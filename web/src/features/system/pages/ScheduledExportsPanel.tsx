@@ -236,7 +236,7 @@ export function ScheduledExportsPanel() {
           <Text as="p" size="sm" color="secondary">
             {t(
               'dataExport.scheduled.subtitle',
-              'Cron-driven recurring exports.',
+              "Cron-driven recurring exports. The server runs each schedule on its cadence and delivers the result via download, email, or webhook.",
             )}
           </Text>
         </div>
@@ -291,7 +291,7 @@ export function ScheduledExportsPanel() {
               <Text as="span" variant="helper" className="mt-1 block">
                 {t(
                   'dataExport.scheduled.form.scheduleCronHelp',
-                  "Standard 5-field cron, e.g. '0 9 * * 0'.",
+                  "Standard 5-field cron, e.g. '0 9 * * 0' for 09:00 every Sunday.",
                 )}
               </Text>
             </label>
@@ -338,7 +338,7 @@ export function ScheduledExportsPanel() {
               <Text as="span" variant="helper" className="mt-1 block">
                 {t(
                   'dataExport.scheduled.form.rangeWindowHelp',
-                  'Format: number + m/h/d.',
+                  "Relative window applied at run time. Format: number + m/h/d (e.g. 7d).",
                 )}
               </Text>
             </label>
@@ -384,7 +384,7 @@ export function ScheduledExportsPanel() {
                 <Text as="span" variant="helper" className="mt-1 block">
                   {t(
                     'dataExport.scheduled.form.deliveryTargetHelp',
-                    'Email address or HTTPS URL.',
+                    "Email address (email kind) or HTTPS URL (webhook kind). Ignored for download.",
                   )}
                 </Text>
               </label>
@@ -561,7 +561,7 @@ export function ScheduledExportsPanel() {
         title={t('dataExport.scheduled.deleteConfirmTitle', 'Delete schedule?')}
         message={t(
           'dataExport.scheduled.deleteConfirmBody',
-          'This will stop future runs of {{name}}.',
+          "This will stop future runs of {{name}}. Past download artifacts are not affected.",
           { name: pendingDelete?.name ?? '' },
         )}
         variant="danger"

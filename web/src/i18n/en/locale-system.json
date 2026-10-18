@@ -240,7 +240,12 @@
       "aria": "Export history"
     },
     "presets": {
-      "aria": "Date range presets"
+      "aria": "Date range presets",
+      "last7": "Last 7 days",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "lastYear": "Last year",
+      "allTime": "All time"
     },
     "brief": {
       "recordsDescription": "Record counts reported by drive and charging export jobs in the loaded history.",
@@ -259,7 +264,29 @@
     },
     "noVehiclesHelp": "Connect a Tesla account and sync a vehicle before exporting vehicle data.",
     "columnsUnavailableHelp": "Column choices appear after the export catalog returns supported fields.",
-    "vehicleUnavailable": "Vehicle {{vehicleId}} is not available in the current fleet."
+    "vehicleUnavailable": "Vehicle {{vehicleId}} is not available in the current fleet.",
+    "types": {
+      "drives": "Drives",
+      "charging": "Charging",
+      "trips": "Trips",
+      "analytics": "Analytics",
+      "fullBackup": "Full backup",
+      "maintenance": "Maintenance",
+      "energy": "Energy",
+      "drivesDesc": "Export drive sessions, routes, and efficiency data",
+      "chargingDesc": "Export charging sessions and energy data",
+      "tripsDesc": "Export trip summaries with SI aggregate columns",
+      "analyticsDesc": "Export analytics and aggregated statistics",
+      "fullBackupDesc": "Complete database backup of all vehicle data",
+      "maintenanceDesc": "Export maintenance and service records",
+      "energyDesc": "Export energy consumption and efficiency data"
+    },
+    "formats": {
+      "csv": "CSV",
+      "json": "JSON",
+      "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
+      "jsonDesc": "Structured JSON format for programmatic access"
+    }
   },
   "dbHealth": {
     "rowChartScope": "Showing {{shown}} of {{total}} returned tables by row count. The complete table list is below.",
@@ -855,7 +882,14 @@
       "scope": "Current browser-session bundle; exact redacted contents remain available below.",
       "metadata": "Redacted browser-session bundle metadata."
     },
-    "showJson": "Show the exact bundle contents"
+    "showJson": "Show the exact bundle contents",
+    "never": {
+      "vin": "Vehicle identification numbers",
+      "location": "Locations or coordinates",
+      "tokens": "Tokens, keys and credentials",
+      "email": "E-mail addresses and account names",
+      "logs": "Raw console or server logs"
+    }
   },
   "system": {
     "outage": {

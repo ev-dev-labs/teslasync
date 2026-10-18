@@ -370,3 +370,17 @@ The reusable codemod aligned 52 fallback call sites in 21 already-failing files 
 **Verification:** 104/151 source files now pass all conservative checks and have regenerated full-source fingerprints. Local constant interpolation objects and explicit count===1 singular/default branches are resolved and checked; unknown operands remain refused. All 38,394 production calls were rescanned: **zero missing literal keys**; 691 dynamic calls still need bounded-domain verification. No English key was deleted relative to bca2df7b44. Every non-metadata Arabic/Hebrew entry still has an English counterpart (21 entries each; five _meta fields each are locale metadata).
 
 Trio: **7,514 passed / 158 failed / 0 skipped**; **42 further closures**, **331 total closures**, **zero new failing identities**. Catalog split check: **PASS** (zero known-missing manifest keys).
+
+## Bounded dynamic-key and context repair group
+
+Recovered 28 keys from explicit palette/widget/correlation domains, 166 more from constant label/default tables, and 102 from finite typed key domains with consistent existing English fallbacks. The audit now follows imported constant arrays, tuple bindings, constant interpolation options, conditional key/default pairs and bounded string transformations. It refuses unknown operands and validates each key/default pair rather than matching two independent sets.
+
+Reviewed six genuine key collisions and gave their existing source text dedicated keys: configuration JSON export versus automated-backup subtitle; notification vehicle-filter exemption versus unconditional-delivery claim; valid battery-fit requirements versus snapshot count alone; a drives link versus notification inbox; drive-end SOC trend versus battery health; and endpoint explorer selection versus sidebar wording. All new English text is copied from existing source fallbacks. Twenty same-context labels/help defaults were aligned with the existing catalog (including Loading ellipses, drive details, region code and scheduled-export delivery/retention help). No other-language content changed.
+
+**Source verification: 126/151 files pass**, including their dynamic defaults; full-source SHA-256 checkpoints were generated with the script. The remaining 25 have no new checkpoints. The two combined contracts also remain unchanged.
+
+**Catalog-history decision:** do not advance the five history checkpoints yet. The deeper known-key scan found additional missing dynamic keys beyond the original manifest: 176 distinct keys at 246 resolutions; 102 had unambiguous English defaults and are now repaired, leaving 74 candidates for further source review. It also reports 376 unresolved dynamic expressions. Advancing the checkpoint before those checks complete would violate the user’s prerequisite. No English keys have been deleted, and all non-metadata Arabic/Hebrew keys still exist in English.
+
+Latest completed trio run: **7,580 passed / 92 failed / 0 skipped**, 7,672 executions. **397 original failures closed**. A final rerun after the last 102 additions and catalog generation follows below.
+
+Final group verification: **7,580 passed / 92 failed / 0 skipped; zero new failing identities**. Catalog split check: **PASS**, 57 grouped bundles, 181 fallback bundles, 1,283 shell keys, zero known-missing manifest keys.

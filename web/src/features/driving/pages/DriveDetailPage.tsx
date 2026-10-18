@@ -35,7 +35,7 @@ const actionTargetClassName = 'min-h-11 min-w-11 max-w-full px-3 py-2 md:min-h-9
 export default function DriveDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
-  usePageTitle(t('driveDetail.title', 'Drive detail'));
+  usePageTitle(t('driveDetail.title', "Drive details"));
   const {
     drive, vehicle, timezone, driveQuery, chartData, stats, routeSource,
     trail, startPos, endPos, centerPos, speedSegments, speedHistData,
@@ -45,7 +45,7 @@ export default function DriveDetailPage() {
     drive ? String(drive.vehicleId) : undefined, id, timezone, true,
   );
   const fsdState = useDataState(fsdQuery, { provenance: 'historical' });
-  const driveSource = { id: 'drive', label: t('driveDetail.title', 'Drive detail'), query: driveQuery };
+  const driveSource = { id: 'drive', label: t('driveDetail.title', "Drive details"), query: driveQuery };
   const fsdSource = {
     id: 'fsd', label: t('driveDetail.fsd.title', 'Supervised driving'),
     query: fsdQuery, enabled: drive != null && !!id,
@@ -70,7 +70,7 @@ export default function DriveDetailPage() {
   );
   const routeTitle = drive?.startAddress && drive?.endAddress
     ? `${drive.startAddress} → ${drive.endAddress}`
-    : t('driveDetail.title', 'Drive detail');
+    : t('driveDetail.title', "Drive details");
   const reportSections = [
     { id: 'journey', label: t('driveDetail.journeyDetails', 'Journey details') },
     { id: 'overview', label: t('driveDetail.report.overview', 'Overview') },
@@ -135,7 +135,7 @@ export default function DriveDetailPage() {
           {t('driveDetail.notFound', 'This drive could not be found. It may have been deleted, or the link is incorrect.')}
         </AlertBanner>
       ) : null}
-      <StaleRefreshWarning state={driveState} label={t('driveDetail.title', 'Drive detail')} />
+      <StaleRefreshWarning state={driveState} label={t('driveDetail.title', "Drive details")} />
       <StaleRefreshWarning state={fsdState} label={t('driveDetail.fsd.title', 'Supervised driving')} />
       {!isLoading && drive && !hasMeaningfulDriveStats ? (
         <AlertBanner variant="info" title={t('driveDetail.noTelemetryTitle', 'No telemetry recorded for this drive')}>

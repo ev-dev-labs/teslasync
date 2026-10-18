@@ -38,7 +38,12 @@
         "motion": "Motion detected",
         "unknown": "Unclassified"
       },
-      "emptyHelp": "Candidates appear after metadata import or local motion analysis completes."
+      "emptyHelp": "Candidates appear after metadata import or local motion analysis completes.",
+      "confidence": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high"
+      }
     },
     "export": {
       "disclaimer": "Exports are generated entirely in this browser. The still-frame export is a single redacted image, not a redacted video file.",
@@ -125,7 +130,13 @@
       "selectSignals": "Choose telemetry signals above to build a reconstruction.",
       "signalCatalogFailed": "The telemetry signal catalog could not be loaded.",
       "noSignals": "No telemetry signals are available for this vehicle.",
-      "signalLimitHint": "Reconstruction loads the first 8 unique, non-empty signal names in selection order. Remove a selected signal before adding another at the limit; existing selections are kept."
+      "signalLimitHint": "Reconstruction loads the first 8 unique, non-empty signal names in selection order. Remove a selected signal before adding another at the limit; existing selections are kept.",
+      "coverage": {
+        "none": "No coverage",
+        "partial": "Partial coverage",
+        "sparse": "Sparse coverage",
+        "good": "Good coverage"
+      }
     },
     "redaction": {
       "add": "Add region",

@@ -306,7 +306,7 @@ export function DeviceNotificationPrefsPanel({
               options={scopeOptions}
               size="sm"
               hint={t(
-                'notifications.device.vehicleScopeHint',
+                "notifications.device.vehicleFilterHint",
                 'System notifications with no vehicle attached are exempt from the vehicle filter. The device switch, category, and minimum severity rules still apply.',
               )}
               onChange={(event) =>

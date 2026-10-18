@@ -687,7 +687,16 @@
         "externalChannels": "External channels for test notifications:",
         "emptyTitle": "No external channels configured",
         "emptyDescription": "Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts.",
-        "selectChannels": "Selected channels"
+        "selectChannels": "Selected channels",
+        "kind": {
+          "discord": "discord",
+          "slack": "slack",
+          "telegram": "telegram",
+          "email": "email",
+          "webhook": "webhook",
+          "ntfy": "ntfy",
+          "pushover": "pushover"
+        }
       },
       "computedMetric": {
         "metric": "Metric",
@@ -740,6 +749,17 @@
         "transition": "When",
         "enter": "Arrives",
         "exit": "Departs"
+      },
+      "operators": {
+        "=": "=",
+        "!=": "!=",
+        "<": "<",
+        "<=": "<=",
+        ">": ">",
+        ">=": ">=",
+        "changed": "changed",
+        "between": "between",
+        "outside": "outside"
       }
     },
     "log": {
@@ -882,7 +902,23 @@
       "reset": "Reset device rules",
       "caveat": "A notification filtered here has still been delivered to the browser. Prefer server-side channel routing and quiet hours whenever they can express the same rule.",
       "sectionAria": "Per-device notification and data rules",
-      "quietBypassHint": "Quiet hours silence notifications that pass your other device rules. Only severities selected below ring through while quiet hours are active; device, category, minimum severity, and vehicle filters still apply."
+      "quietBypassHint": "Quiet hours silence notifications that pass your other device rules. Only severities selected below ring through while quiet hours are active; device, category, minimum severity, and vehicle filters still apply.",
+      "vehicleFilterHint": "System notifications with no vehicle attached are exempt from the vehicle filter. The device switch, category, and minimum severity rules still apply.",
+      "category": {
+        "alert": "Alerts",
+        "charging": "Charging",
+        "drive": "Drives",
+        "battery": "Battery",
+        "security": "Security",
+        "system": "System health",
+        "export": "Exports",
+        "other": "Other"
+      },
+      "bypass": {
+        "info": "Ring through: info",
+        "warn": "Ring through: warnings",
+        "critical": "Ring through: critical"
+      }
     },
     "archived": {
       "summary": {

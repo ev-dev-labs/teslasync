@@ -99,7 +99,7 @@ export function SchemaKpis({ state, isDrifted, retained = false }: {
     <section className="min-w-0" data-retained={retained}>
       <OperationalBrief compact testId="schema-drift-summary" metrics={briefMetrics}
         eyebrow={t('admin.schemaDrift.pageTitle', 'Schema drift')} title={title} description={hint}
-        statusLabel={isLoading ? t('common.loading', 'Loading') : state.error
+        statusLabel={isLoading ? t('common.loading', "Loading...") : state.error
           ? t('common.error', 'Error') : retained ? t('admin.operationalBrief.retained', 'Retained evidence')
           : drift ? t('admin.operationalBrief.snapshot', 'Source snapshot')
           : t('admin.operationalBrief.unmeasured', 'Not measured')}

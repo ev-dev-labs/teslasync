@@ -700,7 +700,10 @@
       "signals": "Signals",
       "totalRecords": "Total records",
       "signalsWithData": "{{count}} with data",
-      "timeSpan": "Time span"
+      "timeSpan": "Time span",
+      "numeric": "Numeric points",
+      "text": "Text points",
+      "boolean": "Boolean points"
     },
     "title": "Signal log viewer",
     "perPage": "Per page",
@@ -7882,6 +7885,12 @@
     "chart": {
       "title": "Consumption change per version",
       "aria": "Bar chart of the change in energy consumption in watt-hours per kilometre after each firmware version"
+    },
+    "verdict": {
+      "better": "More efficient",
+      "worse": "Less efficient",
+      "noChange": "No measurable change",
+      "insufficient": "Not enough drives"
     }
   },
   "live": {
@@ -8782,7 +8791,33 @@
       "dashboardSwitch": "Switch dashboard layout…",
       "dashboardAddWidget": "Add widget to dashboard",
       "dashboardReset": "Reset dashboard to default",
-      "frecencyReset": "Reset command palette usage history"
+      "frecencyReset": "Reset command palette usage history",
+      "fleetSetup": "Open Fleet Setup",
+      "feedback": "Report bug / Send feedback",
+      "wakeUp": "Wake Up Vehicle",
+      "lock": "Lock Vehicle",
+      "unlock": "Unlock Vehicle",
+      "sentryOn": "Sentry Mode On",
+      "sentryOff": "Sentry Mode Off",
+      "climateOn": "Climate On",
+      "climateOff": "Climate Off",
+      "dogMode": "Dog Mode",
+      "campMode": "Camp Mode",
+      "chargePortOpen": "Open Charge Port",
+      "chargePortClose": "Close Charge Port",
+      "chargeStart": "Start Charging",
+      "chargeStop": "Stop Charging",
+      "chargeMax": "Charge to Max Range",
+      "chargeStandard": "Charge to Standard",
+      "frunk": "Open Frunk",
+      "trunk": "Open Trunk",
+      "ventWindows": "Vent Windows",
+      "closeWindows": "Close Windows",
+      "horn": "Honk Horn",
+      "flash": "Flash Lights",
+      "playPause": "Play / Pause",
+      "nextTrack": "Next Track",
+      "prevTrack": "Previous Track"
     },
     "toast": {
       "refreshed": "Data refreshed",
@@ -8796,7 +8831,21 @@
       "sibling": "Same section"
     },
     "dialogLabel": "Command palette",
-    "filterBy": "Filter"
+    "filterBy": "Filter",
+    "scope": {
+      "command": "Commands",
+      "command.empty": "No commands available",
+      "navigate": "Pages",
+      "navigate.empty": "No pages available",
+      "vehicle-switch": "Vehicles",
+      "vehicle-switch.empty": "No vehicles available",
+      "registry": "Settings",
+      "registry.empty": "No settings available"
+    },
+    "placeholder.command": "Search commands…",
+    "placeholder.navigate": "Search pages…",
+    "placeholder.vehicle-switch": "Switch vehicle…",
+    "placeholder.registry": "Search settings…"
   },
   "search": {
     "title": "Search",
@@ -10415,7 +10464,28 @@
     "configIdle": "Fetch config to see results",
     "onboarding": {
       "stepLabel": "Step {{step}}",
-      "goToStep": "Go to step {{step}}: {{label}}"
+      "goToStep": "Go to step {{step}}: {{label}}",
+      "account": {
+        "label": "Tesla developer account"
+      },
+      "application": {
+        "label": "Create application"
+      },
+      "keypair": {
+        "label": "Generate key pair"
+      },
+      "register": {
+        "label": "Register partner"
+      },
+      "auth": {
+        "label": "Authorize account"
+      },
+      "pair": {
+        "label": "Pair vehicle key"
+      },
+      "telemetry": {
+        "label": "Fleet Telemetry"
+      }
     },
     "health": {
       "vin": "VIN",
@@ -10494,7 +10564,11 @@
     "errorsRaw": "Show raw Tesla response",
     "vehicleDataIdle": "Choose a vehicle and an action to see results.",
     "ref": {
-      "empty": "No reference links available"
+      "empty": "No reference links available",
+      "fleetOverview": "Fleet API overview",
+      "partnerEndpoints": "Partner endpoints",
+      "devPortal": "Developer portal",
+      "telemetryGuide": "Fleet Telemetry guide"
     },
     "url": {
       "modeGroup": "Encoding mode"
@@ -10627,7 +10701,8 @@
     "noEndpoints": "No endpoints found in the API spec",
     "workspace": "Request workspace",
     "request": "Request",
-    "historyRecovery": "Saved request history could not be loaded. The playground has started with an empty history; you can select endpoints and send new requests."
+    "historyRecovery": "Saved request history could not be loaded. The playground has started with an empty history; you can select endpoints and send new requests.",
+    "selectExplorerEndpoint": "Select an endpoint from the explorer to start testing"
   },
   "admin": {
     "auditLog": {
@@ -10763,7 +10838,11 @@
       "refresh": "Refresh vehicle cost data",
       "subtitle": "Per-vehicle telemetry cost over the selected window. Use this to spot vehicles whose ingest volume is disproportionate to the fleet baseline.",
       "notConfigured": "The ingest-x-ray subsystem is not configured on this deployment. Vehicle cost reporting requires the signal_log hypertable to be populated.",
-      "breakdownRegion": "Ingest cost breakdown"
+      "breakdownRegion": "Ingest cost breakdown",
+      "window1d": "Last 1 day",
+      "window7d": "Last 7 days",
+      "window30d": "Last 30 days",
+      "window90d": "Last 90 days"
     },
     "systemStatus": {
       "clientPerformance": {
@@ -11236,7 +11315,35 @@
       "actions": {
         "refresh": "Refresh ingest x-ray"
       },
-      "hero": "Sample volume"
+      "hero": "Sample volume",
+      "windowOption": {
+        "5m": "5m",
+        "15m": "15m",
+        "1h": "1h",
+        "6h": "6h",
+        "24h": "24h"
+      },
+      "bucketOption": {
+        "30s": "30s",
+        "1m": "1m",
+        "5m": "5m",
+        "15m": "15m",
+        "1h": "1h"
+      },
+      "windowLabel": {
+        "24h": "24 hours",
+        "6h": "6 hours",
+        "5m": "5 minutes",
+        "15m": "15 minutes",
+        "1h": "1 hour"
+      },
+      "bucketLabel": {
+        "30s": "30 seconds",
+        "5m": "5 minutes",
+        "15m": "15 minutes",
+        "1h": "1 hour",
+        "1m": "1 minute"
+      }
     },
     "liveSignals": {
       "refresh": "Refresh live snapshot",
@@ -11576,7 +11683,11 @@
       "emptyMessage": "pg_stat_statements is empty or has been reset recently. Slow queries will accumulate here as the system processes load.",
       "emptyTable": "No slow queries",
       "subtitle": "Top queries from pg_stat_statements. Sort by mean time to surface the slowest individual calls, or total time to surface the costliest in aggregate.",
-      "notConfigured": "pg_stat_statements is not installed on this PostgreSQL instance. Run `CREATE EXTENSION pg_stat_statements;` and add it to shared_preload_libraries to enable this page."
+      "notConfigured": "pg_stat_statements is not installed on this PostgreSQL instance. Run `CREATE EXTENSION pg_stat_statements;` and add it to shared_preload_libraries to enable this page.",
+      "orderMean": "Mean time",
+      "orderTotal": "Total time",
+      "orderCalls": "Calls",
+      "orderMax": "Max time"
     },
     "dataQuality": {
       "summary": {
@@ -12483,7 +12594,8 @@
     "storageByProvider": "Storage by provider",
     "noStorage": "No stored backups yet.",
     "noErrors": "No recent backup failures.",
-    "runN": "Run #{{id}}"
+    "runN": "Run #{{id}}",
+    "configurationSubtitle": "Export your TeslaSync configuration as a JSON file you can stash in a backup folder or git repo, and import it on a fresh install."
   },
   "redis": {
     "signalName": "Signal name",
@@ -15107,7 +15219,9 @@
     "geofence": {
       "enter": "Enter",
       "exit": "Exit",
-      "dwell": "Dwell"
+      "dwell": "Dwell",
+      "inside": "Inside",
+      "outside": "Outside"
     },
     "operators": {
       "equals": "=",
@@ -15142,7 +15256,39 @@
       "createCustomHint": "You can still create a custom automation from the automations page."
     },
     "importRetryFailedOnly": "Correct and import only the failed entries listed below. Do not re-import successful entries; doing so creates duplicates.",
-    "importEntryError": "Entry {{entry}} ({{name}}): {{message}}"
+    "importEntryError": "Entry {{entry}} ({{name}}): {{message}}",
+    "actions": {
+      "command": "Vehicle command",
+      "notify": "Send notification",
+      "setSetting": "Set setting",
+      "callAutomation": "Call automation",
+      "wait": "Wait"
+    },
+    "conditions": {
+      "signal": "Signal check",
+      "timeWindow": "Time window",
+      "geofence": "Geofence state",
+      "otherAutomation": "Other automation"
+    },
+    "otherAutomation": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "recentlyTriggered": "Recently triggered"
+    },
+    "commandGroups": {
+      "security": "Security & access",
+      "climate": "Climate",
+      "charging": "Charging",
+      "doors": "Doors & trunk",
+      "alerts": "Alerts",
+      "navigation": "Navigation",
+      "driveSoftware": "Drive & software"
+    },
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled",
+      "auto-disabled": "Auto-disabled"
+    }
   },
   "energy": {
     "tou": {
@@ -15631,7 +15777,8 @@
       "predictionIntervalEvidence_one": "Approximate OLS prediction band for a future SOH observation, not confidence in the fitted mean. Basis: {{count}} valid dated SOH sample (finite, 0–100%); residual degrees of freedom: {{df}}. Half-width = {{multiplier}} × residual standard error × sqrt(1 + 1/n + (x − mean(x))² / Sxx). The fixed multiplier is 2 for 3–30 samples and 1.96 above 30, not a Student-t quantile. Displayed bounds are clipped to 0–100% and rounded to 0.1 percentage point. Linear trend and independent, constant-variance residuals are model assumptions; empirical coverage remains unmeasured in BD-C01, not calibrated 95% coverage.",
       "predictionIntervalEvidence_other": "Approximate OLS prediction band for a future SOH observation, not confidence in the fitted mean. Basis: {{count}} valid dated SOH samples (finite, 0–100%); residual degrees of freedom: {{df}}. Half-width = {{multiplier}} × residual standard error × sqrt(1 + 1/n + (x − mean(x))² / Sxx). The fixed multiplier is 2 for 3–30 samples and 1.96 above 30, not a Student-t quantile. Displayed bounds are clipped to 0–100% and rounded to 0.1 percentage point. Linear trend and independent, constant-variance residuals are model assumptions; empirical coverage remains unmeasured in BD-C01, not calibrated 95% coverage.",
       "chargeEquivalentEvidence_one": "Estimated charge equivalents: recorded energy added across {{count}} valid charging session divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption.",
-      "chargeEquivalentEvidence_other": "Estimated charge equivalents: recorded energy added across {{count}} valid charging sessions divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption."
+      "chargeEquivalentEvidence_other": "Estimated charge equivalents: recorded energy added across {{count}} valid charging sessions divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption.",
+      "validFitRequired": "Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)"
     },
     "health": {
       "excellent": "Excellent",
@@ -15805,7 +15952,13 @@
       "aria": "Battery {{from}}% to {{to}}%"
     },
     "links": {
-      "title": "Explore More"
+      "title": "Explore More",
+      "cells": "Battery Cells",
+      "degradation": "Degradation",
+      "energyFlow": "Energy Flow",
+      "projectedRange": "Projected Range",
+      "vampireDrain": "Vampire Drain",
+      "sleepEfficiency": "Sleep Efficiency"
     }
   },
   "powerFlow": {
@@ -16997,7 +17150,13 @@
     "display": "Display",
     "showBorders": "Show widget borders",
     "compactMode": "Compact mode (smaller gaps)",
-    "vehicleFilterDesc": "Show data for a specific vehicle in all widgets. Widget-level filters take precedence."
+    "vehicleFilterDesc": "Show data for a specific vehicle in all widgets. Widget-level filters take precedence.",
+    "refresh0": "Default (per widget)",
+    "refresh5": "Every 5 seconds",
+    "refresh10": "Every 10 seconds",
+    "refresh30": "Every 30 seconds",
+    "refresh60": "Every minute",
+    "refresh300": "Every 5 minutes"
   },
   "freshness": {
     "age": {
@@ -17256,7 +17415,11 @@
       "samplesDescription": "Autocorrelation-adjusted effective sample size at the best lag; raw points are overlapping samples at that lag.",
       "significanceDescription": "The existing autocorrelation-adjusted significance test; the threshold is a coefficient, not a percentage.",
       "resampledPairs": "from {{n}} overlapping resampled pairs",
-      "resampledSamplesDescription": "Autocorrelation-adjusted effective sample size at the best lag; overlapping resampled pairs are not original source records. Valid measurement counts, when available, are timestamp-deduplicated before overlap clipping or resampling."
+      "resampledSamplesDescription": "Autocorrelation-adjusted effective sample size at the best lag; overlapping resampled pairs are not original source records. Valid measurement counts, when available, are timestamp-deduplicated before overlap clipping or resampling.",
+      "sourceRecordsA": "Signal A: {{n}} source records",
+      "validMeasurementsA": "Signal A: {{n}} valid timestamp-deduplicated measurements",
+      "sourceRecordsB": "Signal B: {{n}} source records",
+      "validMeasurementsB": "Signal B: {{n}} valid timestamp-deduplicated measurements"
     },
     "title": "Live telemetry",
     "drivetrain": "Drivetrain",
@@ -17603,7 +17766,9 @@
         "scope": "Selected range and current loaded page have different coverage.",
         "mixDescription": "Counts by event type describe only the loaded page, not the entire selected range."
       }
-    }
+    },
+    "browseDrives": "View all",
+    "batteryTrendTitle": "Battery trend"
   },
   "perf": {
     "title": "Fleet performance",
@@ -17936,6 +18101,11 @@
         "minutes": "{{count}}m ago",
         "hours": "{{count}}h ago",
         "days": "{{count}}d ago"
+      },
+      "severity": {
+        "warning": "warning",
+        "info": "info",
+        "critical": "critical"
       }
     },
     "apiUsage": {
@@ -18178,7 +18348,12 @@
       "savingsSource": "Returned monthly savings estimate, retaining the existing currency formatting without changing its denomination.",
       "summaryTitle": "Returned charging recommendations",
       "summaryDescription": "Schedule and cost estimates remain separate inferred operands; peak-use classification, the rate timeline and actionable recommendations remain below.",
-      "summaryScope": "Vehicle {{id}} · returned optimizer analysis; exact source recording bounds and completeness are not supplied."
+      "summaryScope": "Vehicle {{id}} · returned optimizer analysis; exact source recording bounds and completeness are not supplied.",
+      "priority": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high"
+      }
     },
     "chargingSchedule": {
       "modeStartAt": "Start at",
@@ -18485,7 +18660,12 @@
       "potentialSavings": "Potential savings: {{pct}}%",
       "noTips": "No tips available",
       "title": "Driving coach",
-      "scoreLabel": "/ 100"
+      "scoreLabel": "/ 100",
+      "impact": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high"
+      }
     },
     "drivingDynamics": {
       "partialPeaks": "Partial peak readings",
@@ -18504,7 +18684,13 @@
       "distribution": "G-force distribution",
       "gForce": "G-force",
       "samples": "Samples",
-      "distributionAria": "Distribution of observed acceleration magnitudes"
+      "distributionAria": "Distribution of observed acceleration magnitudes",
+      "severity": {
+        "normal": "Normal",
+        "calm": "Calm",
+        "sporty": "Sporty",
+        "aggressive": "Aggressive"
+      }
     },
     "energyFlowAnimated": {
       "idle": "Idle",
@@ -19024,7 +19210,14 @@
       "pause": "Pause",
       "title": "Signal log",
       "noSignals": "No signal updates yet",
-      "unknownSource": "Unknown"
+      "unknownSource": "Unknown",
+      "source": {
+        "fleet_telemetry": "MQTT",
+        "fleet_api": "API",
+        "manual": "Manual",
+        "backfill": "Cache",
+        "unknown": "Unknown"
+      }
     },
     "sleepEfficiency": {
       "efficiency": "Efficiency",
@@ -19159,7 +19352,11 @@
       "goroutinesDescription": "Goroutines in the returned runtime snapshot; an absent reading remains unknown.",
       "poolSummaryTitle": "Connection pool snapshot",
       "poolSummaryDescription": "Pool and runtime counts retain their own source state independently of service health and database statistics. Memory and database size remain separate source references.",
-      "poolSummaryScope": "Returned pool/runtime snapshot only; no historical window or verified-live coverage is inferred"
+      "poolSummaryScope": "Returned pool/runtime snapshot only; no historical window or verified-live coverage is inferred",
+      "db": "Database",
+      "mqtt": "MQTT",
+      "teslaApi": "Tesla API",
+      "workers": "Fleet Telemetry"
     },
     "telemetryErrors": {
       "unknown": "Unknown",
@@ -19233,7 +19430,11 @@
       "statusUnknown": "Unknown",
       "statusDown": "Down",
       "consecutiveFailures": "consecutive failures",
-      "servicesHealthy": "Services healthy"
+      "servicesHealthy": "Services healthy",
+      "database": "Database",
+      "mqtt": "MQTT",
+      "tesla_api": "Tesla API",
+      "fleet_telemetry": "Fleet Telemetry"
     },
     "vampireDrain": {
       "min": "m",
@@ -19944,7 +20145,13 @@
       "trigger": "trigger: {{trigger}}",
       "signalTitle": "Signal window",
       "signalEmpty": "No signals in this window for the default whitelist.",
-      "loading": "Loading drive diagnostic…"
+      "loading": "Loading drive diagnostic…",
+      "windowOption": {
+        "30s": "30s",
+        "60s": "60s",
+        "5m": "5m",
+        "15m": "15m"
+      }
     },
     "stat": {
       "mean": "Mean",
@@ -22561,7 +22768,16 @@
         "externalChannels": "External channels for test notifications:",
         "emptyTitle": "No external channels configured",
         "emptyDescription": "Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts.",
-        "selectChannels": "Selected channels"
+        "selectChannels": "Selected channels",
+        "kind": {
+          "discord": "discord",
+          "slack": "slack",
+          "telegram": "telegram",
+          "email": "email",
+          "webhook": "webhook",
+          "ntfy": "ntfy",
+          "pushover": "pushover"
+        }
       },
       "computedMetric": {
         "metric": "Metric",
@@ -22614,6 +22830,17 @@
         "transition": "When",
         "enter": "Arrives",
         "exit": "Departs"
+      },
+      "operators": {
+        "=": "=",
+        "!=": "!=",
+        "<": "<",
+        "<=": "<=",
+        ">": ">",
+        ">=": ">=",
+        "changed": "changed",
+        "between": "between",
+        "outside": "outside"
       }
     },
     "log": {
@@ -22756,7 +22983,23 @@
       "reset": "Reset device rules",
       "caveat": "A notification filtered here has still been delivered to the browser. Prefer server-side channel routing and quiet hours whenever they can express the same rule.",
       "sectionAria": "Per-device notification and data rules",
-      "quietBypassHint": "Quiet hours silence notifications that pass your other device rules. Only severities selected below ring through while quiet hours are active; device, category, minimum severity, and vehicle filters still apply."
+      "quietBypassHint": "Quiet hours silence notifications that pass your other device rules. Only severities selected below ring through while quiet hours are active; device, category, minimum severity, and vehicle filters still apply.",
+      "vehicleFilterHint": "System notifications with no vehicle attached are exempt from the vehicle filter. The device switch, category, and minimum severity rules still apply.",
+      "category": {
+        "alert": "Alerts",
+        "charging": "Charging",
+        "drive": "Drives",
+        "battery": "Battery",
+        "security": "Security",
+        "system": "System health",
+        "export": "Exports",
+        "other": "Other"
+      },
+      "bypass": {
+        "info": "Ring through: info",
+        "warn": "Ring through: warnings",
+        "critical": "Ring through: critical"
+      }
     },
     "archived": {
       "summary": {
@@ -24684,7 +24927,12 @@
       "aria": "Export history"
     },
     "presets": {
-      "aria": "Date range presets"
+      "aria": "Date range presets",
+      "last7": "Last 7 days",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "lastYear": "Last year",
+      "allTime": "All time"
     },
     "brief": {
       "recordsDescription": "Record counts reported by drive and charging export jobs in the loaded history.",
@@ -24703,7 +24951,29 @@
     },
     "noVehiclesHelp": "Connect a Tesla account and sync a vehicle before exporting vehicle data.",
     "columnsUnavailableHelp": "Column choices appear after the export catalog returns supported fields.",
-    "vehicleUnavailable": "Vehicle {{vehicleId}} is not available in the current fleet."
+    "vehicleUnavailable": "Vehicle {{vehicleId}} is not available in the current fleet.",
+    "types": {
+      "drives": "Drives",
+      "charging": "Charging",
+      "trips": "Trips",
+      "analytics": "Analytics",
+      "fullBackup": "Full backup",
+      "maintenance": "Maintenance",
+      "energy": "Energy",
+      "drivesDesc": "Export drive sessions, routes, and efficiency data",
+      "chargingDesc": "Export charging sessions and energy data",
+      "tripsDesc": "Export trip summaries with SI aggregate columns",
+      "analyticsDesc": "Export analytics and aggregated statistics",
+      "fullBackupDesc": "Complete database backup of all vehicle data",
+      "maintenanceDesc": "Export maintenance and service records",
+      "energyDesc": "Export energy consumption and efficiency data"
+    },
+    "formats": {
+      "csv": "CSV",
+      "json": "JSON",
+      "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
+      "jsonDesc": "Structured JSON format for programmatic access"
+    }
   },
   "dbHealth": {
     "rowChartScope": "Showing {{shown}} of {{total}} returned tables by row count. The complete table list is below.",
@@ -26289,7 +26559,19 @@
     },
     "pressureHistoryAria": "Tire pressure over time for all four positions",
     "pressureWithStatus": "{{value}} {{unit}} · {{status}}",
-    "unknownPressure": "— · Unknown"
+    "unknownPressure": "— · Unknown",
+    "tire": {
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right"
+    },
+    "status": {
+      "critical": "Critical",
+      "low": "Low",
+      "high": "High",
+      "normal": "Normal"
+    }
   },
   "vehicles": {
     "compareButton": "Compare vehicles",
@@ -29215,7 +29497,8 @@
   "severity": {
     "info": "Info",
     "warn": "Warning",
-    "critical": "Critical"
+    "critical": "Critical",
+    "success": "Success"
   },
   "advanced": {
     "restoreConfirms": {
@@ -30684,7 +30967,20 @@
     "risk": "Posterior risk",
     "evidence": "Evidence",
     "evidenceValue": "{{suspect}} of {{n}} sessions",
-    "lastSuspected": "Last suspected"
+    "lastSuspected": "Last suspected",
+    "trend": {
+      "flat": "Steady",
+      "rising": "Getting worse",
+      "falling": "Improving",
+      "insufficient_data": "Not enough history"
+    },
+    "cause": {
+      "no_end_timestamp": "No end timestamp recorded",
+      "no_end_soc": "No end SoC recorded",
+      "stalled_soc_gain": "SoC gained far slower than this site usually manages",
+      "power_collapse": "Power fell well below this session’s own peak",
+      "aborted_early": "Stopped almost immediately after starting"
+    }
   },
   "chargerHealth": {
     "title": "Charger Health",
@@ -30797,7 +31093,12 @@
     "noRemainingEnergy": "Sites remain, but no positive recorded energy remains.",
     "sessionFallback": "Session-based fallback, not energy-weighted; diversification uses the observed site count.",
     "energyShareUnavailable": "Energy share unavailable",
-    "sessionDependency": "{{site}} — share of sessions, not energy"
+    "sessionDependency": "{{site}} — share of sessions, not energy",
+    "groupedBy": {
+      "place": "Named place",
+      "geo": "Approximate location",
+      "charger_type": "Charger type only"
+    }
   },
   "chargeDepartureAlignment": {
     "modernization": {
@@ -30851,7 +31152,14 @@
     "dwellSuffix": "dwell",
     "margin": "Readiness margin",
     "socUsed": "SoC that drive used",
-    "wellMatched": "Well matched"
+    "wellMatched": "Well matched",
+    "flag": {
+      "tight_margin": "Cut it close on departure",
+      "excess_buffer": "Added far more than that trip used",
+      "early_full_dwell": "Sat at full charge before leaving",
+      "long_dwell": "Long gap before departure",
+      "soc_mismatch": "SoC reading looks inconsistent"
+    }
   },
   "chargingThermalTax": {
     "title": "Charging thermal tax",
@@ -32605,7 +32913,13 @@
     "noReading": "The reading appears once at least one usable four-corner sample has been analyzed.",
     "suspect": "Leak suspect",
     "offset": "Most offset",
-    "cornerStats": "slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}"
+    "cornerStats": "slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}",
+    "corner": {
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right"
+    }
   },
   "signalEntropy": {
     "title": "Signal entropy",
@@ -33057,7 +33371,11 @@
       "title": "Cohort eligibility",
       "unknownYear": "Unknown",
       "year": "Model-year bucket",
-      "loading": "Loading cohort eligibility…"
+      "loading": "Loading cohort eligibility…",
+      "suppressed": "This cohort is suppressed because it is too small, lacks enough metric data, or has exhausted its privacy budget.",
+      "insufficient_cohort": "This cohort is suppressed because it is too small, lacks enough metric data, or has exhausted its privacy budget.",
+      "insufficient_metric_data": "This cohort is suppressed because it is too small, lacks enough metric data, or has exhausted its privacy budget.",
+      "privacy_budget_exhausted": "This cohort is suppressed because it is too small, lacks enough metric data, or has exhausted its privacy budget."
     },
     "consent": {
       "acknowledge": "I opt in to bounded aggregate benchmarking and understand that released aggregates cannot be withdrawn.",
@@ -33181,7 +33499,12 @@
         "motion": "Motion detected",
         "unknown": "Unclassified"
       },
-      "emptyHelp": "Candidates appear after metadata import or local motion analysis completes."
+      "emptyHelp": "Candidates appear after metadata import or local motion analysis completes.",
+      "confidence": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high"
+      }
     },
     "export": {
       "disclaimer": "Exports are generated entirely in this browser. The still-frame export is a single redacted image, not a redacted video file.",
@@ -33268,7 +33591,13 @@
       "selectSignals": "Choose telemetry signals above to build a reconstruction.",
       "signalCatalogFailed": "The telemetry signal catalog could not be loaded.",
       "noSignals": "No telemetry signals are available for this vehicle.",
-      "signalLimitHint": "Reconstruction loads the first 8 unique, non-empty signal names in selection order. Remove a selected signal before adding another at the limit; existing selections are kept."
+      "signalLimitHint": "Reconstruction loads the first 8 unique, non-empty signal names in selection order. Remove a selected signal before adding another at the limit; existing selections are kept.",
+      "coverage": {
+        "none": "No coverage",
+        "partial": "Partial coverage",
+        "sparse": "Sparse coverage",
+        "good": "Good coverage"
+      }
     },
     "redaction": {
       "add": "Add region",
@@ -34303,7 +34632,24 @@
       "boundsUnknown": "Complete source coverage and observation bounds are not established"
     },
     "section": {
-      "vehicleIdentity": "Vehicle identity"
+      "vehicleIdentity": "Vehicle identity",
+      "battery": "Battery health",
+      "maintenance": "Maintenance & service",
+      "softwareUpdates": "Software updates",
+      "warranty": "Warranty",
+      "drivingHistory": "Driving history",
+      "chargingHistory": "Charging history",
+      "securityIncidents": "Security incidents"
+    },
+    "profile": {
+      "warranty": "Warranty claim",
+      "service": "Service visit",
+      "resale": "Resale / vehicle history",
+      "custom": "Custom",
+      "warrantyDesc": "Identity, battery, maintenance, software, and warranty data — no driving/charging behavior.",
+      "serviceDesc": "What a service center needs: identity, maintenance, software, battery, and security events.",
+      "resaleDesc": "The full scrubbed vehicle history a buyer would want to review, across every evidence category.",
+      "customDesc": "Pick exactly which evidence sections to include."
     }
   },
   "rootCauseIntelligence": {
@@ -35353,7 +35699,12 @@
       "emptyTitle": "No overlapping symptoms",
       "score": "{{value}}% match",
       "select": "Choose a vehicle to compare recent signal deviations with campaign components.",
-      "title": "Ranked observed symptoms"
+      "title": "Ranked observed symptoms",
+      "severity": {
+        "info": "Information",
+        "critical": "Critical",
+        "warning": "Warning"
+      }
     },
     "vehicle": {
       "assemblyPlant": "Assembly plant",
@@ -36977,7 +37328,12 @@
       "empty": "This category has no routed fields."
     },
     "stat": {
-      "subscriptionCoverage": "Subscription coverage"
+      "subscriptionCoverage": "Subscription coverage",
+      "categories": "Categories",
+      "routedFields": "Routed fields",
+      "subscribed": "Subscribed",
+      "routedNotSubscribed": "Routed, not subscribed",
+      "orphans": "Orphan fields"
     },
     "kpis": "Coverage summary",
     "subtitle": "Package-derived snapshot of routed Tesla proto fields and configured desired subscription membership. Sourced from routing.yaml and teslaconfig.Builder — not confirmation of observed vehicle ingestion.",
@@ -39919,7 +40275,14 @@
       "scope": "Current browser-session bundle; exact redacted contents remain available below.",
       "metadata": "Redacted browser-session bundle metadata."
     },
-    "showJson": "Show the exact bundle contents"
+    "showJson": "Show the exact bundle contents",
+    "never": {
+      "vin": "Vehicle identification numbers",
+      "location": "Locations or coordinates",
+      "tokens": "Tokens, keys and credentials",
+      "email": "E-mail addresses and account names",
+      "logs": "Raw console or server logs"
+    }
   },
   "signals": {
     "catalog": {
@@ -40010,7 +40373,37 @@
     "panelTitle": "What the numbers mean",
     "panelSubtitle": "Definitions for the terms that are easiest to misread, and where each number actually comes from.",
     "howMeasured": "How we measure it",
-    "seeInContext": "See it in context"
+    "seeInContext": "See it in context",
+    "soc": {
+      "term": "State of charge (SOC)",
+      "definition": "The percentage of usable energy currently left in the battery, where 100% is a full charge of the pack as it exists today — not as it was when new.",
+      "howMeasured": "Reported directly by the vehicle. The displayed value already excludes the buffer the car reserves below 0%, so a car at 0% is not an empty pack."
+    },
+    "ratedRange": {
+      "term": "Rated range",
+      "definition": "A rating, not a prediction: the current state of charge multiplied by a fixed EPA-derived distance per percent. It ignores weather, speed, terrain and load.",
+      "howMeasured": "Reported by the vehicle. Because the multiplier is fixed, rated range moves only when state of charge or the pack’s estimated capacity moves — real trips almost always use more."
+    },
+    "degradation": {
+      "term": "Degradation",
+      "howMeasured": "Derived from many observed charges over weeks. A single reading is noise: temperature, recent fast charging and a resting pack all shift the estimate by more than a year of real loss."
+    },
+    "phantomDrain": {
+      "term": "Phantom drain (vampire drain)",
+      "howMeasured": "Measured only across parked, non-charging windows. Sentry mode, cabin overheat protection, preconditioning and frequent polling all raise it, and each is a setting rather than a fault."
+    },
+    "efficiency": {
+      "term": "Efficiency",
+      "howMeasured": "Computed from completed drives that report both distance and energy. Charging losses are not included, so a wall-meter figure will always look worse than this one."
+    },
+    "signalFreshness": {
+      "term": "Signal freshness",
+      "howMeasured": "Freshness is the age of the last received value, not a health check. A sleeping vehicle produces stale signals by design; that is normal and costs no range."
+    },
+    "stateOfHealth": {
+      "term": "State of health (SoH)",
+      "howMeasured": "Estimated from observed full-charge capacity over time. It is an estimate with a real error bar, which is why the trend matters more than any single value."
+    }
   },
   "metrics": {
     "peakPower": "{{value}} kW peak",
@@ -40051,5 +40444,12 @@
       "sentry": "Sentry",
       "notCharging": "Not Charging"
     }
-  }
+  },
+  "vehicle.state.online": "Online",
+  "vehicle.state.charging": "Charging",
+  "vehicle.state.driving": "Driving",
+  "vehicle.state.parked": "Parked",
+  "vehicle.state.updating": "Updating",
+  "vehicle.state.asleep": "Asleep",
+  "vehicle.state.offline": "Offline"
 }

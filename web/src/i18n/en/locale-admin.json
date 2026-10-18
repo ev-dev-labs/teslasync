@@ -133,7 +133,11 @@
       "refresh": "Refresh vehicle cost data",
       "subtitle": "Per-vehicle telemetry cost over the selected window. Use this to spot vehicles whose ingest volume is disproportionate to the fleet baseline.",
       "notConfigured": "The ingest-x-ray subsystem is not configured on this deployment. Vehicle cost reporting requires the signal_log hypertable to be populated.",
-      "breakdownRegion": "Ingest cost breakdown"
+      "breakdownRegion": "Ingest cost breakdown",
+      "window1d": "Last 1 day",
+      "window7d": "Last 7 days",
+      "window30d": "Last 30 days",
+      "window90d": "Last 90 days"
     },
     "systemStatus": {
       "clientPerformance": {
@@ -606,7 +610,35 @@
       "actions": {
         "refresh": "Refresh ingest x-ray"
       },
-      "hero": "Sample volume"
+      "hero": "Sample volume",
+      "windowOption": {
+        "5m": "5m",
+        "15m": "15m",
+        "1h": "1h",
+        "6h": "6h",
+        "24h": "24h"
+      },
+      "bucketOption": {
+        "30s": "30s",
+        "1m": "1m",
+        "5m": "5m",
+        "15m": "15m",
+        "1h": "1h"
+      },
+      "windowLabel": {
+        "24h": "24 hours",
+        "6h": "6 hours",
+        "5m": "5 minutes",
+        "15m": "15 minutes",
+        "1h": "1 hour"
+      },
+      "bucketLabel": {
+        "30s": "30 seconds",
+        "5m": "5 minutes",
+        "15m": "15 minutes",
+        "1h": "1 hour",
+        "1m": "1 minute"
+      }
     },
     "liveSignals": {
       "refresh": "Refresh live snapshot",
@@ -946,7 +978,11 @@
       "emptyMessage": "pg_stat_statements is empty or has been reset recently. Slow queries will accumulate here as the system processes load.",
       "emptyTable": "No slow queries",
       "subtitle": "Top queries from pg_stat_statements. Sort by mean time to surface the slowest individual calls, or total time to surface the costliest in aggregate.",
-      "notConfigured": "pg_stat_statements is not installed on this PostgreSQL instance. Run `CREATE EXTENSION pg_stat_statements;` and add it to shared_preload_libraries to enable this page."
+      "notConfigured": "pg_stat_statements is not installed on this PostgreSQL instance. Run `CREATE EXTENSION pg_stat_statements;` and add it to shared_preload_libraries to enable this page.",
+      "orderMean": "Mean time",
+      "orderTotal": "Total time",
+      "orderCalls": "Calls",
+      "orderMax": "Max time"
     },
     "dataQuality": {
       "summary": {
@@ -1354,7 +1390,8 @@
     "storageByProvider": "Storage by provider",
     "noStorage": "No stored backups yet.",
     "noErrors": "No recent backup failures.",
-    "runN": "Run #{{id}}"
+    "runN": "Run #{{id}}",
+    "configurationSubtitle": "Export your TeslaSync configuration as a JSON file you can stash in a backup folder or git repo, and import it on a fresh install."
   },
   "coverage": {
     "destinations": {
@@ -1403,7 +1440,12 @@
       "empty": "This category has no routed fields."
     },
     "stat": {
-      "subscriptionCoverage": "Subscription coverage"
+      "subscriptionCoverage": "Subscription coverage",
+      "categories": "Categories",
+      "routedFields": "Routed fields",
+      "subscribed": "Subscribed",
+      "routedNotSubscribed": "Routed, not subscribed",
+      "orphans": "Orphan fields"
     },
     "kpis": "Coverage summary",
     "subtitle": "Package-derived snapshot of routed Tesla proto fields and configured desired subscription membership. Sourced from routing.yaml and teslaconfig.Builder — not confirmation of observed vehicle ingestion.",
@@ -1661,7 +1703,28 @@
     "configIdle": "Fetch config to see results",
     "onboarding": {
       "stepLabel": "Step {{step}}",
-      "goToStep": "Go to step {{step}}: {{label}}"
+      "goToStep": "Go to step {{step}}: {{label}}",
+      "account": {
+        "label": "Tesla developer account"
+      },
+      "application": {
+        "label": "Create application"
+      },
+      "keypair": {
+        "label": "Generate key pair"
+      },
+      "register": {
+        "label": "Register partner"
+      },
+      "auth": {
+        "label": "Authorize account"
+      },
+      "pair": {
+        "label": "Pair vehicle key"
+      },
+      "telemetry": {
+        "label": "Fleet Telemetry"
+      }
     },
     "health": {
       "vin": "VIN",
@@ -1740,7 +1803,11 @@
     "errorsRaw": "Show raw Tesla response",
     "vehicleDataIdle": "Choose a vehicle and an action to see results.",
     "ref": {
-      "empty": "No reference links available"
+      "empty": "No reference links available",
+      "fleetOverview": "Fleet API overview",
+      "partnerEndpoints": "Partner endpoints",
+      "devPortal": "Developer portal",
+      "telemetryGuide": "Fleet Telemetry guide"
     },
     "url": {
       "modeGroup": "Encoding mode"
@@ -1969,7 +2036,8 @@
     "noEndpoints": "No endpoints found in the API spec",
     "workspace": "Request workspace",
     "request": "Request",
-    "historyRecovery": "Saved request history could not be loaded. The playground has started with an empty history; you can select endpoints and send new requests."
+    "historyRecovery": "Saved request history could not be loaded. The playground has started with an empty history; you can select endpoints and send new requests.",
+    "selectExplorerEndpoint": "Select an endpoint from the explorer to start testing"
   },
   "queueStatus": {
     "title": "Background workers",

@@ -81,7 +81,14 @@
     "dwellSuffix": "dwell",
     "margin": "Readiness margin",
     "socUsed": "SoC that drive used",
-    "wellMatched": "Well matched"
+    "wellMatched": "Well matched",
+    "flag": {
+      "tight_margin": "Cut it close on departure",
+      "excess_buffer": "Added far more than that trip used",
+      "early_full_dwell": "Sat at full charge before leaving",
+      "long_dwell": "Long gap before departure",
+      "soc_mismatch": "SoC reading looks inconsistent"
+    }
   },
   "chargeInterruption": {
     "modernization": {
@@ -135,7 +142,20 @@
     "risk": "Posterior risk",
     "evidence": "Evidence",
     "evidenceValue": "{{suspect}} of {{n}} sessions",
-    "lastSuspected": "Last suspected"
+    "lastSuspected": "Last suspected",
+    "trend": {
+      "flat": "Steady",
+      "rising": "Getting worse",
+      "falling": "Improving",
+      "insufficient_data": "Not enough history"
+    },
+    "cause": {
+      "no_end_timestamp": "No end timestamp recorded",
+      "no_end_soc": "No end SoC recorded",
+      "stalled_soc_gain": "SoC gained far slower than this site usually manages",
+      "power_collapse": "Power fell well below this session’s own peak",
+      "aborted_early": "Stopped almost immediately after starting"
+    }
   },
   "chargePlanner": {
     "modernization": {
@@ -335,7 +355,12 @@
     "noRemainingEnergy": "Sites remain, but no positive recorded energy remains.",
     "sessionFallback": "Session-based fallback, not energy-weighted; diversification uses the observed site count.",
     "energyShareUnavailable": "Energy share unavailable",
-    "sessionDependency": "{{site}} — share of sessions, not energy"
+    "sessionDependency": "{{site}} — share of sessions, not energy",
+    "groupedBy": {
+      "place": "Named place",
+      "geo": "Approximate location",
+      "charger_type": "Charger type only"
+    }
   },
   "chargerTypes": {
     "supercharger": "Supercharger",

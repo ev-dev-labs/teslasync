@@ -1502,7 +1502,13 @@
     "noReading": "The reading appears once at least one usable four-corner sample has been analyzed.",
     "suspect": "Leak suspect",
     "offset": "Most offset",
-    "cornerStats": "slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}"
+    "cornerStats": "slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}",
+    "corner": {
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right"
+    }
   },
   "tirePressure": {
     "title": "Tire pressure",
@@ -1551,7 +1557,19 @@
     },
     "pressureHistoryAria": "Tire pressure over time for all four positions",
     "pressureWithStatus": "{{value}} {{unit}} · {{status}}",
-    "unknownPressure": "— · Unknown"
+    "unknownPressure": "— · Unknown",
+    "tire": {
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right"
+    },
+    "status": {
+      "critical": "Critical",
+      "low": "Low",
+      "high": "High",
+      "normal": "Normal"
+    }
   },
   "vehicleSystems": {
     "brief": {

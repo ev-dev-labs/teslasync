@@ -252,7 +252,24 @@
       "boundsUnknown": "Complete source coverage and observation bounds are not established"
     },
     "section": {
-      "vehicleIdentity": "Vehicle identity"
+      "vehicleIdentity": "Vehicle identity",
+      "battery": "Battery health",
+      "maintenance": "Maintenance & service",
+      "softwareUpdates": "Software updates",
+      "warranty": "Warranty",
+      "drivingHistory": "Driving history",
+      "chargingHistory": "Charging history",
+      "securityIncidents": "Security incidents"
+    },
+    "profile": {
+      "warranty": "Warranty claim",
+      "service": "Service visit",
+      "resale": "Resale / vehicle history",
+      "custom": "Custom",
+      "warrantyDesc": "Identity, battery, maintenance, software, and warranty data — no driving/charging behavior.",
+      "serviceDesc": "What a service center needs: identity, maintenance, software, battery, and security events.",
+      "resaleDesc": "The full scrubbed vehicle history a buyer would want to review, across every evidence category.",
+      "customDesc": "Pick exactly which evidence sections to include."
     }
   },
   "achievements": {

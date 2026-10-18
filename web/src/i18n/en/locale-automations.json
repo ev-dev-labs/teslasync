@@ -486,7 +486,9 @@
     "geofence": {
       "enter": "Enter",
       "exit": "Exit",
-      "dwell": "Dwell"
+      "dwell": "Dwell",
+      "inside": "Inside",
+      "outside": "Outside"
     },
     "operators": {
       "equals": "=",
@@ -521,7 +523,39 @@
       "createCustomHint": "You can still create a custom automation from the automations page."
     },
     "importRetryFailedOnly": "Correct and import only the failed entries listed below. Do not re-import successful entries; doing so creates duplicates.",
-    "importEntryError": "Entry {{entry}} ({{name}}): {{message}}"
+    "importEntryError": "Entry {{entry}} ({{name}}): {{message}}",
+    "actions": {
+      "command": "Vehicle command",
+      "notify": "Send notification",
+      "setSetting": "Set setting",
+      "callAutomation": "Call automation",
+      "wait": "Wait"
+    },
+    "conditions": {
+      "signal": "Signal check",
+      "timeWindow": "Time window",
+      "geofence": "Geofence state",
+      "otherAutomation": "Other automation"
+    },
+    "otherAutomation": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "recentlyTriggered": "Recently triggered"
+    },
+    "commandGroups": {
+      "security": "Security & access",
+      "climate": "Climate",
+      "charging": "Charging",
+      "doors": "Doors & trunk",
+      "alerts": "Alerts",
+      "navigation": "Navigation",
+      "driveSoftware": "Drive & software"
+    },
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled",
+      "auto-disabled": "Auto-disabled"
+    }
   },
   "comfort": {
     "title": "Cabin comfort Autopilot",

@@ -69,7 +69,7 @@ export function RegionSettings() {
         ) : region ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4">
-              <p className="text-xs text-[var(--text-muted)] mb-1 tracking-wider">{t('region.regionCode', 'Region')}</p>
+              <p className="text-xs text-[var(--text-muted)] mb-1 tracking-wider">{t('region.regionCode', "Region code")}</p>
               <p className="text-lg font-semibold text-[var(--text-primary)]">{region}</p>
             </div>
             <div className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4">

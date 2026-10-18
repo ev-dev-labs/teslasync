@@ -37,7 +37,11 @@
       "title": "Cohort eligibility",
       "unknownYear": "Unknown",
       "year": "Model-year bucket",
-      "loading": "Loading cohort eligibility…"
+      "loading": "Loading cohort eligibility…",
+      "suppressed": "This cohort is suppressed because it is too small, lacks enough metric data, or has exhausted its privacy budget.",
+      "insufficient_cohort": "This cohort is suppressed because it is too small, lacks enough metric data, or has exhausted its privacy budget.",
+      "insufficient_metric_data": "This cohort is suppressed because it is too small, lacks enough metric data, or has exhausted its privacy budget.",
+      "privacy_budget_exhausted": "This cohort is suppressed because it is too small, lacks enough metric data, or has exhausted its privacy budget."
     },
     "consent": {
       "acknowledge": "I opt in to bounded aggregate benchmarking and understand that released aggregates cannot be withdrawn.",

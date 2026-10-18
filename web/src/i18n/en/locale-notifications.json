@@ -1918,6 +1918,15 @@
         "emptyDescription": "Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts.",
         "emptyTitle": "No external channels configured",
         "externalChannels": "External channels for test notifications:",
+        "kind": {
+          "discord": "discord",
+          "email": "email",
+          "ntfy": "ntfy",
+          "pushover": "pushover",
+          "slack": "slack",
+          "telegram": "telegram",
+          "webhook": "webhook"
+        },
         "selectChannels": "Selected channels",
         "testTargetLabel": "Test delivery target"
       },
@@ -2033,6 +2042,17 @@
         "signalHint": "Fires when a raw telemetry signal crosses a threshold.",
         "system": "System service",
         "systemHint": "Notify when a monitored system service fails or recovers."
+      },
+      "operators": {
+        "!=": "!=",
+        "<": "<",
+        "<=": "<=",
+        "=": "=",
+        ">": ">",
+        ">=": ">=",
+        "between": "between",
+        "changed": "changed",
+        "outside": "outside"
       },
       "place": {
         "add": "Manage places",
@@ -2262,8 +2282,8 @@
         "suppressed": "Suppressed on this device by the \"{{reason}}\" rule."
       },
       "unfiltered": "Everything delivered",
+      "vehicleFilterHint": "System notifications with no vehicle attached are exempt from the vehicle filter. The device switch, category, and minimum severity rules still apply.",
       "vehicleScope": "Vehicle scope",
-      "vehicleScopeHint": "Fleet-wide notifications with no vehicle attached are always delivered.",
       "vehicleScopeSection": "Vehicle scope settings"
     },
     "group": {

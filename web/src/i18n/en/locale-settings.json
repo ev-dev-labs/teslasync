@@ -1518,6 +1518,7 @@
     }
   },
   "backup": {
+    "configurationSubtitle": "Export your TeslaSync configuration as a JSON file you can stash in a backup folder or git repo, and import it on a fresh install.",
     "export": {
       "busy": "Exporting…",
       "cta": "Export JSON",
@@ -1554,7 +1555,6 @@
       "quietHours": "Quiet hours",
       "settings": "General settings"
     },
-    "subtitle": "Manage automated backups and restore points",
     "title": "Backup & restore"
   },
   "battery": {
@@ -1923,6 +1923,31 @@
         "invalid": "invalid",
         "missing": "missing",
         "value": "value"
+      }
+    }
+  },
+  "devtools": {
+    "onboarding": {
+      "account": {
+        "label": "Tesla developer account"
+      },
+      "application": {
+        "label": "Create application"
+      },
+      "auth": {
+        "label": "Authorize account"
+      },
+      "keypair": {
+        "label": "Generate key pair"
+      },
+      "pair": {
+        "label": "Pair vehicle key"
+      },
+      "register": {
+        "label": "Register partner"
+      },
+      "telemetry": {
+        "label": "Fleet Telemetry"
       }
     }
   },

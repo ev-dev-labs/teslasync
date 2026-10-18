@@ -561,7 +561,7 @@ export default function SignalsWorkspacePage() {
                   description={diffSummary.period.kind === 'unknown' ? diffSummary.period.reason ?? diffSummary.period.label : diffSummary.period.label}
                   metrics={diffBriefMetrics}
                   scope={diffSummary.period.label}
-                  statusLabel={diffLoading && !diffResp ? t('common.loading', 'Loading')
+                  statusLabel={diffLoading && !diffResp ? t('common.loading', "Loading...")
                     : diffState.fatalError ? t('error.loadFailed', 'Failed to load data')
                       : diffState.refreshError || diffState.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
                         : diffResp ? t('signalsWorkspace.summary.diffAvailable', 'Snapshot comparison available')

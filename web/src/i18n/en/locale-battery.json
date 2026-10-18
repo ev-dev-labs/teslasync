@@ -3015,6 +3015,7 @@
       "totalCycles": "Total cycles",
       "trendTitle": "Health trend & projection",
       "trendTitleAria": "Battery health trend and 95% confidence projection chart",
+      "validFitRequired": "Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)",
       "warranty": "80% Warranty",
       "years": "years",
       "yearsCount": "{{y}} years",
@@ -3076,7 +3077,13 @@
       "title": "Smart insights"
     },
     "links": {
-      "title": "Explore More"
+      "cells": "Battery Cells",
+      "degradation": "Degradation",
+      "energyFlow": "Energy Flow",
+      "projectedRange": "Projected Range",
+      "sleepEfficiency": "Sleep Efficiency",
+      "title": "Explore More",
+      "vampireDrain": "Vampire Drain"
     },
     "metric": {
       "age": "Battery age",

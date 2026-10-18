@@ -45,6 +45,11 @@
         "minutes": "{{count}}m ago",
         "hours": "{{count}}h ago",
         "days": "{{count}}d ago"
+      },
+      "severity": {
+        "warning": "warning",
+        "info": "info",
+        "critical": "critical"
       }
     },
     "apiUsage": {
@@ -287,7 +292,12 @@
       "savingsSource": "Returned monthly savings estimate, retaining the existing currency formatting without changing its denomination.",
       "summaryTitle": "Returned charging recommendations",
       "summaryDescription": "Schedule and cost estimates remain separate inferred operands; peak-use classification, the rate timeline and actionable recommendations remain below.",
-      "summaryScope": "Vehicle {{id}} · returned optimizer analysis; exact source recording bounds and completeness are not supplied."
+      "summaryScope": "Vehicle {{id}} · returned optimizer analysis; exact source recording bounds and completeness are not supplied.",
+      "priority": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high"
+      }
     },
     "chargingSchedule": {
       "modeStartAt": "Start at",
@@ -594,7 +604,12 @@
       "potentialSavings": "Potential savings: {{pct}}%",
       "noTips": "No tips available",
       "title": "Driving coach",
-      "scoreLabel": "/ 100"
+      "scoreLabel": "/ 100",
+      "impact": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high"
+      }
     },
     "drivingDynamics": {
       "partialPeaks": "Partial peak readings",
@@ -613,7 +628,13 @@
       "distribution": "G-force distribution",
       "gForce": "G-force",
       "samples": "Samples",
-      "distributionAria": "Distribution of observed acceleration magnitudes"
+      "distributionAria": "Distribution of observed acceleration magnitudes",
+      "severity": {
+        "normal": "Normal",
+        "calm": "Calm",
+        "sporty": "Sporty",
+        "aggressive": "Aggressive"
+      }
     },
     "energyFlowAnimated": {
       "idle": "Idle",
@@ -1133,7 +1154,14 @@
       "pause": "Pause",
       "title": "Signal log",
       "noSignals": "No signal updates yet",
-      "unknownSource": "Unknown"
+      "unknownSource": "Unknown",
+      "source": {
+        "fleet_telemetry": "MQTT",
+        "fleet_api": "API",
+        "manual": "Manual",
+        "backfill": "Cache",
+        "unknown": "Unknown"
+      }
     },
     "sleepEfficiency": {
       "efficiency": "Efficiency",
@@ -1268,7 +1296,11 @@
       "goroutinesDescription": "Goroutines in the returned runtime snapshot; an absent reading remains unknown.",
       "poolSummaryTitle": "Connection pool snapshot",
       "poolSummaryDescription": "Pool and runtime counts retain their own source state independently of service health and database statistics. Memory and database size remain separate source references.",
-      "poolSummaryScope": "Returned pool/runtime snapshot only; no historical window or verified-live coverage is inferred"
+      "poolSummaryScope": "Returned pool/runtime snapshot only; no historical window or verified-live coverage is inferred",
+      "db": "Database",
+      "mqtt": "MQTT",
+      "teslaApi": "Tesla API",
+      "workers": "Fleet Telemetry"
     },
     "telemetryErrors": {
       "unknown": "Unknown",
@@ -1342,7 +1374,11 @@
       "statusUnknown": "Unknown",
       "statusDown": "Down",
       "consecutiveFailures": "consecutive failures",
-      "servicesHealthy": "Services healthy"
+      "servicesHealthy": "Services healthy",
+      "database": "Database",
+      "mqtt": "MQTT",
+      "tesla_api": "Tesla API",
+      "fleet_telemetry": "Fleet Telemetry"
     },
     "vampireDrain": {
       "min": "m",

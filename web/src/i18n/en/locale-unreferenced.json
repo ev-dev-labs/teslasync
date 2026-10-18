@@ -389,6 +389,13 @@
     "title": "Vampire drain"
   },
   "vehicle": "vehicle",
+  "vehicle.state.asleep": "Asleep",
+  "vehicle.state.charging": "Charging",
+  "vehicle.state.driving": "Driving",
+  "vehicle.state.offline": "Offline",
+  "vehicle.state.online": "Online",
+  "vehicle.state.parked": "Parked",
+  "vehicle.state.updating": "Updating",
   "visits": "visits",
   "workspaceContext": {
     "ranges": {

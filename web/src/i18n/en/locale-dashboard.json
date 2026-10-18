@@ -77,7 +77,13 @@
     "display": "Display",
     "showBorders": "Show widget borders",
     "compactMode": "Compact mode (smaller gaps)",
-    "vehicleFilterDesc": "Show data for a specific vehicle in all widgets. Widget-level filters take precedence."
+    "vehicleFilterDesc": "Show data for a specific vehicle in all widgets. Widget-level filters take precedence.",
+    "refresh0": "Default (per widget)",
+    "refresh5": "Every 5 seconds",
+    "refresh10": "Every 10 seconds",
+    "refresh30": "Every 30 seconds",
+    "refresh60": "Every minute",
+    "refresh300": "Every 5 minutes"
   },
   "glance": {
     "location": {
@@ -511,14 +517,15 @@
       "vehicleCommandUnlock": "Unlock vehicle",
       "vehicleCommandWake": "Wake vehicle"
     },
+    "batteryTrendTitle": "Battery trend",
+    "browseDrives": "View all",
     "charged": "charged",
     "drive": "drive",
     "empty": "No activity yet. Start driving!",
     "myActivity": {
       "empty": "No recent activity in this window."
     },
-    "title": "Recent activity",
-    "viewAll": "Open full inbox"
+    "title": "Recent activity"
   },
   "admin": {
     "liveSignals": {
@@ -946,8 +953,7 @@
       "unknown": "Battery delta unknown"
     },
     "empty": "No battery health data available yet.",
-    "seriesLabel": "Battery %",
-    "title": "Battery health"
+    "seriesLabel": "Battery %"
   },
   "bulk": {
     "clear": "Clear selection",
@@ -2808,6 +2814,11 @@
         "minutes": "{{count}}m ago",
         "unknown": "—"
       },
+      "severity": {
+        "critical": "critical",
+        "info": "info",
+        "warning": "warning"
+      },
       "title": "Anomaly detector"
     },
     "apiUsage": {
@@ -3009,6 +3020,11 @@
       "optimized": "Optimized",
       "peak": "Peak",
       "peakUsage": "Peak charging: {{pct}}%",
+      "priority": {
+        "high": "high",
+        "low": "low",
+        "medium": "medium"
+      },
       "rateTimeline": "24h rate timeline",
       "savingsLabel": "Savings/mo",
       "savingsShort": "{{amount}}/mo",
@@ -3305,6 +3321,11 @@
     },
     "driving": "Driving",
     "drivingCoach": {
+      "impact": {
+        "high": "high",
+        "low": "low",
+        "medium": "medium"
+      },
       "noTips": "No tips available",
       "potentialSavings": "Potential savings: {{pct}}%",
       "scoreLabel": "/ 100",
@@ -3325,6 +3346,12 @@
       "noData": "No dynamics data",
       "partialPeaks": "Partial peak readings",
       "samples": "Samples",
+      "severity": {
+        "aggressive": "Aggressive",
+        "calm": "Calm",
+        "normal": "Normal",
+        "sporty": "Sporty"
+      },
       "smooth": "Smooth",
       "title": "Driving dynamics",
       "unknown": "Unknown dynamics"
@@ -4000,6 +4027,13 @@
       "pause": "Pause",
       "resume": "Resume",
       "signalsPerSec": "signals/sec",
+      "source": {
+        "backfill": "Cache",
+        "fleet_api": "API",
+        "fleet_telemetry": "MQTT",
+        "manual": "Manual",
+        "unknown": "Unknown"
+      },
       "title": "Signal log",
       "unknownSource": "Unknown"
     },
@@ -4124,6 +4158,7 @@
       "activeConns": "Active conns",
       "activeConnsDescription": "Connections in use in the returned pool snapshot; a maximum is shown only when the source supplies a positive value.",
       "databaseError": "Unable to load database size",
+      "db": "Database",
       "dbSize": "DB size",
       "degraded": "Degraded",
       "down": "Down",
@@ -4132,6 +4167,7 @@
       "healthError": "Unable to load service health",
       "healthy": "Healthy",
       "memory": "Memory",
+      "mqtt": "MQTT",
       "noData": "No system health data",
       "noDatabaseData": "No database size data",
       "noPoolData": "No connection pool data",
@@ -4144,7 +4180,9 @@
       "statusDown": "Down",
       "statusOk": "Healthy",
       "statusUnknown": "Unknown",
-      "title": "System health"
+      "teslaApi": "Tesla API",
+      "title": "System health",
+      "workers": "Fleet Telemetry"
     },
     "telemetryErrors": {
       "activeVINs": "{{count}} VINs with errors",
@@ -4222,8 +4260,11 @@
     "uptime": {
       "allOk": "All OK",
       "consecutiveFailures": "consecutive failures",
+      "database": "Database",
       "dbSize": "DB size",
       "dbSizeSource": "Database size text returned by the server, preserved verbatim; no byte count is supplied.",
+      "fleet_telemetry": "Fleet Telemetry",
+      "mqtt": "MQTT",
       "noData": "No system health data",
       "overall": "Overall",
       "servicesHealthy": "Services healthy",
@@ -4236,6 +4277,7 @@
       "summaryTitle": "Database snapshot",
       "tables": "Tables",
       "tablesSource": "Database table count returned by the system-health snapshot; not a fleet-history record count.",
+      "tesla_api": "Tesla API",
       "title": "Uptime monitor"
     },
     "vampireDrain": {

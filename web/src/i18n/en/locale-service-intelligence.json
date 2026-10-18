@@ -95,7 +95,12 @@
       "emptyTitle": "No overlapping symptoms",
       "score": "{{value}}% match",
       "select": "Choose a vehicle to compare recent signal deviations with campaign components.",
-      "title": "Ranked observed symptoms"
+      "title": "Ranked observed symptoms",
+      "severity": {
+        "info": "Information",
+        "critical": "Critical",
+        "warning": "Warning"
+      }
     },
     "vehicle": {
       "assemblyPlant": "Assembly plant",

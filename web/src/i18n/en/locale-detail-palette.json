@@ -93,7 +93,33 @@
       "dashboardSwitch": "Switch dashboard layout…",
       "dashboardAddWidget": "Add widget to dashboard",
       "dashboardReset": "Reset dashboard to default",
-      "frecencyReset": "Reset command palette usage history"
+      "frecencyReset": "Reset command palette usage history",
+      "fleetSetup": "Open Fleet Setup",
+      "feedback": "Report bug / Send feedback",
+      "wakeUp": "Wake Up Vehicle",
+      "lock": "Lock Vehicle",
+      "unlock": "Unlock Vehicle",
+      "sentryOn": "Sentry Mode On",
+      "sentryOff": "Sentry Mode Off",
+      "climateOn": "Climate On",
+      "climateOff": "Climate Off",
+      "dogMode": "Dog Mode",
+      "campMode": "Camp Mode",
+      "chargePortOpen": "Open Charge Port",
+      "chargePortClose": "Close Charge Port",
+      "chargeStart": "Start Charging",
+      "chargeStop": "Stop Charging",
+      "chargeMax": "Charge to Max Range",
+      "chargeStandard": "Charge to Standard",
+      "frunk": "Open Frunk",
+      "trunk": "Open Trunk",
+      "ventWindows": "Vent Windows",
+      "closeWindows": "Close Windows",
+      "horn": "Honk Horn",
+      "flash": "Flash Lights",
+      "playPause": "Play / Pause",
+      "nextTrack": "Next Track",
+      "prevTrack": "Previous Track"
     },
     "toast": {
       "refreshed": "Data refreshed",
@@ -107,6 +133,20 @@
       "sibling": "Same section"
     },
     "dialogLabel": "Command palette",
-    "filterBy": "Filter"
+    "filterBy": "Filter",
+    "scope": {
+      "command": "Commands",
+      "command.empty": "No commands available",
+      "navigate": "Pages",
+      "navigate.empty": "No pages available",
+      "vehicle-switch": "Vehicles",
+      "vehicle-switch.empty": "No vehicles available",
+      "registry": "Settings",
+      "registry.empty": "No settings available"
+    },
+    "placeholder.command": "Search commands…",
+    "placeholder.navigate": "Search pages…",
+    "placeholder.vehicle-switch": "Switch vehicle…",
+    "placeholder.registry": "Search settings…"
   }
 }

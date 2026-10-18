@@ -781,7 +781,7 @@ export default function BackupRestorePage() {
 
   /* ---- preview table columns ---- */
   const previewColumns: Column<{ name: string; rows: number }>[] = [
-    { key: 'name', filterValue: (row) => row.name ?? null, header: t('backup.table', 'Hypertable'), render: (row) => <Text mono weight="medium" color="primary">{row.name}</Text> },
+    { key: 'name', filterValue: (row) => row.name ?? null, header: t('backup.table', "Table"), render: (row) => <Text mono weight="medium" color="primary">{row.name}</Text> },
     {
       key: 'rows',
       filterValue: (row) => row.rows ?? null,
@@ -1090,7 +1090,7 @@ export default function BackupRestorePage() {
       <Modal
         open={modalOpen}
         onClose={closeModal}
-        title={editingConfig ? t('backup.editConfig', 'Edit configuration') : t('backup.newConfig', 'New configuration')}
+        title={editingConfig ? t('backup.editConfig', 'Edit configuration') : t('backup.newConfig', "New config")}
         size="lg"
       >
         <div className="flex flex-col gap-5 p-1">

@@ -540,7 +540,10 @@
       "signals": "Signals",
       "totalRecords": "Total records",
       "signalsWithData": "{{count}} with data",
-      "timeSpan": "Time span"
+      "timeSpan": "Time span",
+      "numeric": "Numeric points",
+      "text": "Text points",
+      "boolean": "Boolean points"
     },
     "title": "Signal log viewer",
     "perPage": "Per page",
@@ -783,7 +786,11 @@
       "samplesDescription": "Autocorrelation-adjusted effective sample size at the best lag; raw points are overlapping samples at that lag.",
       "significanceDescription": "The existing autocorrelation-adjusted significance test; the threshold is a coefficient, not a percentage.",
       "resampledPairs": "from {{n}} overlapping resampled pairs",
-      "resampledSamplesDescription": "Autocorrelation-adjusted effective sample size at the best lag; overlapping resampled pairs are not original source records. Valid measurement counts, when available, are timestamp-deduplicated before overlap clipping or resampling."
+      "resampledSamplesDescription": "Autocorrelation-adjusted effective sample size at the best lag; overlapping resampled pairs are not original source records. Valid measurement counts, when available, are timestamp-deduplicated before overlap clipping or resampling.",
+      "sourceRecordsA": "Signal A: {{n}} source records",
+      "validMeasurementsA": "Signal A: {{n}} valid timestamp-deduplicated measurements",
+      "sourceRecordsB": "Signal B: {{n}} source records",
+      "validMeasurementsB": "Signal B: {{n}} valid timestamp-deduplicated measurements"
     },
     "title": "Live telemetry",
     "drivetrain": "Drivetrain",

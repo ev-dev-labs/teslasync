@@ -912,6 +912,12 @@
     "chart": {
       "title": "Consumption change per version",
       "aria": "Bar chart of the change in energy consumption in watt-hours per kilometre after each firmware version"
+    },
+    "verdict": {
+      "better": "More efficient",
+      "worse": "Less efficient",
+      "noChange": "No measurable change",
+      "insufficient": "Not enough drives"
     }
   },
   "fleetCompare": {

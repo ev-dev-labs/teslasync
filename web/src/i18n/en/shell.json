@@ -716,6 +716,36 @@
     "loading": "Loading"
   },
   "glossary": {
+    "degradation": {
+      "howMeasured": "Derived from many observed charges over weeks. A single reading is noise: temperature, recent fast charging and a resting pack all shift the estimate by more than a year of real loss.",
+      "term": "Degradation"
+    },
+    "efficiency": {
+      "howMeasured": "Computed from completed drives that report both distance and energy. Charging losses are not included, so a wall-meter figure will always look worse than this one.",
+      "term": "Efficiency"
+    },
+    "phantomDrain": {
+      "howMeasured": "Measured only across parked, non-charging windows. Sentry mode, cabin overheat protection, preconditioning and frequent polling all raise it, and each is a setting rather than a fault.",
+      "term": "Phantom drain (vampire drain)"
+    },
+    "ratedRange": {
+      "definition": "A rating, not a prediction: the current state of charge multiplied by a fixed EPA-derived distance per percent. It ignores weather, speed, terrain and load.",
+      "howMeasured": "Reported by the vehicle. Because the multiplier is fixed, rated range moves only when state of charge or the pack’s estimated capacity moves — real trips almost always use more.",
+      "term": "Rated range"
+    },
+    "signalFreshness": {
+      "howMeasured": "Freshness is the age of the last received value, not a health check. A sleeping vehicle produces stale signals by design; that is normal and costs no range.",
+      "term": "Signal freshness"
+    },
+    "soc": {
+      "definition": "The percentage of usable energy currently left in the battery, where 100% is a full charge of the pack as it exists today — not as it was when new.",
+      "howMeasured": "Reported directly by the vehicle. The displayed value already excludes the buffer the car reserves below 0%, so a car at 0% is not an empty pack.",
+      "term": "State of charge (SOC)"
+    },
+    "stateOfHealth": {
+      "howMeasured": "Estimated from observed full-charge capacity over time. It is an estimate with a real error bar, which is why the trend matters more than any single value.",
+      "term": "State of health (SoH)"
+    },
     "tooltipLabel": "What is {{term}}?"
   },
   "help": {
@@ -1425,7 +1455,9 @@
       "densityCompact": "Workspace density: Compact",
       "densitySpacious": "Workspace density: Spacious",
       "export": "Open data export",
+      "feedback": "Report bug / Send feedback",
       "fleetComparison": "Compare fleet vehicles",
+      "fleetSetup": "Open Fleet Setup",
       "frecencyReset": "Reset command palette usage history",
       "newAlert": "Create new alert rule",
       "notificationsHistory": "Open notification history",
@@ -2284,7 +2316,8 @@
   "severity": {
     "info": "Info",
     "warn": "Warning",
-    "critical": "Critical"
+    "critical": "Critical",
+    "success": "Success"
   },
   "smallMultiples": {
     "noData": "No data"

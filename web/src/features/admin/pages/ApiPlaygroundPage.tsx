@@ -174,7 +174,7 @@ export default function ApiPlaygroundPage() {
               <LayoutCard title={t('playground.workspace', 'Request workspace')}>
                 {/* no-action: the adjacent endpoint explorer owns selection; do not auto-select or execute an arbitrary endpoint. */}
                 <EmptyState icon={<Icon icon={BookOpen} size="xl" />}
-                  message={t('playground.selectEndpoint', 'Select an endpoint from the explorer to start testing')} />
+                  message={t("playground.selectExplorerEndpoint", 'Select an endpoint from the explorer to start testing')} />
                 {allEndpoints.length > 0 && <Text as="p" variant="caption" className="mt-2 text-center">
                   {t('playground.endpointCount', '{{count}} endpoints available', { count: allEndpoints.length })}
                 </Text>}

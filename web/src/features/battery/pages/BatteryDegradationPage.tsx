@@ -600,7 +600,7 @@ export default function BatteryDegradationPage() {
             ) : (
               <EmptyState /* no-action: prediction needs a minimum snapshot count that isn't met yet */
                 icon={<AlertTriangle className="h-8 w-8" />}
-                message={t('battery.degradation.needMore', 'Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)')}
+                message={t("battery.degradation.validFitRequired", 'Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)')}
               />
             )}
           </LayoutCard>

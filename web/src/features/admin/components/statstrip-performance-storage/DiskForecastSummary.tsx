@@ -56,7 +56,7 @@ export function DiskForecastSummary({
     <section className="min-w-0" data-retained={retained}>
       <OperationalBrief compact testId="disk-forecast-summary" metrics={briefMetrics}
         eyebrow={t('admin.diskForecast.pageTitle', 'Disk forecast')} title={title} description={growthHint}
-        statusLabel={loading ? t('common.loading', 'Loading') : error ? t('common.error', 'Error')
+        statusLabel={loading ? t('common.loading', "Loading...") : error ? t('common.error', 'Error')
           : retained ? t('admin.operationalBrief.retained', 'Retained evidence')
           : known ? t('admin.operationalBrief.snapshot', 'Source snapshot')
           : t('admin.operationalBrief.unmeasured', 'Not measured')}

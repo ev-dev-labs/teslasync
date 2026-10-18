@@ -4,6 +4,36 @@
     "panelTitle": "What the numbers mean",
     "panelSubtitle": "Definitions for the terms that are easiest to misread, and where each number actually comes from.",
     "howMeasured": "How we measure it",
-    "seeInContext": "See it in context"
+    "seeInContext": "See it in context",
+    "soc": {
+      "term": "State of charge (SOC)",
+      "definition": "The percentage of usable energy currently left in the battery, where 100% is a full charge of the pack as it exists today — not as it was when new.",
+      "howMeasured": "Reported directly by the vehicle. The displayed value already excludes the buffer the car reserves below 0%, so a car at 0% is not an empty pack."
+    },
+    "ratedRange": {
+      "term": "Rated range",
+      "definition": "A rating, not a prediction: the current state of charge multiplied by a fixed EPA-derived distance per percent. It ignores weather, speed, terrain and load.",
+      "howMeasured": "Reported by the vehicle. Because the multiplier is fixed, rated range moves only when state of charge or the pack’s estimated capacity moves — real trips almost always use more."
+    },
+    "degradation": {
+      "term": "Degradation",
+      "howMeasured": "Derived from many observed charges over weeks. A single reading is noise: temperature, recent fast charging and a resting pack all shift the estimate by more than a year of real loss."
+    },
+    "phantomDrain": {
+      "term": "Phantom drain (vampire drain)",
+      "howMeasured": "Measured only across parked, non-charging windows. Sentry mode, cabin overheat protection, preconditioning and frequent polling all raise it, and each is a setting rather than a fault."
+    },
+    "efficiency": {
+      "term": "Efficiency",
+      "howMeasured": "Computed from completed drives that report both distance and energy. Charging losses are not included, so a wall-meter figure will always look worse than this one."
+    },
+    "signalFreshness": {
+      "term": "Signal freshness",
+      "howMeasured": "Freshness is the age of the last received value, not a health check. A sleeping vehicle produces stale signals by design; that is normal and costs no range."
+    },
+    "stateOfHealth": {
+      "term": "State of health (SoH)",
+      "howMeasured": "Estimated from observed full-charge capacity over time. It is an estimate with a real error bar, which is why the trend matters more than any single value."
+    }
   }
 }
