@@ -156,3 +156,9 @@ export const SIDEBAR_SECTION_ICONS: Record<string, LucideIcon> = {
   Diagnostics: Icons.stethoscope,
   About: Icons.info,
 }
+
+/** One section glyph for every navigation surface. */
+export function resolveSectionIcon(title: string): LucideIcon {
+  return SIDEBAR_SECTION_ICONS[title] ?? Icons.home
+}
+export const PHONE_TAB_SECTIONS = ['Home', 'Vehicles', 'Driving', 'Charging'] as const

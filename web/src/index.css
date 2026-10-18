@@ -126,7 +126,7 @@
      bottom safe area only when it is the lowest bar (tab bar hidden).
      Overlays (Drawer, Modal sheets) pin above this so footers never sit
      under the bars. */
-  --shell-tab-bar-height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  --shell-tab-bar-height: calc(4rem + env(safe-area-inset-bottom, 0px));
   --shell-status-bar-row: 2.75rem;
   --shell-status-bar-safe-area: 0px;
   --shell-status-bar-height: calc(var(--shell-status-bar-row) + var(--shell-status-bar-safe-area));

@@ -96,13 +96,13 @@ describe('MoreSegment', () => {
     );
 
     const trigger = screen.getByRole('button', {
-      name: 'Open more status options',
+      name: 'Status',
     });
-    expect(trigger).toHaveTextContent('More');
+    expect(trigger).toHaveTextContent('Status');
     expect(trigger).toHaveAttribute('data-tour', 'keyboard-hint');
     fireEvent.click(trigger);
 
-    expect(screen.getByRole('dialog', { name: 'More' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Status' })).toBeInTheDocument();
     expect(screen.getByTestId('more-background')).toHaveAttribute(
       'data-embedded',
       'true',
@@ -130,9 +130,9 @@ describe('MoreSegment', () => {
       />,
     );
 
-    expect(screen.queryByText('More')).toBeNull();
+    expect(screen.queryByText('Status')).toBeNull();
     expect(
-      screen.getByRole('button', { name: 'Open more status options' }),
+      screen.getByRole('button', { name: 'Status' }),
     ).toBeInTheDocument();
   });
 
@@ -145,7 +145,7 @@ describe('MoreSegment', () => {
     );
 
     const trigger = screen.getByRole('button', {
-      name: 'Open more status options. Background work in progress: Saving…',
+      name: 'Status. Background work in progress: Saving…',
     });
     expect(trigger.className).toContain(neonColorMap.amber.text);
     expect(trigger.querySelector('.lucide-loader-circle')).toHaveClass(
@@ -164,7 +164,7 @@ describe('MoreSegment', () => {
     );
 
     const trigger = screen.getByRole('button', {
-      name: 'Open more status options. Background work needs attention: Sync failed',
+      name: 'Status. Background work needs attention: Sync failed',
     });
     expect(trigger.className).toContain(neonColorMap.red.text);
     expect(trigger.querySelector('.lucide-triangle-alert')).toBeTruthy();
@@ -180,7 +180,7 @@ describe('MoreSegment', () => {
     );
 
     const trigger = screen.getByRole('button', {
-      name: 'Open more status options. Update or release notes available',
+      name: 'Status. Update or release notes available',
     });
     expect(trigger.className).toContain(neonColorMap.amber.text);
     expect(container.getElementsByClassName(neonColorMap.amber.dot)[0]).not.toBeNull();
@@ -190,37 +190,37 @@ describe('MoreSegment', () => {
 describe('MoreSegment owned accessibility and state preservation', () => {
   it('uses exact named geometry and scroll ownership with real mobile target classes', () => {
     render(<MoreSegment backgroundJobs={backgroundJobs()} onOpenAbout={openAbout} />);
-    const trigger = screen.getByRole('button', { name: 'Open more status options' });
+    const trigger = screen.getByRole('button', { name: 'Status' });
     expect(trigger).toHaveClass('h-11', 'min-h-11', 'min-w-11', 'shrink-0', 'whitespace-nowrap', 'xl:h-5', 'xl:min-h-0');
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('dialog', { name: 'More' })).toHaveClass(
+    expect(screen.getByRole('dialog', { name: 'Status' })).toHaveClass(
       'max-h-more-menu', 'w-connection-diagnostics', 'overflow-y-auto',
     );
-    expect(screen.getByRole('dialog', { name: 'More' })).toHaveAttribute('aria-modal', 'false');
+    expect(screen.getByRole('dialog', { name: 'Status' })).toHaveAttribute('aria-modal', 'false');
   });
 
   it('closes on Escape and restores the real trigger without replacing the shared focus owner', () => {
     render(<MoreSegment backgroundJobs={backgroundJobs()} onOpenAbout={openAbout} />);
-    const trigger = screen.getByRole('button', { name: 'Open more status options' });
+    const trigger = screen.getByRole('button', { name: 'Status' });
     trigger.focus();
     fireEvent.click(trigger);
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog', { name: 'More' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Status' })).toBeNull();
     expect(trigger).toHaveFocus();
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('does not steal focus already transferred to an external overlay control', () => {
     render(<MoreSegment backgroundJobs={backgroundJobs()} onOpenAbout={openAbout} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Open more status options' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Status' }));
     const external = document.createElement('button');
     document.body.append(external);
     try {
       external.focus();
       fireEvent.keyDown(document, { key: 'Escape' });
-      expect(screen.queryByRole('dialog', { name: 'More' })).toBeNull();
+      expect(screen.queryByRole('dialog', { name: 'Status' })).toBeNull();
       expect(external).toHaveFocus();
     } finally {
       external.remove();
@@ -231,7 +231,7 @@ describe('MoreSegment owned accessibility and state preservation', () => {
     buildNews.current = true;
     render(<MoreSegment backgroundJobs={backgroundJobs([job({ status: 'success' })])} onOpenAbout={openAbout} />);
     const trigger = screen.getByRole('button', {
-      name: 'Open more status options. Background work completed: Saving… · Update or release notes available',
+      name: 'Status. Background work completed: Saving… · Update or release notes available',
     });
     expect(trigger).toHaveClass(neonColorMap.green.text);
     expect(trigger.querySelector('.lucide-circle-check')).toBeTruthy();
@@ -242,7 +242,7 @@ describe('MoreSegment owned accessibility and state preservation', () => {
     buildNews.current = true;
     render(<MoreSegment backgroundJobs={backgroundJobs([job(), job({ id: 'failed', status: 'error' })])} onOpenAbout={openAbout} />);
     const trigger = screen.getByRole('button', {
-      name: 'Open more status options. Background work needs attention: {{count}} tasks · Update or release notes available',
+      name: 'Status. Background work needs attention: {{count}} tasks · Update or release notes available',
     });
     expect(trigger).toHaveClass(neonColorMap.red.text);
     expect(trigger.querySelector('.lucide-triangle-alert')).toBeTruthy();
@@ -254,7 +254,7 @@ describe('MoreSegment owned accessibility and state preservation', () => {
     motionPreference.reduce = true;
     render(<MoreSegment backgroundJobs={backgroundJobs([job()])} onOpenAbout={openAbout} />);
     const trigger = screen.getByRole('button', {
-      name: 'Open more status options. Background work in progress: Saving…',
+      name: 'Status. Background work in progress: Saving…',
     });
     expect(trigger).toHaveClass(neonColorMap.amber.text);
     expect(trigger.querySelector('.lucide-loader-circle')).not.toHaveClass('animate-spin');
@@ -265,18 +265,18 @@ describe('MoreSegment owned accessibility and state preservation', () => {
     buildNews.current = true;
     render(<div dir="rtl"><MoreSegment backgroundJobs={backgroundJobs([job({ label })])} onOpenAbout={openAbout} /></div>);
     const trigger = screen.getByTestId('status-bar-more-trigger');
-    expect(trigger).toHaveAttribute('aria-label', `Open more status options. Background work in progress: ${label} · Update or release notes available`);
+    expect(trigger).toHaveAttribute('aria-label', `Status. Background work in progress: ${label} · Update or release notes available`);
     expect(trigger.getElementsByClassName(neonColorMap.amber.dot)[0]).toHaveClass('end-0.5');
   });
 
   it('keeps the idle unknown-free state neutral and toggles closed without inventing work', () => {
     render(<MoreSegment backgroundJobs={backgroundJobs()} onOpenAbout={openAbout} />);
-    const trigger = screen.getByRole('button', { name: 'Open more status options' });
+    const trigger = screen.getByRole('button', { name: 'Status' });
     expect(trigger).toHaveClass(typography.color.muted);
-    expect(trigger.querySelector('.lucide-ellipsis')).toBeTruthy();
+    expect(trigger.querySelector('.lucide-activity')).toBeTruthy();
     fireEvent.click(trigger);
     expect(screen.getByTestId('more-background')).toHaveAttribute('data-count', '0');
     fireEvent.click(trigger);
-    expect(screen.queryByRole('dialog', { name: 'More' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Status' })).toBeNull();
   });
 });

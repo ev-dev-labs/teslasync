@@ -13,6 +13,7 @@ import { NavSectionHeader } from './NavSectionHeader'
 import { SidebarCountChip, SidebarNotificationDot, SidebarRow } from './SidebarRow'
 import { SidebarDriveBadge } from './SidebarDriveBadge'
 import type { SidebarSuggestion } from './sidebarSuggest'
+import { resolveSectionIcon } from './sidebarIcons'
 import type { DeckSelection } from './CommandDeck'
 
 export interface AtlasPanelProps {
@@ -66,10 +67,12 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
   const visibleGroups = groups.map(group => ({ ...group, groupKey: group.entries[0].to, entries: !filtering || (group.label && matchesSidebarTokens(`${group.label} ${group.labelKey ? t(group.labelKey, group.label) : ''}`.toLowerCase(), tokenizeSidebarQuery(query))) ? group.entries : group.entries.filter(item => matches.has(item.to)) })).filter(group => group.entries.length > 0)
   const pins = pinnedItems.filter(item => sectionPaths.has(item.to) && !isActive(item.to) && (!filtering || matches.has(item.to)))
   const recent = recentItems.filter(item => sectionPaths.has(item.to) && !pinned.has(item.to) && (!filtering || matches.has(item.to)))
-  const isOpen = (key: string) => filtering ? !filterClosed.has(key) : !collapsed[viewKey + ':' + key]
+  const defaultClosed = (key: string) => sectionPaths.size > 25 && key !== 'pinned' && key !== 'recent' && !groups.find(group => group.entries[0].to === key)?.entries.some(item => isActive(item.to))
+  const isOpen = (key: string) => filtering ? !filterClosed.has(key) : !(collapsed[viewKey + ':' + key] ?? defaultClosed(key))
+  const SectionIcon = resolveSectionIcon(section?.title ?? 'Home')
   const toggle = (key: string) => {
     if (filtering) setFilterClosed(previous => { const next = new Set(previous); if (next.has(key)) next.delete(key); else next.add(key); return next })
-    else setCollapsed(previous => ({ ...previous, [viewKey + ':' + key]: !previous[viewKey + ':' + key] }))
+    else setCollapsed(previous => ({ ...previous, [viewKey + ':' + key]: isOpen(key) }))
   }
   useEffect(() => { setQuery('') }, [viewKey])
   useEffect(() => {
@@ -89,12 +92,12 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
       ariaLabel={quickPin ? t('nav.deck.quickAccessLink', { page: label, defaultValue: 'Quick access: {{page}}' }) : undefined}
       onSelect={onItemSelect} onDoubleClick={() => { if (!pinned.has(item.to)) onPin(item.to) }} trailing={trailing} dataTour={item.dataTour}
       hoverAction={<IconButton icon={<Icons.pin className={pinned.has(item.to) ? 'h-4 w-4 fill-current' : 'h-4 w-4'} aria-hidden />}
-        label={pinLabel} className="min-h-11 min-w-11" onClick={() => pinned.has(item.to) ? onUnpin(item.to) : onPin(item.to)}
+        label={pinLabel} className="sidenav-pin min-h-11 min-w-11" onClick={() => pinned.has(item.to) ? onUnpin(item.to) : onPin(item.to)}
         aria-describedby={pinSyncUnavailable ? `${id}-pin-offline` : undefined} data-testid={`atlas-pin-${item.to}`} />} />
   }
   const groupHeader = (key: string, label: string, count: number) => <Button type="button" variant="ghost" size="sm"
     aria-label={label} aria-expanded={isOpen(key)} aria-controls={`${id}-${key}`} onClick={() => toggle(key)}
-    className="min-h-11 w-full justify-start gap-2 px-2 text-sm text-[var(--text-secondary)]">
+    className="sidenav-group-header min-h-11 w-full justify-start gap-2 px-2 text-sm text-[var(--text-secondary)]">
     {isOpen(key) ? <Icons.expand className="h-4 w-4 shrink-0" aria-hidden /> : <Icons.next className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden />}
     <span className="min-w-0 flex-1 truncate text-start">{label}</span>
     <span aria-hidden className="rounded-shape-sm bg-[var(--surface-3)] px-2 text-xs tabular-nums">{count}</span>
@@ -102,8 +105,9 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
   const collectionKeys = groups.filter(group => group.label).map(group => group.entries[0].to)
   const anyClosed = collectionKeys.some(key => !isOpen(key))
   return <div role="navigation" aria-label={t('nav.sidebar', 'Sidebar navigation')} data-testid="atlas-panel-secondary"
-    className="flex h-full min-h-0 w-full flex-col border-s border-e border-[var(--border-default)] bg-[var(--nav-context-bg)]">
+    className="sidenav-panel flex h-full min-h-0 w-full flex-col border-s border-e border-[var(--border-default)] bg-[var(--nav-context-bg)]">
     <div className="flex h-12 shrink-0 items-center gap-1 border-b border-[var(--border-default)] px-2">
+      <SectionIcon className="ms-1 h-5 w-5 shrink-0" aria-hidden />
       <p className="min-w-0 flex-1 truncate px-1 text-sm font-medium">{title}</p>
       {collectionKeys.length > 1 && <IconButton label={anyClosed ? t('nav.deck.expandAllGroups', 'Expand all groups') : t('nav.deck.collapseAllGroups', 'Collapse all groups')}
         icon={anyClosed ? <Icons.expandAll className="h-5 w-5" aria-hidden /> : <Icons.collapseAll className="h-5 w-5" aria-hidden />}
@@ -113,7 +117,7 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
         }} className="min-h-11 min-w-11" />}
       <IconButton label={t('nav.sidenav.hidePanel', 'Hide panel')} icon={<Icons.close className="h-4 w-4" aria-hidden />} onClick={onClose} className="min-h-11 min-w-11" />
     </div>
-    {section && <div className="shrink-0 px-3 pt-3"><Input type="search" value={query} onChange={event => { setQuery(event.target.value); setFilterClosed(new Set()) }}
+    {section && <div className="shrink-0 px-3 pt-3"><Input className="sidenav-filter" type="search" value={query} onChange={event => { setQuery(event.target.value); setFilterClosed(new Set()) }}
       aria-label={t('nav.sidenav.filterLabel', { section: title, defaultValue: 'Filter {{section}} pages' })}
       placeholder={t('nav.sidenav.filter', { section: title, defaultValue: 'Filter {{section}}…' })} icon={<Icons.filter className="h-4 w-4" aria-hidden />}
       suffix={query ? <>

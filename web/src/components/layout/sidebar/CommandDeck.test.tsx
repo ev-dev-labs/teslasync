@@ -217,39 +217,28 @@ describe('CommandDeck', () => {
     expect(within(vehiclesLink).getByLabelText('2 vehicles')).toBeInTheDocument()
   })
 
-  it('exposes every rail label through a hover-and-focus tooltip', () => {
-    renderControlledDeck({ suggestions: [{ ...tripsItem, reason: 'Related', kind: 'related' as const }] })
-
+  it('keeps full rail names accessible without duplicate hover or focus tooltips', () => {
+    renderControlledDeck({})
     const driving = desktopRail().getByRole('button', { name: 'Driving' })
-    const tip = document.getElementById(driving.getAttribute('aria-describedby') ?? '')
-    expect(tip).toHaveAttribute('role', 'tooltip')
-    expect(tip).toHaveTextContent('Driving')
-    expect(tip).not.toHaveTextContent('pages')
-    // One affordance for pointer and keyboard: hidden at rest, revealed by
-    // hover or focus.
-    expect(tip).toHaveClass('opacity-0', 'group-hover/tip:opacity-100', 'group-focus-within/tip:opacity-100')
-
-    // Keyboard focus gets the same affordance as hover: Escape dismisses the
-    // bubble while focused, and either focus or hover re-arms it.
+    expect(driving).not.toHaveAttribute('title')
+    expect(driving).not.toHaveAttribute('aria-describedby')
     act(() => { driving.focus() })
-    fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
-    expect(tip).toHaveClass('!opacity-0')
-    act(() => { driving.blur() })
-    act(() => { driving.focus() })
-    expect(tip).not.toHaveClass('!opacity-0')
-    fireEvent.mouseEnter(driving.parentElement!)
-    fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
-    expect(tip).toHaveClass('!opacity-0')
+    fireEvent.mouseEnter(driving)
+    expect(driving).toHaveAccessibleName('Driving')
+    expect(driving.closest('[data-testid="rail-scroll"]')?.querySelector('[role="tooltip"]')).toBeNull()
   })
 
-  it('keeps tooltips hidden at rest while labels are visible', () => {
+  it('keeps visible rail labels and gives icon-only utilities right-side tooltips', () => {
     renderControlledDeck({})
-    for (const button of desktopRail().getAllByRole('button')) {
-      expect(within(button).getByText(button.getAttribute('aria-label')!)).toBeInTheDocument()
-      const tip = document.getElementById(button.getAttribute('aria-describedby') ?? '')
-      expect(tip).toHaveClass('opacity-0')
-      expect(tip).not.toHaveClass('!opacity-0')
+    const rail = screen.getByTestId('command-deck-rail')
+    for (const button of rail.querySelectorAll('.sidenav-rail-item')) {
+      expect(within(button as HTMLElement).getByText(button.getAttribute('aria-label')!)).toBeInTheDocument()
+      expect(button).not.toHaveAttribute('title')
     }
+    const utilities = rail.querySelector('.sidenav-utilities')!
+    const tips = utilities.querySelectorAll('[role="tooltip"]')
+    expect(tips).toHaveLength(3)
+    for (const tip of tips) expect(tip).toHaveClass('left-full')
   })
 
   it('docks the secondary panel to a group and collapses it on re-press', () => {
@@ -571,9 +560,9 @@ describe('CommandDeck', () => {
 
     fireEvent.click(tabs.getByRole('button', { name: 'More' }))
     let dialog = screen.getByRole('dialog')
-    expect(within(dialog).getByRole('button', { name: 'Driving' })).toBeInTheDocument()
-
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Driving' }))
+    expect(within(dialog).queryByRole('button', { name: 'Driving' })).toBeNull()
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+    fireEvent.click(tabs.getByRole('button', { name: 'Driving' }))
     dialog = screen.getByRole('dialog')
     expect(within(dialog).getByRole('link', { name: 'Mileage Log' })).toBeInTheDocument()
     expect(within(dialog).getByText('Trip Records')).toBeInTheDocument()
@@ -752,7 +741,7 @@ describe('CommandDeck', () => {
     expect(screen.getByTestId('command-deck-secondary')).toBeInTheDocument()
     expect(secondaryPanel().getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
     const driving = desktopRail().getByRole('button', { name: 'Driving' })
-    expect(document.getElementById(driving.getAttribute('aria-describedby') ?? '')).toHaveClass('transition-none')
+    expect(driving).not.toHaveAttribute('aria-describedby')
     fireEvent.click(driving)
     expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toBeInTheDocument()
 

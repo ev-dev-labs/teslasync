@@ -40,6 +40,11 @@
     "sha256": "4b7eea25548cc606580e8781e946204f533d11697f7a094bb859b5bb97ad62ff"
   },
   {
+    "file": "web/src/components/layout/BottomTabBar.tsx",
+    "calls": 6,
+    "sha256": "5204ca90ab14101ae434f989bf803e35e9bc7ff820d9f30ee4313b4fdc6bdaa9"
+  },
+  {
     "file": "web/src/components/layout/Layout.tsx",
     "calls": 14,
     "sha256": "96c08ab2902a736838201934e4d2c9c41d0b9a8a8c5d325059d75e88c1f5e807",
@@ -97,7 +102,7 @@
   {
     "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
     "calls": 30,
-    "sha256": "8655e0996ff7d1553f30ea80ba34bf15f602e317323dea2641d5657e9efc239f",
+    "sha256": "369a84fbabbf75143755e80e5be414ba7d7bbbb79d7177eca68fff401b77b6df",
     "dependencies": [
       {
         "file": "web/src/lib/routeRegistry.ts",
@@ -148,6 +153,26 @@
         "sha256": "3198ff236b27cd8993e4bbc14385d5eedc9bc36c52411c9687931382381c8122"
       }
     ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/CommandDeck.tsx",
+    "calls": 1,
+    "sha256": "a943e53419b7d6c9fa4486b22f18024841a5990f4f804f0a9521a28516ad22d6"
+  },
+  {
+    "file": "web/src/components/layout/sidebar/SectionRail.tsx",
+    "calls": 13,
+    "sha256": "529a2176772bbbadc86ecd3d8303a180ee4ca8299b2d18a078dfb328bc1d2269"
+  },
+  {
+    "file": "web/src/components/layout/sidebar/SidebarRow.tsx",
+    "calls": 0,
+    "sha256": "c3b82a056021e770c90d7833a820d0c7812398d8d977c9f863b00cd7589b2df5"
+  },
+  {
+    "file": "web/src/components/layout/status-bar/MoreSegment.tsx",
+    "calls": 9,
+    "sha256": "2ad47115e63990a78484ff08f8900c572699b660958c443b5bcc343e38d578be"
   },
   {
     "file": "web/src/components/layout/ThemeQuickSwitcherPopover.tsx",

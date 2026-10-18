@@ -7,7 +7,7 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 import { PrefetchNavLink } from '../PrefetchLink'
 import type { SidebarSectionInput, SectionGroup } from '../sectionGroups'
-import { SIDEBAR_SECTION_ICONS } from './sidebarIcons'
+import { resolveSectionIcon } from './sidebarIcons'
 import { flattenSidebarItems } from './collections'
 import type { DeckSelection } from './CommandDeck'
 
@@ -70,10 +70,9 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
         {sections.map((section, index) => {
           const label = navSectionTitle(section)
           const short = shortLabels[section.title]
-          const Icon = SIDEBAR_SECTION_ICONS[section.title] ?? section.items[0]?.icon ?? Icons.home
-          return <Tooltip key={section.title} content={label} side="right">
-            <Button ref={element => { buttons.current[index] = element; itemRef?.(`section:${section.title}`, element) }}
-              type="button" variant="ghost" title={label} aria-label={label} aria-current={selected === section.title ? 'true' : undefined}
+          const Icon = resolveSectionIcon(section.title)
+          return <Button key={section.title} ref={element => { buttons.current[index] = element; itemRef?.(`section:${section.title}`, element) }}
+              type="button" variant="ghost" aria-label={label} aria-current={selected === section.title ? 'true' : undefined}
               aria-expanded={selected === section.title && panelOpen} tabIndex={focusTitle === section.title ? 0 : -1}
               className={cn('sidenav-rail-item', selected === section.title && 'is-selected')}
               onFocus={() => setFocusTitle(section.title)}
@@ -89,7 +88,6 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
               <span className="sidenav-icon"><Icon className="h-5 w-5" aria-hidden /></span>
               <span className="sidenav-short-label">{short ?? label}</span>
             </Button>
-          </Tooltip>
         })}
       </div>
       <div aria-hidden data-testid="rail-fade-top" data-visible={fades.top} className="sidenav-fade sidenav-fade-top" />
@@ -105,7 +103,7 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
       <Tooltip content={t('nav.deck.display', 'Display')} side="right">
         <div className="sidenav-utility">{appearanceControl ?? <PrefetchNavLink to="/settings#appearance" onClick={() => { onUtilityActivate?.(); onItemSelect?.() }} aria-label={t('nav.deck.display', 'Display')}><Icons.palette className="h-5 w-5" aria-hidden /></PrefetchNavLink>}</div>
       </Tooltip>
-      <details className="sidenav-account" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>
+      <Tooltip content={t('nav.groups.account', 'Account')} side="right"><details className="sidenav-account" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>
         <summary className="sidenav-utility" aria-label={t('nav.groups.account', 'Account')} onClick={onUtilityActivate} onKeyDown={event => {
           const account = event.currentTarget.closest('details')
           if (event.key === 'Escape' && account?.open) { event.stopPropagation(); account.open = false }
@@ -116,7 +114,7 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
             if (event.key === 'Escape' && account?.open) { event.stopPropagation(); account.open = false; account.querySelector('summary')?.focus() }
           }} className="sidenav-account-link">{navLabel?.(item) ?? item.label}</PrefetchNavLink>)}
         </div>
-      </details>
+      </details></Tooltip>
     </div>
   </div>
 }
