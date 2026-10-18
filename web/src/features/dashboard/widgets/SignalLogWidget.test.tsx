@@ -397,7 +397,7 @@ describe('SignalLogWidget — compact layout (1×N)', () => {
     });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('Signals/sec')).toBeInTheDocument();
+    expect(screen.getByText('signals/sec')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
     // Compact omits the event feed and the pause control.
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
@@ -410,7 +410,7 @@ describe('SignalLogWidget — compact layout (1×N)', () => {
 
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
-    expect(screen.getByText('Signals/sec')).toBeInTheDocument();
+    expect(screen.getByText('signals/sec')).toBeInTheDocument();
   });
 });
 

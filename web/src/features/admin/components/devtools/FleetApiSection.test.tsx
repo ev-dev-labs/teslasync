@@ -423,7 +423,7 @@ describe('VehicleKeyPairingTool', () => {
     expect(card.textContent).not.toContain('YOUR_DOMAIN')
     expect(within(card).queryByRole('button', { name: /copy/i })).not.toBeInTheDocument()
     expect(within(card).getByText('Pairing instructions')).toBeInTheDocument()
-    for (const step of ['Pairing step1', 'Pairing step2', 'Pairing step3']) {
+    for (const step of ['Pairing Step1', 'Pairing Step2', 'Pairing Step3']) {
       expect(within(card).getByText(step)).toBeInTheDocument()
     }
   })

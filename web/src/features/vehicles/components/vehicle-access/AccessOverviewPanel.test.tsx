@@ -66,7 +66,7 @@ describe('AccessOverviewPanel', () => {
       setGlobalLocale('en-US');
       setGlobalPrecision(2);
       renderPanel(props);
-      const bar = screen.getByRole('progressbar', { name: 'Pending' });
+      const bar = screen.getByRole('progressbar', { name: 'pending' });
       expect(screen.getByText(`1,234 ${MIDDOT} 50.00%`)).toBeInTheDocument();
       expect(within(screen.getByRole('list')).getByText('1,234')).toBeInTheDocument();
       expect(bar).toHaveAttribute('aria-valuenow', '1234');
@@ -137,9 +137,9 @@ describe('AccessOverviewPanel', () => {
     expect(screen.getByText('Invitation status')).toBeInTheDocument();
     expect(screen.getByText('Driver roles')).toBeInTheDocument();
 
-    // titleCase-resolved bar labels.
-    expect(screen.getByText('Pending')).toBeInTheDocument();
-    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    // Catalog-resolved bar labels (vehicleAccess.status.*).
+    expect(screen.getByText('pending')).toBeInTheDocument();
+    expect(screen.getByText('accepted')).toBeInTheDocument();
 
     // `${count} · ${fmtPercent(pct, 0)}` sublabels: 3/4 = 75%, 1/4 = 25%.
     expect(screen.getByText(`3 ${MIDDOT} 75.00%`)).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe('AccessOverviewPanel', () => {
     expect(screen.getByText('Invitation status')).toBeInTheDocument();
     expect(screen.getByText('Driver roles')).toBeInTheDocument();
     expect(screen.getByText('Driver')).toBeInTheDocument();
-    expect(screen.queryByText('Pending')).toBeNull();
+    expect(screen.queryByText('pending')).toBeNull();
   });
 
   it('keeps invitation loading independent of a fatal driver error', () => {
@@ -252,12 +252,12 @@ describe('AccessOverviewPanel', () => {
       totalInvitations: 3,
     });
     const view = render(<MemoryRouter><AccessOverviewPanel {...props} /></MemoryRouter>);
-    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getByText('pending')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(retry).toHaveBeenCalledTimes(1);
     view.rerender(<MemoryRouter><AccessOverviewPanel {...props} invitationsState={deriveDataState({ data: [] })} /></MemoryRouter>);
-    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getByText('pending')).toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
   });
 
@@ -284,7 +284,7 @@ describe('AccessOverviewPanel', () => {
     });
 
     expect(screen.getByText('No drivers yet')).toBeInTheDocument();
-    expect(screen.getByText('Expired')).toBeInTheDocument();
+    expect(screen.getByText('expired')).toBeInTheDocument();
     expect(screen.getByText(`5 ${MIDDOT} 100.00%`)).toBeInTheDocument();
   });
 
@@ -341,8 +341,8 @@ describe('AccessOverviewPanel — palette consumer compatibility', () => {
       totalDrivers: 1,
     });
     for (const [label, color, count] of [
-      ['Pending', 'var(--semantic-warning)', '3'],
-      ['Accepted', 'var(--semantic-success)', '1'],
+      ['pending', 'var(--semantic-warning)', '3'],
+      ['accepted', 'var(--semantic-success)', '1'],
     ]) {
       const bar = screen.getByRole('progressbar', { name: label });
       expect(bar).toHaveAttribute('aria-valuenow', count);

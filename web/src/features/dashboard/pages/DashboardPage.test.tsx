@@ -436,7 +436,7 @@ describe('DashboardPage — view-mode header actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'More dashboard actions' }));
     expect(screen.getByRole('button', { name: 'Export dashboard' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Import dashboard' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Kiosk mode' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kiosk' })).toBeInTheDocument();
   });
 
   it('refresh invalidates the core query caches', async () => {
@@ -540,8 +540,8 @@ describe('DashboardPage — data states', () => {
     }
     expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByTestId('dashboard-grid')).toBeNull();
-    expect(screen.queryByText('Bring your vehicles into TeslaSync')).toBeNull();
-    expect(screen.queryByText('Build a live operating picture of your Tesla fleet')).toBeNull();
+    expect(screen.queryByText('Sync your vehicles')).toBeNull();
+    expect(screen.queryByText('Welcome to TeslaSync')).toBeNull();
     expect(screen.queryByRole('region', { name: 'Dashboard widgets' })).toBeNull();
   });
 
@@ -549,7 +549,7 @@ describe('DashboardPage — data states', () => {
     h.vehicles = makeQuery({ data: [] });
     h.auth = { authenticated: false };
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Build a live operating picture of your Tesla fleet' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Welcome to TeslaSync' })).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /Connect Tesla Account/i });
     expect(link.getAttribute('href')).toBe('/settings');
     expect(screen.getByText('Workspace setup')).toBeInTheDocument();
@@ -560,7 +560,7 @@ describe('DashboardPage — data states', () => {
     h.vehicles = makeQuery({ data: [] });
     h.auth = { authenticated: true };
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Bring your vehicles into TeslaSync' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sync your vehicles' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Sync Vehicles/i }));
     expect(h.syncMutate).toHaveBeenCalledTimes(1);
   });
@@ -568,7 +568,7 @@ describe('DashboardPage — data states', () => {
   it('renders the dashboard grid when vehicles exist', () => {
     renderPage();
     expect(screen.getByTestId('dashboard-grid')).toBeInTheDocument();
-    expect(screen.queryByText('Build a live operating picture of your Tesla fleet')).toBeNull();
+    expect(screen.queryByText('Welcome to TeslaSync')).toBeNull();
   });
 });
 
@@ -617,7 +617,7 @@ describe('DashboardPage — banners', () => {
     renderPage();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByText(/Boom/)).toBeNull();
-    expect(screen.queryByText('Bring your vehicles into TeslaSync')).toBeNull();
+    expect(screen.queryByText('Sync your vehicles')).toBeNull();
   });
 
   it('warns and links to settings when the Tesla account is not connected', () => {

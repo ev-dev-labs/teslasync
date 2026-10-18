@@ -208,8 +208,8 @@ describe('EventTimeline — label + subtitle per (kind, variant)', () => {
   it.each([
     ['lock', 'positive', 'Vehicle locked', 'Doors secured'],
     ['lock', 'negative', 'Vehicle unlocked', 'Doors accessible'],
-    ['sentry', 'positive', 'Sentry mode activated', 'Camera surveillance enabled'],
-    ['sentry', 'negative', 'Sentry mode deactivated', 'Camera surveillance disabled'],
+    ['sentry', 'positive', 'Sentry Mode activated', 'Camera surveillance enabled'],
+    ['sentry', 'negative', 'Sentry Mode deactivated', 'Camera surveillance disabled'],
     ['door', 'positive', 'Doors closed', 'Closed'],
     ['door', 'negative', 'Door opened', 'Open'],
   ] as const)('%s / %s → "%s" + "%s"', (kind, variant, title, subtitle) => {
@@ -243,7 +243,7 @@ describe('EventTimeline — label + subtitle per (kind, variant)', () => {
     });
 
     const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveTextContent('Sentry mode activated');
+    expect(items[0]).toHaveTextContent('Sentry Mode activated');
     expect(items[1]).toHaveTextContent('Vehicle unlocked');
   });
 });

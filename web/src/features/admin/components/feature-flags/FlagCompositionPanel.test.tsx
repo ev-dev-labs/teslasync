@@ -92,7 +92,7 @@ describe('FlagCompositionPanel — states', () => {
     // The composition list must NOT render behind the error. (QueryError itself
     // renders a help-links list, so target the labelled composition list.)
     expect(
-      screen.queryByRole('list', { name: 'Flag value-type composition' }),
+      screen.queryByRole('list', { name: 'Returned flag value presentation; stored values are text' }),
     ).toBeNull();
 
     const retry = screen.getByRole('button', { name: 'Retry' });
@@ -238,7 +238,7 @@ describe('FlagCompositionPanel — composition breakdown', () => {
     renderPanel({ flags: [flag('a', true), flag('b', 'x')] });
 
     const list = screen.getByRole('list', {
-      name: 'Flag value-type composition',
+      name: 'Returned flag value presentation; stored values are text',
     });
     expect(list).toBeInTheDocument();
     expect(within(list).getAllByRole('listitem')).toHaveLength(2);

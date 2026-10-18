@@ -368,15 +368,18 @@ describe('VehicleAccessPage — populated tables + overview', () => {
     // Three pending rows → three Revoke buttons (accepted + revoked excluded).
     expect(screen.getAllByRole('button', { name: 'Revoke invitation' })).toHaveLength(3);
     // status badges use the raw status; created_by is surfaced per row.
-    expect(screen.getAllByText('pending')).toHaveLength(3);
+    // (Scoped to the invitations table: the overview bar also renders 'pending'.)
+    const invitesTable = screen.getByRole('table', { name: 'vehicles:access-invitations' });
+    expect(within(invitesTable).getAllByText('pending')).toHaveLength(3);
     expect(screen.getAllByText('Fleet Admin').length).toBeGreaterThan(0);
   });
 
   it('summarises status + role composition in the Access Overview', () => {
     renderPopulated();
-    // Status distribution bars (title-cased, distinct from the raw-status table).
-    expect(screen.getByText('Accepted')).toBeInTheDocument();
-    expect(screen.getByText('Revoked')).toBeInTheDocument();
+    // Status distribution bars (catalog copy, same as the raw-status table badges).
+    const invitationStatus = screen.getByRole('region', { name: 'Invitation status' });
+    expect(within(invitationStatus).getByText('accepted')).toBeInTheDocument();
+    expect(within(invitationStatus).getByText('revoked')).toBeInTheDocument();
     // Driver-role chips (title-cased).
     expect(screen.getByText('Driver')).toBeInTheDocument();
     expect(screen.getByText('Owner')).toBeInTheDocument();
@@ -432,7 +435,7 @@ describe('VehicleAccessPage — error handling', () => {
     mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites, isError: true, error: new Error('invitation refresh failed') }));
     renderPage();
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
-    expect(screen.getAllByText('Accepted').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('accepted').length).toBeGreaterThan(0);
     expect(screen.getByText('Owner')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Revoke invitation' })).toHaveLength(3);
     expect(screen.getByRole('button', { name: 'Copy invite link' })).toBeInTheDocument();
@@ -617,7 +620,7 @@ describe('VehicleAccessPage — independent summary trust', () => {
     expect(retryDrivers).not.toHaveBeenCalled();
     mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites, error: new Error('refresh failed'), refetch: retryInvitations }));
     view.rerenderPage();
-    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Invitation status' })).getByText('accepted')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(retryInvitations).toHaveBeenCalledTimes(2);
@@ -625,7 +628,7 @@ describe('VehicleAccessPage — independent summary trust', () => {
     mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites }));
     view.rerenderPage();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Invitation status' })).getByText('accepted')).toBeInTheDocument();
   });
 
   it('retains driver counts when invitations are still initially loading', () => {
@@ -670,7 +673,7 @@ describe('VehicleAccessPage — independent summary trust', () => {
     mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites, fetchStatus: 'paused' }));
     renderPage();
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
-    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Invitation status' })).getByText('accepted')).toBeInTheDocument();
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Copy invite link' })).toBeInTheDocument();
   });
@@ -805,10 +808,10 @@ describe('VehicleAccessPage — shared access palette', () => {
     mockInvitations.mockReturnValue(makeQuery({ data: records }));
     const view = renderPage();
     const colors = [
-      ['Pending', 'var(--semantic-warning)'],
-      ['Accepted', 'var(--semantic-success)'],
-      ['Revoked', 'var(--semantic-danger)'],
-      ['Expired', 'var(--text-secondary)'],
+      ['pending', 'var(--semantic-warning)'],
+      ['accepted', 'var(--semantic-success)'],
+      ['revoked', 'var(--semantic-danger)'],
+      ['expired', 'var(--text-secondary)'],
       ['Custom', 'var(--text-secondary)'],
     ] as const;
     for (const [label, color] of colors) {
@@ -821,8 +824,8 @@ describe('VehicleAccessPage — shared access palette', () => {
       id: 6, invitation_id: 'palette-accepted-2', status: 'accepted',
     })] }));
     view.rerenderPage();
-    expect(screen.getAllByRole('progressbar')[0]).toHaveAccessibleName('Accepted');
-    expect(screen.getByRole('progressbar', { name: 'Accepted' })).toHaveAttribute('aria-valuenow', '2');
+    expect(screen.getAllByRole('progressbar')[0]).toHaveAccessibleName('accepted');
+    expect(screen.getByRole('progressbar', { name: 'accepted' })).toHaveAttribute('aria-valuenow', '2');
     for (const [label, color] of colors) {
       expect(screen.getByRole('progressbar', { name: label })
         .querySelector<HTMLElement>('[data-metric-fill]')?.style.background).toBe(color);

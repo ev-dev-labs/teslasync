@@ -248,7 +248,8 @@ describe('VehicleHero', () => {
     expect(screen.getByText('charging')).toBeInTheDocument();
     expect(screen.getByText('Charging')).toBeInTheDocument();
     expect(screen.getByText(/^48(\.0+)? kW$/)).toBeInTheDocument();
-    expect(screen.getByText('Charge rate')).toBeInTheDocument();
+    // Trio shipping copy: hero.chargeRate = "Rate" (banner label + charging stat tile).
+    expect(screen.getAllByText('Rate')).toHaveLength(2);
     // "1.5h" appears in the charge banner AND the Time-to-Full stat.
     expect(screen.getAllByText('1.50h')).toHaveLength(2);
     expect(screen.getByText(/Done ~/)).toBeInTheDocument();
@@ -503,7 +504,7 @@ describe('VehicleHero — trust-aware status', () => {
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('charging')).not.toBeInTheDocument();
     // Charge banner is gated on the trusted status, so it must not appear.
-    expect(screen.queryByText('Charge rate')).not.toBeInTheDocument();
+    expect(screen.queryByText('Rate')).not.toBeInTheDocument();
   });
 
   it('reports Unknown when the field backing the claim was never verified', () => {

@@ -267,7 +267,7 @@ describe('Dashboard pilot — additive shared-presentation and preservation proo
     fireEvent.click(trigger);
     const dialog = await screen.findByRole('dialog', { name: 'More dashboard actions' });
     expect(within(dialog).getAllByRole('button').map((button) => button.textContent?.trim()))
-      .toEqual(['Export dashboard', 'Import dashboard', 'Kiosk mode', 'Print snapshot']);
+      .toEqual(['Export dashboard', 'Import dashboard', 'Kiosk', 'Print snapshot']);
     const exportAction = within(dialog).getByRole('button', { name: 'Export dashboard' });
     exportAction.focus();
     expect(exportAction).toHaveFocus();
@@ -293,7 +293,7 @@ describe('Dashboard pilot — additive shared-presentation and preservation proo
       expectMobileTarget(screen.getByRole('button', { name }));
     }
     fireEvent.click(screen.getByRole('button', { name: 'More dashboard actions' }));
-    for (const name of ['Export dashboard', 'Import dashboard', 'Kiosk mode', 'Print snapshot']) {
+    for (const name of ['Export dashboard', 'Import dashboard', 'Kiosk', 'Print snapshot']) {
       expectMobileTarget(screen.getByRole('button', { name }));
     }
     expect(screen.getByRole('button', { name: 'Export dashboard' })).toHaveClass('h-auto', 'whitespace-normal');
@@ -359,7 +359,7 @@ describe('Dashboard pilot — additive shared-presentation and preservation proo
     mount();
     expect(screen.getByTestId('dashboard-loading-skeleton')).toBeInTheDocument();
     expect(screen.queryByTestId('pilot-grid')).toBeNull();
-    expect(screen.queryByText('Bring your vehicles into TeslaSync')).toBeNull();
+    expect(screen.queryByText('Sync your vehicles')).toBeNull();
   });
 
   it('replaces only the fatal registry body with the existing safe error state', () => {
@@ -382,7 +382,7 @@ describe('Dashboard pilot — additive shared-presentation and preservation proo
     expectMobileTarget(screen.getByRole('link', { name: 'Explore capabilities' }));
     expect(screen.getByText('Private by design')).toBeInTheDocument();
     expect(screen.getByText('Setup progress')).toHaveClass('font-medium');
-    for (const label of ['Live telemetry', 'Drive intelligence', 'Energy analytics', 'Fleet operations']) {
+    for (const label of ['Real-time Tracking', 'Drive history', 'Charge analytics', 'Vehicle control']) {
       const item = screen.getAllByText(label).find((element) => element.closest('li'))?.closest('li');
       expect(item?.querySelector('svg')).toHaveClass(typography.color.secondary);
     }
@@ -477,7 +477,7 @@ describe('Dashboard pilot — additive shared-presentation and preservation proo
     fireEvent.click(screen.getByRole('button', { name: 'Test import confirm' }));
     expect(h.layout.importDashboardFromData).toHaveBeenCalledWith(h.layout.activeDashboard);
     more();
-    fireEvent.click(screen.getByRole('button', { name: 'Kiosk mode' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kiosk' }));
     expect(screen.getByTestId('pilot-kiosk-settings')).toBeInTheDocument();
   });
 

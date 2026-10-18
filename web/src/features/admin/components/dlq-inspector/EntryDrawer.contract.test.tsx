@@ -133,7 +133,7 @@ describe('EntryDrawer detail trust contract', () => {
     rerender(<MemoryRouter><QueryClientProvider client={client}>
       <EntryDrawer {...props({ data: full, isFetching: true })} />
     </QueryClientProvider></MemoryRouter>);
-    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Updating…');
+    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('updating…');
     expect(screen.getByRole('tab', { name: 'Raw envelope' })).toBe(raw);
     expect(raw).toHaveAttribute('id', rawId);
     expect(raw).toHaveAttribute('aria-selected', 'true');

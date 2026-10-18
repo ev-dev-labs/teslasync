@@ -104,7 +104,7 @@ function renderCards(overrides: Partial<Props> = {}) {
   return { ...utils, props };
 }
 
-const TILE_LABELS = ['Lock status', 'Sentry mode', 'Doors', 'Windows', 'HomeLink', 'Guest mode'];
+const TILE_LABELS = ['Lock status', 'Sentry Mode', 'Doors', 'Windows', 'HomeLink', 'Guest Mode'];
 
 describe('SecurityStatusCards', () => {
   it('renders the "Security Status" panel title heading in every state', () => {

@@ -53,7 +53,7 @@ afterEach(() => {
 describe('FlagCompositionPanel phase6 existing semantic solid-fill adoption', () => {
   it('uses the existing role map for all six kinds without changing labels, counts or rounded percentages', () => {
     render(panel(kinds.map(({ label, value }) => flag(label, value))));
-    const list = screen.getByRole('list', { name: 'Flag value-type composition' });
+    const list = screen.getByRole('list', { name: 'Returned flag value presentation; stored values are text' });
     const rows = within(list).getAllByRole('listitem');
     expect(rows).toHaveLength(6);
 
