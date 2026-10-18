@@ -167,7 +167,7 @@ function DashboardMoreMenu({
 
   return (
     <>
-      <IconButton ref={triggerRef} icon={<Icon icon={MoreHorizontal} />} label={t('dashboard.more', 'More')} onClick={() => setOpen((value) => !value)} aria-label={t('dashboard.moreActions', 'More dashboard actions')} aria-expanded={open} aria-haspopup="dialog" />
+      <IconButton ref={triggerRef} icon={<Icon icon={MoreHorizontal} />} label={t('dashboard.more', 'More')} onClick={() => setOpen((value) => !value)} aria-label={t('dashboard.moreActions', 'More dashboard actions')} aria-expanded={open} aria-haspopup="dialog" className={ACTION_TARGET} />
       <Popover
         open={open}
         onClose={() => setOpen(false)}
@@ -542,13 +542,13 @@ export default function DashboardPage() {
             <Icon icon={Plus} size="sm" className="sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add widget')}</span>
           </Button>
-          <IconButton icon={<Icon icon={LayoutGrid} size="sm" className="sm:" />} label={t('dashboard.autoArrange', 'Auto arrange')} onClick={autoArrange} aria-label={t('dashboard.autoArrange', 'Auto arrange')} />
+          <IconButton icon={<Icon icon={LayoutGrid} size="sm" className="sm:" />} label={t('dashboard.autoArrange', 'Auto arrange')} onClick={autoArrange} aria-label={t('dashboard.autoArrange', 'Auto arrange')} className={ACTION_TARGET} />
           {/* confirm-step: handleResetRequest asks before resetting the layout */}
-          <IconButton icon={<Icon icon={RotateCcw} size="sm" className="sm:" />} label={t('dashboard.reset', 'Reset')} onClick={() => void handleResetRequest()} />
+          <IconButton icon={<Icon icon={RotateCcw} size="sm" className="sm:" />} label={t('dashboard.reset', 'Reset')} onClick={() => void handleResetRequest()} className={ACTION_TARGET} />
         </>
       ) : (
         <>
-          <IconButton icon={<Icon icon={RefreshCw} />} label={t('dashboard.refreshShort', 'Refresh')} onClick={handleRefresh} busy={isRefreshing} aria-label={t('dashboard.refresh', 'Refresh data')} />
+          <IconButton icon={<Icon icon={RefreshCw} />} label={t('dashboard.refreshShort', 'Refresh')} onClick={handleRefresh} busy={isRefreshing} aria-label={t('dashboard.refresh', 'Refresh data')} className={ACTION_TARGET} />
         </>
       )}
     </div>
@@ -589,7 +589,7 @@ export default function DashboardPage() {
           {t('dashboard.done', 'Done')}
         </Button>
       ) : vehicleList.length > 0 ? (
-        <IconButton icon={<Icon icon={Settings} />} label={t('dashboard.customize', 'Customize')} variant="primary" onClick={() => setEditMode(true)} data-tour="edit-mode-btn" />
+        <IconButton icon={<Icon icon={Settings} />} label={t('dashboard.customize', 'Customize')} variant="primary" onClick={() => setEditMode(true)} data-tour="edit-mode-btn" className={ACTION_TARGET} />
       ) : undefined}
       overflowActions={!editMode && vehicleList.length > 0 ? (
         <DashboardMoreMenu
