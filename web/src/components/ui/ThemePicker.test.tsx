@@ -200,7 +200,7 @@ beforeEach(() => {
 describe('ThemePicker — display-mode section', () => {
   it('shows core modes first and offers the full library on demand', () => {
     renderPicker()
-    expect(screen.getByText('Display Mode')).toBeInTheDocument()
+    expect(screen.getByText('Display mode')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Browse all 4 modes' })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByText('Core').textContent).toContain('(2)')
     expect(screen.queryByRole('button', { name: 'Dracula' })).not.toBeInTheDocument()
@@ -351,7 +351,7 @@ describe('ThemePicker — custom colour builder', () => {
 describe('ThemePicker — prop toggles', () => {
   it('hides the entire mode section when showMode is false', () => {
     renderPicker({ picker: { showMode: false } })
-    expect(screen.queryByText('Display Mode')).toBeNull()
+    expect(screen.queryByText('Display mode')).toBeNull()
     expect(screen.queryByRole('searchbox')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Dark' })).toBeNull()
     // Accent section still renders.

@@ -122,7 +122,7 @@ export function ThemePicker({
         <div>
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
-              {t('theme.displayMode', 'Display Mode')}
+              {t('theme.displayMode', 'Display mode')}
             </p>
           </div>
           {showAllModes && (

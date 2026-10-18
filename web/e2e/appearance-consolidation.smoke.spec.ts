@@ -13,7 +13,7 @@ for (const width of [390, 1920]) {
 
       const appearance = page.locator('#appearance')
       await expect(appearance).toBeVisible()
-      await expect(appearance.getByText('Display Mode', { exact: true })).toBeVisible()
+      await expect(appearance.getByText('Display mode', { exact: true })).toBeVisible()
       await expect(page.getByText('Information density', { exact: true })).toBeVisible()
       const browse = appearance.getByRole('button', { name: /Browse all \d+ modes/ })
       await expect(browse).toHaveAttribute('aria-expanded', 'false')
