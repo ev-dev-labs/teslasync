@@ -6,7 +6,7 @@ import { isApiError } from '@/lib/resilience';
 import type { SecretRotationSeverity, SecretRotationStatus } from '@/types/admin-operator-confidence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { deriveDataState } from '@/api/dataState';
-import { SEVERITY_ORDER, KIND_LABELS } from '../components/structural-closure/secret-rotation/helpers';
+import { SEVERITY_ORDER } from '../components/structural-closure/secret-rotation/helpers';
 
 export function useSecretRotationPage() {
   const { fmtNumber, locale } = useNumberFormatting();
@@ -25,7 +25,17 @@ export function useSecretRotationPage() {
   // Friendly, translatable label for a secret kind — dynamic i18n key with the
   // English `KIND_LABELS` entry as the fallback default.
   const kindLabel = useCallback(
-    (raw: string) => t(`admin.secretRotation.kind.${raw}`, KIND_LABELS[raw] ?? raw),
+    (raw: string) => {
+  switch (raw) {
+    case "tesla_refresh_token": return t("admin.secretRotation.kind.tesla_refresh_token", "Tesla refresh token");
+    case "mqtt_mtls_cert": return t("admin.secretRotation.kind.mqtt_mtls_cert", "MQTT mTLS certificate");
+    case "database_password": return t("admin.secretRotation.kind.database_password", "Database password");
+    case "session_jwk": return t("admin.secretRotation.kind.session_jwk", "Session JWK");
+    case "app_signing_key": return t("admin.secretRotation.kind.app_signing_key", "App signing key");
+    case "authentik_secret": return t("admin.secretRotation.kind.authentik_secret", "Authentik client secret");
+    default: return raw;
+  }
+},
     [t],
   );
 

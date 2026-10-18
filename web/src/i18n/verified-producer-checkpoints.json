@@ -35,6 +35,11 @@
     "sha256": "395953f720dc808a89d598340838995c33f51e27d3b4a9b52486bd7c052b2b21"
   },
   {
+    "file": "web/src/components/feedback/RuntimeHealthBanner.tsx",
+    "calls": 12,
+    "sha256": "4b7eea25548cc606580e8781e946204f533d11697f7a094bb859b5bb97ad62ff"
+  },
+  {
     "file": "web/src/components/layout/WorkspaceContextControl.tsx",
     "calls": 34,
     "sha256": "73561f633f504e2ad3d2b78331337f667b2dbfa79ed2fc50a6956fabade1e84f"
@@ -168,6 +173,11 @@
     "file": "web/src/features/admin/hooks/useAuditLogPage.ts",
     "calls": 3,
     "sha256": "22dca86578f0003d09a412a9d922aece2923ad70cbbc5454ec865a0401959c03"
+  },
+  {
+    "file": "web/src/features/admin/hooks/useSecretRotationPage.ts",
+    "calls": 10,
+    "sha256": "793c3430d1abe27c4bd6adb94014f982c552b3d3d57283178e9a922da6e45112"
   },
   {
     "file": "web/src/features/admin/hooks/useSlowQueriesPage.ts",
@@ -490,6 +500,11 @@
     "sha256": "5f83afee709b46e3b0bf5c688e4d151d3a7c9036302238db891f89742d7a236c"
   },
   {
+    "file": "web/src/features/power-user/pages/DashboardsPage.tsx",
+    "calls": 25,
+    "sha256": "bc82e6a4968c477e7948c3008d5905c2abf50d07ea658349578065a194926b31"
+  },
+  {
     "file": "web/src/features/power-user/pages/SqlPlaygroundPage.tsx",
     "calls": 20,
     "sha256": "edc13dd2f4b223c838bfcdad7c29e2bb10997effe185ba10db70f9cc9a5150f7"
@@ -503,6 +518,11 @@
     "file": "web/src/features/settings/components/FeatureToggles.tsx",
     "calls": 16,
     "sha256": "57014ecabb98014b125c0a45fbb649b6d726271234d322f88adb2b902a4798af"
+  },
+  {
+    "file": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.tsx",
+    "calls": 15,
+    "sha256": "5e2d1c9f86568d0b855989137478bab9c1e9c1467a657f8a57cba0bbb633db27"
   },
   {
     "file": "web/src/features/settings/components/fleet-setup/FleetSetupStreamingPanel.tsx",
@@ -580,6 +600,11 @@
     "sha256": "ff582d5b70f7d1a8f4f12782e41fed0ae613a5d1c00e049dec6c73de7e82ddf1"
   },
   {
+    "file": "web/src/features/system/components/command-center/CommandWorkspace.tsx",
+    "calls": 17,
+    "sha256": "8b24b1977c57d4e54c98b53365f2acc4301f4869876d78f931593a13c391276a"
+  },
+  {
     "file": "web/src/features/system/components/FSMSubFSMPanel.tsx",
     "calls": 6,
     "sha256": "1d686d30b4391c60d4348a37c8d062af52d062de3f99387d8f61107100bf651b"
@@ -608,6 +633,11 @@
     "file": "web/src/features/system/components/status/AiSpendWatch.tsx",
     "calls": 17,
     "sha256": "7ae9b2fe3e1323c41d33870561533903d2a4f85ce21ee228c60f80a4e72227db"
+  },
+  {
+    "file": "web/src/features/system/pages/CommandHistoryPage.tsx",
+    "calls": 101,
+    "sha256": "a189146fa581524d1b355845196de09dc59f6f3c0e92beeeff50359ac2d81461"
   },
   {
     "file": "web/src/features/system/pages/CommandReliabilityPage.tsx",

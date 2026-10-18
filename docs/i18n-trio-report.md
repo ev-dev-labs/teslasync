@@ -402,3 +402,11 @@ Qualified Dashboard title/subtitle calls with the existing dashboard keys, avoid
 **139 of 151 source files now pass verification and have generated current full-source checkpoints.** Twelve files remain under review; their previous contracts stay active. Both combined source contracts remain unchanged pending their own complete translation verification. Final group suite/catalog results follow.
 
 Group verification: **7,630 passed / 42 failed / 0 skipped**, still 7,672 executions. **447 original failures closed; zero new failing identities**. Catalog split check: **PASS**, 57 grouped bundles, 181 fallbacks, 1,319 shell keys, zero known-missing manifest keys.
+
+## Reboot recovery group
+
+### Decisions made
+
+Retained the interrupted repairs after checking their actual source: runtime health reason defaults, finite command-history labels (unknown commands retain their raw human-readable fallback), secret-rotation event messages, and existing command-label capitalization. Verified six additional source files with the typed AST audit before generating their byte fingerprints: RuntimeHealthBanner, useSecretRotationPage, DashboardsPage, FleetSetupProgress, CommandWorkspace and CommandHistoryPage. Source verification is now 145/151; six dynamic-domain files and both combined contracts remain pending. Regenerated all five catalog checkpoints after the known-key and Arabic/Hebrew counterpart checks passed; no catalog wording was reversed. Requested suites and catalog-check results follow.
+
+Recovery-group verification: **7648 passed / 24 failed / 0 skipped**, 7,672 executions. Catalog split check **PASS** (1,325 shell keys, zero known-missing manifest keys). The remaining failures are the six pending source files, the two pending combined contracts, and their imported repetitions.

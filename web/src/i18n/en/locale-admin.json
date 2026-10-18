@@ -948,7 +948,15 @@
       "subtitle": "Status of every tracked credential. Severity reflects per-kind warn/critical thresholds; rotate anything in the critical tier as soon as possible.",
       "notConfigured": "The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page.",
       "criticalTitle": "Overdue rotations",
-      "criticalMessage": "{{count}} secrets are past their critical rotation threshold. These should be rotated immediately to reduce blast radius."
+      "criticalMessage": "{{count}} secrets are past their critical rotation threshold. These should be rotated immediately to reduce blast radius.",
+      "kind": {
+        "tesla_refresh_token": "Tesla refresh token",
+        "mqtt_mtls_cert": "MQTT mTLS certificate",
+        "database_password": "Database password",
+        "session_jwk": "Session JWK",
+        "app_signing_key": "App signing key",
+        "authentik_secret": "Authentik client secret"
+      }
     },
     "slowQueries": {
       "colQuery": "Query",

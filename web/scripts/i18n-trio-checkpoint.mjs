@@ -147,6 +147,7 @@ export function staticValue(node, environment = {}, seen = new Set()) {
     return typeof condition === 'boolean' ? staticValue(condition ? node.whenTrue : node.whenFalse, environment, seen) : unknown;
   }
   if (ts.isCallExpression(node)) {
+    if (ts.isIdentifier(node.expression) && node.expression.text === 'useMemo' && node.arguments[0] && ts.isArrowFunction(node.arguments[0]) && !node.arguments[0].parameters.length && !ts.isBlock(node.arguments[0].body)) return staticValue(node.arguments[0].body, environment, seen);
     if (ts.isPropertyAccessExpression(node.expression) && node.expression.getText() === 'Object.freeze' && node.arguments.length === 1) return staticValue(node.arguments[0], environment, seen);
     if (ts.isIdentifier(node.expression) && node.expression.text === 't' && node.arguments[1] && ts.isStringLiteralLike(node.arguments[1])) return node.arguments[1].text;
     if (ts.isPropertyAccessExpression(node.expression)) {
@@ -166,7 +167,7 @@ export function staticValue(node, environment = {}, seen = new Set()) {
     }
     return unknown;
   }
-  if (ts.isArrayLiteralExpression(node)) return node.elements.map(part => staticValue(part, environment, seen));
+  if (ts.isArrayLiteralExpression(node)) return node.elements.flatMap(part => { if (ts.isSpreadElement(part)) { const value = staticValue(part.expression, environment, seen); return Array.isArray(value) ? value : [unknown]; } return [staticValue(part, environment, seen)]; });
   if (ts.isObjectLiteralExpression(node)) return Object.fromEntries(node.properties.filter(ts.isPropertyAssignment).map(part => [part.name.getText().replace(/^['"]|['"]$/g, ''), staticValue(part.initializer, environment, seen)]));
   if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
     const object = staticValue(node.expression, environment, seen);
@@ -218,6 +219,18 @@ function possibleValues(node, seen = new Set()) {
 }
 export function verificationCalls(file) {
   return callsIn(file).flatMap(call => {
+    const arrow = call.node.parent;
+    if (ts.isArrowFunction(arrow) && arrow.body === call.node && arrow.parameters.length === 2 && call.node.arguments.length === 2 && arrow.parameters.every((parameter, index) => parameter.name.getText() === call.node.arguments[index].getText()) && ts.isPropertyAssignment(arrow.parent) && arrow.parent.name.getText() === 't' && ts.isObjectLiteralExpression(arrow.parent.parent) && ts.isCallExpression(arrow.parent.parent.parent)) {
+      const invocation = arrow.parent.parent.parent;
+      let symbol = typedProgram?.getTypeChecker().getSymbolAtLocation(invocation.expression);
+      if (symbol?.flags & ts.SymbolFlags.Alias) symbol = typedProgram.getTypeChecker().getAliasedSymbol(symbol);
+      const provider = symbol?.valueDeclaration;
+      if (provider && ts.isFunctionDeclaration(provider) && provider.body && provider.getSourceFile() === call.tree && provider.parameters[0] && ts.isIdentifier(provider.parameters[0].name)) {
+        const argument = provider.parameters[0].name.text;
+        const forwarded = callsIn(file).filter(row => row.node.pos >= provider.body.pos && row.node.end <= provider.body.end);
+        if (forwarded.length && forwarded.every(row => row.key && row.fallback !== null && ts.isPropertyAccessExpression(row.node.expression) && row.node.expression.expression.getText() === argument)) return forwarded;
+      }
+    }
     const directKey = staticValue(call.keyNode), directFallback = call.fallbackNode ? staticValue(call.fallbackNode) : null;
     if (typeof directKey === 'string' && (directFallback === null || typeof directFallback === 'string')) return [{ ...call, key: directKey, fallback: directFallback }];
     if (call.keyNode && ts.isPropertyAccessExpression(call.keyNode) && call.fallbackNode && ts.isPropertyAccessExpression(call.fallbackNode) && call.keyNode.expression.getText() === call.fallbackNode.expression.getText()) {
@@ -250,7 +263,7 @@ export function verificationCalls(file) {
     for (let parent = call.node.parent; parent; parent = parent.parent) {
       if (!ts.isArrowFunction(parent) || !ts.isCallExpression(parent.parent) || !ts.isPropertyAccessExpression(parent.parent.expression)) continue;
       const invocation = parent.parent;
-      if (!['map', 'flatMap'].includes(invocation.expression.name.text)) continue;
+      if (!['map', 'flatMap', 'filter', 'find', 'some', 'every'].includes(invocation.expression.name.text)) continue;
       const rows = staticValue(invocation.expression.expression);
       if (!Array.isArray(rows)) continue;
       const parameter = parent.parameters[0]?.name;

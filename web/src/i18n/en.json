@@ -11727,7 +11727,15 @@
       "subtitle": "Status of every tracked credential. Severity reflects per-kind warn/critical thresholds; rotate anything in the critical tier as soon as possible.",
       "notConfigured": "The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page.",
       "criticalTitle": "Overdue rotations",
-      "criticalMessage": "{{count}} secrets are past their critical rotation threshold. These should be rotated immediately to reduce blast radius."
+      "criticalMessage": "{{count}} secrets are past their critical rotation threshold. These should be rotated immediately to reduce blast radius.",
+      "kind": {
+        "tesla_refresh_token": "Tesla refresh token",
+        "mqtt_mtls_cert": "MQTT mTLS certificate",
+        "database_password": "Database password",
+        "session_jwk": "Session JWK",
+        "app_signing_key": "App signing key",
+        "authentik_secret": "Authentik client secret"
+      }
     },
     "slowQueries": {
       "colQuery": "Query",
@@ -24891,7 +24899,59 @@
     "kpis": "Command metrics",
     "topCommands": "Top commands",
     "totalInRange": "Total in range",
-    "errorPrefix": "Error: {{msg}}"
+    "errorPrefix": "Error: {{msg}}",
+    "commands": {
+      "lock": "Lock",
+      "unlock": "Unlock",
+      "wake_up": "Wake up",
+      "climate_on": "Climate ON",
+      "climate_off": "Climate OFF",
+      "honk_horn": "Honk horn",
+      "flash_lights": "Flash lights",
+      "charge_start": "Start charging",
+      "charge_stop": "Stop charging",
+      "set_charge_limit": "Set charge limit",
+      "set_temps": "Set temperature",
+      "actuate_trunk": "Open/close trunk",
+      "actuate_frunk": "Open frunk",
+      "window_control": "Window control",
+      "sun_roof_control": "Sunroof control",
+      "remote_start_drive": "Remote start",
+      "set_sentry_mode": "Sentry mode",
+      "set_speed_limit": "Speed limit",
+      "clear_speed_limit": "Clear speed limit",
+      "set_valet_mode": "Valet mode",
+      "reset_valet_pin": "Reset valet PIN",
+      "schedule_software_update": "Schedule update",
+      "cancel_software_update": "Cancel update",
+      "media_toggle_playback": "Media play/pause",
+      "media_next_track": "Next track",
+      "media_prev_track": "Previous track",
+      "media_volume_up": "Volume up",
+      "media_volume_down": "Volume down",
+      "adjust_volume": "Adjust volume",
+      "navigation_request": "Navigate",
+      "share": "Share to vehicle",
+      "trigger_homelink": "Trigger HomeLink",
+      "set_bioweapon_mode": "Bioweapon defense",
+      "set_climate_keeper": "Climate keeper",
+      "set_cop_temp": "Cabin overheat protection",
+      "dog_mode_on": "Dog mode ON",
+      "dog_mode_off": "Dog mode OFF",
+      "camp_mode_on": "Camp mode ON",
+      "camp_mode_off": "Camp mode OFF",
+      "set_scheduled_departure": "Scheduled departure",
+      "set_scheduled_charging": "Scheduled charging",
+      "set_preconditioning_max": "Max preconditioning",
+      "auto_conditioning_start": "Start preconditioning",
+      "auto_conditioning_stop": "Stop preconditioning",
+      "remote_seat_heater_request": "Seat heater",
+      "remote_seat_cooler_request": "Seat cooler",
+      "remote_steering_wheel_heater_request": "Steering wheel heater",
+      "close_charge_port": "Close charge port",
+      "open_charge_port": "Open charge port",
+      "set_pin_to_drive": "PIN to drive"
+    }
   },
   "audit": {
     "title": "Audit log",
@@ -40220,7 +40280,15 @@
     "affected": "Affected components: {{components}}.",
     "telemetryLastSeen": "The last Fleet Telemetry signal arrived {{time}}. Stored history remains available while live values recover.",
     "historyAvailable": "The application and stored history remain available; live or dependent features may be stale.",
-    "configureAlerts": "Health alerts"
+    "configureAlerts": "Health alerts",
+    "components": {
+      "database": "Database",
+      "mqtt": "MQTT",
+      "redis": "Redis",
+      "telemetry": "Fleet Telemetry",
+      "tesla_api": "Tesla API",
+      "worker": "Background worker"
+    }
   },
   "modal": {
     "close": "Close"

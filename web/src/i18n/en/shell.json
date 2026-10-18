@@ -1910,6 +1910,14 @@
   },
   "runtimeHealth": {
     "affected": "Affected components: {{components}}.",
+    "components": {
+      "database": "Database",
+      "mqtt": "MQTT",
+      "redis": "Redis",
+      "telemetry": "Fleet Telemetry",
+      "tesla_api": "Tesla API",
+      "worker": "Background worker"
+    },
     "configureAlerts": "Health alerts",
     "historyAvailable": "The application and stored history remain available; live or dependent features may be stale.",
     "systemStatus": "System status",

@@ -251,7 +251,7 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'valet_mode', command: 'set_valet_mode', commandOff: 'valet_off',
-    labelKey: 'commands.security.valetMode', labelFallback: 'Valet mode',
+    labelKey: 'commands.security.valetMode', labelFallback: "Valet Mode",
     icon: Icons.userCheck, iconOff: Icons.userX, category: 'security', type: 'toggle', variant: 'danger',
     inputConfig: {
       promptKey: 'commands.security.enterValetPin',
@@ -262,13 +262,13 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'reset_valet_pin', command: 'reset_valet_pin',
-    labelKey: 'commands.security.resetValetPin', labelFallback: 'Reset valet PIN',
+    labelKey: 'commands.security.resetValetPin', labelFallback: "Reset Valet PIN",
     sublabelKey: 'commands.security.admin', sublabelFallback: 'Admin',
     icon: Icons.userX, category: 'security', type: 'action', variant: 'danger',
   },
   {
     id: 'guest_mode', command: 'guest_mode_on', commandOff: 'guest_mode_off',
-    labelKey: 'commands.security.guestMode', labelFallback: 'Guest mode',
+    labelKey: 'commands.security.guestMode', labelFallback: "Guest Mode",
     icon: Icons.userPlus, iconOff: Icons.userX, category: 'security', type: 'toggle',
   },
   {
@@ -377,13 +377,13 @@ export const COMMANDS: CommandDef[] = [
   {
     id: 'cop_off', command: 'cop_off',
     labelKey: 'commands.climate.copOff', labelFallback: 'Overheat protect',
-    sublabelKey: 'commands.climate.off', sublabelFallback: 'OFF',
+    sublabelKey: 'commands.climate.off', sublabelFallback: "Off",
     icon: Icons.climate, category: 'climate_protection', type: 'action',
   },
   {
     id: 'set_cop_temp', command: 'set_cop_temp',
     labelKey: 'commands.climate.copTemp', labelFallback: 'COP temp',
-    sublabelKey: 'commands.climate.setLevel', sublabelFallback: 'Low/med/high',
+    sublabelKey: 'commands.climate.setLevel', sublabelFallback: "Low/Med/high",
     icon: Icons.climate, category: 'climate_protection', type: 'input',
     selectConfig: {
       paramName: 'cop_temp',
@@ -420,12 +420,12 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'dog_mode', command: 'dog_mode',
-    labelKey: 'commands.climate.dogMode', labelFallback: 'Dog mode',
+    labelKey: 'commands.climate.dogMode', labelFallback: "Dog Mode",
     icon: Icons.dog, category: 'climate_protection', type: 'action', variant: 'success',
   },
   {
     id: 'camp_mode', command: 'camp_mode',
-    labelKey: 'commands.climate.campMode', labelFallback: 'Camp mode',
+    labelKey: 'commands.climate.campMode', labelFallback: "Camp Mode",
     icon: Icons.tent, category: 'climate_protection', type: 'action', variant: 'success',
   },
   {
@@ -533,12 +533,12 @@ export const COMMANDS: CommandDef[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'vent_windows', command: 'vent_windows',
-    labelKey: 'commands.windows.vent', labelFallback: 'Vent Windows',
+    labelKey: 'commands.windows.vent', labelFallback: "Vent windows",
     icon: Icons.wind, category: 'windows', type: 'action',
   },
   {
     id: 'close_windows', command: 'close_windows',
-    labelKey: 'commands.windows.close', labelFallback: 'Close Windows',
+    labelKey: 'commands.windows.close', labelFallback: "Close windows",
     icon: Icons.close, category: 'windows', type: 'action',
   },
 
@@ -676,7 +676,7 @@ export const COMMANDS: CommandDef[] = [
   {
     id: 'navigation_gps_request', command: 'navigation_gps_request',
     labelKey: 'commands.nav.sendGPS', labelFallback: 'Send GPS',
-    sublabelKey: 'commands.nav.coordinates', sublabelFallback: 'Lat / lon',
+    sublabelKey: 'commands.nav.coordinates', sublabelFallback: "Lat / Lon",
     icon: Icons.location, category: 'navigation', type: 'input',
     inputConfig: {
       promptKey: 'commands.nav.sendGPSTitle',
@@ -754,7 +754,7 @@ export const COMMANDS: CommandDef[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'media_toggle_playback', command: 'media_toggle_playback',
-    labelKey: 'commands.media.playPause', labelFallback: 'Play / pause',
+    labelKey: 'commands.media.playPause', labelFallback: "Play / Pause",
     icon: Icons.play, category: 'media', type: 'action',
   },
   {
