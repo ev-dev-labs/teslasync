@@ -73,3 +73,4 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-17 22:55 UTC | wave-3 Stage 3: 14/16 integrated (admin partial 74/249 verified SUBSET-OK) | analytics + system still running | none
 2026-10-17 23:55 UTC | wave-3 COMPLETE 16/16 (726 resolved, cumulative 3002); remainder migrated 14 + 52 pre-existing proven | analytics 192/201 integrated SUBSET-OK; starting post-wave3 full suite | analytics child needed wrap-up nudge
 2026-10-18 00:40 UTC | post-wave3 suite 55975/982 recorded; MapTileLayer 8 fixed (21/21); wave 4 spawning | reconciled exact (974+9-1); ChargingForensics 1 = flake; trio owned by ui/i18n-trio | none
+2026-10-18 00:50 UTC | wave 4 spawned (admin/charging/dashboard/analytics, 392 fails) | MapTileLayer fix pushed 0de3ba882f; suite-D recorded | none
