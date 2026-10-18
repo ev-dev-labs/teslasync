@@ -134,3 +134,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-18 10:05 UTC - step 7 COMPLETE; follow-ups done
 - Final gates all green: full suite alone 57050/24/4skip (24 = exactly the known blocked/by-design set, 0 unexpected); tsc, full lint+audits, catalog --check (32971), build, go build/test, i18n 8123/7 (C1-C7) green; route guard 12/12 on 12 main routes x 375/768/1280/1920 (Edge; first attempt hit the known truncated-pipe preview death, clean restart passed).
 - Killed 2 stale preview servers from step-3 verification. Final summary written in plan (Results + Final summary). Baseline 56831/168 -> final 57050/24. Next: PR #198 CI-green loop.
+
+## 2026-10-18 13:00 UTC - perf startup diet fixed+pushed; CI watching
+- e86a58ef8e: commandShortcuts mirror split (GlobalShortcuts no longer pins 22KB commandRegistry at boot); regen i18n moves 44 palette keys out of shell.json. Startup 402.7KB -> 399.0KB, local bundle check + 64/64 tests + tsc/eslint/catalog green.
+- CI run 39161392364 (+7 siblings) pending on push. Next: watch to green, fix failures as they land.

@@ -548,3 +548,22 @@ Fixes (each verified locally under CI conditions before push):
    sentinels/probes fail loudly; idempotent). Layout: re-derived
    0/5/12/13, dropped 6/7, merged 8-11; palette: re-pin only;
    theme popover: re-derived 1. Suite 139/139; tsc/eslint clean.
+8. Perf startup diet FIXED (e86a58ef8e): sourcemap attribution of the
+   startup closure (entry + vendor-react via index.html modulepreload)
+   showed commandRegistry (12.5KB min) pinned at boot by GlobalShortcuts
+   (Layout-mounted) just to seed 3 cheatsheet hints. Split: new
+   web/src/lib/commandShortcuts.ts 3-entry mirror (id/shortcut/labelKey/
+   labelFallback); globalShortcuts.tsx uses the mirror; registry keeps
+   full defs (lazy behind palette) + pointer comment. Drift-guarded by
+   existing globalShortcuts.test.tsx (derives expectations from the
+   registry — no new test needed). Regen i18n: 44 palette.cmd.* keys
+   move shell.json -> palette namespace bundle (still in shell bundle
+   set, loaded with shell; only the 3 sync-needed keys stay inlined).
+   startup JS 402.7KB -> 399.0KB (budget 400KB). Local gates: 64/64
+   shortcut+palette tests, tsc, eslint, catalog --check, build green.
+   Rejected: registry i18nKey-drop (gzip already dedups vs name, ~1KB);
+   theme key-compression (repetitive keys, low gz value); tour split
+   (tours already tree-shaken, ~20KB source mostly i18n keys).
+9. CI run on e86a58ef8e: run 39161392364 (+siblings 39161392349/
+   39161392377/39161392383/39161382484/39161392438/39161392475/
+   39161392604) — pending at push time; watching.
