@@ -25,7 +25,7 @@ Pending.
 
 ### Fix 1: shared icon/label row
 - Before: 54 source call sites exposed to the shared wrapLabel child-icon stacking defect, plus one explicit vertical command-button map in CommandQuickActionsWidget: **55 affected source call sites**. After shared wrapper and command-row fixes: **0 unintended stacked action call sites**.
-- Whole-app AST scan also reviewed 14 explicit flex-col button/anchor declarations. One was the command map fixed above; the other 13 are multi-line card/preview/choice surfaces or labels without an icon, not ordinary icon+label actions. Existing vertical sidenav tabs/rail/section grid are intentional navigation surfaces. Glance command children now align through the shared wrapper.
+- Whole-app AST scan also reviewed 14 explicit flex-col button/anchor declarations. Two were ordinary commands: the widget map and Glance QuickAction (already counted among the 54 wrapper callers). The other 12 are multi-line card/preview/choice surfaces or labels without an icon, not ordinary icon+label actions. Existing vertical sidenav tabs/rail/section grid are intentional navigation surfaces. Glance command children now align through the shared wrapper.
 - Regression: shared Button test covers child SVG + label, translated multiline labels, 8px gap, centering and no icon shrink. Existing icon-prop/loading/empty-child coverage retained. Command widget test now guards horizontal command rows.
 - Shared Button + notification studio/source-closure suites: 69 passed, 0 failed. Command-widget suites: 19 passed, 0 failed.
 
@@ -55,3 +55,7 @@ Pending.
 - New tests: existing API payload and live-mode flag, pending state, success/detail/list updates, filtered-list removal, duplicate-click suppression, persistent conflict error + retained note, notice at first load/during refresh/after refresh error/metadata update/resolve/reopen. Three new integration tests pass; all affected 517 tests pass.
 - Translation verification: Drawer 19 calls, EvidencePanel 18, Collaboration 8, presentation helpers 8; zero errors after aligning three stale fallbacks to current catalog wording (confidence high/medium and overlap warning). API hook/shared Button contain no t() calls. Added two complete repair explanation/error strings. Existing catalog/source/combined generators used after LF normalization; all 7,672 trio checks pass.
 - Catalog checkpoint verified 42,175 known source keys and preserved language keys. No catalog keys deleted. Split catalog regeneration reports zero known-missing keys.
+
+### Final horizontal-layout follow-up
+- Removed Glance QuickAction's outer flex-col as well, so its loading spinner stays beside the caption. Its ordinary child icon already benefits from the shared wrapper; this is within the same 55 affected source call sites, not an additional count.
+- Glance typed translation verification: 90 calls, zero errors. Glance/client/resolve focused run: 166 passed, zero failures (includes three previously counted resolve tests).

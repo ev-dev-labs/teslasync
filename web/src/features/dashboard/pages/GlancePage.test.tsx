@@ -976,7 +976,8 @@ describe('GlancePage — null safety + idle branches', () => {
         const action = within(controlsRegion()).getByRole('button', { name });
         expect(action).toBeEnabled();
         expect(action.className).not.toContain('border-white');
-        expect(action).toHaveClass('min-h-16', 'min-w-24');
+        expect(action).toHaveClass('min-h-16', 'min-w-24', 'flex-row');
+        expect(action).not.toHaveClass('flex-col');
       }
       expect(screen.getByRole('link', { name: 'Open full app →' })).toHaveAttribute('href', '/');
     });
