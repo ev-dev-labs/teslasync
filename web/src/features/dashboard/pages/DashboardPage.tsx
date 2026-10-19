@@ -592,7 +592,7 @@ export default function DashboardPage() {
           {t('dashboard.done', 'Done')}
         </Button>
       ) : vehicleList.length > 0 ? (
-        <IconButton icon={<Icon icon={Settings} />} label={t('dashboard.customize', 'Customize')} variant="primary" onClick={() => setEditMode(true)} data-tour="edit-mode-btn" className={ACTION_TARGET} />
+        <IconButton icon={<Icon icon={Settings} />} label={t('dashboard.customize', 'Customize')} variant="ghost" onClick={() => setEditMode(true)} data-tour="edit-mode-btn" className={ACTION_TARGET} />
       ) : undefined}
       overflowActions={!editMode && vehicleList.length > 0 ? (
         <DashboardMoreMenu

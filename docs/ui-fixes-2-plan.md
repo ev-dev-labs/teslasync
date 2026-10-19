@@ -15,7 +15,7 @@
 ## Checklist
 - [x] Shared icon/label layout and app-wide scan.
 - [x] Expanded navigation defaults and new persistence version.
-- [ ] Ghost Customize and stricter action audit.
+- [x] Ghost Customize and stricter action audit.
 - [ ] Repair drawer alignment, footer, resolve feedback and permanent structural notice.
 - [ ] Unit/i18n/audit checks, gates, Edge checks and screenshots.
 - [ ] Final summary, cleanup, commits/pushes and stopped preview.
@@ -34,3 +34,9 @@ Pending.
 - New local-storage key: teslasync-sidenav-collapsed-groups-v2. Old unversioned values are ignored without deleting unrelated state. Explicit v2 collapse/open values persist.
 - Updated large-section expectation and added migration/remount coverage. All sidebar + BottomTabBar suites: **212 passed, 0 failed**.
 - AtlasPanel typed translation verification: 30 calls, zero errors; source normalized to LF and existing producer/combined checkpoint generators run.
+
+### Fix 3: ghost Customize
+- App-wide source search found one filled icon-only Customize action, in DashboardPage. Changed it to ghost; shared IconButton supplies transparent rest state, subtle hover and token focus outline.
+- Removed only the Customize exemption from the freshness/actions audit; other action, confirmation and freshness checks are unchanged. Audit tests now reject filled Customize and accept ghost Customize.
+- Header/PageActions/IconButton/Dashboard suites: **73 passed, 0 failed**. Freshness/actions audit tests: **8 passed, 0 failed**; audit passes.
+- DashboardPage typed i18n verification: 68 calls, zero errors; LF-normalized and regenerated its existing fingerprint.

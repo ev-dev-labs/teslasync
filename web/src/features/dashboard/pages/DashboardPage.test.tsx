@@ -457,7 +457,11 @@ describe('DashboardPage — view-mode header actions', () => {
 
   it('entering customize mode calls setEditMode(true)', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Customize' }));
+    const customize = screen.getByRole('button', { name: 'Customize' });
+    expect(customize).toHaveClass('bg-transparent', 'hover:bg-[var(--control-bg)]');
+    expect(customize.className).toContain('focus-visible:outline-[var(--focus-ring)]');
+    expect(customize).not.toHaveClass('bg-[var(--theme-primary)]');
+    fireEvent.click(customize);
     expect(h.layout.setEditMode).toHaveBeenCalledWith(true);
   });
 
