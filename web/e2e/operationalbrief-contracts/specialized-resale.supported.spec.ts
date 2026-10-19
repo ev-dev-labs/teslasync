@@ -1,3 +1,4 @@
+import { expectBriefDetails } from './disclosure.helpers';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   assertMockApiComplete, expectThemeApplied, installApiMocks, seedBrowserState,
@@ -33,6 +34,7 @@ async function ready(page: Page, mocks: MockApiController | null, theme: Theme) 
 
 async function metric(brief: Locator, key: string, value: string | RegExp, state = 'value') {
   const item = brief.locator(`[data-operational-metric="${key}"]`);
+  if (state === 'missing') { await expect(item).toHaveCount(0); return; }
   await expect(item).toHaveAttribute('data-value-state', state);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }
@@ -105,13 +107,13 @@ async function positiveMetrics(page: Page) {
   await metric(charging, 'cost', /12\.50/);
   await expect(charging.locator('[data-operational-metric="cost"] [data-operational-value]'))
     .not.toContainText(/USD|\$/);
-  await expect(charging).toContainText('the source does not supply a currency denomination');
+  await expectBriefDetails(page, charging, ['the source does not supply a currency denomination']);
   await metric(page.getByTestId('vault-incidents-brief'), 'events', '2');
   await metric(page.getByTestId('vault-incidents-brief'), 'acknowledged', '1');
   const maintenance = page.getByTestId('vault-maintenance-brief');
   await metric(maintenance, 'scheduled-items', '—', 'missing');
   await metric(maintenance, 'service-records', '—', 'missing');
-  await expect(maintenance).toContainText('No evidence supplied');
+  await expectBriefDetails(page, maintenance, ['No evidence supplied']);
 }
 
 test('supported resale positive typed evidence retains source windows and disclosure changes only the report at 320px dark', async ({ page }) => {
@@ -152,15 +154,23 @@ test('supported resale positive typed evidence retains source windows and disclo
     '2026-06-05', '2026-07-07', 'Security incidents loaded:', 'no incident severity or legal conclusion is inferred.',
   ]);
   await review(page, page.getByTestId('vault-maintenance-brief'), 'Maintenance record counts', [
-    'No measurement supplied', 'Scheduled items loaded:', 'Service records loaded:',
+    '2 empty fields are hidden.', 'Scheduled items', 'Service records',
   ]);
   const before = await page.locator('main [data-operational-value]').allTextContents();
   await page.getByRole('tab', { name: 'Disclosure profile', exact: true }).click();
-  await page.getByRole('radio', { name: /^Custom(?:\s|$)/ }).check();
-  await page.getByRole('checkbox', { name: 'Charging history', exact: true }).uncheck();
+  const customProfile = page.getByRole('radio', { name: /^Custom(?:\s|$)/ });
+  await customProfile.focus(); await customProfile.press('Space'); await expect(customProfile).toBeChecked();
+  const chargingHistory = page.getByRole('checkbox', { name: 'Charging history', exact: true });
+  await expect(chargingHistory).toBeChecked();
+  await chargingHistory.focus();
+  await chargingHistory.press('Space');
+  await expect(chargingHistory).not.toBeChecked();
   await page.getByRole('tab', { name: 'Preview & sign', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Excluded by profile (1)', exact: true })).toBeVisible();
-  await expect(page.getByText('charging_history', { exact: true })).toBeVisible();
+  const exclusions = page.getByRole('button', { name: 'Excluded by profile (1)', exact: true });
+  if (await exclusions.getAttribute('aria-expanded') === 'false') await exclusions.click();
+  await expect(exclusions).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByText('evidence.charging_history', { exact: true })).toBeVisible();
   await expect(page.locator('main')).toContainText('day precision');
   await page.getByRole('tab', { name: 'Evidence', exact: true }).click();
   await expect(page.locator('main [data-operational-brief]')).toHaveCount(7);
@@ -186,7 +196,7 @@ test('supported resale independent stats failure stays missing then real global 
   for (const key of ['distance', 'duration', 'efficiency', 'regen', 'co2']) {
     await metric(driving, key, '—', 'missing');
   }
-  await expect(driving).toContainText('Some sources unavailable');
+  await expectBriefDetails(page, driving, ['Some sources unavailable']);
   await metric(page.getByTestId('vault-battery-brief'), 'capacity', /73\.50\s+kWh/);
   await metric(page.getByTestId('vault-charging-brief'), 'sessions', '2');
   await expect(page.getByText('Driving score: 92 (A)', { exact: true })).toBeVisible();
@@ -196,23 +206,23 @@ test('supported resale independent stats failure stays missing then real global 
   await globalRefresh(page);
   await expect.poll(() => state.reads['/drives/stats'] ?? 0).toBeGreaterThan(reads);
   await positiveMetrics(page);
-  await expect(driving).toContainText('Evidence available');
+  await expectBriefDetails(page, driving, ['Evidence available']);
   const published = await driving.locator('[data-operational-value]').allTextContents();
   state.failStats = true;
   const failure = page.waitForResponse(response =>
     new URL(response.url()).pathname === '/api/v1/drives/stats' && response.status() === 422);
   await globalRefresh(page);
   await failure;
-  await expect(driving).toContainText('Retained evidence');
+  await expectBriefDetails(page, driving, ['Retained evidence']);
   expect(await driving.locator('[data-operational-value]').allTextContents()).toEqual(published);
   await review(page, driving, 'Driving', [
     '150.00 km', '2.00 h', '2026-08-21', '2026-08-23', 'Driving loaded:', 'Driving score loaded:',
   ]);
   await metric(page.getByTestId('vault-charging-brief'), 'cost', /12\.50/);
-  await expect(page.getByTestId('vault-charging-brief')).toContainText('Evidence available');
+  await expectBriefDetails(page, page.getByTestId('vault-charging-brief'), ['Evidence available']);
   state.failStats = false;
   await globalRefresh(page);
-  await expect(driving).toContainText('Evidence available');
+  await expectBriefDetails(page, driving, ['Evidence available']);
   expect(await driving.locator('[data-operational-value]').allTextContents()).toEqual(published);
   expect(diagnostics.failedDataRequests.length).toBeGreaterThan(0);
   expect(diagnostics.failedDataRequests.every(request =>
@@ -247,7 +257,7 @@ test('supported resale issued certificate fixture agreement never carries a vali
     state.holdVerification = false;
     await expect(page.getByText('Self-verification failed — the signature may be stale.', { exact: true })).toBeVisible();
     await expect(page.getByText('Signature verified', { exact: true })).toHaveCount(0);
-    await expect(page.getByTestId('vault-certificate-brief')).toContainText('Evidence available');
+    await expectBriefDetails(page, page.getByTestId('vault-certificate-brief'), ['Evidence available']);
     await metric(page.getByTestId('vault-certificate-brief'), 'certificate-cycles', '126');
     await metric(page.getByTestId('vault-battery-brief'), 'soh', /98.*%/);
     await review(page, page.getByTestId('vault-certificate-brief'), 'Certificate measurements', [

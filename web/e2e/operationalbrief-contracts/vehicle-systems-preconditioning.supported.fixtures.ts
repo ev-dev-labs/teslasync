@@ -1,7 +1,7 @@
 import type { Drive } from '../../src/api/types';
 import type { ClimateWire } from './vehicle-systems.fixtures';
 
-export const preconditioningPath = '/preconditioning-effectiveness?vehicle_id=7';
+export const preconditioningPath = '/preconditioning-effectiveness?vehicle_id=7&from=2026-08-20&to=2026-08-26';
 export type TemperaturePreference = 'C' | 'F';
 export type DepartureWire = Pick<
   Drive, 'id' | 'vehicle_id' | 'start_ts' | 'end_ts' | 'duration_s' | 'distance_m'

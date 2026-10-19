@@ -38,23 +38,28 @@ for (const theme of ['light', 'dark'] as const) {
       await waitForHarnessReady(page, mocks);
       const overview = page.getByTestId('drives-overview');
       await overview.scrollIntoViewIfNeeded();
-      const cards = overview.locator('[data-role="metric-card"]');
+      const cards = overview.locator('[data-operational-metric]');
       await expect(cards).toHaveCount(6);
-      await expect(cards.first().locator('[data-role="metric-value"]')).toHaveText('4');
-      await expect(overview.locator('[data-role="metric-comparison"]')).toHaveCount(5);
-      await expect(cards.nth(3).locator('[data-role="metric-comparison"]')).toHaveCount(0);
-      const values = await cards.locator('[data-role="metric-value"]').evaluateAll(nodes =>
-        nodes.map(node => {
-          const bounds = node.getBoundingClientRect();
-          return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
-        }),
-      );
-      for (let column = 0; column < 3; column++) {
-        expect(Math.abs(values[column].x - values[column + 3].x)).toBeLessThanOrEqual(1);
+      await expect(cards.first().locator('[data-operational-value]')).toHaveText('4');
+      await overview.getByRole('button', { name: 'Review details', exact: true }).click();
+      const details = page.getByRole('dialog', { name: 'Overview details', exact: true });
+      await expect(details.locator('[role="group"][aria-label] span[title]')).toHaveCount(5);
+      await expect(details.getByRole('group', { name: 'Efficiency grade', exact: true }).locator('span[title]')).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      await expect(cards.locator('[data-role="metric-comparison"]')).toHaveCount(0);
+      const values = await cards.evaluateAll(nodes => nodes.map(node => {
+        const box = node.getBoundingClientRect();
+        const value = node.querySelector('[data-operational-value]')!.getBoundingClientRect();
+        return { x: Math.round(box.x), y: Math.round(box.y), width: box.width, valueX: value.x, valueY: value.y };
+      }));
+      for (const value of values) expect(value.width).toBeGreaterThanOrEqual(200);
+      for (const column of new Set(values.map(value => value.x))) {
+        const rowValues = values.filter(value => value.x === column);
+        expect(Math.max(...rowValues.map(value => value.valueX)) - Math.min(...rowValues.map(value => value.valueX))).toBeLessThanOrEqual(1);
       }
-      for (const row of [values.slice(0, 3), values.slice(3)]) {
-        expect(Math.max(...row.map(value => value.y)) - Math.min(...row.map(value => value.y)))
-          .toBeLessThanOrEqual(1);
+      for (const row of new Set(values.map(value => value.y))) {
+        const rowValues = values.filter(value => value.y === row);
+        expect(Math.max(...rowValues.map(value => value.valueY)) - Math.min(...rowValues.map(value => value.valueY))).toBeLessThanOrEqual(1);
       }
       await overview.screenshot({ path: test.info().outputPath(`drive-overview-mixed-${width}-${theme}.png`) });
       await expectNoHorizontalOverflow(page);
@@ -79,7 +84,9 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(metrics).toHaveCount(6);
       if (width >= 1920) {
         const rows = await metrics.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().y));
-        expect(new Set(rows).size).toBe(1);
+        // OperationalBrief balances its six facts into two banks of three.
+        expect(new Set(rows).size).toBe(2);
+        for (const row of new Set(rows)) expect(rows.filter(y => y === row)).toHaveLength(3);
       }
 
       const pageHeader = page.locator('[data-role="page-header"]');
@@ -88,9 +95,9 @@ for (const theme of ['light', 'dark'] as const) {
       expect(shadow === 'none' || shadow.replaceAll('rgba(0, 0, 0, 0)', '').replaceAll('0px', '').replace(/[,\s]/g, '') === '').toBe(true);
       const overview = page.getByTestId('drives-overview');
       await overview.scrollIntoViewIfNeeded();
-      const overviewGeometry = await overview.locator('[data-role="metric-card"]').evaluateAll((cards) => cards.map(card => {
+      const overviewGeometry = await overview.locator('[data-operational-metric]').evaluateAll((cards) => cards.map(card => {
         const bounds = card.getBoundingClientRect();
-        const value = card.querySelector('[data-role="metric-value"]')!;
+        const value = card.querySelector('[data-operational-value]')!;
         const valueBounds = value.getBoundingClientRect();
         const inline = getComputedStyle(value.parentElement!).display === 'grid';
         return {
@@ -112,7 +119,7 @@ for (const theme of ['light', 'dark'] as const) {
         const values = overviewGeometry.filter(item => item.row === row).map(item => item.valueY);
         expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(1);
       }
-      if (width >= 1920) expect(overviewGeometry.every(item => item.inline)).toBe(true);
+      if (width >= 1920) expect(new Set(overviewGeometry.map(item => item.row)).size).toBe(2);
       await overview.screenshot({ path: test.info().outputPath(`drive-overview-${width}-${theme}.png`) });
       await region.scrollIntoViewIfNeeded();
       if (width < 1024) {

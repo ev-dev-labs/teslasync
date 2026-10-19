@@ -119,7 +119,9 @@ export async function installDiagnosticFixtures(
     const signal = name as DiagnosticSignal;
     expect(route.request().method()).toBe('GET');
     expect(url.pathname).toBe(`/api/v1/signals/7/${encodeURIComponent(signal)}/history`);
-    expect(url.search).toBe('?hours=72&limit=10000');
+    expect(url.search).toBe(service
+      ? '?hours=72&limit=10000'
+      : '?from=2026-08-24T00%3A00%3A00.000Z&to=2026-08-27T00%3A00%3A00.000Z&limit=10000');
     controls.historyRequests.push(signal);
     if (signal === FOCAL_SIGNAL && hold) {
       hold = false;

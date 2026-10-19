@@ -226,9 +226,9 @@ for (const theme of ['light', 'dark'] as const) {
       }));
       await page.goto('/automations/list');
       await waitForHarnessReady(page, mocks);
-      const table = page.getByRole('table', { name: 'automations:bulk-list', exact: true });
+      const table = page.getByRole('group', { name: 'automations:bulk-list', exact: true });
       await expect(table).toBeVisible();
-      await expect(table.locator('tbody tr')).toHaveCount(25);
+      await expect(table.locator('[data-row-key]')).toHaveCount(25);
       await expect(table.getByText('Automation 063', { exact: true })).toHaveCount(0);
 
       await table.getByRole('button', { name: /^name filter$/i }).click();
@@ -255,8 +255,8 @@ for (const theme of ['light', 'dark'] as const) {
       await page.screenshot({ path: test.info().outputPath(`complete-filter-${width}-${theme}.png`) });
       await dialog.getByRole('button', { name: 'Done', exact: true }).click();
 
-      await expect(table.locator('tbody tr')).toHaveCount(1);
-      await expect(table.locator('tbody td[data-column-key="name"]')).toHaveText('Automation 063');
+      await expect(table.locator('[data-row-key]')).toHaveCount(1);
+      await expect(table.locator('[data-card-label]')).toHaveText('Automation 063');
       await expectNoHorizontalOverflow(page);
       await assertMockApiComplete(page, mocks);
     });

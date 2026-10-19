@@ -1,3 +1,4 @@
+import { expectBriefDetails } from './disclosure.helpers';
 import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 import {
   assertMockApiComplete, expectThemeApplied, fulfillApiFixture, installApiMocks,
@@ -20,6 +21,7 @@ function metric(brief: Locator, id: string) {
 
 async function reading(brief: Locator, id: string, value: string, state = 'value') {
   const item = metric(brief, id);
+  if (state === 'missing') { await expect(item).toHaveCount(0); return; }
   await expect(item).toHaveAttribute('data-value-state', state);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }
@@ -27,6 +29,9 @@ async function reading(brief: Locator, id: string, value: string, state = 'value
 function checkRequest(route: Route, params: Record<string, string>) {
   expect(route.request().method()).toBe('GET');
   const url = new URL(route.request().url());
+  if (url.pathname === '/api/v1/climate' || url.pathname === '/api/v1/drives') {
+    params = { ...params, start: '2026-08-20T00:00:00.000Z', end: '2026-08-27T00:00:00.000Z' };
+  }
   expect([...url.searchParams.keys()].sort()).toEqual(Object.keys(params).sort());
   expect(Object.fromEntries(url.searchParams)).toEqual(params);
 }
@@ -60,14 +65,13 @@ async function review(page: Page, brief: Locator) {
   await brief.scrollIntoViewIfNeeded();
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
   await expect(brief.locator('xpath=..')).toHaveAttribute('data-source-period-kind', 'unknown');
-  await expect(brief).toContainText('Not a live-state observation');
+  await expectBriefDetails(page, brief, ['Not a live-state observation']);
   const rows = brief.locator('[data-operational-metric]');
   const retained = await rows.evaluateAll(nodes => nodes.map(node => ({
-    label: node.firstElementChild?.firstElementChild?.textContent?.trim() ?? '',
+    label: node.firstElementChild?.textContent?.trim() ?? '',
     value: node.querySelector('[data-operational-value]')?.textContent?.trim() ?? '',
     detail: node.lastElementChild?.textContent?.trim() ?? '',
   })));
-  const description = (await brief.locator('p').first().textContent())?.trim() ?? '';
   const trigger = brief.getByRole('button', { name: 'Review details', exact: true });
   await trigger.focus();
   await page.keyboard.press('Enter');
@@ -75,6 +79,9 @@ async function review(page: Page, brief: Locator) {
   await expect(drawer).toHaveCount(1);
   await expect(drawer).toHaveAttribute('aria-modal', 'true');
   await expect(drawer).toHaveAccessibleName(/ details$/);
+  const describedBy = await drawer.getAttribute('aria-describedby');
+  expect(describedBy).toBeTruthy();
+  const description = (await page.locator(`[id="${describedBy}"]`).textContent())?.trim() ?? '';
   expect(description).not.toBe('');
   await expect(drawer).toHaveAccessibleDescription(description);
   await expect(drawer.getByText('Operational metrics', { exact: true })).toBeVisible();
@@ -95,7 +102,7 @@ async function review(page: Page, brief: Locator) {
 
 async function climateResolved(page: Page) {
   const climate = page.getByTestId('preconditioning-climate-source-summary');
-  await expect(climate).toContainText('Returned evidence');
+  await expectBriefDetails(page, climate, ['Returned evidence']);
   for (const id of ['returned', 'unique', 'thermal', 'known-hvac']) {
     await reading(climate, id, '6');
   }
@@ -162,8 +169,8 @@ async function matchedEvidence(page: Page, temperature: TemperaturePreference) {
   await reading(brief, 'readiness-difference', expectedDelta(matchedExpected.readinessDifferenceC, temperature, true));
   await reading(brief, 'improvement-difference', expectedDelta(matchedExpected.improvementDifferenceC, temperature, true));
   await reading(brief, 'comparison-confidence', '2.08%');
-  await expect(metric(brief, 'classified-departures')).toContainText('3 of 3 unique valid drives');
-  await expect(metric(brief, 'hvac-active-share')).toContainText('2 classified departures');
+  await expectBriefDetails(page, brief, ['3 of 3 unique valid drives']);
+  await expectBriefDetails(page, brief, ['2 classified departures']);
   const drives = page.getByTestId('preconditioning-drive-source-summary');
   for (const id of ['returned', 'valid', 'overlap']) await reading(drives, id, '3');
   await reading(drives, 'span', '2.00 h');
@@ -180,7 +187,7 @@ async function matchedEvidence(page: Page, temperature: TemperaturePreference) {
   ]) await reading(availability, id, value);
   const join = page.getByTestId('preconditioning-join-summary');
   for (const [index, value] of ['3', '3', '3', '6', '6', '0', '2', '2', '0.42 h', '0.08 h', '0.08 h'].entries()) {
-    await reading(join, `join-${index}`, value);
+    await reading(join, `join-${index}`, index === 6 || index === 7 ? Number(value).toFixed(2) : value);
   }
   await expect(page.getByTestId('preconditioning-join-support'))
     .toContainText('No climate-row reuse is observed in the returned windows');
@@ -214,7 +221,7 @@ async function matchedEvidence(page: Page, temperature: TemperaturePreference) {
   await comparisonCards(page.getByTestId('preconditioning-improvement-comparison'), temperature, 'improvement');
   const hourly = page.locator('[data-chart-key="preconditioning-effectiveness-hourly"]');
   await expect(hourly).toHaveAttribute('data-chart-state', 'ready');
-  await expect(hourly.locator('.recharts-surface')).toBeVisible();
+  await expect(hourly.locator('.recharts-wrapper > .recharts-surface')).toBeVisible();
   await expect(hourly.locator('table tbody tr')).toHaveCount(24);
   const occupiedHours = await hourly.locator('table tbody tr').evaluateAll(rows =>
     rows.map(row => Array.from(row.querySelectorAll('td'), cell => cell.textContent?.trim() ?? ''))
@@ -230,7 +237,7 @@ async function matchedEvidence(page: Page, temperature: TemperaturePreference) {
   );
   const distribution = page.locator('[data-chart-key="preconditioning-effectiveness-distribution"]');
   await expect(distribution).toHaveAttribute('data-chart-state', 'ready');
-  await expect(distribution.locator('.recharts-surface')).toBeVisible();
+  await expect(distribution.locator('.recharts-wrapper > .recharts-surface')).toBeVisible();
   await expect(distribution.locator('table tbody tr')).toHaveCount(5);
   const bins = await distribution.locator('table tbody tr').evaluateAll(rows =>
     rows.map(row => Array.from(row.querySelectorAll('td'), cell => cell.textContent?.trim() ?? '')));
@@ -296,7 +303,7 @@ for (const theme of ['light', 'dark'] as const) {
           // Intentionally do not invoke the settled harness helper during a held request.
           await expect.poll(() => driveReads).toBeGreaterThan(0);
           await climateResolved(page);
-          await expect(page.getByTestId('preconditioning-drive-source-summary')).toContainText('Loading source');
+          await expectBriefDetails(page, page.getByTestId('preconditioning-drive-source-summary'), ['Loading source']);
           expect(mocks.requests.some(request => request.path === '/api/v1/drives'
             && request.disposition === 'pending')).toBe(true);
           const brief = page.getByTestId('preconditioning-evidence');
@@ -310,7 +317,7 @@ for (const theme of ['light', 'dark'] as const) {
           }
           await review(page, page.getByTestId('preconditioning-climate-source-summary'));
           release();
-          const errors = page.getByTestId('preconditioning-initial-errors');
+          const errors = page.getByTestId('preconditioning-drives-notice');
           await expect(errors).toContainText('Drive-history query failed');
           await expect(errors).not.toContainText('Climate-history query failed');
           await expect(page.getByTestId('preconditioning-source-coverage')).toContainText('Unavailable');
@@ -338,7 +345,7 @@ for (const theme of ['light', 'dark'] as const) {
           expect(diagnostics.brokenResources).toEqual([]);
           expect(diagnostics.failedDataRequests.length).toBeGreaterThan(0);
           for (const failure of diagnostics.failedDataRequests) {
-            expect(failure).toMatch(/^400 (fetch|xhr) .*\/api\/v1\/drives\?vehicle_id=7&limit=1000$/);
+            expect(failure).toMatch(/^400 (fetch|xhr) .*\/api\/v1\/drives\?vehicle_id=7&limit=1000&start=2026-08-20T00%3A00%3A00.000Z&end=2026-08-27T00%3A00%3A00.000Z$/);
           }
           for (const message of diagnostics.consoleErrors) {
             expect(message).toMatch(/^Failed to load resource: the server responded with a status of 400/);

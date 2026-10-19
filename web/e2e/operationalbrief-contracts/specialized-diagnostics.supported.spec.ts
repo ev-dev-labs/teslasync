@@ -1,3 +1,4 @@
+import { expectBriefDetails } from './disclosure.helpers';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   assertMockApiComplete, expectThemeApplied, installApiMocks,
@@ -38,19 +39,24 @@ async function start(page: Page, workspace: Workspace, focalEmpty = false) {
   const mocks = await installApiMocks(page, 'populated', workspace.theme);
   expect(mocks, 'supported diagnostics require the strict shared API harness').not.toBeNull();
   const controls = await installDiagnosticFixtures(page, mocks, workspace.service, focalEmpty);
-  await page.goto(workspace.route);
+  await page.goto(`${workspace.route}?from=2026-08-24&to=2026-08-26`);
   await waitForHarnessReady(page, mocks);
   await expectThemeApplied(page, workspace.theme);
   const brief = page.getByTestId(workspace.testId);
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
-  await expect(brief).toContainText('Choose a focal signal');
-  const window = page.getByRole('combobox', { name: 'Analysis window', exact: true });
-  await expect(window).toHaveValue('72');
-  await expect(window.getByRole('option')).toHaveText([
-    'Last 24 hours', 'Last 3 days', 'Last 7 days', 'Last 30 days',
-  ]);
-  // Exercise only public selectors; no state injection or analysis endpoint.
-  await window.selectOption('72');
+  await expectBriefDetails(page, brief, ['Choose a focal signal']);
+  const window = page.getByRole('button', { name: /^Analysis window:/ });
+  if (workspace.service) {
+    await expect(window).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: 'Analysis window', exact: true })).toHaveValue('72');
+  } else {
+    await expect(window).toBeVisible();
+    await expect(window).toHaveText('Custom');
+    await expect(page.getByRole('combobox', { name: 'Analysis window', exact: true })).toHaveCount(0);
+  }
+  expect(new URL(page.url()).searchParams.get('from')).toBe('2026-08-24');
+  expect(new URL(page.url()).searchParams.get('to')).toBe('2026-08-26');
+  // The shared header owns this exact 72-hour calendar window.
   const focal = page.getByRole('combobox', { name: 'Focal signal', exact: true });
   await expect(focal.getByRole('option')).toHaveText(['Choose a signal', ...DIAGNOSTIC_SIGNALS]);
   expect(controls.historyRequests).toEqual([]);
@@ -65,6 +71,7 @@ async function start(page: Page, workspace: Workspace, focalEmpty = false) {
 
 async function metric(brief: Locator, key: string, value: string | RegExp, state = 'value') {
   const item = brief.locator(`[data-operational-metric="${key}"]`);
+  if (state === 'missing') { await expect(item).toHaveCount(0); return; }
   await expect(item).toHaveAttribute('data-value-state', state);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }
@@ -80,44 +87,49 @@ async function sourceEvidence(page: Page, focalMissing: boolean) {
   }
 }
 
-async function positiveMetrics(brief: Locator, workspace: Workspace) {
+async function positiveMetrics(page: Page, brief: Locator, workspace: Workspace) {
   const prefix = workspace.service ? 'service-evidence' : 'root-cause';
   await metric(brief, `${prefix}-quality`, 'Moderate evidence');
   await metric(brief, `${prefix}-hypotheses`, '2');
-  await expect(brief).toContainText('BatteryLevel · 72h requested history window');
-  await expect(brief).toContainText('Signal evidence available');
+  await expectBriefDetails(page, brief, ['BatteryLevel · 72h requested history window']);
+  await expectBriefDetails(page, brief, ['Signal evidence available']);
   if (workspace.service) {
     await metric(brief, 'service-evidence-signals', '4');
     await metric(brief, 'service-evidence-pack-status', 'Ready');
     // The existing core counts hasEvidence graph flags, including its focal
     // node; this is not a count of successfully retrieved candidate histories.
-    await expect(brief).toContainText('3 corroborating');
+    await expectBriefDetails(page, brief, ['3 corroborating']);
   } else {
     // 90 actual samples, two of three candidates and an 89-minute span:
     // 0.4*(90/200) + 0.35*(2/3) + 0.25*(89/1440) = 0.4287847…
     await metric(brief, 'root-cause-overall-score', '0.43');
     await metric(brief, 'root-cause-effect', /^50(?:\.0{1,2})?$/);
     await metric(brief, 'root-cause-focal-samples', String(SAMPLE_COUNT));
-    await expect(brief).toContainText('3 candidates considered');
-    await expect(brief).toContainText('72h window');
+    await expectBriefDetails(page, brief, ['3 candidates considered']);
+    await expectBriefDetails(page, brief, ['72h window']);
   }
 }
 
-async function missingMetrics(brief: Locator, workspace: Workspace) {
+async function missingMetrics(page: Page, brief: Locator, workspace: Workspace) {
   const prefix = workspace.service ? 'service-evidence' : 'root-cause';
-  await metric(brief, `${prefix}-quality`, 'Insufficient evidence');
+  if (workspace.service) {
+    await metric(brief, `${prefix}-quality`, 'Insufficient evidence');
+  } else {
+    await metric(brief, `${prefix}-quality`, '—', 'missing');
+    await expect(page.locator('main')).toContainText('Insufficient evidence');
+  }
   await metric(brief, `${prefix}-hypotheses`, '—', 'missing');
-  await expect(brief).toContainText('Partial signal evidence');
+  await expectBriefDetails(page, brief, ['Partial signal evidence']);
   if (workspace.service) {
     await metric(brief, 'service-evidence-signals', '4');
     await metric(brief, 'service-evidence-pack-status', 'Not ready');
-    await expect(brief).toContainText('1 corroborating');
+    await expectBriefDetails(page, brief, ['1 corroborating']);
   } else {
-    await metric(brief, 'root-cause-overall-score', /^0(?:\.0{1,2})?$/);
+    await metric(brief, 'root-cause-overall-score', '—', 'missing');
     await metric(brief, 'root-cause-effect', '—', 'missing');
     await metric(brief, 'root-cause-focal-samples', '—', 'missing');
-    await expect(brief).toContainText('Focal history unavailable; no shift conclusion can be drawn.');
-    await expect(brief).toContainText('3 candidates considered');
+    await expectBriefDetails(page, brief, ['5 empty fields are hidden.']);
+    await expectBriefDetails(page, brief, ['No metric values are available yet.']);
   }
 }
 
@@ -132,16 +144,27 @@ async function review(page: Page, brief: Locator, workspace: Workspace, missing 
   const narrative = drawer.getByTestId('operational-narrative');
   await expect(narrative).toContainText('What changed');
   await expect(narrative).toContainText('Not scored');
-  await expect(narrative).toContainText(SCORE_BASIS);
+  if (missing && !workspace.service) {
+    await expect(narrative).toContainText('No confidence basis was supplied.');
+    await expect(narrative).not.toContainText(SCORE_BASIS);
+  } else {
+    await expect(narrative).toContainText(SCORE_BASIS);
+  }
   await expect(narrative).toContainText('Cause is not established by the available evidence.');
   await expect(narrative).toContainText('No action is recommended from this evidence alone.');
   await expect(narrative).toContainText(SOURCE_ATTRIBUTION);
   for (const limitation of COMMON_LIMITATIONS) await expect(narrative).toContainText(limitation);
   if (missing) {
-    for (const limitation of MISSING_FOCAL_LIMITATIONS) await expect(narrative).toContainText(limitation);
+    if (workspace.service) {
+      for (const limitation of MISSING_FOCAL_LIMITATIONS) await expect(narrative).toContainText(limitation);
+      await expect(narrative).toContainText('never a diagnosis');
+    } else {
+      await expect(narrative).toContainText('Not enough history yet for this signal and window.');
+      await expect(narrative).toContainText('No supporting records were supplied.');
+      await expect(narrative).toContainText('not a diagnosis or a claim of causal proof');
+    }
     await expect(narrative).not.toContainText(EXPECTED_SUMMARY);
     await expect(narrative).not.toContainText('No robust shift was found for BatteryLevel');
-    await expect(narrative).toContainText('never a diagnosis');
   } else {
     await expect(narrative).toContainText(EXPECTED_SUMMARY);
     await expect(narrative).toContainText(NO_CAUSAL_PROOF);
@@ -215,7 +238,7 @@ for (const workspace of WORKSPACES) {
   test(`supported actual diagnostics positive signal evidence ${workspace.route}`, async ({ page }) => {
     const { brief, mocks, diagnostics } = await start(page, workspace);
     await sourceEvidence(page, false);
-    await positiveMetrics(brief, workspace);
+    await positiveMetrics(page, brief, workspace);
     await review(page, brief, workspace);
     if (workspace.service) {
       await generateActualPack(page, brief);
@@ -233,7 +256,7 @@ for (const workspace of WORKSPACES) {
   test(`supported actual diagnostics missing focal and held retry preserves related evidence ${workspace.route}`, async ({ page }) => {
     const { brief, mocks, diagnostics, controls } = await start(page, workspace, true);
     await sourceEvidence(page, true);
-    await missingMetrics(brief, workspace);
+    await missingMetrics(page, brief, workspace);
     await review(page, brief, workspace, true);
     if (workspace.service) {
       await expect(page.getByRole('button', { name: 'Generate pack', exact: true })).toBeDisabled();
@@ -248,7 +271,7 @@ for (const workspace of WORKSPACES) {
       await expect.poll(() => focalRequestCount(controls)).toBe(focalBefore + 1);
       await expect(focalSource.getByRole('button', { name: 'Retry', exact: true })).toBeDisabled();
       await sourceEvidence(page, true);
-      await missingMetrics(brief, workspace);
+      await missingMetrics(page, brief, workspace);
       if (workspace.service) {
         await expect(page.getByRole('button', { name: 'Generate pack', exact: true })).toBeDisabled();
       }
@@ -256,14 +279,14 @@ for (const workspace of WORKSPACES) {
       controls.releaseFocal();
     }
     await waitForHarnessReady(page, mocks);
-    await missingMetrics(brief, workspace);
+    await missingMetrics(page, brief, workspace);
     // A second real per-source retry resolves the focal history; no catalog,
     // related-series replacement, workspace injection or fake analysis API.
     controls.focalEmpty = false;
     await focalSource.getByRole('button', { name: 'Retry', exact: true }).click();
     await waitForHarnessReady(page, mocks);
     await sourceEvidence(page, false);
-    await positiveMetrics(brief, workspace);
+    await positiveMetrics(page, brief, workspace);
     expect(focalRequestCount(controls)).toBe(focalBefore + 2);
     expect(controls.historyRequests.filter(signal => signal !== FOCAL_SIGNAL)).toEqual(relatedBefore);
     await review(page, brief, workspace);
