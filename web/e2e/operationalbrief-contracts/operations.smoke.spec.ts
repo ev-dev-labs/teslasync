@@ -31,6 +31,10 @@ import {
 
 async function expectMetric(brief: Locator, key: string, value: string, state = 'value') {
   const metric = brief.locator(`[data-operational-metric="${key}"]`);
+  if (state === 'missing') {
+    await expect(metric).toHaveCount(0);
+    return;
+  }
   await expect(metric).toHaveCount(1);
   await expect(metric).toHaveAttribute('data-value-state', state);
   await expect(metric.locator('[data-operational-value]')).toHaveText(value);
@@ -52,7 +56,7 @@ async function reviewDetails(page: Page, brief: Locator, title: string, details:
   await trigger.press('Enter');
   const dialog = page.getByRole('dialog', { name: `${title} details`, exact: true });
   await expect(dialog).toBeVisible();
-  const close = dialog.getByRole('button', { name: 'Close', exact: true });
+  const close = dialog.locator('[data-drawer-header]').getByRole('button', { name: 'Close', exact: true });
   await expect(close).toBeFocused();
   await close.press('Tab');
   await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
@@ -67,6 +71,14 @@ async function reviewDetails(page: Page, brief: Locator, title: string, details:
   await close.click();
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
+}
+
+async function expectDisclosure(page: Page, brief: Locator, text: string, options = {}) {
+  await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+  const drawer = page.getByRole('dialog').filter({ has: page.getByTestId('operational-narrative') });
+  await expect(drawer).toContainText(text, options);
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
 }
 
 async function expectServiceSections(page: Page) {
@@ -109,15 +121,19 @@ for (const theme of ['light', 'dark'] as const) {
         for (const [key, value] of [['total', '6'], ['ready', '2'], ['in-progress', '2'], ['failed', '1'], ['storage', '3.75 KB']]) {
           await expectMetric(brief, key, value);
         }
-        await expect(brief).toContainText('Export-job list snapshot');
-        await expect(brief).toContainText('Loaded jobs before table filters and pagination; no date window is applied.');
-        await expect(brief).toContainText('Last successful load:');
+        await expectDisclosure(page, brief, 'Export-job list snapshot');
+        await expectDisclosure(page, brief, 'Loaded jobs before table filters and pagination; no date window is applied.');
+        await expectDisclosure(page, brief, 'Last successful load:');
         const readyLink = page.getByRole('link', { name: `Download export ${exportJobs[0].id}`, exact: true });
         await expect(readyLink).toHaveAttribute('href', `/api/v1/export/jobs/${exportJobs[0].id}/download`);
         await expect(readyLink).toHaveAttribute('download', '');
         await expect(page.getByRole('link', { name: /^Download export / })).toHaveCount(2);
-        const selection = page.getByRole('checkbox', { name: /^Select drives export,/ });
-        await selection.check();
+        if (width < 640) await page.getByRole('group', { name: 'Export jobs', exact: true })
+          .getByRole('button', { name: 'Select', exact: true }).click();
+        const selection = page.getByRole('checkbox', { name: /^(?:Select|Deselect) drives export,/ });
+        await selection.focus();
+        await selection.press('Space');
+        await expect(selection).toBeChecked();
         await expectMetric(brief, 'total', '6');
         await expectMetric(brief, 'storage', '3.75 KB');
         const grid = page.locator('[data-grid-frame]');
@@ -125,7 +141,7 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.getByRole('heading', { name: 'Status breakdown', exact: true })).toBeVisible();
         await grid.getByRole('button', { name: 'Export list', exact: true }).click();
         const exportMenu = page.getByRole('menu', { name: 'Export list', exact: true });
-        await expect(exportMenu.getByRole('radio', { name: 'Selected (1)', exact: true })).toBeChecked();
+        await expect(exportMenu.getByRole('menuitemradio', { name: 'Selected (1)', exact: true })).toBeChecked();
         const jsonDownload = page.waitForEvent('download');
         await exportMenu.getByRole('menuitem', { name: 'Download as JSON', exact: true }).click();
         const selectedRows: unknown = JSON.parse(await readDownload(await jsonDownload));
@@ -139,8 +155,8 @@ for (const theme of ['light', 'dark'] as const) {
         expect(csv).toContain('drives');
         expect(csv).not.toContain('charging');
         await grid.getByRole('button', { name: 'Export list', exact: true }).click();
-        await exportMenu.getByRole('radio', { name: 'Visible (6)', exact: true }).click();
-        await expect(exportMenu.getByRole('radio', { name: 'Visible (6)', exact: true })).toBeChecked();
+        await exportMenu.getByRole('menuitemradio', { name: 'Visible (6)', exact: true }).click();
+        await expect(exportMenu.getByRole('menuitemradio', { name: 'Visible (6)', exact: true })).toBeChecked();
         const allDownload = page.waitForEvent('download');
         await exportMenu.getByRole('menuitem', { name: 'Download as JSON', exact: true }).click();
         const allRows: unknown = JSON.parse(await readDownload(await allDownload));
@@ -150,8 +166,10 @@ for (const theme of ['light', 'dark'] as const) {
         if (width === 1440) {
           await grid.getByRole('button', { name: 'Type filter', exact: true }).click();
           const filter = page.getByRole('dialog', { name: 'Type filter', exact: true });
-          await filter.getByRole('checkbox', { name: 'Select all shown values', exact: true }).uncheck();
-          await filter.getByRole('checkbox', { name: 'drives', exact: true }).check();
+          const allValues = filter.getByRole('checkbox', { name: 'Select all shown values', exact: true });
+          await allValues.focus(); await allValues.press('Space'); await expect(allValues).not.toBeChecked();
+          const drivesValue = filter.getByRole('checkbox', { name: 'drives', exact: true });
+          await drivesValue.focus(); await drivesValue.press('Space'); await expect(drivesValue).toBeChecked();
           await filter.getByRole('button', { name: 'Done', exact: true }).click();
           await expect(grid.getByRole('checkbox', { name: /export,/ })).toHaveCount(1);
           await expectMetric(brief, 'total', '6');
@@ -199,7 +217,7 @@ for (const theme of ['light', 'dark'] as const) {
         const brief = page.getByRole('region', { name: 'Export summary', exact: true });
         for (const key of ['total', 'ready', 'in-progress', 'failed']) await expectMetric(brief, key, '0');
         await expectMetric(brief, 'storage', '—');
-        await expect(brief).toContainText('Export-job list snapshot');
+        await expectDisclosure(page, brief, 'Export-job list snapshot');
         await expect(page.getByText('No exports yet', { exact: true })).toBeVisible();
         await reviewDetails(page, brief, 'Export summary', [
           'A zero footprint displays as —, not as an unknown source.',
@@ -218,8 +236,8 @@ for (const theme of ['light', 'dark'] as const) {
         fixture.fail();
         await page.goto(operationsRoutes.exports);
         const brief = page.getByRole('region', { name: 'Export summary', exact: true });
-        await expect(brief).toContainText('Export-job source failed', { timeout: 30_000 });
-        await expect(brief).toContainText('Successful load time is unknown.');
+        await expectDisclosure(page, brief, 'Export-job source failed', { timeout: 30_000 });
+        await expectDisclosure(page, brief, 'Successful load time is unknown.');
         for (const key of ['total', 'ready', 'in-progress', 'failed', 'storage']) {
           await expectMetric(brief, key, '—', 'missing');
         }
@@ -249,7 +267,7 @@ for (const theme of ['light', 'dark'] as const) {
         const refresh = page.locator('[data-role="page-header"]').getByRole('button', { name: 'Refresh', exact: true });
         await refresh.click();
         await expect.poll(() => fixture.reads).toBeGreaterThan(reads);
-        await expect(brief).toContainText('Retained export jobs', { timeout: 30_000 });
+        await expectDisclosure(page, brief, 'Retained export jobs', { timeout: 30_000 });
         expect(await brief.locator('[data-operational-metric]').allTextContents()).toEqual(published);
         await expect(page.getByRole('link', { name: /^Download export / })).toHaveCount(2);
         await reviewDetails(page, brief, 'Export summary', [
@@ -258,7 +276,7 @@ for (const theme of ['light', 'dark'] as const) {
         ]);
         fixture.recover();
         await refresh.click();
-        await expect(brief).toContainText('Export-job list snapshot');
+        await expectDisclosure(page, brief, 'Export-job list snapshot');
         await expectMetric(brief, 'total', '6');
         await waitForHarnessReady(page, mocks);
         await expectThemeApplied(page, theme);
@@ -285,16 +303,18 @@ for (const theme of ['light', 'dark'] as const) {
         for (const [key, value] of [['recall-candidates', '1'], ['potentially-applicable', '1'], ['manufacturer-communications', '1'], ['symptom-matches', '2']]) {
           await expectMetric(summary, key, value);
         }
-        await expect(summary).toContainText('Returned report');
-        await expect(summary).toContainText('Selected vehicle · source windows may differ');
-        await expect(summary).toContainText('Report generated');
+        await expectDisclosure(page, summary, 'Returned report');
+        await expectDisclosure(page, summary, 'Selected vehicle · source windows may differ');
+        await expectDisclosure(page, summary, 'Report generated');
         await expect(page.getByRole('table', { name: 'Vehicle match context', exact: true })).toContainText('Tesla Model 3');
         await expect(page.getByRole('table', { name: 'Vehicle match context', exact: true })).toContainText('2021');
         await expectMetric(catalog, 'normalized-tesla-records', '321');
         await expectMetric(catalog, 'official-period-artifacts', '5');
-        await expect(catalog).toContainText('Fresh');
-        await expect(catalog).toContainText('Global catalog · official periods');
-        await expect(catalog.getByTitle('2026-08-05T07:00:00.000Z')).toBeVisible();
+        await expectDisclosure(page, catalog, 'Fresh');
+        await expectDisclosure(page, catalog, 'Global catalog · official periods');
+        await catalog.getByRole('button', { name: 'Review details', exact: true }).click();
+        await expect(page.getByRole('dialog').getByTitle('2026-08-05T07:00:00.000Z')).toBeVisible();
+        await page.keyboard.press('Escape');
         await expect(page.getByText('Latest import failed', { exact: true })).toBeVisible();
         await expect(page.getByText(failedLaterCatalog.latest_attempt!.error_detail!, { exact: true })).toBeVisible();
         await expect(page.getByText('1000 source rows', { exact: true })).toBeVisible();
@@ -343,7 +363,7 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.getByText(claimReport.subject, { exact: true })).toBeVisible();
         await context.grantPermissions(['clipboard-read', 'clipboard-write']);
         await page.getByRole('button', { name: 'Copy ticket text', exact: true }).click();
-        await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(claimReport.body);
+        await expect.poll(async () => (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n')).toBe(claimReport.body.replace(/\r\n/g, '\n'));
         await expect(page.getByRole('button', { name: 'Open service evidence pack', exact: true })).toBeEnabled();
         await page.getByRole('button', { name: 'Import official NHTSA artifact for 2025–2026', exact: true }).click();
         await expect.poll(() => fixture.importedArtifacts).toEqual([catalogReport.latest_successful!.artifact_url]);
@@ -366,10 +386,12 @@ for (const theme of ['light', 'dark'] as const) {
         await page.goto(operationsRoutes.service);
         await waitForHarnessReady(page, mocks);
         const catalog = page.getByTestId('service-intelligence-catalog-summary');
-        await expect(catalog).toContainText('Stale');
+        await expectDisclosure(page, catalog, 'Stale');
         await expectMetric(catalog, 'normalized-tesla-records', '321');
         await expectMetric(catalog, 'official-period-artifacts', '5');
-        await expect(catalog.getByTitle('2026-08-05T07:00:00.000Z')).toBeVisible();
+        await catalog.getByRole('button', { name: 'Review details', exact: true }).click();
+        await expect(page.getByRole('dialog').getByTitle('2026-08-05T07:00:00.000Z')).toBeVisible();
+        await page.keyboard.press('Escape');
         await expect(page.getByText('Catalog refresh recommended', { exact: true })).toBeVisible();
         await expect(page.getByText('TSB catalog is not populated', { exact: true })).toHaveCount(0);
         await expect(page.getByRole('button', { name: 'Import official NHTSA artifact for 2025–2026', exact: true }))
@@ -386,7 +408,7 @@ for (const theme of ['light', 'dark'] as const) {
         await expectNoRuntimeFailures(diagnostics);
       });
 
-      test('service refresh failure retains source details and leaves catalog and warranty requests independent', async ({ page }) => {
+      test('page refresh retains failed service data and source retry leaves catalog and warranty requests independent', async ({ page }) => {
         test.setTimeout(60_000);
         const diagnostics = monitorPage(page);
         await seedBrowserState(page, theme, operationsRoutes.service);
@@ -404,12 +426,12 @@ for (const theme of ['light', 'dark'] as const) {
         fixture.fail();
         await page.locator('[data-role="page-container"]').getByRole('button', { name: /^Refresh data/ }).click();
         await expect.poll(() => fixture.reportReads).toBeGreaterThan(reportReads);
-        await expect(summary).toContainText('Retained report', { timeout: 30_000 });
+        await expectDisclosure(page, summary, 'Retained report', { timeout: 30_000 });
         expect(await summary.locator('[data-operational-metric]').allTextContents()).toEqual(published);
-        expect(fixture.warrantyReads).toBe(warrantyReads);
-        expect(fixture.catalogReads).toBe(catalogReads);
+        expect(fixture.warrantyReads).toBe(warrantyReads + 1);
+        expect(fixture.catalogReads).toBe(catalogReads + 1);
         await expectMetric(catalog, 'normalized-tesla-records', '321');
-        await expect(catalog).toContainText('Fresh');
+        await expectDisclosure(page, catalog, 'Fresh');
         await expect(page.getByText('Retained battery coverage', { exact: true })).toBeVisible();
         await expect(page.locator(`a[href="${serviceReport.recall_findings[0].source_document_url}"]`)).toBeVisible();
         await reviewDetails(page, summary, 'Service match summary', [
@@ -423,10 +445,10 @@ for (const theme of ['light', 'dark'] as const) {
           hasText: 'Recall & service intelligence may be out of date',
         });
         await notice.getByRole('button', { name: 'Refresh', exact: true }).click();
-        await expect(summary).toContainText('Returned report');
+        await expectDisclosure(page, summary, 'Returned report');
         await waitForHarnessReady(page, mocks);
-        expect(fixture.warrantyReads).toBe(warrantyReads);
-        expect(fixture.catalogReads).toBe(catalogReads);
+        expect(fixture.warrantyReads).toBe(warrantyReads + 1);
+        expect(fixture.catalogReads).toBe(catalogReads + 1);
         await expectThemeApplied(page, theme);
         await expectNoHorizontalOverflow(page);
         await assertMockApiComplete(page, mocks);
@@ -453,16 +475,16 @@ for (const theme of ['light', 'dark'] as const) {
           }
           await expectMetric(catalog, 'normalized-tesla-records', state === 'zero' ? '0' : '—', state === 'zero' ? 'value' : 'missing');
           await expectMetric(catalog, 'official-period-artifacts', '5');
-          await expect(summary).toContainText(state === 'zero' ? 'Returned report' : 'Summary unavailable');
-          await expect(catalog).toContainText(state === 'zero' ? 'Fresh' : 'Not imported');
+          await expectDisclosure(page, summary, state === 'zero' ? 'Returned report' : 'Summary unavailable');
+          await expectDisclosure(page, catalog, state === 'zero' ? 'Fresh' : 'Not imported');
           if (state === 'unknown') {
-            await expect(summary).toContainText('Report generated —');
-            await expect(catalog).toContainText('Never');
+            await expectDisclosure(page, summary, 'Report generated —');
+            await expectDisclosure(page, catalog, 'Never');
             await expect(page.getByText('TSB catalog is not populated', { exact: true })).toBeVisible();
           }
           await expect(page.getByRole('table', { name: 'Vehicle match context', exact: true })).toContainText('Tesla Model 3');
           await expect(page.getByRole('button', { name: /^Import official NHTSA artifact for / })).toHaveCount(5);
-          await reviewDetails(page, summary, 'Service match summary', [
+          await reviewDetails(page, summary, 'Service match summary', state === 'unknown' ? ['4 empty fields are hidden.'] : [
             'Returned applicability hypotheses; campaign completion remains unknown.',
             'Returned observed signal overlaps; match scores and evidence remain in the ranked records below.',
           ]);

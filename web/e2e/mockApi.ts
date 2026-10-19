@@ -466,6 +466,7 @@ export function resolveApiFixture(
   if (path === '/settings/dashboard-layouts') return matched({ layouts: [], active_layout_id: null });
   if (path.startsWith('/user-preferences/latest?')) return matched(null);
   if (/^\/signals\/7\/live/.test(path)) return matched({});
+  if (path === '/vehicles/7') return matched(vehicle);
   if (path === '/vehicles') {
     if (scenario === 'large-fleet') return matched(largeFleetVehicles());
     return matched(listFor(scenario, scenario === 'partial' ? { ...vehicle, model: '', trim_badging: '' } : vehicle));

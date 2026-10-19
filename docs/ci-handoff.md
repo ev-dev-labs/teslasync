@@ -90,3 +90,8 @@ baseline. Responsive narrow/perchar work is DONE and verified.
 - Visual baseline regeneration completed 49 passed / 41 existing profile skips, no test or assertion changes. Baselines are held for diff review and a separate commit.
 - Visual review: compared old/new fleet degraded and battery long-content frames side by side; content/evidence are preserved, nav rail label/icon alignment matches the merged nav-motion UI. Refreshed 22 Windows Chromium baselines using the unchanged snapshot assertions (49 pass, 41 existing profile skips). No tolerance changes. Temporary comparison PNG remains outside the repo.
 - Removed a stale zero-byte .git/index.lock (11:06:38, no running git.exe) before commit; no concurrent worktree edits observed. Production fixes pushed as 5d594e0040.
+
+### Operations contracts closeout
+- 40/40 verified under CI=true/TZ=UTC, retries=0: 36 cases in full run plus 4 export cases in final focused run. Retained exact counts/values/windows, source independence on retry, zero/missing distinction, privacy, clipboard/export/delete flows, keyboard focus and drawer geometry. Windows clipboard CRLF normalized to LF for logical text equality. Actual source timestamps and withheld-count disclosures are asserted in the real drawer.
+- Shared mock harness now explicitly handles GET /vehicles/7 using its existing canonical vehicle fixture. Global refresh requested this real endpoint; strict harness previously returned 599. Unknown routes remain rejected.
+- Runtime drive pricing follow-up in progress: failed initial settings must show unknown cost, while a successfully loaded unset rate still says No rate configured. Existing unit suite 23/23; browser confirmation running. No workflow changes.
