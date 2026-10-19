@@ -260,7 +260,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(16);
     expect(within(table).queryByRole('columnheader', { name: 'misaligned' })).not.toBeInTheDocument();
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart', exact: true }));
-    const menu = within(chart).getByRole('menu', { name: 'Export chart', exact: true });
+    const menu = screen.getByRole('menu', { name: 'Export chart', exact: true });
     for (const name of ['Save as PNG', 'Save as SVG', 'Copy image to clipboard']) {
       expect(within(menu).getByRole('menuitem', { name, exact: true })).toBeInTheDocument();
     }
@@ -269,7 +269,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(within(menu).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
     expect(within(chart).queryByRole('button', { name: /fullscreen|annotation/i })).not.toBeInTheDocument();
     fireEvent.keyDown(menu, { key: 'Escape' });
-    expect(within(chart).queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('shows unknown instead of zero for missing denominators while keeping all shells', () => {
@@ -510,7 +510,7 @@ describe('Charge departure chart flag alternatives (AUTHORED_NOTRUN)', () => {
       mountPage();
       const chart = figure();
       fireEvent.click(within(chart).getByRole('button', { name: 'Export chart', exact: true }));
-      fireEvent.click(within(chart).getByRole('menuitem', { name: 'Download data as CSV', exact: true }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV', exact: true }));
       expect(createObjectURL).toHaveBeenCalledTimes(1);
       expect(click).toHaveBeenCalledTimes(1);
       const blob = createObjectURL.mock.calls[0]![0];

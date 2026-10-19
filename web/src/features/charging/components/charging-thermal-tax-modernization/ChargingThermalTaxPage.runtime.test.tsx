@@ -342,7 +342,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     expect(within(chart).queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
     expect(within(chart).queryByRole('button', { name: /annotation/i })).not.toBeInTheDocument();
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
-    const menu = within(chart).getByRole('menu', { name: 'Export chart' });
+    const menu = screen.getByRole('menu', { name: 'Export chart' });
     expect(within(menu).getByRole('menuitem', { name: 'Save as PNG' })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Copy image to clipboard' })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();

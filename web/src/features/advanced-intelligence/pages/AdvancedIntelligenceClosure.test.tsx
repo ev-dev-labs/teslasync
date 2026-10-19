@@ -551,11 +551,11 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
     expect(screen.getByText(/Modeled range is not an observed route/)).toBeInTheDocument();
     const exportButton = within(chart).getByRole('button', { name: 'Export chart' });
     fireEvent.click(exportButton);
-    expect(within(chart).getByRole('menuitem', { name: 'Save as PNG' })).toBeInTheDocument();
-    expect(within(chart).getByRole('menuitem', { name: 'Save as SVG' })).toBeInTheDocument();
-    expect(within(chart).getByRole('menuitem', { name: 'Copy image to clipboard' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Save as PNG' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Save as SVG' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Copy image to clipboard' })).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(within(chart).queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(exportButton).toHaveAttribute('aria-expanded', 'false');
     expect(state.twin.data).toEqual(original);
     expect(state.twin.mutate).not.toHaveBeenCalled();
@@ -692,9 +692,9 @@ describe('independent forecast, event history and modeled outage sources', () =>
     expectBefore(screen.getByRole('heading', { name: 'Caller priority first' }), screen.getByRole('heading', { name: 'Caller priority second' }));
     expectBefore(screen.getByText(/Review evacuation reserve/), screen.getByText(/No automatic shedding/));
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
-    expect(within(chart).getAllByRole('menuitem')).toHaveLength(3);
+    expect(screen.getAllByRole('menuitem')).toHaveLength(3);
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(within(chart).queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('retains caller edits and weather assessment on a failed status refresh without treating an unresolved event source as an empty history', () => {

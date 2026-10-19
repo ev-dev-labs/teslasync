@@ -372,7 +372,7 @@ describe('DriveDNAPage', () => {
     expectEverySection();
   });
 
-  it('refreshes only scoped history when there is no active drive, then includes populated telemetry', () => {
+  it('refreshes scoped history and adds telemetry only after a drive is selected', () => {
     h.history = query({ data: [], dataUpdatedAt: Date.now() });
     h.telemetry = query({ isError: true, error: new Error('inactive telemetry') }, telemetryRefetch);
     const view = renderPage();
@@ -394,7 +394,7 @@ describe('DriveDNAPage', () => {
     view.rerenderPage();
     fireEvent.click(screen.getByRole('button', { name: /Refresh data.*Stale/i }));
     expect(telemetryRefetch).toHaveBeenCalledTimes(1);
-    expect(historyRefetch).toHaveBeenCalledTimes(1);
+    expect(historyRefetch).toHaveBeenCalledTimes(2);
     expect(h.telemetryHook).toHaveBeenLastCalledWith('1');
     expect(screen.getByLabelText(/Drive DNA deterministic emission artwork/)).toBeInTheDocument();
     expectEverySection();

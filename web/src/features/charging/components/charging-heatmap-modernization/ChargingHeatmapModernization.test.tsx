@@ -279,10 +279,10 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
       expect(within(chart).getByRole('button', { name: /full.?screen/i })).toBeInTheDocument();
       expect(within(chart).getByRole('button', { name: 'Export chart', exact: true })).toBeInTheDocument();
       fireEvent.click(within(chart).getByRole('button', { name: 'Export chart', exact: true }));
-      const menu = within(chart).getByRole('menu', { name: 'Export chart', exact: true });
+      const menu = screen.getByRole('menu', { name: 'Export chart', exact: true });
       expect(within(menu).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
       fireEvent.keyDown(menu, { key: 'Escape' });
-      expect(within(chart).queryByRole('menu')).not.toBeInTheDocument();
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     }
   });
 });

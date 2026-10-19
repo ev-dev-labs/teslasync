@@ -94,7 +94,7 @@ describe('charger resilience canonical migration', () => {
     expect(table).toHaveTextContent(longSite);
     expect(table).toHaveTextContent('Backup station');
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
-    expect(within(chart).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
   });
   it.each(['refresh-error', 'paused'] as const)('retains all specialist content during %s and provides source retry', mode => {
     h.query = { ...h.query, error: mode === 'refresh-error' ? new Error('Refresh failed') : null,

@@ -705,7 +705,7 @@ describe('RegenEfficiencyPage', () => {
       within(monthlySection).getByRole('button', { name: 'Export chart' }),
     );
     fireEvent.click(
-      within(monthlySection).getByRole('menuitem', {
+      screen.getByRole('menuitem', {
         name: 'Download data as CSV',
       }),
     );

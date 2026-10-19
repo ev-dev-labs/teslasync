@@ -284,8 +284,8 @@ describe('Pack Capacity source modernization (NOT RUN)', () => {
     const figure = within(screen.getByRole('figure', { name: 'Capacity estimate timeline' }));
     expect(figure.getByRole('group', { name: 'Timeline of raw and filtered capacity estimates' })).toBeInTheDocument();
     fireEvent.click(figure.getByRole('button', { name: 'Export chart' }));
-    expect(figure.getByRole('menuitem', { name: /CSV/i })).toBeInTheDocument();
-    expect(figure.getByRole('menuitem', { name: /PNG/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /CSV/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /PNG/i })).toBeInTheDocument();
     // No capture-eligible SVG renders at jsdom size, so the menu
     // intentionally omits SVG per the capture-eligibility gate (pinned by
     // the export menu's own suite) rather than inventing a snapshot.

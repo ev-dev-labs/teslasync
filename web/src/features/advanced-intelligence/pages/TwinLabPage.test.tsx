@@ -384,7 +384,7 @@ describe('TwinLabPage restrained source adoption', () => {
     const chart = card('Range-effect uncertainty comparison');
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
     for (const label of ['Save as PNG', 'Save as SVG', 'Copy image to clipboard']) {
-      expect(within(chart).getByRole('menuitem', { name: label })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: label })).toBeInTheDocument();
     }
     expect(state.mutation.mutate).not.toHaveBeenCalled();
   });

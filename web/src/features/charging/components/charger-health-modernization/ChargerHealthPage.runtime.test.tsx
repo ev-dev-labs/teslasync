@@ -241,7 +241,7 @@ describe('ChargerHealthPage live modernization (execution NOTRUN)', () => {
     expect(within(figure).queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
     expect(within(figure).queryByRole('button', { name: /annotation/i })).not.toBeInTheDocument();
     fireEvent.click(within(figure).getByRole('button', { name: 'Export chart' }));
-    const menu = within(figure).getByRole('menu', { name: 'Export chart' });
+    const menu = screen.getByRole('menu', { name: 'Export chart' });
     for (const name of ['Save as PNG', 'Save as SVG', 'Copy image to clipboard']) {
       expect(within(menu).getByRole('menuitem', { name })).toBeInTheDocument();
     }

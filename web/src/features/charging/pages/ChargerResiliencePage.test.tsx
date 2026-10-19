@@ -284,8 +284,8 @@ describe('charger resilience page-local modernization', () => {
     expect(siteRow).toHaveTextContent('80.00%');
     expect(siteRow).toHaveTextContent('Top-site dependency');
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
-    expect(within(chart).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
-    fireEvent.click(within(chart).getByRole('menuitem', { name: 'Download data as CSV' }));
+    expect(screen.getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
     expect(h.downloadCSV).toHaveBeenCalledWith(expect.any(String),
       `site,share,sessions,dependency\r\n${longSite},80,2,Top-site dependency\r\nBackup station,20,1,—`);
   });
@@ -306,7 +306,7 @@ describe('charger resilience page-local modernization', () => {
       .toEqual(['Backup station', '33,30', '1', '—']);
     expect(h.chart?.exportData?.map(row => [row.share, row.sessions])).toEqual([[66.7, 1], [33.3, 1]]);
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
-    fireEvent.click(within(chart).getByRole('menuitem', { name: 'Download data as CSV' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
     expect(h.downloadCSV).toHaveBeenCalledWith(expect.any(String),
       `site,share,sessions,dependency\r\n${longSite},66.7,1,Top-site dependency\r\nBackup station,33.3,1,—`);
   });

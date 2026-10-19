@@ -335,7 +335,7 @@ describe('ChargeInterruptionPage source adoption and preservation', () => {
       expect(within(table).getByRole('columnheader', { name: label, exact: true })).toBeInTheDocument();
     }
     fireEvent.click(within(figure()).getByRole('button', { name: 'Export chart', exact: true }));
-    const menu = within(figure()).getByRole('menu', { name: 'Export chart', exact: true });
+    const menu = screen.getByRole('menu', { name: 'Export chart', exact: true });
     for (const name of ['Save as PNG', 'Save as SVG', 'Copy image to clipboard']) {
       expect(within(menu).getByRole('menuitem', { name, exact: true })).toBeInTheDocument();
     }
