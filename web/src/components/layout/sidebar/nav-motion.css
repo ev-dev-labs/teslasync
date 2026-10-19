@@ -1,0 +1,135 @@
+.nav-icon-part, .nav-motion-icon { transform-box: view-box; }
+.nav-motion-target { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.nav-phone-icon { width: 22px; height: 22px; }
+.sidenav-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--surface-2); }
+.sidenav-rail-item .sidenav-short-label { color: var(--text-muted); }
+.sidenav-rail-item.is-selected .sidenav-short-label { color: var(--text-primary); }
+@media (prefers-reduced-motion: no-preference) {
+  [data-nav-action] .nav-motion-target { transition: transform 100ms cubic-bezier(.2,.9,.2,1.2); }
+  .sidenav-phone-tabs:not([data-nav-reduced]) > [data-nav-action]:active .nav-motion-target,
+  .sidenav-rail:not([data-nav-reduced]) [data-nav-action]:active .nav-motion-target { transform: scale(.9); }
+  .nav-motion-target.is-animating { animation: nav-motion-lifetime 440ms ease-out; }
+  .nav-motion-target.is-animating .nav-icon-part { animation-duration: 340ms; animation-timing-function: cubic-bezier(.2,.8,.25,1); animation-fill-mode: backwards; animation-iteration-count: 1; }
+  .nav-motion-target.is-animating ~ .sidenav-alert-count { animation: nav-badge 340ms ease-out; transform-origin: center; }
+  @keyframes nav-motion-lifetime { from, to { opacity: 1; } }
+  @keyframes nav-badge { 30% { transform: scale(1.2); } 100% { transform: scale(1); } }
+  .nav-motion-target.is-animating .nav-glyph-home .part-1 { animation-name: nav-tile; animation-duration: 270ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-home .part-2 { animation-name: nav-tile; animation-duration: 270ms; animation-delay: 40ms; }
+  .nav-motion-target.is-animating .nav-glyph-home .part-3 { animation-name: nav-tile; animation-duration: 270ms; animation-delay: 80ms; }
+  .nav-motion-target.is-animating .nav-glyph-home .part-4 { animation-name: nav-tile; animation-duration: 270ms; animation-delay: 120ms; }
+  @keyframes nav-tile { 25% { transform: scale(.85); } 65% { transform: scale(1.04); } 100% { transform: scale(1); } }
+  .nav-motion-target.is-animating .nav-glyph-vehicles .part-1 { animation-name: nav-dip; animation-duration: 340ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-vehicles .part-2, .nav-motion-target.is-animating .nav-glyph-vehicles .part-3 { animation-name: nav-wheel; animation-duration: 340ms; animation-delay: 0ms; }
+  @keyframes nav-dip { 30% { transform: translateY(1.5px); } 65% { transform: translateY(-.5px); } 100% { transform: none; } }
+  @keyframes nav-wheel { to { transform: rotate(180deg); } }
+  .nav-motion-target.is-animating .nav-glyph-driving .part-1 { animation-name: nav-drive; animation-duration: 340ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-driving .part-2 { animation-name: nav-drive; animation-duration: 340ms; animation-delay: 30ms; }
+  @keyframes nav-drive { 35% { transform: translate(1.8px,-1.8px) scale(1.1); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-charging .part-1 { animation-name: nav-dip; animation-duration: 310ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-charging .part-2 { animation-name: nav-dip; animation-duration: 310ms; animation-delay: 30ms; }
+  .nav-motion-target.is-animating .nav-glyph-charging .part-3 { animation-name: nav-dip; animation-duration: 310ms; animation-delay: 60ms; }
+  .nav-motion-target.is-animating .nav-glyph-battery .part-1 { animation-name: nav-casing; animation-duration: 340ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-battery .part-2 { animation-name: nav-bolt; animation-duration: 340ms; animation-delay: 0ms; }
+  @keyframes nav-casing { 30% { transform: scaleX(.95); } 100% { transform: none; } }
+  @keyframes nav-bolt { 15% { transform: scale(.6); opacity: .55; } 50% { transform: scale(1.25); opacity: 1; } 100% { transform: none; opacity: 1; } }
+  .nav-motion-target.is-animating .nav-glyph-energy .part-1 { animation-name: nav-hex; animation-duration: 340ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-energy .part-2 { animation-name: nav-counter; animation-duration: 340ms; animation-delay: 0ms; }
+  @keyframes nav-hex { to { transform: rotate(60deg); } }
+  @keyframes nav-counter { 50% { transform: rotate(-30deg) scale(1.2); } 100% { transform: rotate(-60deg); } }
+  .nav-motion-target.is-animating .nav-glyph-cabin .part-1 { animation-name: nav-frame; animation-duration: 340ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-cabin .part-2 { animation-name: nav-cushion; animation-duration: 340ms; animation-delay: 0ms; }
+  @keyframes nav-frame { 35% { transform: scaleX(1.05); } 100% { transform: none; } }
+  @keyframes nav-cushion { 35% { transform: translateY(2.5px) scaleY(.9); } 70% { transform: translateY(-.5px) scaleY(1.02); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-reports .part-2 { animation-name: nav-bar; animation-duration: 300ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-reports .part-3 { animation-name: nav-bar; animation-duration: 300ms; animation-delay: 45ms; }
+  .nav-motion-target.is-animating .nav-glyph-reports .part-4 { animation-name: nav-bar; animation-duration: 300ms; animation-delay: 90ms; }
+  @keyframes nav-bar { 20% { transform: scaleY(.2); } 65% { transform: scaleY(1.15); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-service { animation: nav-wrench 400ms ease-out; transform-origin: 16.5px 7.5px; }
+  .nav-motion-target.is-animating .nav-glyph-service .part-2 { animation-name: nav-jaw; animation-duration: 400ms; animation-delay: 0ms; }
+  @keyframes nav-wrench { 20% { transform: rotate(-25deg); } 45% { transform: rotate(5deg); } 70% { transform: rotate(-20deg); } 100% { transform: none; } }
+  @keyframes nav-jaw { 35% { transform: rotate(35deg); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-commands .part-1 { animation-name: nav-punch; animation-duration: 340ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-commands .part-2 { animation-name: nav-cursor-slide, nav-cursor-blink; animation-duration: 380ms; animation-delay: 0ms; animation-timing-function: ease-out, steps(1, end); }
+  @keyframes nav-punch { 35% { transform: translateX(2.5px); } 100% { transform: none; } }
+  @keyframes nav-cursor-slide { 35% { transform: translateX(2px); } 100% { transform: none; } }
+  @keyframes nav-cursor-blink { 15%, 45% { opacity: 0; } 30%, 60%, 100% { opacity: 1; } }
+  .nav-motion-target.is-animating .nav-glyph-automation .part-1 { animation-name: nav-node; animation-duration: 250ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-automation .part-2 { animation-name: nav-flow; animation-duration: 280ms; animation-delay: 50ms; }
+  .nav-motion-target.is-animating .nav-glyph-automation .part-3 { animation-name: nav-node; animation-duration: 250ms; animation-delay: 150ms; }
+  @keyframes nav-node { 35% { transform: scale(1.25); } 100% { transform: none; } }
+  @keyframes nav-flow { 20% { opacity: .3; transform: translateY(-1.5px); } 65% { opacity: 1; transform: translateY(.5px); } 100% { opacity: 1; transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-inbox .part-1 { animation-name: nav-dip; animation-duration: 340ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-inbox .part-2 { animation-name: nav-flap; animation-duration: 320ms; animation-delay: 60ms; }
+  @keyframes nav-flap { 0% { transform: translateY(-3px); opacity: .5; } 60% { transform: translateY(.5px); opacity: 1; } 100% { transform: none; opacity: 1; } }
+  .nav-motion-target.is-animating .nav-glyph-security .part-2 { animation-name: nav-shackle; animation-duration: 400ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-security .part-1 { animation-name: nav-slam; animation-duration: 400ms; animation-delay: 0ms; }
+  @keyframes nav-shackle { 25%, 45% { transform: translateY(-3.5px); } 65%, 100% { transform: none; } }
+  @keyframes nav-slam { 55% { transform: none; } 70% { transform: translateY(1.5px) scaleY(.92); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-advanced .part-1 { animation-name: nav-spark1; animation-duration: 380ms; animation-delay: 0ms; }
+  @keyframes nav-spark1 { 50% { transform: translate(-0.5px,-0.5px) rotate(45deg) scale(1.2); opacity: .7; } 100% { transform: rotate(90deg); opacity: 1; } }
+  .nav-motion-target.is-animating .nav-glyph-advanced .part-2 { animation-name: nav-spark2; animation-duration: 380ms; animation-delay: 0ms; }
+  @keyframes nav-spark2 { 50% { transform: translate(-0.5px,0.5px) rotate(45deg) scale(1.2); opacity: .7; } 100% { transform: rotate(90deg); opacity: 1; } }
+  .nav-motion-target.is-animating .nav-glyph-advanced .part-3 { animation-name: nav-spark3; animation-duration: 380ms; animation-delay: 0ms; }
+  @keyframes nav-spark3 { 50% { transform: translate(0.5px,0.5px) rotate(45deg) scale(1.2); opacity: .7; } 100% { transform: rotate(90deg); opacity: 1; } }
+  .nav-motion-target.is-animating .nav-glyph-advanced .part-4 { animation-name: nav-spark4; animation-duration: 380ms; animation-delay: 0ms; }
+  @keyframes nav-spark4 { 50% { transform: translate(0.5px,-0.5px) rotate(45deg) scale(1.2); opacity: .7; } 100% { transform: rotate(90deg); opacity: 1; } }
+  .nav-motion-target.is-animating .nav-glyph-ownership .part-1 { animation-name: nav-hand-left; animation-duration: 400ms; animation-delay: 0ms; }
+  @keyframes nav-hand-left { 20% { transform: translateX(1px); } 35%, 65% { transform: translate(1px,-2px); } 50%, 80% { transform: translate(1px,2px); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-ownership .part-2 { animation-name: nav-hand-right; animation-duration: 400ms; animation-delay: 0ms; }
+  @keyframes nav-hand-right { 20% { transform: translateX(-1px); } 35%, 65% { transform: translate(-1px,-2px); } 50%, 80% { transform: translate(-1px,2px); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-physics .part-1 { animation-name: nav-orbit-forward; animation-duration: 400ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-physics .part-2 { animation-name: nav-orbit; animation-duration: 400ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-physics .part-3 { animation-name: nav-nucleus; animation-duration: 400ms; animation-delay: 0ms; }
+  @keyframes nav-orbit { 55% { transform: rotate(-60deg); } 100% { transform: none; } }
+  @keyframes nav-orbit-forward { 55% { transform: rotate(60deg); } 100% { transform: none; } }
+  @keyframes nav-nucleus { 40% { transform: scale(1.4); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-data .part-1 { animation-name: nav-platter-top; animation-duration: 380ms; animation-delay: 0ms; }
+  @keyframes nav-platter-top { 30% { transform: translateY(-2px); } 65% { transform: translateY(0.5px) scaleY(.96); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-data .part-2 { animation-name: nav-platter-middle; animation-duration: 380ms; animation-delay: 0ms; }
+  @keyframes nav-platter-middle { 30% { transform: translateY(0px); } 65% { transform: translateY(0.0px) scaleY(.96); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-data .part-3 { animation-name: nav-platter-bottom; animation-duration: 380ms; animation-delay: 0ms; }
+  @keyframes nav-platter-bottom { 30% { transform: translateY(2px); } 65% { transform: translateY(-0.5px) scaleY(.96); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-diagnostics .part-1 { animation-name: nav-tube; animation-duration: 400ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-diagnostics .part-2 { animation-name: nav-tube; animation-duration: 400ms; animation-delay: 20ms; }
+  .nav-motion-target.is-animating .nav-glyph-diagnostics .part-3 { animation-name: nav-heartbeat; animation-duration: 400ms; animation-delay: 0ms; }
+  @keyframes nav-tube { 35% { transform: scaleX(.96); } 100% { transform: none; } }
+  @keyframes nav-heartbeat { 20% { transform: scale(1.35); } 40% { transform: scale(.95); } 65% { transform: scale(1.25); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-account .part-1 { animation-name: nav-head; animation-duration: 340ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-account .part-2 { animation-name: nav-shoulders; animation-duration: 340ms; animation-delay: 0ms; }
+  @keyframes nav-head { 30% { transform: translateY(-2.5px) scale(1.08); } 70% { transform: translateY(.5px); } 100% { transform: none; } }
+  @keyframes nav-shoulders { 35% { transform: scaleX(1.06); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-settings .part-1 { animation-name: nav-gear; animation-duration: 400ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-settings .part-2 { animation-name: nav-ring; animation-duration: 400ms; animation-delay: 0ms; }
+  @keyframes nav-gear { 30% { transform: rotate(50deg); } 45% { transform: rotate(45deg); } 80% { transform: rotate(95deg); } 100% { transform: rotate(90deg); } }
+  @keyframes nav-ring { to { transform: rotate(-45deg); } }
+  .nav-motion-target.is-animating .nav-glyph-connect .part-1 { animation-name: nav-node; animation-duration: 250ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-connect .part-2 { animation-name: nav-flow; animation-duration: 300ms; animation-delay: 40ms; }
+  .nav-motion-target.is-animating .nav-glyph-connect .part-3 { animation-name: nav-child; animation-duration: 260ms; animation-delay: 100ms; }
+  .nav-motion-target.is-animating .nav-glyph-connect .part-4 { animation-name: nav-child; animation-duration: 260ms; animation-delay: 150ms; }
+  @keyframes nav-child { 0% { transform: translateY(2px) scale(.8); opacity: .5; } 60% { transform: translateY(-.5px) scale(1.1); opacity: 1; } 100% { transform: none; opacity: 1; } }
+  .nav-motion-target.is-animating .nav-glyph-about .part-1 { animation-name: nav-info-ring; animation-duration: 340ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-about .part-2 { animation-name: nav-dip; animation-duration: 340ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-about .part-3 { animation-name: nav-dot; animation-duration: 340ms; animation-delay: 0ms; }
+  @keyframes nav-info-ring { 40% { transform: scale(1.1); } 100% { transform: none; } }
+  @keyframes nav-dot { 30% { transform: translateY(-3.5px); } 65% { transform: translateY(.5px); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-alerts .part-1 { animation-name: nav-bell; animation-duration: 400ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-alerts .part-2 { animation-name: nav-clapper; animation-duration: 360ms; animation-delay: 40ms; }
+  .nav-motion-target.is-animating .nav-glyph-alerts .part-3 { animation-name: nav-waves; animation-duration: 400ms; animation-delay: 0ms; }
+  @keyframes nav-bell { 20% { transform: rotate(15deg); } 45% { transform: rotate(-12deg); } 70% { transform: rotate(6deg); } 100% { transform: none; } }
+  @keyframes nav-clapper { 25% { transform: rotate(-22deg); } 55% { transform: rotate(18deg); } 100% { transform: none; } }
+  @keyframes nav-waves { 35% { opacity: .4; transform: scale(1.05); } 100% { opacity: 1; transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-display .part-1 { animation-name: nav-paint1; animation-duration: 280ms; animation-delay: 0ms; }
+  @keyframes nav-paint1 { 35% { transform: translate(-0.7px,-0.8px) scale(1.3); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-display .part-2 { animation-name: nav-paint2; animation-duration: 280ms; animation-delay: 40ms; }
+  @keyframes nav-paint2 { 35% { transform: translate(0.2px,-0.8px) scale(1.3); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-display .part-3 { animation-name: nav-paint3; animation-duration: 280ms; animation-delay: 80ms; }
+  @keyframes nav-paint3 { 35% { transform: translate(0.8px,0px) scale(1.3); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-display .part-4 { animation-name: nav-paint4; animation-duration: 280ms; animation-delay: 120ms; }
+  @keyframes nav-paint4 { 35% { transform: translate(-0.8px,0.2px) scale(1.3); } 100% { transform: none; } }
+  .nav-motion-target.is-animating:has(.nav-glyph-avatar) { animation: nav-avatar 440ms ease-out; }
+  @keyframes nav-avatar { 30% { transform: scale(.92); } 70% { transform: scale(1.02); } 100% { transform: none; } }
+  .nav-motion-target.is-animating .nav-glyph-more .part-1 { animation-name: nav-more; animation-duration: 260ms; animation-delay: 0ms; }
+  .nav-motion-target.is-animating .nav-glyph-more .part-2 { animation-name: nav-more; animation-duration: 260ms; animation-delay: 60ms; }
+  .nav-motion-target.is-animating .nav-glyph-more .part-3 { animation-name: nav-more; animation-duration: 260ms; animation-delay: 120ms; }
+  @keyframes nav-more { 35% { transform: translateY(-2px); } 65% { transform: translateY(.5px); } 100% { transform: none; } }
+}

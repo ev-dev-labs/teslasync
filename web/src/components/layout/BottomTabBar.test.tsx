@@ -127,7 +127,7 @@ describe('BottomTabBar', () => {
       // aria-label is the accessible name; getByRole(name) proves it resolved.
       const button = screen.getByRole('button', { name: tab.label })
       expect(button).toBeInTheDocument()
-      expect(button.querySelector('span')).toHaveTextContent(tab.label)
+      expect(button.querySelector('.sidenav-tab-label')).toHaveTextContent(tab.label)
     }
   })
 
@@ -242,13 +242,13 @@ describe('BottomTabBar', () => {
     expect(active.className).toContain('sidenav-phone-tab')
     expect(active).toHaveClass('is-selected')
     expect(active).toHaveAttribute('aria-current', 'true')
-    expect(active.querySelector('svg')).toHaveAttribute('stroke-width', '2')
+    expect(active.querySelector('svg')).toHaveAttribute('stroke-width', '1.8')
 
     const inactive = screen.getByRole('button', { name: 'Driving' })
     expect(inactive.className).toContain('sidenav-phone-tab')
     expect(inactive).not.toHaveClass('is-selected')
     expect(inactive).not.toHaveAttribute('aria-current')
-    expect(inactive.querySelector('svg')).toHaveAttribute('stroke-width', '2')
+    expect(inactive.querySelector('svg')).toHaveAttribute('stroke-width', '1.8')
   })
 
   it('lights More (and only More) when the section is off the bar', () => {
@@ -312,7 +312,7 @@ describe('BottomTabBar', () => {
     expect(charging).toHaveTextContent(longLabel)
     expect(charging).toHaveAttribute('aria-current', 'true')
     expect(charging).toHaveClass('is-selected')
-    expect(charging.querySelector('span')).not.toHaveClass('truncate')
+    expect(charging.querySelector('.sidenav-tab-label')).not.toHaveClass('truncate')
     expect(container).toHaveAttribute('dir', 'rtl')
   })
 

@@ -585,9 +585,11 @@ function ThemeQuickSwitcher({
   className,
   placement = 'right',
   onOpen,
+  triggerIcon,
 }: {
   className?: string
   onOpen?: () => void
+  triggerIcon?: React.ReactNode
   /**
    * Which side of the trigger to anchor the popover to. The popover
    * grows AWAY from the anchored side, so use 'left' when the trigger
@@ -681,6 +683,7 @@ function ThemeQuickSwitcher({
     <div ref={containerRef} className={`relative inline-block ${className ?? ''}`} data-role="theme-popover">
       <Button
         ref={triggerRef}
+        data-nav-action={triggerIcon ? true : undefined}
         type="button"
         variant="ghost"
         aria-haspopup="dialog"
@@ -689,7 +692,7 @@ function ThemeQuickSwitcher({
         onClick={() => { if (!open) onOpen?.(); setOpen(v => !v) }}
         className="h-11 w-11 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
       >
-        <Icons.palette className="h-5 w-5" aria-hidden="true" />
+        {triggerIcon ?? <Icons.palette className="h-5 w-5" aria-hidden="true" />}
       </Button>
       {open && coords && (
         <Suspense fallback={null}>

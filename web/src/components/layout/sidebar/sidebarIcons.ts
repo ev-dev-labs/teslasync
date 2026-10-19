@@ -1,3 +1,4 @@
+import { NAV_SECTION_ICONS } from './NavIcons'
 import { Icons, type LucideIcon } from '@/lib/icons'
 import { SidebarGlyphs } from '@/lib/sidebarGlyphs'
 
@@ -132,30 +133,7 @@ export const SIDEBAR_ROUTE_ICONS: Record<string, LucideIcon> = {
   '/service-intelligence': SidebarGlyphs.bookOpen,
 }
 
-export const SIDEBAR_SECTION_ICONS: Record<string, LucideIcon> = {
-  Home: Icons.layoutTemplate,
-  Vehicles: SidebarGlyphs.carFront,
-  'Tesla physics': SidebarGlyphs.atom,
-  Driving: Icons.navigation,
-  Charging: Icons.charger,
-  Battery: Icons.batteryCharging,
-  Energy: Icons.bolt,
-  Service: Icons.maintenance,
-  Cabin: Icons.cabin,
-  Reports: Icons.analytics,
-  Commands: Icons.terminal,
-  Automation: Icons.workflow,
-  Notifications: SidebarGlyphs.inbox,
-  'Advanced intelligence': SidebarGlyphs.sparkle,
-  'Ownership intelligence': SidebarGlyphs.handshake,
-  Security: Icons.locked,
-  Account: Icons.user,
-  Settings: SidebarGlyphs.cog,
-  Integrations: Icons.network,
-  Data: Icons.database,
-  Diagnostics: Icons.stethoscope,
-  About: Icons.info,
-}
+export const SIDEBAR_SECTION_ICONS = NAV_SECTION_ICONS
 
 /** One section glyph for every navigation surface. */
 export function resolveSectionIcon(title: string): LucideIcon {
