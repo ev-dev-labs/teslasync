@@ -103,7 +103,7 @@ describe('PageLayout production composition', () => {
     expect(container.querySelector('[data-layout-reference]')).toHaveTextContent('Retained report');
   });
 
-  it('keeps worst-query freshness and refresh behavior without dropping retained children', () => {
+  it('keeps worst-query freshness while refreshing every declared source without dropping retained children', () => {
     const fresh = query();
     const failed = query({ isError: true });
     renderPage(
@@ -113,7 +113,7 @@ describe('PageLayout production composition', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /Refresh data · Error/ }));
     expect(failed.refetch).toHaveBeenCalledOnce();
-    expect(fresh.refetch).not.toHaveBeenCalled();
+    expect(fresh.refetch).toHaveBeenCalledOnce();
     expect(screen.getByText('Cached report')).toBeInTheDocument();
     expect(screen.getByText('Cached report').closest('[data-role="page-container"]'))
       .toHaveAttribute('aria-busy', 'true');

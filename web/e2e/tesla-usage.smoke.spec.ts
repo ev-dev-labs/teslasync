@@ -1,3 +1,4 @@
+import { expectBriefDetails } from './operationalbrief-contracts/disclosure.helpers';
 import { expect, test } from '@playwright/test'
 import { installApiMocks, seedBrowserState } from './mockApi'
 
@@ -93,7 +94,7 @@ test('Tesla usage page and status overview render desktop/mobile, light/dark and
       await page.getByRole('option', { name: 'Last year' }).click()
       await expect.poll(() => longRange).toBe(true)
       await expect(trend).toHaveAttribute('data-chart-state', 'ready')
-      await expect(page.getByText('3 observed buckets')).toBeVisible()
+      await expectBriefDetails(page, page.getByRole('region', { name: 'Selected range estimate', exact: true }), ['3 observed buckets'])
       await trend.screenshot({ path: testInfo.outputPath(`tesla-trend-year-${theme}-${width}.png`) })
       await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-year.png`), fullPage: true })
       await page.getByRole('combobox', { name: 'Group by' }).selectOption('week')

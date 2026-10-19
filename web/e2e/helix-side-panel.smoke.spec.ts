@@ -34,6 +34,7 @@ for (const width of [390, 1440]) {
     })
     await page.goto('/drives', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, mocks)
+    if (width < 1280) await page.locator('[data-role="status-bar"]').getByRole('button', { name: /^Status(?:\.|$)/ }).click()
     await page.getByRole('button', { name: 'Open Helix chat' }).click()
     const panel = page.getByRole(width < 1280 ? 'dialog' : 'complementary', { name: 'Helix chat' })
     await expect(panel).toBeVisible()

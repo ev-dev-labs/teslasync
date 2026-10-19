@@ -14,11 +14,11 @@ for (const width of [390, 1440]) {
     await expect(page.getByRole('region', { name: 'Recent incidents' })).toBeVisible()
     const details = page.locator('#operator-details')
     await expect(details).not.toHaveAttribute('open')
-    await expect(details.getByText('Resources', { exact: true })).not.toBeVisible()
+    await expect(details.getByRole('heading', { name: 'Server resources', exact: true })).not.toBeVisible()
     await expect(page.getByText('80.00%')).toHaveCount(0)
 
     await details.locator('summary').click()
     await expect(details).toHaveAttribute('open', '')
-    await expect(details.getByText('Resources', { exact: true })).toBeVisible()
+    await expect(details.getByRole('heading', { name: 'Server resources', exact: true })).toBeVisible()
   })
 }

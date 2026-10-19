@@ -1,3 +1,5 @@
+import { formatDateTime } from '../../src/lib/dateFormat';
+import { expectBriefDetails } from './disclosure.helpers';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   assertMockApiComplete, expectThemeApplied, fulfillApiFixture, installApiMocks,
@@ -102,8 +104,8 @@ async function assertPlan(page: Page, scenario: OrchestrationScenario, start = H
   expect(actual.result).toEqual(expected.result);
   expect(actual.disclaimer).toContain('locally-computed recommendation only');
   const brief = page.getByTestId('home-energy-outcomes');
-  await expect(brief).toContainText(start);
-  await expect(brief).toContainText(new Date(Date.parse(start) + scenario.horizonHours * 3_600_000).toISOString());
+  await expectBriefDetails(page, brief, [formatDateTime(start)]);
+  await expectBriefDetails(page, brief, [formatDateTime(new Date(Date.parse(start) + scenario.horizonHours * 3_600_000))]);
   await metric(brief, 'overall', String(Math.round(expected.result.scores.overall)));
   // The preference supplies a glyph, not an observed ISO currency denomination.
   await metric(brief, 'projected-cost', `${mockAppSettings.currency_symbol}${fmtNumber(
@@ -111,7 +113,7 @@ async function assertPlan(page: Page, scenario: OrchestrationScenario, start = H
   )}`);
   await metric(brief, 'peak-grid-import', formatPower(expected.result.totals.peakGridImportW, homeDisplay));
   await metric(brief, 'unmet-energy', formatEnergy(expected.result.vehicles.reduce((sum, v) => sum + v.unmetWh, 0), homeDisplay));
-  await metric(brief, 'vehicles-ready', `${expected.result.vehicles.filter(v => v.readinessAchieved).length}/1`);
+  await metric(brief, 'vehicles-ready', `${expected.result.vehicles.filter(v => v.readinessAchieved).length} / 1`);
   return expected;
 }
 
@@ -130,14 +132,17 @@ async function assertSections(page: Page) {
 async function assertQuality(page: Page, expected: ReturnType<typeof expectedHomePlan>) {
   const quality = page.getByTestId('home-energy-forecast-quality');
   for (const [key, forecast] of [['solar-confidence', expected.solar], ['load-confidence', expected.load]] as const) {
-    await metric(quality, key, `${Math.round(forecast.confidence * 100)}%`);
-    await expect(quality.locator(`[data-operational-metric="${key}"]`))
-      .toContainText(`${forecast.sourceSampleCount} history sample(s)`);
+    if (forecast.sourceSampleCount === 0) {
+      await expect(quality.locator(`[data-operational-metric="${key}"]`)).toHaveCount(0);
+    } else {
+      await metric(quality, key, `${Math.round(forecast.confidence * 100)}%`);
+      await expectBriefDetails(page, quality, [`${forecast.sourceSampleCount} history sample(s)`]);
+    }
   }
   await review(page, quality, 'Assumptions & forecast quality', expected.solar.latestSampleIso ? [
     'High', expected.solar.latestSampleIso,
     'not confidence in measured vehicle or battery state.',
-  ] : ['No history', 'No source history sample timestamp is available.']);
+  ] : ['2 empty fields are hidden.']);
 }
 
 async function assertSiblings(mocks: MockApiController) {
@@ -227,7 +232,7 @@ for (const theme of ['dark', 'light'] as const) {
         await assertSections(page);
         await expect.poll(() => reads.get(historyPath) ?? 0).toBeGreaterThan(0);
         const quality = page.getByTestId('home-energy-forecast-quality');
-        await expect(quality).toContainText('Loading source inputs');
+        await expectBriefDetails(page, quality, ['Loading source inputs']);
         const assumed = await assertPlan(page, homeScenario(), HOME_ANCHOR, []);
         expect(assumed.input.vehicles[0].currentSocPct).toBe(30);
         expect(assumed.input.powerwall?.currentSocPct).toBe(60);
@@ -235,7 +240,7 @@ for (const theme of ['dark', 'light'] as const) {
         releaseHistory();
         const historySource = page.locator('[data-home-energy-source="history"]');
         await expect(historySource.getByRole('button', { name: /Retry/i })).toBeVisible();
-        await expect(quality).toContainText('Incomplete source inputs');
+        await expectBriefDetails(page, quality, ['Incomplete source inputs']);
         await assertQuality(page, assumed);
         await assertPlan(page, homeScenario(), HOME_ANCHOR, []);
         await assertSections(page);

@@ -29,7 +29,7 @@ for (const theme of ['light', 'dark'] as const) {
       })
       await page.goto('/drives', { waitUntil: 'domcontentloaded' })
       await waitForHarnessReady(page, mockApi)
-      if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+      if (width < 1280) await expect(page.locator('[data-role="mobile-workspace-controls"]')).toBeVisible()
 
       await page.getByRole('button', { name: /Analysis window: Last 7 days/ }).click()
       const dialog = page.getByRole('dialog', { name: 'View settings' })
@@ -65,7 +65,7 @@ test(`Drive Calendar year chips shift and preserve fixed dates at ${width}px`, a
   await page.goto('/drive-calendar', { waitUntil: 'domcontentloaded' })
   await waitForHarnessReady(page, mockApi)
 
-  if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+  if (width < 1280) await expect(page.locator('[data-role="mobile-workspace-controls"]')).toBeVisible()
   await page.getByRole('button', { name: /Analysis window:/ }).click()
   const calendarSettings = page.getByRole('dialog', { name: 'View settings' })
   const currentYear = new Date().getFullYear()
@@ -88,7 +88,7 @@ test(`Drive Calendar year chips shift and preserve fixed dates at ${width}px`, a
 
   const selected = new URL(page.url()).search
   await page.goto(`/drives${selected}`, { waitUntil: 'domcontentloaded' })
-  if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+  if (width < 1280) await expect(page.locator('[data-role="mobile-workspace-controls"]')).toBeVisible()
   await page.getByRole('button', { name: /Analysis window: Custom/ }).click()
   const drivesSettings = page.getByRole('dialog', { name: 'View settings' })
   await expect(drivesSettings.getByRole('button', { name: `Full year ${currentYear - 1}` })).toHaveCount(0)
@@ -105,7 +105,7 @@ for (const width of [390, 1440]) {
     const mockApi = await installApiMocks(page, 'populated', 'light')
     await page.goto('/drives?time_scope=all', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, mockApi)
-    if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+    if (width < 1280) await expect(page.locator('[data-role="mobile-workspace-controls"]')).toBeVisible()
     await page.getByRole('button', { name: 'Analysis window: All time' }).click()
     const dialog = page.getByRole('dialog', { name: 'View settings' })
     const all = dialog.getByRole('button', { name: 'All time' })
@@ -132,7 +132,7 @@ for (const width of [390, 1440]) {
     const mockApi = await installApiMocks(page, 'populated', 'light')
     await page.goto('/drive-calendar?from=2026-09-26&to=2026-09-27&time_scope=24h', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, mockApi)
-    if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+    if (width < 1280) await expect(page.locator('[data-role="mobile-workspace-controls"]')).toBeVisible()
     await page.getByRole('button', { name: 'Analysis window: Custom' }).click()
     const dialog = page.getByRole('dialog', { name: 'View settings' })
     await expect(dialog.getByRole('button', { name: 'Custom' })).toHaveAttribute('aria-pressed', 'true')
@@ -149,7 +149,7 @@ for (const width of [390, 1440]) {
     const mockApi = await installApiMocks(page, 'populated', 'light')
     await page.goto('/drive-calendar?from=2017-01-01&to=2017-12-31&time_scope=custom', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, mockApi)
-    if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+    if (width < 1280) await expect(page.locator('[data-role="mobile-workspace-controls"]')).toBeVisible()
     await page.getByRole('button', { name: 'Analysis window: Full year 2017' }).click()
     const dialog = page.getByRole('dialog', { name: 'View settings' })
     const selected = dialog.getByRole('button', { name: 'Full year 2017' })

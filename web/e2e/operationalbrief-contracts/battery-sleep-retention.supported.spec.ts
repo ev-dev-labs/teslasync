@@ -1,3 +1,4 @@
+import { expectBriefDetails } from './disclosure.helpers';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { ROUTE_REGISTRY } from '../../src/lib/routeRegistry';
 import {
@@ -29,14 +30,30 @@ async function reading(brief: Locator, key: string, value: string, state = 'valu
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }
 
-async function transitionOnlyReadings(brief: Locator) {
+async function transitionOnlyReadings(page: Page, brief: Locator) {
   await reading(brief, 'sleep-destinations', '10');
   await reading(brief, 'sleep-asleep-count-share', '80.00%');
   await reading(brief, 'sleep-duration-efficiency', '—', 'missing');
   await reading(brief, 'sleep-average-time-to-sleep', '—', 'missing');
-  await expect(metric(brief, 'sleep-asleep-count-share')).toContainText('Count-based; not a time share');
-  await expect(metric(brief, 'sleep-duration-efficiency')).toContainText('Unavailable pending dwell reconstruction');
-  await expect(metric(brief, 'sleep-average-time-to-sleep')).toContainText('Placeholder zero withheld');
+  await expectBriefDetails(page, brief, ['Count-based; not a time share', '2 empty fields are hidden.']);
+}
+
+async function freshnessReceipt(page: Page, refresh: Locator) {
+  await refresh.hover();
+  const tooltip = page.getByRole('tooltip').filter({ hasText: 'Last updated:' });
+  await expect(tooltip).toBeVisible();
+  const receipt = (await tooltip.innerText()).match(/Last updated:[^\n·]+/)?.[0].trim();
+  await page.mouse.move(0, 0);
+  return receipt;
+}
+
+async function sourcePeriod(page: Page, brief: Locator) {
+  await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+  const drawer = page.getByRole('dialog');
+  const period = await drawer.locator('[data-battery-period]').textContent();
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  return period;
 }
 
 async function publication(brief: Locator) {
@@ -65,7 +82,7 @@ async function reviewRetained(page: Page, brief: Locator) {
     if (row.detail) await expect(drawer).toContainText(row.detail);
   }
   await expect(drawer).toContainText('80.00%');
-  await expect(drawer).toContainText('Unavailable pending dwell reconstruction');
+  await expect(drawer).toContainText('2 empty fields are hidden.');
   await expect(drawer).not.toContainText('40.00%');
   await expect(drawer).not.toContainText('75.00%');
   for (let index = 0; index < 4; index++) {
@@ -100,12 +117,12 @@ for (const theme of ['light', 'dark'] as const) {
       const refresh = page.locator('[data-role="page-container"] > header')
         .getByRole('button', { name: /^Refresh data/ });
       await expect(refresh).toHaveCount(1);
-      await transitionOnlyReadings(brief);
-      await expect(brief).toContainText('Available source readings');
+      await transitionOnlyReadings(page, brief);
+      await expectBriefDetails(page, brief, ['Available source readings']);
       await expect(page.getByTestId('sleep-refresh-error')).toHaveCount(0);
       const initialPublication = await publication(brief);
-      const initialScope = await brief.locator('[data-battery-period]').textContent();
-      const lastSuccessfulUpdate = await refresh.getAttribute('title');
+      const initialScope = await sourcePeriod(page, brief);
+      const lastSuccessfulUpdate = await freshnessReceipt(page, refresh);
       expect(lastSuccessfulUpdate).toMatch(/^Last updated:/);
       expect(source.reads.map(read => read.status)).toEqual([200]);
       assertSleepRetentionLedger(mocks, source.reads);
@@ -116,7 +133,7 @@ for (const theme of ['light', 'dark'] as const) {
       await refresh.focus();
       await refresh.press('Enter');
       await firstFailure;
-      await transitionOnlyReadings(brief);
+      await transitionOnlyReadings(page, brief);
       // Keep 503 active until the actual query retry lifecycle reaches retained error.
       const notice = page.getByTestId('sleep-refresh-error');
       await expect(notice).toBeVisible({ timeout: 30_000 });
@@ -125,16 +142,16 @@ for (const theme of ['light', 'dark'] as const) {
       );
       await expect(notice).not.toContainText(noNewObservation);
       await expect(notice.locator('[data-data-state]')).toHaveAttribute('data-data-state', 'stale');
-      await expect(refresh).toHaveAccessibleName(/^Refresh data.*Error/);
-      await expect(refresh).toHaveAttribute('title', lastSuccessfulUpdate!);
-      await expect(brief).toContainText('Retained source evidence');
-      await expect(brief).not.toContainText('Available source readings');
+      await expect(refresh).toHaveAccessibleName(/^Refresh data.*error/i);
+      expect(await freshnessReceipt(page, refresh)).toBe(lastSuccessfulUpdate);
+      await expectBriefDetails(page, brief, ['Retained source evidence']);
+      await expectBriefDetails(page, brief, [], ['Available source readings']);
       await expect(brief).not.toContainText(noNewObservation);
       await expect(page.getByTestId('sleep-query-initial-error')).toHaveCount(0);
-      await transitionOnlyReadings(brief);
+      await transitionOnlyReadings(page, brief);
       expect(await publication(brief), 'failed refresh preserves every published value and evidence gate')
         .toEqual(initialPublication);
-      expect(await brief.locator('[data-battery-period]').textContent(), 'request failure is not a new observation')
+      expect(await sourcePeriod(page, brief), 'request failure is not a new observation')
         .toBe(initialScope);
       await waitForHarnessReady(page, mocks);
       // Each query attempt makes direct + resilient fallback HTTP reads; QueryClient retries once.
@@ -143,7 +160,7 @@ for (const theme of ['light', 'dark'] as const) {
         .toEqual(Array(4).fill('failed-refresh'));
       assertSleepRetentionLedger(mocks, source.reads);
       await reviewRetained(page, brief);
-      await transitionOnlyReadings(brief);
+      await transitionOnlyReadings(page, brief);
       await expect(notice).toBeVisible();
       expect(await publication(brief)).toEqual(initialPublication);
       expect(source.reads.map(read => read.status), 'Review details does not retry the source')
@@ -156,11 +173,11 @@ for (const theme of ['light', 'dark'] as const) {
       await reading(brief, 'sleep-duration-efficiency', '75.00%');
       await reading(brief, 'sleep-average-time-to-sleep', '12.00 min');
       await reading(brief, 'sleep-destinations', '10');
-      await expect(metric(brief, 'sleep-duration-efficiency')).toContainText('Derived from positive dwell minutes');
-      await expect(brief).toContainText('Available source readings');
-      await expect(brief).not.toContainText('Retained source evidence');
+      await expectBriefDetails(page, brief, ['Derived from positive dwell minutes']);
+      await expectBriefDetails(page, brief, ['Available source readings']);
+      await expectBriefDetails(page, brief, [], ['Retained source evidence']);
       await expect(notice).toHaveCount(0);
-      await expect(refresh).not.toHaveAccessibleName(/Error/);
+      await expect(refresh).not.toHaveAccessibleName(/error/i);
       await waitForHarnessReady(page, mocks);
       expect(source.reads.map(read => read.status)).toEqual([200, 503, 503, 503, 503, 200]);
       expect(source.reads[source.reads.length - 1]?.phase).toBe('recovered');

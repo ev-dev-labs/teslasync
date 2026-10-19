@@ -26,7 +26,9 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(map).toBeVisible();
       await expect(stats).toBeVisible();
       await expect(stats.locator('[data-print-card]')).toHaveCount(0);
-      await expect(page.getByRole('region', { name: 'Drive Summary' }).locator('[data-print-card]')).toHaveCount(0);
+      const summary = page.getByRole('region', { name: 'Drive summary' });
+      await expect(summary.locator('[data-print-card]')).toHaveCount(1);
+      await expect(summary.locator('[data-operational-metric] [data-print-card]')).toHaveCount(0);
       const mapBox = await map.boundingBox();
       const statsBox = await stats.boundingBox();
       expect(mapBox).not.toBeNull();
@@ -56,9 +58,20 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(slider).toHaveAttribute('aria-valuenow', '100');
       await expect(stats).toContainText('68%');
       const routeSegment = map.locator('.leaflet-overlay-pane path.leaflet-interactive').first();
-      await routeSegment.click({ force: true });
+      // SVG bounding-box centres need not lie on the route stroke. Click a
+      // measured point on the first segment instead of forcing a map-background hit.
+      await map.scrollIntoViewIfNeeded();
+      const routePoint = await routeSegment.evaluate(node => {
+        const path = node as SVGPathElement;
+        const point = path.getPointAtLength(path.getTotalLength() / 2);
+        const matrix = path.getScreenCTM();
+        if (!matrix) throw new Error('Route segment has no screen transform');
+        const screen = point.matrixTransform(matrix);
+        return { x: screen.x, y: screen.y };
+      });
+      await page.mouse.click(routePoint.x, routePoint.y);
       await expect(slider).not.toHaveAttribute('aria-valuenow', '100');
-      await stage.getByRole('button', { name: 'Reset', exact: true }).click();
+      await stage.getByRole('button', { name: 'Restart', exact: true }).click();
       await expect(slider).toHaveAttribute('aria-valuenow', '0');
       await expect(stats).toContainText('78%');
       const sliderBox = await slider.boundingBox();

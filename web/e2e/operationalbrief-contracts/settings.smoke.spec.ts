@@ -703,11 +703,11 @@ test('Helix polling failure retains audited operands and Retry recovers through 
   state.usageState = 'available'
   state.usage = { ...usageToday, input_tokens: 2500, output_tokens: 840, cost_micro_cents: 2400 }
   await card.getByRole('button', { name: 'Retry', exact: true }).click()
-  await reviewWithKeyboard(page, brief, 'Audited usage totals', 'Helix daily usage audit',
-    { texts: ['Source available'] })
   await expectValue(brief, 'helix-input-tokens', '2,500')
   await expectValue(brief, 'helix-output-tokens', '840')
   await expectValue(brief, 'helix-estimated-cost', '$0.002400')
+  await reviewWithKeyboard(page, brief, 'Audited usage totals', 'Helix daily usage audit',
+    { texts: ['Source available'] })
   await expectNoHorizontalOverflow(page)
   expectSettingsReadOnly(api)
   await assertMockApiComplete(page, api)

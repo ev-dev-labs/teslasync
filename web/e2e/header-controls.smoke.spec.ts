@@ -87,7 +87,15 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(freshness).toHaveCSS('border-top-width', '0px');
       await expect(freshness).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
       await freshness.hover();
-      await expect(freshness).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      const hoverBackground = await page.evaluate(() => {
+        const probe = document.createElement('span');
+        probe.style.backgroundColor = 'var(--control-bg)';
+        document.body.append(probe);
+        const color = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return color;
+      });
+      await expect(freshness).toHaveCSS('background-color', hoverBackground);
       await page.screenshot({ path: test.info().outputPath(`header-controls-${width}-${theme}.png`) });
       await assertMockApiComplete(page, mocks);
     });

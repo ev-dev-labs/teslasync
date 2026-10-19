@@ -158,7 +158,9 @@ for (const theme of ['light', 'dark'] as const) {
           }
           await expect(hero.getByText('Unlocked', { exact: true })).toBeVisible();
           await expect(hero.getByText('Off', { exact: true })).toBeVisible();
-          await expect(hero.getByText('0.00', { exact: true })).toBeVisible();
+          for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
+            await expect(hero.getByRole('meter', { name: label, exact: true }).getByText('0.00', { exact: true })).toBeVisible();
+          }
         } else {
           await expect(hero.getByRole('meter', { name: 'Battery', exact: true }))
             .toHaveAttribute('aria-valuenow', '72');

@@ -1,3 +1,4 @@
+import { expectBriefDetails } from './disclosure.helpers';
 import { expect, test } from '@playwright/test';
 import { ROUTE_REGISTRY } from '../../src/lib/routeRegistry';
 import { analyzeCycleStress } from '../../src/features/battery/lib/cycleStress';
@@ -141,7 +142,7 @@ for (const theme of ['light', 'dark'] as const) {
       expect(await accounting.locator('[data-operational-metric]').allTextContents()).toEqual(accountingBefore);
       await page.getByLabel('Depth exponent', { exact: true }).selectOption('2');
       await expect(summaryMetric('depth-index').locator('[data-operational-value]')).toHaveText(fmt(expected.depthWeightedIndex2));
-      await expect(summaryMetric('depth-index')).toContainText('illustrative exponent 2');
+      await expectBriefDetails(page, summary, ['illustrative exponent 2']);
       await expect(summaryMetric('deep-share').locator('[data-operational-value]')).toHaveText('100.0%');
       await expect(summaryMetric('median-depth').locator('[data-operational-value]')).toHaveText('55.0%');
       await expect(summaryMetric('efc').locator('[data-operational-value]')).toHaveText(fmt(expected.equivalentFullCycles));
@@ -174,7 +175,7 @@ for (const theme of ['light', 'dark'] as const) {
           await expect(drawer).toContainText('illustrative exponent 2');
           await expect(drawer).toContainText('sum of count x depth fraction');
         } else {
-          await expect(drawer).toContainText('available data: 2 drives + 2 charging');
+          await expect(drawer).toContainText('available data: 2.00 drives + 2.00 charging');
           await expect(drawer).toContainText('after validation and overlap rejection');
         }
         await expectDialogsInsideViewport(page);

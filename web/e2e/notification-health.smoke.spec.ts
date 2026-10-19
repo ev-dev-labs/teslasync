@@ -11,9 +11,9 @@ test('legacy notification analysis routes land on the matching unified section',
   const mocks = await installApiMocks(page);
 
   for (const [legacy, section, label] of [
-    ['/alert-fatigue', 'fatigue', 'Alert Fatigue'],
-    ['/notification-burn-rate', 'burn-rate', 'Notification Burn Rate'],
-    ['/notification-latency', 'latency', 'Notification Latency'],
+    ['/alert-fatigue', 'fatigue', 'Alert fatigue'],
+    ['/notification-burn-rate', 'burn-rate', 'Notification burn rate'],
+    ['/notification-latency', 'latency', 'Notification latency'],
   ]) {
     await page.goto(legacy);
     await expect(page).toHaveURL(new RegExp(`/notifications/health#${section}$`));
@@ -32,8 +32,8 @@ test('Studio offers typed system and place rules without a saved place', async (
   await page.goto('/notifications/studio');
   await expect(page.getByRole('tab', { name: 'System service' })).toBeVisible();
   await page.getByRole('tab', { name: 'System service' }).click();
-  await expect(page.getByLabel('Service', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Vehicles', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Service', exact: true })).toBeVisible();
+  await expect(page.locator('main').getByLabel('Vehicles', { exact: true })).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Place event' }).click();
   await expect(page.getByText('No places configured')).toBeVisible();

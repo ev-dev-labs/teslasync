@@ -30,14 +30,14 @@ for (const theme of ['light', 'dark'] as const) {
       }));
       await page.goto('/day-log');
       await waitForHarnessReady(page, mocks);
-      if (width === 390) await page.getByRole('button', { name: 'Open sidebar', exact: true }).click();
+      if (width === 390) await expect(page.locator('[data-role="mobile-workspace-controls"]')).toBeVisible();
       const picker = page.locator('[data-role="vehicle-picker-control"]:visible').getByRole('combobox');
       await picker.click();
       const popup = page.getByRole('listbox', { name: 'Select vehicle' });
       await expect(popup).toBeVisible();
       await expect(popup.getByRole('option', { selected: true })).toHaveText('Aurora');
       await expect(popup.getByRole('option', { selected: true }).locator('svg')).toBeVisible();
-      await expect(popup).toHaveCSS('border-radius', '16px');
+      await expect(popup).toHaveCSS('border-radius', '10px');
       await expectNoHorizontalOverflow(page);
       await page.screenshot({ path: testInfo.outputPath('vehicle-popup.png') });
       await picker.press('End');
