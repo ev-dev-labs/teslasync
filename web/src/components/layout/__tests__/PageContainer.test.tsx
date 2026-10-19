@@ -57,6 +57,13 @@ function renderWith(ui: React.ReactNode, route = '/drives') {
 }
 
 describe('PageContainer', () => {
+  it('preserves intrinsic title width when desktop actions need another row', () => {
+    renderWith(<PageContainer title="Aurora" subtitle="Vehicle details" actions={<button>Vehicle actions</button>}>Content</PageContainer>);
+    const header = screen.getByRole('heading', { level: 1, name: 'Aurora' }).closest('header');
+    expect(header).toHaveClass('flex-wrap');
+    expect(header?.firstElementChild).toHaveClass('xl:flex-auto');
+    expect(header?.firstElementChild).not.toHaveClass('xl:flex-1');
+  });
   it('accepts a single source whose optional error flag has not been published yet', () => {
     const query = makeQuery();
     Reflect.deleteProperty(query, 'isError');

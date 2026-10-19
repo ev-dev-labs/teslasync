@@ -57,7 +57,7 @@ export function PageHeader({
         )}
         data-role="page-header"
       >
-        <div className={cn('flex min-w-0 max-w-4xl gap-4', compactHeader && 'gap-3 xl:flex-1')}>
+        <div className={cn('flex min-w-0 max-w-4xl gap-4', compactHeader && 'gap-3 xl:flex-auto')}>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-3">
               {icon && (

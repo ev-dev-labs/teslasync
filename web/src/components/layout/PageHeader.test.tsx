@@ -85,6 +85,14 @@ describe('PageHeader', () => {
     expect(heading.tagName).toBe('H1')
   })
 
+  it('retains intrinsic title basis so desktop action rails wrap instead of collapsing the heading', () => {
+    render(<PageHeader title="Aurora" subtitle="Vehicle details" actions={<button>Vehicle actions</button>} />)
+    const header = screen.getByRole('heading', { level: 1, name: 'Aurora' }).closest('header')
+    expect(header).toHaveClass('flex-wrap')
+    expect(header?.firstElementChild).toHaveClass('xl:flex-auto')
+    expect(header?.firstElementChild).not.toHaveClass('xl:flex-1')
+  })
+
   it('owns the compact description in an accessible info tooltip and omits it when unset', () => {
     const { container, rerender } = renderHeader(
       <PageHeader title="Drives" subtitle="Last 30 days" />,

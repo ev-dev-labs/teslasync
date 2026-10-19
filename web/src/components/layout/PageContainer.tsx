@@ -183,7 +183,7 @@ export function PageContainer({
         )}
         data-role="page-header"
       >
-        <div className={cn('flex min-w-0 max-w-4xl gap-4 xl:flex-1', compactHeader && 'gap-3')}>
+        <div className={cn('flex min-w-0 max-w-4xl gap-4 xl:flex-auto', compactHeader && 'gap-3')}>
           <span
             className="w-1 shrink-0 self-stretch rounded-pill bg-[var(--theme-primary)]"
             aria-hidden="true"
