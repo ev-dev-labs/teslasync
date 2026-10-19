@@ -85,7 +85,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
       ) : wrapLabel && icon ? <span className="inline-flex shrink-0">{icon}</span> : icon}
-      {wrapLabel ? <span className="min-w-0 break-words">{children}</span> : children}
+      {wrapLabel ? <span className="inline-flex min-w-0 items-center gap-2 break-words [&>svg]:shrink-0">{children}</span> : children}
     </button>
     );
   },

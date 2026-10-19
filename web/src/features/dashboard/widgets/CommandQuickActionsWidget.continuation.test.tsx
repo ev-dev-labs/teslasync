@@ -24,7 +24,7 @@ describe('quick action label and command preservation', () => {
       .map(name => screen.getByRole('button', { name }));
     fireEvent.click(buttons[1]);
     expect(mocks.send).toHaveBeenCalledWith({ vehicleId: 42, command: 'unlock' }, expect.objectContaining({ onSettled: expect.any(Function) }));
-    buttons.forEach(button => expect(button).toBeDisabled());
+    buttons.forEach(button => { expect(button).toBeDisabled(); expect(button).toHaveClass('flex-row', 'gap-2'); expect(button).not.toHaveClass('flex-col'); });
     expect(buttons[1]).toHaveAttribute('aria-busy', 'true');
     act(() => { mocks.send.mock.calls[0][1].onSettled(); });
     buttons.forEach(button => expect(button).not.toBeDisabled());

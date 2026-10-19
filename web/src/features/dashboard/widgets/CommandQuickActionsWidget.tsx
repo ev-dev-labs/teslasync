@@ -135,7 +135,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
                 aria-busy={isRunning || undefined}
                 onClick={() => handleCommand(cmd.command)}
                 aria-label={t(cmd.labelKey, cmd.labelFallback)}
-                className="flex min-h-11 min-w-0 flex-col items-center gap-1 py-2 px-1 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border border-[var(--border-subtle)] transition-colors h-auto"
+                className="flex min-h-11 min-w-0 flex-row items-center gap-2 py-2 px-1 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border border-[var(--border-subtle)] transition-colors h-auto"
               >
                 {!isCompact && (
                   <Text variant="bodySm" className="w-full text-center">
