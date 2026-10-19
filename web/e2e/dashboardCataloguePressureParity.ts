@@ -70,8 +70,12 @@ export async function assertCataloguePressureParity(page: Page, livePanel: Locat
     await expect(visualValue).toBeVisible();
     paired.push({ ...wheel, live: await liveRow.textContent(), visual: await visualMetric.textContent() });
   }
-  await expect(visualPanel.getByText(/^bar\s*·/)).toHaveCount(1);
-  await expect(visualPanel.getByText(/^bar\s*·/)).toBeVisible();
+  // The footer caption shows the unit; the reading age lives in its
+  // tooltip (TirePressureVisualWidget reading-time footer contract).
+  const caption = visualPanel.getByText('bar', { exact: true });
+  await expect(caption).toHaveCount(1);
+  await expect(caption).toBeVisible();
+  await expect(caption).toHaveAttribute('title', /.+/);
   await writeFile(info.outputPath('pressure-native-paired-contract.json'), JSON.stringify({
     width, theme, served, source, settings, bindings, paired,
     scope: 'Original Pa payload, same exact tire-latest7 source observers, exact wheel/value pairings in both widgets.',

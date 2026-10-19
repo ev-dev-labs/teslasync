@@ -43,9 +43,11 @@ export function catalogueSystemSources(now: string): CatalogueSources {
   };
   const history: SignalHistoryResponse = {
     vehicleId: 7, signal: 'Soc', from: earlier, to: now, count: 4,
-    data: [69, 70, 71, 72].map((valueNum, index) => ({
-      timestamp: new Date(Date.parse(earlier) + index * 1_200_000).toISOString(),
-      valueNum,
+    data: [69, 70, 71, 72].map((value, index) => ({
+      ts: new Date(Date.parse(earlier) + index * 1_200_000).toISOString(),
+      kind: 'ValueKindFloat', value,
+      ingest_origin: null, source_emitted_at: null, received_at: null,
+      normalization_version: null,
     })),
   };
   return {

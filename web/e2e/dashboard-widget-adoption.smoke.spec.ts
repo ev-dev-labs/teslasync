@@ -133,6 +133,10 @@ for (const [batch, ids] of Object.entries(batches)) {
         await page.addInitScript(saved => {
           localStorage.setItem('teslasync-dashboards', JSON.stringify([saved]));
           localStorage.setItem('teslasync-active-dashboard', saved.id);
+          // The watch summary widget gates its real-content path on a
+          // session API key; configure it so the adoption batch exercises
+          // readings instead of the access-gate empty state.
+          sessionStorage.setItem('teslasync-watch-key', 'e2e-watch-key');
         }, dashboard);
         const mocks = await installApiMocks(page, 'populated', theme);
         if (!mocks) throw new Error('Dashboard widget acceptance requires API fixtures');

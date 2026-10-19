@@ -10,7 +10,7 @@ import type {
   TeslaEnergySiteInfoResponse, TeslaWCChargingEntry,
   TeslaBackupEvent,
 } from '../src/types/energy';
-import type { SignalCatalogEntry } from '../src/types/signals';
+import type { SignalsCatalogResponse } from '../src/types/signals';
 import type { TelemetryStatus } from '../src/types/telemetry';
 import type { SafetySnapshot } from '../src/types/vehicle-systems';
 import { fulfillApiFixture, mockVehicle, type MockApiController } from './mockApi';
@@ -76,6 +76,10 @@ export async function installDashboardWidgetSources(page: Page, mocks: MockApiCo
     '/safety/latest': safety,
     '/safety': [safety],
     '/vehicles/7/guard': {
+      vehicle_id: 7, enabled: true, home_geofence_id: null, sensitivity: 'medium',
+      auto_panic: false, created_at: earlier, updated_at: now,
+    } satisfies GuardConfig,
+    '/vehicles/7/guard/config': {
       vehicle_id: 7, enabled: true, home_geofence_id: null, sensitivity: 'medium',
       auto_panic: false, created_at: earlier, updated_at: now,
     } satisfies GuardConfig,
@@ -193,10 +197,13 @@ export async function installDashboardWidgetSources(page: Page, mocks: MockApiCo
     '/signals/7/stats': { vehicle_id: 7, count: 1200, oldest: earlier, newest: now },
     '/signals/7/available': { signals: [{ name: 'Soc', unit: '%', type: 'float' }], count: 1 },
     '/signals/7/live': { vehicle_id: 7, signals: { Soc: { value: 72, timestamp: now } }, count: 1 },
-    '/signals/catalog': [{
-      name: 'Soc', value_type: 'numeric', source_module: 'tesla', unit: '%',
-      description: 'Battery state of charge', first_seen_at: earlier, last_seen_at: now,
-    }] satisfies SignalCatalogEntry[],
+    '/signals/catalog': {
+      signals: [{
+        field: 'Soc', destination: 'signal_log', value_kind: 'ValueKindFloat',
+        last_seen_at: now, sample_count_total: 1200, vehicle_count: 1,
+      }],
+      generated_at: now,
+    } satisfies SignalsCatalogResponse,
     '/signals/observations': {
       count: 2, total: 2, observations: [
         { vehicle_id: 7, ts: now, field: 'Soc', value_kind: 'ValueKindFloat', value: 72 },

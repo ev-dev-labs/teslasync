@@ -207,6 +207,7 @@ export function FreshnessDot({
       )}
       label={[ariaLabel, updateTitle].join(' · ')}
       aria-label={ariaLabel}
+      tooltipMultiline
       variant="ghost"
       onClick={onRefresh ? handleClick : undefined}
       busy={isFetching}

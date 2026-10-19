@@ -27,6 +27,11 @@ export interface IconButtonProps {
   busy?: boolean;
   disabled?: boolean;
   tooltipSide?: 'top' | 'bottom' | 'left' | 'right';
+  /**
+   * Long labels (freshness sentences) wrap instead of forcing a
+   * viewport-wide nowrap bubble that overflows narrow panels.
+   */
+  tooltipMultiline?: boolean;
   'aria-label'?: string;
   'aria-haspopup'?: AriaAttributes['aria-haspopup'];
   'aria-expanded'?: boolean;
@@ -53,6 +58,7 @@ export const IconButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, Icon
   busy = false,
   disabled = false,
   tooltipSide = 'top',
+  tooltipMultiline = false,
   'aria-label': ariaLabelOverride,
   className,
   ...ariaProps
@@ -96,7 +102,7 @@ export const IconButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, Icon
 
   return (
     <>
-      <Tooltip content={label} side={tooltipSide}>{control}</Tooltip>
+      <Tooltip content={label} side={tooltipSide} multiline={tooltipMultiline}>{control}</Tooltip>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
     </>
   );
