@@ -192,14 +192,14 @@ describe('CommandQuickActionsWidget', () => {
     expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Horn' })).toBeInTheDocument();
     // The 7th/8th commands only appear once the tile is wide.
-    expect(screen.queryByRole('button', { name: 'Flash' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Flash Lights' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trunk' })).not.toBeInTheDocument();
   });
 
   it('renders the full command set at wide size (adds Flash + Trunk)', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_WIDE} />);
 
-    expect(screen.getByRole('button', { name: 'Flash' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Flash Lights' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Trunk' })).toBeInTheDocument();
     for (const cmd of COMMANDS) {
       expect(screen.getByRole('button', { name: cmd.labelFallback })).toBeInTheDocument();

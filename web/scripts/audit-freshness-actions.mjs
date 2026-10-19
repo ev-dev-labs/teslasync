@@ -199,9 +199,8 @@ for (const file of walk(SRC)) {
         if (reason) allowed.push(`${rel}:${line(node)}  <IconButton> destructive — ${reason}`);
         else findings.action.push(`${rel}:${line(node)}  <IconButton> destructive without a confirmation step`);
       }
-      // (c) Repeated icon-only actions are ghost; only Customize may be filled.
-      if (name === 'IconButton' && /^(primary|secondary)$/.test(attrText(node, 'variant') ?? '')
-        && !/customi[sz]e/i.test(attrText(node, 'label') ?? '')) {
+      // (c) Repeated icon-only actions are ghost, including Customize.
+      if (name === 'IconButton' && /^(primary|secondary)$/.test(attrText(node, 'variant') ?? '')) {
         findings.action.push(`${rel}:${line(node)}  <IconButton variant="${attrText(node, 'variant')}"> (repeated actions are ghost)`);
       }
       if (ACTION_ELEMENTS.has(name) && hasIcon(node, iconNames)) {

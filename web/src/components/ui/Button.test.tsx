@@ -262,6 +262,17 @@ describe('Button', () => {
     expect(screen.queryByTestId('wrapped-icon')).toBeNull();
   });
 
+  it('keeps child SVG icons beside wrapped labels, including translated multiline labels', () => {
+    const { rerender } = render(<Button wrapLabel><svg aria-hidden="true" data-testid="child-icon" />Use template</Button>);
+    const label = screen.getByTestId('child-icon').parentElement;
+    expect(label).toHaveClass('inline-flex', 'items-center', 'gap-2', 'min-w-0', 'break-words', '[&>svg]:shrink-0');
+    expect(label).not.toHaveClass('flex-col');
+    expect(screen.getByRole('button', { name: 'Use template' })).toHaveClass('h-auto');
+    rerender(<Button wrapLabel><svg aria-hidden="true" data-testid="child-icon" />Eine lange übersetzte Beschriftung mit mehreren Zeilen</Button>);
+    expect(screen.getByTestId('child-icon').parentElement).toHaveClass('inline-flex', 'gap-2');
+    expect(screen.getByRole('button')).toHaveTextContent('Eine lange übersetzte Beschriftung');
+  });
+
   it('preserves native form identity, submission overrides and keyboard handlers', () => {
     const onKeyDown = vi.fn();
     render(<Button type="submit" form="settings" name="action" value="save" formNoValidate formAction="/save" onKeyDown={onKeyDown}>Save</Button>);

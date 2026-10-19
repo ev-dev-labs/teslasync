@@ -98,7 +98,7 @@ function QuickAction({ icon, label, onClick, disabled, loading }: QuickActionPro
       loading={loading}
       wrapLabel
       aria-label={label}
-      className="flex min-h-16 min-w-24 flex-1 flex-col items-center justify-center gap-2
+      className="flex min-h-16 min-w-24 flex-1 flex-row items-center justify-center gap-2
         border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 hover:border-[var(--border-default)]"
     >
       {!loading && <Icon icon={icon} size="lg" className={typography.color.secondary} />}

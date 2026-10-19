@@ -37,7 +37,7 @@ export interface AtlasPanelProps {
   vehicleId?: string
   collections?: readonly SectionGroup[]
 }
-const GROUP_STORAGE = 'teslasync-sidenav-collapsed-groups'
+const GROUP_STORAGE = 'teslasync-sidenav-collapsed-groups-v2'
 function readCollapsed(): Record<string, boolean> {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(GROUP_STORAGE) ?? '{}')
@@ -67,8 +67,7 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
   const visibleGroups = groups.map(group => ({ ...group, groupKey: group.entries[0].to, entries: !filtering || (group.label && matchesSidebarTokens(`${group.label} ${group.labelKey ? t(group.labelKey, group.label) : ''}`.toLowerCase(), tokenizeSidebarQuery(query))) ? group.entries : group.entries.filter(item => matches.has(item.to)) })).filter(group => group.entries.length > 0)
   const pins = pinnedItems.filter(item => sectionPaths.has(item.to) && !isActive(item.to) && (!filtering || matches.has(item.to)))
   const recent = recentItems.filter(item => sectionPaths.has(item.to) && !pinned.has(item.to) && (!filtering || matches.has(item.to)))
-  const defaultClosed = (key: string) => sectionPaths.size > 25 && key !== 'pinned' && key !== 'recent' && !groups.find(group => group.entries[0].to === key)?.entries.some(item => isActive(item.to))
-  const isOpen = (key: string) => filtering ? !filterClosed.has(key) : !(collapsed[viewKey + ':' + key] ?? defaultClosed(key))
+  const isOpen = (key: string) => filtering ? !filterClosed.has(key) : !collapsed[viewKey + ':' + key]
   const SectionIcon = resolveSectionIcon(section?.title ?? 'Home')
   const toggle = (key: string) => {
     if (filtering) setFilterClosed(previous => { const next = new Set(previous); if (next.has(key)) next.delete(key); else next.add(key); return next })

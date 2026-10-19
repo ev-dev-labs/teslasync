@@ -1049,6 +1049,10 @@
     "removedChip": "Removed {{label}}"
   },
   "commands": {
+    "doors": {
+      "frunk": "Frunk",
+      "trunk": "Trunk"
+    },
     "toast": {
       "error": "Command failed: {{message}}",
       "failed": "Command failed",
@@ -2103,6 +2107,11 @@
     "redMulticoat": "Red Multi-Coat",
     "reset": "Reset to auto-detected",
     "solidBlack": "Solid Black"
+  },
+  "palette": {
+    "cmd": {
+      "flash": "Flash Lights"
+    }
   },
   "powerDashboards": {
     "aiDrafter": {

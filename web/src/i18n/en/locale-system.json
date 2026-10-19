@@ -3108,6 +3108,7 @@
       "lastScan": "Last scan: {{time}}",
       "lastSeen": "Last seen {{time}}",
       "loading": "Loading repair cases…",
+      "manualResolutionHint": "Resolution records your review; it does not correct the source data. Document the manual correction in the operator note.",
       "metricsLabel": "Repair case metrics",
       "metricsResource": "Repair case metrics",
       "metricsRetained": "Retained metrics",
@@ -3155,6 +3156,7 @@
       "tabCases": "Case queue",
       "tabDiagnostics": "Diagnostics",
       "tabQuarantine": "Quarantine ledger",
+      "transitionFailed": "The case could not be updated. {{message}}",
       "unassignedValue": "Unassigned",
       "updating": "Updating",
       "vehicle": "Vehicle",
@@ -5290,6 +5292,7 @@
           "success": "Comment added"
         },
         "transition": {
+          "error": "Failed to update repair case",
           "success": "Repair case updated"
         }
       },

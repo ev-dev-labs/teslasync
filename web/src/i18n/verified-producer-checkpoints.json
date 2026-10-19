@@ -102,7 +102,7 @@
   {
     "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
     "calls": 30,
-    "sha256": "369a84fbabbf75143755e80e5be414ba7d7bbbb79d7177eca68fff401b77b6df",
+    "sha256": "afd41838de319675b352fd330a0d23601263c7234a35d5e7dd01c27c5f35c813",
     "dependencies": [
       {
         "file": "web/src/lib/routeRegistry.ts",
@@ -535,7 +535,7 @@
   {
     "file": "web/src/features/dashboard/pages/DashboardPage.tsx",
     "calls": 68,
-    "sha256": "3893e4e8844daef75e14fcf86cb5c24babc0f0257832bb7920eb84c460a116e9"
+    "sha256": "54e728d81cdbdd886bd4d23926ed65ca276f066ff6a72d3372dbf5d48a4f724b"
   },
   {
     "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",

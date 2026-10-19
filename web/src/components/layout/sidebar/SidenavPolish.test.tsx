@@ -70,17 +70,30 @@ describe('sidenav polish', () => {
     expect(screen.getByRole('button', { name: 'Battery insights' })).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('defaults large sections to the active group, preserves explicit opens and closes after remount', () => {
+  it('expands every large-section group and preserves explicit collapses after remount', () => {
     const view = render(<Deck large path="/large/0" />)
     expect(screen.getByRole('button', { name: 'Pinned' })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('button', { name: 'First group' })).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('button', { name: 'Second group' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: 'Second group' })).toHaveAttribute('aria-expanded', 'true')
     fireEvent.click(screen.getByRole('button', { name: 'Second group' }))
     fireEvent.click(screen.getByRole('button', { name: 'First group' }))
     view.unmount()
     render(<Deck large path="/large/0" />)
-    expect(screen.getByRole('button', { name: 'Second group' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: 'Second group' })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByRole('button', { name: 'First group' })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('ignores collapse state written by the old design once, then persists new choices', () => {
+    localStorage.setItem('teslasync-sidenav-collapsed-groups', JSON.stringify({ 'section:Battery:/battery': true, 'section:Battery:pinned': true }))
+    const view = render(<Deck />)
+    expect(screen.getByRole('button', { name: 'Pinned' })).toHaveAttribute('aria-expanded', 'true')
+    const group = screen.getByRole('button', { name: 'Battery insights' })
+    expect(group).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(group)
+    expect(JSON.parse(localStorage.getItem('teslasync-sidenav-collapsed-groups-v2')!)).toMatchObject({ 'section:Battery:/battery': true })
+    view.unmount()
+    render(<Deck />)
+    expect(screen.getByRole('button', { name: 'Battery insights' })).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('defines fine-pointer density separately from coarse touch and keeps phone rows touch sized', () => {

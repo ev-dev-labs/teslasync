@@ -72,9 +72,10 @@ export const A = () => <DropdownMenu><Button icon={<Download />}>{t('x.export', 
 export const A = () => <Button icon={<Check />}>{t('common.save', 'Save')}</Button>;`).status, 0);
 });
 
-test('fails on a filled icon-only repeated action; only Customize may be filled', () => {
+test('fails on every filled icon-only repeated action, including Customize', () => {
   assert.equal(scan(`export const A = () => <IconButton icon={i} label={t('common.refresh', 'Refresh')} variant="secondary" />;`).status, 1);
-  assert.equal(scan(`export const A = () => <IconButton icon={i} label={t('dashboard.customize', 'Customize')} variant="primary" />;`).status, 0);
+  assert.equal(scan(`export const A = () => <IconButton icon={i} label={t('dashboard.customize', 'Customize')} variant="primary" />;`).status, 1);
+  assert.equal(scan(`export const A = () => <IconButton icon={i} label={t('dashboard.customize', 'Customize')} variant="ghost" />;`).status, 0);
 });
 
 test('fails on a destructive icon-only action without a confirmation step', () => {
