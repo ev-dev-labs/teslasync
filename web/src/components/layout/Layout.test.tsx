@@ -937,9 +937,11 @@ describe('Layout — global page chrome', () => {
 
   it('keeps vehicle scope as a single desktop instance in the command header', () => {
     renderLayout('/')
-    const pickers = screen.getAllByTestId('vehicle-picker')
-    // The redesign removed the mobile-drawer duplicate: exactly one instance,
-    // owned by the desktop command header (which hides itself below xl).
+    const pickers = screen.getAllByTestId('vehicle-picker').filter(node =>
+      node.closest('[data-role="workspace-header"]'))
+    const mobile = document.querySelector('[data-role="mobile-workspace-controls"]')!
+    expect(within(mobile as HTMLElement).getAllByTestId('vehicle-picker')).toHaveLength(1)
+    // Exactly one desktop picker and one mobile picker; neither lives in navigation.
     expect(pickers).toHaveLength(1)
     const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
     expect(workspaceHeader).toContainElement(pickers[0])
@@ -951,9 +953,11 @@ describe('Layout — global page chrome', () => {
 
   it('renders a single analysis-window control in the command header on a range-owning route', () => {
     renderLayout('/drives')
-    const controls = screen.getAllByTestId('workspace-context-control')
-    // One desktop instance in the workspace header — never a competing
-    // mobile duplicate (the drawer no longer hosts scope controls).
+    const controls = screen.getAllByTestId('workspace-context-control').filter(node =>
+      node.closest('[data-role="workspace-header"]'))
+    const mobile = document.querySelector('[data-role="mobile-workspace-controls"]')!
+    expect(within(mobile as HTMLElement).getAllByTestId('workspace-context-control')).toHaveLength(1)
+    // Desktop and mobile chrome each own one scope control; navigation owns none.
     expect(controls).toHaveLength(1)
 
     const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
@@ -1166,7 +1170,7 @@ describe('Layout — mobile drawer', () => {
       expect(bell).toHaveTextContent('7')
       expect(bell.querySelector('span')).toHaveAttribute('aria-hidden', 'true')
       expect(bell.querySelector('svg')).toHaveClass('h-5', 'w-5')
-      expect(header.lastElementChild).toHaveClass('shrink-0', 'ms-auto')
+      expect(header.querySelector('[data-role="mobile-header-actions"]')).toHaveClass('shrink-0', 'ms-auto')
       fireEvent.click(bell)
       await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/notifications/inbox'))
       expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
@@ -1211,7 +1215,7 @@ describe('Layout — mobile drawer', () => {
       expect(headerLogo.parentElement).not.toHaveClass('-ml-10')
       expect(header).toHaveClass('flex-wrap', 'gap-2')
       expect(menu).toHaveClass('h-11', 'w-11', 'shrink-0', '-ms-1')
-      expect(header.lastElementChild).toHaveClass('shrink-0', 'ms-auto')
+      expect(header.querySelector('[data-role="mobile-header-actions"]')).toHaveClass('shrink-0', 'ms-auto')
       expect(header).not.toHaveClass('overflow-hidden')
       expect(headerLogo).not.toHaveClass('overflow-hidden')
 

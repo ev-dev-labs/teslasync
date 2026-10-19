@@ -126,6 +126,7 @@ const LazyGotoIndicator = lazy(async () => {
   return { default: module.GotoIndicator }
 })
 
+const MobileWorkspaceControls = lazy(() => import('./MobileWorkspaceControls'))
 const WorkspaceHeader = lazy(async () => {
   const module = await import('./WorkspaceHeader')
   return { default: module.WorkspaceHeader }
@@ -1323,10 +1324,15 @@ export default function Layout() {
           <div className="flex min-w-0 flex-1 basis-16 justify-center">
             <Logo size={26} showWordmark className={MOBILE_BRAND_CONTAINMENT} />
           </div>
-          <div className="ms-auto flex shrink-0 items-center gap-2">
+          <div data-role="mobile-header-actions" className="ms-auto flex shrink-0 items-center gap-2">
             <NotificationBellPopover className="max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11" />
             <ThemeQuickSwitcher />
           </div>
+          {deckViewport !== 'desktop' && (workspaceScope.range || workspaceScope.vehicle) && (
+            <Suspense fallback={<div className="h-11 w-full basis-full" aria-hidden="true" />}>
+              <MobileWorkspaceControls />
+            </Suspense>
+          )}
         </header>
       )}
 

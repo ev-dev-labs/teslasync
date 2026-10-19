@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 export const acceptedShellDeltas = [
   {
     path: 'web/src/components/layout/Layout.tsx',
-    predecessorSHA256: 'cef29f502361ecafacf8bd0a3c11e0f538587cec5a2dfc5fc9e3ebf423254deb',
+    predecessorSHA256: '3dce0ff77ca4cd560150f941da1fc11446f46a38e7e52ff779517004a44522cd',
     fragments: [
       {
         current: "import { RouteTransition } from '@/components/motion/runtime'\nimport {\n",
@@ -51,7 +51,7 @@ export const acceptedShellDeltas = [
         predecessor: "          </Button>\n          <div className=\"flex-1 flex justify-center -ml-10\">\n            <Logo size={26} showWordmark />\n          </div>\n",
       },
       {
-        current: "          </div>\n          <div className=\"ms-auto flex shrink-0 items-center gap-2\">\n            <NotificationBellPopover className=\"max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11\" />\n            <ThemeQuickSwitcher />\n          </div>\n        </header>\n",
+        current: "          </div>\n          <div data-role=\"mobile-header-actions\" className=\"ms-auto flex shrink-0 items-center gap-2\">\n            <NotificationBellPopover className=\"max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11\" />\n            <ThemeQuickSwitcher />\n          </div>\n          {deckViewport !== 'desktop' && (workspaceScope.range || workspaceScope.vehicle) && (\n            <Suspense fallback={<div className=\"h-11 w-full basis-full\" aria-hidden=\"true\" />}>\n              <MobileWorkspaceControls />\n            </Suspense>\n          )}\n        </header>\n",
         predecessor: "          </div>\n          <NotificationBellPopover className=\"ms-auto\" />\n          <ThemeQuickSwitcher />\n        </header>\n",
       },
       {

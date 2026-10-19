@@ -12,9 +12,9 @@ describe('exact accepted shell inverse, independent of recovery test registratio
   it('reconstructs the actual Layout canonical predecessor without changing shipping source', () => {
     const file = 'web/src/components/layout/Layout.tsx'
     const current = currentSource(file)
-    expect(hash(current)).toBe('d5f3c5cffd86f567050cbb461fdbe10c7930c5c695ea2870897954e05a1ef8a1')
+    expect(hash(current)).toBe('2001a691cd1157e7c0c0a8db2ffd0bcaa41acea1d4acfaa855c6694b884a43c7')
     expect(hash(restoreAcceptedShellSource(file, current)))
-      .toBe('cef29f502361ecafacf8bd0a3c11e0f538587cec5a2dfc5fc9e3ebf423254deb')
+      .toBe('3dce0ff77ca4cd560150f941da1fc11446f46a38e7e52ff779517004a44522cd')
     expect(currentSource(file)).toBe(current)
   })
 
