@@ -112,6 +112,10 @@ test('Tesla usage page and status overview render desktop/mobile, light/dark and
       await expect(page.locator('#tesla-api')).toHaveCount(0)
       await page.screenshot({ path: testInfo.outputPath(`tesla-status-${theme}-${width}.png`) })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
+      // Stop the old app's fleet polling before removing its API interceptors.
+      // Otherwise the next iteration's viewport/theme changes release live
+      // requests to the hermetic preview while no mock owns them.
+      await page.goto('about:blank')
       await page.unroute(usageRoute)
       await page.unroute('**/api/**')
     }

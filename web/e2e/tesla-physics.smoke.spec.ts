@@ -88,6 +88,8 @@ test('Tesla Physics workbench preserves deep links, evidence and mobile/desktop 
       await expect(chargeEvidence.getByText('Showing 1–1 of 1', { exact: true })).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`physics-charge-port-${theme}-${width}.png`), fullPage: true })
+      // Dispose the mounted polling shell before removing its API routes.
+      await page.goto('about:blank')
       await page.unroute(/\/api\/v1\/physics\/exclusive(?:\?|$)/)
       await page.unroute('**/api/**')
     }
