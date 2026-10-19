@@ -209,7 +209,7 @@ export async function assertCatalogueChargeCategories(page: Page, chart: Locator
   expect(bar.payload.energy).toBe(42);
   expect(bar.value).toBe(42);
   await page.mouse.move(bar.point.x, bar.point.y);
-  const tooltip = chart.getByRole('tooltip');
+  const tooltip = chart.getByRole('tooltip').filter({ hasText: 'Home / AC:' });
   await expect(tooltip).toBeVisible();
   const homeLabel = tooltip.getByText('Home / AC:', { exact: true });
   await expect(homeLabel).toBeVisible();
@@ -218,6 +218,7 @@ export async function assertCatalogueChargeCategories(page: Page, chart: Locator
   await expect(homeRow).toContainText('kWh');
   const tooltipText = await tooltip.textContent();
   await captureCataloguePanel(page, chart, info, `charge-session-category-tooltip-${width}-${theme}.png`);
+  await page.mouse.move(bar.point.x, bar.point.y);
   await expect(homeRow).toContainText('42');
   await page.mouse.move(0, 0);
   await expect(tooltip).toBeHidden();
@@ -277,7 +278,7 @@ export async function assertCatalogueChargeHistory(page: Page, panel: Locator, w
       return { x: glyph.left + glyph.width / 2, y: chart.top + chart.height / 2 };
     });
     await page.mouse.move(point.x, point.y);
-    const tooltip = panel.getByRole('tooltip');
+    const tooltip = panel.getByRole('tooltip').filter({ hasText: expectedDate });
     await expect(tooltip).toBeVisible();
     await expect(tooltip.locator('p').first()).toHaveText(expectedDate);
     await expect(tooltip).toContainText('42');
@@ -287,6 +288,7 @@ export async function assertCatalogueChargeHistory(page: Page, panel: Locator, w
     contract.accessibilitySnapshot = await panel.ariaSnapshot();
     contract.nativeHoverPoint = point;
     await captureCataloguePanel(page, panel, info, `charge-history-date-tooltip-${width}-${theme}.png`);
+    await page.mouse.move(point.x, point.y);
     await expect(tooltip.locator('p').first()).toHaveText(expectedDate);
     await page.mouse.move(0, 0);
     await expect(tooltip).toBeHidden();

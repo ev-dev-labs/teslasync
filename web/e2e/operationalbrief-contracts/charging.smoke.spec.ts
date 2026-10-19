@@ -890,23 +890,20 @@ for (const theme of ['light', 'dark'] as const) {
       await waitForHarnessReady(page, run.mocks);
       await expectThermalNonzero(page, section);
       await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW', 'Estimated from sampled heater power']);
-      // History goes stale at 15 s, telemetry at 60 s. The real page badge
-      // refreshes its worst query: refresh history first, then stale telemetry.
+      // History goes stale at 15 s, telemetry at 60 s. One global refresh
+      // refreshes both declared sources, even though the badge describes the worst.
       await page.waitForTimeout(61000);
       const refresh = page.locator('[data-role="page-container"] > header')
         .getByRole('button', { name: /^Refresh data ·/ });
       await expect(refresh).toHaveCount(1);
       const historyRefresh = page.waitForResponse(response =>
         new URL(response.url()).pathname === '/api/v1/charging' && response.status() === 200);
-      await refresh.click();
-      await historyRefresh;
-      await waitForHarnessReady(page, run.mocks);
       unavailable = true;
       const telemetryRefresh = page.waitForResponse(response =>
         new URL(response.url()).pathname === '/api/v1/charging/202/telemetry' && response.status() === 503);
       await refresh.focus();
       await page.keyboard.press('Enter');
-      await telemetryRefresh;
+      await Promise.all([historyRefresh, telemetryRefresh]);
       const metrics = page.locator('#charging-thermal-tax-metrics');
       await expect(metrics).toHaveAttribute('data-retained', 'true', { timeout: 30000 });
 

@@ -398,14 +398,27 @@ for (const theme of ['light', 'dark'] as const) {
         const brief = page.getByTestId(root === 'day-log' ? 'day-log-summary' : 'digital-twin-summary');
         const values = await brief.locator('[data-operational-value]').allTextContents();
         expect(values).toHaveLength(root === 'day-log' ? 6 : 5);
+        const retainedReadings = brief.locator('[data-operational-metric]:not([data-operational-metric="twin-status"]) [data-operational-value]');
+        const physicalValues = await retainedReadings.allTextContents();
+        if (root === 'digital-twin') {
+          await expect(brief.locator('[data-operational-metric="twin-status"] [data-operational-value]')).toHaveText('Online');
+          expect(physicalValues).toHaveLength(4);
+        }
         fail = true;
         await page.locator('[data-role="page-header"]').getByRole('button', { name: /Refresh/ }).click();
         await expect.poll(() => diagnostics.failedDataRequests.length, { timeout: 20000 }).toBeGreaterThan(0);
-        expect(await brief.locator('[data-operational-value]').allTextContents()).toEqual(values);
+        if (root === 'digital-twin') {
+          // A failed live-state request invalidates the current status badge,
+          // not the retained lock/opening/sentry source measurements.
+          await expect(brief.locator('[data-operational-metric="twin-status"]')).toHaveCount(0);
+          expect(await retainedReadings.allTextContents()).toEqual(physicalValues);
+        } else {
+          expect(await brief.locator('[data-operational-value]').allTextContents()).toEqual(values);
+        }
         await reviewDrawer(page, brief, root === 'day-log' ? 'Day summary' : 'Physical-state summary',
           root === 'day-log' ? /Recorded drives and charging sessions/ : /Security, vehicle-state and charging snapshots/, [
             root === 'day-log' ? 'Retained recorded history' : 'Retained source snapshots',
-            ...(root === 'day-log' ? [] : ['1 empty field is hidden.']),
+            ...(root === 'day-log' ? [] : ['2 empty fields are hidden.']),
           ]);
         await expectNoHorizontalOverflow(page);
         expectSourceLedger(mocks, root === 'day-log' ? ['/api/v1/day-log'] : twinPaths.map((path) => `/api/v1${path}`));

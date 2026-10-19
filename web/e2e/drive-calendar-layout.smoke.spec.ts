@@ -9,14 +9,21 @@ for (const [width, range, compact] of [
 ] as const) {
   test(`drive calendar activity fits ${width}px with ${compact ? 'short' : 'year-long'} period`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await seedBrowserState(page, 'light', '/drive-calendar');
     const mockApi = await installApiMocks(page, 'populated', 'light');
     await page.goto(`/drive-calendar?${range}`, { waitUntil: 'domcontentloaded' });
     await waitForHarnessReady(page, mockApi);
 
     const activity = page.getByRole('region', { name: 'Driving activity' });
+    // The heatmap's disclosure contains its own printable evidence card.
+    // Measure the three Grid children, not that nested card.
+    const cards = activity.locator(':scope > [data-layout="responsive-columns"] > *');
+    await expect(cards).toHaveCount(3);
+    await page.evaluate(() => document.fonts.ready);
+    await expect(async () => {
     const [heatmap, monthly, weekday] = await Promise.all(
-      [0, 1, 2].map((index) => activity.locator('[data-print-card]').nth(index).boundingBox()),
+      [0, 1, 2].map((index) => cards.nth(index).boundingBox()),
     );
     const bounds = await activity.boundingBox();
     expect(heatmap).not.toBeNull();
@@ -43,6 +50,7 @@ for (const [width, range, compact] of [
       expect(monthly!.y).toBeGreaterThan(heatmap!.y + heatmap!.height);
       expect(weekday!.y).toBeGreaterThan(monthly!.y + monthly!.height);
     }
+    }).toPass({ timeout: 8000 });
     await expectNoHorizontalOverflow(page);
     await assertMockApiComplete(page, mockApi);
   });

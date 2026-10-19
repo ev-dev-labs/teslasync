@@ -10,8 +10,8 @@ for (const theme of ['dark', 'light'] as const) {
     await expectThemeApplied(page, theme)
 
     await page.getByRole('button', { name: 'More dashboard actions' }).click()
-    await page.getByRole('button', { name: 'Kiosk mode' }).click()
-    const settings = page.getByRole('dialog', { name: 'Kiosk Settings' })
+    await page.getByRole('button', { name: 'Kiosk' , exact: true }).click()
+    const settings = page.getByRole('dialog', { name: 'Kiosk settings' })
     await expect(settings).toBeVisible()
     const preview = settings.locator('.kiosk-surface')
     const previewPanel = settings.locator('.kiosk-panel')
@@ -22,7 +22,7 @@ for (const theme of ['dark', 'light'] as const) {
     expect(previewColors.background).not.toBe('rgba(10, 10, 20, 1)')
     await expect(previewPanel).toBeVisible()
 
-    await settings.getByRole('button', { name: 'Enter Kiosk Mode' }).click()
+    await settings.getByRole('button', { name: 'Enter kiosk mode' }).click()
     const kiosk = page.locator('.kiosk-root')
     await expect(kiosk).toBeVisible()
     await expect(kiosk.locator('.kiosk-panel').first()).toBeVisible()

@@ -80,7 +80,7 @@ for (const theme of ['light', 'dark'] as const) {
         const box = await bar.boundingBox();
         if (!box || box.width <= 0 || box.height <= 0) throw new Error('Unknown source must render a real nonzero energy bar');
         await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-        const tooltip = chart.getByRole('tooltip');
+        const tooltip = chart.getByRole('tooltip').filter({ hasText: 'Unknown:' });
         await expect(tooltip).toBeVisible();
         await expect(tooltip.getByText('Unknown:', { exact: true })).toBeVisible();
         await expect(tooltip).toContainText('42.00 kWh');
@@ -88,6 +88,7 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(tooltip).not.toContainText('Supercharger');
         const tooltipText = await tooltip.textContent();
         await captureCataloguePanel(page, chart, test.info(), `unknown-native-tooltip-${width}-${theme}.png`);
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await expect(tooltip.getByText('Unknown:', { exact: true })).toBeVisible();
         await page.mouse.move(0, 0);
         await expect(tooltip).toBeHidden();
