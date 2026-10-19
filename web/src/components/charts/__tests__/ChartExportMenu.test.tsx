@@ -79,7 +79,9 @@ describe('ChartExportMenu', () => {
     expect(trigger).toHaveClass('h-11', 'w-11', 'md:h-7', 'md:w-7');
     expect(trigger.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     openMenu();
-    expect(screen.getByRole('menu')).toHaveClass('end-0', 'shadow-e2');
+    expect(screen.getByRole('menu')).toHaveClass('shadow-e2');
+    expect(screen.getByRole('menu')).toHaveStyle({ position: 'fixed' });
+    expect(screen.getByRole('menu').parentElement).toBe(document.body);
     for (const item of screen.getAllByRole('menuitem')) {
       expect(item).toHaveClass(
         'min-h-11',
@@ -468,7 +470,7 @@ describe('ChartExportMenu', () => {
     );
     openMenu();
     expect(screen.getByRole('menu')).toBeInTheDocument();
-    fireEvent.mouseDown(screen.getByTestId('outside'));
+    fireEvent.pointerDown(screen.getByTestId('outside'));
     expect(screen.queryByRole('menu')).toBeNull();
   });
 });

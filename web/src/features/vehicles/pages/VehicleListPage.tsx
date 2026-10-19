@@ -1411,6 +1411,7 @@ export default function VehicleListPage() {
       {vehiclesState.fatalError && !vehiclesState.isRefreshBlocked && (
         <GlassPanel padding="md">
           <QueryError
+            compact
             error={vehiclesState.fatalError}
             onRetry={() => vehiclesQuery.refetch()}
             resourceName={t('nav.vehicles', 'Fleet')}
@@ -1441,12 +1442,12 @@ export default function VehicleListPage() {
         </FadeIn>
       )}
       {workOrdersState.fatalError && (
+        <details className="rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-1)]">
+          <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]">
+            <span role="status">{t('operations.vehicles.serviceUnavailableTitle', 'Service attention is temporarily unavailable')}</span>
+          </summary>
         <DataStateNotice
           state="partial"
-          title={t(
-            'operations.vehicles.serviceUnavailableTitle',
-            'Service attention is temporarily unavailable',
-          )}
         >
           {t(
             'dataSources.partialMessage',
@@ -1456,6 +1457,7 @@ export default function VehicleListPage() {
             {t('common.retry', 'Retry')}
           </Button>
         </DataStateNotice>
+        </details>
       )}
       {!vehiclesState.isRefreshBlocked && <StaleRefreshWarning
         state={vehiclesState}

@@ -1506,6 +1506,9 @@
       "shortLabel": "Live"
     }
   },
+  "operations": {
+    "reviewDetails": "Review details"
+  },
   "pagination": {
     "currentPage": "Page {{page}} of {{total}}",
     "first": "First page",

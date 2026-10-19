@@ -166,7 +166,7 @@ async function expectCharts(page: Page, fixture: SandboxExpectation): Promise<vo
 async function expectRun(page: Page, fixture: SandboxExpectation): Promise<string> {
   const brief = page.getByTestId(SANDBOX_BRIEF_ID);
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
-  await expect(brief).toContainText('Synthetic sandbox');
+  await expect(brief).toContainText('Selected pack evaluation');
   await expect(brief.locator('[data-operational-metric]')).toHaveCount(3);
   for (const [id, value] of [
     ['sandbox-sample-rows', String(fixture.rows)],
@@ -214,6 +214,7 @@ async function reviewRun(
   await review.press('Enter');
   const drawer = page.getByRole('dialog', { name: 'Selected pack evaluation details', exact: true });
   await expect(drawer).toBeVisible();
+  await expect(drawer).toContainText('Synthetic sandbox');
   await expect(drawer).toHaveAttribute('aria-modal', 'true');
   const narrative = drawer.getByTestId('operational-narrative');
   await expect(narrative.getByText('Not scored', { exact: true })).toBeVisible();
@@ -354,11 +355,12 @@ for (const width of [320, 1440]) {
           timeout: 10_000,
         }).toBeGreaterThanOrEqual(2);
         await waitForHarnessReady(page, api);
-        await expect(page.getByText(INSTALLED_GRANT, { exact: true })).toBeVisible();
+        await expect(page.getByText(`${INSTALLED_GRANT} may be out of date`, { exact: true })).toBeVisible();
+        await expect(page.getByText(`Could not read ${INSTALLED_GRANT} from local storage.`, { exact: true })).toBeVisible();
         await expect(page.getByText(/simulating full requested-capability grant/)).toHaveCount(0);
         expect(await page.getByTestId(SANDBOX_BRIEF_ID).innerText()).toBe(retainedBrief);
         await expectCharts(page, STARTER_EXPECTATION);
-        await reviewRun(page, STARTER_EXPECTATION, INSTALLED_GRANT, runStats, runContext(STARTER_EXPECTATION));
+        await reviewRun(page, STARTER_EXPECTATION, `${INSTALLED_GRANT} may be out of date`, runStats, runContext(STARTER_EXPECTATION));
       } finally {
         await restoreLocalTrustReads(page);
       }

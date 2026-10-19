@@ -153,7 +153,16 @@ export function PageContainer({
   const resolvedQuery: FreshnessQuery | null = (() => {
     if (!query) return null;
     if ('isError' in query) return query;
-    return query.length > 0 ? pickWorstQuery(query) : null;
+    if (query.length === 0) return null;
+    return {
+      ...pickWorstQuery(query),
+      // The badge describes the worst source; its page-level refresh must
+      // refresh every declared source, including equally fresh siblings.
+      refetch: async (options) => {
+        const results = await Promise.all(query.map((source) => source.refetch(options)));
+        return results[0]!;
+      },
+    };
   })();
 
   return (

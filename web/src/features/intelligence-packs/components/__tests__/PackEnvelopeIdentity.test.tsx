@@ -115,7 +115,7 @@ describe('complete pack envelope identity', () => {
     const pending = new Promise<void>((resolve) => { release = resolve; });
     const append = repository.appendAuditLog.bind(repository);
     const auditWrite = vi.spyOn(repository, 'appendAuditLog').mockImplementation(async (record) => {
-      await pending;
+      if (record.action === 'install') await pending;
       await append(record);
     });
     const close = vi.fn();
@@ -123,7 +123,7 @@ describe('complete pack envelope identity', () => {
     const { rerender } = render(<PackDetailModal entry={entry(first)} open onClose={close} />, { wrapper });
     await confirmUnsigned();
     fireEvent.click(screen.getByRole('button', { name: /Trust & install/i }));
-    await waitFor(() => expect(auditWrite).toHaveBeenCalledOnce());
+    await waitFor(() => expect(auditWrite.mock.calls.some(([record]) => record.action === 'install')).toBe(true));
     const changed = structuredClone(first);
     changed.manifest.description += ' replacement';
     rerender(<PackDetailModal entry={entry(changed)} open onClose={close} />);

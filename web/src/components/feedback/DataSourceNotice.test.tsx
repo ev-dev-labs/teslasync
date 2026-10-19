@@ -28,6 +28,20 @@ function source(
 }
 
 describe('DataSourceNotice', () => {
+  it('keeps a compact failure visible and all source recovery controls available on disclosure', () => {
+    const refetch = vi.fn();
+    const { container } = render(<DataSourceNotice compact sources={[
+      source('fleet', 'Fleet analytics', { isError: true, refetch }),
+    ]} />);
+    const details = container.querySelector('details')!;
+    expect(details).not.toHaveAttribute('open');
+    expect(container.querySelector('summary')).toHaveTextContent('Service unavailable');
+    details.open = true;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Fleet analytics' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(screen.getByRole('alert')).toHaveTextContent('No requested source has returned usable data yet.');
+  });
+
   beforeEach(() => {
     vi.mocked(useOnlineStatus).mockReturnValue(true);
   });

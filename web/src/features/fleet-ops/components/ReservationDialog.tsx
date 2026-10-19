@@ -166,22 +166,22 @@ export function ReservationDialog({
             assignments={assignments}
             costCenters={costCenters}
           />
-          <div className="flex justify-between gap-2">
-            <div className="flex gap-2">
+          <div className="flex flex-wrap justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap gap-2">
               {item && (
                 <Button type="button" variant="danger" onClick={() => onDelete(item)}>
                   {t('common.delete', 'Delete')}
                 </Button>
               )}
               {item && (item.status === 'requested' || item.status === 'confirmed') && (
-                <Button type="button" variant="outline" onClick={() => onCancel(item)}>
+                <Button type="button" variant="outline" wrapLabel onClick={() => onCancel(item)}>
                   {t('fleetOps.reservations.cancelAction', 'Cancel reservation')}
                 </Button>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="ms-auto flex min-w-0 flex-wrap gap-2">
               <Button type="button" variant="ghost" onClick={requestClose}>{t('common.cancel', 'Cancel')}</Button>
-              <Button type="submit" loading={pending}>
+              <Button type="submit" wrapLabel loading={pending}>
                 {item ? t('common.save', 'Save') : t('fleetOps.reservationDialog.create', 'Create reservation')}
               </Button>
             </div>

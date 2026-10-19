@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Copy,
@@ -11,6 +11,7 @@ import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Text } from '@/components/ui/Typography';
+import { Popover } from '@/components/ui/Popover';
 import { useOptionalToast } from '@/components/feedback/Toast';
 import type { ClipboardOutcome } from '@/hooks/useChartExport';
 
@@ -83,6 +84,7 @@ export function ChartExportMenu({
     'csv' | 'png' | 'svg' | 'copy' | null
   >(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -96,23 +98,6 @@ export function ChartExportMenu({
         !containerRef.current?.contains(svg),
     );
   }, [onExportSVG]);
-
-  // Close on outside click / Escape.
-  useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) close();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onClickOutside);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open, close]);
 
   const triggerLabel = pendingAction
     ? t('chart.export.preparing', 'Preparing chart export…')
@@ -199,6 +184,7 @@ export function ChartExportMenu({
   return (
     <div ref={containerRef} className={cn('relative', className)}>
       <Button
+        ref={triggerRef}
         type="button"
         variant="ghost"
         size="sm"
@@ -216,11 +202,16 @@ export function ChartExportMenu({
         title={triggerLabel}
       />
       {open && !disabled && pendingAction === null && (
-        <div
+        <Popover
+          open
+          anchorRef={triggerRef}
+          onClose={close}
+          align="end"
+          avoidMobileChrome
           role="menu"
-          aria-label={t('chart.export.menuLabel', 'Export chart')}
+          ariaLabel={t('chart.export.menuLabel', 'Export chart')}
           className={cn(
-            'absolute end-0 z-30 mt-1 w-56 rounded-shape-lg p-1',
+            'w-56 rounded-shape-lg p-1',
             'border border-[var(--border-default)] bg-[var(--surface-2)] shadow-e2',
           )}
         >
@@ -277,7 +268,7 @@ export function ChartExportMenu({
           >
             <Text variant="bodySm">{t('chart.export.copy', 'Copy image to clipboard')}</Text>
           </Button>
-        </div>
+        </Popover>
       )}
     </div>
   );

@@ -736,8 +736,7 @@
     },
     "noAttention": "No current attention items.",
     "noMetricValues": "No metric values are available yet.",
-    "reviewAll": "Review all",
-    "reviewDetails": "Review details"
+    "reviewAll": "Review all"
   },
   "problemReport": {
     "context": {

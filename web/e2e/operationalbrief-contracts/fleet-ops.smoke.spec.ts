@@ -408,7 +408,7 @@ for (const theme of ['light', 'dark'] as const) {
           '2026-10-08', '60.3', '40', '75',
         ]);
         await chart.getByRole('button', { name: 'Export chart', exact: true }).click();
-        const menu = chart.getByRole('menu', { name: 'Export chart', exact: true });
+        const menu = page.getByRole('menu', { name: 'Export chart', exact: true });
         for (const name of ['Save as PNG', 'Save as SVG', 'Copy image to clipboard']) {
           await expect(menu.getByRole('menuitem', { name, exact: true })).toBeEnabled();
         }

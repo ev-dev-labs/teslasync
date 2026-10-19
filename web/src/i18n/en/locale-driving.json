@@ -1840,7 +1840,6 @@
     "noAttention": "No current attention items.",
     "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all",
-    "reviewDetails": "Review details",
     "status": {
       "awaitingData": "Awaiting data",
       "onTrack": "On track",

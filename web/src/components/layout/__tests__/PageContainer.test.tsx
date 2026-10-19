@@ -57,6 +57,17 @@ function renderWith(ui: React.ReactNode, route = '/drives') {
 }
 
 describe('PageContainer', () => {
+  it('refreshes every declared source while the badge describes the worst source', () => {
+    const fleet = makeQuery();
+    const reservations = makeQuery({ isError: true });
+    const forecast = makeQuery();
+    renderWith(<PageContainer title="Fleet" query={[fleet, reservations, forecast]}>Content</PageContainer>);
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
+    for (const source of [fleet, reservations, forecast]) {
+      expect(source.refetch).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it('preserves product names and acronyms in the default empty message', () => {
     renderWith(<PageContainer title="Tesla API" empty>{null}</PageContainer>);
     expect(screen.getByText('No Tesla API found.')).toBeInTheDocument();

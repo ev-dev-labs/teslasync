@@ -5,7 +5,8 @@
       "colDetail": "Detail",
       "colPack": "Pack",
       "colWhen": "When",
-      "empty": "No actions have been recorded yet."
+      "empty": "No actions have been recorded yet.",
+      "trustDecisionRecorded": "Recorded trust decision: {{decision}}."
     },
     "capabilities": {
       "denied": "Denied",
@@ -777,8 +778,7 @@
     },
     "noAttention": "No current attention items.",
     "noMetricValues": "No metric values are available yet.",
-    "reviewAll": "Review all",
-    "reviewDetails": "Review details"
+    "reviewAll": "Review all"
   },
   "problemReport": {
     "context": {

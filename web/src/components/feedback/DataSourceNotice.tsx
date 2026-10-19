@@ -51,6 +51,8 @@ export interface DataSourceNoticeProps
   title?: string;
   message?: string;
   retryLabel?: string;
+  /** Keep the source summary visible and disclose the full recovery panel on demand. */
+  compact?: boolean;
   /**
    * HELP-04. Extra evidence a page knows but a query result cannot express —
    * most usefully `vehicleState`, and `requestedBeforeRetention` /
@@ -126,6 +128,7 @@ export function DataSourceNotice({
   title,
   message,
   retryLabel,
+  compact = false,
   evidence,
   ...props
 }: DataSourceNoticeProps) {
@@ -226,7 +229,7 @@ export function DataSourceNotice({
     });
   };
 
-  return (
+  const notice = (
     <DataStateNotice
       {...props}
       state={state}
@@ -292,5 +295,19 @@ export function DataSourceNotice({
         ) : null}
       </div>
     </DataStateNotice>
+  );
+  if (!compact) return notice;
+  const summary = title ?? (state === 'unavailable'
+    ? t('dataState.unavailable.title', 'Service unavailable')
+    : state === 'stale'
+      ? t('dataState.stale.title', 'Data may be stale')
+      : t('dataState.partial.title', 'Partial data'));
+  return (
+    <details className="min-w-0 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-1)]">
+      <summary className="min-h-11 cursor-pointer break-words px-4 py-3 text-sm text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]">
+        <span role="status">{summary} · {t('operations.reviewDetails', 'Review details')}</span>
+      </summary>
+      {notice}
+    </details>
   );
 }

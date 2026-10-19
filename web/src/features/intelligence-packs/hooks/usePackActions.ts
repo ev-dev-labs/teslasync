@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
 import { usePackRepositoryContext } from './packRepositoryContext';
 import { intelPackQueryKeys } from './queryKeys';
@@ -12,6 +13,7 @@ import {
   type UpgradePackInput,
 } from '../lib/packActions';
 import type { TrustDecision } from '../lib/trust';
+import { buildAuditEntry } from '../lib/auditLog';
 
 /**
  * Imperative install/upgrade/rollback/uninstall/enable-disable/trust-decision
@@ -20,6 +22,7 @@ import type { TrustDecision } from '../lib/trust';
  * inventory, audit log, trust badges) reflects the change immediately.
  */
 export function usePackActions() {
+  const { t } = useTranslation();
   const { repository } = usePackRepositoryContext();
   const queryClient = useQueryClient();
 
@@ -55,7 +58,17 @@ export function usePackActions() {
   });
 
   const recordTrustDecision = useMutation({
-    mutationFn: (decision: TrustDecision) => repository.putTrustDecision(decision),
+    mutationFn: async (decision: TrustDecision) => {
+      await repository.putTrustDecision(decision);
+      const installed = await repository.getInstalled(decision.packId);
+      await repository.appendAuditLog(buildAuditEntry({
+        packId: decision.packId,
+        packName: installed?.envelope.manifest.name ?? decision.packId,
+        action: 'trust-decision',
+        detail: t('intelPacks.audit.trustDecisionRecorded', 'Recorded trust decision: {{decision}}.', { decision: decision.decision }),
+        now: () => new Date(decision.decidedAtIso),
+      }));
+    },
     onSuccess: (_void, decision) => invalidateAfter(decision.packId),
   });
 

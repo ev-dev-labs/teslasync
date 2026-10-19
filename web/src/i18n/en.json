@@ -34512,7 +34512,8 @@
       "colDetail": "Detail",
       "colPack": "Pack",
       "colWhen": "When",
-      "empty": "No actions have been recorded yet."
+      "empty": "No actions have been recorded yet.",
+      "trustDecisionRecorded": "Recorded trust decision: {{decision}}."
     },
     "capabilities": {
       "denied": "Denied",
