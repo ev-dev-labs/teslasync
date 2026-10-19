@@ -6,7 +6,14 @@ export function useNavIconMotion() {
   const { reduce } = useMotionPreference()
   const root = useRef<HTMLElement | null>(null)
   useEffect(() => {
-    if (reduce) root.current?.querySelectorAll('.is-animating').forEach(target => target.classList.remove('is-animating'))
+    const clear = () => root.current?.querySelectorAll('.is-animating').forEach(target => target.classList.remove('is-animating'))
+    if (reduce) clear()
+    // CSS cancels an animation when the OS preference changes, so animationend
+    // will not fire. Listen directly as well as honoring the app preference.
+    const media = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    const change = () => { if (media?.matches) clear() }
+    media?.addEventListener?.('change', change)
+    return () => media?.removeEventListener?.('change', change)
   }, [reduce])
   return {
     ref: (element: HTMLElement | null) => { root.current = element },

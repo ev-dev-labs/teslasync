@@ -32,3 +32,9 @@
 - Unit verification: 213 existing nav tests + 37 new motion tests pass. TypeScript noEmit and targeted ESLint pass. Existing tests now inspect the explicit caption span and require the specified 1.8px SVG stroke.
 - LF translation audit: Layout 14 calls, BottomTabBar 6, SectionRail 13; keys/fallbacks/interpolations all verified, zero errors. Existing generators regenerated source/combined fingerprints (68 combined producers); hashes not hand-edited.
 - Preview uses port 3102, PID 53648; other agents' occupied ports 3100/3101 left untouched.
+
+## Edge-driven follow-up
+- First browser pass exercised all 22 rail items and all phone tabs successfully, then exposed a live OS preference change leaving is-animating behind when CSS cancels playback. Added a direct media-query change listener and subscription cleanup; dedicated regression test passes (38 motion unit tests now).
+- The default populated API harness has no legacy /alerts entries. The motion fixture explicitly supplies one unread alert so browser assertions and captures exercise the existing footer badge/pop rather than an empty badge state.
+- Avatar deliberately animates its container only, matching the requested gentle press bounce; the browser assertion allows its one container animation while requiring multiple animations for all other controls.
+- Full existing nav/status/i18n trio batch: 33 suites / 8,176 passed before the added live-preference regression; no failures. Catalog check passes. Full lint and Edge layout/regression checks running.

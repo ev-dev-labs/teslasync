@@ -119,6 +119,19 @@ describe('selection-only nav icon motion', () => {
     fireEvent.click(home)
     expect(target(home)).not.toHaveClass('is-animating')
   })
+  it('clears playback immediately when the OS cancels animation mid-flight', () => {
+    const media = { matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }
+    vi.stubGlobal('matchMedia', vi.fn(() => media))
+    const view = render(<BottomTabBar />)
+    const home = screen.getByRole('button', { name: 'Home', exact: true })
+    fireEvent.click(home)
+    expect(target(home)).toHaveClass('is-animating')
+    media.matches = true
+    media.addEventListener.mock.calls[0][1]()
+    expect(target(home)).not.toHaveClass('is-animating')
+    view.unmount()
+    expect(media.removeEventListener).toHaveBeenCalledWith('change', media.addEventListener.mock.calls[0][1])
+  })
   it('keeps panel, More grid and section sheet icons identical but static', () => {
     const view = render(<Deck route="Notifications" />)
     const icon = rail().getByRole('button', { name: 'Notifications', exact: true }).querySelector('svg')!.innerHTML
