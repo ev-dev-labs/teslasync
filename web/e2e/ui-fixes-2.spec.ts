@@ -30,7 +30,8 @@ for (const theme of ['light', 'dark'] as const) for (const width of [375, 768, 1
         return { gap: caption.x - icon.right, center: Math.abs((icon.y + icon.height / 2) - (caption.y + caption.height / 2)) }
       }))
       for (const row of geometry) { expect(row.gap).toBeGreaterThanOrEqual(7); expect(row.gap).toBeLessThanOrEqual(9); expect(row.center).toBeLessThan(3) }
-      await templates.first().scrollIntoViewIfNeeded()
+      await templates.first().evaluate(element => element.scrollIntoView({ block: 'center' }))
+      await templates.first().click({ trial: true })
       await shot('template-cards-inline-icons')
 
       await page.evaluate(() => {
