@@ -790,3 +790,13 @@ Fixes applied (all root-caused, none weakening):
 - App fix (UI-only): BatteryHealthPage narrative provenance gains BMS source;
   standalone provenance prop was silently superseded by narrative since #100.
 - Full file: 81 passed, 0 failed, 5.3m (was 60/60 failing on 599).
+
+## 2026-10-19 ui-fixes-2 merge (0cf4c58d9d) + trio re-pin (5e41040ccf)
+
+- Committed contracts batch ba6fcfc33a (27 files +483/-160) first, then merged origin/ui/ui-fixes-2 (08c3d2d6e1) cleanly, no conflicts (~98 files). Both i18n key sets present (bmsSource + transitionFailed/manualResolutionHint).
+- Post-merge trio FAIL 11 (count drift +2 leaves each). Root cause of regen stall: i18n-trio-checkpoint.mjs shells out to 'rg', which was missing on PATH after reboot (earlier EXIT=0 was tail's code, not node's). Installed ripgrep via winget, then node scripts/i18n-trio-checkpoint.mjs --typed --checkpoint-catalog succeeded: 42177 keys verified, partitions 30943/32864/30125.
+- Trio suites now 1933/1933 green. LF endings confirmed (0 CR bytes).
+- Merge gates all green locally: tsc clean; lint+audits pass; catalog check OK (57/181/1272/0); build + e2e:build OK; sidenav+statusbar+notifications+repair 1268/1268; redesign+ui-fixes-2 e2e 30/30 (preview needed --host 127.0.0.1 after reboot: vite localhost bound IPv6-only, ERR_CONNECTION_REFUSED).
+- Reverted docs/ PNG churn from local e2e run (specs write-only screenshots; Windows-font churn must not replace branch evidence). Committed 7 trio files only, pushed ui/simplification 0cf4c58d9d..5e41040ccf.
+- New CI run 39197974201 started on push; watching.
+

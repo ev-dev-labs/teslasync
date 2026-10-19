@@ -192,3 +192,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Fresh CI totals: r2 103/5 + r3-r16 277/1218 = 380 exp / 1223 unexp.
 - Battery full-file rerun in progress (29 passed first run; harvesting exact
   /drives values for ledger/care/advisor pins from the log).
+
+## 2026-10-19 04:15 UTC - ui-fixes-2 merged, gates green, pushed
+- Merged origin/ui/ui-fixes-2 into ui/simplification (0cf4c58d9d), re-pinned trio via generator (5e41040ccf), all merge gates green (tsc/lint/catalog/build/1268 vitest/1933 trio/30 e2e). Pushed; CI run 39197974201 in progress.
+
