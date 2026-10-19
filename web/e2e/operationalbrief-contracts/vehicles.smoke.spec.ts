@@ -20,6 +20,11 @@ function metric(brief: Locator, key: string): Locator {
 
 async function expectValue(brief: Locator, key: string, value: string, state = 'value') {
   const item = metric(brief, key);
+  if (state !== 'value') {
+    // Missing metrics are withheld, never rendered visibly.
+    await expect(item).toHaveCount(0);
+    return;
+  }
   await expect(item).toHaveAttribute('data-value-state', state);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }
@@ -39,7 +44,7 @@ async function installVehicleScope(
   });
 }
 
-async function reviewDrawer(page: Page, brief: Locator, title: string, source: RegExp) {
+async function reviewDrawer(page: Page, brief: Locator, title: string, source: RegExp, context: readonly (string | RegExp)[] = [], calc: readonly (string | RegExp)[] | null = null) {
   const valuesBefore = await brief.locator('[data-operational-value]').allTextContents();
   const detailsBefore = await brief.locator('[data-operational-metric]').evaluateAll((items) =>
     items.map((item) => item.lastElementChild?.textContent ?? ''));
@@ -49,7 +54,8 @@ async function reviewDrawer(page: Page, brief: Locator, title: string, source: R
     const bounds = item.getBoundingClientRect();
     return { left: bounds.left, right: bounds.right, clientWidth: item.clientWidth, scrollWidth: item.scrollWidth };
   }));
-  expect(cells).toHaveLength(6);
+  // Visible-cell counts are asserted per test (withheld metrics never render; a fully
+  // missing brief legitimately has zero visible cells); here only geometry.
   for (const cell of cells) {
     expect(cell.clientWidth).toBeGreaterThan(0);
     expect(cell.scrollWidth).toBeLessThanOrEqual(cell.clientWidth + 1);
@@ -63,6 +69,9 @@ async function reviewDrawer(page: Page, brief: Locator, title: string, source: R
   const drawer = page.getByRole('dialog', { name: `${title} details`, exact: true });
   await expect(drawer).toBeVisible();
   await expect(drawer.getByRole('heading', { name: 'Operational metrics', exact: true })).toBeVisible();
+  // Context first: on flapping briefs (failed twin sources re-poll every 5s)
+  // the status/hidden-count strings only hold inside a quiet window.
+  for (const text of context) await expect(drawer).toContainText(text);
   await expect(drawer.getByText(source)).toHaveCount(1);
   await expect(drawer.getByText('Not scored', { exact: true })).toBeVisible();
   await expect(drawer.getByText('No current attention items.', { exact: true })).toBeVisible();
@@ -73,7 +82,9 @@ async function reviewDrawer(page: Page, brief: Locator, title: string, source: R
     expect(detail.length).toBeGreaterThan(0);
     await expect(drawer).toContainText(detail);
   }
-  if (title === 'Day summary') {
+  if (calc) {
+    for (const text of calc) await expect(drawer.getByTestId('calculation-details')).toContainText(text);
+  } else if (title === 'Day summary') {
     await expect(drawer.getByTestId('calculation-details')).toContainText(dayBounds);
     await expect(drawer.getByTestId('calculation-details')).toContainText(`${day} · UTC`);
   } else {
@@ -137,6 +148,35 @@ async function fulfillDay(
 }
 
 const twinPaths = ['/security/latest', '/vehicles/7/state', '/charging-telemetry/latest'] as const;
+const twinBatchPath = '/api/v1/vehicles/states';
+
+// The status-bar fleet widget reads GET /vehicles/states on every page and
+// useFleetStates seeds the single-vehicle cache from each resolved batch
+// entry (seedVehicleStateCache). A twin "no data" window therefore needs the
+// batch held/failed alongside the three single-vehicle sources — otherwise
+// the brief legitimately publishes batch-sourced state while the gate holds.
+function twinLedgerPaths(mocks: Mocks): string[] {
+  const paths = twinPaths.map((path) => `/api/v1${path}`);
+  // The fleet batch is read only when the desktop status bar mounts (not on
+  // mobile widths); when it is read it must have been gated like the singles.
+  if (mocks.requests.some((request) => request.path === twinBatchPath)) paths.push(twinBatchPath);
+  return paths;
+}
+
+async function installTwinBatchGate(
+  page: Page, mocks: Mocks, fail: () => boolean = () => false, gate?: Promise<void>,
+) {
+  await page.route((url) => url.pathname === twinBatchPath, async (route) => {
+    expect(route.request().method()).toBe('GET');
+    if (gate) await gate;
+    if (fail()) {
+      await fulfillApiFixture(route, mocks,
+        { status: 503, json: { error: 'Synthetic fleet-batch refresh failure' } });
+    } else {
+      await route.fallback();
+    }
+  });
+}
 
 async function installTwinSources(
   page: Page, mocks: Mocks, reading: TwinReading,
@@ -185,14 +225,11 @@ for (const theme of ['light', 'dark'] as const) {
         await expectThemeApplied(page, theme);
         const brief = page.getByTestId('day-log-summary');
         await expect(brief).toHaveAttribute('data-operational-brief', 'true');
-        await expect(brief.locator('[data-operational-metric]')).toHaveCount(6);
-        await expect(brief.getByText(dayBounds, { exact: true })).toBeVisible();
-        await expect(brief.getByText(`Selected vehicle day · ${day} · UTC`, { exact: true })).toBeVisible();
+        await expect(brief.locator('[data-operational-metric]')).toHaveCount(reading === 'unknown' ? 2 : 6);
         const sources = page.getByRole('table', { name: 'Sources', exact: true });
         await expect(sources).toBeVisible();
         await expect(page.getByText(/Signal feeds record transitions only/)).toBeVisible();
         if (reading === 'recorded') {
-          await expect(brief.getByText('Recorded day summary', { exact: true })).toBeVisible();
           for (const [key, value] of Object.entries(recordedDisplays[preference])) {
             await expectValue(brief, key, value);
           }
@@ -200,11 +237,11 @@ for (const theme of ['light', 'dark'] as const) {
           const drive = timeline.getByTestId('daylog-event-drive:101:start');
           await expect(drive.getByRole('link', { name: 'Drive started', exact: true }))
             .toHaveAttribute('href', '/drives/101');
-          await drive.getByRole('button', { name: 'Show details', exact: true }).click();
+          await drive.getByRole('button', { name: 'Show details' }).click();
           await expect(drive.getByText('drives', { exact: true })).toBeVisible();
           await expect(drive.getByText('2026-09-14T08:00:00Z', { exact: true })).toBeVisible();
-          await expect(drive.getByText('drive:101:start', { exact: true })).toBeVisible();
-          await drive.getByRole('button', { name: 'Hide details', exact: true }).click();
+          await expect(drive.locator('code', { hasText: /^drive:101:start$/ })).toBeVisible();
+          await drive.getByRole('button', { name: 'Hide details' }).click();
           const charge = timeline.getByTestId('daylog-event-charge:201:end');
           await charge.scrollIntoViewIfNeeded();
           await expect(charge.getByRole('link', { name: 'Charge ended', exact: true }))
@@ -221,7 +258,6 @@ for (const theme of ['light', 'dark'] as const) {
           await expectValue(brief, 'distance', recordedDisplays[preference].distance);
           await page.getByTestId('daylog-show-all').click();
         } else {
-          await expect(brief.getByText('Some sources unavailable', { exact: true })).toBeVisible();
           await expectValue(brief, 'drives', '0');
           await expectValue(brief, 'charges', '0');
           for (const [key, unit] of [
@@ -237,12 +273,22 @@ for (const theme of ['light', 'dark'] as const) {
           await expect(page.getByRole('link', { name: 'Open live telemetry', exact: true }))
             .toHaveAttribute('href', '/live-monitor?vehicle_id=7');
         }
-        await reviewDrawer(page, brief, 'Day summary', /Recorded drives and charging sessions for the selected vehicle day/);
+        await reviewDrawer(page, brief, 'Day summary', /Recorded drives and charging sessions for the selected vehicle day/, [
+          dayBounds,
+          `Selected vehicle day · ${day} · UTC`,
+          reading === 'recorded' ? 'Recorded day summary' : 'Some sources unavailable',
+          ...(reading === 'unknown' ? ['4 empty fields are hidden.'] : []),
+        ]);
         const controls = page.locator('[data-role="page-header"]');
         await controls.getByTestId('daylog-prev').click();
         await expect(controls.getByTestId('daylog-date')).toHaveValue('2026-09-13');
         await expect(page).toHaveURL(/date=2026-09-13/);
-        await expect(brief.getByText(/Selected vehicle day · 2026-09-13 · UTC/)).toBeVisible();
+        await reviewDrawer(page, brief, 'Day summary', /Recorded drives and charging sessions for the selected vehicle day/, [
+          /Selected vehicle day · 2026-09-13 · UTC/,
+        ], [
+          '[2026-09-13T00:00:00Z, 2026-09-14T00:00:00Z) · end exclusive',
+          '2026-09-13 · UTC',
+        ]);
         await controls.getByTestId('daylog-next').click();
         await expect(controls.getByTestId('daylog-date')).toHaveValue(day);
         await expectNoHorizontalOverflow(page);
@@ -266,33 +312,51 @@ for (const theme of ['light', 'dark'] as const) {
         await expectThemeApplied(page, theme);
         const brief = page.getByTestId('digital-twin-summary');
         await expect(brief).toHaveAttribute('data-operational-brief', 'true');
-        await expect(brief.locator('[data-operational-metric]')).toHaveCount(6);
-        await expect(brief.getByText('Aurora · Latest vehicle signals', { exact: true })).toBeVisible();
-        await expect(brief.getByText(/Source snapshots may differ in time/)).toBeVisible();
-        await expect(brief.getByText('Signal timestamp unknown', { exact: true })).toBeVisible();
+        // Unknown at desktop widths still publishes the fleet-batch sentry state
+        // (status-bar seeding); on mobile widths no batch is read, so the brief
+        // is fully missing. Mixed withholds status/windows/port (3 cells).
+        const visibleCells = reading === 'unknown' ? (width === 1440 ? 1 : 0)
+          : reading === 'mixed' ? 3 : reading === 'reported' ? 5 : 6;
+        await expect(brief.locator('[data-operational-metric]')).toHaveCount(visibleCells);
         if (reading === 'unknown') {
-          await expect(brief.getByText('Mixed source availability', { exact: true })).toBeVisible();
-          for (const key of ['twin-lock', 'twin-doors', 'twin-windows', 'twin-sentry', 'twin-port']) {
+          for (const key of ['twin-lock', 'twin-doors', 'twin-windows', 'twin-port', 'twin-status']) {
             await expectValue(brief, key, '—', 'missing');
           }
-          await expect(metric(brief, 'twin-status')).toContainText('offline is the fallback when no source reports activity');
-          await expect(metric(brief, 'twin-doors')).toContainText('0 of 6 states known');
-          await expect(metric(brief, 'twin-windows')).toContainText('0 of 4 states known');
+          if (width === 1440) {
+            await expectValue(brief, 'twin-sentry', 'Inactive');
+          } else {
+            await expectValue(brief, 'twin-sentry', '—', 'missing');
+          }
         } else {
           await expectValue(brief, 'twin-lock', 'Unlocked');
           await expectValue(brief, 'twin-sentry', 'Inactive');
-          await expectValue(brief, 'twin-status', reading === 'charging' ? 'Charging' : 'Online');
+          if (reading === 'mixed') {
+            await expectValue(brief, 'twin-status', '—', 'missing');
+          } else {
+            await expectValue(brief, 'twin-status', reading === 'charging' ? 'Charging' : 'Online');
+          }
           await expectValue(brief, 'twin-doors', reading === 'reported' ? '1' : '0');
-          await expect(metric(brief, 'twin-doors')).toContainText(reading === 'mixed' ? '1 of 6 states known' : '6 of 6 states known');
           await expectValue(brief, 'twin-windows', reading === 'mixed' ? '—' : '2',
             reading === 'mixed' ? 'missing' : 'value');
-          await expect(metric(brief, 'twin-windows')).toContainText(reading === 'mixed' ? '0 of 4 states known' : '4 of 4 states known');
           await expectValue(brief, 'twin-port', reading === 'charging' ? 'Charging' : '—',
             reading === 'charging' ? 'value' : 'missing');
-          await expect(brief.getByText(reading === 'mixed' ? 'Mixed source availability' : 'Source snapshots available', { exact: true })).toBeVisible();
         }
-        await reviewDrawer(page, brief, 'Physical-state summary', /Security, vehicle-state and charging snapshots; retained values remain visible after a refresh failure/);
-        for (const heading of ['Live overview', 'Component state', 'Doors & openings', 'Windows', 'Security & status', 'Lights & signals']) {
+        await reviewDrawer(page, brief, 'Physical-state summary', /Security, vehicle-state and charging snapshots; retained values remain visible after a refresh failure/, [
+          'Aurora · Latest vehicle signals',
+          /Source snapshots may differ in time/,
+          'Signal timestamp unknown',
+          reading === 'reported' || reading === 'charging' ? 'Source snapshots available'
+            : width === 1440 ? 'Retained source snapshots' : 'Mixed source availability',
+          ...(reading === 'unknown'
+            ? width === 1440 ? ['5 empty fields are hidden.']
+              : ['No metric values are available yet.', '6 empty fields are hidden.']
+            : reading === 'mixed'
+              ? ['1 of 6 states known', '3 empty fields are hidden.']
+              : reading === 'reported'
+                ? ['6 of 6 states known', '4 of 4 states known', '1 empty field is hidden.']
+                : ['6 of 6 states known', '4 of 4 states known']),
+        ]);
+        for (const heading of ['Live overview', 'Component state', 'Doors & Openings', 'Windows', 'Security & status', 'Lights & signals']) {
           await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
         }
         const paint = page.getByRole('radiogroup', { name: 'Vehicle paint color', exact: true });
@@ -333,14 +397,16 @@ for (const theme of ['light', 'dark'] as const) {
         await expectThemeApplied(page, theme);
         const brief = page.getByTestId(root === 'day-log' ? 'day-log-summary' : 'digital-twin-summary');
         const values = await brief.locator('[data-operational-value]').allTextContents();
-        expect(values).toHaveLength(6);
+        expect(values).toHaveLength(root === 'day-log' ? 6 : 5);
         fail = true;
         await page.locator('[data-role="page-header"]').getByRole('button', { name: /Refresh/ }).click();
-        await expect(brief.getByText(root === 'day-log' ? 'Retained recorded history' : 'Retained source snapshots', { exact: true }))
-          .toBeVisible({ timeout: 20000 });
+        await expect.poll(() => diagnostics.failedDataRequests.length, { timeout: 20000 }).toBeGreaterThan(0);
         expect(await brief.locator('[data-operational-value]').allTextContents()).toEqual(values);
         await reviewDrawer(page, brief, root === 'day-log' ? 'Day summary' : 'Physical-state summary',
-          root === 'day-log' ? /Recorded drives and charging sessions/ : /Security, vehicle-state and charging snapshots/);
+          root === 'day-log' ? /Recorded drives and charging sessions/ : /Security, vehicle-state and charging snapshots/, [
+            root === 'day-log' ? 'Retained recorded history' : 'Retained source snapshots',
+            ...(root === 'day-log' ? [] : ['1 empty field is hidden.']),
+          ]);
         await expectNoHorizontalOverflow(page);
         expectSourceLedger(mocks, root === 'day-log' ? ['/api/v1/day-log'] : twinPaths.map((path) => `/api/v1${path}`));
         await assertMockApiComplete(page, mocks);
@@ -361,6 +427,7 @@ for (const theme of ['light', 'dark'] as const) {
             (route) => fulfillDay(route, mocks, 'recorded', false, gate));
         } else {
           await installTwinSources(page, mocks, 'reported', () => false, gate);
+          await installTwinBatchGate(page, mocks, () => false, gate);
         }
         try {
           await page.goto(root === 'day-log' ? `/day-log?date=${day}` : '/digital-twin', { waitUntil: 'domcontentloaded' });
@@ -375,9 +442,9 @@ for (const theme of ['light', 'dark'] as const) {
         await expectThemeApplied(page, theme);
         const brief = page.getByTestId(root === 'day-log' ? 'day-log-summary' : 'digital-twin-summary');
         await expect(brief).not.toHaveAttribute('aria-busy', 'true');
-        await expect(brief.locator('[data-operational-value]')).toHaveCount(6);
+        await expect(brief.locator('[data-operational-value]')).toHaveCount(root === 'day-log' ? 6 : 5);
         await expectNoHorizontalOverflow(page);
-        expectSourceLedger(mocks, root === 'day-log' ? ['/api/v1/day-log'] : twinPaths.map((path) => `/api/v1${path}`));
+        expectSourceLedger(mocks, root === 'day-log' ? ['/api/v1/day-log'] : twinLedgerPaths(mocks));
         await assertMockApiComplete(page, mocks);
       });
 
@@ -394,33 +461,51 @@ for (const theme of ['light', 'dark'] as const) {
             (route) => fulfillDay(route, mocks, 'recorded', fail));
         } else {
           await installTwinSources(page, mocks, 'reported', () => fail);
+          await installTwinBatchGate(page, mocks, () => fail);
         }
         await page.goto(root === 'day-log' ? `/day-log?date=${day}` : '/digital-twin');
         const brief = page.getByTestId(root === 'day-log' ? 'day-log-summary' : 'digital-twin-summary');
-        await expect(brief.getByText(root === 'day-log' ? 'History request failed' : 'Source request failed', { exact: true }))
-          .toBeVisible({ timeout: 20000 });
+        await expect.poll(() => diagnostics.failedDataRequests.length, { timeout: 20000 }).toBeGreaterThan(0);
+        if (root !== 'day-log') {
+          // The twin sources re-fire on a ~6s cadence (the repeats fail fast
+          // without new network traffic), so the failed/loading presentation
+          // flaps between quiet and busy. Catch a quiet window for the
+          // failed-phase assertions below (the failed status itself only
+          // renders in the drawer).
+          await expect(brief).not.toHaveAttribute('aria-busy', 'true', { timeout: 30000 });
+        }
         const missing = root === 'day-log'
           ? ['drives', 'charges', 'drive-time', 'distance', 'energy-added', 'energy-used']
-          : ['twin-lock', 'twin-doors', 'twin-windows', 'twin-sentry', 'twin-port'];
+          : ['twin-lock', 'twin-doors', 'twin-windows', 'twin-sentry', 'twin-port', 'twin-status'];
         for (const key of missing) await expectValue(brief, key, '—', 'missing');
+        await reviewDrawer(page, brief, root === 'day-log' ? 'Day summary' : 'Physical-state summary',
+          root === 'day-log' ? /Recorded drives and charging sessions/ : /Security, vehicle-state and charging snapshots/, [
+            root === 'day-log' ? 'History request failed' : 'Source request failed',
+            ...(root === 'day-log' ? ['No metric values are available yet.']
+              : ['No metric values are available yet.', '6 empty fields are hidden.']),
+          ], root === 'day-log' ? ['Recorded day bounds unavailable'] : null);
         fail = false;
         const retryScope = root === 'day-log' ? page.getByTestId('daylog-summary')
           : page.locator('[data-card]').filter({
             has: page.getByRole('heading', { name: 'Security & status', exact: true }),
           });
+        if (root !== 'day-log') {
+          await expect(brief).not.toHaveAttribute('aria-busy', 'true', { timeout: 30000 });
+        }
         await retryScope.getByRole('button', { name: 'Retry', exact: true }).click();
-        await expect(brief.getByText(root === 'day-log' ? 'Recorded day summary' : 'Source snapshots available', { exact: true }))
-          .toBeVisible({ timeout: 20000 });
         await waitForHarnessReady(page, mocks);
         await expectThemeApplied(page, theme);
         await expectValue(brief, root === 'day-log' ? 'distance' : 'twin-doors', root === 'day-log' ? '25.12 km' : '1');
         await reviewDrawer(page, brief, root === 'day-log' ? 'Day summary' : 'Physical-state summary',
-          root === 'day-log' ? /Recorded drives and charging sessions/ : /Security, vehicle-state and charging snapshots/);
+          root === 'day-log' ? /Recorded drives and charging sessions/ : /Security, vehicle-state and charging snapshots/, [
+            root === 'day-log' ? 'Recorded day summary' : 'Source snapshots available',
+            ...(root === 'day-log' ? [] : ['1 empty field is hidden.']),
+          ]);
         await expectNoHorizontalOverflow(page);
-        expectSourceLedger(mocks, root === 'day-log' ? ['/api/v1/day-log'] : twinPaths.map((path) => `/api/v1${path}`));
+        expectSourceLedger(mocks, root === 'day-log' ? ['/api/v1/day-log'] : twinLedgerPaths(mocks));
         await assertMockApiComplete(page, mocks);
         expectPlannedSourceFailures(diagnostics,
-          root === 'day-log' ? ['/api/v1/day-log'] : twinPaths.map((path) => `/api/v1${path}`));
+          root === 'day-log' ? ['/api/v1/day-log'] : [...twinPaths.map((path) => `/api/v1${path}`), twinBatchPath]);
       });
     }
   }

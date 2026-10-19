@@ -208,3 +208,15 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Actions first run: systematic review-helper failure (Close matched header+footer buttons); scoped to [data-drawer-header]; full rerun in progress (D:/tmp/actions-local2.log) against shared :4173 preview.
 - Notifications run finished 24 passed / 32 failed = 8 groups x 4 viewports; all 8 fixed (push/subscribe stub, Critical case, 2 latency wordings, Notification.permission pin via init script after proving grantPermissions is ignored in headless shell, burn 3-hidden, No schedules, Refresh .first()); rerun pending after actions.
 - Log entry stamped 2026-10-19T06:47:30.5877558-07:00
+
+## 2026-10-17 nav-motion merge
+- Merged origin/ui/nav-motion (5 commits) into ui/simplification as 935eb8478b. SectionRail conflict kept both sides (motion spread + role=navigation); en.json auto-merged (shortInbox + mojibake fixes); 7 trio pin files re-pinned via i18n-trio-checkpoint.mjs.
+- Shell-preservation re-pinned via repin-shell-preservation.mts (7c43d5a2d9). Gates green: tsc, lint+audits, catalog, build, sidebar+statusbar+repair 498, shell+nav 228, trio 8110, studio+repair 52.
+- Edge nav-motion/sidenav-redesign/route-guard e2e running on :3102 (D:/tmp/navmotion-local.log).
+## 2026-10-19 vehicles contracts 56/56
+- vehicles.smoke.spec.ts migrated + green 56/56 on chromium-smoke (:4173).
+- Root-caused twin loading-gate failure (pre-existing in all runs): status-bar HonestyMeterSegment fetches GET /vehicles/states on desktop widths and useFleetStates seeds the single-vehicle cache (seedVehicleStateCache), so the twin brief legitimately had batch-sourced data while the 3 single sources were gated. Fix in test: gate/fail the batch alongside the singles (installTwinBatchGate, fallback to generic mock on release); batch ledger conditional (never read at 320px, no status bar).
+- Twin retryable: failed/loading flaps on ~6s cadence (repeats fail fast, network-silent); test catches quiet windows via aria-busy. Failed status is drawer-only now; empty drawer shows both No-metric-values and 6-empty-fields sentences.
+- Mixed: status withheld (3 cells); unknown width-dependent (sentry from batch seed at 1440, fully missing at 320); 1440 mixed/unknown status is Retained-source-snapshots (stale), 320 Mixed-source-availability. Dropped dead-key assert digitalTwin.brief.statusBasis (unused in code).
+- Day recorded: timeline toggle name is aria-labelledby concatenation (drop exact); event id needs code-locator (sr-only dup).
+- Edge nav-motion run finished 35 passed / 7 failed: 5 route-guard chunks with real responsive violations (/climate, /commands, /climate-control, /cycle-stress narrow; /admin + /system-status perchar Telemetry) + LOAD ERRORs in chunk2@1280 and 1 gallery caused by my mid-run e2e:build (shared dist went inconsistent ~60s). Rerun affected chunks cleanly; fix responsive.
