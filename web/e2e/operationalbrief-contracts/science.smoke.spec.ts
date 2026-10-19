@@ -39,11 +39,16 @@ async function expectMetric(
   state: 'value' | 'missing' = 'value',
 ): Promise<void> {
   const item = metric(page, brief, occurrence);
+  if (state !== 'value') {
+    // Missing metrics are withheld, never rendered visibly.
+    await expect(item).toHaveCount(0);
+    return;
+  }
   await expect(item).toHaveAttribute('data-value-state', state);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }
 
-async function openReview(page: Page, brief: BriefId): Promise<Locator> {
+async function openReview(page: Page, brief: BriefId, extra: readonly (string | RegExp)[] = []): Promise<Locator> {
   const trigger = page.getByTestId(brief).getByRole('button', { name: 'Review details', exact: true });
   await trigger.scrollIntoViewIfNeeded();
   await trigger.focus();
@@ -54,7 +59,9 @@ async function openReview(page: Page, brief: BriefId): Promise<Locator> {
   await expect(drawer).toHaveAttribute('aria-modal', 'true');
   await expect(drawer.getByRole('heading', { name: 'Operational metrics', exact: true })).toBeVisible();
   await expect(drawer).toContainText('Not scored');
+  await expect(drawer).toContainText('Vehicle 7');
   await expect(drawer.getByTestId('calculation-details')).toContainText('Historical inputs and derived fits');
+  for (const text of extra) await expect(drawer).toContainText(text);
   await expectDialogsInsideViewport(page);
   const close = drawer.getByRole('button', { name: 'Close', exact: true });
   await close.first().focus();
@@ -130,7 +137,6 @@ async function bootScience(
   for (const id of BRIEFS) {
     await expect(page.getByTestId(id)).toHaveAttribute('data-operational-brief', 'true');
     await expect(page.getByTestId(id).getByRole('button', { name: 'Review details', exact: true })).toBeVisible();
-    await expect(page.getByTestId(id)).toContainText('Vehicle 7');
   }
   await expect(page.getByRole('button', { name: 'Copy link to this view', exact: true })).toBeVisible();
   await expectNoHorizontalOverflow(page);
@@ -144,22 +150,21 @@ async function expectOverview(page: Page): Promise<void> {
   await expectMetric(page, 'science-evidence-brief', 'science-weather', '6');
   await expectMetric(page, 'science-evidence-brief', 'science-tires', '4');
   await expectMetric(page, 'science-evidence-brief', 'science-notebook', '2');
-  await expect(metric(page, 'science-evidence-brief', 'science-tires')).toContainText('4 of 4 corners reported');
-  await expect(metric(page, 'science-evidence-brief', 'science-notebook')).toContainText('2 of 3 rows with a result');
-  await expect(metric(page, 'science-evidence-brief', 'science-thermal')).toContainText('1 qualified cooldown fits');
-  await expect(page.getByTestId('science-evidence-brief')).toContainText('Independent reports');
-  await expect(metric(page, 'science-evidence-brief', 'science-electrochem')).toContainText(electrochemFixture.honesty);
-  await expect(metric(page, 'science-evidence-brief', 'science-thermal')).toContainText(thermalFixture.honesty);
-  await expect(metric(page, 'science-evidence-brief', 'science-weather')).toContainText(weatherFixture.honesty);
-  await expect(metric(page, 'science-evidence-brief', 'science-tires')).toContainText(tiresFixture.honesty);
-  await expect(metric(page, 'science-evidence-brief', 'science-notebook')).toContainText(notebookFixture.honesty);
-  for (const [domain, report] of [
-    ['electrochem', electrochemFixture], ['thermal', thermalFixture],
-    ['weather', weatherFixture], ['tires', tiresFixture], ['notebook', notebookFixture],
-  ] as const) {
-    const options = { tz: 'UTC', locale: 'en-US' };
-    await expect(metric(page, 'science-evidence-brief', `science-${domain}`))
-      .toContainText(`${formatDateTime(report.start, options)} → ${formatDateTime(report.end, options)}`);
+}
+
+async function expectOverviewDrawer(drawer: Locator): Promise<void> {
+  await expect(drawer).toContainText('4 of 4 corners reported');
+  await expect(drawer).toContainText('2 of 3 rows with a result');
+  await expect(drawer).toContainText('1 qualified cooldown fits');
+  await expect(drawer).toContainText('Independent reports');
+  await expect(drawer).toContainText(electrochemFixture.honesty);
+  await expect(drawer).toContainText(thermalFixture.honesty);
+  await expect(drawer).toContainText(weatherFixture.honesty);
+  await expect(drawer).toContainText(tiresFixture.honesty);
+  await expect(drawer).toContainText(notebookFixture.honesty);
+  const options = { tz: 'UTC', locale: 'en-US' };
+  for (const report of [electrochemFixture, thermalFixture, weatherFixture, tiresFixture, notebookFixture]) {
+    await expect(drawer).toContainText(`${formatDateTime(report.start, options)} → ${formatDateTime(report.end, options)}`);
   }
 }
 
@@ -171,11 +176,16 @@ for (const theme of ['light', 'dark'] as const) {
       try {
         const { controller, diagnostics } = await bootScience(page, theme, width, 'populated', 'metric', pendingWeather);
         await expectMetric(page, 'science-evidence-brief', 'science-weather', '—', 'missing');
-        await expect(metric(page, 'science-evidence-brief', 'science-weather')).toContainText('Awaiting a successful report');
         await expectMetric(page, 'science-evidence-brief', 'science-electrochem', '2');
         await expectMetric(page, 'science-tires-brief', 'front-left', '2.90 bar');
         await expect(page.getByTestId('science-evidence-brief')).not.toHaveAttribute('aria-busy');
         await expect(page.getByTestId('science-weather-brief').locator('[data-operational-value]')).toHaveCount(0);
+        await openReview(page, 'science-evidence-brief', ['1 empty field is hidden.']);
+        await closeReview(page, 'science-evidence-brief');
+        await openReview(page, 'science-weather-brief', [
+          'Loading', 'Awaiting a successful report', 'No measurement supplied',
+        ]);
+        await closeReview(page, 'science-weather-brief');
         await expectNoHorizontalOverflow(page);
         releaseWeather();
         await waitForHarnessReady(page, controller);
@@ -194,8 +204,6 @@ for (const theme of ['light', 'dark'] as const) {
       const { controller, diagnostics } = await bootScience(page, theme, width, 'populated');
       await expectOverview(page);
       await expectMetric(page, 'science-electrochem-brief', 'firmware', '2026.24.3');
-      await expect(metric(page, 'science-electrochem-brief', 'firmware')).toContainText('Sample cap hit');
-      await expect(page.getByTestId('science-electrochem-brief')).toContainText('Limited evidence');
       await expectMetric(page, 'science-arrhenius-brief', 'activation-energy', '8,314.00 J/mol');
       await expectMetric(page, 'science-arrhenius-brief', 'temperature-bins', '3.00');
       await expectMetric(page, 'science-arrhenius-brief', 'temperature-span', '10.00°C');
@@ -234,17 +242,18 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(thermalTable.locator('tbody td[data-column-key="interval"]').first()).toHaveText('0.47 h…0.53 h');
       }
 
-      const overviewDrawer = await openReview(page, 'science-evidence-brief');
-      await expect(overviewDrawer).toContainText('2 of 3 rows with a result');
-      await expect(overviewDrawer).toContainText('4 of 4 corners reported');
+      const overviewDrawer = await openReview(page, 'science-evidence-brief', ['Evidence available']);
+      await expectOverviewDrawer(overviewDrawer);
       await expect(overviewDrawer).toContainText('Counts are not a health grade');
-      await expect(overviewDrawer).toContainText(thermalFixture.honesty);
-      await expect(overviewDrawer).toContainText(weatherFixture.honesty);
       for (const domain of SCIENCE_DOMAINS) {
-        await expect(overviewDrawer.locator(`a[href="#science-${domain}"]`)).toHaveAccessibleName('Inspect evidence');
+        const link = overviewDrawer.locator(`a[href="#science-${domain}"]`);
+        await expect(link).toHaveAccessibleName('Inspect evidence');
+        await link.click();
+        await expect(page).toHaveURL(new RegExp(`#science-${domain}$`));
+        await expect(page.getByTestId(`science-${domain}`)).toBeVisible();
       }
       await closeReview(page, 'science-evidence-brief');
-      const samplingDrawer = await openReview(page, 'science-electrochem-brief');
+      const samplingDrawer = await openReview(page, 'science-electrochem-brief', ['Limited evidence']);
       await expect(samplingDrawer).toContainText('2026.24.3');
       await expect(samplingDrawer).toContainText('Sample cap hit');
       await expect(samplingDrawer).toContainText('Rest-end pack voltage is not proven equilibrium OCV');
@@ -259,7 +268,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(agingDrawer).toContainText('n=6.00');
       await expect(agingDrawer).toContainText(electrochemFixture.aging.honesty);
       await closeReview(page, 'science-aging-brief');
-      const weatherDrawer = await openReview(page, 'science-weather-brief');
+      const weatherDrawer = await openReview(page, 'science-weather-brief', ['1 empty field is hidden.']);
       await expect(weatherDrawer).toContainText('An unknown coefficient is not a zero effect');
       await expect(weatherDrawer).toContainText('rain/dry: 0.00/6.00');
       await closeReview(page, 'science-weather-brief');
@@ -269,13 +278,11 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(tiresDrawer).toContainText('placard 3.10 bar');
       await closeReview(page, 'science-tires-brief');
 
-      for (const domain of SCIENCE_DOMAINS) {
-        const link = page.getByTestId('science-evidence-brief').locator(`a[href="#science-${domain}"]`);
-        await link.click();
-        await expect(page).toHaveURL(new RegExp(`#science-${domain}$`));
-        await expect(page.getByTestId(`science-${domain}`)).toBeVisible();
+      if (width === 1440) {
+        await expect(page.getByTestId('science-weather').getByRole('link', { name: '#101', exact: true })).toHaveAttribute('href', '/drives/101');
+      } else {
+        await expect(page.getByTestId('science-weather').getByText('#101', { exact: true })).toBeVisible();
       }
-      await expect(page.getByTestId('science-weather').getByRole('link', { name: '#101', exact: true })).toHaveAttribute('href', '/drives/101');
       const entry = page.getByTestId('science-notebook').getByRole('button', { name: /electrochem · Synthetic rest-voltage observations map SOC/ });
       await entry.press('Enter');
       await expect(entry).toHaveAttribute('aria-expanded', 'true');
@@ -302,14 +309,19 @@ for (const theme of ['light', 'dark'] as const) {
       await expectMetric(page, 'science-weather-brief', 'wind-correlation', '—', 'missing');
       await expectMetric(page, 'science-tires-brief', 'front-left', '0.00 bar');
       await expectMetric(page, 'science-tires-brief', 'front-right', '—', 'missing');
+      await expectMetric(page, 'science-tires-brief', 'rear-left', '3.00 bar');
+      await expectMetric(page, 'science-tires-brief', 'rear-right', '—', 'missing');
       await expectMetric(page, 'science-tires-brief', 'imbalance', '0.00 bar');
       await expectMetric(page, 'science-tires-brief', 'underinflation', '0.00 %');
       await expectMetric(page, 'science-tires-brief', 'extra-rolling', '0.00 kWh');
       await expectMetric(page, 'science-evidence-brief', 'science-tires', '2');
-      await expect(metric(page, 'science-evidence-brief', 'science-tires')).toContainText('2 of 4 corners reported');
-      const drawer = await openReview(page, 'science-weather-brief');
+      const drawer = await openReview(page, 'science-weather-brief', ['1 empty field is hidden.']);
       await expect(drawer).toContainText('An unknown coefficient is not a zero effect');
       await closeReview(page, 'science-weather-brief');
+      await openReview(page, 'science-evidence-brief', ['Limited evidence', '2 of 4 corners reported']);
+      await closeReview(page, 'science-evidence-brief');
+      await openReview(page, 'science-tires-brief', ['2 empty fields are hidden.']);
+      await closeReview(page, 'science-tires-brief');
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
       await assertMockApiComplete(page, controller);
@@ -320,7 +332,6 @@ for (const theme of ['light', 'dark'] as const) {
       for (const occurrence of ['science-electrochem', 'science-resistance-steps', 'science-thermal', 'science-weather', 'science-tires', 'science-notebook']) {
         await expectMetric(page, 'science-evidence-brief', occurrence, '0');
       }
-      await expect(metric(page, 'science-evidence-brief', 'science-notebook')).toContainText('0 of 0 rows with a result');
       for (const occurrence of ['activation-energy', 'temperature-bins', 'temperature-span']) {
         await expectMetric(page, 'science-arrhenius-brief', occurrence, '—', 'missing');
       }
@@ -332,11 +343,27 @@ for (const theme of ['light', 'dark'] as const) {
       }
       await expectMetric(page, 'science-weather-brief', 'density-correlation', '—', 'missing');
       await expectMetric(page, 'science-weather-brief', 'wind-correlation', '—', 'missing');
+      await expectMetric(page, 'science-weather-brief', 'matched-drives', '0');
+      await expectMetric(page, 'science-weather-brief', 'rain-drives', '0');
+      await expectMetric(page, 'science-weather-brief', 'dry-drives', '0');
       await expect(page.getByTestId('science-notebook')).toContainText('No notebook rows in this window');
       await expect(page.getByTestId('science-weather')).toContainText('No drives joined archive weather in this window');
-      const drawer = await openReview(page, 'science-arrhenius-brief');
-      await expect(drawer).toContainText('Confidence interval unknown');
+      await openReview(page, 'science-arrhenius-brief', [
+        'No metric values are available yet.', '3 empty fields are hidden.',
+      ]);
       await closeReview(page, 'science-arrhenius-brief');
+      await openReview(page, 'science-evidence-brief', ['Limited evidence', '0 of 0 rows with a result']);
+      await closeReview(page, 'science-evidence-brief');
+      await openReview(page, 'science-aging-brief', [
+        'No metric values are available yet.', '6 empty fields are hidden.',
+      ]);
+      await closeReview(page, 'science-aging-brief');
+      await openReview(page, 'science-tires-brief', [
+        'No metric values are available yet.', '7 empty fields are hidden.',
+      ]);
+      await closeReview(page, 'science-tires-brief');
+      await openReview(page, 'science-weather-brief', ['weather unknown', '2 empty fields are hidden.']);
+      await closeReview(page, 'science-weather-brief');
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
       await assertMockApiComplete(page, controller);
@@ -346,14 +373,21 @@ for (const theme of ['light', 'dark'] as const) {
       const { controller, diagnostics } = await bootScience(page, theme, width, 'source-unknown');
       await expectOverview(page);
       await expectMetric(page, 'science-aging-brief', 'capacity-proxy', '—', 'missing');
-      await expect(page.getByTestId('science-aging-brief')).toContainText('Limited evidence');
-      await expect(page.getByTestId('science-evidence-brief')).toContainText('Limited evidence');
       for (const occurrence of ['front-left', 'front-right', 'rear-left', 'rear-right', 'imbalance', 'underinflation', 'extra-rolling']) {
         await expectMetric(page, 'science-tires-brief', occurrence, '—', 'missing');
       }
       await expectMetric(page, 'science-weather-brief', 'matched-drives', '6');
-      await expect(metric(page, 'science-weather-brief', 'matched-drives')).toContainText('weather unknown');
       await expect(page.getByTestId('science-tires')).toContainText('No TPMS corners reported in this window');
+      await openReview(page, 'science-aging-brief', ['Limited evidence', '1 empty field is hidden.']);
+      await closeReview(page, 'science-aging-brief');
+      await openReview(page, 'science-evidence-brief', ['Limited evidence']);
+      await closeReview(page, 'science-evidence-brief');
+      await openReview(page, 'science-tires-brief', [
+        'No metric values are available yet.', '7 empty fields are hidden.',
+      ]);
+      await closeReview(page, 'science-tires-brief');
+      await openReview(page, 'science-weather-brief', ['weather unknown', '1 empty field is hidden.']);
+      await closeReview(page, 'science-weather-brief');
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
       await assertMockApiComplete(page, controller);
@@ -370,7 +404,7 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(weatherTable.locator('tbody td[data-column-key="temp"]').first()).toHaveText('59.00°F');
         await expect(weatherTable.locator('tbody td[data-column-key="wind"]').first()).toHaveText('6.71 mph');
       }
-      const drawer = await openReview(page, 'science-tires-brief');
+      const drawer = await openReview(page, 'science-tires-brief', ['Report loaded']);
       await expect(drawer).toContainText('310.69 mi');
       await expect(drawer).toContainText('placard 44.96 psi');
       await expect(drawer).toContainText('0.18 kWh…0.52 kWh');
@@ -391,10 +425,11 @@ for (const theme of ['light', 'dark'] as const) {
         `${domain} did not receive both selected bounds`).toBe(true);
       }
       await expectMetric(page, 'science-tires-brief', 'front-left', '42.06 psi');
-      await expect(page.getByTestId('science-tires-brief')).toContainText('Report loaded');
-      await expect(page.getByTestId('science-tires-brief')).toContainText(
+      await openReview(page, 'science-tires-brief', [
+        'Report loaded',
         `${formatDateTime(tiresFixture.start, { tz: 'UTC', locale: 'en-US' })} → ${formatDateTime(tiresFixture.end, { tz: 'UTC', locale: 'en-US' })}`,
-      );
+      ]);
+      await closeReview(page, 'science-tires-brief');
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
       await assertMockApiComplete(page, controller);
