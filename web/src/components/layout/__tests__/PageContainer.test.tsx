@@ -57,6 +57,14 @@ function renderWith(ui: React.ReactNode, route = '/drives') {
 }
 
 describe('PageContainer', () => {
+  it('accepts a single source whose optional error flag has not been published yet', () => {
+    const query = makeQuery();
+    Reflect.deleteProperty(query, 'isError');
+    renderWith(<PageContainer title="Fleet" query={query}>Content</PageContainer>);
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
+    expect(query.refetch).toHaveBeenCalledOnce();
+  });
+
   it('refreshes every declared source while the badge describes the worst source', () => {
     const fleet = makeQuery();
     const reservations = makeQuery({ isError: true });

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Car, Zap, BarChart3, Battery } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import { Button, Icon, Text } from '@/components/ui';
-import { DataSourceNotice, DataStateNotice } from '@/components/feedback';
+import { DataStateNotice } from '@/components/feedback';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -41,12 +41,13 @@ export default function AnalyticsPage() {
       subtitle={t('analytics.subtitle', 'Comprehensive fleet performance insights')}
       query={fleetQuery}
       busy={fleetQuery.isFetching}
-    >
-      <DataSourceNotice compact sources={[{
+      compactDataSources
+      dataSources={[{
         id: 'analytics-fleet',
         label: t('analytics.title', 'Fleet analytics'),
         query: fleetQuery,
-      }]} />
+      }]}
+    >
       {fleetQuery.data?.partial_result?.is_partial && (
         <DataStateNotice state="partial" role="status" data-testid="analytics-fleet-partial">
           <Text as="p" variant="bodySm" color="secondary">

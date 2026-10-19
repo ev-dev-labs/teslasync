@@ -108,6 +108,8 @@ export interface PageContainerProps {
    * sections remain on screen.
    */
   dataSources?: readonly DataSourceDescriptor[];
+  /** Disclose full recovery details beneath a compact source summary. */
+  compactDataSources?: boolean;
   /**
    * Set false to suppress the automatic "loaded" / "could not refresh"
    * live-region announcement. Use for pages that announce their own,
@@ -122,7 +124,7 @@ export function PageContainer({
   destructiveActions, overflowActions, primaryAction,
   loading, busy, error, empty, emptyMessage,
   breadcrumbLabels,
-  children, className, copyLink, query, dataSources,
+  children, className, copyLink, query, dataSources, compactDataSources,
   announce = true,
   actionLayout,
 }: PageContainerProps) {
@@ -152,7 +154,7 @@ export function PageContainer({
   // arrays without guarding at the call site.
   const resolvedQuery: FreshnessQuery | null = (() => {
     if (!query) return null;
-    if ('isError' in query) return query;
+    if (!Array.isArray(query)) return query as FreshnessQuery;
     if (query.length === 0) return null;
     return {
       ...pickWorstQuery(query),
@@ -261,7 +263,7 @@ export function PageContainer({
         </GlassPanel>
       ) : (
         <PageErrorBoundary pageName={title}>
-          {dataSources && <DataSourceNotice sources={dataSources} />}
+          {dataSources && <DataSourceNotice compact={compactDataSources} sources={dataSources} />}
           {children}
         </PageErrorBoundary>
       )}
