@@ -288,7 +288,9 @@
       "readOnly": "Repair controls are read-only",
       "rowLabel": "Case #{{id}}, {{rule}}",
       "briefDescription": "Server-reported repair case workload; active cases are open plus in-review cases.",
-      "briefScope": "Repair case statistics response; separate from the filtered queue and diagnosis scan."
+      "briefScope": "Repair case statistics response; separate from the filtered queue and diagnosis scan.",
+      "transitionFailed": "The case could not be updated. {{message}}",
+      "manualResolutionHint": "Resolution records your review; it does not correct the source data. Document the manual correction in the operator note."
     },
     "quarantine": {
       "all": "All records",

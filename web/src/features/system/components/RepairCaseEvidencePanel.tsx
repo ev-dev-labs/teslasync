@@ -4,7 +4,7 @@ import { KVList } from '@/components/data-display';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { repairCodeLabel } from './repairCasePresentation';
+import { isStructuralRepairCase, repairCodeLabel } from './repairCasePresentation';
 
 interface RepairCaseEvidencePanelProps {
   repairCase: RepairCase;
@@ -30,7 +30,11 @@ export function RepairCaseEvidencePanel({ repairCase }: RepairCaseEvidencePanelP
               : t('dataRepair.cases.blocked', 'Blocked')}
           </Badge>
         </div>
-        {repairCase.blocked_reason ? (
+        {isStructuralRepairCase(repairCase) ? (
+          <Text as="p" variant="bodySm" role="note" className="mb-3 text-[var(--semantic-warning)]">
+            {t('dataRepair.cases.blockedReasons.structuralCorrection', 'This structural anomaly requires a manual correction')}
+          </Text>
+        ) : repairCase.blocked_reason ? (
           <Text as="p" variant="bodySm" className="mb-3 text-amber-700 dark:text-amber-300">
             {repairCodeLabel(t, repairCase.blocked_reason)}
           </Text>
@@ -51,8 +55,8 @@ export function RepairCaseEvidencePanel({ repairCase }: RepairCaseEvidencePanelP
             {
               label: t('dataRepair.cases.confidence', 'Confidence'),
               value: repairCase.confidence === 'high'
-                ? t('dataRepair.confidence.high', 'High')
-                : t('dataRepair.confidence.medium', 'Medium'),
+                ? t('dataRepair.confidence.high', 'High confidence')
+                : t('dataRepair.confidence.medium', 'Medium confidence'),
             },
             {
               label: t('dataRepair.cases.firstDetected', 'First detected'),

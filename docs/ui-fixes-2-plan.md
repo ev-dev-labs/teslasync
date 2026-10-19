@@ -16,7 +16,7 @@
 - [x] Shared icon/label layout and app-wide scan.
 - [x] Expanded navigation defaults and new persistence version.
 - [x] Ghost Customize and stricter action audit.
-- [ ] Repair drawer alignment, footer, resolve feedback and permanent structural notice.
+- [x] Repair drawer alignment, footer, resolve feedback and permanent structural notice.
 - [ ] Unit/i18n/audit checks, gates, Edge checks and screenshots.
 - [ ] Final summary, cleanup, commits/pushes and stopped preview.
 
@@ -44,3 +44,14 @@ Pending.
 ### Fix 1 verification follow-up
 - Finite-registry verification found eight pre-existing missing widget.quickActions command-label keys. Reused existing catalog keys for all eight commands; Flash now uses the existing complete label “Flash Lights”. Verified every key/default pair from the real COMMANDS declaration, with no interpolation. Updated command-label expectations without changing dispatched commands.
 - Combined affected suites now pass: **517 tests, 33 files, 0 failures** (studio, shared Button, command widget, sidenav, header/actions, repair components/workspace and API hooks).
+
+### Fix 4: repair drawer
+- Ownership: Input's className applies to the native input, not its label wrapper. Wrapped it in a flexible full-width container; wide rows bottom-align the input and equal-height button, narrow rows stack full width.
+- Footer: added 96px bottom space inside the repair content so the final Controlled actions section can scroll fully clear of the persistent footer. Real geometry/clickability checks pending Edge.
+- Resolve diagnosis: source inspection found the correct existing POST /data-repair/cases/{id}/transition and correct case id/timestamp/note wiring. The first click opens a confirmation; the required operator note intentionally disables confirmation until nonblank. Failures previously surfaced only in a transient toast, and successful mutations invalidated caches without applying the response immediately. No missing endpoint or swallowed request handler was found.
+- Resolve fix: synchronous in-flight guard prevents duplicate requests; confirmation/footer expose pending state; persistent inline errors retain the note for retry; the successful API response updates the detail and cached lists immediately (removing the row from status filters it no longer matches), followed by existing invalidation/broadcast. Success closes confirmation and changes the drawer badge.
+- Backend/product decision: internal/api/datarepair/cases.go permits open/in_review → resolved as a metadata lifecycle transition with an operator note and optimistic concurrency. It does NOT require applicable=true for this transition. Structural corrections remain separate, safety-checked operations. UI explicitly states that resolution records review and does not correct source data; the operator note should document the manual correction. No backend rule or calculation changed.
+- Manual notice cause: previously rendered only when blocked_reason was present. Structural rule identity now also keeps it in the Integrity finding card even if a refresh/action response omits or clears that optional reason. Status and loading/error state do not gate the notice.
+- New tests: existing API payload and live-mode flag, pending state, success/detail/list updates, filtered-list removal, duplicate-click suppression, persistent conflict error + retained note, notice at first load/during refresh/after refresh error/metadata update/resolve/reopen. Three new integration tests pass; all affected 517 tests pass.
+- Translation verification: Drawer 19 calls, EvidencePanel 18, Collaboration 8, presentation helpers 8; zero errors after aligning three stale fallbacks to current catalog wording (confidence high/medium and overlap warning). API hook/shared Button contain no t() calls. Added two complete repair explanation/error strings. Existing catalog/source/combined generators used after LF normalization; all 7,672 trio checks pass.
+- Catalog checkpoint verified 42,175 known source keys and preserved language keys. No catalog keys deleted. Split catalog regeneration reports zero known-missing keys.

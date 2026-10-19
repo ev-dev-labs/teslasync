@@ -700,7 +700,21 @@ export function useTransitionRepairCase() {
         body: JSON.stringify(body),
       }),
     networkMode: 'always',
-    onSuccess: () => {
+    onSuccess: (updated: RepairCase) => {
+      qc.setQueryData<RepairCaseDetailResponse>(dataRepairKeys.case(updated.id), previous =>
+        previous ? { ...previous, case: updated } : previous);
+      for (const [key, previous] of qc.getQueriesData<RepairCaseListResponse>({
+        queryKey: ['data-repair', 'cases'],
+        predicate: query => typeof query.queryKey[2] === 'object',
+      })) {
+        if (!previous) continue;
+        const filters = key[2] as RepairCaseFilters;
+        qc.setQueryData(key, {
+          ...previous,
+          cases: previous.cases.flatMap(item => item.id !== updated.id ? [item]
+            : filters.status && filters.status !== updated.status ? [] : [updated]),
+        });
+      }
       invalidateRepairCases(qc);
       success('toast.dataRepair.case.transition.success', 'Repair case updated');
     },
