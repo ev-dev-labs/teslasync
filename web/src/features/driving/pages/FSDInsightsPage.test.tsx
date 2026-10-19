@@ -404,6 +404,19 @@ describe('FSDInsightsPage', () => {
     );
   });
 
+  it('does not publish perpetual loading for an idle disabled query with no vehicle', () => {
+    selectedVehicleMock.mockReturnValue({ vehicleId: null });
+    useFsdInsightsMock.mockReturnValue(query({ isPending: true, isFetching: false, fetchStatus: 'idle' }));
+    renderPage();
+    expect(sectionPropsMock).toHaveBeenCalled();
+    for (const [, props] of sectionPropsMock.mock.calls) {
+      expect(props.state.noVehicle).toBe(true);
+      expect(props.state.isLoading).toBe(false);
+      expect(props.insights).toBeUndefined();
+    }
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('no-vehicle');
+  });
+
   it('shares one retry callback across every panel', () => {
     const refetch = vi.fn();
     useFsdInsightsMock.mockReturnValue(

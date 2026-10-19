@@ -113,9 +113,10 @@ export default function FSDInsightsPage() {
 
   const sectionState: FsdSectionState = {
     // `initial` is the only status with nothing retained AND no failure, so it
-    // is the only one that should show a skeleton. A failed refresh keeps the
-    // retained payload on screen.
-    isLoading: insightsState.status === 'initial',
+    // can show a skeleton once a vehicle enables the query. Without a vehicle
+    // the disabled query stays pending/idle indefinitely, not loading.
+    // A failed refresh keeps the retained payload on screen.
+    isLoading: vehicleId != null && insightsState.status === 'initial',
     error: insightsState.fatalError,
     onRetry,
     noVehicle: vehicleId == null,
