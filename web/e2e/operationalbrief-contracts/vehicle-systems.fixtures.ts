@@ -35,8 +35,11 @@ const climateRow = (minute: number, overrides: Partial<ClimateWire> = {}): Clima
 export const accountingClimate: ClimateWire[] = [
   climateRow(0),
   climateRow(0, { inside_temp: 30, hvac_power: false }),
-  {},
-  { timestamp: 'invalid', inside_temp: 21, hvac_power: true },
+  // Fan/AC signals on timestamp-invalid rows: consumed only by the
+  // unfiltered ClimateControl efficiency stats; every timestamp-gated
+  // accounting path (cabin, HVAC, comfort) excludes these rows.
+  { fan_speed: 4, is_ac_on: true },
+  { timestamp: 'invalid', inside_temp: 21, hvac_power: true, fan_speed: 6, is_ac_on: false },
   climateRow(5, { hvac_power: null }),
   climateRow(10, { hvac_power: false }),
   climateRow(15, { inside_temp: null }),
@@ -117,7 +120,7 @@ export const maintenanceItems: MaintenanceItem[] = [
     id: 802, vehicle_id: 7, category: 'brakes', name: 'Synthetic brake inspection',
     description: 'Read-only synthetic schedule', due_date: '2026-08-01',
     due_mileage: null, current_mileage: 12_000_000,
-    last_service_date: null, last_service_mileage: null,
+    last_service_date: '2025-08-01', last_service_mileage: null,
     interval_months: 12, interval_miles: null,
     status: 'overdue', created_at: observedAt,
   },

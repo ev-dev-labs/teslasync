@@ -38,7 +38,7 @@ function endpoints(contract: RootContract, mode: FixtureMode): Endpoint[] {
         );
       }
       if (contract.fixture === 'preconditioning') {
-        result.push(scoped('/drives', [], ['limit']));
+        result.push(scoped('/drives', [], ['limit', 'start', 'end']));
       }
       return result;
     }
@@ -96,7 +96,12 @@ async function installDomainFixtures(
       if (endpoint.query.includes('vehicle_id')) {
         expect(url.searchParams.get('vehicle_id'), endpoint.path).toBe('7');
       }
-      if (endpoint.path === '/api/v1/drives') expect(url.searchParams.get('limit')).toBe('1000');
+      // Half-open UTC window derived from the route range (?from=2026-08-01&to=2026-08-31).
+      if (endpoint.path === '/api/v1/drives') {
+        expect(url.searchParams.get('limit')).toBe('1000');
+        expect(url.searchParams.get('start')).toBe('2026-08-01T00:00:00.000Z');
+        expect(url.searchParams.get('end')).toBe('2026-09-01T00:00:00.000Z');
+      }
       if (endpoint.path === '/api/v1/software-updates') {
         expect(url.searchParams.get('limit')).toBe('50');
         expect(url.searchParams.get('offset')).toBe('0');
@@ -113,6 +118,12 @@ function metric(brief: Locator, id: string) {
 
 async function reading(brief: Locator, id: string, value: string | RegExp, state = 'value') {
   const item = metric(brief, id);
+  if (state === 'missing') {
+    // Settled missing-state metrics are withheld as hidden empty fields,
+    // never rendered visibly (OperationalBrief visibleMetrics contract).
+    await expect(item).toHaveCount(0);
+    return;
+  }
   await expect(item).toHaveAttribute('data-value-state', state);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }
@@ -144,19 +155,27 @@ async function reviewDrawer(page: Page, brief: Locator, width: number, scopes: r
   await brief.scrollIntoViewIfNeeded();
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
   const items = brief.locator('[data-operational-metric]');
-  expect(await items.count()).toBeGreaterThan(0);
-  // Metrics chunk into flex bank rows of at most 3 (wrapping fluidly on
-  // narrow screens); pin the bank structure instead of grid columns.
-  const banks = brief.locator('[data-operational-metric-bank]');
-  expect(await banks.count()).toBeGreaterThan(0);
-  for (const bank of await banks.all()) {
-    const columns = Number(await bank.getAttribute('data-columns'));
-    expect(Number.isInteger(columns) && columns >= 1 && columns <= 3).toBe(true);
+  const itemCount = await items.count();
+  if (itemCount === 0) {
+    // Fully-withheld brief: no metric rows render; the brief discloses the
+    // empty state inline and the hidden-field count in the drawer.
+    await expect(brief).toContainText('No metric values are available yet.');
+    await expect(brief).toContainText('Values will appear when the source provides measurements.');
+  } else {
+    // Metrics chunk into flex bank rows of at most 3 (wrapping fluidly on
+    // narrow screens); pin the bank structure instead of grid columns.
+    const banks = brief.locator('[data-operational-metric-bank]');
+    expect(await banks.count()).toBeGreaterThan(0);
+    for (const bank of await banks.all()) {
+      const columns = Number(await bank.getAttribute('data-columns'));
+      expect(Number.isInteger(columns) && columns >= 1 && columns <= 3).toBe(true);
+    }
   }
   const period = await brief.locator('xpath=..').getAttribute('data-source-period-kind');
   const retainedSource = await brief.locator('xpath=..').getAttribute('data-source-retained');
   expect(['unknown', 'snapshot'], 'summary must declare its actual source period').toContain(period);
-  if (period === 'unknown') await expect(brief).toContainText('Not a live-state observation');
+  // Freshness disclosures render in the Review drawer, never inline.
+  const freshnessScopes = period === 'unknown' ? ['Not a live-state observation'] : [];
   // Label is the first child div's own text (MetricLabel renders flat);
   // no detail element exists inline (details are drawer-only).
   const retained = await items.evaluateAll(nodes => nodes.map(node => ({
@@ -183,8 +202,11 @@ async function reviewDrawer(page: Page, brief: Locator, width: number, scopes: r
     ? ((await page.locator(`[id="${describedBy}"]`).first().textContent())?.trim() ?? '')
     : '';
   expect(drawerDescription).not.toBe('');
-  for (const scope of scopes) {
+  for (const scope of [...scopes, ...freshnessScopes]) {
     await expect(drawer).toContainText(scope);
+  }
+  if (itemCount === 0) {
+    await expect(drawer).toContainText(/empty fields are hidden/);
   }
   await expect(drawer.getByText('Operational metrics', { exact: true })).toBeVisible();
   for (const fact of retained) {
@@ -244,8 +266,7 @@ async function assertOperands(page: Page, contract: RootContract): Promise<Reado
       for (const [index, value] of ['0', '1', '1', '1', '1', '1', '1', '1', '5'].entries()) {
         await reading(disposition, `outcome-${index}`, value);
       }
-      const source = page.getByTestId('comfort-consistency-source-summary');
-      await expect(source).toContainText('Counts are evaluated against 9 unique timestamp-valid rows.');
+      drawer('comfort-consistency-source-summary', 'Counts are evaluated against 9 unique timestamp-valid rows.');
       break;
     }
     case 'HvacCyclingPage': {
@@ -256,7 +277,7 @@ async function assertOperands(page: Page, contract: RootContract): Promise<Reado
       await reading(brief, 'observed-duration', '0.38 h');
       await reading(brief, 'on-duty', '78.26%');
       const source = page.getByTestId('hvac-cycling-source-summary');
-      await expect(source).toContainText('Counts are evaluated against 9 unique timestamp-valid rows.');
+      drawer('hvac-cycling-source-summary', 'Counts are evaluated against 9 unique timestamp-valid rows.');
       await reading(source, 'power', '8 · 88.89%');
       const duty = page.getByTestId('hvac-cycling-duty-summary');
       await reading(duty, 'on', '0.30 h');
@@ -328,14 +349,15 @@ async function assertOperands(page: Page, contract: RootContract): Promise<Reado
       break;
     case 'GuardModePage':
       await reading(page.getByTestId('guard-overview'), 'guard-sentry', 'Off');
-      await reading(page.getByTestId('guard-overview'), 'guard-lock', 'Unlocked');
+      await reading(page.getByTestId('guard-overview'), 'guard-lock', 'Vehicle unlocked');
       await reading(page.getByTestId('guard-overview'), 'guard-state', 'Disarmed');
       await reading(page.getByTestId('guard-overview'), 'guard-total', '0');
       drawer('guard-overview', 'not confirmation of active monitoring');
       break;
     case 'ClimateControlPage':
-      await reading(page.getByTestId('climate-systems-stats'), 'climate-systems-stats-0', 'Off');
-      await reading(page.getByTestId('climate-systems-stats'), 'climate-systems-stats-3', '0');
+      await reading(page.getByTestId('climate-systems-stats'), 'climate-systems-stats-0', 'On');
+      await reading(page.getByTestId('climate-systems-stats'), 'climate-systems-stats-3', '—', 'missing');
+      await reading(page.getByTestId('climate-systems-stats'), 'climate-systems-stats-4', '0');
       await expect(page.getByTestId('climate-efficiency-stats').locator('[data-operational-metric]'))
         .toHaveCount(3);
       break;
