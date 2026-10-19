@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { seedBrowserState, installApiMocks, waitForHarnessReady } from './mockApi'
+const screenshotRoot = process.env.SIDENAV_SCREENSHOT_DIR ?? '../docs/sidenav-polish'
 
 for (const theme of ['dark', 'light'] as const) for (const width of [375, 414, 768, 1280, 1920]) {
   test.describe(`${theme} ${width}`, () => {
@@ -10,7 +11,7 @@ for (const theme of ['dark', 'light'] as const) for (const width of [375, 414, 7
     const api = await installApiMocks(page, 'populated', theme)
     await page.goto('/')
     await waitForHarnessReady(page, api)
-    const shot = (name: string) => page.screenshot({ path: `../docs/sidenav-polish/${theme}-${width}-${name}.png`, animations: 'disabled' })
+    const shot = (name: string) => page.screenshot({ path: `${screenshotRoot}/${theme}-${width}-${name}.png`, animations: 'disabled' })
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1)
     if (width < 768) {
       const tabs = page.getByRole('navigation', { name: 'Quick navigation' })
@@ -106,7 +107,7 @@ for (const theme of ['dark', 'light'] as const) for (const width of [375, 414, 7
       const api = await installApiMocks(page, 'populated', theme)
       await page.goto('/charging')
       await waitForHarnessReady(page, api)
-      const shot = (name: string) => page.screenshot({ path: `../docs/sidenav-polish/${theme}-${width}-${name}.png`, animations: 'disabled' })
+      const shot = (name: string) => page.screenshot({ path: `${screenshotRoot}/${theme}-${width}-${name}.png`, animations: 'disabled' })
       if (width < 768) {
         const tabs = page.getByRole('navigation', { name: 'Quick navigation' })
         const tabBox = (await tabs.boundingBox())!
@@ -183,7 +184,7 @@ for (const width of [768, 1280]) {
     expect(box.y).toBeGreaterThanOrEqual(0)
     expect(box.y + box.height).toBeLessThanOrEqual(anchor.y)
     if (width === 768) await expect(page.locator('.sidenav-tablet-panel')).toHaveCount(0)
-    await page.screenshot({ path: `../docs/sidenav-polish/utilities/dark-${width}-display.png`, animations: 'disabled' })
+    await page.screenshot({ path: `${screenshotRoot}/utilities/dark-${width}-display.png`, animations: 'disabled' })
     await page.keyboard.press('Escape')
     await expect(picker).toHaveCount(0)
     if (width === 768) await rail.getByRole('button', { name: 'Home', exact: true }).click()
