@@ -17,7 +17,7 @@ import {
 } from './vehicle-systems.fixtures';
 
 type FixtureMode = 'populated' | 'empty' | 'unknown';
-type Endpoint = { path: string; json: unknown; query: readonly string[] };
+type Endpoint = { path: string; json: unknown; query: readonly string[]; optional?: boolean };
 const scoped = (path: string, json: unknown, extra: readonly string[] = []): Endpoint => ({
   path: `/api/v1${path}`, json, query: ['vehicle_id', ...extra],
 });
@@ -80,6 +80,24 @@ function endpoints(contract: RootContract, mode: FixtureMode): Endpoint[] {
           },
         },
         { path: '/api/v1/geofences', query: [], json: [] },
+        // The desktop status bar mounts the honesty meter, whose fleet batch
+        // seeds the per-vehicle cache (seedVehicleStateCache overwrites on
+        // equal observedAt). Without this anchor the mock batch's unverified
+        // fields would poison the guard brief's verified sentry/lock reads at
+        // desktop widths. Optional: the segment only mounts inline on desktop.
+        {
+          path: '/api/v1/vehicles/states', query: ['vehicle_ids', 'limit'], optional: true,
+          json: {
+            now: observedAt, total: 1,
+            counts: { resolved: 1, missing: 0, failed: 0 },
+            vehicles: [{
+              vehicle_id: 7, outcome: 'resolved',
+              state: unknown ? { vehicle_id: 7, state: 'online' } : guardState,
+              live: true, data_source: 'signal_store', observed_at: observedAt, freshness: 'fresh',
+              verified_fields: unknown ? ['state'] : ['state', 'is_locked', 'sentry_mode'],
+            }],
+          },
+        },
       ];
   }
 }
@@ -145,6 +163,7 @@ async function openPage(
   await waitForHarnessReady(page, mocks);
   await expectThemeApplied(page, theme);
   for (const endpoint of supplied) {
+    if (endpoint.optional) continue;
     expect(mocks.requests.some(request => request.path === endpoint.path && request.disposition === 'fulfilled'),
       `${contract.root} must actually request ${endpoint.path}`).toBe(true);
   }

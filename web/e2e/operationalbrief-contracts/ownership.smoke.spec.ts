@@ -109,7 +109,7 @@ const roots: readonly RootCase[] = [
       { title: 'Recorded driving exposure', metrics: [
         { key: 'exposure', label: 'Exposure distance', value: distance, context: '12 drives' },
         { key: 'duration', label: 'Time behind the wheel', value: /^2(?:\.00)?\s*h$/ },
-        { key: 'night', label: 'Night distance', value: /^16\.09\s*km$/, context: '10.00%' },
+        { key: 'night', label: 'Distance of trips starting overnight (UTC)', value: /^16\.09\s*km$/, context: '10.00%' },
         missing('percentile', 'Peer percentile'),
       ] },
       { title: 'Policy-based premium model', metrics: [
@@ -298,13 +298,20 @@ function metric(container: Locator, key: string): Locator {
   return container.locator(`[data-operational-metric="${key}"]`);
 }
 async function expectMetrics(container: Locator, cases: readonly MetricCase[]): Promise<void> {
-  await expect(container.getByRole('listitem')).toHaveCount(cases.length);
+  // Settled missing-state metrics are withheld as hidden empty fields, never
+  // rendered visibly; metric context renders in the Review drawer (asserted by
+  // review()), not inline (OperationalBrief visibleMetrics contract).
+  const visible = cases.filter(entry => entry.state !== 'missing');
+  await expect(container.getByRole('listitem')).toHaveCount(visible.length);
   for (const entry of cases) {
     const item = metric(container, entry.key);
-    await expect(item).toHaveAttribute('data-value-state', entry.state ?? 'value');
+    if (entry.state === 'missing') {
+      await expect(item).toHaveCount(0);
+      continue;
+    }
+    await expect(item).toHaveAttribute('data-value-state', 'value');
     await expect(item).toContainText(entry.label);
     await expect(item.locator('[data-operational-value]')).toHaveText(entry.value);
-    if (entry.context) await expect(item).toContainText(entry.context);
   }
 }
 async function activate(page: Page, root: RootCase): Promise<void> {
@@ -316,8 +323,9 @@ async function activate(page: Page, root: RootCase): Promise<void> {
     await page.getByRole('button', { name: 'Run dry-run plan', exact: true }).click();
   }
 }
-async function review(page: Page, container: Locator, summary: BandCase): Promise<void> {
-  const before = await container.getByRole('list').innerText();
+async function review(page: Page, container: Locator, summary: BandCase, drawerTexts: readonly string[] = []): Promise<void> {
+  // Ownership briefs split metrics across two banks; join all lists.
+  const before = (await container.getByRole('list').allInnerTexts()).join('\n');
   const trigger = container.getByRole('button', { name: 'Review details', exact: true });
   await trigger.focus();
   await page.keyboard.press('Enter');
@@ -327,13 +335,24 @@ async function review(page: Page, container: Locator, summary: BandCase): Promis
   await expect(drawer).toContainText(summary.title === 'Recorded period liability'
     ? 'Recorded apportionment window'
     : 'Returned source values; model assumptions and limitations remain in the evidence below.');
+  // Status label, scope bounds and freshness render drawer-side only
+  // (OperationalBrief visibleMetrics contract); assert them here, never on
+  // the closed brief.
+  for (const text of drawerTexts) await expect(drawer).toContainText(text);
+  const hidden = summary.metrics.filter(entry => entry.state === 'missing');
   for (const entry of summary.metrics) {
+    if (entry.state === 'missing') continue;
     const detail = drawer.locator('[data-drawer-body] .rounded-shape-md').filter({
       has: page.getByText(entry.label, { exact: true }),
     });
     await expect(detail).toHaveCount(1);
     await expect(detail.locator(':scope > div').first().locator('span').last()).toHaveText(entry.value);
     if (entry.context) await expect(detail).toContainText(entry.context);
+  }
+  if (hidden.length > 0) {
+    await expect(drawer).toContainText(hidden.length === 1
+      ? '1 empty field is hidden.'
+      : `${hidden.length} empty fields are hidden.`);
   }
   await expectDialogsInsideViewport(page);
   await expectNoHorizontalOverflow(page);
@@ -346,7 +365,28 @@ async function review(page: Page, container: Locator, summary: BandCase): Promis
   await page.keyboard.press('Escape');
   await expect(drawer).toHaveCount(0);
   await expect(trigger).toBeFocused();
-  await expect(container.getByRole('list')).toHaveText(before);
+  expect((await container.getByRole('list').allInnerTexts()).join('\n')).toBe(before);
+}
+async function expectDrawerTexts(page: Page, summary: Locator, title: string, texts: readonly string[], absent: readonly string[] = []): Promise<void> {
+  // Status label, scope bounds, freshness and descriptions render drawer-side
+  // only; open Review details for standalone status/scope assertions.
+  await summary.getByRole('button', { name: 'Review details', exact: true }).click();
+  const drawer = page.getByRole('dialog', { name: `${title} details`, exact: true });
+  await expect(drawer).toBeVisible();
+  for (const text of texts) await expect(drawer).toContainText(text);
+  for (const text of absent) await expect(drawer).not.toContainText(text);
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+}
+async function expectDrawerDetailContext(page: Page, summary: Locator, title: string, label: string, context: string): Promise<void> {
+  await summary.getByRole('button', { name: 'Review details', exact: true }).click();
+  const drawer = page.getByRole('dialog', { name: `${title} details`, exact: true });
+  const detail = drawer.locator('[data-drawer-body] .rounded-shape-md').filter({
+    has: page.getByText(label, { exact: true }),
+  });
+  await expect(detail).toContainText(context);
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
 }
 
 for (const root of roots) {
@@ -370,19 +410,19 @@ for (const root of roots) {
             await expect(page.getByRole('combobox', { name: 'Analysis window', exact: true }))
               .toHaveValue(String(root.windowDays));
           }
+          const drawerTexts: string[] = [];
           if (root.slug !== 'jurisdiction-compliance') {
-            await expect(container).toContainText('Source returned');
+            drawerTexts.push('Source returned');
           }
           if (['charging-reconciliation', 'driver-attribution', 'insurance-telematics',
             'jurisdiction-compliance', 'model-trust', 'subscription-roi', 'tariff-lab'].includes(root.slug)) {
-            await expect(container).toContainText('May 1, 2026');
-            await expect(container).toContainText('Aug 1, 2026');
+            drawerTexts.push('May 1, 2026', 'Aug 1, 2026');
           } else {
-            await expect(container).toContainText('Source as of Aug 1, 2026');
+            drawerTexts.push('Source as of Aug 1, 2026');
           }
-          await review(page, container, summary);
+          await review(page, container, summary, drawerTexts);
         }
-        await expect(page.locator('main').getByText(evidence[0].summary, { exact: true })).toBeVisible();
+        await expect(page.locator('main').getByText(evidence[0].summary, { exact: true }).first()).toBeVisible();
         await expectNoHorizontalOverflow(page);
       });
     }
@@ -414,11 +454,9 @@ test('subscription window changes preserve returned totals rather than aggregate
   await page.getByRole('combobox', { name: 'Analysis window', exact: true }).selectOption('30');
   await expect(metric(summary, 'value').locator('[data-operational-value]')).toHaveText('$22.00');
   await expect(metric(summary, 'spend').locator('[data-operational-value]')).toHaveText('$500.00');
-  await expect(summary).toContainText('30-day analysis window');
-  await expect(summary).toContainText('Recorded bounds');
-  await expect(summary).toContainText('Jul 1, 2026');
-  await expect(summary).not.toContainText('May 1, 2026');
-  await expect(summary).not.toContainText('lifetime coverage');
+  await expectDrawerTexts(page, summary, roots[7].bands[0].title,
+    ['30-day analysis window', 'Recorded bounds', 'Jul 1, 2026'],
+    ['May 1, 2026', 'lifetime coverage']);
   expect(requestedDays).toEqual(['180', '30']);
   // Loaded ROI item spends $150; aggregate spends $500. Neither is replaced by $12.50 monthly.
   await expect(page.locator('main').getByText('$150.00', { exact: true }).first()).toBeVisible();
@@ -451,7 +489,8 @@ for (const length of ['km', 'mi'] as const) {
     await expect(metric(economics, 'odometer').locator('[data-operational-value]'))
       .toHaveText(length === 'mi' ? /^100(?:\.00)?\s*mi$/ : distance);
     await expect(metric(economics, 'blended').locator('[data-operational-value]')).toHaveText('$1.25');
-    await expect(metric(economics, 'blended')).toContainText('per 1 000 metres driven');
+    await expectDrawerDetailContext(page, economics, 'Blended wear cost and recorded distance',
+      'Blended wear cost', 'per 1 000 metres driven');
     await expect(metric(band(page, roots[1].bands[0].title), 'lifetime')
       .locator('[data-operational-value]')).toHaveText('$678.90');
   });
@@ -479,9 +518,11 @@ for (const odometer of [null, 0] as const) {
     await page.goto('/ownership/warranty-command');
     await waitForHarnessReady(page, api);
     const summary = band(page, 'Recorded warranty coverage and expiry');
-    await expect(metric(summary, 'odometer')).toHaveAttribute('data-value-state', odometer == null ? 'missing' : 'value');
-    await expect(metric(summary, 'odometer').locator('[data-operational-value]'))
-      .toHaveText(odometer == null ? '—' : /^0(?:\.00)?\s*km$/);
+    if (odometer == null) await expect(metric(summary, 'odometer')).toHaveCount(0);
+    else {
+      await expect(metric(summary, 'odometer')).toHaveAttribute('data-value-state', 'value');
+      await expect(metric(summary, 'odometer').locator('[data-operational-value]')).toHaveText(/^0(?:\.00)?\s*km$/);
+    }
     await expect(metric(summary, 'expiring')).toHaveAttribute('data-value-state', 'value');
     await expect(metric(summary, 'expiring').locator('[data-operational-value]')).toHaveText('0');
   });
@@ -501,15 +542,14 @@ test('tariff replay remains not computed before its actual control publishes res
   await page.goto('/ownership/tariff-lab');
   await waitForHarnessReady(page, api);
   const summary = band(page, 'Returned tariff replay comparison');
-  await expect(summary).toContainText('Not computed');
+  await expectDrawerTexts(page, summary, 'Returned tariff replay comparison', ['Not computed']);
   for (const entry of roots[8].bands[0].metrics) {
-    await expect(metric(summary, entry.key)).toHaveAttribute('data-value-state', 'missing');
-    await expect(metric(summary, entry.key).locator('[data-operational-value]')).toHaveText('—');
+    await expect(metric(summary, entry.key)).toHaveCount(0);
   }
   await activate(page, roots[8]);
   await expectMetrics(summary, roots[8].bands[0].metrics);
-  await expect(summary).toContainText('modelled replay results, not a bill');
-  await expect(summary).toContainText('Recorded bounds');
+  await expectDrawerTexts(page, summary, 'Returned tariff replay comparison',
+    ['modelled replay results, not a bill', 'Recorded bounds']);
 });
 
 test('repeating the real tariff replay control retains the last publication while the next response is pending', async ({ page }) => {
@@ -538,8 +578,8 @@ test('repeating the real tariff replay control retains the last publication whil
   try {
     await expect.poll(() => calls).toBe(2);
     await expectMetrics(summary, roots[8].bands[0].metrics);
-    await expect(summary).toContainText('Recorded bounds');
-    await expect(summary).not.toContainText('Not computed');
+    await expectDrawerTexts(page, summary, 'Returned tariff replay comparison',
+      ['Recorded bounds'], ['Not computed']);
   } finally {
     release();
   }
@@ -551,12 +591,12 @@ test('governance dry-run control publishes a plan, not executed deletion', async
   await page.goto('/ownership/data-governance');
   await waitForHarnessReady(page, api);
   const summary = band(page, 'Computed dry-run totals');
-  await expect(summary).toContainText('Not computed');
-  await expect(metric(summary, 'rows')).toHaveAttribute('data-value-state', 'missing');
+  await expectDrawerTexts(page, summary, 'Computed dry-run totals', ['Not computed']);
+  await expect(metric(summary, 'rows')).toHaveCount(0);
   await expect(metric(summary, 'mode').locator('[data-operational-value]')).toHaveText('Never — dry run');
   await activate(page, roots[2]);
   await expectMetrics(summary, roots[2].bands[1].metrics);
-  await expect(summary).toContainText('no rows are deleted');
+  await expectDrawerTexts(page, summary, 'Computed dry-run totals', ['no rows are deleted']);
   expect(api.requests.filter((request) => request.method === 'DELETE')).toEqual([]);
 });
 
@@ -566,8 +606,9 @@ for (const width of [320, 1440]) {
     const api = await setup(page, 'charging-reconciliation');
     await page.goto('/ownership/charging-reconciliation');
     await waitForHarnessReady(page, api);
-    const invoiceTable = page.locator('table').filter({ has: page.getByText(invoice.invoice_ref, { exact: true }) });
-    const grid = invoiceTable.locator('xpath=ancestor::*[@data-grid-frame][1]');
+    // At 320px the invoice list renders as cards titled "ref · provider",
+    // so scope by grid frame with a substring match rather than by table.
+    const grid = page.locator('[data-grid-frame]').filter({ has: page.getByText(invoice.invoice_ref) });
     await grid.getByRole('button', { name: 'Export list', exact: true }).click();
     const menu = page.getByRole('menu', { name: 'Export list', exact: true });
     const pending = page.waitForEvent('download');
@@ -611,19 +652,19 @@ test.describe('independent local business dates', () => {
     await page.goto('/ownership/jurisdiction-compliance');
     await waitForHarnessReady(page, api);
     const summary = band(page, 'Recorded period liability');
-    const original = await summary.getByRole('list').innerText();
+    const original = (await summary.getByRole('list').allInnerTexts()).join('\n');
     await page.getByRole('button', { name: 'Seal a period', exact: true }).click();
-    await page.getByLabel('Period start', { exact: true }).fill('2026-03-08');
-    await page.getByLabel('Period end', { exact: true }).fill('2026-11-01');
-    await expect(page.getByLabel('Period start', { exact: true })).toHaveValue('2026-03-08');
-    await expect(page.getByLabel('Period end', { exact: true })).toHaveValue('2026-11-01');
+    await page.getByLabel(/^Period start/).fill('2026-03-08');
+    await page.getByLabel(/^Period end/).fill('2026-11-01');
+    await expect(page.getByLabel(/^Period start/)).toHaveValue('2026-03-08');
+    await expect(page.getByLabel(/^Period end/)).toHaveValue('2026-11-01');
     await page.getByRole('button', { name: 'Seal period', exact: true }).click();
     await expect.poll(() => filings.length).toBe(1);
     expect(filings[0]).toEqual({
       vehicle_id: 7, period_start: '2026-03-08T00:00:00.000Z',
       period_end: '2026-11-01T00:00:00.000Z', confirmed: true,
     });
-    await expect(summary.getByRole('list')).toHaveText(original);
+    expect((await summary.getByRole('list').allInnerTexts()).join('\n')).toBe(original);
     await expect(page.getByRole('combobox', { name: 'Analysis window', exact: true })).toHaveValue('90');
     await expectNoHorizontalOverflow(page);
   });
@@ -638,17 +679,36 @@ for (const width of [320, 1440]) {
     }, { limit: '100', offset: '0' });
     await page.goto('/ownership/subscription-roi');
     await waitForHarnessReady(page, api);
-    if (width < 1280) await page.getByRole('button', { name: 'Open sidebar', exact: true }).click();
-    const rail = page.getByRole('navigation', { name: 'Sections and shortcuts' });
-    await rail.getByRole('button', { name: /Ownership intelligence, \d+ pages/ }).click();
-    const nav = page.getByRole('navigation', { name: 'Sidebar navigation' });
-    await nav.getByRole('button', { name: 'Expand all groups', exact: true }).click();
+    // Phone viewports have no section rail: the header button opens the
+    // More grid, which drills into the sheet panel (collection-navigation).
+    const scope = width < 1280 ? page.locator('.sidenav-sheet') : page;
+    if (width < 1280) {
+      await page.getByRole('button', { name: 'Open sidebar', exact: true }).click();
+      await scope.getByRole('button', { name: 'Ownership intelligence' }).click();
+    } else {
+      // Clicking the already-selected section toggles the panel closed, so
+      // only click when the panel is shut (collection-navigation).
+      if ((await page.getByTestId('command-deck-secondary').count()) === 0) {
+        const rail = page.getByRole('navigation', { name: 'Sections and shortcuts' });
+        await rail.getByRole('button', { name: 'Ownership intelligence' }).click();
+      }
+    }
+    const nav = scope.getByRole('navigation', { name: 'Sidebar navigation' });
     const link = nav.locator('a[href="/ownership/tariff-lab"]').first();
+    if ((await link.count()) === 0) {
+      // The toggle reads Collapse when groups start expanded; only expand
+      // when the destination link is hidden inside a collapsed group.
+      await expect(nav.getByRole('button', { name: /all groups/i })).toBeVisible();
+      if ((await nav.getByRole('button', { name: 'Collapse all groups' }).count()) === 0) {
+        await nav.getByRole('button', { name: 'Expand all groups' }).click();
+      }
+    }
     await expect(link).toBeVisible();
     await link.click();
     await expect(page).toHaveURL(/\/ownership\/tariff-lab$/);
     await waitForHarnessReady(page, api);
-    await expect(band(page, 'Returned tariff replay comparison')).toContainText('Not computed');
+    await expectDrawerTexts(page, band(page, 'Returned tariff replay comparison'),
+      'Returned tariff replay comparison', ['Not computed']);
     await page.goBack();
     await expect(page).toHaveURL(/\/ownership\/subscription-roi$/);
     await waitForHarnessReady(page, api);

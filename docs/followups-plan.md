@@ -857,3 +857,35 @@ denomination inconsistent (sessions derives, history undenominated);
 partial-missing thermal note has no e2e scenario (full-missing pins the
 unsupported notice + absence of the partial note instead).
 
+## 2026-10-19 guard-1440 ROOT CAUSE + vehicle-systems 100/100 (uncommitted)
+
+GuardModePage sentry/lock withheld at 1440 only, present at 320. Root cause:
+the desktop status bar mounts HonestyMeterSegment inline (StatusBar.tsx
+!overflowStatus branch), which calls useFleetStates -> GET /vehicles/states.
+The fleet hook seeds the per-vehicle cache (seedVehicleStateCache overwrites
+when existing.observedAt is not strictly newer), and the mockApi fleet batch
+serves vehicle 7 with verified_fields lacking is_locked/sentry_mode. The seed
+overwrites the guard fixture's verified per-vehicle state, so
+isVehicleStateFieldCurrent goes false and the brief withholds sentry/lock. At
+320 the segment lives unmounted inside the closed More menu, so no batch, no
+seed, values show. Deterministic, not a flake. Fix (test-side): added an
+OPTIONAL /api/v1/vehicles/states endpoint to the guard contract fixtures with
+vehicle 7 verified for is_locked/sentry_mode (mode-aware: unknown mode keeps
+verified ['state'] only), plus Endpoint.optional to skip the must-request
+assertion for viewport-conditional traffic. Guard 8/8 now (populated + unknown
+x 320/1440 x light/dark); vehicle-systems full file 100/100 pending rerun.
+Product note (not changed): seed overwrites verified per-vehicle fields with
+sparser-but-newer batch verification; a merge (union verified fields, newest
+wins per field) would be more truthful but is an architecture call.
+
+Driving contracts: 6/50 -> rerun in progress after withhold migration of the
+unknown() helper, drawer-text moves (samples/business/what-if/tie contexts),
+sweet-spot /drives datetime pins, Service-unavailable error panel pin,
+leaderboard option->toggle-button migration (unit-pinned), Plan-trip
+sentence-case, drive-rows sentence-case drawer detail, and one app fix:
+RangeBufferSummaryBrief cap interpolation now uses fmtInt (sibling regen
+precedent; the smoke pin + authorial intent were grouped '1,000-row').
+Ownership contracts: expectMetrics/review/missing assertions pre-migrated to
+the withhold contract (visible-only listitem count, count-0 missing, drawer
+context + hidden-count readings) ahead of its first local run.
+

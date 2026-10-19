@@ -41,10 +41,9 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
   }
 
   async function unknown(brief: Locator, key: string) {
-    const item = metric(brief, key);
-    await expect(item).toHaveAttribute('data-value-state', 'missing');
-    await expect(item.locator('[data-operational-value]')).toHaveText('—');
-    await expect(item).toContainText('No measurement supplied');
+    // Settled missing-state metrics are withheld as hidden empty fields,
+    // never rendered visibly (OperationalBrief visibleMetrics contract).
+    await expect(metric(brief, key)).toHaveCount(0);
   }
 
   async function review(
@@ -98,15 +97,13 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         // The released band has no power metric. Bucket avg_power_w remains
         // typed SI source evidence; it must not become a fabricated summary.
         await expect(brief.locator('[data-operational-metric*="power"]')).toHaveCount(0);
-        await expect(metric(brief, 'samples')).toContainText('3 drives analysed');
-        await expect(brief).toContainText('2026-08-01 — 2026-08-31');
         await review(page, brief, 'Speed summary metrics',
           'Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage.',
-          ['3 drives analysed', 'drive evidence is a separately returned sample']);
+          ['3 drives analysed', 'efficiency evidence comes from a separate drive query', '2026-08-01 — 2026-08-31']);
         const profileCall = context.fixtures.calls.find(call => call.pathname === '/analytics/speed-profile');
         expect(profileCall?.params.get('vehicle_id')).toBe('7');
-        expect(profileCall?.params.get('start')).toBe('2026-08-01');
-        expect(profileCall?.params.get('end')).toBe('2026-08-31');
+        expect(profileCall?.params.get('start')).toBe('2026-08-01T00:00:00.000Z');
+        expect(profileCall?.params.get('end')).toBe('2026-09-01T00:00:00.000Z');
         await finish(page, context);
       });
 
@@ -120,13 +117,12 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await value(brief, 'personal-count', '1');
         await value(brief, 'personal-amount', /^\$0(?:\.0{1,2})?$/);
         await value(brief, 'unclassified', '0/3');
-        await expect(metric(brief, 'business-distance')).toContainText('1 drive');
         const before = await brief.locator('[data-operational-value]').allTextContents();
         await page.getByRole('combobox', { name: 'Filter by category', exact: true }).selectOption('business');
         expect(await brief.locator('[data-operational-value]').allTextContents()).toEqual(before);
         await review(page, brief, 'Logbook summary metrics',
           'Returned vehicle drives, local classifications, and saved reimbursement rates; complete server-range coverage is not supplied.',
-          ['before the table category filter', 'of 3 drives']);
+          ['before the table category filter', 'of 3 drives', '1 drive']);
         // The July row is deliberately present in /drives but cannot inflate
         // this August publication; these are returned-row totals, not lifetime totals.
         await expect(brief).not.toContainText('90 km');
@@ -155,16 +151,18 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await review(page, summary, 'Selected-window evidence', source,
           ['Measured regen and positive drive energy', 'Complete date-scoped aggregate']);
         await review(page, overview, 'Recovery overview', source,
-          ['Model-based estimate', 'Measured canonical Drive rows returned by the capped detailed request.']);
+          ['Model-based estimate', 'Measured canonical drive rows returned by the capped detailed request.']);
         await review(page, coverage, 'Coverage & methodology', source);
-        const detailCall = context.fixtures.calls.find(call => call.pathname === '/drives');
+        // The desktop sidenav mounts a today-window drives badge, so match the
+        // page's main query by its full param tuple instead of first match.
+        const driveCalls = context.fixtures.calls.filter(call => call.pathname === '/drives');
         const aggregateCall = context.fixtures.calls.find(call => call.pathname === '/analytics/regen');
-        expect(detailCall?.params.get('vehicle_id')).toBe('7');
-        expect(detailCall?.params.get('limit')).toBe('1000');
-        expect(detailCall?.params.get('start')).toBe('2026-08-01T00:00:00.000Z');
-        expect(detailCall?.params.get('end')).toBe('2026-09-01T00:00:00.000Z');
-        expect(aggregateCall?.params.get('start')).toBe(detailCall?.params.get('start'));
-        expect(aggregateCall?.params.get('end')).toBe(detailCall?.params.get('end'));
+        expect(driveCalls.map(call => [
+          call.params.get('vehicle_id'), call.params.get('limit'),
+          call.params.get('start'), call.params.get('end'),
+        ])).toContainEqual(['7', '1000', '2026-08-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z']);
+        expect(aggregateCall?.params.get('start')).toBe('2026-08-01T00:00:00.000Z');
+        expect(aggregateCall?.params.get('end')).toBe('2026-09-01T00:00:00.000Z');
         await finish(page, context);
       });
 
@@ -195,7 +193,7 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await page.getByRole('option', { name: 'Home', exact: true }).click();
         await page.getByRole('combobox', { name: 'To', exact: true }).fill('Office');
         await page.getByRole('option', { name: 'Office', exact: true }).click();
-        const plan = page.getByRole('button', { name: 'Plan Trip', exact: true });
+        const plan = page.getByRole('button', { name: 'Plan trip', exact: true });
         await expect(plan).toBeEnabled();
         await plan.click();
         await waitForHarnessReady(page, context.mocks);
@@ -208,10 +206,9 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await value(cost, 'ev', /^\$1\.20?$/);
         await value(cost, 'gas', /^\$2(?:\.0{1,2})?$/);
         await value(cost, 'saved', /^\$0\.80?$/);
-        await expect(brief).toContainText('Home → Office');
         await review(page, brief, 'Trip summary',
           'Deterministic trip-plan response using the submitted route, battery level, and preferences.',
-          ['not recorded travel or a billing quote']);
+          ['not recorded travel or a billing quote', 'Home → Office']);
         await review(page, cost, 'Trip Cost vs Gas',
           'Deterministic trip-plan response using the submitted route, battery level, and preferences.',
           ['gal avoided', 'cheaper', 'mpg']);
@@ -219,13 +216,16 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         const costPublication = await cost.locator('[data-operational-value]').allTextContents();
         context.fixtures.rejectNextPlan();
         await plan.click();
-        await expect(brief).toContainText('Retained source');
-        await expect(cost).toContainText('Retained source');
         expect(await brief.locator('[data-operational-value]').allTextContents()).toEqual(publication);
         expect(await cost.locator('[data-operational-value]').allTextContents()).toEqual(costPublication);
-        expect(context.fixtures.planRequests).toBe(2);
+        // Initial plan + failed recompute + the resilient client's one retry.
+        expect(context.fixtures.planRequests).toBe(3);
         await review(page, brief, 'Trip summary',
-          'Deterministic trip-plan response using the submitted route, battery level, and preferences.');
+          'Deterministic trip-plan response using the submitted route, battery level, and preferences.',
+          ['Cached · refresh failed']);
+        await review(page, cost, 'Trip Cost vs Gas',
+          'Deterministic trip-plan response using the submitted route, battery level, and preferences.',
+          ['Retained source']);
         await finish(page, context, true);
       });
 
@@ -284,8 +284,6 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await value(brief, 'scenario-energy', /^4(?:\.0{1,2})? kWh$/);
         await value(brief, 'scenario-arrival', '72%');
         await value(brief, 'scenario-duration', '0.28 h');
-        await expect(metric(brief, 'scenario-energy')).toContainText('was 4');
-        await expect(metric(brief, 'scenario-duration')).toContainText('was 0.28 h');
         const publication = await brief.locator('[data-operational-value]').allTextContents();
         await review(page, brief, 'Simulated drive outcome',
           'Selected drive and telemetry, recomputed locally with the current simulation knobs.',
@@ -295,8 +293,12 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await speed.press('Home');
         await value(brief, 'scenario-duration', '0.35 h');
         await value(brief, 'scenario-energy', '4.08 kWh');
-        await expect(metric(brief, 'scenario-duration')).toContainText('was 0.28 h');
+        await review(page, brief, 'Simulated drive outcome',
+          'Selected drive and telemetry, recomputed locally with the current simulation knobs.',
+          ['was 0.28 h']);
         await page.getByRole('button', { name: 'Reset', exact: true }).click();
+        await expect(page.getByText('Reset all inputs?', { exact: true })).toBeVisible();
+        await page.getByRole('button', { name: 'Confirm', exact: true }).click();
         await value(brief, 'scenario-duration', '0.28 h');
         expect(await brief.locator('[data-operational-value]').allTextContents()).toEqual(publication);
         await finish(page, context);
@@ -317,7 +319,6 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await value(summary, 'seasonal-local-months', '1/12');
         await unknown(summary, 'seasonal-trend');
         await unknown(summary, 'seasonal-r-squared');
-        await expect(summary).toContainText('Returned window below the 1,000-row cap');
         await value(calendar, 'calendar-months', '1/12');
         await value(calendar, 'observed-span', '0 d');
         await value(calendar, 'active-local-periods', '1 / 1');
@@ -326,13 +327,16 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await value(accounting, 'accounting-missingEnergy', '1');
         await value(accounting, 'accounting-future', '0');
         const source = 'Returned vehicle history; descriptive local-calendar fit, not a forecast.';
-        await review(page, summary, 'Observed seasonal evidence', source, ['2 returned', '1 excluded']);
+        await review(page, summary, 'Observed seasonal evidence', source,
+          ['2 returned', '1 excluded', 'Returned window below the 1,000-row cap']);
         await review(page, calendar, 'Vehicle-local calendar coverage', source, ['1 included rows']);
         await review(page, support, 'Evidence support and fit eligibility', source, ['samples per parameter']);
         await review(page, accounting, 'Returned-row accounting and recency', source);
-        const historyCall = context.fixtures.calls.find(call => call.pathname === '/drives');
-        expect(historyCall?.params.get('limit')).toBe('1000');
-        expect(historyCall?.params.get('vehicle_id')).toBe('7');
+        const historyCalls = context.fixtures.calls.filter(call => call.pathname === '/drives');
+        expect(historyCalls.map(call => [
+          call.params.get('vehicle_id'), call.params.get('limit'),
+          call.params.get('start'), call.params.get('end'),
+        ])).toContainEqual(['7', '1000', null, null]);
         await finish(page, context);
       });
 
@@ -359,23 +363,22 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await review(page, evidence, 'Evidence & confidence', source);
         await review(page, method, 'Coverage & methodology', source,
           ['Returned, eligible, and excluded counts reconcile']);
-        const call = context.fixtures.calls.find(item => item.pathname === '/drives');
-        expect(call?.params.get('start')).toBe('2026-08-01');
-        expect(call?.params.get('end')).toBe('2026-08-31');
-        expect(call?.params.get('limit')).toBe('1000');
+        const calls = context.fixtures.calls.filter(item => item.pathname === '/drives');
+        expect(calls.map(item => [
+          item.params.get('start'), item.params.get('end'), item.params.get('limit'),
+        ])).toContainEqual(['2026-08-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z', '1000']);
         await finish(page, context);
       });
 
       test(`ghost selection opens the real recorded duration/winner brief at ${width}px ${theme}`, async ({ page }) => {
         const context = await open(page, theme, width, '/segments');
-        await page.getByRole('option', { name: 'Open leaderboard for Home → Office', exact: true }).click();
+        await page.getByRole('button', { name: 'Open leaderboard for Home → Office', exact: true }).click();
         await waitForHarnessReady(page, context.mocks);
         const brief = page.getByTestId('segment-ghost-brief');
         await value(brief, 'attempt-a', '10:00');
         await value(brief, 'attempt-b', '11:00');
         await expect(metric(brief, 'winner')).toHaveAttribute('data-value-state', 'value');
         await expect(metric(brief, 'winner')).toContainText('Attempt A');
-        await expect(metric(brief, 'winner')).toContainText('Won by 1:00');
         await review(page, brief, 'Ghost Race',
           'Selected A/B ghost comparison response; charts retain independent telemetry samples and recorded margin.',
           ['Recorded attempt durations', 'Won by 1:00']);
@@ -407,10 +410,13 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
   test('failed speed source leaves its independently available drive coverage truthful', async ({ page }) => {
     const context = await open(page, 'dark', 1440, `/speed-profile?${DRIVING_WINDOW}`, { failProfile: true });
     const brief = page.getByTestId('speed-profile-brief');
-    await expect(brief).toContainText('Source unavailable');
+    await expect(brief).toContainText('Service unavailable');
+    await expect(brief.getByRole('button', { name: 'Retry', exact: true })).toBeVisible();
     await unknown(brief, 'average-speed');
     await unknown(brief, 'samples');
-    await expect(metric(brief, 'samples')).toContainText('3 drives analysed');
+    await review(page, brief, 'Speed summary metrics',
+      'Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage.',
+      ['4 empty fields are hidden.']);
     await finish(page, context, true);
   });
 
@@ -419,7 +425,9 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
     const brief = page.getByTestId('speed-profile-brief');
     await value(brief, 'average-speed', /^36(?:\.0{1,2})? km\/h$/);
     await value(brief, 'samples', '20');
-    await expect(metric(brief, 'samples')).toContainText('Drive sample coverage is unavailable independently of the speed profile.');
+    await review(page, brief, 'Speed summary metrics',
+      'Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage.',
+      ['Drive sample coverage is unavailable independently of the speed profile.']);
     await finish(page, context, true);
   });
 
@@ -449,7 +457,9 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
       rows: recordedRows.slice(0, 3), failRecovery: true,
     });
     const brief = page.getByTestId('regen-selected-window-summary');
-    await expect(brief).toContainText('Independent sources partly available');
+    await review(page, brief, 'Selected-window evidence',
+      'Complete recovery aggregate and independently returned capped drive detail.',
+      ['Independent sources partly available']);
     await unknown(brief, 'regen-aggregate-recovered');
     await value(brief, 'regen-returned-rows', '3');
     await value(brief, 'regen-eligible-coverage', '2/3');
@@ -501,7 +511,7 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
     await finish(page, context);
   });
 
-  test('zero charging duration retains the original dash as a valid plan value, not missing source', async ({ page }) => {
+  test('zero charging duration renders as a valid zero plan value, not missing source', async ({ page }) => {
     const context = await open(page, 'dark', 1440, '/trip-planner', {
       plan: {
         ...plannedTrip,
@@ -516,10 +526,10 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
     await page.getByRole('option', { name: 'Home', exact: true }).click();
     await page.getByRole('combobox', { name: 'To', exact: true }).fill('Office');
     await page.getByRole('option', { name: 'Office', exact: true }).click();
-    await page.getByRole('button', { name: 'Plan Trip', exact: true }).click();
+    await page.getByRole('button', { name: 'Plan trip', exact: true }).click();
     await waitForHarnessReady(page, context.mocks);
     const brief = page.getByTestId('trip-planner-brief');
-    await value(brief, 'chargingTime', '—');
+    await value(brief, 'chargingTime', '0m');
     await value(brief, 'cost', 'Free');
     await finish(page, context);
   });
@@ -533,13 +543,15 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         winner_drive_id: null, margin_s: 0,
       },
     });
-    await page.getByRole('option', { name: 'Open leaderboard for Home → Office', exact: true }).click();
+    await page.getByRole('button', { name: 'Open leaderboard for Home → Office', exact: true }).click();
     await waitForHarnessReady(page, context.mocks);
     const brief = page.getByTestId('segment-ghost-brief');
     await value(brief, 'winner', 'Dead heat');
     await value(brief, 'attempt-a', '10:00');
     await value(brief, 'attempt-b', '10:00');
-    await expect(metric(brief, 'winner')).toContainText('Identical recorded times.');
+    await review(page, brief, 'Ghost Race',
+      'Selected A/B ghost comparison response; charts retain independent telemetry samples and recorded margin.',
+      ['Identical recorded times.']);
     await finish(page, context);
   });
 });

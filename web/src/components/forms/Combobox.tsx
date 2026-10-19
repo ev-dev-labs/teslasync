@@ -355,8 +355,11 @@ export function Combobox<T>(props: ComboboxProps<T>) {
 
   const commitOption = useCallback(
     (opt: T) => {
-      onChange(opt);
+      // Text sync first: parents that clear stale selections on text change
+      // (e.g. trip-planner address fields) must see the commit text before
+      // the selection callback, or the trailing text sync wipes the pick.
       updateInputText(getOptionLabel(opt));
+      onChange(opt);
       setOpen(false);
       setActiveIndex(-1);
     },

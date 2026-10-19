@@ -137,7 +137,7 @@ export function RangeBufferSummaryBrief({
       description: t('rangeBuffer.accounting.subtitle', 'Every returned row enters exactly one primary category; optional context fields are counted separately.'),
       metrics: [
         count('returned', accounting.returnedRows, t('rangeBuffer.accounting.returned', 'Returned'),
-          t('rangeBuffer.accounting.cap', '{{limit}}-row request cap', { limit: accounting.historyLimit })),
+          t('rangeBuffer.accounting.cap', '{{limit}}-row request cap', { limit: fmtInt(accounting.historyLimit) })),
         count('included', accounting.includedRows, t('rangeBuffer.accounting.included', 'Included'),
           t('rangeBuffer.accounting.validArrival', 'valid completed arrival evidence')),
         count('incomplete', accounting.incompleteRows, t('rangeBuffer.accounting.incomplete', 'Incomplete'),
