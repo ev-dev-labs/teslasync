@@ -58,6 +58,12 @@ async function ready(page: Page, mocks: MockApiController | null, theme: Theme) 
 
 async function metric(brief: Locator, key: string, value: string | RegExp, state = 'value') {
   const item = brief.locator(`[data-operational-metric="${key}"]`);
+  if (state === 'missing') {
+    // Settled missing-state metrics are withheld as hidden empty fields,
+    // never rendered visibly (OperationalBrief visibleMetrics contract).
+    await expect(item).toHaveCount(0);
+    return;
+  }
   await expect(item).toHaveAttribute('data-value-state', state);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }

@@ -35,7 +35,8 @@ async function stormSources(page: Page, mocks: MockApiController | null) {
   });
   await page.route('**/api/v1/stormguard/events?*', async route => {
     expect(route.request().method()).toBe('GET');
-    expect(new URL(route.request().url()).search).toBe('?vehicle_id=7&limit=10');
+    // scopedPath sorts params canonically (limit before vehicle_id).
+    expect(new URL(route.request().url()).search).toBe('?limit=10&vehicle_id=7');
     await fulfillApiFixture(route, mocks, { json: stormEvents });
   });
 }

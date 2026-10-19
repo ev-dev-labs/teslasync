@@ -48,6 +48,12 @@ function brief(page: Page, id: string) {
 
 async function value(section: Locator, key: string, expected: string, state = 'value') {
   const metric = section.locator(`[data-operational-metric="${key}"]`);
+  if (state === 'missing') {
+    // Settled missing-state metrics are withheld as hidden empty fields,
+    // never rendered visibly (OperationalBrief visibleMetrics contract).
+    await expect(metric).toHaveCount(0);
+    return;
+  }
   await expect(metric).toHaveCount(1);
   await expect(metric).toHaveAttribute('data-value-state', state);
   await expect(metric.locator('[data-operational-value]')).toHaveText(expected);
@@ -293,7 +299,8 @@ for (const theme of ['light', 'dark'] as const) {
       const run = await open(page, theme, route);
       const ledger: SourceRequest[] = [];
       await strictSourceFixture(page, run.mocks, '/charging', {
-        vehicle_id: '7', limit: '200', start: '2026-08-01', end: '2026-08-31',
+        vehicle_id: '7', limit: '200', offset: '0',
+        start: '2026-08-01T00:00:00.000Z', end: '2026-09-01T00:00:00.000Z',
       }, () => ({ json: measuredWindow }), ledger);
       await page.goto(route);
       await waitForHarnessReady(page, run.mocks);
@@ -330,7 +337,7 @@ for (const theme of ['light', 'dark'] as const) {
       const route = `/charging-heatmap${analysisWindow}`;
       const run = await open(page, theme, route);
       await fixture(page, run.mocks, '/charging', [measuredWindow[0], incompleteSession], {
-        vehicle_id: '7', limit: '2000', start: '2026-08-01', end: '2026-08-31',
+        vehicle_id: '7', limit: '2000', start: '2026-08-01T00:00:00.000Z', end: '2026-09-01T00:00:00.000Z',
       });
       await page.goto(route);
       await waitForHarnessReady(page, run.mocks);
@@ -562,7 +569,7 @@ for (const theme of ['light', 'dark'] as const) {
       const route = `/cost-analysis${analysisWindow}`;
       const run = await open(page, theme, route);
       await fixture(page, run.mocks, '/charging', measuredWindow, {
-        vehicle_id: '7', limit: '1000', offset: '0', start: '2026-08-01', end: '2026-08-31',
+        vehicle_id: '7', limit: '1000', offset: '0', start: '2026-08-01T00:00:00.000Z', end: '2026-09-01T00:00:00.000Z',
       });
       await fixture(page, run.mocks, '/analytics/cost-forecast', costForecast, { vehicle_id: '7', months: '6' });
       await fixture(page, run.mocks, '/charging/bill-variance', billVariance, { vehicle_id: '7' });
@@ -961,7 +968,7 @@ for (const theme of ['light', 'dark'] as const) {
         const run = await open(page, theme, route);
         const ledger: SourceRequest[] = [];
         await strictSourceFixture(page, run.mocks, '/charging', {
-          vehicle_id: '7', limit: '1000', offset: '0', start: '2026-08-01', end: '2026-08-31',
+          vehicle_id: '7', limit: '1000', offset: '0', start: '2026-08-01T00:00:00.000Z', end: '2026-09-01T00:00:00.000Z',
         }, () => ({ json: scenario.sessions }), ledger);
         await strictSourceFixture(page, run.mocks, '/analytics/cost-forecast',
           { vehicle_id: '7', months: '6' }, () => ({ json: costForecast }), ledger);

@@ -182,7 +182,12 @@ export async function assertCatalogueAffectedAxes(
 export async function assertTwinWheelAndPhotoGeometry(
   panel: Locator, widgetId: string, motion: 'reduce' | 'no-preference', driving: boolean, svgFallback: boolean, info: TestInfo,
 ) {
-  const twin = panel.getByRole('img', { name: 'Vehicle digital twin showing current physical state', exact: true });
+  // Phase-3 twin root: div role img (non-interactive) labelled with the
+  // translated digitalTwin.title. Tag-qualified because the nested SVG
+  // carries the same title. Asserted visible first so a future label
+  // change fails loudly here instead of passing vacuously at rotor counts.
+  const twin = panel.locator('div[role="img"][aria-label="Digital twin"]');
+  await expect(twin).toBeVisible();
   await expect(twin.locator('[data-svg-wheel-rotor]')).toHaveCount(svgFallback ? 2 : 0);
   await expect(twin.locator('[data-wheel-rotor]')).toHaveCount(svgFallback ? 0 : 2);
   const rotorAttribute = svgFallback ? 'data-svg-wheel-rotor' : 'data-wheel-rotor';

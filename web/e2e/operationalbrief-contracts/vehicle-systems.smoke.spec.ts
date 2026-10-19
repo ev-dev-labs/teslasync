@@ -140,25 +140,31 @@ async function openPage(
   return mocks;
 }
 
-async function reviewDrawer(page: Page, brief: Locator, width: number) {
+async function reviewDrawer(page: Page, brief: Locator, width: number, scopes: readonly string[] = []) {
   await brief.scrollIntoViewIfNeeded();
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
   const items = brief.locator('[data-operational-metric]');
   expect(await items.count()).toBeGreaterThan(0);
-  const columns = await brief.getByRole('list').evaluate(node =>
-    getComputedStyle(node).gridTemplateColumns.split(' ').length);
-  expect(columns).toBe(width === 320 ? 1 : 3);
+  // Metrics chunk into flex bank rows of at most 3 (wrapping fluidly on
+  // narrow screens); pin the bank structure instead of grid columns.
+  const banks = brief.locator('[data-operational-metric-bank]');
+  expect(await banks.count()).toBeGreaterThan(0);
+  for (const bank of await banks.all()) {
+    const columns = Number(await bank.getAttribute('data-columns'));
+    expect(Number.isInteger(columns) && columns >= 1 && columns <= 3).toBe(true);
+  }
   const period = await brief.locator('xpath=..').getAttribute('data-source-period-kind');
   const retainedSource = await brief.locator('xpath=..').getAttribute('data-source-retained');
-  const sourceDescription = (await brief.locator('p').first().textContent())?.trim() ?? '';
   expect(['unknown', 'snapshot'], 'summary must declare its actual source period').toContain(period);
   if (period === 'unknown') await expect(brief).toContainText('Not a live-state observation');
+  // Label is the first child div's own text (MetricLabel renders flat);
+  // no detail element exists inline (details are drawer-only).
   const retained = await items.evaluateAll(nodes => nodes.map(node => ({
     id: node.getAttribute('data-operational-metric'),
     state: node.getAttribute('data-value-state'),
-    label: node.firstElementChild?.firstElementChild?.textContent?.trim() ?? '',
+    label: node.firstElementChild?.textContent?.trim() ?? '',
     value: node.querySelector('[data-operational-value]')?.textContent?.trim() ?? '',
-    detail: node.lastElementChild?.textContent?.trim() ?? '',
+    detail: '',
     links: Array.from(node.querySelectorAll<HTMLAnchorElement>('a[href]'))
       .map(link => ({ name: link.getAttribute('aria-label') ?? link.textContent?.trim() ?? '', href: link.getAttribute('href') ?? '' })),
   })));
@@ -170,8 +176,16 @@ async function reviewDrawer(page: Page, brief: Locator, width: number) {
   await expect(drawer).toBeVisible();
   await expect(drawer).toHaveAttribute('aria-modal', 'true');
   await expect(drawer).toHaveAccessibleName(/ details$/);
-  expect(sourceDescription).not.toBe('');
-  await expect(drawer).toHaveAccessibleDescription(sourceDescription);
+  // The drawer carries the brief description (never rendered inline).
+  const describedBy = await drawer.getAttribute('aria-describedby');
+  expect(describedBy, 'drawer must expose its description').not.toBeNull();
+  const drawerDescription = describedBy
+    ? ((await page.locator(`[id="${describedBy}"]`).first().textContent())?.trim() ?? '')
+    : '';
+  expect(drawerDescription).not.toBe('');
+  for (const scope of scopes) {
+    await expect(drawer).toContainText(scope);
+  }
   await expect(drawer.getByText('Operational metrics', { exact: true })).toBeVisible();
   for (const fact of retained) {
     expect(fact.label, `metric ${fact.id} must preserve its label`).not.toBe('');
@@ -198,20 +212,28 @@ async function reviewDrawer(page: Page, brief: Locator, width: number) {
   expect(await items.evaluateAll(nodes => nodes.map(node => ({
     id: node.getAttribute('data-operational-metric'),
     state: node.getAttribute('data-value-state'),
-    label: node.firstElementChild?.firstElementChild?.textContent?.trim() ?? '',
+    label: node.firstElementChild?.textContent?.trim() ?? '',
     value: node.querySelector('[data-operational-value]')?.textContent?.trim() ?? '',
-    detail: node.lastElementChild?.textContent?.trim() ?? '',
+    detail: '',
     links: Array.from(node.querySelectorAll<HTMLAnchorElement>('a[href]'))
       .map(link => ({ name: link.getAttribute('aria-label') ?? link.textContent?.trim() ?? '', href: link.getAttribute('href') ?? '' })),
   })))).toEqual(retained);
 }
 
-async function assertOperands(page: Page, contract: RootContract) {
+async function assertOperands(page: Page, contract: RootContract): Promise<ReadonlyMap<string, readonly string[]>> {
+  // Drawer scopes per brief testid: metric details render in the Review
+  // drawer, not inline (the brief shows labels + values by contract).
+  const scopes = new Map<string, string[]>();
+  const drawer = (bandId: string, ...texts: string[]) => {
+    scopes.set(bandId, [...(scopes.get(bandId) ?? []), ...texts]);
+  };
   switch (contract.root) {
     case 'CabinThermalPage':
       await reading(page.getByTestId('cabin-thermal-evidence'), 'cabin-thermal-returned', '12');
       await reading(page.getByTestId('cabin-thermal-evidence'), 'cabin-thermal-normalized', '8');
-      await reading(page.getByTestId('cabin-thermal-evidence'), 'cabin-thermal-tau', '—', 'missing');
+      // Withheld without an accepted fit: tau never renders as a visible
+      // missing metric (evidence-bank preservation contract).
+      await expect(metric(page.getByTestId('cabin-thermal-evidence'), 'cabin-thermal-tau')).toHaveCount(0);
       break;
     case 'ComfortConsistencyPage': {
       await reading(page.getByTestId('comfort-consistency-evidence'), 'analyzed-samples', '5');
@@ -242,22 +264,23 @@ async function assertOperands(page: Page, contract: RootContract) {
       await reading(duty, 'on-samples', '7');
       await reading(duty, 'off-samples', '1');
       await reading(duty, 'duty', '78.26%');
-      await expect(duty).toContainText('sample counts remain a separate evidence layer');
+      drawer('hvac-cycling-duty-summary', 'sample counts remain a separate evidence layer');
       break;
     }
     case 'PreconditioningEffectivenessPage':
       await reading(page.getByTestId('preconditioning-climate-source-summary'), 'returned', '12');
       await reading(page.getByTestId('preconditioning-drive-source-summary'), 'returned', '0');
-      await reading(page.getByTestId('preconditioning-evidence'), 'readiness-difference', '—', 'missing');
+      // Withheld without both climate and drive evidence: never a visible
+      // missing metric (evidence-bank preservation contract).
+      await expect(metric(page.getByTestId('preconditioning-evidence'), 'readiness-difference')).toHaveCount(0);
       break;
     case 'TirePressurePage': {
       const brief = page.getByTestId('tire-pressure-summary');
       await reading(brief, 'tire-pressure-average', '2.90 bar');
       await reading(brief, 'tire-pressure-minimum', '2.80 bar');
       await reading(brief, 'tire-pressure-warning-count', '0');
-      await expect(metric(brief, 'tire-pressure-warning-count')).toContainText('2 of 4 corners reported');
-      await expect(metric(brief, 'tire-pressure-average')).toContainText('Missing corners are excluded.');
-      await expect(metric(brief, 'tire-pressure-range-last-updated')).toContainText('not the observation time');
+      drawer('tire-pressure-summary', '2 of 4 corners reported', 'Missing corners are excluded.',
+        'not the observation time');
       break;
     }
     case 'TireDifferentialDriftPage':
@@ -271,8 +294,7 @@ async function assertOperands(page: Page, contract: RootContract) {
       await reading(brief, 'media-top-source', 'Bluetooth');
       await reading(brief, 'media-average-volume', '4');
       await reading(brief, 'media-volume-step', '0.00');
-      await expect(metric(brief, 'media-average-volume')).toContainText('Missing readings are excluded.');
-      await expect(brief).toContainText('not complete listening time');
+      drawer('media-listening-stats', 'Missing readings are excluded.', 'not complete listening time');
       break;
     }
     case 'SafetySettingsPage': {
@@ -293,7 +315,7 @@ async function assertOperands(page: Page, contract: RootContract) {
       await reading(brief, 'software-installed', '2');
       await reading(brief, 'software-pending', '1');
       await reading(brief, 'software-average-cadence', '10d');
-      await expect(brief).toContainText('not the complete fleet history');
+      drawer('software-update-summary', 'not the complete fleet history');
       break;
     }
     case 'MaintenancePage':
@@ -309,8 +331,7 @@ async function assertOperands(page: Page, contract: RootContract) {
       await reading(page.getByTestId('guard-overview'), 'guard-lock', 'Unlocked');
       await reading(page.getByTestId('guard-overview'), 'guard-state', 'Disarmed');
       await reading(page.getByTestId('guard-overview'), 'guard-total', '0');
-      await expect(metric(page.getByTestId('guard-overview'), 'guard-state'))
-        .toContainText('not confirmation of active monitoring');
+      drawer('guard-overview', 'not confirmation of active monitoring');
       break;
     case 'ClimateControlPage':
       await reading(page.getByTestId('climate-systems-stats'), 'climate-systems-stats-0', 'Off');
@@ -319,6 +340,7 @@ async function assertOperands(page: Page, contract: RootContract) {
         .toHaveCount(3);
       break;
   }
+  return scopes;
 }
 
 for (const theme of ['light', 'dark'] as const) {
@@ -328,11 +350,11 @@ for (const theme of ['light', 'dark'] as const) {
         test.setTimeout(120_000);
         const diagnostics = monitorPage(page);
         const mocks = await openPage(page, theme, width, contract, 'populated');
-        await assertOperands(page, contract);
+        const scopes = await assertOperands(page, contract);
         for (const band of contract.bands) {
           const briefs = page.getByTestId(band.id);
           await expect(briefs).toHaveCount(band.instances ?? 1);
-          for (const brief of await briefs.all()) await reviewDrawer(page, brief, width);
+          for (const brief of await briefs.all()) await reviewDrawer(page, brief, width, scopes.get(band.id) ?? []);
         }
         await expectNoHorizontalOverflow(page);
         await expectNoRuntimeFailures(diagnostics);
@@ -355,7 +377,10 @@ for (const theme of ['light', 'dark'] as const) {
         const mocks = await openPage(page, theme, width, contract, 'empty');
         const brief = page.getByTestId(band);
         await reading(brief, zero, '0');
-        await reading(brief, missing, '—', 'missing');
+        // Withheld inferences are hidden empty fields disclosed in the
+        // Review drawer, never visible missing metrics (evidence-bank
+        // preservation contract): the observed zero above must stand alone.
+        await expect(metric(brief, missing)).toHaveCount(0);
         await reviewDrawer(page, brief, width);
         await expectNoHorizontalOverflow(page);
         await expectNoRuntimeFailures(diagnostics);

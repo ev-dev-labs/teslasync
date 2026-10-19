@@ -465,24 +465,33 @@ for (const [batch, ids] of Object.entries(batches)) {
             await test.info().attach(`${widget.widgetId}-geometry.json`, {
               body: Buffer.from(JSON.stringify(geometry)), contentType: 'application/json',
             });
+            // Sentry feedback is the only measured node (charge feedback is a
+            // static path, pinned below for the charging batch).
+            expect(geometry[0].length).toBe(1);
             for (let index = 0; index < geometry[0].length; index++) {
               const frames = geometry.map(sample => sample[index]);
               for (const frame of frames) {
                 expect(Number.isFinite(frame.rx) && Number.isFinite(frame.ry)).toBe(true);
-                expect(frame.rx).toBe(index === 0 ? 16 : 190);
-                expect(frame.ry).toBe(index === 0 ? 7 : 16);
+                expect(frame.rx).toBe(16);
+                expect(frame.ry).toBe(7);
                 expect(Number.isFinite(frame.x) && Number.isFinite(frame.y)).toBe(true);
                 for (const radius of frame.circles) {
                   expect(Number.isFinite(radius) && radius >= 0, 'SVG circle radius must stay finite').toBe(true);
                 }
               }
               expect(Math.max(...frames.map(frame => frame.x)) - Math.min(...frames.map(frame => frame.x)),
-                'Animated geometry must retain its horizontal center').toBeLessThanOrEqual(1);
+                'Twin geometry must retain its horizontal center').toBeLessThanOrEqual(1);
               expect(Math.max(...frames.map(frame => frame.y)) - Math.min(...frames.map(frame => frame.y)),
-                'Animated geometry must retain its vertical center').toBeLessThanOrEqual(1);
-              if (motion === 'no-preference') {
-                expect(new Set(frames.map(frame => frame.transform)).size, 'Actual animation frames must change').toBeGreaterThan(1);
-              }
+                'Twin geometry must retain its vertical center').toBeLessThanOrEqual(1);
+              // Charge/sentry feedback is static in both motion modes by unit
+              // contract (VehicleTwin "finite and static" pin): the ellipse
+              // parent must not move across frames.
+              expect(new Set(frames.map(frame => frame.transform)).size, 'Twin feedback stays static').toBe(1);
+            }
+            if (batch === 'vehicle-twin-charging') {
+              const underglow = panel.locator('path[d="M 152 246 C 240 253 360 253 446 244"]');
+              await expect(underglow).toHaveCount(1);
+              await expect(underglow).toHaveAttribute('opacity', '0.45');
             }
           }
           if (width === 1440 && widget.widgetId === 'system-health') {

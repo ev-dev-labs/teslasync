@@ -5017,7 +5017,9 @@
         "evidenceLimit": "Supporting evidence is limited to the five most recent retained snapshots.",
         "analyticsMethod": "Models state of health and degradation from retained battery snapshots.",
         "chargingSource": "Charging history",
-        "chargingMethod": "Measures fast-charge, depth-of-discharge, and cycle exposure from recorded sessions."
+        "chargingMethod": "Measures fast-charge, depth-of-discharge, and cycle exposure from recorded sessions.",
+        "bmsSource": "BMS telemetry",
+        "bmsMethod": "Latest available BMS telemetry."
       }
     },
     "energy": {

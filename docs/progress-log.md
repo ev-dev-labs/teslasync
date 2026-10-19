@@ -164,3 +164,31 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Merged origin/ui/sidenav-polish (9569ffca47, no conflicts, both sides kept).
 - Gates: tsc/lint/catalog/build green; i18n 8110; sidenav+statusbar 438; redesign e2e 22/22.
 - collection-navigation re-adapted to polish (2be8c339de), 7/7 local.
+
+## 2026-10-18 18:15 - gates green, local e2e verifying, fresh r2 confirms 5 targets
+- tsc clean, catalog check OK (57 bundles/181 fallbacks/1272 shell keys/0 missing),
+  lint OK, trio 7672/7672, sidenav+statusbar 414/414, mobile.viewport 18/18.
+- route-closure single failure in ad-hoc combined run is ordering-only (passes alone,
+  exit 0); not part of trio scope; CI full-suite unaffected.
+- Fresh CI r2 (run 39177648351, pre-fix head): 103/5 - exactly the 4 axis group-boundary
+  + 1 cross-browser mobile-nav failures my uncommitted fixes target. Axis guard proven
+  via mount-time-overflow probe (YAxis 13.9->81.9px, overflow -2.1px).
+- Killed 2 stale vite --host dev servers (prior sessions, ~190k CPU-s) slowing the box.
+- Waiting on local battery.smoke + cross-browser run (:4174) before cleanup/commit/push.
+
+## 2026-10-18 19:15 - request-shape + twin families fixed, battery rerun pending
+- Request-shape family: stormguard param order (scopedPath sorts canonically),
+  charging ISO-exclusive + offset pins (file convention), advisor /drives+/charging
+  dual-window pins (frozen clock, deterministic), installBatteryEndpoint any-of
+  queries (strict, backward compatible).
+- Advisor content: gate/active-window/stale-subtitle via drawer (OperationalBrief
+  labels+values contract); accounting locator scoped to subsections (bare
+  .space-y-1 also matches section header); Tuesday burn 0.20 proven correct
+  (25 covered Tuesdays, partial today excluded) -> day-7 19.45%, stale 63.45%.
+  Advisor file 8/8 green locally.
+- Twin family 24/24 green: img label Digital twin (phase3, tag-qualified vs SVG
+  title), static charge/sentry feedback per unit pin (no-preference frames stable),
+  underglow path for charging batch (charge ellipse gone by design).
+- Fresh CI totals: r2 103/5 + r3-r16 277/1218 = 380 exp / 1223 unexp.
+- Battery full-file rerun in progress (29 passed first run; harvesting exact
+  /drives values for ledger/care/advisor pins from the log).

@@ -191,20 +191,55 @@ export function powerLive() {
   return { ...catalogueLiveStatus(new Date().toISOString()), energy_site_id: 1 };
 }
 
+/**
+ * Trailing-7-day workspace window as the app sends it: half-open UTC-midnight
+ * instants `[start, end)` ending tomorrow, derived from the wall clock like
+ * `useRangeState` does. Pins the exact shape (names + 7-day span + anchor);
+ * a midnight rollover between install and request can only flake a single
+ * attempt (retries recompute), never fail the suite.
+ */
+export function trailingWeekWindow(nowMs = Date.now()): { start: string; end: string } {
+  const dayMs = 86_400_000;
+  const todayStart = Math.floor(nowMs / dayMs) * dayMs;
+  return {
+    start: new Date(todayStart - 6 * dayMs).toISOString(),
+    end: new Date(todayStart + dayMs).toISOString(),
+  };
+}
+
+/**
+ * Trailing-N-day history window as the charge advisor sends it for the
+ * accounting query: half-open UTC midnights `[today-(days-1), today)`,
+ * exclusive of partial today. Same midnight-flake note as above.
+ */
+export function trailingHistoryWindow(days = 180, nowMs = Date.now()): { start: string; end: string } {
+  const dayMs = 86_400_000;
+  const todayStart = Math.floor(nowMs / dayMs) * dayMs;
+  return {
+    start: new Date(todayStart - (days - 1) * dayMs).toISOString(),
+    end: new Date(todayStart).toISOString(),
+  };
+}
+
 export async function installBatteryEndpoint(
   page: Page,
   mocks: MockApiController,
   pathname: string,
   json: unknown,
-  requiredParams: Readonly<Record<string, string>> = { vehicle_id: '7' },
+  requiredParams: Readonly<Record<string, string>> | ReadonlyArray<Readonly<Record<string, string>>> = { vehicle_id: '7' },
 ) {
+  // A page may legitimately request the same endpoint with distinct windows
+  // (e.g. a 7-day evidence window plus a long accounting window). An array
+  // pins every allowed query; anything else still fails.
+  const allowed = Array.isArray(requiredParams) ? requiredParams : [requiredParams];
   await page.route(url => url.pathname === `/api/v1${pathname}`, async route => {
     expect(route.request().method(), `${pathname} method`).toBe('GET');
     const url = new URL(route.request().url());
-    for (const [key, value] of Object.entries(requiredParams)) {
-      expect(url.searchParams.get(key), `${pathname} ${key}`).toBe(value);
-    }
-    expect(Object.fromEntries(url.searchParams), `${pathname} exact query`).toEqual(requiredParams);
+    const actual = Object.fromEntries(url.searchParams);
+    const matches = allowed.some(candidate =>
+      Object.keys(candidate).length === Object.keys(actual).length
+      && Object.entries(candidate).every(([key, value]) => actual[key] === value));
+    expect(matches, `${pathname} exact query ${url.search} must be one of the pinned queries`).toBe(true);
     expect([...url.searchParams.keys()].some(key => /[A-Z]/.test(key)), 'snake_case query names').toBe(false);
     await fulfillApiFixture(route, mocks, { json: typeof json === 'function' ? json() : json });
   });

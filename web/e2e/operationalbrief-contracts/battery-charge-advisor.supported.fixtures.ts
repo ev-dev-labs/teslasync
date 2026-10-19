@@ -92,17 +92,27 @@ export async function installSupportedAdvisorSources(
     timezone_user: 'UTC',
     tz_display_default: 'vehicle',
   }, {});
-  await installBatteryEndpoint(page, mocks, '/drives', qualifiedAdvisorDrives, {
-    vehicle_id: '7', limit: '1000',
-  });
+  await installBatteryEndpoint(page, mocks, '/drives', qualifiedAdvisorDrives, [
+    {
+      vehicle_id: '7', limit: '1000',
+      start: '2026-05-27T00:00:00.000Z', end: '2026-06-03T00:00:00.000Z',
+    },
+    {
+      vehicle_id: '7', limit: '1000', offset: '0',
+      start: '2025-12-05T00:00:00.000Z', end: '2026-06-02T00:00:00.000Z',
+    },
+  ]);
   await installBatteryEndpoint(page, mocks, '/charging', qualifiedAdvisorCharging, {
     vehicle_id: '7', limit: '1000',
+    start: '2026-05-27T00:00:00.000Z', end: '2026-06-03T00:00:00.000Z',
   });
   await installBatteryEndpoint(page, mocks, '/signals/7/live', getLive, {});
 }
 
-// Source calculation: weekday means are 0.20,0.20,0.38,0.19,0.19,0.19,0.19;
-// calendar-day p75 is zero for every weekday (zero-driving days stay in denominators).
+// Source calculation: weekday mean burns are Wed 0.20, Thu 0.20, Fri 0.38,
+// Sat 0.19, Sun 0.19, Mon 0.19, Tue 0.20 (Tuesday's single 5% drop spreads
+// over 25 covered Tuesdays: partial today Jun 2 is excluded from coverage).
+// Calendar-day p75 is zero for every weekday (zero-driving days stay in denominators).
 export const advisorReserveExpectations = [
   { floor: 10, meanDays: null, p75Days: null, guidance: 'No immediate need' },
   { floor: 20, meanDays: 5, p75Days: null, guidance: 'Monitor the threshold' },
@@ -110,5 +120,5 @@ export const advisorReserveExpectations = [
 ] as const;
 
 export const advisorMeanEndSoc = [
-  '20.80%', '20.60%', '20.22%', '20.03%', '19.84%', '19.65%', '19.46%',
+  '20.80%', '20.60%', '20.22%', '20.03%', '19.84%', '19.65%', '19.45%',
 ] as const;

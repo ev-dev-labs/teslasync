@@ -34,7 +34,9 @@ test('drive report retains its action controls', async ({ page }) => {
   await page.goto(path);
   await waitForHarnessReady(page, mocks);
   const report = page.locator('main');
-  await expect(report.getByRole('group', { name: 'Drive summary', exact: true })).toBeVisible();
+  // The 'Drive summary' group is gone by design (single-heading layout per
+  // HeroGauges unit contract); gate on the Actions group holding Share/Replay.
+  await expect(report.getByRole('group', { name: 'Actions', exact: true })).toBeVisible();
   await report.getByRole('button', { name: 'Share', exact: true }).click();
   const share = page.getByRole('dialog');
   await expect(share).toBeVisible();
@@ -50,7 +52,8 @@ test('drive report retains its action controls', async ({ page }) => {
   await expect(share.getByText('Synthetic commute', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(share).toHaveCount(0);
-  await report.getByRole('button', { name: 'Replay', exact: true }).click();
+  // Replay navigates: it is a link, not a button.
+  await report.getByRole('link', { name: 'Replay', exact: true }).click();
   await waitForHarnessReady(page, mocks);
   await expect(page).toHaveURL(new RegExp(`/drives/${DRIVE_DETAIL_ID}/replay$`));
   await expect(page.locator('main').getByRole('heading', { level: 1 })).toBeVisible();

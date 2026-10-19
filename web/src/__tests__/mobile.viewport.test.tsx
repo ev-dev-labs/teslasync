@@ -135,7 +135,7 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     expect(close!.className).toMatch(/\bw-11\b/);
   });
 
-  it('BottomTabBar carries safe-bottom + per-tab 44 px touch targets', () => {
+  it('BottomTabBar carries safe-bottom + per-tab 60 px touch targets', () => {
     patchMatchMedia(() => false);
     render(
       <MemoryRouter initialEntries={['/']}>
@@ -156,11 +156,12 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
       /@media\s*\(min-width:\s*768px\)\s*\{\s*\.sidenav-phone-tabs\s*\{\s*display:\s*none;?\s*\}\s*\}/,
     );
     // Every tab button must satisfy WCAG 2.5.5 minimum touch-target size:
-    // `sidenav-phone-tab` floors height at 44px and `flex: 1` spreads the
-    // five tabs across the full viewport width.
+    // `sidenav-phone-tab` floors height at 60px (sidenav polish preserves
+    // the full icon plus touch size) and `flex: 1` spreads the five tabs
+    // across the full viewport width.
     const tabs = nav!.querySelectorAll('button[aria-label]');
     expect(tabs.length).toBeGreaterThanOrEqual(5);
-    expect(sidenavCss).toMatch(/\.sidenav-phone-tab\s*\{[^}]*min-height:\s*44px/);
+    expect(sidenavCss).toMatch(/\.sidenav-phone-tab\s*\{[^}]*min-height:\s*60px/);
     expect(sidenavCss).toMatch(/\.sidenav-phone-tab\s*\{[^}]*flex:\s*1;/);
     tabs.forEach((tab) => {
       expect(tab).toHaveClass('sidenav-phone-tab');

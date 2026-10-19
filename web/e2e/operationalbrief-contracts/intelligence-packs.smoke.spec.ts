@@ -138,7 +138,8 @@ async function openMarketplace(page: Page, width: number, theme: Theme): Promise
   await expect(page.getByRole('heading', { level: 1, name: 'Intelligence-pack marketplace' })).toBeVisible();
   await expect(page.getByRole('tablist', { name: 'Intelligence-pack marketplace sections', exact: true })
     .getByRole('tab')).toHaveText([
-    'Catalog', 'Installed', 'Sandbox preview', 'Audit log', 'Import / export', 'Security & methodology',
+    // Catalog Title Case wins over the sentence-case source fallback.
+    'Catalog', 'Installed', 'Sandbox preview', 'Audit log', 'Import / export', 'Security & Methodology',
   ]);
   return api;
 }
@@ -384,7 +385,7 @@ for (const width of [320, 1440]) {
       await expect(page.getByText('trust-decision', { exact: true })).toBeVisible();
       await expect(page.getByText('disable', { exact: true })).toBeVisible();
       await expect(page.getByText('enable', { exact: true })).toBeVisible();
-      await selectTab(page, 'Security & methodology');
+      await selectTab(page, 'Security & Methodology');
       await expect(page.getByText(/The sandbox proves computational safety, not real-world analytical correctness/)).toBeVisible();
       await expect(page.getByRole('table', { name: 'Resource ceilings & budgets in this build', exact: true })).toBeVisible();
 

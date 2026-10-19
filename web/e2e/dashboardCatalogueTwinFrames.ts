@@ -3,13 +3,16 @@ import type { Locator } from '@playwright/test';
 export async function captureCatalogueTwinFrames(panel: Locator, chargingMode: boolean) {
   return panel.evaluate(async (element, charging) => {
     const sentry = element.querySelector<SVGEllipseElement>('ellipse[cx="320"][cy="91"]');
-    const charge = element.querySelector<SVGEllipseElement>('ellipse[cx="298"][cy="255"]');
+    // Charge feedback is a static underglow path since phase3 (the charge
+    // ellipse is gone by design); require it in charging mode, measure the
+    // sentry node for frame stability in all modes.
+    const underglow = element.querySelector('path[d="M 152 246 C 240 253 360 253 446 244"]');
     const main = element.closest('main');
     const widget = element.closest('[data-widget-id]');
-    if (!sentry || (charging && !charge) || !main || !widget) {
+    if (!sentry || (charging && !underglow) || !main || !widget) {
       throw new Error('Missing active twin geometry or scroll/grid ancestors');
     }
-    const nodes = [sentry, ...(charging && charge ? [charge] : [])];
+    const nodes = [sentry];
     const measure = (node: Element) => {
       const rect = node.getBoundingClientRect();
       const css = getComputedStyle(node);

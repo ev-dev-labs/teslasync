@@ -3907,6 +3907,8 @@
       "healthDetail": "Current modeled health relative to the original usable pack.",
       "narrative": {
         "analyticsMethod": "Models state of health and degradation from retained battery snapshots.",
+        "bmsMethod": "Latest available BMS telemetry.",
+        "bmsSource": "BMS telemetry",
         "causeLimitation": "Capacity history can identify a trend but does not diagnose the physical cause of degradation.",
         "chargingMethod": "Measures fast-charge, depth-of-discharge, and cycle exposure from recorded sessions.",
         "chargingResponse": "Review repeated fast charging and deep discharge exposure before the pattern continues.",

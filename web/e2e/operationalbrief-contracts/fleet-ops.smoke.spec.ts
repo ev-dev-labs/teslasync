@@ -72,7 +72,7 @@ async function expectBriefFits(page: Page) {
     const bounds = root.getBoundingClientRect();
     return {
       left: bounds.left, right: bounds.right, width: innerWidth,
-      metrics: [...root.querySelector<HTMLElement>('[data-operational-metric]')].map((node) => {
+      metrics: [...root.querySelectorAll<HTMLElement>('[data-operational-metric]')].map((node) => {
         const box = node.getBoundingClientRect();
         return {
           key: node.dataset.operationalMetric, left: box.left, right: box.right,
@@ -105,6 +105,7 @@ async function setup(
   theme: 'light' | 'dark',
   fixture: FleetOpsFixtures,
   failures: SourceResource[] = [],
+  expectedMetricCount = 4,
 ) {
   expect(ROUTE_REGISTRY.find((entry) => entry.path === fleetRoute)?.name).toBe('FleetOperations');
   await page.clock.setFixedTime(new Date(fleetNow));
@@ -142,7 +143,9 @@ async function setup(
   await page.goto(fleetRoute);
   await waitForHarnessReady(page, mocks);
   await expect(brief(page)).toHaveAttribute('data-operational-brief', 'true');
-  await expect(brief(page).locator('[data-operational-metric]')).toHaveCount(4);
+  // Withheld (non-value) metrics never render: scenarios with an unknown
+  // source pin 3, not 4.
+  await expect(brief(page).locator('[data-operational-metric]')).toHaveCount(expectedMetricCount);
   await expectThemeApplied(page, theme);
   return { mocks, control };
 }
@@ -157,35 +160,41 @@ async function expectSourceLedger(mocks: MockApiController) {
     .every((request) => request.method === 'GET' && request.disposition === 'fulfilled')).toBe(true);
 }
 
-async function expectPopulatedSummary(page: Page) {
+async function expectPopulatedSummary(page: Page): Promise<string[]> {
   for (const key of ['reservations', 'assignments', 'work-orders'] as const) {
     await expectValue(page, key, '2');
-    await expect(metric(page, key)).toContainText('Operational lists are not date-filtered.');
-    await expect(metric(page, key)).toContainText('Loaded source data');
-    await expect(metric(page, key)).toContainText(`Received ${formatDateTime(fleetNow, dateOptions)}`);
   }
-  await expect(metric(page, 'reservations')).toContainText('4 loaded of 4 source records; offset 0, limit 100');
-  await expect(metric(page, 'assignments')).toContainText('3 loaded of 3 source records; offset 0, limit 100');
-  await expect(metric(page, 'work-orders')).toContainText('4 loaded of 4 source records; offset 0, limit 100');
-  await expect(metric(page, 'assignments')).toContainText('not a count of assignments active at this instant');
   await expectValue(page, 'forecast', '40.3%');
-  await expect(metric(page, 'forecast')).toContainText(sourceWindow);
-  await expect(metric(page, 'forecast')).toContainText('14-day fleet average');
-  await expect(metric(page, 'forecast')).toContainText('3 returned vehicle-day points');
-  await expect(metric(page, 'forecast')).toContainText('Forecast limitations: Moderate history.');
-  await expect(metric(page, 'forecast')).toContainText(
-    `Forecast generated ${formatDateTime('2026-10-06T11:00:00Z', dateOptions)}`,
-  );
-  await expect(brief(page)).toContainText('Fleet-wide · Loaded operational records');
-  await expect(brief(page)).toContainText('Independent source snapshots');
   await expect(brief(page)).not.toHaveAttribute('aria-busy', 'true');
   // The released band has no metric href or action slot. Do not invent one.
   await expect(brief(page).getByRole('link')).toHaveCount(0);
+  // Scope, description, and metric details render in the Review drawer, not
+  // inline (the brief shows title + labels + values by contract).
+  return [
+    'Fleet-wide · Loaded operational records',
+    'Independent source snapshots',
+    'Operational lists are not date-filtered.',
+    'Loaded source data',
+    `Received ${formatDateTime(fleetNow, dateOptions)}`,
+    '4 loaded of 4 source records; offset 0, limit 100',
+    '3 loaded of 3 source records; offset 0, limit 100',
+    'not a count of assignments active at this instant',
+    sourceWindow,
+    '14-day fleet average',
+    '3 returned vehicle-day points',
+    'Forecast limitations: Moderate history.',
+    `Forecast generated ${formatDateTime('2026-10-06T11:00:00Z', dateOptions)}`,
+  ];
 }
 
-async function reviewDetails(page: Page, width: number) {
+async function reviewDetails(
+  page: Page,
+  width: number,
+  expectedKeys: readonly MetricKey[] = keys,
+  scopes: readonly (string | RegExp)[] = [],
+) {
   const review = brief(page).getByRole('button', { name: 'Review details', exact: true });
-  const contextBefore = await Promise.all(keys.map((key) => metric(page, key).textContent()));
+  const contextBefore = await Promise.all(expectedKeys.map((key) => metric(page, key).textContent()));
   await review.focus();
   await expect(review).toBeFocused();
   await page.keyboard.press('Enter');
@@ -196,6 +205,9 @@ async function reviewDetails(page: Page, width: number) {
   for (const context of contextBefore) {
     if (context == null) throw new Error('Published metric context is missing');
     await expect(drawer).toContainText(context);
+  }
+  for (const scope of scopes) {
+    await expect(drawer).toContainText(scope);
   }
   const closeButtons = drawer.getByRole('button', { name: 'Close', exact: true });
   await expect(closeButtons).toHaveCount(2);
@@ -216,7 +228,7 @@ async function reviewDetails(page: Page, width: number) {
   await page.keyboard.press('Escape');
   await expect(drawer).toHaveCount(0);
   await expect(review).toBeFocused();
-  expect(await Promise.all(keys.map((key) => metric(page, key).textContent()))).toEqual(contextBefore);
+  expect(await Promise.all(expectedKeys.map((key) => metric(page, key).textContent()))).toEqual(contextBefore);
 }
 
 async function expectOnlySourceFailures(diagnostics: PageDiagnostics, resources: SourceResource[]) {
@@ -243,9 +255,9 @@ for (const theme of ['light', 'dark'] as const) {
       test('preserves loaded operands, independent windows and keyboard Review details', async ({ page }) => {
         const diagnostics = monitorPage(page);
         const { mocks } = await setup(page, theme, fleetOpsFixtures());
-        await expectPopulatedSummary(page);
+        const scopes = await expectPopulatedSummary(page);
         await expectBriefFits(page);
-        await reviewDetails(page, width);
+        await reviewDetails(page, width, keys, scopes);
         await expectSourceLedger(mocks);
         await expectNoRuntimeFailures(diagnostics);
         await assertMockApiComplete(page, mocks);
@@ -253,17 +265,19 @@ for (const theme of ['light', 'dark'] as const) {
 
       test('successful empty lists publish real zero while an empty forecast stays unknown', async ({ page }) => {
         const diagnostics = monitorPage(page);
-        const { mocks } = await setup(page, theme, fleetOpsFixtures('empty'));
+        const { mocks } = await setup(page, theme, fleetOpsFixtures('empty'), [], 3);
         for (const key of ['reservations', 'assignments', 'work-orders'] as const) {
           await expectValue(page, key, '0');
-          await expect(metric(page, key)).toContainText('0 loaded of 0 source records; offset 0, limit 100');
-          await expect(metric(page, key)).toContainText('Loaded source data');
         }
-        await expectValue(page, 'forecast', '—', 'missing');
-        await expect(metric(page, 'forecast')).toContainText('0 returned vehicle-day points');
-        await expect(metric(page, 'forecast')).toContainText(sourceWindow);
-        await expect(brief(page)).toContainText('Partial source coverage');
-        await reviewDetails(page, width);
+        // The unknown forecast is withheld, never a zero or a '—' placeholder.
+        await expect(metric(page, 'forecast')).toHaveCount(0);
+        // Status, scope, and metric details render in the drawer, not the brief.
+        await reviewDetails(page, width, ['reservations', 'assignments', 'work-orders'], [
+          'Partial source coverage',
+          '0 loaded of 0 source records; offset 0, limit 100',
+          'Loaded source data',
+          '1 empty field is hidden.',
+        ]);
         await expectBriefFits(page);
         await expectSourceLedger(mocks);
         await expectNoRuntimeFailures(diagnostics);
@@ -274,10 +288,9 @@ for (const theme of ['light', 'dark'] as const) {
         const diagnostics = monitorPage(page);
         const { mocks } = await setup(page, theme, fleetOpsFixtures('zeroForecast'));
         await expectValue(page, 'forecast', '0.0%');
-        await expect(metric(page, 'forecast')).toContainText('1 returned vehicle-day points');
-        await expect(brief(page)).toContainText('Loaded source data');
+        // Status renders in the drawer header, not the brief.
+        await reviewDetails(page, width, keys, ['1 returned vehicle-day points', 'Loaded source data']);
         await expect(brief(page)).not.toContainText('Partial source coverage');
-        await reviewDetails(page, width);
         await expectBriefFits(page);
         await expectSourceLedger(mocks);
         await expectNoRuntimeFailures(diagnostics);
@@ -288,17 +301,18 @@ for (const theme of ['light', 'dark'] as const) {
         test(`unavailable ${unavailableKey} source remains unknown without blanking independent metrics`, async ({ page }) => {
           test.setTimeout(90_000);
           const diagnostics = monitorPage(page);
-          const { mocks } = await setup(page, theme, fleetOpsFixtures(), [resource]);
-          await expectValue(page, unavailableKey, '—', 'missing');
-          await expect(metric(page, unavailableKey)).toContainText('Source unavailable');
-          await expect(metric(page, unavailableKey)).toContainText(unavailableKey === 'forecast'
-            ? 'Forecast source window unavailable' : 'List coverage unavailable');
-          await expect(metric(page, unavailableKey)).toContainText('Source receipt time unavailable');
+          const { mocks } = await setup(page, theme, fleetOpsFixtures(), [resource], 3);
+          // The failed source is withheld, never a '—' placeholder; its
+          // details never render, so the drawer names the hidden field.
+          await expect(metric(page, unavailableKey)).toHaveCount(0);
           for (const key of keys.filter((key) => key !== unavailableKey)) {
             await expectValue(page, key, key === 'forecast' ? '40.3%' : '2');
           }
-          await expect(brief(page)).toContainText('Partial source coverage');
-          await reviewDetails(page, width);
+          await reviewDetails(
+            page, width,
+            keys.filter((key) => key !== unavailableKey),
+            ['Partial source coverage', '1 empty field is hidden.'],
+          );
           await expectBriefFits(page);
           await expectSourceLedger(mocks);
           await expectOnlySourceFailures(diagnostics, [resource]);
@@ -321,11 +335,12 @@ for (const theme of ['light', 'dark'] as const) {
         await page.keyboard.press('Enter');
         const drawer = page.getByRole('dialog', { name: 'Operational record summary details', exact: true });
         await expect(drawer).toBeVisible();
-        await expect(metric(page, 'reservations')).toContainText('Retained source data', { timeout: 45_000 });
+        // Retention state is metric detail: wait for it in the drawer, where
+        // details render (the brief metric shows label + value only).
+        await expect(drawer).toContainText('Retained source data', { timeout: 45_000 });
         await expectValue(page, 'reservations', '2');
         await expectValue(page, 'assignments', '2');
         await expectValue(page, 'forecast', '40.3%');
-        await expect(drawer).toContainText('Retained source data');
         await expect(drawer).toContainText('Received ' + formatDateTime(fleetNow, dateOptions));
         await expect(drawer).toContainText('4 loaded of 4 source records; offset 0, limit 100');
         await expect(drawer).toContainText(sourceWindow);

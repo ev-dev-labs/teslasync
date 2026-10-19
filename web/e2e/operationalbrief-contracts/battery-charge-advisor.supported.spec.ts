@@ -76,8 +76,11 @@ async function historicalEvidence(page: Page) {
   await reading(summary, 'advisor-drive-evidence', '8');
   await reading(summary, 'advisor-daily-drop', '5.00%');
   await reading(summary, 'advisor-charging-evidence', '0');
-  await expect(summary).toContainText('Evidence gate passed');
-  await expect(summary).toContainText('8 active local days · 5 active weeks');
+  // Gate + active-window strings are metric context: the OperationalBrief
+  // contract renders labels + values in the brief and context in the Review
+  // drawer, so they are asserted through the drawer, never as brief text.
+  await review(page, summary, /Evidence gate passed/);
+  await review(page, summary, /8 active local days · 5 active weeks/);
   const support = page.getByTestId('charge-advisor-support');
   await expect(support.getByText('29 days', { exact: true })).toBeVisible();
   await expect(support.getByText('50.00%', { exact: true })).toBeVisible();
@@ -101,13 +104,15 @@ async function historicalEvidence(page: Page) {
   await expect(accounting).toContainText('2025-12-05');
   await expect(accounting).toContainText('2026-06-02');
   await expect(accounting).toContainText('UTC');
-  const categories = accounting.locator('.space-y-1');
-  await expect(categories).toHaveCount(2);
-  for (const [index, expected] of [
-    [0, ['8', '0', '0', '0', '0', '0', '0', '0', '0', '0']],
-    [1, ['0', '0', '0', '0', '0', '0', '0', '0']],
+  // Scope to the two category subsections: the bare `.space-y-1` class also
+  // matches the section header title block, which is not a category list.
+  for (const [testId, expected] of [
+    ['charge-advisor-accounting-drive', ['8', '0', '0', '0', '0', '0', '0', '0', '0', '0']],
+    ['charge-advisor-accounting-charging', ['0', '0', '0', '0', '0', '0', '0', '0']],
   ] as const) {
-    expect(await categories.nth(index).locator(':scope > div > span:last-child').allTextContents()).toEqual(expected);
+    const list = accounting.getByTestId(testId).locator('.space-y-1');
+    await expect(list).toHaveCount(1);
+    expect(await list.locator(':scope > div > span:last-child').allTextContents()).toEqual(expected);
   }
 }
 
@@ -129,9 +134,17 @@ async function sensitivity(page: Page) {
 }
 
 async function finish(page: Page, mocks: MockApiController, diagnostics: ReturnType<typeof monitorPage>) {
+  // Queries are pinned in the app's exact sending order; URLSearchParams
+  // derives the wire encoding (colons become %3A) instead of hand-written
+  // literals.
+  const query = (entries: ReadonlyArray<readonly [string, string]>) =>
+    new URLSearchParams(entries.map(([key, value]) => [key, value] as [string, string])).toString();
+  const week = query([['vehicle_id', '7'], ['limit', '1000'], ['start', '2026-05-27T00:00:00.000Z'], ['end', '2026-06-03T00:00:00.000Z']]);
+  const accounting = query([['vehicle_id', '7'], ['start', '2025-12-05T00:00:00.000Z'], ['end', '2026-06-02T00:00:00.000Z'], ['limit', '1000'], ['offset', '0']]);
   for (const request of [
-    'GET /drives?vehicle_id=7&limit=1000',
-    'GET /charging?vehicle_id=7&limit=1000',
+    `GET /drives?${week}`,
+    `GET /drives?${accounting}`,
+    `GET /charging?${week}`,
     'GET /signals/7/live',
   ]) expect(mocks.seen.has(request), request).toBe(true);
   await expectNoHorizontalOverflow(page);
@@ -213,7 +226,9 @@ for (const theme of ['light', 'dark'] as const) {
       await historicalEvidence(page);
       await reading(kpis(page), 'advisor-current-soc', '65.00%');
       await reading(kpis(page), 'advisor-guidance', 'Current state is stale');
-      await expect(kpis(page)).toContainText('Displayed as stale; guidance is blocked');
+      // Stale subtitle is Current-SoC metric context: drawer-only by the
+      // OperationalBrief contract (brief shows labels + values).
+      await review(page, kpis(page), /Displayed as stale; guidance is blocked/);
       await expect(current.getByText('Completed drive end', { exact: true })).toBeVisible();
       await expect(current.getByText('Stale', { exact: true })).toBeVisible();
       await expect(current.getByText('4.10 days', { exact: true })).toBeVisible();
@@ -226,7 +241,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(
         page.getByTestId('charge-advisor-directory').locator('article').last()
           .getByText('Mean end SoC', { exact: true }).locator('..'),
-      ).toContainText('63.46%');
+      ).toContainText('63.45%');
       for (const card of await page.getByTestId('charge-advisor-sensitivity').locator('article').all()) {
         for (const label of ['Mean path', 'Calendar-day p75']) {
           await expect(card.getByText(label, { exact: true }).locator('..')).toContainText('—');

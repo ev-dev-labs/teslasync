@@ -709,3 +709,84 @@ Fixes (each verified locally under CI conditions before push):
   asserts restored incl. Trips-0, More grid taps Battery. 7/7 local.
 - Climate endpoint fix verified past the query assertion; fails forward
   at cabin-thermal-tau metric (next triage item).
+
+## Contracts: hidden-empty-fields contract batch
+- Root cause (one rule, ~150 failures): OperationalBrief renders only
+  loading/value-state metrics visibly; missing-state metrics are withheld
+  as hidden empty fields disclosed in the Review drawer (pinned by unit
+  preservation tests, e.g. EvidenceStats.preservation Oct 16, and
+  BatteryEvidenceBrief loading-only visible-missing). Every settled-state
+  `reading/value/metric(..., '—', 'missing')` e2e assertion is therefore
+  unsatisfiable as written (specs predate the contract, Oct 6).
+- Fix shape (spec-side, intent-preserving): missing-readings assert
+  absence (count 0) with a contract comment; zero/value readings and the
+  generic Review-drawer passes are unchanged. Applied to helper fns in
+  battery, charging, specialized, battery-sleep-retention (CI shows
+  helper-frame failures there); vehicle-systems fixed at call sites
+  (tau/readiness + shared zero-unknown body).
+- NOT blanket-applied: actions (failures are text-level; 'invalid' states
+  suggest custom components), resale (drawer-text-in-brief pattern needs
+  per-site drawer opening), and files without helper-frame failures.
+- Full-shard aggregation: 1184 unexpected in r2-r16 (r15 superseded).
+  Next clusters: request-shape family (start/end, date-only vs ISO,
+  param order ~100), per-brief text drift, twin SVG, drive-detail.
+
+## 2026-10-19 axis guard verified + CI run 39177648351/344 triage
+
+- Axis overflow guard VERIFIED on real code path via axis-probe: with
+  mount-time tick overflow (the Linux condition), YAxis grew 13.9->81.9px,
+  plot shrank 384->317, overflow went to -2.1px (all ticks inside).
+  Earlier frozen-tick observation was a probe artifact (post-mount style
+  injection never re-triggers the mount-time measurement effect).
+  Expect the 4 dashboard-axis-formatters group-boundary fails to heal in CI.
+- CI run 39177648351 (head fd112f28ff, WITHOUT axis/contracts/viewport fixes):
+  responsive r1+r15 PASS, r2-r14+r16 FAIL. Fresh failures still reflect old state.
+- Frontend tests (8/8) fails on exactly ONE test: mobile.viewport BottomTabBar
+  44px pin -> fixed locally (60px), pending push. Merge-coverage fail is
+  downstream of it.
+- Windows visual (all 10) + deliberate gate FAIL (font churn, under triage).
+- Lighthouse FAIL (blocked CLS item, needs owner decision).
+
+## 2026-10-19 battery 599 root cause + annotations fixture
+
+- Local battery.smoke 60/60 failed with 599 "Unmatched E2E API fixture" from
+  expectNoRuntimeFailures; cross-browser 24/24 PASSED in the same run.
+- Root cause: battery pages render ChartContainer charts with
+  annotations={vehicleId, scope:"battery", ...} (old code, e.g.
+  BatteryCellsPage spread-trend). The app GETs
+  /api/v1/annotations?vehicle_id=7&scope=battery; resolveApiFixture has no
+  /annotations case -> mock fulfills 599 -> console error. Identical 599
+  signature in old CI r7 confirms long-standing tail item, not a regression.
+- Fix: central fixture in mockApi.ts resolveApiFixture returning [] for
+  /annotations (mirrors /saved-views pattern + driveDetailFixtures precedent).
+  No spec asserts annotation rendering, so [] is safe.
+- Verified: battery-cells 4/4 pass; full battery.smoke file running.
+- Locally all reading()/query/text assertions now pass, so the uncommitted
+  contracts fixes (hidden-empty-fields, drawer-text, cycle 0.00) are proven;
+  in old CI those families failed first and masked the 599 in most tests.
+- Axis guard hardened: each tick measured against its own closest("svg") so
+  widget sparklines cannot skew the comparison. tsc clean.
+- NOTE: old-run tail (1184) predates pushed commit 4329f421e9 (r2 fixes incl.
+  vehicle-systems start/end). Harvesting FRESH run 39177648351 r3-r16 reports
+  for true current-state triage.
+
+## 2026-10-19 battery.smoke 81/81 green (local, :4174)
+
+Fixes applied (all root-caused, none weakening):
+- Query pins: trailing-week window helper (half-open UTC, matches useRangeState);
+  degradation /analytics/battery-health + charge-advisor /drives+/charging;
+  180-day accounting window any-of for advisor drives; health test allows both
+  shapes (navigates to degradation page). Multi-window any-of in
+  installBatteryEndpoint (strict, backward compatible).
+- Central fixtures (mockApi): /annotations -> [] (ChartContainer requests);
+  battery-health prediction += fit_valid:true (backend DTO), += valid_dod_count.
+- Content: signed fit slope -1.40%/yr (DTO); BD-15 equivalents reword in review
+  regex; drawer-text moves (sleep/care/energy/power/ledger/advisor per
+  OperationalBrief labels+values contract); lifetime-brief filter on rendered
+  metric; ledger vampire withheld (zero SoC drop uninformative per module rule);
+  meter casing to catalog (State of charge, Backup reserve, Health score);
+  integer range pins (fmtInt); BMS provenance restored into health narrative
+  (new keys operations.battery.narrative.bmsSource/bmsMethod + regen).
+- App fix (UI-only): BatteryHealthPage narrative provenance gains BMS source;
+  standalone provenance prop was silently superseded by narrative since #100.
+- Full file: 81 passed, 0 failed, 5.3m (was 60/60 failing on 599).

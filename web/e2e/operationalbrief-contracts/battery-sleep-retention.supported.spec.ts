@@ -19,6 +19,12 @@ const noNewObservation = /new observation|newly observed|just observed|observed 
 
 async function reading(brief: Locator, key: string, value: string, state = 'value') {
   const item = metric(brief, key);
+  if (state === 'missing') {
+    // Settled missing-state metrics are withheld as hidden empty fields,
+    // never rendered visibly (OperationalBrief visibleMetrics contract).
+    await expect(item).toHaveCount(0);
+    return;
+  }
   await expect(item).toHaveAttribute('data-value-state', state);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }

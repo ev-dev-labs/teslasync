@@ -445,6 +445,15 @@ export default function BatteryHealthPage() {
           'Measures fast-charge, depth-of-discharge, and cycle exposure from recorded sessions.',
         ),
       },
+      // The standalone provenance prop is superseded by this narrative: the
+      // BMS source must live here or it never reaches the drawer.
+      {
+        source: t('operations.battery.narrative.bmsSource', 'BMS telemetry'),
+        method: t(
+          'operations.battery.narrative.bmsMethod',
+          'Latest available BMS telemetry.',
+        ),
+      },
     ],
   };
 

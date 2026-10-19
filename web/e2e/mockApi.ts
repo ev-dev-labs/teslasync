@@ -458,6 +458,7 @@ export function resolveApiFixture(
   if (path === '/admin/impersonate') return matched({ mode: 'inactive' });
   if (path === '/push/public-key') return matched({ public_key: '' });
   if (path === '/saved-views' || path.startsWith('/saved-views?')) return matched([]);
+  if (path === '/annotations' || path.startsWith('/annotations?')) return matched([]);
   if (path.startsWith('/search?')) {
     const query = new URLSearchParams(path.split('?')[1]).get('q') ?? '';
     return matched({ hits: [], query });
@@ -643,7 +644,7 @@ export function resolveApiFixture(
     return matched({
       vehicle_id: 7, current_soh: 94, estimated_capacity_wh: 74200,
       original_capacity_wh: 79000, degradation_rate_pct_per_year: 1.4,
-      battery_age_months: 36, total_cycles: 184, avg_depth_of_discharge_pct: 34,
+      battery_age_months: 36, total_cycles: 184, valid_dod_count: 184, avg_depth_of_discharge_pct: 34,
       fast_charge_pct: 18, full_charge_pct: 9, charge_habits_score: 88,
       stress_level: 'Low', temp_exposure_score: 91, temp_exposure_reason: null,
       capacity_source: 'fleet_telemetry', charging_analysis: {
@@ -657,7 +658,10 @@ export function resolveApiFixture(
         total_sessions: 42,
       },
       prediction: {
-        has_enough_data: true, slope_per_year: -1.4, years_to_80_pct: 9.8,
+        // Mirrors the backend DTO (internal/api/batterydegradation/dtos.go):
+        // a valid fit ships fit_valid; the degradation page withholds the
+        // fit-rate metric and projections without it.
+        fit_valid: true, has_enough_data: true, slope_per_year: -1.4, years_to_80_pct: 9.8,
         predicted_date: '2036-06-01', projection_points: [
           { month: '2026-08', health: 94 }, { month: '2027-08', health: 92.6 },
         ],

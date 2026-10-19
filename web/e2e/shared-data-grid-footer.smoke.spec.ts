@@ -22,7 +22,8 @@ for (const theme of ['light', 'dark'] as const) {
       }));
       await page.goto('/notifications/audit');
       await waitForHarnessReady(page, mocks);
-      const table = page.getByRole('table', { name: 'audit-logs', exact: true });
+      // Table accessible name is the caption per the caption contract.
+      const table = page.getByRole('table', { name: 'Recent activity', exact: true });
       await expect(table).toBeVisible();
       const frame = table.locator('xpath=ancestor::*[@data-grid-frame][1]');
       const viewport = frame.locator('[data-grid-viewport]');

@@ -102,12 +102,16 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
     if (isCompact || canUseDonut) return;
     let needed = 0;
     try {
+      // Viewport coordinates (getBBox reports local SVG space, which ignores
+      // the translated tick groups recharts renders). Each tick is measured
+      // against its own SVG so sparklines elsewhere in the widget cannot skew
+      // the comparison.
       const texts = chartRef.current?.querySelectorAll('.recharts-yAxis .recharts-cartesian-axis-tick text');
       texts?.forEach(node => {
-        const box = typeof (node as SVGTextElement).getBBox === 'function'
-          ? (node as SVGTextElement).getBBox()
-          : null;
-        if (box && Number.isFinite(box.x)) needed = Math.max(needed, 1 - box.x);
+        const svgLeft = (node as SVGTextElement).closest('svg')?.getBoundingClientRect().left;
+        const left = (node as SVGTextElement).getBoundingClientRect?.().left;
+        if (svgLeft != null && Number.isFinite(svgLeft) && left != null && Number.isFinite(left))
+          needed = Math.max(needed, svgLeft - 1 - left);
       });
     } catch {
       needed = 0;

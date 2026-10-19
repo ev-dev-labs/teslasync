@@ -19350,6 +19350,8 @@
       "operations.battery.eyebrow",
       "operations.battery.healthDetail",
       "operations.battery.narrative.analyticsMethod",
+      "operations.battery.narrative.bmsMethod",
+      "operations.battery.narrative.bmsSource",
       "operations.battery.narrative.causeLimitation",
       "operations.battery.narrative.chargingMethod",
       "operations.battery.narrative.chargingResponse",

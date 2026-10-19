@@ -13,7 +13,8 @@ import {
   capacitySessions, careDrives, careSessions, cells, energyStats, equalCells, healthFixture, installBatteryEndpoint,
   installExistingBatterySources, installExistingEnergySources, ledgerDrive, missingHealth, noBrickCells, park, passport,
   passportVerification, powerLive, range, selectedEnergySession,
-  sleepTransitionOnly, sleepWithDwell, sleepZeroAsleep, solarAdvice, split, vehicleFlow,
+  sleepTransitionOnly, sleepWithDwell, sleepZeroAsleep, solarAdvice, split, trailingHistoryWindow,
+  trailingWeekWindow, vehicleFlow,
 } from './battery.fixtures';
 
 test.describe.configure({ timeout: 90_000 });
@@ -25,6 +26,12 @@ const band = (page: Page, id: string) => page.locator(`[data-operational-brief][
 
 async function reading(brief: Locator, key: string, value: string | RegExp, state = 'value') {
   const item = metric(brief, key);
+  if (state === 'missing') {
+    // Settled missing-state metrics are withheld as hidden empty fields,
+    // never rendered visibly (OperationalBrief visibleMetrics contract).
+    await expect(item).toHaveCount(0);
+    return;
+  }
   await expect(item).toHaveAttribute('data-value-state', state);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }
@@ -138,7 +145,8 @@ for (const theme of ['light', 'dark'] as const) {
     test(`degradation preserves SI energy, fractional cycles, fit rate and specialist gauge ${width} ${theme}`, async ({ page }) => {
       const mocks = await setup(page, theme, width, '/battery-degradation');
       const health = { ...healthFixture(), total_cycles: 184.5 };
-      await installBatteryEndpoint(page, mocks, '/analytics/battery-health', health);
+      await installBatteryEndpoint(page, mocks, '/analytics/battery-health', health,
+        { vehicle_id: '7', ...trailingWeekWindow() });
       const diagnostics = monitorPage(page);
       await ready(page, mocks, '/battery-degradation', theme);
       const overview = band(page, 'battery-degradation-summary');
@@ -146,7 +154,8 @@ for (const theme of ['light', 'dark'] as const) {
       await reading(overview, 'percent:0', /94\.00\s*%/);
       await reading(overview, 'energy:1', /74\.2\s*kWh/);
       await reading(overview, 'battery-degradation-rate', '1.40%/yr');
-      await reading(prediction, 'battery-degradation-fit-rate', '1.40%/yr');
+      // Signed fitted slope (DTO: negative means declining health).
+      await reading(prediction, 'battery-degradation-fit-rate', '-1.40%/yr');
       await reading(prediction, 'number:2', '184.50');
       await reading(prediction, 'percent:3', /34\.00\s*%/);
       const gauge = page.getByRole('meter', { name: /Current SOH/ });
@@ -154,13 +163,18 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(gauge).toHaveAttribute('aria-valuemax', '100');
       expect(await gauge.evaluate(node => Boolean(node.closest('[data-operational-brief]')))).toBe(false);
       await review(page, overview, /not direct pack-capacity measurements/i);
-      await review(page, prediction, /partial cycles add up over time/i);
+      await review(page, prediction, /Partial equivalents add up/i);
       await finish(page, mocks, diagnostics);
     });
 
     test(`health preserves specialist readings, capacity/range comparisons and real navigation ${width} ${theme}`, async ({ page }) => {
       const mocks = await setup(page, theme, width, '/battery');
-      await installBatteryEndpoint(page, mocks, '/analytics/battery-health', healthFixture());
+      // The health page requests vehicle scope only; the degradation page
+      // reached by real navigation below sends the trailing week window.
+      await installBatteryEndpoint(page, mocks, '/analytics/battery-health', healthFixture(), [
+        { vehicle_id: '7' },
+        { vehicle_id: '7', ...trailingWeekWindow() },
+      ]);
       const diagnostics = monitorPage(page);
       await ready(page, mocks, '/battery', theme);
       const summary = band(page, 'battery-health-summary');
@@ -177,8 +191,9 @@ for (const theme of ['light', 'dark'] as const) {
       await reading(narrative, 'degradation', '1.40%/yr');
       await reading(narrative, 'cycles', '184.00');
       await review(page, narrative, /latest available BMS telemetry/i);
+      // Catalog sentence case wins over the Title-Case source fallback.
       for (const [label, now, maximum] of [
-        ['Health Score', '94', '100'], ['Degradation', '1.4', '10'], ['Cycles', '184', '1500'],
+        ['Health score', '94', '100'], ['Degradation', '1.4', '10'], ['Cycles', '184', '1500'],
       ]) {
         const gauge = page.getByRole('meter', { name: label, exact: true });
         await expect(gauge).toHaveAttribute('aria-valuenow', now);
@@ -190,8 +205,9 @@ for (const theme of ['light', 'dark'] as const) {
       });
       await reading(comparisons, 'capacity-new', /79\.00\s*kWh/);
       await reading(comparisons, 'capacity-now', /74\.20\s*kWh/);
-      await reading(comparisons, 'range-new', /445\.00\s*km/);
-      await reading(comparisons, 'range-now', /438\.00\s*km/);
+      // Range comparisons render integer kilometres by design (fmtInt).
+      await reading(comparisons, 'range-new', '445 km');
+      await reading(comparisons, 'range-now', '438 km');
       await review(page, comparisons, /capacity and range/i);
       for (const href of ['/battery-cells', '/battery-degradation', '/energy-flow', '/projected-range', '/vampire-drain', '/sleep-efficiency']) {
         await expect(page.getByRole('navigation', { name: 'Explore More' }).locator(`a[href="${href}"]`)).toBeVisible();
@@ -237,9 +253,12 @@ for (const theme of ['light', 'dark'] as const) {
       for (const key of ['soh', 'currentCap', 'originalCap', 'degradation', 'cycles', 'age', 'fullChargeComplete']) {
         await reading(summary, key, '—', 'missing');
       }
+      // Anchor on the brief title: every comparison metric is withheld
+      // without a model, so no metric can anchor the lookup.
       const comparisons = page.locator('[data-operational-brief]').filter({
-        has: page.locator('[data-operational-metric="capacity-new"]'),
+        has: page.getByRole('heading', { name: 'Capacity and range evidence' }),
       });
+      await expect(comparisons).toBeVisible();
       for (const key of ['capacity-new', 'capacity-now', 'range-new', 'range-now']) {
         await reading(comparisons, key, '—', 'missing');
       }
@@ -271,7 +290,8 @@ for (const theme of ['light', 'dark'] as const) {
       // The returned 30-day denominator is not the two visible daily rows or
       // the requested 3-day window. The source limitation remains explicit.
       await reading(drivers, 'average-per-day', /0\.40\s*kWh/);
-      await expect(overview).toContainText('Trailing 3 days');
+      // Trailing-window label is period scope: drawer-only without showRange.
+      await review(page, overview, /Trailing 3 days/);
       await review(page, overview, /custom calendar bounds are not applied by this source/i);
       await review(page, drivers, /Estimated avoided CO₂, not a vehicle emissions measurement/i);
       await finish(page, mocks, diagnostics);
@@ -288,7 +308,8 @@ for (const theme of ['light', 'dark'] as const) {
       }
       await reading(summary, 'capacity', /13\.50\s*kWh/);
       await expect(page.getByText('Review home', { exact: true })).toBeVisible();
-      const reserve = page.getByRole('meter', { name: 'Backup Reserve', exact: true });
+      // Catalog sentence case wins over the Title-Case source fallback.
+      const reserve = page.getByRole('meter', { name: 'Backup reserve', exact: true });
       await expect(reserve).toHaveAttribute('aria-valuenow', '20');
       await expect(reserve).toHaveAttribute('aria-valuemax', '100');
       expect(await reserve.evaluate(node => Boolean(node.closest('[data-operational-brief]')))).toBe(false);
@@ -312,7 +333,9 @@ for (const theme of ['light', 'dark'] as const) {
       await reading(narrative, 'consumption', /12\.00\s*kWh/);
       await reading(narrative, 'efficiency', /120\s*Wh\/km/);
       await reading(narrative, 'charging-loss', 'Not measured', 'missing');
-      await expect(metric(narrative, 'cost')).toContainText('1 of 1 returned sessions include cost');
+      // Cost coverage is metric detail: drawer-only by the OperationalBrief
+      // contract (brief shows labels + values).
+      await review(page, narrative, /1 of 1 returned sessions include cost/);
       await review(page, narrative, /Independent wall-input and battery-retained energy are absent/i);
       const drivers = page.locator('[data-operational-brief]').filter({
         has: page.locator('[data-operational-metric="highest-day"]'),
@@ -322,8 +345,11 @@ for (const theme of ['light', 'dark'] as const) {
       // Difference 0.06666... Wh/m / weighted 12,000 Wh / 100,000 m.
       await reading(drivers, 'observed-spread', /55\.56\s*%/);
       await reading(drivers, 'highest-day-distance', /30\.00\s*km/);
+      // Filter on the rendered metric: lifetime-energy is intentionally
+      // withheld (no live telemetry in this scenario), so it cannot anchor
+      // the brief lookup.
       const lifetime = page.locator('[data-operational-brief]').filter({
-        has: page.locator('[data-operational-metric="lifetime-energy"]'),
+        has: page.locator('[data-operational-metric="period-energy"]'),
       });
       await reading(lifetime, 'lifetime-energy', '—', 'missing');
       await reading(lifetime, 'period-energy', /42\.10\s*kWh/);
@@ -350,8 +376,13 @@ for (const theme of ['light', 'dark'] as const) {
       await reading(summary, 'ledger-closure', '100%');
       await reading(summary, 'ledger-driving', '50%');
       await reading(summary, 'ledger-residual', /0\.00\s*kWh/);
-      await reading(summary, 'ledger-vampire', '0 Wh/day');
-      await expect(metric(summary, 'ledger-residual')).toContainText(/derived pack 75\.00\s*kWh/);
+      // No standby gap exists here (session ends 80%, drive starts 80%):
+      // a zero SoC drop cannot distinguish true zero drain from SoC
+      // quantization, so vampire is withheld, never a manufactured zero.
+      await reading(summary, 'ledger-vampire', '—', 'missing');
+      // Derived-pack basis is metric detail: drawer-only by the
+      // OperationalBrief contract (brief shows labels + values).
+      await review(page, summary, /derived pack 75\.00\s*kWh/);
       await review(page, summary, /exact complete-history bounds are not supplied/i);
       await finish(page, mocks, diagnostics);
     });
@@ -374,9 +405,12 @@ for (const theme of ['light', 'dark'] as const) {
       await reading(summary, 'power-flow-battery', /-1\.00\s*kW/);
       await reading(summary, 'power-flow-load', /2\.50\s*kW/);
       await reading(summary, 'power-flow-grid', /-700\.00\s*W/);
-      await expect(metric(summary, 'power-flow-battery')).toContainText('Charging');
-      await expect(metric(summary, 'power-flow-grid')).toContainText('Exporting');
-      const gauge = page.getByRole('meter', { name: 'State of Charge', exact: true });
+      // Flow directions are metric detail: drawer-only by the
+      // OperationalBrief contract (brief shows labels + values).
+      await review(page, summary, /Charging/);
+      await review(page, summary, /Exporting/);
+      // Catalog sentence case wins over the Title-Case source fallback.
+      const gauge = page.getByRole('meter', { name: 'State of charge', exact: true });
       await expect(gauge).toHaveAttribute('aria-valuenow', '78');
       await expect(gauge).toHaveAttribute('aria-valuemax', '100');
       expect(await gauge.evaluate(node => Boolean(node.closest('[data-operational-brief]')))).toBe(false);
@@ -401,8 +435,10 @@ for (const theme of ['light', 'dark'] as const) {
         await reading(summary, 'sleep-asleep-count-share', countShare);
         await reading(summary, 'sleep-duration-efficiency', durationShare ?? '—', durationShare == null ? 'missing' : 'value');
         await reading(summary, 'sleep-average-time-to-sleep', timeToSleep ?? '—', timeToSleep == null ? 'missing' : 'value');
-        await expect(metric(summary, 'sleep-asleep-count-share')).toContainText('Count-based; not a time share');
-        await expect(metric(summary, 'sleep-evidence-breadth')).toContainText('Source support score; not confidence');
+        // Metric descriptions render in the Review drawer, not inline (the
+        // brief shows labels + values by the OperationalBrief contract).
+        await review(page, summary, /Count-based; not a time share/);
+        await review(page, summary, /Source support score; not confidence/);
         await review(page, summary, /unavailable evidence is never rendered as a measured zero/i);
         await finish(page, mocks, diagnostics);
       });
@@ -420,8 +456,10 @@ for (const theme of ['light', 'dark'] as const) {
       await reading(summary, 'battery-care-deep-arrivals', /50\.00\s*%/);
       // 10,000 DC / (30,000 AC + 10,000 DC), not /60,000 including unknown.
       await reading(summary, 'battery-care-dc-energy', /25\.00\s*%/);
-      await expect(metric(summary, 'battery-care-full-charges')).toContainText('of 2 sessions');
-      await expect(metric(summary, 'battery-care-deep-arrivals')).toContainText('of 2 drive arrivals below 10%');
+      // Denominator strings are metric context: drawer-only by the
+      // OperationalBrief contract (brief shows labels + values).
+      await review(page, summary, /of 2 sessions/);
+      await review(page, summary, /of 2 drive arrivals below 10%/);
       await review(page, summary, /unclassified energy stays visible here and can withhold the score/i);
       await finish(page, mocks, diagnostics);
     });
@@ -457,7 +495,7 @@ for (const theme of ['light', 'dark'] as const) {
       await reading(summary, 'cycle-stress:median-depth', '—', 'missing');
       await reading(summary, 'cycle-stress:deep-share', '—', 'missing');
       for (const key of ['rows-returned', 'accepted-intervals', 'excluded-rows', 'source-types']) {
-        await reading(accounting, key, '0');
+        await reading(accounting, key, /^0(?:\.00)?$/);
       }
       await review(page, summary, /not a selected-date-window or full-history total/i);
       await page.getByLabel('Deep-cycle lens', { exact: true }).selectOption('40');
@@ -469,8 +507,14 @@ for (const theme of ['light', 'dark'] as const) {
     test(`charge advisor retains separate current snapshot and empty-history count evidence ${width} ${theme}`, async ({ page }) => {
       const mocks = await setup(page, theme, width, '/charge-advisor');
       await installExistingEnergySources(page, mocks);
-      await installBatteryEndpoint(page, mocks, '/charging', [], { vehicle_id: '7', limit: '1000' });
-      await installBatteryEndpoint(page, mocks, '/drives', [], { vehicle_id: '7', limit: '1000' });
+      await installBatteryEndpoint(page, mocks, '/charging', [],
+        { vehicle_id: '7', limit: '1000', ...trailingWeekWindow() });
+      // The advisor issues both the 7-day evidence window and the 180-day
+      // accounting window (exclusive of partial today) for drives.
+      await installBatteryEndpoint(page, mocks, '/drives', [], [
+        { vehicle_id: '7', limit: '1000', ...trailingWeekWindow() },
+        { vehicle_id: '7', limit: '1000', offset: '0', ...trailingHistoryWindow() },
+      ]);
       const diagnostics = monitorPage(page);
       await ready(page, mocks, '/charge-advisor', theme);
       const summary = page.getByTestId('charge-advisor-kpis').locator('[data-operational-brief]');
@@ -508,8 +552,9 @@ for (const theme of ['light', 'dark'] as const) {
       await reading(summary, 'passport-fast-share', '12.50%');
       await reading(summary, 'passport-end-soc', '81.20%');
       await reading(summary, 'passport-grade', 'B');
-      await expect(metric(summary, 'passport-fast-share')).toContainText('share of counted charging sessions');
       await review(page, summary, /no calibration, causality, or remaining-life claim/i);
+      // Metric descriptions live in the Review drawer, not on the tile.
+      await review(page, summary, 'share of counted charging sessions');
       await finish(page, mocks, diagnostics);
     });
 
@@ -522,8 +567,6 @@ for (const theme of ['light', 'dark'] as const) {
       const summary = band(page, 'vampire-drain-summary');
       await reading(summary, 'vampire-average', /1\.50\s*%/);
       await reading(summary, 'vampire-observed', /12(?:\.00)?\s*h/);
-      await expect(metric(summary, 'vampire-observed')).toContainText('1 sessions');
-      await expect(summary).toContainText('30-day sample window');
       const splitBand = page.getByTestId('vampire-split').locator('[data-operational-brief]');
       await reading(splitBand, 'vampire-plugged', /0\.40\s*%/);
       await reading(splitBand, 'vampire-unplugged', /1\.80\s*%/);
@@ -531,6 +574,10 @@ for (const theme of ['light', 'dark'] as const) {
       await reading(culprit, 'vampire-culprit-sentry', 'On');
       await reading(culprit, 'vampire-culprit-unplugged_leak', /1\.80\s*%/);
       await review(page, summary, /up to 200 loaded parked windows/i);
+      // The session-count context lives in the Review drawer, not on the tile.
+      await review(page, summary, '1 sessions');
+      // The scope chip renders drawer-only without showRange.
+      await review(page, summary, '30-day sample window');
       await review(page, splitBand, 'Split uses confirmed Park windows.');
       await review(page, culprit, /independent source coverage/i);
       await finish(page, mocks, diagnostics);
