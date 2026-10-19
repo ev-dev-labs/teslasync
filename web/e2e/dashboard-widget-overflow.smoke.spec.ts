@@ -280,11 +280,19 @@ async function measureAll(page: Page): Promise<WidgetRecord[]> {
       if (body.scrollWidth > body.clientWidth + 1) {
         record.status = 'body-overflow'
         const boundary = body.getBoundingClientRect()
-        Object.assign(record, { overflowingElements: [...body.querySelectorAll<HTMLElement>('*')]
-          .filter(el => el.getBoundingClientRect().right > boundary.right + 1)
+        const clientRight = boundary.left + body.clientLeft + body.clientWidth
+        const style = getComputedStyle(body)
+        Object.assign(record, { bodyGeometry: {
+          width: boundary.width, clientLeft: body.clientLeft,
+          scrollHeight: body.scrollHeight, clientHeight: body.clientHeight,
+          cssWidth: style.width, paddingLeft: style.paddingLeft, paddingRight: style.paddingRight,
+          overflowX: style.overflowX, overflowY: style.overflowY,
+          boxSizing: style.boxSizing, transform: style.transform, scrollbarGutter: style.scrollbarGutter,
+        }, overflowingElements: [...body.querySelectorAll<HTMLElement>('*')]
+          .filter(el => el.getBoundingClientRect().right > clientRight + 1)
           .slice(0, 12).map(el => ({
             tag: el.tagName, text: el.textContent?.slice(0, 100), cls: String(el.className),
-            right: el.getBoundingClientRect().right - boundary.right,
+            right: el.getBoundingClientRect().right - clientRight,
             visibility: getComputedStyle(el).visibility, position: getComputedStyle(el).position,
           })) })
       }
@@ -423,6 +431,7 @@ test('widget bodies never overflow horizontally at min, default and large sizes 
               : '')
         violations.push(`${size}/${mode} ${row.id}: ${detail}`)
         console.log(`[overflow-guard] VIOLATION ${size}/${mode} ${row.id}: ${row.status} ${detail}`)
+        console.log(JSON.stringify(Reflect.get(row, 'bodyGeometry') ?? {}))
         console.log(JSON.stringify(Reflect.get(row, 'overflowingElements') ?? []))
       }
       console.log(
