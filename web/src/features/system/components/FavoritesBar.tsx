@@ -40,7 +40,7 @@ export function FavoritesBar({ favorites, commands, renderTile }: FavoritesBarPr
           </Text>
           <Text size="2xs" color="muted">({favCmds.length})</Text>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
           {favCmds.map(cmd => renderTile(cmd))}
         </div>
       </section>

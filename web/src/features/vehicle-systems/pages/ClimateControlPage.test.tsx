@@ -1098,8 +1098,10 @@ describe('ClimateControlPage — independent charging source registry', () => {
       const comfortGrid = group('climate-comfort').querySelector('.grid')!;
       expect(comfortGrid).toHaveClass('grid-cols-1', '@2xl:grid-cols-3');
       const seatGrids = group('climate-seats').querySelectorAll('.grid');
-      // Five-across only once the container fits five 200px tiles (row-17 readable minimum).
-      expect(seatGrids[0]).toHaveClass('grid-cols-1', '@sm:grid-cols-2', '@6xl:grid-cols-5');
+      // Each step-up waits until the container fits 200px tiles (row-17
+      // readable minimum): two-across at @md (448px), three-across at @2xl
+      // (672px), five-across at @6xl (1152px).
+      expect(seatGrids[0]).toHaveClass('grid-cols-1', '@md:grid-cols-2', '@2xl:grid-cols-3', '@6xl:grid-cols-5');
       expect(seatGrids[0].children).toHaveLength(5);
       expect(seatGrids[1]).toHaveClass('grid-cols-1', '@lg:grid-cols-2');
       expect(seatGrids[2]).toHaveClass('grid-cols-1', '@sm:grid-cols-2');

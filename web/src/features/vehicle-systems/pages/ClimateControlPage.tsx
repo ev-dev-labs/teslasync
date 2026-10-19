@@ -142,7 +142,7 @@ const SYSTEMS_GRID =
   'grid grid-cols-1 gap-3 @sm:grid-cols-2 @lg:grid-cols-3 @2xl:grid-cols-4 @4xl:grid-cols-5 @7xl:grid-cols-7';
 const PROTECTION_GRID = 'grid grid-cols-1 gap-3 @sm:grid-cols-2 @2xl:grid-cols-4';
 const COMFORT_GRID = 'grid grid-cols-1 gap-3 @2xl:grid-cols-3';
-const SEAT_GRID = 'grid grid-cols-1 gap-3 @sm:grid-cols-2 @lg:grid-cols-3 @6xl:grid-cols-5';
+const SEAT_GRID = 'grid grid-cols-1 gap-3 @md:grid-cols-2 @2xl:grid-cols-3 @6xl:grid-cols-5';
 
 const TONE_CIRCLE: Record<ComfortTone, string> = {
   good: neonColorMap.green.bg,
@@ -813,7 +813,7 @@ export default function ClimateControlPage() {
           {/* Temperature gauges (hero, spans 2 cols on wide screens) */}
           <LayoutCard title={t('climate.page.temperature', 'Temperature')}>
             <ClimateSourceBoundary state={latestState} label={latestLabel}>
-            <div className="grid grid-cols-1 gap-4 @lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 @2xl:grid-cols-3">
               <GaugeCell
                 loading={latestLoading}
                 value={latest?.insideTemp != null ? toTemperatureDisplay(latest.insideTemp) : null}

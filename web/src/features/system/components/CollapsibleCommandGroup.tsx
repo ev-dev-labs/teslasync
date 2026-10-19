@@ -71,7 +71,7 @@ export function CollapsibleCommandGroup({
       </ControlButton>
       {open && (
         <FadeIn>
-          <div id={panelId} className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+          <div id={panelId} className="mt-2 grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5">
             {children}
           </div>
         </FadeIn>
