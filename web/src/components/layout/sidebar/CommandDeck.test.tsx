@@ -403,12 +403,12 @@ describe('CommandDeck', () => {
     expect(secondaryPanel().getByRole('link', { name: 'Quick access: Trips' })).toBeInTheDocument()
     fireEvent.click(pins)
     expect(pins).toHaveAttribute('aria-expanded', 'false')
-    expect(JSON.parse(window.localStorage.getItem('teslasync-sidenav-collapsed-groups') ?? '{}')).toEqual({ 'section:Driving:pinned': true })
+    expect(JSON.parse(window.localStorage.getItem('teslasync-sidenav-collapsed-groups-v2') ?? '{}')).toEqual({ 'section:Driving:pinned': true })
     fireEvent.change(secondaryPanel().getByRole('searchbox', { name: 'Filter Driving pages' }), {
       target: { value: 'Trips' },
     })
     expect(secondaryPanel().getByRole('button', { name: 'Pinned' })).toHaveAttribute('aria-expanded', 'true')
-    expect(JSON.parse(window.localStorage.getItem('teslasync-sidenav-collapsed-groups') ?? '{}')).toEqual({ 'section:Driving:pinned': true })
+    expect(JSON.parse(window.localStorage.getItem('teslasync-sidenav-collapsed-groups-v2') ?? '{}')).toEqual({ 'section:Driving:pinned': true })
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Clear filter' }))
     expect(secondaryPanel().getByRole('button', { name: 'Pinned' })).toHaveAttribute('aria-expanded', 'false')
     first.unmount()
@@ -422,7 +422,7 @@ describe('CommandDeck', () => {
     expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Trips' })).not.toBeInTheDocument()
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Pinned' }))
     expect(secondaryPanel().getByRole('link', { name: 'Quick access: Trips' })).toBeInTheDocument()
-    expect(JSON.parse(window.localStorage.getItem('teslasync-sidenav-collapsed-groups') ?? '{}')).toEqual({ 'section:Driving:pinned': false })
+    expect(JSON.parse(window.localStorage.getItem('teslasync-sidenav-collapsed-groups-v2') ?? '{}')).toEqual({ 'section:Driving:pinned': false })
 
     cleanup()
     renderControlledDeck({ pathname: '/', recentItems: [tripsItem] })

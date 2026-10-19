@@ -102,7 +102,7 @@
   {
     "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
     "calls": 30,
-    "sha256": "369a84fbabbf75143755e80e5be414ba7d7bbbb79d7177eca68fff401b77b6df",
+    "sha256": "afd41838de319675b352fd330a0d23601263c7234a35d5e7dd01c27c5f35c813",
     "dependencies": [
       {
         "file": "web/src/lib/routeRegistry.ts",

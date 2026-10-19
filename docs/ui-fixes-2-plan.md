@@ -14,7 +14,7 @@
 
 ## Checklist
 - [x] Shared icon/label layout and app-wide scan.
-- [ ] Expanded navigation defaults and new persistence version.
+- [x] Expanded navigation defaults and new persistence version.
 - [ ] Ghost Customize and stricter action audit.
 - [ ] Repair drawer alignment, footer, resolve feedback and permanent structural notice.
 - [ ] Unit/i18n/audit checks, gates, Edge checks and screenshots.
@@ -27,4 +27,10 @@ Pending.
 - Before: 54 source call sites exposed to the shared wrapLabel child-icon stacking defect, plus one explicit vertical command-button map in CommandQuickActionsWidget: **55 affected source call sites**. After shared wrapper and command-row fixes: **0 unintended stacked action call sites**.
 - Whole-app AST scan also reviewed 14 explicit flex-col button/anchor declarations. One was the command map fixed above; the other 13 are multi-line card/preview/choice surfaces or labels without an icon, not ordinary icon+label actions. Existing vertical sidenav tabs/rail/section grid are intentional navigation surfaces. Glance command children now align through the shared wrapper.
 - Regression: shared Button test covers child SVG + label, translated multiline labels, 8px gap, centering and no icon shrink. Existing icon-prop/loading/empty-child coverage retained. Command widget test now guards horizontal command rows.
-- Shared Button + notification studio/source-closure suites: 69 passed, 0 failed. Additional command-widget checks running before commit.
+- Shared Button + notification studio/source-closure suites: 69 passed, 0 failed. Command-widget suites: 19 passed, 0 failed.
+
+### Fix 2: always-expanded navigation defaults
+- All groups now default expanded regardless of section page count. Pinned/Recent behavior and filtering remain intact.
+- New local-storage key: teslasync-sidenav-collapsed-groups-v2. Old unversioned values are ignored without deleting unrelated state. Explicit v2 collapse/open values persist.
+- Updated large-section expectation and added migration/remount coverage. All sidebar + BottomTabBar suites: **212 passed, 0 failed**.
+- AtlasPanel typed translation verification: 30 calls, zero errors; source normalized to LF and existing producer/combined checkpoint generators run.
