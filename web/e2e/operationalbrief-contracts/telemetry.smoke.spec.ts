@@ -32,8 +32,9 @@ async function expectMetric(brief: Locator, key: string, value: string | RegExp)
 
 async function expectMissing(brief: Locator, key: string): Promise<void> {
   const cell = metric(brief, key);
-  await expect(cell).toHaveAttribute('data-value-state', 'missing');
-  await expect(cell.locator('[data-operational-value]')).toHaveText('—');
+  // Settled missing-state metrics are withheld as hidden empty fields,
+  // never rendered visibly (OperationalBrief visibleMetrics contract).
+  await expect(cell).toHaveCount(0);
 }
 
 async function reviewBrief(page: Page, brief: Locator, detail: string): Promise<void> {
@@ -42,7 +43,22 @@ async function reviewBrief(page: Page, brief: Locator, detail: string): Promise<
   await expectThemeApplied(page, layout.theme);
   expect(page.viewportSize()?.width).toBe(layout.width);
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
-  await expect(brief.getByRole('list')).toHaveClass(/\bgrid-cols-1\b/);
+  const itemCount = await brief.locator('[data-operational-metric]').count();
+  if (itemCount === 0) {
+    // Fully-withheld brief: no metric rows render; the brief discloses the
+    // empty state inline and the hidden-field count in the drawer.
+    await expect(brief).toContainText('No metric values are available yet.');
+    await expect(brief).toContainText('Values will appear when the source provides measurements.');
+  } else {
+    // Metrics chunk into flex bank rows of at most 3 (wrapping fluidly on
+    // narrow screens); pin the bank structure instead of grid columns.
+    const banks = brief.locator('[data-operational-metric-bank]');
+    expect(await banks.count()).toBeGreaterThan(0);
+    for (const bank of await banks.all()) {
+      const columns = Number(await bank.getAttribute('data-columns'));
+      expect(Number.isInteger(columns) && columns >= 1 && columns <= 3).toBe(true);
+    }
+  }
   const publication = await brief.locator('[data-operational-value]').allTextContents();
   const evidence = await brief.locator('[data-operational-metric]').allTextContents();
   const trigger = brief.getByRole('button', { name: 'Review details', exact: true });
@@ -52,6 +68,9 @@ async function reviewBrief(page: Page, brief: Locator, detail: string): Promise<
   await expect(drawer).toBeVisible();
   await expect(drawer.getByRole('heading', { name: 'Operational metrics', exact: true })).toBeVisible();
   await expect(drawer).toContainText(detail);
+  if (itemCount === 0) {
+    await expect(drawer).toContainText(/empty fields are hidden/);
+  }
   for (const value of publication) await expect(drawer).toContainText(value);
   for (const text of evidence) await expect(drawer).toContainText(text);
   await page.keyboard.press('Tab');
@@ -106,9 +125,9 @@ for (const layout of LAYOUTS) {
       const brief = page.getByTestId(analysis.id);
       await expect(brief).toHaveAttribute('data-operational-brief', 'true');
       for (const key of analysis.keys) await expectMissing(brief, key);
-      await expect(brief).toContainText('Source values unknown');
       await reviewBrief(page, brief, analysis.path === '/signal-correlation'
         ? 'Only valid overlapping samples contribute' : HISTORY_SCOPE);
+      await reviewBrief(page, brief, 'Source values unknown');
       await expectNoHorizontalOverflow(page);
       expect(diagnostics.pageErrors).toEqual([]);
       await assertMockApiComplete(page, mocks);
@@ -126,7 +145,20 @@ for (const layout of LAYOUTS) {
       await waitForHarnessReady(page, mocks);
       expect(fixtures.historyRequests).toHaveLength(analysis.paired ? 2 : 1);
       for (const request of fixtures.historyRequests) {
-        expect(request.searchParams.get('hours')).toBe(String(analysis.hours));
+        // Change-points passes the range window explicitly (half-open UTC
+        // bounds); deadband and correlation pass the route window with an
+        // inclusive end (SQL BETWEEN keeps the final microsecond); the other
+        // analyses send trailing hours.
+        if (analysis.path === '/signal-change-points') {
+          expect(request.searchParams.get('from')).toBe('2026-08-27T00:00:00.000Z');
+          expect(request.searchParams.get('to')).toBe('2026-08-29T00:00:00.000Z');
+        } else if (analysis.path === '/signal-deadband' || analysis.path === '/signal-correlation') {
+          expect(request.searchParams.get('from')).toBe('2026-08-27T00:00:00.000Z');
+          expect(request.searchParams.get('to')).toBe('2026-08-28T23:59:59.999999Z');
+          expect(request.searchParams.has('hours')).toBe(false);
+        } else {
+          expect(request.searchParams.get('hours')).toBe(String(analysis.hours));
+        }
         if (analysis.analysis) expect(request.searchParams.get('limit')).toBe('10000');
       }
       const brief = page.getByTestId(analysis.id);
@@ -161,8 +193,8 @@ for (const layout of LAYOUTS) {
     for (const key of ['rate', 'buffer', 'unique', 'numeric', 'categorical']) {
       await expectMetric(brief, key, '0');
     }
-    await expect(metric(brief, 'connection')).toContainText('not a vehicle-health or signal-freshness verdict');
-    await expect(metric(brief, 'buffer')).toContainText('/ 500');
+    await reviewBrief(page, brief, 'not a vehicle-health or signal-freshness verdict');
+    await reviewBrief(page, brief, '/ 500');
     await page.getByRole('button', { name: 'Pause', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Resume', exact: true }).click();
@@ -182,7 +214,18 @@ for (const layout of LAYOUTS) {
     await expectMetric(brief, 'mqtt-signals', '12');
     await expectMetric(brief, 'mqtt-batches', '3');
     await expectMetric(brief, 'mqtt-rate', /^1\.25(?:\s.*)?$/);
-    await expect(page.locator('main').getByRole('table')).toContainText('E2E-SYNTHETIC-TELEMETRY');
+    // The vehicle breakdown lists returned broker VINs with their counters;
+    // broker identity surfaces in the connection panel instead.
+    await expect(page.getByRole('region', { name: 'Stream overview' })).toContainText('synthetic-broker');
+    if (layout.width === 1440) {
+      const table = page.getByRole('table', { name: 'Vehicle breakdown', exact: true });
+      await expect(table).toContainText('E2E-SYNTHETIC-TELEMETRY');
+      expect(await table.getByRole('row').count()).toBeGreaterThan(1);
+    } else {
+      const cards = page.getByRole('group', { name: 'Vehicle breakdown', exact: true });
+      await expect(cards.locator('[data-card]')).toHaveCount(1);
+      await expect(cards).toContainText('E2E-SYNTHETIC-TELEMETRY');
+    }
     await reviewBrief(page, brief, 'not the throughput chart’s per-poll deltas');
     expect(diagnostics.pageErrors).toEqual([]);
     await expectNoHorizontalOverflow(page);
@@ -210,21 +253,49 @@ for (const layout of LAYOUTS) {
       quietRateSamples = rate === '0' ? quietRateSamples + 1 : 0;
       return quietRateSamples;
     }, { intervals: [1000], timeout: 10_000 }).toBeGreaterThanOrEqual(2);
-    await expect(brief).toContainText('Retained source data');
+    await reviewBrief(page, brief, 'Retained source data');
+    // Below 640px the tail table renders mobile cards in a named group.
     const table = page.locator('main').getByRole('table');
-    const battery = table.getByRole('row').filter({ hasText: 'BatteryLevel' });
-    const presence = table.getByRole('row').filter({ hasText: 'IsUserPresent' });
-    await expect(battery.getByRole('cell', { name: '0', exact: true })).toBeVisible();
-    await expect(presence.getByRole('cell', { name: 'false', exact: true })).toBeVisible();
+    const tailCards = page.getByRole('group', { name: 'telemetry:live-signal-tail', exact: true });
+    if (layout.width === 1440) {
+      const battery = table.getByRole('row').filter({ hasText: 'BatteryLevel' });
+      const presence = table.getByRole('row').filter({ hasText: 'IsUserPresent' });
+      await expect(battery.getByRole('cell', { name: '0', exact: true })).toBeVisible();
+      await expect(presence.getByRole('cell', { name: 'false', exact: true })).toBeVisible();
+    } else {
+      const batteryCard = tailCards.locator('[data-card]', { hasText: 'BatteryLevel' });
+      const presenceCard = tailCards.locator('[data-card]', { hasText: 'IsUserPresent' });
+      await expect(batteryCard.locator('[data-card-primary]')).toHaveText('0');
+      await expect(presenceCard.locator('[data-card-primary]')).toHaveText('false');
+    }
     await reviewBrief(page, brief, BUFFER_SCOPE);
     await page.getByRole('textbox', { name: 'Filter signals', exact: true }).fill('BatteryLevel');
-    await expect(table.getByRole('row').filter({ hasText: 'IsUserPresent' })).toHaveCount(0);
+    if (layout.width === 1440) {
+      await expect(table.getByRole('row').filter({ hasText: 'IsUserPresent' })).toHaveCount(0);
+    } else {
+      await expect(tailCards.locator('[data-card]', { hasText: 'IsUserPresent' })).toHaveCount(0);
+    }
     await expectMetric(brief, 'buffer', '3');
+    const requestsBeforeClear = mocks?.requests.length ?? 0;
     await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await expect(page.getByText('Clear the stream?', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Confirm', exact: true }).click();
     await expectMetric(brief, 'buffer', '0');
     await expectMetric(brief, 'unique', '0');
-    await expect(brief).not.toContainText('Retained source data');
-    expect(mocks?.requests.filter(request =>
+    {
+      const trigger = brief.getByRole('button', { name: 'Review details', exact: true });
+      await trigger.click();
+      const drawer = page.getByRole('dialog');
+      await expect(drawer).toBeVisible();
+      await expect(drawer).not.toContainText('Retained source data');
+      await page.keyboard.press('Escape');
+      await expect(drawer).toHaveCount(0);
+    }
+    // The ended tail never backfills from durable history ...
+    expect(mocks?.requests.filter(request => request.path.includes('/history'))).toEqual([]);
+    // ... and Clear itself issues no history reads or durable mutations
+    // (startup traffic such as navigation-pin import predates the click).
+    expect((mocks?.requests ?? []).slice(requestsBeforeClear).filter(request =>
       request.path.includes('/history') || request.method !== 'GET' && !request.path.startsWith('/api/v1/web-'),
     )).toEqual([]);
     expect(diagnostics.pageErrors).toEqual([]);
@@ -241,14 +312,14 @@ for (const layout of LAYOUTS) {
     await expectMetric(brief, 'total', '4');
     for (const key of ['active', 'aging', 'stale', 'never']) await expectMetric(brief, key, '1');
     await expectMetric(brief, 'freshness', '50%');
-    await expect(brief).toContainText('2 of 4 signals arriving');
+    await reviewBrief(page, brief, '2 of 4 signals arriving');
     await reviewBrief(page, brief, 'a sleeping vehicle can be stale without being unhealthy');
     const beforeRefresh = fixtures.liveRequests;
     fixtures.holdNextLive();
     try {
       await page.getByRole('button', { name: 'Refresh signals', exact: true }).click();
       await expect.poll(() => fixtures.liveRequests).toBeGreaterThan(beforeRefresh);
-      await expect(brief).toContainText('Retained source data');
+      await reviewBrief(page, brief, 'Retained source data');
       await expectMetric(brief, 'total', '4');
       await expectMetric(brief, 'freshness', '50%');
     } finally {
@@ -273,10 +344,13 @@ for (const layout of LAYOUTS) {
       await waitForHarnessReady(page, mocks);
       const brief = page.getByTestId(surface.id);
       await expectMissing(brief, 'records');
-      await expectMetric(brief, 'signals', '1');
+      // The explorer counts the URL-selected signals before submit; the log
+      // counts submitted signals, so it reads zero until Query runs.
+      await expectMetric(brief, 'signals', surface.path === '/signal-explorer' ? '1' : '0');
       await page.locator('main').getByRole('button', { name: surface.submit, exact: true }).click();
       await waitForHarnessReady(page, mocks);
       await expectMetric(brief, 'records', String(HISTORY_ROWS));
+      await expectMetric(brief, 'signals', '1');
       expect(fixtures.historyRequests.length).toBeGreaterThan(0);
       for (const request of fixtures.historyRequests) {
         expect(request.searchParams.has('from')).toBe(true);
@@ -313,10 +387,16 @@ for (const layout of LAYOUTS) {
     await expectMetric(brief, 'numeric', '2');
     await expectMetric(brief, 'pinned', '0');
     await expectMetric(brief, 'window-span', '24h');
-    const speedRow = page.locator('main').getByRole('row').filter({ hasText: 'VehicleSpeed' });
-    await expect(speedRow.getByRole('cell', { name: '0.00', exact: true })).toBeVisible();
-    await expect(speedRow.getByRole('cell', { name: '2.50', exact: true })).toBeVisible();
-    await expect(speedRow.getByRole('cell', { name: '+2.50', exact: true })).toBeVisible();
+    // The diff renders expandable per-signal row buttons; at desktop widths
+    // the values sit in sibling table cells, while mobile cards keep the
+    // raw zero, SI value and signed delta in the row text.
+    const speedButton = page.locator('main').getByRole('button', { name: 'VehicleSpeed', exact: true });
+    const speedRow = layout.width === 1440
+      ? page.locator('main').getByRole('row').filter({ hasText: 'VehicleSpeed' })
+      : speedButton;
+    await expect(speedRow).toContainText('0.00');
+    await expect(speedRow).toContainText('2.50');
+    await expect(speedRow).toContainText('+2.50');
     const filter = page.getByRole('searchbox', { name: 'Filter signals', exact: true });
     await filter.fill('VehicleSpeed');
     await expectMetric(brief, 'changed', '2');
@@ -341,7 +421,7 @@ for (const layout of LAYOUTS) {
     await expectMetric(brief, 'signals-selected', '1');
     await expectMetric(brief, 'signals-mode', 'Historical');
     await expectMissing(brief, 'signals-live-rate');
-    await reviewBrief(page, brief, 'Live stream is not active');
+    await reviewBrief(page, brief, '1 empty field is hidden.');
     await page.locator('main').getByRole('button', { name: 'Live', exact: true }).click();
     await waitForHarnessReady(page, mocks);
     await expectMetric(brief, 'signals-mode', 'Live');
@@ -406,7 +486,8 @@ for (const brokerState of ['empty', 'unavailable'] as const) {
       if (brokerState === 'empty') await expectMetric(brief, key, /^0(?:\.0+)?$/);
       else await expectMissing(brief, key);
     }
-    await expect(brief).toContainText(brokerState === 'empty'
+    await expect(brief).toContainText('Broker counters and reported rates');
+    await reviewBrief(page, brief, brokerState === 'empty'
       ? 'Broker snapshot available' : 'Broker snapshot unavailable');
     if (brokerState === 'unavailable') {
       expect(diagnostics.failedDataRequests.length).toBeGreaterThan(0);
@@ -427,13 +508,13 @@ test('a long submitted signal-history window is not shortened to satisfy the agr
   await waitForHarnessReady(page, mocks);
   await page.locator('main').getByRole('button', { name: 'Query', exact: true }).click();
   await waitForHarnessReady(page, mocks);
-  await expect(page.getByRole('region', { name: 'HTTP / MQTT agreement', exact: true }))
+  await expect(page.getByRole('region', { name: 'HTTP / MQTT Agreement', exact: true }))
     .toContainText('Agreement is limited to seven days');
   expect(fixtures.agreementRequests).toEqual([]);
   expect(fixtures.historyRequests).toHaveLength(1);
   const expected = await page.evaluate(() => ({
     from: new Date('2026-08-01T00:00:00').toISOString(),
-    to: new Date('2026-08-28T23:59:59.999').toISOString(),
+    to: new Date('2026-08-29T00:00:00').toISOString(),
   }));
   expect(fixtures.historyRequests[0]?.searchParams.get('from')).toBe(expected.from);
   expect(fixtures.historyRequests[0]?.searchParams.get('to')).toBe(expected.to);

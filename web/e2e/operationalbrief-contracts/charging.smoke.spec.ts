@@ -173,16 +173,15 @@ async function expectThermalNonzero(page: Page, section: Locator) {
   await value(section, 'thermal-heater-on-time', '2m');
   await value(section, 'thermal-peak-heater', '1.00 kW');
   await expect(page.locator('#charging-thermal-tax-metrics')).toHaveAttribute('data-period-kind', 'event');
-  await expect(section).toContainText('Estimated from sampled heater power');
   await expect(page.getByText('Metered running total', { exact: true })).toBeVisible();
-  const chart = page.getByRole('figure', { name: 'Heater vs. Charge Power', exact: true });
+  const chart = page.getByRole('figure', { name: 'Heater vs. charge power', exact: true });
   await expect(chart).toBeVisible();
-  const table = chart.getByRole('table', { name: 'Heater vs. Charge Power — data table', exact: true });
+  const table = chart.getByRole('table', { name: 'Heater vs. charge power — data table', exact: true });
   await expect(table.locator('tbody tr')).toHaveCount(3);
-  await expect(table.locator('tbody tr').nth(0).locator('td').nth(1)).toHaveText('1000');
-  await expect(table.locator('tbody tr').nth(0).locator('td').nth(2)).toHaveText('5000');
-  await expect(table.locator('tbody tr').nth(2).locator('td').nth(1)).toHaveText('0');
-  await expect(page.getByRole('heading', { name: 'Thermal Phases', exact: true })).toBeVisible();
+  await expect(table.locator('tbody tr').nth(0).locator('td').nth(2)).toHaveText('1000');
+  await expect(table.locator('tbody tr').nth(0).locator('td').nth(3)).toHaveText('5000');
+  await expect(table.locator('tbody tr').nth(2).locator('td').nth(2)).toHaveText('0');
+  await expect(page.getByRole('heading', { name: 'Thermal phases', exact: true })).toBeVisible();
 }
 
 async function finishExpectedTelemetryFailure(
@@ -237,21 +236,21 @@ for (const theme of ['light', 'dark'] as const) {
       const habits = page.getByRole('region', { name: /^Charging habits$/i });
       await value(habits, 'hour', '0:00');
       await value(habits, 'location', '—', 'missing');
-      await expect(habits).toContainText('Location clusters do not confirm home charging.');
       await value(habits, 'sessions-week', '2.00');
       await value(habits, 'target', '80.00%');
       await review(page, habits,
         'Independent optimizer source; its history bounds are not reported. Recommendations and savings are illustrative, not measured outcomes.',
-        ['0:00', 'Monday', '2.00', '80.00%']);
+        ['0:00', 'Monday', '2.00', '80.00%',
+          'Location clusters do not confirm home charging. Missing location evidence is shown as unknown.']);
       const observedRates = page.locator('[data-operational-brief]').filter({
         has: page.locator('[data-operational-metric="peak-hours"]'),
       });
-      await value(observedRates, 'peak', '$0.30/kWh');
-      await value(observedRates, 'offpeak', '$0.10/kWh');
+      await value(observedRates, 'peak', '0.30/kWh');
+      await value(observedRates, 'offpeak', '0.10/kWh');
       await value(observedRates, 'peak-sessions', '0.00%');
       await review(page, observedRates,
         'Independent optimizer source; its history bounds are not reported. Recommendations and savings are illustrative, not measured outcomes.',
-        ['$0.30/kWh', '$0.10/kWh', '0.00%']);
+        ['0.30/kWh', '0.10/kWh', '0.00%']);
       const free = page.locator('[data-operational-brief]').filter({
         has: page.locator('[data-operational-metric="free-energy"]'),
       });
@@ -311,20 +310,17 @@ for (const theme of ['light', 'dark'] as const) {
       await value(summary, 'peakRate', '44.00 kW');
       await value(summary, 'avgDuration', '75 min');
       await value(summary, 'totalCost', '$10.80');
-      await expect(summary.locator('[data-operational-metric="avgRate"]')).toContainText('Arithmetic mean of session peak power');
       await review(page, summary, 'Up to 200 returned sessions; not a full-history aggregate.',
-        ['33.00 kW', '44.00 kW', '75 min', '$10.80']);
+        ['33.00 kW', '44.00 kW', '75 min', '$10.80',
+          'Arithmetic mean of session peak power, using the original returned-session denominator.']);
       const threshold = page.getByRole('region', { name: /^Time-to-charge analysis$/i });
       await value(threshold, 'avg10to80', '90.00 min');
       await value(threshold, 'avg20to80', '90.00 min');
       await value(threshold, 'fastest', '24.00 kWh/h');
       await value(threshold, 'slowest', '24.00 kWh/h');
-      for (const key of ['fastest', 'slowest']) {
-        await expect(threshold.locator(`[data-operational-metric="${key}"]`)).toContainText('Session #202');
-      }
       await review(page, threshold,
         'Completed DC sessions from the returned history only. Threshold means exclude unfinished sessions; fastest and slowest use recorded energy divided by positive elapsed time.',
-        ['90.00 min', '24.00 kWh/h'], { '90.00 min': 2, '24.00 kWh/h': 2 });
+        ['90.00 min', '24.00 kWh/h'], { '90.00 min': 2, '24.00 kWh/h': 2, 'Session #202': 2 });
       await finish(page, run);
       assertSourceLedger(run.mocks, ledger);
       expect(ledger.map(({ path, status }) => ({ path, status }))).toEqual([
@@ -346,11 +342,10 @@ for (const theme of ['light', 'dark'] as const) {
       await value(summary, 'charging-heatmap-total-energy', '36.00 kWh');
       await value(summary, 'charging-heatmap-total-cost', '$0.00');
       await value(summary, 'charging-heatmap-average-duration', '1.00 h');
-      await expect(summary.locator('[data-operational-metric="charging-heatmap-total-cost"]'))
-        .toContainText('Some returned sessions have no recorded value; the total includes recorded values only.');
       await review(page, summary,
         'Summary of the returned sessions for the shared vehicle and date scope (request limit: 2,000). This is not a complete-history total.',
-        ['36.00 kWh', '$0.00', '1.00 h']);
+        ['36.00 kWh', '$0.00', '1.00 h',
+          'Some returned sessions have no recorded value; the total includes recorded values only.']);
       await finish(page, run);
     });
 
@@ -364,17 +359,25 @@ for (const theme of ['light', 'dark'] as const) {
       const summary = brief(page, 'tesla-charging-history-summary');
       await value(summary, 'sessions', '40');
       await value(summary, 'energy', '720.00 kWh');
-      await value(summary, 'spend', '$216.00');
-      await value(summary, 'average-cost', '$0.30');
+      await value(summary, 'spend', '216.00 · —');
+      await value(summary, 'average-cost', '0.30 · —');
       await value(summary, 'duration', '3h 0m');
       await value(summary, 'sites', '2');
       const table = page.getByRole('table').filter({ hasText: 'Synthetic August site' });
-      await expect(table).toHaveCount(1);
-      await expect(table.locator('tbody tr')).toHaveCount(1);
-      await expect(table).not.toContainText('Synthetic July site');
+      if (width === 1440) {
+        await expect(table).toHaveCount(1);
+        await expect(table.locator('tbody tr')).toHaveCount(1);
+        await expect(table).not.toContainText('Synthetic July site');
+      } else {
+        // Below 640px the sessions table renders mobile cards in a named group.
+        const cards = page.getByRole('group', { name: 'Charging sessions', exact: true });
+        await expect(cards.locator('[data-card]')).toHaveCount(1);
+        await expect(cards).toContainText('Synthetic August site');
+        await expect(cards).not.toContainText('Synthetic July site');
+      }
       await review(page, summary,
         'Tesla lifetime summary; duration and sites use all loaded records. The analysis window filters charts and the session table separately.',
-        ['720.00 kWh', '$216.00', '3h 0m']);
+        ['720.00 kWh', '216.00 · —', '3h 0m']);
       await finish(page, run);
     });
 
@@ -400,7 +403,8 @@ for (const theme of ['light', 'dark'] as const) {
       await review(page, lifetime,
         'Tesla lifetime summary. The analysis window filters loaded sessions, charts, and operational totals separately.',
         ['720.00 kWh', '$216.00', '44.00 kW']);
-      await review(page, active, 'Tesla Fleet Charging sessions',
+      await review(page, active,
+        'The selected vehicle and date range drive charging totals, location analysis, and the supporting session history.',
         ['18.00 kWh', '$0.00', '1h 0m']);
       await finish(page, run);
     });
@@ -418,10 +422,9 @@ for (const theme of ['light', 'dark'] as const) {
       await value(summary, 'alignment-avg-dwell', '—', 'missing');
       await value(summary, 'alignment-avg-margin', '—', 'missing');
       await value(summary, 'alignment-misaligned-rate', '—', 'missing');
-      await expect(summary).toContainText('No paired drive has a recorded end SoC.');
       await review(page, summary,
         'Selected vehicle · up to 1,000 charges and 1,000 drives from the existing queries. These are loaded records, not complete lifetime coverage; the workspace date range does not filter this model.',
-        ['No paired drive has a recorded end SoC.']);
+        ['3 empty fields are hidden.']);
       await finish(page, run);
     });
 
@@ -431,6 +434,7 @@ for (const theme of ['light', 'dark'] as const) {
       const run = await open(page, theme, route);
       await fixture(page, run.mocks, '/charging/201', invoicedSession);
       await fixture(page, run.mocks, '/charging/201/telemetry', []);
+      await fixture(page, run.mocks, '/charging/201/shares', []);
       await fixture(page, run.mocks, '/vehicles/7', mockVehicle);
       await fixture(page, run.mocks, '/physics/charging/201', unavailableChargePhysics);
       await fixture(page, run.mocks, '/physics/charging/201/ledger', unavailableChargeLedger);
@@ -442,11 +446,9 @@ for (const theme of ['light', 'dark'] as const) {
       await value(summary, 'jsx-17203', '60.00 min');
       await value(summary, 'jsx-17205', '22.00 kW');
       await value(summary, 'jsx-17207', '0.00–80.00%');
-      await value(summary, 'jsx-17209', '$6.00');
-      await value(summary, 'jsx-17213', '—', 'missing');
+      await value(summary, 'jsx-17209', '6.00 USD');
+      await value(summary, 'jsx-17213', '0.00 km');
       await value(summary, 'jsx-17215', '20.00 kWh/h');
-      await expect(summary).toContainText('Vehicle measured 18.00 kWh');
-      await expect(summary.locator('[data-operational-metric="jsx-17209"]')).toContainText('Tesla invoice');
       const bill = page.getByTestId('charge-bill-truth').locator('[data-operational-brief]');
       await value(bill, 'billed', '20.00 kWh');
       await value(bill, 'pack', '18.00 kWh');
@@ -455,7 +457,17 @@ for (const theme of ['light', 'dark'] as const) {
         'Tesla Supercharger invoices meter energy at the cabinet. Vehicle telemetry is energy into the pack and is often a few percent lower.',
         ['20.00 kWh', '18.00 kWh', '2.00 kWh']);
       await review(page, summary, 'Charge session',
-        ['20.00 kWh', '$6.00', 'Vehicle measured 18.00 kWh']);
+        ['20.00 kWh', '6.00 USD', '0.00 km', 'Tesla invoice']);
+      {
+        // The vehicle-measured context shares its drawer node with the billed-
+        // energy help tooltip, so pin it as a substring, not an exact reading.
+        const trigger = summary.getByRole('button', { name: 'Review details', exact: true });
+        await trigger.click();
+        const drawer = page.getByRole('dialog');
+        await expect(drawer).toContainText('Vehicle measured 18.00 kWh');
+        await page.keyboard.press('Escape');
+        await expect(drawer).toHaveCount(0);
+      }
       await expect(page.getByRole('link', { name: 'Back to charging', exact: true })).toHaveAttribute('href', '/charging');
       await finish(page, run);
     });
@@ -472,7 +484,7 @@ for (const theme of ['light', 'dark'] as const) {
         await value(summary, key, '—', 'missing');
       }
       await expect(page.locator('#charging-thermal-tax-metrics')).toHaveAttribute('data-period-kind', 'unknown');
-      await review(page, summary, 'No session selected.', ['no session selected']);
+      await review(page, summary, 'No session selected.', ['4 empty fields are hidden.']);
       expect(run.mocks?.requests.some(request => /\/charging\/\d+\/telemetry/.test(request.path))).toBe(false);
       await finish(page, run);
     });
@@ -491,7 +503,6 @@ for (const theme of ['light', 'dark'] as const) {
       await value(summary, 'charge-interruption-evaluable-sessions', '0');
       await value(summary, 'charge-interruption-highest-risk', '—', 'missing');
       const priorDisclosure = 'No evaluable sessions; this is the model prior, not an evidence-based estimate.';
-      await expect(summary).toContainText(priorDisclosure);
       await review(page, summary,
         'Selected vehicle · up to 1,000 returned sessions. Coverage and time bounds are not reported; this model does not use the workspace date range.',
         ['50.00%', priorDisclosure]);
@@ -510,10 +521,9 @@ for (const theme of ['light', 'dark'] as const) {
       await value(summary, 'charger-health-underperforming', '—', 'missing');
       await value(summary, 'charger-health-fastest', '—', 'missing');
       await value(summary, 'charger-health-time-lost', '—', 'missing');
-      await expect(summary).toContainText('No location has enough clean sessions for a health benchmark.');
       await review(page, summary,
         'The existing sessions endpoint returns an observed history window, not a guaranteed lifetime or calendar-year total.',
-        ['No location has enough clean sessions for a health benchmark.']);
+        ['3 empty fields are hidden.']);
       await finish(page, run);
     });
 
@@ -529,7 +539,6 @@ for (const theme of ['light', 'dark'] as const) {
       await value(summary, 'effective-sites', '1.00');
       await value(summary, 'top-site-dependency', '100.00%');
       await value(summary, 'fallback-coverage', '0.00%');
-      await expect(summary).toContainText('Synthetic home charger');
       await review(page, summary,
         'Calculated from returned charging history, not a complete time-range guarantee.',
         ['0.00%', '100.00%', 'Synthetic home charger']);
@@ -624,11 +633,11 @@ for (const theme of ['light', 'dark'] as const) {
       const assumptions = page.locator('[data-operational-brief]').filter({
         has: page.getByRole('heading', { name: /Evidence: Comparison/i }),
       });
-      await value(assumptions, 'currency:0', '$0.00');
+      await value(assumptions, 'currency:0', '—', 'missing');
       await value(assumptions, 'currency:1', '$10.80');
-      await value(assumptions, 'currency:2', '$-10.80');
-      await value(assumptions, 'currency:3', '$-7.02');
-      await review(page, assumptions, returnedScope, ['$10.80', '$-10.80', '$-7.02']);
+      await value(assumptions, 'currency:2', '—', 'missing');
+      await value(assumptions, 'currency:3', '—', 'missing');
+      await review(page, assumptions, returnedScope, ['$10.80']);
       const timeOfUse = page.locator('[data-operational-brief]').filter({
         has: page.locator('[data-operational-metric="text:2"]'),
       });
@@ -768,7 +777,9 @@ test('heatmap distinguishes measured zero from absent costs and unfinished durat
   await value(summary, 'charging-heatmap-total-energy', '0.00 kWh');
   await value(summary, 'charging-heatmap-total-cost', '—', 'missing');
   await value(summary, 'charging-heatmap-average-duration', '—', 'missing');
-  await expect(summary).toContainText('No completed session with a positive measured duration');
+  await review(page, summary,
+    'Summary of the returned sessions for the shared vehicle and date scope (request limit: 2,000). This is not a complete-history total.',
+    ['0.00 kWh', '2 empty fields are hidden.']);
   await finish(page, run);
 });
 
@@ -789,10 +800,9 @@ test('heatmap retains its published readings after a real failed refresh', async
   await expect(page.locator('#charging-heatmap-summary')).toHaveAttribute('data-retained', 'true', { timeout: 30000 });
   await value(summary, 'charging-heatmap-total-energy', '54.00 kWh');
   await value(summary, 'charging-heatmap-total-cost', '$10.80');
-  await expect(summary).toContainText('Retained source measurements');
   await review(page, summary,
     'Summary of the returned sessions for the shared vehicle and date scope (request limit: 2,000). This is not a complete-history total.',
-    ['54.00 kWh', '$10.80']);
+    ['54.00 kWh', '$10.80', 'Retained source measurements']);
   await expectNoHorizontalOverflow(page);
   await assertMockApiComplete(page, run.mocks);
   // The deliberately failed source is not a render failure.
@@ -817,7 +827,7 @@ for (const theme of ['light', 'dark'] as const) {
       const section = await selectedThermal(page, run, ledger);
       await waitForHarnessReady(page, run.mocks);
       await expectThermalNonzero(page, section);
-      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW']);
+      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW', 'Estimated from sampled heater power']);
       await finish(page, run);
       assertSourceLedger(run.mocks, ledger);
       expect(ledger.map(({ path, status }) => ({ path, status }))).toEqual([
@@ -846,9 +856,9 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(metrics).toHaveAttribute('data-period-kind', 'event');
       for (const key of thermalKeys) await value(section, key, '—', 'missing');
       await expect(page.getByRole('combobox', { name: 'Inspect session', exact: true })).toHaveValue('202');
-      await expect(page.getByRole('figure', { name: 'Heater vs. Charge Power', exact: true })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Thermal Phases', exact: true })).toBeVisible();
-      await review(page, section, thermalProvenance, ['Not enough recorded heater readings for this metric.']);
+      await expect(page.getByRole('figure', { name: 'Heater vs. charge power', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Thermal phases', exact: true })).toBeVisible();
+      await review(page, section, thermalProvenance, ['4 empty fields are hidden.']);
       const failedAttempts = ledger.filter(request => request.path.endsWith('/telemetry'));
       // HTTP ApiErrors stop resilient retries: direct + fallback, then one QueryClient retry.
       expect(failedAttempts.map(request => request.status)).toEqual([503, 503, 503, 503]);
@@ -858,7 +868,7 @@ for (const theme of ['light', 'dark'] as const) {
       await waitForHarnessReady(page, run.mocks);
       await expectThermalNonzero(page, section);
       await expect(retry).toHaveCount(0);
-      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW']);
+      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW', 'Estimated from sampled heater power']);
       await finishExpectedTelemetryFailure(page, run, ledger);
       expect(ledger.filter(request => request.path.endsWith('/telemetry')).map(request => request.status))
         .toEqual([503, 503, 503, 503, 200]);
@@ -879,7 +889,7 @@ for (const theme of ['light', 'dark'] as const) {
       const section = await selectedThermal(page, run, ledger);
       await waitForHarnessReady(page, run.mocks);
       await expectThermalNonzero(page, section);
-      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW']);
+      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW', 'Estimated from sampled heater power']);
       // History goes stale at 15 s, telemetry at 60 s. The real page badge
       // refreshes its worst query: refresh history first, then stale telemetry.
       await page.waitForTimeout(61000);
@@ -899,12 +909,13 @@ for (const theme of ['light', 'dark'] as const) {
       await telemetryRefresh;
       const metrics = page.locator('#charging-thermal-tax-metrics');
       await expect(metrics).toHaveAttribute('data-retained', 'true', { timeout: 30000 });
-      await expect(section).toContainText('Retained source measurements');
+
       await expect(metrics.getByTestId('stale-refresh-warning')).toContainText('Session telemetry may be out of date');
       await expect(metrics.getByRole('button', { name: 'Refresh', exact: true })).toBeVisible();
       await expect(page.getByRole('combobox', { name: 'Inspect session', exact: true })).toHaveValue('202');
       await expectThermalNonzero(page, section);
-      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW']);
+      await review(page, section, thermalProvenance,
+        ['0.03 kWh', '2.50%', '2m', '1.00 kW', 'Estimated from sampled heater power', 'Retained source measurements']);
       await finishExpectedTelemetryFailure(page, run, ledger);
       expect(ledger.filter(request => request.path === '/api/v1/charging').map(request => request.status))
         .toEqual([200, 200]);
@@ -936,20 +947,25 @@ for (const theme of ['light', 'dark'] as const) {
           await value(section, key, scenario.missing ? '—' : reading, scenario.missing ? 'missing' : 'value');
         }
         await expect(page.locator('#charging-thermal-tax-metrics')).toHaveAttribute('data-period-kind', 'event');
-        const chart = page.getByRole('figure', { name: 'Heater vs. Charge Power', exact: true });
-        const table = chart.getByRole('table', { name: 'Heater vs. Charge Power — data table', exact: true });
+        const chart = page.getByRole('figure', { name: 'Heater vs. charge power', exact: true });
+        const table = chart.getByRole('table', { name: 'Heater vs. charge power — data table', exact: true });
         await expect(table.locator('tbody tr')).toHaveCount(3);
         for (const row of await table.locator('tbody tr').all()) {
-          await expect(row.locator('td').nth(1)).toHaveText(scenario.missing ? '—' : '0');
-          await expect(row.locator('td').nth(2)).toHaveText('5000');
+          await expect(row.locator('td').nth(2)).toHaveText(scenario.missing ? '—' : '0');
+          await expect(row.locator('td').nth(3)).toHaveText('5000');
         }
         await expect(page.getByText('Metered running total', { exact: true })).toBeVisible();
         if (scenario.missing) {
-          await expect(section).toContainText('missing readings do not mean no heater draw.');
-          await expect(page.getByText('Heater state uncertain', { exact: true }).first()).toBeVisible();
+          // Fully-missing heater data renders the unsupported-analysis notice,
+          // not per-phase badges or the partial-data incomplete note (which
+          // needs a measured peak).
+          await expect(page.locator('#charging-thermal-tax-metrics'))
+            .not.toContainText('incomplete estimates');
+          await expect(page.getByText('Heater-power analysis is unsupported for these samples').first())
+            .toBeVisible();
         }
         await review(page, section, thermalProvenance, scenario.missing
-          ? ['Not enough recorded heater readings for this metric.']
+          ? ['4 empty fields are hidden.']
           : readings);
         await finish(page, run);
         assertSourceLedger(run.mocks, ledger);
@@ -958,9 +974,9 @@ for (const theme of ['light', 'dark'] as const) {
     }
 
     for (const scenario of [
-      { name: 'mixed zero, null and paid costs', sessions: mixedCostWindow, count: '3', free: '1', freeEnergy: '(18.00 kWh)', energy: '63.00 kWh', cost: '$10.80' },
-      { name: 'only unknown cost', sessions: [unknownCostSession], count: '1', free: '0', freeEnergy: '(0.00 kWh)', energy: '36.00 kWh', cost: '$0.00' },
-      { name: 'recorded numeric zero cost', sessions: [measuredWindow[0]], count: '1', free: '1', freeEnergy: '(18.00 kWh)', energy: '18.00 kWh', cost: '$0.00' },
+      { name: 'mixed zero, null and paid costs', sessions: mixedCostWindow, count: '3', free: '1', freeEnergy: '(18.00 kWh)', energy: '63.00 kWh', cost: '$10.80', costMissing: false },
+      { name: 'only unknown cost', sessions: [unknownCostSession], count: '1', free: '0', freeEnergy: '(0.00 kWh)', energy: '36.00 kWh', cost: '$0.00', costMissing: true },
+      { name: 'recorded numeric zero cost', sessions: [measuredWindow[0]], count: '1', free: '1', freeEnergy: '(18.00 kWh)', energy: '18.00 kWh', cost: '$0.00', costMissing: false },
     ] as const) {
       test(`cost summary ${scenario.name} does not count null as free at ${width}px ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width, height: 1000 });
@@ -979,12 +995,15 @@ for (const theme of ['light', 'dark'] as const) {
         const lifetime = page.locator('[data-operational-brief]').filter({
           has: page.getByRole('heading', { name: /Lifetime summary/i }),
         });
-        await value(lifetime, 'currency:0', scenario.cost);
+        if (scenario.costMissing) await value(lifetime, 'currency:0', '—', 'missing');
+        else await value(lifetime, 'currency:0', scenario.cost);
         await value(lifetime, 'energy:1', scenario.energy);
         await value(lifetime, 'count:2', scenario.count);
         await value(lifetime, 'count:6', scenario.free);
-        await expect(lifetime.locator('[data-operational-metric="count:6"]')).toContainText(scenario.freeEnergy);
-        await review(page, lifetime, returnedCostScope, [scenario.cost, scenario.energy, scenario.freeEnergy]);
+
+        await review(page, lifetime, returnedCostScope, scenario.costMissing
+          ? [scenario.energy, scenario.freeEnergy]
+          : [scenario.cost, scenario.energy, scenario.freeEnergy]);
         const forecast = page.locator('[data-operational-brief]').filter({
           has: page.getByRole('heading', { name: /Gas vs EV savings/i }),
         });

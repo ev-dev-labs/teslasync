@@ -196,3 +196,5 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-19 04:15 UTC - ui-fixes-2 merged, gates green, pushed
 - Merged origin/ui/ui-fixes-2 into ui/simplification (0cf4c58d9d), re-pinned trio via generator (5e41040ccf), all merge gates green (tsc/lint/catalog/build/1268 vitest/1933 trio/30 e2e). Pushed; CI run 39197974201 in progress.
 
+## 2026-10-19 08:17 UTC - telemetry 84/84, charging 49 mapped+fixed
+- Telemetry contracts 31/52 -> 84/84 green; charging 42/49 with all 49 fixed and subset-verified, full rerun in progress. Only the 2 spec files changed; tsc/lint/catalog green. Key rule: drawer shows visible metrics + hidden count only, so withheld reasons migrate to count readings. Currency/window/sentence-case/mobile-cards drift all unit-pinned app side; smoke pins updated. Details in followups-plan.md.

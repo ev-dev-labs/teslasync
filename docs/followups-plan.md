@@ -800,3 +800,60 @@ Fixes applied (all root-caused, none weakening):
 - Reverted docs/ PNG churn from local e2e run (specs write-only screenshots; Windows-font churn must not replace branch evidence). Committed 7 trio files only, pushed ui/simplification 0cf4c58d9d..5e41040ccf.
 - New CI run 39197974201 started on push; watching.
 
+## 2026-10-19 telemetry 84/84 + charging contracts (this session, uncommitted)
+
+Telemetry full file: 31 passed/52 failed -> 84/84 green (3.8m, chromium-smoke,
+CI=true TZ=UTC). Charging full file: first confirmation run 42/49; all 49
+mapped to diagnosed fixes and verified green in subsets; full-file
+confirmation rerun in progress. Only the 2 contracts spec files touched
+(+ this plan/log); tsc clean, lint pass, catalog OK (57/181/1272/0).
+
+Drawer-text rule REFINED (matters for the rest of the tail): the
+OperationalBrief drawer renders only VISIBLE metrics plus "N empty fields are
+hidden" (OperationalBrief.tsx). Withheld-metric reasons/context are invisible
+everywhere. Migration pattern used:
+- Visible-metric description/context/subtitle -> review() readings (exact).
+- Status labels (retained/unknown) -> drawer header badge readings.
+- Withheld-metric reasons -> hidden-count readings, never dropped silently.
+- Brief `secondary` slots render INLINE outside [data-operational-brief] ->
+  scope assertions to the #id container, not the drawer.
+- Fully-missing thermal shows the unsupported-analysis notice, not per-phase
+  badges or the partial-data incomplete note (which needs a measured peak).
+
+Currency formats are per-source by design (every one unit-pinned; smoke pins
+were the stale side in each case, confirmed by blame: Oct-14 unit pins beat
+Oct-6 smoke pins):
+- Tesla billing lifetime spend/avg undenominated ('216.00 - —').
+- Optimizer rates undenominated ('0.30/kWh'; unit asserts no $/USD/EUR).
+- Detail cost keeps the invoice denomination suffix ('6.00 USD').
+- Fleet lifetime cost keeps '$' via derived single-currency.
+- Detail Miles Added '0.00 km' is a real measured zero (odometer delta 0),
+  correctly visible per step-2c; pin updated from missing.
+
+Query windows: deadband/correlation now send route-window from/to with the
+inclusive SQL-BETWEEN end '2026-08-28T23:59:59.999999Z' (microsecond
+precision, 48h full-day window for from=27/to=28); change-points stays
+half-open exclusive; agreement-cap 'to' is exclusive midnight
+('2026-08-29T00:00:00.000Z'). Gas comparison without verified driven distance
+is NaN -> withheld (unit-pinned 'no-verified-driven-distance'); unknown-cost
+lifetime total is NaN -> withheld (step-2c: missing never zero).
+
+Interaction/structure drift migrated: live-monitor Clear gained a confirm
+dialog ('Clear the stream?' + Confirm); the post-Clear purity assertion split
+into whole-session no-/history plus a post-Clear request slice (startup
+navigation-pin POSTs predate the click). Signal-log counts submitted signals
+pre-submit ('0', transitions to '1'); explorer counts URL-selected ('1').
+Thermal chart title/headings went sentence-case ('Heater vs. charge power',
+'Thermal phases'); the fallback data table has 4 columns
+(time/timestamp/heater/charge) so heater=td[2], charge=td[3]. Broker table
+redesigned to 'Vehicle breakdown' (unit-pinned). Below 640px tables render
+mobile cards: sessions group, tail group 'telemetry:live-signal-tail' with
+[data-card-primary] values; diff rows keep values in sibling cells at 1440
+(filter rows by hasText; the name cell is Code text, not a button).
+
+Non-blocking findings for later: correlation scope still claims 'Last 24
+hours requested' while the wire is window-bounded; sessions/history lifetime
+denomination inconsistent (sessions derives, history undenominated);
+partial-missing thermal note has no e2e scenario (full-missing pins the
+unsupported notice + absence of the partial note instead).
+
