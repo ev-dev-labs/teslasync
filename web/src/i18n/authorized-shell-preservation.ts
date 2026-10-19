@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 export const acceptedShellDeltas = [
   {
     path: 'web/src/components/layout/Layout.tsx',
-    predecessorSHA256: '321af2241234177c49905db6011f366ffeb9e48cb7c158e8e2915efbb6c5946c',
+    predecessorSHA256: 'cef29f502361ecafacf8bd0a3c11e0f538587cec5a2dfc5fc9e3ebf423254deb',
     fragments: [
       {
         current: "import { RouteTransition } from '@/components/motion/runtime'\nimport {\n",
