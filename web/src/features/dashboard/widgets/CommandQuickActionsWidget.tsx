@@ -23,14 +23,14 @@ export interface QuickCommand {
 }
 
 export const COMMANDS: QuickCommand[] = [
-  { id: 'lock', command: 'lock', icon: Lock, labelKey: 'widget.quickActions.lock', labelFallback: 'Lock', color: 'text-neon-green' },
-  { id: 'unlock', command: 'unlock', icon: Unlock, labelKey: 'widget.quickActions.unlock', labelFallback: 'Unlock', color: 'text-neon-red' },
-  { id: 'climate_on', command: 'climate_on', icon: Thermometer, labelKey: 'widget.quickActions.climateOn', labelFallback: 'Climate on', color: 'text-neon-cyan' },
-  { id: 'climate_off', command: 'climate_off', icon: ThermometerSnowflake, labelKey: 'widget.quickActions.climateOff', labelFallback: 'Climate off', color: 'text-blue-400' },
-  { id: 'frunk', command: 'actuate_frunk', icon: Container, labelKey: 'widget.quickActions.frunk', labelFallback: 'Frunk', color: 'text-purple-400' },
-  { id: 'honk', command: 'honk_horn', icon: Volume2, labelKey: 'widget.quickActions.horn', labelFallback: 'Horn', color: 'text-amber-400' },
-  { id: 'flash', command: 'flash_lights', icon: Flashlight, labelKey: 'widget.quickActions.flash', labelFallback: 'Flash', color: 'text-yellow-400' },
-  { id: 'trunk', command: 'actuate_trunk', icon: Container, labelKey: 'widget.quickActions.trunk', labelFallback: 'Trunk', color: 'text-indigo-400' },
+  { id: 'lock', command: 'lock', icon: Lock, labelKey: 'glance.action.lock', labelFallback: 'Lock', color: 'text-neon-green' },
+  { id: 'unlock', command: 'unlock', icon: Unlock, labelKey: 'glance.action.unlock', labelFallback: 'Unlock', color: 'text-neon-red' },
+  { id: 'climate_on', command: 'climate_on', icon: Thermometer, labelKey: 'glance.action.climateOn', labelFallback: 'Climate on', color: 'text-neon-cyan' },
+  { id: 'climate_off', command: 'climate_off', icon: ThermometerSnowflake, labelKey: 'glance.action.climateOff', labelFallback: 'Climate off', color: 'text-blue-400' },
+  { id: 'frunk', command: 'actuate_frunk', icon: Container, labelKey: 'commands.doors.frunk', labelFallback: 'Frunk', color: 'text-purple-400' },
+  { id: 'honk', command: 'honk_horn', icon: Volume2, labelKey: 'glance.action.horn', labelFallback: 'Horn', color: 'text-amber-400' },
+  { id: 'flash', command: 'flash_lights', icon: Flashlight, labelKey: 'palette.cmd.flash', labelFallback: 'Flash Lights', color: 'text-yellow-400' },
+  { id: 'trunk', command: 'actuate_trunk', icon: Container, labelKey: 'commands.doors.trunk', labelFallback: 'Trunk', color: 'text-indigo-400' },
 ];
 
 /**

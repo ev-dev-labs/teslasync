@@ -40,3 +40,7 @@ Pending.
 - Removed only the Customize exemption from the freshness/actions audit; other action, confirmation and freshness checks are unchanged. Audit tests now reject filled Customize and accept ghost Customize.
 - Header/PageActions/IconButton/Dashboard suites: **73 passed, 0 failed**. Freshness/actions audit tests: **8 passed, 0 failed**; audit passes.
 - DashboardPage typed i18n verification: 68 calls, zero errors; LF-normalized and regenerated its existing fingerprint.
+
+### Fix 1 verification follow-up
+- Finite-registry verification found eight pre-existing missing widget.quickActions command-label keys. Reused existing catalog keys for all eight commands; Flash now uses the existing complete label “Flash Lights”. Verified every key/default pair from the real COMMANDS declaration, with no interpolation. Updated command-label expectations without changing dispatched commands.
+- Combined affected suites now pass: **517 tests, 33 files, 0 failures** (studio, shared Button, command widget, sidenav, header/actions, repair components/workspace and API hooks).

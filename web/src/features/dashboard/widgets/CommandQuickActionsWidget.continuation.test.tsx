@@ -20,7 +20,7 @@ beforeEach(() => {
 describe('quick action label and command preservation', () => {
   it('retains all eight wide commands, wraps their labels and disables every command while one is running', () => {
     render(<MemoryRouter><CommandQuickActionsWidget vehicleId={42} size={{ cols: 3, rows: 2 }} /></MemoryRouter>);
-    const buttons = ['Lock', 'Unlock', 'Climate on', 'Climate off', 'Frunk', 'Horn', 'Flash', 'Trunk']
+    const buttons = ['Lock', 'Unlock', 'Climate on', 'Climate off', 'Frunk', 'Horn', 'Flash Lights', 'Trunk']
       .map(name => screen.getByRole('button', { name }));
     fireEvent.click(buttons[1]);
     expect(mocks.send).toHaveBeenCalledWith({ vehicleId: 42, command: 'unlock' }, expect.objectContaining({ onSettled: expect.any(Function) }));
