@@ -145,7 +145,7 @@ export const SIDEBAR_SECTION_ICONS: Record<string, LucideIcon> = {
   Reports: Icons.analytics,
   Commands: Icons.terminal,
   Automation: Icons.workflow,
-  Notifications: Icons.notifications,
+  Notifications: SidebarGlyphs.inbox,
   'Advanced intelligence': SidebarGlyphs.sparkle,
   'Ownership intelligence': SidebarGlyphs.handshake,
   Security: Icons.locked,

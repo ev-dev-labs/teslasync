@@ -30,6 +30,17 @@ afterEach(cleanup)
 const svg = (element: Element) => element.querySelector('svg')?.innerHTML
 
 describe('sidenav polish', () => {
+  it('uses an Inbox caption for Notifications and reserves the bell for the pinned Alerts utility', () => {
+    render(<Deck title="Notifications" path="/notifications/inbox" />)
+    const rail = screen.getByTestId('command-deck-rail')
+    const notifications = within(rail).getByRole('button', { name: 'Notifications', exact: true })
+    expect(notifications).toHaveTextContent('Inbox')
+    expect(notifications).not.toHaveTextContent('Alerts')
+    expect(notifications.querySelector('svg')).toHaveClass('lucide-inbox')
+    expect(within(rail).getByRole('link', { name: 'Alerts', exact: true }).querySelector('svg')).toHaveClass('lucide-bell-ring')
+    expect(rail.querySelectorAll('.lucide-bell, .lucide-bell-ring')).toHaveLength(1)
+    expect(screen.getByTestId('atlas-panel-secondary')).toHaveTextContent('Notifications')
+  })
   it.each(sections.map(section => section.title))('%s has one shared glyph in the rail, header, phone tab or More, and section sheet', title => {
     expect(resolveSectionIcon(title)).toBe(SIDEBAR_SECTION_ICONS[title])
     const view = render(<Deck title={title} />)

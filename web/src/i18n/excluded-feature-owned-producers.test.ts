@@ -1435,10 +1435,10 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     }
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    expect(oldEntries).toHaveLength(30123)
+    expect(oldEntries).toHaveLength(30124)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe("f52318a7d0d2a863fe7e6c65426609411524a8fc80e6a5201c87eef8b5d8123d")
-    expect(leaves(catalog)).toHaveLength(32973)
+      .toBe("badeedb466fd8760e326f4cef1ac7e072fde9ea4347060211387f32b6eb77438")
+    expect(leaves(catalog)).toHaveLength(32974)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
   })

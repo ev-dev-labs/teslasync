@@ -5940,7 +5940,8 @@
       "filter": "Filter {{section}}…",
       "pinned": "Pinned",
       "recent": "Recent",
-      "noMatches": "No pages match \"{{query}}\"."
+      "noMatches": "No pages match \"{{query}}\".",
+      "shortInbox": "Inbox"
     }
   },
   "routes": {

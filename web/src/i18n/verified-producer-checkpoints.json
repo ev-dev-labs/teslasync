@@ -162,7 +162,7 @@
   {
     "file": "web/src/components/layout/sidebar/SectionRail.tsx",
     "calls": 13,
-    "sha256": "529a2176772bbbadc86ecd3d8303a180ee4ca8299b2d18a078dfb328bc1d2269"
+    "sha256": "0d4827d9ac6f5265a2f9839a22c4b3928d4602de923a953a811da19f44d88e1f"
   },
   {
     "file": "web/src/components/layout/sidebar/SidebarRow.tsx",

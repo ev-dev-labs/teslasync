@@ -41,7 +41,7 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
     'Advanced intelligence': t('nav.sidenav.shortAdvanced', 'Advanced'),
     'Ownership intelligence': t('nav.sidenav.shortOwnership', 'Ownership'),
     'Tesla physics': t('nav.sidenav.shortPhysics', 'Physics'),
-    Notifications: t('nav.sidenav.shortAlerts', 'Alerts'),
+    Notifications: t('nav.sidenav.shortInbox', 'Inbox'),
     Integrations: t('nav.sidenav.shortConnect', 'Connect'),
   }
   const scrollRef = useRef<HTMLDivElement>(null)
