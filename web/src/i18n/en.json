@@ -39786,7 +39786,7 @@
       "accessSub": "no writes possible",
       "si": "SI units",
       "units": "Storage units",
-      "unitsSub": "m Â· s Â· Wh",
+      "unitsSub": "m · s · Wh",
       "label": "Catalog overview"
     },
     "brief": {
@@ -39794,8 +39794,8 @@
       "description": "Counts describe the bundled curated schema, not database rows or query results. Queries never execute in the browser.",
       "invalid": "Invalid catalog counts",
       "status": "Static reference",
-      "scope": "Bundled schema catalog Â· all entries",
-      "freshness": "Reference data Â· no live measurement",
+      "scope": "Bundled schema catalog · all entries",
+      "freshness": "Reference data · no live measurement",
       "provenance": "Table and column counts come from the bundled curated SQL catalog. Read-only composing and SI storage are reference properties; no query has been executed."
     },
     "aiDrafter": {
@@ -40132,8 +40132,8 @@
       "eyebrow": "Panel-builder reference",
       "description": "Counts describe the bundled builder catalog, not live Grafana panels, connected datasources or database rows.",
       "status": "Static reference",
-      "scope": "Bundled builder catalog Â· all entries",
-      "freshness": "Reference data Â· no live measurement",
+      "scope": "Bundled builder catalog · all entries",
+      "freshness": "Reference data · no live measurement",
       "provenance": "Counts come from the bundled panel types, datasource types and curated tables. The browser never pushes panels to Grafana; copy JSON into your own dashboard."
     },
     "editor": {

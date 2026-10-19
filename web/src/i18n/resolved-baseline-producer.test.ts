@@ -214,7 +214,7 @@ describe('resolved known-missing canonical producers', () => {
     expect(oldEntries).toHaveLength(30026)
     // User-approved current checkpoint; preserve every exact leaf/value in this partition.
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe("7b16e215967275bf3ef2cc777456195ba3562c622e178c915fd3e8e7b6271522")
+      .toBe("176b5d121bf7df8d09113d4cb4252469d5941f55c5e0e04c8b02ea518a384c4e")
     expect(leaves(catalog)).toHaveLength(32975)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa.offline.banner).toBe(

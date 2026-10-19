@@ -19,9 +19,15 @@ test.beforeEach(() => {
 test.use({ timezoneId: 'UTC', locale: 'en-US', reducedMotion: 'reduce' });
 
 async function assertMetrics(brief: Locator, metrics: readonly MetricExpectation[]) {
-  await expect(brief.locator('[data-operational-metric]')).toHaveCount(metrics.length);
+  const visible = metrics.filter(metric => metric.state !== 'missing');
+  await expect(brief.locator('[data-operational-metric]')).toHaveCount(visible.length);
   for (const metric of metrics) {
     const row = brief.locator(`[data-operational-metric="${metric.key}"]`);
+    if (metric.state === 'missing') {
+      // Settled missing-state metrics are withheld, never rendered visibly.
+      await expect(row).toHaveCount(0);
+      continue;
+    }
     await expect(row).toHaveAttribute('data-value-state', metric.state);
     await expect(row.locator('[data-operational-value]')).toHaveText(metric.text);
   }
@@ -41,18 +47,27 @@ async function stormSources(page: Page, mocks: MockApiController | null) {
   });
 }
 
-async function reviewSource(page: Page, brief: Locator, title: string, source: string, limitations: readonly string[]) {
+async function reviewSource(page: Page, brief: Locator, title: string, source: string, limitations: readonly string[],
+  extra: { texts?: readonly string[]; hidden?: number } = {}) {
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
-  await expect(brief).toContainText('Vehicle #7');
-  await expect(brief).toContainText('Observation window: Aug 1, 2026');
-  await expect(brief).toContainText('Aug 3, 2026');
-  await expect(brief).toContainText('Result generated: Aug 3, 2026');
-  await expect(brief).toContainText(source);
   const review = brief.getByRole('button', { name: 'Review details', exact: true });
   await review.focus();
   await page.keyboard.press('Enter');
   const drawer = page.getByRole('dialog', { name: `${title} details`, exact: true });
   await expect(drawer).toBeVisible();
+  // Scope, freshness, status and source render drawer-side only; withheld
+  // metrics surface solely as the hidden-count sentence.
+  await expect(drawer).toContainText('Vehicle #7');
+  await expect(drawer).toContainText('Observation window: Aug 1, 2026');
+  await expect(drawer).toContainText('Aug 3, 2026');
+  await expect(drawer).toContainText('Result generated: Aug 3, 2026');
+  await expect(drawer).toContainText(source);
+  for (const text of extra.texts ?? []) await expect(drawer).toContainText(text);
+  if (extra.hidden != null && extra.hidden > 0) {
+    await expect(drawer).toContainText(extra.hidden === 1
+      ? '1 empty field is hidden.'
+      : `${extra.hidden} empty fields are hidden.`);
+  }
   await expect(drawer.getByTestId('operational-narrative')).toContainText('Not scored');
   await expect(drawer).toContainText('Source quality sample count: 0');
   await expect(drawer).toContainText('Source coverage not supplied');
@@ -111,11 +126,18 @@ for (const theme of ['light', 'dark'] as const) {
           await waitForHarnessReady(page, mocks);
           const brief = page.getByTestId(subject.briefId);
           await expect(brief).toBeVisible();
-          await expect(brief).toContainText('Not calculated');
-          await expect(brief).toContainText('Observation window not supplied');
-          await expect(brief).toContainText('Result generation time not supplied');
-          await expect(brief.locator('[data-operational-metric][data-value-state="missing"]'))
-            .toHaveCount(variant.metrics.length);
+          await expect(brief.locator('[data-operational-metric]')).toHaveCount(0);
+          for (const metric of variant.metrics) {
+            await expect(brief.locator(`[data-operational-metric="${metric.key}"]`)).toHaveCount(0);
+          }
+          await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+          const preDrawer = page.getByRole('dialog', { name: `${subject.title} details`, exact: true });
+          await expect(preDrawer).toContainText('Not calculated');
+          await expect(preDrawer).toContainText('Observation window not supplied');
+          await expect(preDrawer).toContainText('Result generation time not supplied');
+          await expect(preDrawer).toContainText('No metric values are available yet.');
+          await page.keyboard.press('Escape');
+          await expect(preDrawer).toHaveCount(0);
           expect(calls()).toBe(0);
           const run = page.getByRole('button', { name: subject.button, exact: true });
           await expect(run).toBeEnabled();
@@ -123,21 +145,23 @@ for (const theme of ['light', 'dark'] as const) {
           await expect.poll(calls).toBe(1);
           await waitForHarnessReady(page, mocks);
           await assertMetrics(brief, variant.metrics);
-          await expect(brief).toContainText('Limited evidence');
+          const hidden = variant.metrics.filter(metric => metric.state === 'missing').length;
+          const contexts = subject.name === 'journey'
+            ? ['Limited evidence', 'not a vehicle health assessment or confidence estimate']
+            : subject.name === 'twin'
+              ? ['Limited evidence', 'not scenario count or confidence']
+              : ['Limited evidence'];
           await reviewSource(page, brief, subject.title, subject.source,
             subject.name === 'site'
               ? [...variant.response.limitations, ...('assumptions' in variant.response ? variant.response.assumptions : [])]
-              : variant.response.limitations);
+              : variant.response.limitations,
+            { texts: contexts, hidden });
           await expect(run).toBeEnabled();
           if (subject.name === 'journey') {
-            await expect(brief.locator('[data-operational-metric="readiness"]'))
-              .toContainText('not a vehicle health assessment or confidence estimate');
             await expect(page.getByText('Observed charge, not readiness proof.', { exact: true })).toBeVisible();
             await expect(page.getByText('Unknown weather is not zero degrees.', { exact: true })).toBeVisible();
           }
           if (subject.name === 'twin') {
-            await expect(brief.locator('[data-operational-metric="calibration-samples"]'))
-              .toContainText('not scenario count or confidence');
             await expect(page.getByRole('button', { name: 'Add scenario', exact: true })).toBeEnabled();
             await expect(page.getByLabel(/Scenario name/)).toHaveCount(2);
           }
@@ -180,10 +204,10 @@ for (const theme of ['light', 'dark'] as const) {
         const brief = page.getByTestId('advanced-intelligence-federated-brief');
         await assertMetrics(brief, ['epsilon-budget', 'epsilon-spent', 'epsilon-remaining']
           .map((key, index) => ({ key, text: expected[index], state: 'value' })));
-        await expect(brief).toContainText('dimensionless epsilon, not a percentage');
         await reviewSource(page, brief, 'Subject privacy budget', 'Local subject privacy accounting',
-          response.items.flatMap(card => card.limitations));
-        await page.getByRole('button', { name: 'Use for next local round', exact: true }).click();
+          response.items.flatMap(card => card.limitations),
+          { texts: ['dimensionless epsilon, not a percentage'] });
+        await page.getByRole('button', { name: /^Use for next local round/ }).click();
         await expect(page.getByLabel(/^Model name/)).toHaveValue(response.items[0].model_name);
         await expect(page.getByLabel(/^Model version/)).toHaveValue(response.items[0].model_version);
         await expect(page.getByLabel(/^Expected model-card version/)).toHaveValue(String(response.items[0].version));
@@ -273,9 +297,10 @@ for (const [width, theme] of [[320, 'light'], [1440, 'dark']] as const) {
       await expect.poll(() => calls).toBe(2);
       try {
         await expect(run).toBeDisabled();
-        await expect(brief).toContainText('Updating result');
         await assertMetrics(brief, variant.metrics);
-        await reviewSource(page, brief, subject.title, subject.source, variant.response.limitations);
+        await reviewSource(page, brief, subject.title, subject.source, variant.response.limitations,
+          { texts: ['Updating result'],
+            hidden: variant.metrics.filter(metric => metric.state === 'missing').length });
       } finally {
         // Drain only the held response; assertion failures are never swallowed.
         release();
@@ -326,24 +351,31 @@ for (const [width, theme] of [[320, 'light'], [1440, 'dark']] as const) {
       { key: 'epsilon-remaining', text: '0.50', state: 'value' },
     ];
     await assertMetrics(brief, metrics);
-    await page.getByRole('button', { name: 'Use for next local round', exact: true }).click();
+    await page.getByRole('button', { name: /^Use for next local round/ }).click();
     await page.getByRole('button', { name: 'Review privacy spend', exact: true }).click();
     const confirmation = page.getByRole('dialog', { name: 'Confirm local privacy spend', exact: true });
-    await expect(confirmation).toContainText('0.1 epsilon');
+    await expect(confirmation).toContainText('0.10 epsilon');
     expect(rounds).toBe(0);
     await confirmation.getByRole('button', { name: 'Start local round', exact: true }).click();
     await expect.poll(() => rounds).toBe(1);
     await expect(confirmation).not.toBeVisible();
-    await expect(brief).toContainText('Retained result', { timeout: 20000 });
+    await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+    const retainedDialog = page.getByRole('dialog', { name: 'Subject privacy budget details', exact: true });
+    await expect(retainedDialog).toContainText('Retained result', { timeout: 20000 });
+    await page.keyboard.press('Escape');
+    await expect(retainedDialog).toHaveCount(0);
     await assertMetrics(brief, metrics);
     await reviewSource(page, brief, 'Subject privacy budget', 'Local subject privacy accounting',
-      federated.items.flatMap(card => card.limitations));
-    await expect(page.getByText('Previously loaded data remains visible while affected sources recover.', { exact: true }).first()).toBeVisible();
+      federated.items.flatMap(card => card.limitations),
+      { texts: ['Retained result'] });
+    await expect(page.getByText('Previously loaded data remains visible while affected sources recover.').first()).toBeVisible();
     phase = 'recovery';
     await page.getByRole('button', { name: 'Retry', exact: true }).first().click();
-    await expect(brief).toContainText('Limited evidence');
     await waitForHarnessReady(page, mocks);
     await assertMetrics(brief, metrics);
+    await reviewSource(page, brief, 'Subject privacy budget', 'Local subject privacy accounting',
+      federated.items.flatMap(card => card.limitations),
+      { texts: ['Limited evidence'] });
     expect(rounds).toBe(1);
     await expectThemeApplied(page, theme);
     await expectNoHorizontalOverflow(page);

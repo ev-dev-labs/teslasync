@@ -131,7 +131,7 @@ describe('five source-backed copy-owner contracts', () => {
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(predecessor).toHaveLength(30931)
     expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex'))
-      .toBe("c031c521b0b5e73ae87891e257da13b340bbf20b4b5ed5fdfc752e3458205720")
+      .toBe("8247449b334d83751b6eccf4103679bae2f3a96e19627b179dd3f8512d3e6f19")
   })
 
   it('executes the actual guarded incident count producer with English plurals', () => {

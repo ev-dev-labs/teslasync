@@ -68,7 +68,7 @@ async function metric(brief: Locator, key: string, value: string | RegExp, state
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }
 
-async function review(page: Page, brief: Locator, title: string, evidence: readonly string[]) {
+async function review(page: Page, brief: Locator, title: string, evidence: readonly string[]): Promise<string> {
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
   const before = await brief.locator('[data-operational-metric]').allTextContents();
   const trigger = brief.getByRole('button', { name: 'Review details', exact: true });
@@ -87,10 +87,12 @@ async function review(page: Page, brief: Locator, title: string, evidence: reado
   await page.keyboard.press('Tab');
   await expect(close.first()).toBeFocused();
   await expectNoHorizontalOverflow(page);
+  const text = await drawer.innerText();
   await page.keyboard.press('Escape');
   await expect(drawer).toHaveCount(0);
   await expect(trigger).toBeFocused();
   expect(await brief.locator('[data-operational-metric]').allTextContents()).toEqual(before);
+  return text;
 }
 
 for (const theme of ['dark', 'light'] as const) {
@@ -104,11 +106,11 @@ for (const theme of ['dark', 'light'] as const) {
       await metric(brief, 'vehicles', '1');
       const total = await brief.locator('[data-operational-metric="features"] [data-operational-value]').innerText();
       await metric(brief, 'showing', total);
-      await expect(brief).toContainText('no date window');
       await review(page, brief, 'Feature overview', [
         'Catalog counts are derived, not vehicle telemetry.',
         'Vehicles in the returned fleet list',
         'Visible catalog entries after vehicle and authentication gates',
+        'no date window',
       ]);
       await page.getByRole('searchbox', { name: 'Filter features', exact: true }).fill('zzzz-no-matching-destination');
       await metric(brief, 'showing', '0');
@@ -135,7 +137,6 @@ for (const theme of ['dark', 'light'] as const) {
       await metric(sqlBrief, 'columns', String(CURATED_CATALOG.reduce((sum, table) => sum + table.columns.length, 0)));
       await metric(sqlBrief, 'access', 'Read-only');
       await metric(sqlBrief, 'units', 'SI units');
-      await expect(sqlBrief).toContainText('m · s · Wh');
       const editor = page.getByRole('textbox', { name: 'SQL query editor', exact: true });
       await editor.fill('SELECT distance_m, duration_s, energy_used_wh FROM drives LIMIT 10;');
       await review(page, sqlBrief, 'Catalog overview', [
@@ -160,6 +161,9 @@ for (const theme of ['dark', 'light'] as const) {
       ]);
       await expect(panelEditor).toHaveValue('{"title":"SI distance","type":"timeseries","targets":[]}');
       await page.getByRole('button', { name: 'Clear', exact: true }).click();
+      const confirmClear = page.getByRole('dialog', { name: 'Clear the editor?', exact: true });
+      await expect(confirmClear).toBeVisible();
+      await confirmClear.getByRole('button', { name: 'Confirm', exact: true }).click();
       await expect(panelEditor).toHaveValue('');
       await metric(grafanaBrief, 'panel-types', '8');
       await expectNoHorizontalOverflow(page);
@@ -177,11 +181,12 @@ for (const theme of ['dark', 'light'] as const) {
       await metric(brief, 'anomaly-7d', '5');
       await metric(brief, 'anomaly-24h', '0');
       await metric(brief, 'anomaly-health-categories', '3');
-      await expect(brief).toContainText('Current snapshot · last 7 days · last 24 hours');
       await review(page, brief, 'Coverage and anomaly windows', [
         'separate 7-day and 24-hour source windows', 'Current detector snapshot', 'Last 24 hours',
+        'Current snapshot · last 7 days · last 24 hours',
       ]);
-      await expect(page.getByRole('heading', { name: 'Most frequent anomalies', exact: true })).toBeVisible();
+      // The chart carries an sr-only duplicate title; the visible section heading comes first.
+      await expect(page.getByRole('heading', { name: 'Most frequent anomalies', exact: true }).first()).toBeVisible();
       await expect(page.getByText('Battery drift', { exact: true })).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
@@ -203,10 +208,10 @@ for (const theme of ['dark', 'light'] as const) {
       await metric(brief, 'locations-visits', '35');
       await metric(brief, 'locations-time', /^21\.00\s*h$/);
       await metric(brief, 'locations-top', 'Home, Seattle');
-      await expect(brief).toContainText('loaded page 1, up to 50 places; not server-wide totals.');
       await review(page, brief, 'Location summary', [
         'Home, Seattle', 'Loaded-page total duration divided by loaded-page visits',
-        'search does not recalculate the summary', 'historical',
+        'search does not recalculate the summary', 'Historical',
+        'loaded page 1, up to 50 places; not server-wide totals.',
       ]);
       await expect(page.getByRole('region', { name: 'Top locations', exact: true })).toBeVisible();
       const search = page.getByPlaceholder('Search by address…', { exact: true });
@@ -231,10 +236,10 @@ for (const theme of ['dark', 'light'] as const) {
       await metric(route, 'navigation-average', /^72\.00\s*km\/h$/);
       await metric(route, 'navigation-delay', /^0/);
       await metric(route, 'navigation-arrival', '0.00%');
-      await expect(route).toContainText('no common source window');
       await review(page, route, 'Route metrics', [
         'Source ETA is in minutes', 'independent charging telemetry',
         'unknown differs from measured no delay', 'latest 200 snapshots',
+        'no common source window',
       ]);
       const presence = page.getByRole('region', { name: 'Location status', exact: true });
       await metric(presence, 'navigation-home', 'Away');
@@ -242,7 +247,7 @@ for (const theme of ['dark', 'light'] as const) {
       await metric(presence, 'navigation-heading', 'N (0°)');
       await review(page, presence, 'Location status', [
         'False is a reported away state; missing presence is unknown.',
-        '37.1', '-122.1', 'live',
+        '37.1', '-122.1', 'Live',
       ]);
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
@@ -259,10 +264,10 @@ for (const theme of ['dark', 'light'] as const) {
       await metric(brief, 'vehicles', '1');
       await metric(brief, 'tesla', 'Not connected');
       await metric(brief, 'telemetry', 'Interrupted');
-      await expect(brief).toContainText('All steps complete');
       await review(page, brief, 'Setup status', [
         'completed setup remains complete during a live-service outage',
         'Telemetry health is not a status-fetch timestamp', 'Stored history remains available',
+        'All steps complete',
       ]);
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
@@ -280,10 +285,10 @@ for (const theme of ['dark', 'light'] as const) {
       for (const key of ['geofences-total', 'geofences-reviewed', 'geofences-pending', 'geofences-candidates']) {
         await metric(brief, key, '0');
       }
-      await expect(brief).toContainText('not limited to the selected vehicle');
       await review(page, brief, 'Geofence summary', [
         'Saved geofences and visited candidates are independent sources',
         'Returned visited-place candidates; separate from saved geofence totals.',
+        'not limited to the selected vehicle',
       ]);
       await page.getByRole('button', { name: 'Add geofence', exact: true }).click();
       const form = page.getByRole('dialog', { name: 'Create geofence', exact: true });
@@ -313,16 +318,15 @@ for (const theme of ['dark', 'light'] as const) {
       await exactGet(page, mocks, '/location-snapshots/latest', () => ({ status: 200, json: null }), { vehicle_id: '7' });
       await page.goto('/live');
       await ready(page, mocks, theme);
-      const brief = page.getByRole('region', { name: 'Vehicle status', exact: true });
-      await metric(brief, 'overview-speed', /^0\.00\s*km\/h$/);
-      await metric(brief, 'overview-heading', '0.00°');
-      await metric(brief, 'overview-latitude', '—', 'missing');
-      await metric(brief, 'overview-longitude', '—', 'missing');
-      await expect(brief).toContainText('latest position only');
-      await review(page, brief, 'Vehicle status', [
-        'missing GPS is not a measured zero', 'Reported heading in degrees.',
-        'Auto-refreshes every 15 s', 'live',
-      ]);
+      // Row 14 merged /live into one surface: the hero info panel carries the readings.
+      const details = page.getByRole('region', { name: 'Location details', exact: true });
+      const row = (label: string) => details.locator('div.flex.items-center.gap-3', { hasText: label });
+      await expect(row('Observed speed')).toContainText(/0\.00\s*km\/h/);
+      await expect(row('Heading')).toContainText('N (0°)');
+      await expect(row('Coordinates')).toContainText('—');
+      await expect(row('Coordinates')).not.toContainText('0.0000');
+      await expect(page.getByText('GPS coordinates not available. Location data requires Fleet Telemetry HTTP streaming.', { exact: true })).toBeVisible();
+      await expect(page.getByText('No location data available yet', { exact: true })).toBeVisible();
       await expect(page.locator('.leaflet-container')).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
@@ -338,23 +342,22 @@ for (const theme of ['dark', 'light'] as const) {
       const brief = page.getByRole('region', { name: 'Summary metrics', exact: true });
       await metric(brief, 'temperature-average', /^185\.00\s*Wh\/km$/);
       await metric(brief, 'temperature-best', '10–20°C');
-      await metric(brief, 'temperature-worst', '> 30°C');
+      await metric(brief, 'temperature-worst', '≥ 30°C');
       await metric(brief, 'temperature-points', '2');
       await metric(brief, 'temperature-best-efficiency', /^150\.00\s*Wh\/km$/);
       await metric(brief, 'temperature-worst-efficiency', /^220\.00\s*Wh\/km$/);
-      await expect(brief).toContainText('source window unspecified');
       await review(page, brief, 'Summary metrics', [
         'Monthly trend and efficiency detective use independent periods.',
         'Lowest average consumption among populated temperature buckets.',
+        'source window unspecified',
       ]);
       const detective = page.getByRole('region', { name: 'Month-over-month diagnosis', exact: true });
       await metric(detective, 'detective-delta', '15.00%');
       await metric(detective, 'detective-attributed', '12.00%');
       await metric(detective, 'detective-temperature', '-8.00°C');
-      await expect(detective).toContainText('2025-12 versus 2025-11');
       await review(page, detective, 'Month-over-month diagnosis', [
         'independent server diagnosis', 'not an absolute temperature conversion',
-        'temperature-attributed', 'Efficiency detective:',
+        'temperature-attributed', 'Efficiency detective:', '2025-12 versus 2025-11',
       ]);
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
@@ -369,19 +372,20 @@ for (const theme of ['dark', 'light'] as const) {
       await ready(page, mocks, theme);
       const brief = page.getByTestId('rul-next-service-summary');
       await metric(brief, 'rul-next-service-component', 'Tires');
-      await metric(brief, 'rul-next-service-date', '2026-08-01');
-      await expect(brief).toContainText('Board snapshot; no observation timestamp supplied');
+      await metric(brief, 'rul-next-service-date', 'Aug 1, 2026');
       await review(page, brief, 'Next service due', [
         'not a guaranteed failure date',
         'component forecasts retain their own confidence and basis below',
         'Existing next-service projection from the component health board.',
+        'Board snapshot; no observation timestamp supplied',
       ]);
-      const component = page.getByRole('option', { name: 'Show forecast for Tires', exact: true });
-      await expect(component).toHaveAttribute('aria-selected', 'true');
-      await expect(page.getByText('Measured tread trend', { exact: true })).toBeVisible();
-      await expect(page.getByRole('heading', { name: /Health forecast/ })).toBeVisible();
+      const component = page.getByRole('button', { name: 'Show forecast for Tires', exact: true });
+      await expect(component).toHaveAttribute('aria-pressed', 'true');
+      // The basis renders twice: inside the selector card and in the forecast detail panel below it.
+      await expect(page.getByText('Basis: Measured tread trend', { exact: true }).nth(1)).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Health forecast · Tires', exact: true })).toBeVisible();
       await component.click();
-      await expect(component).toHaveAttribute('aria-selected', 'true');
+      await expect(component).toHaveAttribute('aria-pressed', 'true');
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
       await assertMockApiComplete(page, mocks);
@@ -394,27 +398,28 @@ for (const theme of ['dark', 'light'] as const) {
       await page.goto('/energy-orchestrator');
       await ready(page, mocks, theme);
       const outcomes = page.getByTestId('home-energy-outcomes');
-      await metric(outcomes, 'vehicles-ready', '0/0');
+      await metric(outcomes, 'vehicles-ready', '0 / 0');
       await metric(outcomes, 'peak-grid-import', /^0\.00\s*kW$/);
       await metric(outcomes, 'unmet-energy', /^0\.00\s*kWh$/);
       await metric(outcomes, 'projected-cost', '$0.00');
-      await expect(outcomes).toContainText('15-minute modeled slots · UTC · source coverage not established');
-      const interval = (await outcomes.innerText()).match(/Planning horizon: (\S+) — (\S+) \(end exclusive\)/);
-      expect(interval, 'actual modeled interval must expose both exclusive bounds').not.toBeNull();
-      if (!interval) throw new Error('Planning interval is missing');
-      expect(Date.parse(interval[2]) - Date.parse(interval[1])).toBe(24 * 3_600_000);
-      await review(page, outcomes, 'Planning outcomes', [
+      const drawerText = await review(page, outcomes, 'Planning outcomes', [
         'Modeled recommendation score, not source confidence',
         'raw input in watts', 'raw input in watt-hours',
         'TeslaSync has no endpoint that reports these as measured fact.',
+        '15.00-minute modeled slots · UTC · source coverage not established',
       ]);
+      const interval = drawerText.match(/Planning horizon: (.+?) — (.+?) \(end exclusive\)/);
+      expect(interval, 'actual modeled interval must expose both exclusive bounds').not.toBeNull();
+      if (!interval) throw new Error('Planning interval is missing');
+      const parseHorizon = (raw: string) => Date.parse(raw.replace(/, (\d{2}:\d{2} [AP]M)$/, ' $1'));
+      expect(parseHorizon(interval[2]) - parseHorizon(interval[1])).toBe(24 * 3_600_000);
       const quality = page.getByTestId('home-energy-forecast-quality');
       await metric(quality, 'solar-confidence', '0%');
       await metric(quality, 'load-confidence', '0%');
-      await expect(quality).toContainText('0% confidence from 0 history sample(s)');
       await review(page, quality, 'Assumptions & forecast quality', [
         'No history', 'No source history sample timestamp is available.',
         'not confidence in measured vehicle or battery state.',
+        '0% confidence from 0 history sample(s)',
       ]);
       for (const title of [
         'Scenario & assumptions', 'Vehicle assumptions', 'Energy flow schedule',
@@ -423,7 +428,7 @@ for (const theme of ['dark', 'light'] as const) {
       ]) await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
       await expect(page.getByText('Missing vehicle or home-battery SoC uses a 50% model assumption, not a measurement.', { exact: false })).toBeVisible();
       await page.getByRole('button', { name: 'Reset to defaults', exact: true }).click();
-      await metric(outcomes, 'vehicles-ready', '0/0');
+      await metric(outcomes, 'vehicles-ready', '0 / 0');
       await metric(quality, 'solar-confidence', '0%');
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
@@ -449,6 +454,13 @@ for (const theme of ['dark', 'light'] as const) {
       await exactGet(page, mocks, '/vehicles/7/guard/events', () => ({
         status: 200, json: { vehicle_id: 7, events: [] },
       }));
+      await exactGet(page, mocks, '/vehicles/7', () => ({
+        status: 200, json: {
+          id: 7, vehicle_id: 7, vin: '5YJMOCK0000000001', display_name: 'Aurora',
+          model: 'Model Y', trim_badging: 'Long Range', exterior_color: 'Pearl White',
+          wheel_type: 'Gemini', state: 'online', healthy: true, timezone: 'UTC',
+        },
+      }));
       await page.goto('/resale-vault');
       await ready(page, mocks, theme);
       const bands = [
@@ -463,12 +475,12 @@ for (const theme of ['dark', 'light'] as const) {
       await expect(page.locator('main [data-operational-brief]')).toHaveCount(7);
       for (const band of bands) {
         const brief = page.getByTestId(`vault-${band.id}-brief`);
-        await expect(brief).toContainText('No evidence supplied');
-        await expect(brief.locator('[data-operational-metric]')).toHaveCount(band.keys.length);
+        await expect(brief.locator('[data-operational-metric]')).toHaveCount(0);
         for (const key of band.keys) await metric(brief, key, '—', 'missing');
-        await review(page, brief, band.title, ['No measurement supplied']);
+        await review(page, brief, band.title, ['No evidence supplied']);
       }
-      await expect(page.getByTestId('vault-charging-brief')).toContainText('the source does not supply a currency denomination');
+      // The currency-denomination note is a withheld cost-metric description; it renders nowhere.
+      await review(page, page.getByTestId('vault-charging-brief'), 'Charging', ['No evidence supplied']);
       const before = await page.locator('main [data-operational-metric]').allTextContents();
       await page.getByRole('tab', { name: 'Disclosure profile', exact: true }).click();
       await expect(page.getByRole('tab', { name: 'Disclosure profile', exact: true })).toHaveAttribute('aria-selected', 'true');
@@ -496,8 +508,14 @@ for (const source of ['zero', 'unknown'] as const) {
     for (const key of ['anomaly-monitored', 'anomaly-7d', 'anomaly-24h', 'anomaly-health-categories']) {
       await metric(brief, key, source === 'zero' ? '0' : '—', source === 'zero' ? 'value' : 'missing');
     }
-    await expect(brief).toContainText(source === 'zero' ? 'Detector snapshot available' : 'Detector snapshot unavailable');
-    await review(page, brief, 'Coverage and anomaly windows', ['Current detector snapshot', 'Last 7 days']);
+    await review(page, brief, 'Coverage and anomaly windows', [
+      // Metric contexts only render for visible metrics; the unknown variant withholds all four.
+      // A 200 + null body still counts as received (shared hasData semantics), so the
+      // unknown variant also reports an available snapshot and differs by its withheld values.
+      ...(source === 'zero'
+        ? ['Current detector snapshot', 'Last 7 days', 'Detector snapshot available']
+        : ['Detector snapshot available', 'Current snapshot · last 7 days · last 24 hours', 'No metric values are available yet.']),
+    ]);
     await expectNoHorizontalOverflow(page);
     await assertMockApiComplete(page, mocks);
   });
@@ -517,7 +535,10 @@ for (const source of ['zero', 'unknown'] as const) {
     await metric(brief, 'navigation-average', source === 'zero' ? /^0\.00\s*km\/h$/ : '—', source === 'zero' ? 'value' : 'missing');
     await metric(brief, 'navigation-distance', source === 'zero' ? /^0\.00\s*km$/ : '—', source === 'zero' ? 'value' : 'missing');
     await metric(brief, 'navigation-arrival', '—', 'missing');
-    await expect(brief).toContainText('Independent sources incomplete');
+    await review(page, brief, 'Route metrics', [
+      'Independent sources incomplete',
+      ...(source === 'zero' ? ['1 empty field is hidden.'] : ['No metric values are available yet.', '5 empty fields are hidden.']),
+    ]);
     await expectNoHorizontalOverflow(page);
     await assertMockApiComplete(page, mocks);
   });
@@ -531,9 +552,13 @@ test('specialized first-run measured zero keeps setup checklist and account navi
   const brief = page.getByTestId('onboarding-setup-brief');
   await metric(brief, 'vehicles', '0');
   await metric(brief, 'setup-progress', '0/3');
-  await expect(page.getByRole('link', { name: 'Connect Tesla account', exact: true })).toHaveAttribute('href', '/tesla-account');
-  await expect(brief).toContainText('This installation · 3 setup anchors');
-  await review(page, brief, 'Setup status', ['Waiting for the first sync', 'No signals received yet']);
+  await page.getByRole('button', { name: 'Connect Tesla account', exact: true }).click();
+  await expect(page).toHaveURL(/\/tesla-account/);
+  await page.goBack();
+  await ready(page, mocks, 'light');
+  await review(page, brief, 'Setup status', [
+    'Waiting for the first sync', 'Fleet Telemetry connection unknown', 'This installation · 3 setup anchors',
+  ]);
   await expectNoHorizontalOverflow(page);
   await assertMockApiComplete(page, mocks);
 });
@@ -546,10 +571,16 @@ test('specialized feature hub missing fleet does not masquerade as a measured em
   }));
   await page.goto('/explore');
   const brief = page.getByTestId('explore-operational-brief');
-  await expect(brief).toContainText('Fleet unavailable', { timeout: 45_000 });
+  await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+  const failedDialog = page.getByRole('dialog', { name: 'Feature overview details', exact: true });
+  await expect(failedDialog).toContainText('Fleet unavailable', { timeout: 45_000 });
+  await page.keyboard.press('Escape');
+  await expect(failedDialog).toHaveCount(0);
   await expectThemeApplied(page, 'dark');
   await metric(brief, 'vehicles', '—', 'missing');
-  await expect(brief).toContainText('No fleet list is available');
+  await review(page, brief, 'Feature overview', [
+    'Fleet unavailable', 'No fleet list is available', '1 empty field is hidden.',
+  ]);
   await expect(brief.locator('[data-operational-metric="features"]')).toHaveAttribute('data-value-state', 'value');
   await expect(page.getByRole('searchbox', { name: 'Filter features', exact: true })).toBeVisible();
   await expectNoHorizontalOverflow(page);
@@ -563,7 +594,7 @@ test('specialized feature hub successful empty fleet is a measured zero', async 
   await ready(page, mocks, 'light');
   const brief = page.getByTestId('explore-operational-brief');
   await metric(brief, 'vehicles', '0');
-  await expect(brief).toContainText('Catalog ready');
+  await review(page, brief, 'Feature overview', ['Catalog ready']);
   await expect(brief.locator('[data-operational-metric="features"]')).toHaveAttribute('data-value-state', 'value');
   await expectNoHorizontalOverflow(page);
   await assertMockApiComplete(page, mocks);
@@ -578,10 +609,15 @@ test('specialized setup unavailable counts stay unknown until the real Retry suc
     : { status: 200, json: incompleteSetup });
   await page.goto('/onboarding');
   const brief = page.getByTestId('onboarding-setup-brief');
-  await expect(brief).toContainText('Setup status unavailable', { timeout: 45_000 });
+  await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+  const failedDialog = page.getByRole('dialog', { name: 'Setup status details', exact: true });
+  await expect(failedDialog).toContainText('Setup status unavailable', { timeout: 45_000 });
+  await page.keyboard.press('Escape');
+  await expect(failedDialog).toHaveCount(0);
   await metric(brief, 'setup-progress', '—', 'missing');
   await metric(brief, 'vehicles', '—', 'missing');
   await review(page, brief, 'Setup status', [
+    'Setup status unavailable',
     'Setup status has not been received; no completed-step or vehicle count is known.',
   ]);
   unavailable = false;
@@ -606,13 +642,17 @@ test('specialized route explicit Refresh preserves published metrics through a s
   await metric(brief, 'navigation-distance', /^9\.00\s*km$/);
   failRefresh = true;
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(brief).toContainText('Retained source data', { timeout: 20_000 });
+  await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+  const retainedDialog = page.getByRole('dialog', { name: 'Route metrics details', exact: true });
+  await expect(retainedDialog).toContainText('Retained source data', { timeout: 20_000 });
+  await page.keyboard.press('Escape');
+  await expect(retainedDialog).toHaveCount(0);
   await metric(brief, 'navigation-distance', /^9\.00\s*km$/);
   await metric(brief, 'navigation-average', /^72\.00\s*km\/h$/);
-  await review(page, brief, 'Route metrics', ['Retained source data', 'Navigation: live', 'Location history: historical']);
+  await review(page, brief, 'Route metrics', ['Retained source data', 'Navigation: Cached', 'Location history: Historical']);
   failRefresh = false;
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(brief).toContainText('Source data available', { timeout: 20_000 });
+  await review(page, brief, 'Route metrics', ['Source data available']);
   await expectNoHorizontalOverflow(page);
   expect(diagnostics.pageErrors).toEqual([]);
   await assertMockApiComplete(page, mocks);

@@ -16,8 +16,8 @@
       "eyebrow": "Panel-builder reference",
       "description": "Counts describe the bundled builder catalog, not live Grafana panels, connected datasources or database rows.",
       "status": "Static reference",
-      "scope": "Bundled builder catalog Â· all entries",
-      "freshness": "Reference data Â· no live measurement",
+      "scope": "Bundled builder catalog · all entries",
+      "freshness": "Reference data · no live measurement",
       "provenance": "Counts come from the bundled panel types, datasource types and curated tables. The browser never pushes panels to Grafana; copy JSON into your own dashboard."
     },
     "editor": {
