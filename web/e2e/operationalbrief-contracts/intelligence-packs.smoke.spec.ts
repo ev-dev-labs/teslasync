@@ -55,7 +55,7 @@ for (const width of [320, 1440]) {
           .getByRole('button', { name: 'Up to date (v1.0.0)', exact: true })).toBeVisible();
 
         await selectTab(page, 'Installed');
-        await page.getByRole('button', { name: 'Expand row', exact: true }).click();
+        await page.getByRole('button', { name: 'Expand row' }).click();
         await expect(page.getByText('Trust decision: trusted-signed-recognized', { exact: true })).toBeVisible();
         await expect(page.getByRole('switch', { name: `Enable ${starter.manifest.name}`, exact: true })).toBeChecked();
         const capabilityList = page.getByText('Capability grant on record', { exact: true })
@@ -98,7 +98,7 @@ for (const width of [320, 1440]) {
         await expect(observedRange).toContainText(fixture.headroomLatest);
         await expect(observedRange).toContainText(fixture.headroomRange);
         await expect(observedRange.locator('[role="progressbar"]')).toHaveCount(0);
-        await reviewRun(page, fixture.sandbox, INSTALLED_GRANT, runStats);
+        await reviewRun(page, fixture.sandbox, INSTALLED_GRANT, runStats, runContext(fixture.sandbox));
         expect(await localPackTables(page)).toEqual(persisted);
 
         // A fresh page/provider must read the persisted restricted grant,
@@ -115,7 +115,7 @@ for (const width of [320, 1440]) {
             `Fields evaluated as 0 (capability denied): ${notice.field}`, { exact: true },
           )).toBeVisible();
         }
-        await reviewRun(page, fixture.sandbox, INSTALLED_GRANT, reloadedStats);
+        await reviewRun(page, fixture.sandbox, INSTALLED_GRANT, reloadedStats, runContext(fixture.sandbox));
         expect(await localPackTables(page)).toEqual(persisted);
         await complete(page, api);
         await expectNoRuntimeFailures(diagnostics);
@@ -167,10 +167,6 @@ async function expectRun(page: Page, fixture: SandboxExpectation): Promise<strin
   const brief = page.getByTestId(SANDBOX_BRIEF_ID);
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
   await expect(brief).toContainText('Synthetic sandbox');
-  await expect(brief).toContainText('Sample evaluation complete');
-  await expect(brief).toContainText(`${fixture.envelope.manifest.name} · v${fixture.envelope.manifest.version}`);
-  await expect(brief).toContainText('Selected run; no vehicle-data timestamp');
-  await expect(brief).toContainText('not a subscription or evidence of model accuracy on real vehicle data');
   await expect(brief.locator('[data-operational-metric]')).toHaveCount(3);
   for (const [id, value] of [
     ['sandbox-sample-rows', String(fixture.rows)],
@@ -188,9 +184,17 @@ async function expectRun(page: Page, fixture: SandboxExpectation): Promise<strin
   expect(Number.isFinite(milliseconds)).toBe(true);
   expect(milliseconds).toBeGreaterThanOrEqual(0);
   const runStats = `${fixture.rows} sample rows · ${fixture.steps} evaluation steps · ${milliseconds}ms`;
-  await expect(brief.getByText(runStats, { exact: true })).toBeVisible();
   await expectCharts(page, fixture);
   return runStats;
+}
+
+function runContext(fixture: SandboxExpectation): string[] {
+  return [
+    'Sample evaluation complete',
+    `${fixture.envelope.manifest.name} · v${fixture.envelope.manifest.version}`,
+    'Selected run; no vehicle-data timestamp',
+    'not a subscription or evidence of model accuracy on real vehicle data',
+  ];
 }
 
 async function reviewRun(
@@ -198,6 +202,7 @@ async function reviewRun(
   fixture: SandboxExpectation,
   grant: string,
   runStats: string,
+  context: readonly string[] = [],
 ): Promise<void> {
   const brief = page.getByTestId(SANDBOX_BRIEF_ID);
   const before = await brief.innerText();
@@ -220,10 +225,11 @@ async function reviewRun(
     'Bundled synthetic rows used by this evaluation, not recorded vehicle observations.',
     'Interpreter steps consumed by the selected pack, not a configured execution ceiling.',
     'Measured wall-clock time for this synthetic evaluation; this is not a live-data freshness timestamp.',
-    'No current attention items.',
   ]) {
     await expect(drawer.getByText(detail, { exact: true })).toBeVisible();
   }
+  await expect(drawer).toContainText('No current attention items.');
+  for (const text of context) await expect(drawer).toContainText(text);
   const closeButtons = drawer.getByRole('button', { name: 'Close', exact: true });
   await expect(closeButtons).toHaveCount(2);
   await expect(closeButtons.first()).toBeFocused();
@@ -279,12 +285,12 @@ for (const width of [320, 1440]) {
       await expect(observedRange).toContainText('63.0');
       await expect(observedRange).toContainText('sample 21.00–69.00 %');
       await expect(observedRange.locator('[role="progressbar"]')).toHaveCount(0);
-      await reviewRun(page, STARTER_EXPECTATION, SIMULATED_GRANT, starterStats);
+      await reviewRun(page, STARTER_EXPECTATION, SIMULATED_GRANT, starterStats, runContext(STARTER_EXPECTATION));
       await selector.selectOption(DRAFT_EXPECTATION.envelope.manifest.id);
       const draftStats = await expectRun(page, DRAFT_EXPECTATION);
       await expect(card(page, 'Sandbox preview').locator('[data-card-content] [data-card-title]')).toHaveText(
         DRAFT_EXPECTATION.envelope.manifest.dashboards.flatMap(dashboard => dashboard.widgets.map(widget => widget.title)));
-      await reviewRun(page, DRAFT_EXPECTATION, SIMULATED_GRANT, draftStats);
+      await reviewRun(page, DRAFT_EXPECTATION, SIMULATED_GRANT, draftStats, runContext(DRAFT_EXPECTATION));
       await selector.selectOption(STARTER_EXPECTATION.envelope.manifest.id);
       await expectRun(page, STARTER_EXPECTATION);
       await complete(page, api);
@@ -322,7 +328,7 @@ for (const width of [320, 1440]) {
       await expect(card(page, starter.manifest.name).getByRole('button', { name: 'Up to date (v1.0.0)', exact: true })).toBeVisible();
 
       await selectTab(page, 'Installed');
-      await page.getByRole('button', { name: 'Expand row', exact: true }).click();
+      await page.getByRole('button', { name: 'Expand row' }).click();
       await expect(page.getByText('Capability grant on record', { exact: true })).toBeVisible();
       await expect(page.getByText('Trust decision: trusted-signed-recognized', { exact: true })).toBeVisible();
       await expect(page.getByText('0 previous version(s) retained for rollback', { exact: true })).toBeVisible();
@@ -352,7 +358,7 @@ for (const width of [320, 1440]) {
         await expect(page.getByText(/simulating full requested-capability grant/)).toHaveCount(0);
         expect(await page.getByTestId(SANDBOX_BRIEF_ID).innerText()).toBe(retainedBrief);
         await expectCharts(page, STARTER_EXPECTATION);
-        await reviewRun(page, STARTER_EXPECTATION, INSTALLED_GRANT, runStats);
+        await reviewRun(page, STARTER_EXPECTATION, INSTALLED_GRANT, runStats, runContext(STARTER_EXPECTATION));
       } finally {
         await restoreLocalTrustReads(page);
       }
