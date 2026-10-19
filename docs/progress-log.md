@@ -198,3 +198,13 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 
 ## 2026-10-19 08:17 UTC - telemetry 84/84, charging 49 mapped+fixed
 - Telemetry contracts 31/52 -> 84/84 green; charging 42/49 with all 49 fixed and subset-verified, full rerun in progress. Only the 2 spec files changed; tsc/lint/catalog green. Key rule: drawer shows visible metrics + hidden count only, so withheld reasons migrate to count readings. Currency/window/sentence-case/mobile-cards drift all unit-pinned app side; smoke pins updated. Details in followups-plan.md.
+## 2026-10-19 11:30 UTC - ownership 58/58, widget-adoption fixed, pushed x2
+- Ownership 8/58 -> 58/58 local; pushed 74c6def79e (driving 56/56 + vehicle-systems 100/100 + ownership 58/58).
+- Widget-adoption: FreshnessDot tooltip multiline fix + guard/config + catalog envelope + watch key + tire/history shapes; pushed e7e342f90d.
+- CI inventory grouped (run 39224816990, all shards): settings 65, trips 52, adv-intel 50, notifications 48, specialized 56, actions 34, vehicles 52, science 24, intel-packs 16, fleet-ops 8, operations 3, r16 responsive 23. Settings local run in progress.
+
+## 2026-10-17 (session, post-reboot)
+- Actions spec migrated (withhold + drawer-text rule) and pushed-state verified clean at e7e342f90d.
+- Actions first run: systematic review-helper failure (Close matched header+footer buttons); scoped to [data-drawer-header]; full rerun in progress (D:/tmp/actions-local2.log) against shared :4173 preview.
+- Notifications run finished 24 passed / 32 failed = 8 groups x 4 viewports; all 8 fixed (push/subscribe stub, Critical case, 2 latency wordings, Notification.permission pin via init script after proving grantPermissions is ignored in headless shell, burn 3-hidden, No schedules, Refresh .first()); rerun pending after actions.
+- Log entry stamped 2026-10-19T06:47:30.5877558-07:00

@@ -29,17 +29,14 @@ async function expectValue(brief: Locator, id: string, value: string) {
 }
 
 async function expectMissing(brief: Locator, id: string) {
-  const item = metric(brief, id)
-  await expect(item).toHaveAttribute('data-value-state', 'missing')
-  await expect(item.locator('[data-operational-value]')).toHaveText('—')
+  // Settled missing-state metrics are withheld, never rendered visibly.
+  await expect(metric(brief, id)).toHaveCount(0)
 }
 
-async function expectBrief(brief: Locator, count: number, source: string, status = 'Source available') {
+async function expectBrief(brief: Locator, count: number) {
   await expect(brief).toBeVisible()
   await expect(brief).toHaveAttribute('data-operational-brief', 'true')
   await expect(brief.locator('[data-operational-metric]')).toHaveCount(count)
-  await expect(brief).toContainText(source)
-  await expect(brief).toContainText(status)
   const overflow = await brief.locator('[data-operational-metric]').evaluateAll(items => items.flatMap(item => {
     const bounds = item.getBoundingClientRect()
     const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT)
@@ -58,7 +55,8 @@ async function expectBrief(brief: Locator, count: number, source: string, status
   expect(overflow, 'Published preference, source and cost text must not clip inside summary cells').toEqual([])
 }
 
-async function reviewWithKeyboard(page: Page, brief: Locator, title: string, source: string) {
+async function reviewWithKeyboard(page: Page, brief: Locator, title: string, source: string,
+  extra: { texts?: readonly string[]; hidden?: number } = {}) {
   const published = await brief.locator('[data-operational-metric]').allTextContents()
   const values = await brief.locator('[data-operational-value]').allTextContents()
   const details = await brief.locator('[data-operational-metric] > div:last-child').allTextContents()
@@ -71,15 +69,25 @@ async function reviewWithKeyboard(page: Page, brief: Locator, title: string, sou
   await expect(drawer).toHaveAttribute('aria-modal', 'true')
   await expect(drawer.getByTestId('operational-narrative')).toContainText(source)
   await expect(drawer).toContainText('Operational metrics')
+  // Status label, scope, descriptions and metric context render drawer-side
+  // only; withheld metrics surface solely as the hidden-count sentence.
+  for (const text of extra.texts ?? []) await expect(drawer).toContainText(text)
+  if (extra.hidden != null && extra.hidden > 0) {
+    await expect(drawer).toContainText(extra.hidden === 1
+      ? '1 empty field is hidden.'
+      : `${extra.hidden} empty fields are hidden.`)
+  }
   const labels = await brief.locator('[data-operational-metric]').evaluateAll(items =>
-    items.map(item => item.firstElementChild?.firstElementChild?.textContent ?? ''))
+    items.map(item => item.firstElementChild?.textContent ?? ''))
   for (const label of labels) {
     expect(label.trim(), 'Each published metric has an accessible label').not.toBe('')
     await expect(drawer).toContainText(label.trim())
   }
   for (const value of values) await expect(drawer).toContainText(value.trim())
   for (const detail of details) await expect(drawer).toContainText(detail.trim())
-  const close = drawer.getByRole('button', { name: 'Close', exact: true })
+  // Empty-state drawers render a footer Close alongside the header one;
+  // focus lands on the first.
+  const close = drawer.getByRole('button', { name: 'Close', exact: true }).first()
   await expect(close).toBeFocused()
   const actions = await drawer.locator('button:visible, a[href]:visible, input:visible, select:visible').count()
   for (let index = 0; index <= actions; index += 1) {
@@ -129,21 +137,19 @@ for (const { width, theme } of layouts) {
     await waitForHarnessReady(page, api)
     await expectThemeApplied(page, theme)
     const brief = page.getByTestId('settings-preferences-summary')
-    await expectBrief(brief, 7, 'Saved settings and browser font preferences')
+    await expectBrief(brief, 7)
     for (const [id, value] of [
       ['settings-preference-0', 'mi'], ['settings-preference-1', '°F'],
       ['settings-preference-2', 'psi'], ['settings-preference-3', 'EN'],
       ['settings-preference-4', '€'], ['settings-preference-5', '€0,1235'],
     ]) await expectValue(brief, id, value)
-    await expect(metric(brief, 'settings-preference-0')).toContainText('Ideal')
-    await expect(metric(brief, 'settings-preference-3')).toContainText('English')
-    await expect(metric(brief, 'settings-preference-5')).toContainText('per kWh')
-    await expect(metric(brief, 'settings-preference-6')).toContainText('100%')
-    await expect(brief).toContainText('These are configuration choices, not vehicle measurements.')
-    await reviewWithKeyboard(page, brief, 'Preferences at a glance', 'Saved settings and browser font preferences')
+    await expectValue(brief, 'settings-preference-6', 'System UI')
+    await reviewWithKeyboard(page, brief, 'Preferences at a glance', 'Saved settings and browser font preferences',
+      { texts: ['Source available', 'Ideal', 'English', 'per kWh', '100%',
+        'These are configuration choices, not vehicle measurements.'] })
     const shortcuts = page.getByRole('region', { name: 'Settings shortcuts', exact: true })
-    await expect(shortcuts.getByRole('link', { name: /Data export/ })).toHaveAttribute('href', '/data-export')
-    await expect(shortcuts.getByRole('button', { name: /Open tour launcher/i })).toBeVisible()
+    await expect(shortcuts.getByRole('link', { name: /Export dashboard/ })).toHaveAttribute('href', '/data-export')
+    await expect(shortcuts.getByRole('button', { name: /Show tours/ })).toBeVisible()
     await selectCategory(page, width, 'general', /Units, language & costs/)
     const distance = page.getByRole('combobox', { name: /^Distance Unit$/i })
     await expect(distance).toHaveValue('mi')
@@ -176,21 +182,21 @@ for (const { width, theme } of layouts) {
     await waitForHarnessReady(page, api)
     await expectThemeApplied(page, theme)
     const status = page.getByTestId('helix-summary')
-    await expectBrief(status, 4, 'Configuration draft and audited usage')
+    await expectBrief(status, 4)
     await expectValue(status, 'helix-mode', 'Local-only')
     await expectValue(status, 'helix-features', '0')
     await expectValue(status, 'helix-provider', 'Ollama')
-    await expectValue(status, 'helix-spend', '€0,0012')
-    await expect(status).toContainText('Editing a draft does not save it.')
-    await expect(status).toContainText('spend today in UTC')
-    await reviewWithKeyboard(page, status, 'Helix configuration and spend', 'Configuration draft and audited usage')
+    await expectValue(status, 'helix-spend', '€0,001200')
+    await reviewWithKeyboard(page, status, 'Helix configuration and spend', 'Configuration draft and audited usage',
+      { texts: ['Source available', 'Editing a draft does not save it.', 'spend today in UTC'] })
     const usage = page.getByTestId('helix-usage-summary')
-    await expectBrief(usage, 3, 'Helix daily usage audit')
+    await expectBrief(usage, 3)
     await expectValue(usage, 'helix-input-tokens', '1.250')
     await expectValue(usage, 'helix-output-tokens', '420')
-    await expectValue(usage, 'helix-estimated-cost', '€0,001200')
+    await expectValue(usage, 'helix-estimated-cost', '$0,001200')
     await expect(page.getByTestId('ai-usage-card')).toContainText('3 calls · 1 error')
-    await reviewWithKeyboard(page, usage, 'Audited usage totals', 'Helix daily usage audit')
+    await reviewWithKeyboard(page, usage, 'Audited usage totals', 'Helix daily usage audit',
+      { texts: ['Source available'] })
     const explorer = page.getByTestId('ai-feature-toggle-list')
     await explorer.getByRole('searchbox', { name: 'Search AI features' }).fill('chat')
     const chat = explorer.getByRole('switch', { name: 'Helix chat (side panel)' })
@@ -209,19 +215,18 @@ for (const { width, theme } of layouts) {
 
   test(`sessions retain counts, device and network context and separate sign-out controls at ${suffix}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
-    const { api } = await installSettingsFixtures(page, theme, '/account/sessions', { sessions: accountSessions })
+    const { api } = await installSettingsFixtures(page, theme, '/account/sessions', { sessions: accountSessions, forwardAuth: true })
     await page.goto('/account/sessions', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, api)
     await expectThemeApplied(page, theme)
     const brief = page.getByTestId('sessions-summary')
-    await expectBrief(brief, 4, 'Account session list')
+    await expectBrief(brief, 4)
     await expectValue(brief, 'sessions-total', '2')
     await expectValue(brief, 'sessions-other', '1')
     await expectValue(brief, 'sessions-current', 'Chrome · Windows')
-    await expect(metric(brief, 'sessions-current')).toContainText('192.0.2.10')
     await expect(metric(brief, 'sessions-last')).toHaveAttribute('data-value-state', 'value')
-    await expect(brief).toContainText('not a historical activity range')
-    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list')
+    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list',
+      { texts: ['Source available', '192.0.2.10', 'not a historical activity range'] })
     await expect(page.getByRole('heading', { name: 'Device breakdown', exact: true })).toBeVisible()
     await expect(page.getByRole('table')).toBeVisible()
     await page.getByTestId('active-sessions-revoke-all-others').click()
@@ -243,13 +248,13 @@ for (const { width, theme } of layouts) {
     await waitForHarnessReady(page, api)
     await expectThemeApplied(page, theme)
     const brief = page.getByTestId('totp-summary')
-    await expectBrief(brief, 4, 'Account two-factor status')
+    await expectBrief(brief, 3)
     await expectValue(brief, 'totp-status', 'Active')
-    await expectValue(brief, 'totp-lastUsed', 'Never')
+    await expectMissing(brief, 'totp-lastUsed')
     await expectValue(brief, 'totp-backup', '0')
     await expectValue(brief, 'totp-method', 'TOTP')
-    await expect(metric(brief, 'totp-method')).toContainText('RFC 6238')
-    await reviewWithKeyboard(page, brief, 'Two-factor overview', 'Account two-factor status')
+    await reviewWithKeyboard(page, brief, 'Two-factor overview', 'Account two-factor status',
+      { texts: ['Source available', 'RFC 6238'], hidden: 1 })
     await expect(page.getByRole('region', { name: 'Manage two-factor authentication', exact: true })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Two-factor apps and recovery', exact: true })).toBeVisible()
     await expectNoHorizontalOverflow(page)
@@ -268,13 +273,13 @@ for (const { width, theme } of layouts) {
     await waitForHarnessReady(page, api)
     await expectThemeApplied(page, theme)
     const brief = page.getByTestId('safety-settings-summary')
-    await expectBrief(brief, 4, 'Install settings')
+    await expectBrief(brief, 4)
     await expectValue(brief, 'safety-safeguards', '0 / 3')
     await expectValue(brief, 'safety-quiet-window', 'Off')
     await expectValue(brief, 'safety-cadence', 'Hourly')
     await expectValue(brief, 'safety-api', 'Active')
-    await expect(metric(brief, 'safety-quiet-window')).toContainText('Always delivering')
-    await reviewWithKeyboard(page, brief, 'Safety configuration', 'Install settings')
+    await reviewWithKeyboard(page, brief, 'Safety configuration', 'Install settings',
+      { texts: ['Source available', 'Always delivering'] })
     const listing = page.getByTestId('safety-settings-listing')
     await expect(listing.locator('[data-testid^="safety-settings-row-"]')).toHaveCount(7)
     const docs = listing.getByRole('link')
@@ -302,14 +307,13 @@ for (const { width, theme } of layouts) {
     await waitForHarnessReady(page, api)
     await expectThemeApplied(page, theme)
     const brief = page.getByTestId('privacy-summary')
-    await expectBrief(brief, 4, 'Browser privacy', 'Deployment policy available')
+    await expectBrief(brief, 4)
     await expectValue(brief, 'privacy-recent', '3')
-    await expect(metric(brief, 'privacy-recent')).toContainText('of 50 max')
     await expectValue(brief, 'privacy-consent', 'Accepted')
     await expectValue(brief, 'privacy-policy', 'Optional')
     await expectValue(brief, 'privacy-scope', 'This browser')
-    await expect(metric(brief, 'privacy-scope')).toContainText('Local only — never synced')
-    await reviewWithKeyboard(page, brief, 'Browser-local privacy', 'Browser-local privacy and deployment policy')
+    await reviewWithKeyboard(page, brief, 'Browser-local privacy', 'Browser-local privacy and deployment policy',
+      { texts: ['Deployment policy available', 'of 50 max', 'Local only — never synced'] })
     await page.getByTestId('privacy-consent-decline').click()
     await expectValue(brief, 'privacy-consent', 'Declined')
     await expect(page.getByTestId('privacy-consent-state')).toHaveAttribute('data-consent-state', 'declined')
@@ -336,14 +340,13 @@ for (const { width, theme } of layouts) {
     await waitForHarnessReady(page, api)
     await expectThemeApplied(page, theme)
     const brief = page.getByTestId('fleet-setup-summary')
-    await expectBrief(brief, 4, 'Fleet setup checks')
+    await expectBrief(brief, 4)
     await expectValue(brief, 'fleet-setup-account', 'Connected')
     await expectValue(brief, 'fleet-setup-token', 'Auto-refresh on')
     await expectValue(brief, 'fleet-setup-domain', 'Published')
     await expectValue(brief, 'fleet-setup-stream', 'Streaming')
-    await expect(metric(brief, 'fleet-setup-domain')).toContainText(publicKey.fingerprint)
-    await expect(metric(brief, 'fleet-setup-stream')).toContainText('Packets arrived in the last 24 hours.')
-    await reviewWithKeyboard(page, brief, 'Fleet setup overview', 'Fleet setup checks')
+    await reviewWithKeyboard(page, brief, 'Fleet setup overview', 'Fleet setup checks',
+      { texts: ['Source available', publicKey.fingerprint, 'Packets arrived in the last 24 hours.'] })
     await expect(page.locator('#fleet-setup-account')).toBeVisible()
     await expect(page.locator('#fleet-setup-subscribe').getByRole('combobox', { name: 'Vehicle', exact: true })).toBeVisible()
     await expect(page.locator('#fleet-setup-subscribe [data-operational-brief]')).toHaveCount(0)
@@ -367,9 +370,11 @@ for (const theme of ['dark', 'light'] as const) {
       const brief = page.getByTestId('settings-preferences-summary')
       if (rate === 0) await expectValue(brief, 'settings-preference-5', '$0.00')
       else await expectMissing(brief, 'settings-preference-5')
-      await expect(metric(brief, 'settings-preference-5')).toContainText('per kWh')
       await expectValue(brief, 'settings-preference-0', 'km')
-      await reviewWithKeyboard(page, brief, 'Preferences at a glance', 'Saved settings and browser font preferences')
+      await reviewWithKeyboard(page, brief, 'Preferences at a glance', 'Saved settings and browser font preferences',
+        rate === 0
+          ? { texts: ['Source available', 'per kWh'] }
+          : { texts: ['Source available'], hidden: 1 })
       await expectNoHorizontalOverflow(page)
       expectSettingsReadOnly(api)
       await assertMockApiComplete(page, api)
@@ -387,7 +392,8 @@ for (const theme of ['dark', 'light'] as const) {
     await expectValue(usage, 'helix-output-tokens', '0')
     await expectValue(usage, 'helix-estimated-cost', '$0.00')
     await expect(page.getByTestId('ai-usage-card')).toContainText('No Helix calls yet today.')
-    await reviewWithKeyboard(page, usage, 'Audited usage totals', 'Helix daily usage audit')
+    await reviewWithKeyboard(page, usage, 'Audited usage totals', 'Helix daily usage audit',
+      { texts: ['Source available'] })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -402,8 +408,8 @@ for (const theme of ['dark', 'light'] as const) {
     await expectValue(brief, 'helix-features', '0')
     await expectMissing(brief, 'helix-provider')
     await expectMissing(brief, 'helix-spend')
-    await expect(metric(brief, 'helix-spend')).toContainText('Helix is off.')
-    await reviewWithKeyboard(page, brief, 'Helix configuration and spend', 'Configuration draft and audited usage')
+    await reviewWithKeyboard(page, brief, 'Helix configuration and spend', 'Configuration draft and audited usage',
+      { texts: ['Source available'], hidden: 2 })
     await expect(page.getByTestId('ai-usage-card')).toHaveCount(0)
     expect(api.requests.filter(request => request.path.startsWith('/api/v1/ai/usage/'))).toEqual([])
     await expectNoHorizontalOverflow(page)
@@ -418,11 +424,12 @@ for (const theme of ['dark', 'light'] as const) {
     await page.goto('/account/sessions', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, api)
     const brief = page.getByTestId('sessions-summary')
-    await expectBrief(brief, 4, 'Account session list')
+    await expectBrief(brief, 4)
     await expectValue(brief, 'sessions-total', '0')
     await expectValue(brief, 'sessions-other', '0')
     await expect(page.getByTestId('active-sessions-revoke-all-others')).toHaveCount(0)
-    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list')
+    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list',
+      { texts: ['Source available'] })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -435,9 +442,11 @@ for (const theme of ['dark', 'light'] as const) {
     await waitForHarnessReady(page, api)
     const brief = page.getByTestId('totp-summary')
     await expectValue(brief, 'totp-status', 'Active')
+    await expectMissing(brief, 'totp-lastUsed')
     await expectMissing(brief, 'totp-backup')
     await expectValue(brief, 'totp-method', 'TOTP')
-    await reviewWithKeyboard(page, brief, 'Two-factor overview', 'Account two-factor status')
+    await reviewWithKeyboard(page, brief, 'Two-factor overview', 'Account two-factor status',
+      { texts: ['Source available'], hidden: 2 })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -449,12 +458,13 @@ for (const theme of ['dark', 'light'] as const) {
     await page.goto('/account/privacy', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, api)
     const brief = page.getByTestId('privacy-summary')
-    await expectBrief(brief, 4, 'Browser privacy', 'Deployment policy unavailable')
+    await expectBrief(brief, 3)
     await expectMissing(brief, 'privacy-policy')
     await expectValue(brief, 'privacy-scope', 'This browser')
     await expect(page.getByTestId('privacy-consent-section')).toContainText('Deployment consent policy unavailable')
     await expect(page.getByTestId('privacy-consent-accept')).toBeVisible()
-    await reviewWithKeyboard(page, brief, 'Browser-local privacy', 'Browser-local privacy and deployment policy')
+    await reviewWithKeyboard(page, brief, 'Browser-local privacy', 'Browser-local privacy and deployment policy',
+      { texts: ['Deployment policy unavailable'], hidden: 1 })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -471,8 +481,8 @@ for (const theme of ['dark', 'light'] as const) {
     await expectValue(brief, 'fleet-setup-token', 'Missing')
     await expectValue(brief, 'fleet-setup-domain', 'Not published')
     await expectValue(brief, 'fleet-setup-stream', 'Streaming')
-    await expect(metric(brief, 'fleet-setup-token')).toContainText('Connect Tesla to store a refreshable Fleet token.')
-    await reviewWithKeyboard(page, brief, 'Fleet setup overview', 'Fleet setup checks')
+    await reviewWithKeyboard(page, brief, 'Fleet setup overview', 'Fleet setup checks',
+      { texts: ['Source available', 'Connect Tesla to store a refreshable Fleet token.'] })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -488,15 +498,16 @@ for (const theme of ['dark', 'light'] as const) {
       await expectValue(brief, 'fleet-setup-account', 'Connected')
       await expectValue(brief, 'fleet-setup-token', 'Auto-refresh on')
       await expectMissing(brief, 'fleet-setup-domain')
-      await expect(metric(brief, 'fleet-setup-domain')).toContainText('Loading source')
       await expectValue(brief, 'fleet-setup-stream', 'Streaming')
-      await reviewWithKeyboard(page, brief, 'Fleet setup overview', 'Fleet setup checks')
+      await reviewWithKeyboard(page, brief, 'Fleet setup overview', 'Fleet setup checks',
+        { texts: ['Source available'], hidden: 1 })
     } finally {
       releasePublicKey()
     }
     await waitForHarnessReady(page, api)
     await expectValue(brief, 'fleet-setup-domain', 'Published')
-    await expect(metric(brief, 'fleet-setup-domain')).toContainText(publicKey.fingerprint)
+    await reviewWithKeyboard(page, brief, 'Fleet setup overview', 'Fleet setup checks',
+      { texts: ['Source available', publicKey.fingerprint] })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -509,19 +520,20 @@ for (const theme of ['dark', 'light'] as const) {
     })
     await page.goto('/account/sessions', { waitUntil: 'domcontentloaded' })
     const brief = page.getByTestId('sessions-summary')
-    await expect(brief).toContainText('Source unavailable', { timeout: 90_000 })
     await waitForHarnessReady(page, api)
     await expectMissing(brief, 'sessions-total')
     await expectMissing(brief, 'sessions-other')
     await expectMissing(brief, 'sessions-current')
     await expectMissing(brief, 'sessions-last')
-    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list')
+    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list',
+      { texts: ['Source unavailable', 'No metric values are available yet.'] })
     state.sessionsState = 'available'
     await page.getByRole('region', { name: 'Session summary', exact: true })
       .getByRole('button', { name: 'Retry', exact: true }).click()
     await expectValue(brief, 'sessions-total', '2')
     await expectValue(brief, 'sessions-other', '1')
-    await expect(brief).toContainText('Source available')
+    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list',
+      { texts: ['Source available'] })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -549,21 +561,22 @@ for (const theme of ['dark', 'light'] as const) {
     })
     await page.goto('/integrations/helix', { waitUntil: 'domcontentloaded' })
     const usage = page.getByTestId('helix-usage-summary')
-    await expect(usage).toContainText('Source unavailable', { timeout: 90_000 })
     await waitForHarnessReady(page, api)
     await expectMissing(usage, 'helix-input-tokens')
     await expectMissing(usage, 'helix-output-tokens')
     await expectMissing(usage, 'helix-estimated-cost')
     await expectValue(page.getByTestId('helix-summary'), 'helix-mode', 'Local-only')
     await expectValue(page.getByTestId('helix-summary'), 'helix-features', '0')
-    await reviewWithKeyboard(page, usage, 'Audited usage totals', 'Helix daily usage audit')
+    await reviewWithKeyboard(page, usage, 'Audited usage totals', 'Helix daily usage audit',
+      { texts: ['Source unavailable', 'No metric values are available yet.'] })
     const card = page.getByTestId('ai-usage-card')
     await expect(card).toContainText('Usage could not be loaded.')
     state.usageState = 'available'
     await card.getByRole('button', { name: 'Retry', exact: true }).click()
     await expectValue(usage, 'helix-input-tokens', '1,250')
     await expectValue(usage, 'helix-estimated-cost', '$0.001200')
-    await expect(usage).toContainText('Source available')
+    await reviewWithKeyboard(page, usage, 'Audited usage totals', 'Helix daily usage audit',
+      { texts: ['Source available'] })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -576,17 +589,18 @@ for (const theme of ['dark', 'light'] as const) {
     })
     await page.goto('/settings/fleet-setup', { waitUntil: 'domcontentloaded' })
     const brief = page.getByTestId('fleet-setup-summary')
-    await expect(brief).toContainText('Source unavailable', { timeout: 90_000 })
     await waitForHarnessReady(page, api)
     await expectMissing(brief, 'fleet-setup-domain')
     await expectValue(brief, 'fleet-setup-token', 'Auto-refresh on')
     await expectValue(brief, 'fleet-setup-stream', 'Streaming')
-    await reviewWithKeyboard(page, brief, 'Fleet setup overview', 'Fleet setup checks')
+    await reviewWithKeyboard(page, brief, 'Fleet setup overview', 'Fleet setup checks',
+      { texts: ['Source unavailable'], hidden: 1 })
     state.publicKeyState = 'available'
     const readiness = page.getByRole('region', { name: 'Streaming and domain readiness', exact: true })
     await readiness.getByRole('button', { name: 'Retry', exact: true }).click()
     await expectValue(brief, 'fleet-setup-domain', 'Published')
-    await expect(metric(brief, 'fleet-setup-domain')).toContainText(publicKey.fingerprint)
+    await reviewWithKeyboard(page, brief, 'Fleet setup overview', 'Fleet setup checks',
+      { texts: ['Source available', publicKey.fingerprint] })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -602,7 +616,8 @@ for (const theme of ['dark', 'light'] as const) {
     await expectMissing(brief, 'safety-safeguards')
     await expectValue(brief, 'safety-quiet-window', 'Off')
     await expectValue(brief, 'safety-api', 'Active')
-    await reviewWithKeyboard(page, brief, 'Safety configuration', 'Install settings')
+    await reviewWithKeyboard(page, brief, 'Safety configuration', 'Install settings',
+      { texts: ['Source available'], hidden: 1 })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -621,8 +636,8 @@ for (const theme of ['dark', 'light'] as const) {
     await expectValue(brief, 'safety-quiet-window', '21:15–06:45')
     await expectValue(brief, 'safety-cadence', 'Daily')
     await expectValue(brief, 'safety-api', 'Suspended')
-    await expect(metric(brief, 'safety-quiet-window')).toContainText('Deferring non-critical')
-    await reviewWithKeyboard(page, brief, 'Safety configuration', 'Install settings')
+    await reviewWithKeyboard(page, brief, 'Safety configuration', 'Install settings',
+      { texts: ['Source available', 'Deferring non-critical'] })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -633,12 +648,12 @@ for (const theme of ['dark', 'light'] as const) {
     const { api } = await installSettingsFixtures(page, theme, '/settings', { settingsState: 'unavailable' })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
     const brief = page.getByTestId('settings-preferences-summary')
-    await expect(brief).toContainText('Source unavailable', { timeout: 90_000 })
     await waitForHarnessReady(page, api)
     for (const index of [0, 1, 2, 3, 4, 5]) await expectMissing(brief, `settings-preference-${index}`)
     await expect(metric(brief, 'settings-preference-6')).toHaveAttribute('data-value-state', 'value')
-    await expect(metric(brief, 'settings-preference-6')).toContainText('100%')
-    await reviewWithKeyboard(page, brief, 'Preferences at a glance', 'Saved settings and browser font preferences')
+    await expectValue(brief, 'settings-preference-6', 'System UI')
+    await reviewWithKeyboard(page, brief, 'Preferences at a glance', 'Saved settings and browser font preferences',
+      { texts: ['Source unavailable', '100%'], hidden: 6 })
     await expectNoHorizontalOverflow(page)
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
@@ -652,9 +667,9 @@ for (const theme of ['dark', 'light'] as const) {
     await waitForHarnessReady(page, api)
     const brief = page.getByTestId('privacy-summary')
     await expectValue(brief, 'privacy-policy', 'Required')
-    await expect(metric(brief, 'privacy-policy')).toContainText('Consent gate enabled')
     await expectValue(brief, 'privacy-scope', 'This browser')
-    await reviewWithKeyboard(page, brief, 'Browser-local privacy', 'Browser-local privacy and deployment policy')
+    await reviewWithKeyboard(page, brief, 'Browser-local privacy', 'Browser-local privacy and deployment policy',
+      { texts: ['Deployment policy available', 'Consent gate enabled'] })
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -670,18 +685,26 @@ test('Helix polling failure retains audited operands and Retry recovers through 
   const brief = page.getByTestId('helix-usage-summary')
   await expectValue(brief, 'helix-estimated-cost', '$0.001200')
   state.usageState = 'unavailable'
-  await expect(brief).toContainText('Retained source', { timeout: 60_000 })
+  await brief.getByRole('button', { name: 'Review details', exact: true }).click()
+  const retainedDrawer = page.getByRole('dialog', { name: 'Audited usage totals details', exact: true })
+  await expect(retainedDrawer).toContainText('Retained source', { timeout: 60_000 })
+  await page.keyboard.press('Escape')
+  await expect(retainedDrawer).toHaveCount(0)
   await expectValue(brief, 'helix-input-tokens', '1,250')
   await expectValue(brief, 'helix-output-tokens', '420')
   await expectValue(brief, 'helix-estimated-cost', '$0.001200')
-  await expect(page.getByTestId('helix-summary')).toContainText('Retained source')
-  await reviewWithKeyboard(page, brief, 'Audited usage totals', 'Helix daily usage audit')
+  await reviewWithKeyboard(page, page.getByTestId('helix-summary'),
+    'Helix configuration and spend', 'Configuration draft and audited usage',
+    { texts: ['Retained source'] })
+  await reviewWithKeyboard(page, brief, 'Audited usage totals', 'Helix daily usage audit',
+    { texts: ['Retained source'] })
   const card = page.getByTestId('ai-usage-card')
   await expect(card).toContainText('Showing the last available totals. Refresh failed.')
   state.usageState = 'available'
   state.usage = { ...usageToday, input_tokens: 2500, output_tokens: 840, cost_micro_cents: 2400 }
   await card.getByRole('button', { name: 'Retry', exact: true }).click()
-  await expect(brief).toContainText('Source available')
+  await reviewWithKeyboard(page, brief, 'Audited usage totals', 'Helix daily usage audit',
+    { texts: ['Source available'] })
   await expectValue(brief, 'helix-input-tokens', '2,500')
   await expectValue(brief, 'helix-output-tokens', '840')
   await expectValue(brief, 'helix-estimated-cost', '$0.002400')

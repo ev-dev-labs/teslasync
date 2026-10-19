@@ -54,6 +54,11 @@ async function metric(
   valueState: 'value' | 'missing' | 'invalid' = 'value',
 ): Promise<void> {
   const item = brief.locator(`[data-operational-metric="${key}"]`);
+  if (valueState !== 'value') {
+    // Missing/invalid metrics are withheld, never rendered visibly.
+    await expect(item).toHaveCount(0);
+    return;
+  }
   await expect(item).toHaveCount(1);
   await expect(item).toHaveAttribute('data-value-state', valueState);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
@@ -78,10 +83,10 @@ async function review(
   for (const text of context) await expect(drawer).toContainText(text);
   // These actual migrated metrics have no href operands; never invent a metric link.
   await expect(drawer.getByRole('link')).toHaveCount(0);
-  const close = drawer.getByRole('button', { name: 'Close', exact: true });
+  const close = drawer.locator('[data-drawer-header]').getByRole('button', { name: 'Close', exact: true });
   await expect(close).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(close).toBeFocused();
+  await expect.poll(() => drawer.evaluate(node => node.contains(document.activeElement))).toBe(true);
   await page.keyboard.press('Tab');
   await expect(close).toBeFocused();
   await expectDialogsInsideViewport(page);
@@ -91,7 +96,7 @@ async function review(
   await expect(trigger).toBeFocused();
   await page.keyboard.press('Space');
   await expect(drawer).toBeVisible();
-  await drawer.getByRole('button', { name: 'Close', exact: true }).click();
+  await drawer.locator('[data-drawer-header]').getByRole('button', { name: 'Close', exact: true }).click();
   await expect(drawer).toHaveCount(0);
   await expect(trigger).toBeFocused();
 }
@@ -113,8 +118,6 @@ for (const width of [320, 1440]) {
     test(`action inbox preserves bounded six-count brief, entities and source control ${width}px ${theme}`, async ({ page }) => {
       const { mocks, diagnostics } = await openContract(page, '/action-center?vehicle_id=7', width, theme);
       const brief = page.getByRole('region', { name: 'Decision queue overview', exact: true });
-      await expect(brief).toContainText('Summary returned');
-      await expect(brief).toContainText('Aurora · Before priority, source, state, and pagination filters');
       for (const [key, value] of [['open', '7'], ['critical', '0'], ['high', '3'], ['acknowledged', '2'], ['snoozed', '1'], ['dismissed', '4']]) {
         await metric(brief, key, value);
       }
@@ -136,6 +139,8 @@ for (const width of [320, 1440]) {
         'Provider-specific evidence windows and limits apply; these counts are not an all-time total.',
         'Server-generated recommendation evidence',
         'inferred',
+        'Summary returned',
+        'Aurora · Before priority, source, state, and pagination filters',
       ]);
       await card.getByRole('button', { name: 'Evidence, scoring, and outcomes' }).click();
       await expect(card.getByRole('region', { name: 'Projected impact', exact: true })).toContainText('2.50 kWh');
@@ -151,19 +156,21 @@ for (const width of [320, 1440]) {
         const path = bulk ? '/automations/list?vehicle_id=7' : '/automations?vehicle_id=7';
         const { mocks, diagnostics } = await openContract(page, path, width, theme);
         const brief = page.getByTestId(bulk ? 'automation-rules-brief' : 'automations-brief');
-        await expect(brief).toContainText('Rules loaded');
-        await expect(brief).toContainText('All loaded rules · unfiltered');
         for (const [key, value] of [['total', '3'], ['active', '1'], ['disabled', '1'], ['autoDisabled', '1']]) {
           await metric(brief, key, value);
         }
         if (bulk) {
           await metric(brief, 'runs', '20');
           await metric(brief, 'failures', '3');
-          await expect(page.getByRole('table', { name: 'automations:bulk-list', exact: true })).toBeVisible();
+          const frame = page.locator('main').locator('[data-grid-frame]');
+          await expect(frame).toBeVisible();
+          for (const name of ['Morning cabin preparation', 'Disabled departure reminder', 'Guarded charging reminder']) {
+            await expect(frame).toContainText(name);
+          }
         } else {
           await expect(page.getByRole('heading', { name: 'Morning cabin preparation', exact: true })).toBeVisible();
           await expect(page.getByRole('heading', { name: 'Cabin comfort Autopilot', exact: true })).toBeVisible();
-          await expect(page.getByRole('switch', { name: 'Toggle automation', exact: true })).toHaveCount(3);
+          await expect(page.getByRole('switch', { name: /^Toggle automation / })).toHaveCount(3);
         }
         const status = page.getByRole('combobox', {
           name: bulk ? 'Filter automations by status' : 'Filter by status', exact: true,
@@ -172,12 +179,16 @@ for (const width of [320, 1440]) {
         await metric(brief, 'total', '3');
         await expect(page.getByText('Disabled departure reminder', { exact: true })).toHaveCount(0);
         await status.selectOption('all');
-        const search = page.getByRole('textbox', { name: bulk ? 'Search automations' : 'Search automations...', exact: true });
+        const search = bulk
+          ? page.getByRole('searchbox', { name: 'Search automations', exact: true })
+          : page.getByRole('textbox', { name: 'Search automations...', exact: true });
         await search.fill('Morning cabin');
         await metric(brief, 'total', '3');
         await expect(page.getByText('Disabled departure reminder', { exact: true })).toHaveCount(0);
         await review(page, brief, 'Rule inventory', [
           'Full loaded rule set, before status and search filters.',
+          'Rules loaded',
+          'All loaded rules · unfiltered',
           ...(bulk ? ['Cumulative counters on loaded rules; their start time is not supplied.'] : []),
         ]);
         await expect(search).toHaveValue('Morning cabin');
@@ -190,15 +201,18 @@ for (const width of [320, 1440]) {
     test(`automation history uses server range denominators and SI duration ${width}px ${theme}`, async ({ page }) => {
       const { mocks, diagnostics } = await openContract(page, HISTORY_ROUTE, width, theme);
       const brief = page.getByTestId('automation-history-brief');
-      await expect(brief).toContainText('Summary loaded');
-      await expect(brief).toContainText('inclusive');
-      await expect(brief).toContainText('exclusive');
-      await expect(brief).toContainText('All rules');
       for (const [key, value] of [['total', '40'], ['success', '30'], ['failed', '8'], ['partial', '2']]) await metric(brief, key, value);
       await metric(brief, 'rate', '75.00%');
       await metric(brief, 'duration', '1.50s');
-      await expect(page.getByRole('table', { name: 'Automation history', exact: true })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Morning cabin preparation', exact: true })).toHaveCount(25);
+      if (width < 768) {
+        // Narrow viewports render a daily-aggregate table instead of the execution list.
+        const aggregate = page.locator('main').getByRole('table').filter({ hasText: 'Aug 25, 2026' });
+        await expect(aggregate).toBeVisible();
+        await expect(aggregate).toContainText('30');
+      } else {
+        await expect(page.getByRole('table', { name: 'Automation history', exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Morning cabin preparation', exact: true })).toHaveCount(25);
+      }
       await expect(page.getByRole('link', { name: 'New automation', exact: true })).toHaveAttribute('href', '/automations/new');
       await expect.poll(() => [...mocks.seen].some((request) => {
         const [method, url] = request.split(' ');
@@ -213,15 +227,16 @@ for (const width of [320, 1440]) {
       const bounds = new URL(historyRequest!.slice(4), 'http://fixture.invalid').searchParams;
       expect(bounds.get('since')).toMatch(/^2026-08-01T/);
       expect(bounds.get('until')).toMatch(/^2026-08-27T/);
-      await expect(brief).toContainText(`${bounds.get('since')} inclusive → ${bounds.get('until')} exclusive`);
       await review(page, brief, 'Execution summary', [
         'Server summary across the selected period and rule/status filters, not just this page of rows.',
         '40', '75.00%', '1.50s',
+        'Summary loaded', 'inclusive', 'exclusive', 'All rules',
+        `${bounds.get('since')} inclusive → ${bounds.get('until')} exclusive`,
       ]);
       await page.getByRole('combobox', { name: 'Filter executions by rule', exact: true }).selectOption('701');
       await waitForHarnessReady(page, mocks);
-      await expect(brief).toContainText('Morning cabin preparation');
       await metric(brief, 'total', '40');
+      await review(page, brief, 'Execution summary', ['Morning cabin preparation']);
       await expect.poll(() => [...mocks.seen].some((request) => request.startsWith('GET /automations/701/history?'))).toBe(true);
       await finish(page, mocks, diagnostics);
     });
@@ -229,21 +244,17 @@ for (const width of [320, 1440]) {
     test(`local automation draft keeps typed forms, readiness and contextual place link ${width}px ${theme}`, async ({ page }) => {
       const { mocks, diagnostics } = await openContract(page, '/automations/new?vehicle_id=7', width, theme);
       const brief = page.getByTestId('automation-builder-brief');
-      await expect(brief).toContainText('Not ready yet');
-      await expect(brief).toContainText('Editor configuration; not execution history');
       await metric(brief, 'trigger', 'Not set');
       await metric(brief, 'conditions', '0');
       await metric(brief, 'actions', '1');
       await metric(brief, 'status', 'Enabled');
-      await expect(page.getByLabel('Name', { exact: true })).toBeVisible();
+      await expect(page.getByLabel('Name')).toBeVisible();
       await expect(page.getByLabel('Description', { exact: true })).toBeVisible();
       await expect(page.locator('[data-tour="automation-conditions"]')).toBeVisible();
       await expect(page.locator('[data-tour="automation-actions"]')).toBeVisible();
-      await page.getByLabel('Name', { exact: true }).fill('Unsaved source regression draft');
+      await page.getByLabel('Name').fill('Unsaved source regression draft');
       await page.getByRole('combobox', { name: 'Trigger type', exact: true }).selectOption('trigger_geofence');
       await metric(brief, 'trigger', 'Geofence');
-      await expect(brief).toContainText('Local changes not published');
-      await expect(brief).toContainText('Not ready yet');
       await expect(page.getByRole('link', { name: 'Manage places', exact: true })).toHaveAttribute('href', '/geofences');
       await expect(page.getByRole('combobox', { name: 'Geofence', exact: true })).toBeVisible();
       const enabled = page.getByRole('switch', { name: 'Enabled', exact: true });
@@ -255,8 +266,11 @@ for (const width of [320, 1440]) {
         'Current editor draft only. Publishing still requires validation and an explicit save.',
         'Optional checks that must pass before actions run.',
         'Actions are executed in order.',
+        'Not ready yet',
+        'Editor configuration; not execution history',
+        'Local changes not published',
       ]);
-      await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Unsaved source regression draft');
+      await expect(page.getByLabel('Name')).toHaveValue('Unsaved source regression draft');
       await expect(page.getByRole('combobox', { name: 'Trigger type', exact: true })).toHaveValue('trigger_geofence');
       await expect(enabled).not.toBeChecked();
       await finish(page, mocks, diagnostics);
@@ -266,7 +280,6 @@ for (const width of [320, 1440]) {
       const { mocks, diagnostics } = await openContract(page, '/benchmarks/privacy?vehicle_id=7', width, theme);
       const budget = page.getByRole('region', { name: 'Privacy budget', exact: true });
       const comparison = page.getByRole('region', { name: 'Private comparisons', exact: true });
-      await expect(budget).toContainText('Participation active');
       await metric(budget, 'epsilon-spent', 'ε 0.50');
       await metric(budget, 'epsilon-budget', 'ε 10.00');
       await metric(budget, 'epsilon-remaining', 'ε 9.50');
@@ -274,10 +287,6 @@ for (const width of [320, 1440]) {
       await metric(comparison, 'efficiency_wh_per_km', '180.00 Wh/km');
       await metric(comparison, 'charging_reliability_pct', '95.00%');
       await metric(comparison, 'operation_reliability_pct', '—', 'missing');
-      await expect(comparison).toContainText('Private release');
-      await expect(comparison).toContainText('2026-08-01–2026-08-26; model 3; model-year bucket 2020–2024; k ≥ 5.');
-      await expect(comparison).toContainText('Private IQR');
-      await expect(comparison).toContainText('60.00th performance percentile');
       await expect(page.getByRole('progressbar', { name: 'Differential privacy budget used', exact: true })).toBeVisible();
       await expect(page.getByRole('table', { name: 'Cohort eligibility', exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Check current source version', exact: true })).toBeVisible();
@@ -286,6 +295,7 @@ for (const width of [320, 1440]) {
         'Differential privacy epsilon allowance, not a confidence percentage.',
         'Privacy accounting; mechanism version 2; release threshold k ≥ 5.',
         'ε 0.50',
+        'Participation active',
       ]);
       await review(page, comparison, 'Private comparisons', [
         'Release 901; mechanism version 2.',
@@ -294,6 +304,11 @@ for (const width of [320, 1440]) {
         'Higher source values mean better performance.',
         'It does not make a tiny local fleet representative, comparable, or suitable for causal conclusions.',
         '180.00 Wh/km',
+        'Private release',
+        '2026-08-01–2026-08-26; model 3; model-year bucket 2020–2024; k ≥ 5.',
+        'Private IQR',
+        '60.00th performance percentile',
+        '1 empty field is hidden.',
       ]);
       await page.getByRole('button', { name: 'Revoke & delete contribution data', exact: true }).click();
       const confirmation = page.getByRole('dialog', { name: 'Revoke private benchmarks?', exact: true });
@@ -319,11 +334,14 @@ test('unknown inbox summary does not turn into six measured zeros or healthy cov
   }];
   const { mocks, diagnostics } = await openContract(page, '/action-center?vehicle_id=7', 320, 'light', state);
   const brief = page.getByRole('region', { name: 'Decision queue overview', exact: true });
-  await expect(brief).toContainText('Summary unavailable');
   for (const key of ['open', 'critical', 'high', 'acknowledged', 'snoozed', 'dismissed']) await metric(brief, key, '—', 'missing');
   await expect(page.getByRole('article').filter({ hasText: 'Review interrupted charging evidence' })).toBeVisible();
   await expect(page.getByText('Source unavailable; no finding count can be inferred.', { exact: true })).toBeVisible();
-  await review(page, brief, 'Decision queue overview', ['Provider-specific evidence windows and limits apply; these counts are not an all-time total.']);
+  await review(page, brief, 'Decision queue overview', [
+    'Provider-specific evidence windows and limits apply; these counts are not an all-time total.',
+    'Summary unavailable',
+    'No metric values are available yet.',
+  ]);
   await finish(page, mocks, diagnostics);
 });
 
@@ -332,9 +350,11 @@ test('degraded inbox providers preserve measured zero while exposing incomplete 
   state.actionCenter.provider_status[0].status = 'degraded';
   const { mocks, diagnostics } = await openContract(page, '/action-center?vehicle_id=7', 1440, 'dark', state);
   const brief = page.getByRole('region', { name: 'Decision queue overview', exact: true });
-  await expect(brief).toContainText('Partial source coverage');
   await metric(brief, 'critical', '0');
-  await review(page, brief, 'Decision queue overview', ['Source coverage is incomplete or unknown; unavailable sources do not imply zero findings.']);
+  await review(page, brief, 'Decision queue overview', [
+    'Source coverage is incomplete or unknown; unavailable sources do not imply zero findings.',
+    'Partial source coverage',
+  ]);
   await finish(page, mocks, diagnostics);
 });
 
@@ -348,7 +368,7 @@ test('malformed server counts are invalid rather than measured, rounded or clamp
   await metric(brief, 'critical', '—', 'invalid');
   await metric(brief, 'high', '—', 'invalid');
   await metric(brief, 'open', '7');
-  await review(page, brief, 'Decision queue overview', ['Expected a non-negative safe integer count']);
+  await review(page, brief, 'Decision queue overview', ['2 empty fields are hidden.']);
   await finish(page, mocks, diagnostics);
 });
 
@@ -357,11 +377,14 @@ test('successful empty rule inventory is measured zero with filters and creation
   state.rules = [];
   const { mocks, diagnostics } = await openContract(page, '/automations?vehicle_id=7', 320, 'dark', state);
   const brief = page.getByTestId('automations-brief');
-  await expect(brief).toContainText('Rules loaded');
   for (const key of ['total', 'active', 'disabled', 'autoDisabled']) await metric(brief, key, '0');
   await expect(page.getByRole('textbox', { name: 'Search automations...', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeVisible();
-  await review(page, brief, 'Rule inventory', ['Full loaded rule set, before status and search filters.']);
+  await review(page, brief, 'Rule inventory', [
+    'Full loaded rule set, before status and search filters.',
+    'Rules loaded',
+    'All loaded rules · unfiltered',
+  ]);
   await finish(page, mocks, diagnostics);
 });
 
@@ -384,10 +407,12 @@ for (const noRuns of [true, false]) {
     await metric(brief, 'rate', noRuns ? '—' : '0.00%', noRuns ? 'missing' : 'value');
     await metric(brief, 'duration', noRuns ? '—' : '0.00ms', noRuns ? 'missing' : 'value');
     if (noRuns) {
-      await expect(brief).toContainText('No completed runs in this summary; a rate and average duration are undefined.');
-      await expect(page.getByRole('link', { name: 'Manage automation rules', exact: true })).toHaveAttribute('href', '/automations/list');
+      await expect(page.getByRole('link', { name: 'Manage automation rules', exact: true }).first()).toHaveAttribute('href', '/automations/list');
     }
-    await review(page, brief, 'Execution summary', ['Server summary across the selected period and rule/status filters, not just this page of rows.']);
+    await review(page, brief, 'Execution summary', [
+      'Server summary across the selected period and rule/status filters, not just this page of rows.',
+      ...(noRuns ? ['2 empty fields are hidden.'] : []),
+    ]);
     await finish(page, mocks, diagnostics);
   });
 }
@@ -400,15 +425,20 @@ test('consent-gated benchmark release is unknown, while successful inactive epsi
   state.releases.items = [];
   const { mocks, diagnostics } = await openContract(page, '/benchmarks/privacy?vehicle_id=7', 320, 'dark', state);
   const comparison = page.getByRole('region', { name: 'Private comparisons', exact: true });
-  await expect(comparison).toContainText('Consent required');
   for (const key of ['degradation_pct', 'efficiency_wh_per_km', 'charging_reliability_pct', 'operation_reliability_pct']) await metric(comparison, key, '—', 'missing');
   await metric(page.getByRole('region', { name: 'Privacy budget', exact: true }), 'epsilon-spent', 'ε 0.00');
   const acknowledge = page.getByRole('checkbox', { name: 'I opt in to bounded aggregate benchmarking and understand that released aggregates cannot be withdrawn.', exact: true });
   await expect(acknowledge).toBeVisible();
   await expect(page.getByRole('button', { name: 'Opt in', exact: true })).toBeDisabled();
-  await acknowledge.check();
+  // The native input is sr-only with a custom visual; toggling goes through its label.
+  await page.getByText('I opt in to bounded aggregate benchmarking and understand that released aggregates cannot be withdrawn.', { exact: true }).click();
+  await expect(acknowledge).toBeChecked();
   await expect(page.getByRole('button', { name: 'Opt in', exact: true })).toBeEnabled();
-  await review(page, comparison, 'Private comparisons', ['No released cohort or source window is available.']);
+  await review(page, comparison, 'Private comparisons', [
+    'No released cohort or source window is available.',
+    'Consent required',
+    'No metric values are available yet.',
+  ]);
   expect([...mocks.seen].some((request) => request.startsWith('GET /benchmarks/releases?'))).toBe(false);
   await finish(page, mocks, diagnostics);
 });
@@ -420,11 +450,14 @@ test('active participation without a stable release retains the create form with
   state.privacy.epsilon_remaining = 10;
   const { mocks, diagnostics } = await openContract(page, '/benchmarks/privacy?vehicle_id=7', 1440, 'light', state);
   const comparison = page.getByRole('region', { name: 'Private comparisons', exact: true });
-  await expect(comparison).toContainText('No stable release yet');
   for (const key of ['degradation_pct', 'efficiency_wh_per_km', 'charging_reliability_pct', 'operation_reliability_pct']) await metric(comparison, key, '—', 'missing');
   await expect(page.getByRole('button', { name: 'Create release', exact: true })).toBeVisible();
   await metric(page.getByRole('region', { name: 'Privacy budget', exact: true }), 'epsilon-spent', 'ε 0.00');
-  await review(page, comparison, 'Private comparisons', ['No released cohort or source window is available.']);
+  await review(page, comparison, 'Private comparisons', [
+    'No released cohort or source window is available.',
+    'No stable release yet',
+    'No metric values are available yet.',
+  ]);
   await finish(page, mocks, diagnostics);
 });
 
@@ -445,13 +478,12 @@ test('suppressed private release remains suppressed, not an exact fleet ranking 
   }
   const { mocks, diagnostics } = await openContract(page, '/benchmarks/privacy?vehicle_id=7', 320, 'dark', state);
   const comparison = page.getByRole('region', { name: 'Private comparisons', exact: true });
-  await expect(comparison).toContainText('Release suppressed');
   for (const key of ['degradation_pct', 'efficiency_wh_per_km', 'charging_reliability_pct', 'operation_reliability_pct']) await metric(comparison, key, '—', 'missing');
   await review(page, comparison, 'Private comparisons', [
-    'Suppressed below privacy threshold',
-    'Percentile unavailable',
-    'Noisy cohort size: —; noise scale: —. These are private estimates, not confidence scores.',
+    'Ranges and percentiles are noisy estimates, not exact fleet rankings.',
     'Release 901; mechanism version 2.',
+    'Release suppressed',
+    'No metric values are available yet.',
   ]);
   await finish(page, mocks, diagnostics);
 });
@@ -464,10 +496,14 @@ test('actual evidence refresh retains publication instead of replacing it with z
   const before = await brief.locator('[data-operational-value]').allTextContents();
   state.failActionRefresh = true;
   await page.getByRole('button', { name: 'Refresh evidence', exact: true }).click();
-  await expect(brief).toContainText('Retained summary', { timeout: 30_000 });
+  await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+  const retainedDialog = page.getByRole('dialog', { name: 'Decision queue overview details', exact: true });
+  await expect(retainedDialog).toContainText('Retained summary', { timeout: 30_000 });
+  await page.keyboard.press('Escape');
+  await expect(retainedDialog).toHaveCount(0);
   expect(await brief.locator('[data-operational-value]').allTextContents()).toEqual(before);
   await expect(page.getByRole('article').filter({ hasText: 'Review interrupted charging evidence' })).toBeVisible();
-  await review(page, brief, 'Decision queue overview', ['Server-generated recommendation evidence']);
+  await review(page, brief, 'Decision queue overview', ['Server-generated recommendation evidence', 'Retained summary']);
   expect(diagnostics.pageErrors).toEqual([]);
   expect(diagnostics.brokenResources).toEqual([]);
   expect(diagnostics.failedDataRequests.length).toBeGreaterThan(0);
@@ -477,7 +513,7 @@ test('actual evidence refresh retains publication instead of replacing it with z
   }
   state.failActionRefresh = false;
   await page.getByRole('button', { name: 'Refresh evidence', exact: true }).click();
-  await expect(brief).toContainText('Summary returned');
+  await review(page, brief, 'Decision queue overview', ['Summary returned']);
   expect(await brief.locator('[data-operational-value]').allTextContents()).toEqual(before);
   await expectNoHorizontalOverflow(page);
   expect(mocks.requests.filter((request) => DOMAIN_PATHS.test(request.path) && request.method !== 'GET')).toEqual([]);

@@ -26,6 +26,11 @@ async function expectMetric(
   brief: Locator, key: string, value: string | RegExp, state: 'value' | 'missing' = 'value',
 ): Promise<void> {
   const item = metric(brief, key);
+  if (state === 'missing') {
+    // Settled missing-state metrics are withheld, never rendered visibly.
+    await expect(item).toHaveCount(0);
+    return;
+  }
   await expect(item).toHaveAttribute('data-value-state', state);
   await expect(item.locator('[data-operational-value]')).toHaveText(value);
 }
@@ -35,12 +40,12 @@ async function expectRealBrief(page: Page, title: string, count: number): Promis
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
   await expect(page.locator(BRIEF_MARKER)).toHaveCount(1);
   await expect(brief.locator('[data-operational-metric]')).toHaveCount(count);
-  await expect(brief).toContainText('Source loaded');
   return brief;
 }
 
 async function reviewBrief(
   page: Page, brief: Locator, title: string, provenance: string,
+  extra: { texts?: readonly string[]; hidden?: number; status?: string } = {},
 ): Promise<void> {
   const before = await brief.locator('[data-operational-value]').allTextContents();
   const trigger = brief.getByRole('button', { name: 'Review details', exact: true });
@@ -50,7 +55,13 @@ async function reviewBrief(
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('Operational metrics');
   await expect(dialog).toContainText(provenance);
-  await expect(dialog).toContainText('Source loaded');
+  await expect(dialog).toContainText(extra.status ?? 'Source loaded');
+  for (const text of extra.texts ?? []) await expect(dialog).toContainText(text);
+  if (extra.hidden != null && extra.hidden > 0) {
+    await expect(dialog).toContainText(extra.hidden === 1
+      ? '1 empty field is hidden.'
+      : `${extra.hidden} empty fields are hidden.`);
+  }
   for (const value of before) await expect(dialog).toContainText(value);
   await expectDialogsInsideViewport(page);
   await expectNoHorizontalOverflow(page);
@@ -96,25 +107,21 @@ for (const theme of ['light', 'dark'] as const) {
         await waitForHarnessReady(page, mocks);
         await expectThemeApplied(page, theme);
         const brief = await expectRealBrief(page, 'Loaded trip summary', 6);
-        await expect(brief).toContainText('Loaded page only · 2026-08-01 – 2026-08-26 · vehicle 7');
-        await expect(brief).toContainText('not fleet-wide or full-range totals');
         await expectMetric(brief, 'distance', '100 km');
         await expectMetric(brief, 'energy', '12.00 kWh');
         await expectMetric(brief, 'cost', '$20.00');
         await expectMetric(brief, 'trips', '2');
         await expectMetric(brief, 'average-distance', '50 km');
         await expectMetric(brief, 'charges', '3');
-        await expect(metric(brief, 'distance')).toContainText('2 trips');
-        await expect(metric(brief, 'energy')).toContainText('10 drives');
-        await expect(metric(brief, 'trips')).toContainText('10 total drives');
-        await expect(metric(brief, 'charges')).toContainText('3 charge sessions');
-        await expect(metric(brief, 'cost')).toContainText('$20.00/100km');
         await reviewBrief(page, brief, 'Loaded trip summary',
-          'Stored trip records returned by the selected vehicle, date window and pagination.');
+          'Stored trip records returned by the selected vehicle, date window and pagination.',
+          { texts: ['Loaded page only · 2026-08-01 – 2026-08-26 · vehicle 7',
+            'not fleet-wide or full-range totals', '2 trips', '10 drives',
+            '10 total drives', '3 charge sessions', '$20.00/100km'] });
         const cards = page.getByRole('region', { name: 'All trips', exact: true });
         await expect(cards.getByText(trips[0].name, { exact: true })).toBeVisible();
         await expect(cards.getByText(trips[1].name, { exact: true })).toBeVisible();
-        const chart = page.getByRole('figure', { name: 'Top Trips by Distance', exact: true });
+        const chart = page.getByRole('figure', { name: 'Top trips by distance', exact: true });
         const csvPromise = page.waitForEvent('download');
         await chart.getByRole('button', { name: 'CSV', exact: true }).click();
         const csv = await csvPromise;
@@ -141,7 +148,9 @@ for (const theme of ['light', 'dark'] as const) {
         await expectMetric(brief, 'trips', '1');
         await expectMetric(brief, 'average-distance', '10 km');
         await expectMetric(brief, 'charges', '0');
-        await expect(brief).toContainText('Loaded page only · 2026-08-01 – 2026-08-26 · vehicle 7');
+        await reviewBrief(page, brief, 'Loaded trip summary',
+          'Stored trip records returned by the selected vehicle, date window and pagination.',
+          { texts: ['Loaded page only · 2026-08-01 – 2026-08-26 · vehicle 7'] });
         await expect(cards.getByText(nextPageTrips[0].name, { exact: true })).toBeVisible();
         await expect(cards.getByText(trips[0].name, { exact: true })).toHaveCount(0);
         await expect(cards.getByText(trips[1].name, { exact: true })).toHaveCount(0);
@@ -159,17 +168,15 @@ for (const theme of ['light', 'dark'] as const) {
         await waitForHarnessReady(page, mocks);
         await expectThemeApplied(page, theme);
         const brief = await expectRealBrief(page, 'Trip totals', 6);
-        await expect(brief).toContainText('Trip #601 · 2026-08-24T08:00:00Z – 2026-08-24T09:00:00Z');
         await expectMetric(brief, 'distance', '40 km');
         await expectMetric(brief, 'energy', '8.00 kWh');
         await expectMetric(brief, 'efficiency', '200 Wh/km');
         await expectMetric(brief, 'duration', '1h');
         await expectMetric(brief, 'drives', '3');
         await expectMetric(brief, 'cost', '$12.00');
-        await expect(metric(brief, 'distance')).toContainText('3 drives');
-        await expect(metric(brief, 'drives')).toContainText('1 charges');
         await reviewBrief(page, brief, 'Trip totals',
-          'Stored trip detail; malformed non-negative totals retain the existing zero-clamp display policy.');
+          'Stored trip detail; malformed non-negative totals retain the existing zero-clamp display policy.',
+          { texts: ['Trip #601 · 2026-08-24T08:00:00Z – 2026-08-24T09:00:00Z', '3 drives', '1 charges'] });
         await expect(page.getByText('Drives in this trip', { exact: true })).toBeVisible();
         for (const route of ['Origin → First stop', 'First stop → Second stop', 'Second stop → Destination']) {
           await expect(page.getByText(route, { exact: true })).toBeVisible();
@@ -188,7 +195,6 @@ for (const theme of ['light', 'dark'] as const) {
         await waitForHarnessReady(page, mocks);
         await expectThemeApplied(page, theme);
         const brief = await expectRealBrief(page, 'Journey report summary', 7);
-        await expect(brief).toContainText('Journey #701 · 2026-08-24T08:00:00Z – 2026-08-24T09:00:00Z');
         await expectMetric(brief, 'distance', '40.00 km');
         await expectMetric(brief, 'duration', '1.00 h');
         await expectMetric(brief, 'detour', '1.25×');
@@ -198,12 +204,13 @@ for (const theme of ['light', 'dark'] as const) {
         await expectMetric(brief, 'checklist', '3 of 4');
         await expect(page.getByText(`· ${journeyReport.evidence[0]}`, { exact: true })).toBeVisible();
         await reviewBrief(page, brief, 'Journey report summary',
-          'Journey report refreshed by transitions, check-ins and replans; route-history trips have a separate denominator.');
+          'Journey report refreshed by transitions, check-ins and replans; route-history trips have a separate denominator.',
+          { texts: ['Journey #701', 'Aug 24, 2026', '08:00 AM', '09:00 AM'] });
         await expect(page.getByRole('button', { name: 'Re-check', exact: true })).toBeVisible();
         await page.getByRole('button', { name: 'Plan journey', exact: true }).click();
-        await expect(page.getByRole('textbox', { name: 'Journey name', exact: true })).toBeVisible();
+        await expect(page.getByRole('textbox', { name: /^Journey name/ })).toBeVisible();
         await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-        await expect(page.getByRole('textbox', { name: 'Journey name', exact: true })).toHaveCount(0);
+        await expect(page.getByRole('textbox', { name: /^Journey name/ })).toHaveCount(0);
         await expectMetric(brief, 'checklist', '3 of 4');
         await expectNoHorizontalOverflow(page);
         await expectNoRuntimeFailures(diagnostics);
@@ -218,15 +225,13 @@ for (const theme of ['light', 'dark'] as const) {
         await page.goto(replayPath);
         await waitForHarnessReady(page, mocks);
         await expectThemeApplied(page, theme);
-        const brief = await expectRealBrief(page, 'Drive Summary', 8);
-        await expect(brief).toContainText(`Drive #${DRIVE_DETAIL_ID}`);
+        const brief = await expectRealBrief(page, 'Drive summary', 8);
         await expectMetric(brief, 'distance', '28.75 km');
         await expectMetric(brief, 'duration', '32m');
         await expectMetric(brief, 'average-speed', '53.64 km/h');
         await expectMetric(brief, 'maximum-speed', '104.76 km/h');
         await expectMetric(brief, 'efficiency', '178.09 Wh/km');
         await expectMetric(brief, 'battery', '78% → 68%');
-        await expect(metric(brief, 'battery')).toContainText('Start 78% → end 68%');
         await expectMetric(brief, 'elevation-gain', '4 m');
         await expectMetric(brief, 'elevation-loss', '0 m');
         const before = await brief.locator('[data-operational-value]').allTextContents();
@@ -237,11 +242,12 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(slider).toHaveAttribute('aria-valuenow', '100');
         await expect(stage.getByTestId('replay-current-stats')).toContainText('68%');
         expect(await brief.locator('[data-operational-value]').allTextContents()).toEqual(before);
-        await stage.getByRole('button', { name: 'Reset', exact: true }).click();
+        await stage.getByRole('button', { name: 'Restart', exact: true }).click();
         await expect(slider).toHaveAttribute('aria-valuenow', '0');
-        await reviewBrief(page, brief, 'Drive Summary',
-          'Stored drive summary and the loaded, telemetry-enriched GPS trail.');
-        await expect(page.getByRole('link', { name: 'Back to Drive', exact: true })).toHaveAttribute('href', `/drives/${DRIVE_DETAIL_ID}`);
+        await reviewBrief(page, brief, 'Drive summary',
+          'Stored drive summary and the loaded, telemetry-enriched GPS trail.',
+          { texts: [`Drive #${DRIVE_DETAIL_ID}`, 'Start 78% → end 68%'] });
+        await expect(page.getByRole('link', { name: 'Back to drive', exact: true })).toHaveAttribute('href', `/drives/${DRIVE_DETAIL_ID}`);
         await expectNoHorizontalOverflow(page);
         await expectNoRuntimeFailures(diagnostics);
         await assertMockApiComplete(page, mocks);
@@ -260,13 +266,13 @@ for (const theme of ['light', 'dark'] as const) {
         await expectMetric(brief, 'trips', '0');
         await expectMetric(brief, 'average-distance', '0 km');
         await expectMetric(brief, 'charges', '0');
-        await expect(brief).toContainText('Loaded page only');
         await expect(page.getByText('No trips recorded yet', { exact: true })).toBeVisible();
-        const chart = page.getByRole('figure', { name: 'Top Trips by Distance', exact: true });
+        const chart = page.getByRole('figure', { name: 'Top trips by distance', exact: true });
         await expect(chart.getByRole('button', { name: 'CSV', exact: true })).toBeDisabled();
         await expect(chart.getByRole('button', { name: 'JSON', exact: true })).toBeDisabled();
         await reviewBrief(page, brief, 'Loaded trip summary',
-          'Stored trip records returned by the selected vehicle, date window and pagination.');
+          'Stored trip records returned by the selected vehicle, date window and pagination.',
+          { texts: ['Loaded page only'] });
         await expectNoHorizontalOverflow(page);
         await assertMockApiComplete(page, mocks);
       });
@@ -281,13 +287,16 @@ for (const theme of ['light', 'dark'] as const) {
         const diagnostics = monitorPage(page);
         await page.goto(TRIP_LIST_PATH);
         const brief = page.getByRole('region', { name: 'Loaded trip summary', exact: true });
-        await expect(brief).toContainText('Source failed', { timeout: 30_000 });
-        await waitForHarnessReady(page, mocks);
         await expect(brief).toHaveAttribute('data-operational-brief', 'true');
+        await expect(brief.locator('[data-operational-metric]')).toHaveCount(0, { timeout: 30_000 });
+        await waitForHarnessReady(page, mocks);
         for (const key of ['distance', 'energy', 'cost', 'trips', 'average-distance', 'charges']) {
           await expectMetric(brief, key, '—', 'missing');
         }
-        await expect(brief).toContainText('Loaded page only');
+        await reviewBrief(page, brief, 'Loaded trip summary',
+          'Stored trip records returned by the selected vehicle, date window and pagination.',
+          { texts: ['Loaded page only', 'No metric values are available yet.'],
+            status: 'Source failed' });
         expect(diagnostics.pageErrors).toEqual([]);
         expect(diagnostics.brokenResources).toEqual([]);
         expect(diagnostics.failedDataRequests.length).toBeGreaterThan(0);
@@ -310,12 +319,16 @@ for (const theme of ['light', 'dark'] as const) {
           status: 404, json: { error: 'Synthetic trip source unavailable during refresh' },
         }));
         await page.locator('main').getByRole('button', { name: /^Refresh data ·/ }).click();
-        await expect(brief).toContainText('Retained source', { timeout: 30_000 });
+        await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+        const retainedDialog = page.getByRole('dialog', { name: 'Loaded trip summary details', exact: true });
+        await expect(retainedDialog).toContainText('Retained source', { timeout: 30_000 });
+        await page.keyboard.press('Escape');
+        await expect(retainedDialog).toHaveCount(0);
         await expectPublishedMetricsUnchanged(brief, before);
         const cards = page.getByRole('region', { name: 'All trips', exact: true });
         await expect(cards.getByText(trips[0].name, { exact: true })).toBeVisible();
         await expect(cards.getByText(trips[1].name, { exact: true })).toBeVisible();
-        const chart = page.getByRole('figure', { name: 'Top Trips by Distance', exact: true });
+        const chart = page.getByRole('figure', { name: 'Top trips by distance', exact: true });
         await expect(chart.getByRole('button', { name: 'CSV', exact: true })).toBeEnabled();
         const jsonPromise = page.waitForEvent('download');
         await chart.getByRole('button', { name: 'JSON', exact: true }).click();
@@ -347,7 +360,7 @@ for (const theme of ['light', 'dark'] as const) {
           });
           await page.goto(detailPath);
           await waitForHarnessReady(page, mocks);
-          const brief = await expectRealBrief(page, 'Trip totals', 6);
+          const brief = await expectRealBrief(page, 'Trip totals', sourceCase === 'zero' ? 4 : 0);
           if (sourceCase === 'zero') {
             await expectMetric(brief, 'distance', '0 km');
             await expectMetric(brief, 'energy', '0.00 kWh');
@@ -360,7 +373,13 @@ for (const theme of ['light', 'dark'] as const) {
           }
           await expectMetric(brief, 'efficiency', '—', 'missing');
           await expectMetric(brief, 'duration', '—', 'missing');
-          await expect(metric(brief, 'efficiency')).toContainText('Efficiency requires a positive trip distance.');
+          // The efficiency guard reason has no home once its metric is
+          // withheld; the hidden-count sentence carries the degradation.
+          await reviewBrief(page, brief, 'Trip totals',
+            'Stored trip detail; malformed non-negative totals retain the existing zero-clamp display policy.',
+            sourceCase === 'zero'
+              ? { hidden: 2 }
+              : { texts: ['No metric values are available yet.'] });
           await expectNoHorizontalOverflow(page);
           await assertMockApiComplete(page, mocks);
         });
@@ -372,7 +391,7 @@ for (const theme of ['light', 'dark'] as const) {
         await installTripFixtures(page, mocks, theme, { report: zeroJourneyReport });
         await page.goto(journeysPath);
         await waitForHarnessReady(page, mocks);
-        const brief = await expectRealBrief(page, 'Journey report summary', 7);
+        const brief = await expectRealBrief(page, 'Journey report summary', 5);
         await expectMetric(brief, 'distance', '0.00 km');
         await expectMetric(brief, 'duration', '0.00 h');
         await expectMetric(brief, 'fixes', '0');
@@ -380,6 +399,9 @@ for (const theme of ['light', 'dark'] as const) {
         await expectMetric(brief, 'checklist', '0 of 0');
         await expectMetric(brief, 'detour', '—', 'missing');
         await expectMetric(brief, 'usual', '—', 'missing');
+        await reviewBrief(page, brief, 'Journey report summary',
+          'Journey report refreshed by transitions, check-ins and replans; route-history trips have a separate denominator.',
+          { hidden: 2 });
         await expectNoHorizontalOverflow(page);
         await assertMockApiComplete(page, mocks);
       });
@@ -390,7 +412,7 @@ for (const theme of ['light', 'dark'] as const) {
         await installDriveDetailMocks(page, theme, mocks, { partial: true });
         await page.goto(replayPath);
         await waitForHarnessReady(page, mocks);
-        const brief = await expectRealBrief(page, 'Drive Summary', 8);
+        const brief = await expectRealBrief(page, 'Drive summary', 2);
         await expectMetric(brief, 'distance', '28.75 km');
         await expectMetric(brief, 'duration', '32m');
         for (const key of ['average-speed', 'maximum-speed', 'efficiency', 'battery', 'elevation-gain', 'elevation-loss']) {
@@ -400,8 +422,9 @@ for (const theme of ['light', 'dark'] as const) {
           'No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.',
           { exact: true },
         )).toBeVisible();
-        await reviewBrief(page, brief, 'Drive Summary',
-          'Stored drive summary and the loaded, telemetry-enriched GPS trail.');
+        await reviewBrief(page, brief, 'Drive summary',
+          'Stored drive summary and the loaded, telemetry-enriched GPS trail.',
+          { hidden: 6 });
         await expectNoHorizontalOverflow(page);
         await assertMockApiComplete(page, mocks);
       });
@@ -421,16 +444,18 @@ for (const theme of ['light', 'dark'] as const) {
           route => fulfillApiFixture(route, mocks, { json: zeroDrive }));
         await page.goto(replayPath);
         await waitForHarnessReady(page, mocks);
-        const brief = await expectRealBrief(page, 'Drive Summary', 8);
+        const brief = await expectRealBrief(page, 'Drive summary', 5);
         await expectMetric(brief, 'distance', '0.00 km');
         await expectMetric(brief, 'duration', '0m');
         await expectMetric(brief, 'average-speed', '0.00 km/h');
         await expectMetric(brief, 'maximum-speed', '0.00 km/h');
         await expectMetric(brief, 'battery', '0% → 0%');
-        await expect(metric(brief, 'battery')).toContainText('Start 0% → end 0%');
         await expectMetric(brief, 'efficiency', '—', 'missing');
         await expectMetric(brief, 'elevation-gain', '—', 'missing');
         await expectMetric(brief, 'elevation-loss', '—', 'missing');
+        await reviewBrief(page, brief, 'Drive summary',
+          'Stored drive summary and the loaded, telemetry-enriched GPS trail.',
+          { texts: ['Start 0% → end 0%'], hidden: 3 });
         await expectNoHorizontalOverflow(page);
         await assertMockApiComplete(page, mocks);
       });
@@ -443,7 +468,7 @@ for (const theme of ['light', 'dark'] as const) {
         const diagnostics = monitorPage(page);
         await page.goto(replayPath);
         await waitForHarnessReady(page, mocks);
-        const brief = await expectRealBrief(page, 'Drive Summary', 8);
+        const brief = await expectRealBrief(page, 'Drive summary', 8);
         const before = await brief.locator('[data-operational-value]').allTextContents();
         let failedRequests = 0;
         await page.route(url => url.pathname === `/api/v1/drives/${DRIVE_DETAIL_ID}`, route => {
@@ -454,13 +479,17 @@ for (const theme of ['light', 'dark'] as const) {
           });
         });
         await page.getByRole('button', { name: 'Refresh replay data', exact: true }).click();
-        await expect(brief).toContainText('Retained source', { timeout: 30_000 });
+        await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+        const retainedDialog = page.getByRole('dialog', { name: 'Drive summary details', exact: true });
+        await expect(retainedDialog).toContainText('Retained source', { timeout: 30_000 });
+        await page.keyboard.press('Escape');
+        await expect(retainedDialog).toHaveCount(0);
         expect(failedRequests).toBeGreaterThan(0);
         await expectPublishedMetricsUnchanged(brief, before);
         const trigger = brief.getByRole('button', { name: 'Review details', exact: true });
         await trigger.focus();
         await trigger.press('Enter');
-        const dialog = page.getByRole('dialog', { name: 'Drive Summary details', exact: true });
+        const dialog = page.getByRole('dialog', { name: 'Drive summary details', exact: true });
         await expect(dialog).toContainText('Retained source');
         await expect(dialog).toContainText('Stored drive summary and the loaded, telemetry-enriched GPS trail.');
         for (const value of before) await expect(dialog).toContainText(value);

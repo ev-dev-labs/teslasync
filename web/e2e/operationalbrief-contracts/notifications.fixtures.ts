@@ -187,5 +187,9 @@ export async function installNotificationFixtures(
     expect(route.request().method()).toBe('GET');
     await fulfillApiFixture(route, mocks, { json: { windows: options.quiet ?? quietRows } });
   });
+  await page.route(/\/api\/v1\/push\/subscribe$/, async route => {
+    expect(route.request().method()).toBe('GET');
+    await fulfillApiFixture(route, mocks, { json: [] });
+  });
   return { mocks, ledger, control };
 }

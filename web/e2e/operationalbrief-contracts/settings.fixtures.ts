@@ -121,6 +121,7 @@ interface FixtureOptions {
   sessionsState?: 'available' | 'unavailable' | 'open'
   publicKeyState?: 'available' | 'unavailable'
   holdPublicKey?: boolean
+  forwardAuth?: boolean
 }
 
 export async function installSettingsFixtures(
@@ -164,6 +165,19 @@ export async function installSettingsFixtures(
   () => state.settingsState === 'unavailable' ? 503 : 200)
   await json('/onboarding/status', () => completeOnboarding)
   await json('/system/version', () => options.version ?? deploymentVersion)
+  if (options.forwardAuth) {
+    // The revoke flow requires a forward-auth deployment with session
+    // capabilities; the default harness answers open mode (writes blocked).
+    await json('/system/auth-mode', () => ({
+      mode: 'forward_auth',
+      subject_header: 'X-Forwarded-User',
+      subject: 'synthetic-operator',
+      capabilities: {
+        step_up_reauth: true, totp_enrollment: true, session_list: true,
+        impersonation: false, rbac: false,
+      },
+    }))
+  }
   await json('/auth/sessions', () => state.sessionsState === 'open'
     ? { error: 'Synthetic open-mode fixture', code: 'AUTH_MODE_OPEN' }
     : state.sessionsState === 'unavailable'
@@ -206,6 +220,8 @@ export async function installSettingsFixtures(
 
 export function expectSettingsReadOnly(api: NonNullable<Awaited<ReturnType<typeof installApiMocks>>>) {
   const mutations = api.requests.filter(request => request.method !== 'GET'
-    && !['/api/v1/web-vitals', '/api/v1/web-errors'].includes(request.path))
+    // Shell chrome (telemetry beacons, sidenav pin sync) fires on page load
+    // without any settings interaction; settings saves use their own routes.
+    && !['/api/v1/web-vitals', '/api/v1/web-errors', '/api/v1/pinned'].includes(request.path))
   expect(mutations, 'Review, local edits and category selection must not save or invoke providers').toEqual([])
 }

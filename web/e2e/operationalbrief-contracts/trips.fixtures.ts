@@ -5,6 +5,7 @@ import type { WaitOracleSite } from '../../src/api/hooks/useCharging';
 import { fulfillApiFixture, mockAppSettings, type MockApiController } from '../mockApi';
 
 export const TRIP_WINDOW = { start: '2026-08-01', end: '2026-08-26' } as const;
+const TRIP_QUERY = { start: '2026-08-01T00:00:00.000Z', end: '2026-08-27T00:00:00.000Z' } as const;
 export const TRIP_ID = 601;
 export const JOURNEY_ID = 701;
 export const TRIP_LIST_PATH = `/trips?vehicle_id=7&from=${TRIP_WINDOW.start}&to=${TRIP_WINDOW.end}&size=2`;
@@ -128,8 +129,8 @@ export async function installTripFixtures(
     const url = new URL(route.request().url());
     expect(route.request().method()).toBe('GET');
     expect(url.searchParams.get('vehicle_id')).toBe('7');
-    expect(url.searchParams.get('start')).toBe(TRIP_WINDOW.start);
-    expect(url.searchParams.get('end')).toBe(TRIP_WINDOW.end);
+    expect(url.searchParams.get('start')).toBe(TRIP_QUERY.start);
+    expect(url.searchParams.get('end')).toBe(TRIP_QUERY.end);
     expect(url.searchParams.get('limit')).toBe('2');
     const offset = url.searchParams.get('offset');
     expect([null, '2']).toContain(offset);

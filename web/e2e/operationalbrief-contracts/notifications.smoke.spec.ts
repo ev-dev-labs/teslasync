@@ -11,6 +11,11 @@ test.use({ timezoneId: 'UTC' });
 
 async function metric(brief: Locator, key: string, value: string, state: 'value' | 'missing' = 'value') {
   const cell = brief.locator(`[data-operational-metric="${key}"]`);
+  if (state === 'missing') {
+    // Settled missing-state metrics are withheld, never rendered visibly.
+    await expect(cell).toHaveCount(0);
+    return cell;
+  }
   await expect(cell).toHaveAttribute('data-value-state', state);
   await expect(cell.locator('[data-operational-value]')).toHaveText(value);
   return cell;
@@ -35,7 +40,7 @@ async function review(page: Page, brief: Locator, title: string, preserved: read
   await expect(close).toBeFocused();
   if (title === 'Rule noise and engagement') {
     await drawer.getByRole('button', { name: 'More info about fatiguing rules', exact: true }).focus();
-    await expect(page.getByRole('tooltip')).toContainText('The noise score blends three things');
+    await expect(page.getByRole('tooltip', { name: 'The noise score blends three things' })).toContainText('The noise score blends three things');
     await close.focus();
   }
   await page.keyboard.press('Shift+Tab');
@@ -69,9 +74,6 @@ for (const theme of ['light', 'dark'] as const) {
         await metric(backlog, 'inbox-critical', '13');
         await metric(backlog, 'inbox-warn', '13');
         await metric(backlog, 'inbox-info', '12');
-        await expect(backlog).toContainText('25 of 50');
-        await expect(backlog).toContainText('12 with unknown severity');
-        await expect(backlog).toContainText('Latest 50 active entries · all time');
         await expect(page.getByTestId('inbox-result-count')).toHaveText('83 notifications');
         const table = page.locator('main').getByRole('table', { name: 'Inbox', exact: true });
         await expect(table.getByRole('button', { name: /^Open notification:/ })).toHaveCount(25);
@@ -82,17 +84,15 @@ for (const theme of ['light', 'dark'] as const) {
         await metric(report, 'report-fanout', '2.50');
         await metric(report, 'report-uncorrelated', '10');
         await metric(report, 'report-http', '401');
-        await expect(report).toContainText('(exclusive) · UTC');
         const request = ledger.find(entry => entry.path === '/notifications/report');
         expect(request).toBeDefined();
-        await expect(report).toContainText(request!.params.get('from_instant')!);
-        await expect(report).toContainText(request!.params.get('to_exclusive')!);
         await review(page, backlog, 'Backlog severity and read status', [
           '25 of 50', '12 with unknown severity', 'Latest 50 active entries · all time',
           'not the workspace period or the server total',
         ]);
         await review(page, report, 'Triggers, linked deliveries, and outbound calls', [
           'Triggers recorded', '120', '2.50', 'retries and failures', '(exclusive) · UTC',
+          request!.params.get('from_instant')!, request!.params.get('to_exclusive')!,
         ]);
         const frame = table.locator('xpath=ancestor::*[@data-grid-frame][1]');
         const search = frame.getByPlaceholder('Search messages…', { exact: true });
@@ -130,7 +130,6 @@ for (const theme of ['light', 'dark'] as const) {
         await metric(brief, 'inbox-total', '50');
         await metric(brief, 'inbox-unread', '25');
         await metric(brief, 'inbox-critical', '13');
-        await expect(brief).toContainText('Latest 50 archived entries · all time');
         await review(page, brief, 'Backlog severity and read status', [
           'Latest 50 archived entries · all time', '25 of 50', 'Last archived',
         ]);
@@ -188,7 +187,7 @@ for (const theme of ['light', 'dark'] as const) {
         await metric(brief, 'quiet-windows', '2');
         await metric(brief, 'quiet-enabled', '1/2');
         await metric(brief, 'quiet-now', 'Quiet');
-        await metric(brief, 'quiet-bypass', 'critical');
+        await metric(brief, 'quiet-bypass', 'Critical');
         await review(page, brief, 'Schedules, delivery status, and bypass policy', [
           '1/2', '1 window active now', 'Configured schedules · right now', 'local weekday and time',
         ]);
@@ -207,7 +206,7 @@ for (const theme of ['light', 'dark'] as const) {
         await metric(latency, 'latency-p99', '1,980.00 ms');
         await metric(latency, 'latency-apdex', '0.750');
         await review(page, latency, 'Delivery speed, tail latency, and Apdex', [
-          'trimmed mean 1,000.00 ms', '2 measured deliveries', 'T = 1 s · tolerating through 4 s',
+          'trimmed mean 1,000.00 ms', '2 deliveries have usable latency measurements.', 'T = 1 s · tolerating through 4 s',
           'not a guaranteed complete analysis window',
         ]);
         const burn = await briefMarker(page, 'notification-burn-rate-brief');
@@ -219,7 +218,7 @@ for (const theme of ['light', 'dark'] as const) {
         ]);
         const fatigue = await briefMarker(page, 'alert-fatigue-brief');
         await metric(fatigue, 'fatigue-rules', '0');
-        await metric(fatigue, 'fatigue-ignored', '50%');
+        await metric(fatigue, 'fatigue-ignored', '50.00%');
         await review(page, fatigue, 'Rule noise and engagement', [
           'of 3 rules', 'of notifications with read tracking', 'not a complete requested analysis period',
           'A rule can be low-volume and still fatiguing if every firing comes in a cluster of six.',
@@ -256,7 +255,11 @@ for (const theme of ['light', 'dark'] as const) {
 
       test('browser counts follow real in-tab and sound master controls without inventing delivery health', async ({ page }) => {
         const { mocks } = await installNotificationFixtures(page, theme, '/notifications/browser');
-        await page.context().grantPermissions(['notifications']);
+        // Headless Chromium reports Notification.permission as 'denied' and ignores
+        // grantPermissions(['notifications']), so pin the granted state directly.
+        await page.addInitScript(() => {
+          Object.defineProperty(window.Notification, 'permission', { value: 'granted', configurable: true });
+        });
         await page.goto('/notifications/browser');
         await waitForHarnessReady(page, mocks);
         const brief = await briefMarker(page, 'browser-notifications-brief');
@@ -270,7 +273,7 @@ for (const theme of ['light', 'dark'] as const) {
         ]);
         await page.getByRole('switch', { name: 'Enable notification sounds', exact: true }).click();
         await metric(brief, 'browser-sounds', '3/7');
-        await page.getByRole('switch', { name: 'Alerts', exact: true }).click();
+        await page.locator('[data-tour="settings-notifications"]').getByRole('switch', { name: 'Alerts', exact: true }).click();
         await metric(brief, 'browser-push', '0/2');
         await expectNoHorizontalOverflow(page);
         await assertMockApiComplete(page, mocks);
@@ -316,7 +319,11 @@ test('missing report source retains all five unknown measurements and breakdown 
   const { mocks } = await installNotificationFixtures(page, theme, INBOX_ROUTE, { reportUnavailable: true });
   await page.goto(INBOX_ROUTE);
   const brief = await briefMarker(page, 'notification-report-brief');
-  await expect(brief).toContainText('Report unavailable', { timeout: 45_000 });
+  await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+  const failedDialog = page.getByRole('dialog', { name: 'Triggers, linked deliveries, and outbound calls details', exact: true });
+  await expect(failedDialog).toContainText('Report unavailable', { timeout: 45_000 });
+  await page.keyboard.press('Escape');
+  await expect(failedDialog).toHaveCount(0);
   await waitForHarnessReady(page, mocks);
   for (const key of ['report-triggered', 'report-deliveries', 'report-fanout', 'report-uncorrelated', 'report-http']) {
     await metric(brief, key, '—', 'missing');
@@ -326,7 +333,8 @@ test('missing report source retains all five unknown measurements and breakdown 
     await expect(activity.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   }
   await review(page, brief, 'Triggers, linked deliveries, and outbound calls', [
-    'Outbound HTTP calls', '(exclusive) · UTC', 'retries and failures',
+    'Report unavailable', 'Outbound HTTP calls', '(exclusive) · UTC', 'retries and failures',
+    'No metric values are available yet.',
   ]);
   await assertMockApiComplete(page, mocks);
 });
@@ -337,13 +345,18 @@ test('no usable health outcomes are unknown rather than zero latency or a health
   await waitForHarnessReady(page, mocks);
   const latency = await briefMarker(page, 'notification-latency-brief');
   for (const key of ['latency-p50', 'latency-p95', 'latency-p99', 'latency-apdex']) await metric(latency, key, '—', 'missing');
-  await expect(latency).toContainText('No usable latency measurements');
+  await review(page, latency, 'Delivery speed, tail latency, and Apdex', [
+    'No usable latency measurements', 'No metric values are available yet.',
+  ]);
   const burn = await briefMarker(page, 'notification-burn-rate-brief');
   for (const key of ['burn-delivery', 'burn-short', 'burn-long']) await metric(burn, key, '—', 'missing');
-  await expect(burn).toContainText('No eligible delivery outcomes');
+  await review(page, burn, 'Delivery reliability and error budget', [
+    'No eligible delivery outcomes', '3 empty fields are hidden.',
+  ]);
   const fatigue = await briefMarker(page, 'alert-fatigue-brief');
   await metric(fatigue, 'fatigue-rules', '0');
   await metric(fatigue, 'fatigue-ignored', '—', 'missing');
+  await review(page, fatigue, 'Rule noise and engagement', ['3 empty fields are hidden.']);
   await assertMockApiComplete(page, mocks);
 });
 
@@ -356,7 +369,7 @@ test('measured zero is preserved in the canonical latency bridge', async ({ page
   const brief = await briefMarker(page, 'notification-latency-brief');
   for (const key of ['latency-p50', 'latency-p95', 'latency-p99']) await metric(brief, key, '0.00 ms');
   await metric(brief, 'latency-apdex', '1.000');
-  await expect(brief).toContainText('1 measured deliveries');
+  await review(page, brief, 'Delivery speed, tail latency, and Apdex', ['1 delivery has a usable latency measurement.']);
   await assertMockApiComplete(page, mocks);
 });
 
@@ -369,7 +382,9 @@ test('empty quiet schedule keeps zero windows distinct from missing enabled deno
   await metric(brief, 'quiet-enabled', '—', 'missing');
   await metric(brief, 'quiet-bypass', '—', 'missing');
   await metric(brief, 'quiet-now', 'Delivering');
-  await expect(brief).toContainText('No configured windows');
+  await review(page, brief, 'Schedules, delivery status, and bypass policy', [
+    'No schedules', '2 empty fields are hidden.',
+  ]);
   await assertMockApiComplete(page, mocks);
 });
 
@@ -382,9 +397,13 @@ test('failed real refresh retains published channel counts and drawer provenance
   await metric(brief, 'channels-active', '2/5');
   const previous = control.statsRequests;
   control.failStats = true;
-  await page.locator('main').getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.locator('main').getByRole('button', { name: 'Refresh', exact: true }).first().click();
   await expect.poll(() => control.statsRequests).toBeGreaterThan(previous);
-  await expect(brief).toContainText('Data may be stale', { timeout: 45_000 });
+  await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+  const staleDialog = page.getByRole('dialog', { name: 'Delivery channels and recorded outcomes details', exact: true });
+  await expect(staleDialog).toContainText('Data may be stale', { timeout: 45_000 });
+  await page.keyboard.press('Escape');
+  await expect(staleDialog).toHaveCount(0);
   await metric(brief, 'channels-sent', '17');
   await metric(brief, 'channels-failed', '0');
   await metric(brief, 'channels-active', '2/5');
@@ -392,8 +411,8 @@ test('failed real refresh retains published channel counts and drawer provenance
     'Data may be stale', '2/5', 'Delivery counts have no reported time bounds',
   ]);
   control.failStats = false;
-  await page.locator('main').getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(brief).toContainText('Statistics available');
+  await page.locator('main').getByRole('button', { name: 'Refresh', exact: true }).first().click();
+  await review(page, brief, 'Delivery channels and recorded outcomes', ['Statistics available']);
   await waitForHarnessReady(page, mocks);
   await assertMockApiComplete(page, mocks);
 });
