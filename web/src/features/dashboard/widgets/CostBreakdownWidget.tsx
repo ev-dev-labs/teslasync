@@ -98,6 +98,7 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
   // normal renders keep their exact width.
   const chartRef = useRef<HTMLDivElement>(null);
   const [axisOverflow, setAxisOverflow] = useState(0);
+  const [axisRemeasure, setAxisRemeasure] = useState(0);
   useLayoutEffect(() => {
     if (isCompact || canUseDonut) return;
     let needed = 0;
@@ -117,8 +118,26 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
       needed = 0;
     }
     const grown = Math.max(0, Math.ceil(needed));
-    setAxisOverflow(previous => (previous === grown ? previous : grown));
-  }, [axisWidth, axisOverflow, donutData, isCompact, canUseDonut]);
+    // Monotonic within a mount: a fractional overflow must not oscillate the
+    // axis width between renders (grow by ceil, re-measure inside tolerance,
+    // shrink, repeat). A stale extra pixel is harmless; a loop is not.
+    setAxisOverflow(previous => (grown > previous ? grown : previous));
+  }, [axisWidth, axisOverflow, axisRemeasure, donutData, isCompact, canUseDonut]);
+  useLayoutEffect(() => {
+    if (isCompact || canUseDonut) return;
+    // ResponsiveContainer injects the SVG asynchronously after the chart node
+    // mounts, so a mount-time measurement sees no ticks; webfonts landing
+    // later widen the rendered glyphs without touching the DOM. Re-observe on
+    // every data change because the chart node itself mounts late: the chart
+    // frame renders a skeleton while donutData is empty, so the mount pass
+    // has no node to observe. Mirrors useMeasuredAxisWidth's fonts.ready pass.
+    const bump = () => setAxisRemeasure(value => value + 1);
+    const node = chartRef.current;
+    const observer = new MutationObserver(bump);
+    if (node) observer.observe(node, { childList: true, subtree: true });
+    void document.fonts?.ready.then(bump);
+    return () => observer.disconnect();
+  }, [donutData, isCompact, canUseDonut]);
   const yAxisWidth = axisWidth + axisOverflow;
 
   const rankedItems = useMemo((): (RankedItem & { value: number })[] => {
