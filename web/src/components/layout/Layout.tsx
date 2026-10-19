@@ -40,7 +40,7 @@ import {
 } from './sidebar/compactNav'
 import { collectionGroups, collectionPrimaryPath, collectionSidebarSections } from './sidebar/collections'
 import { suggestSidebarPages } from './sidebar/sidebarSuggest'
-import { SIDEBAR_ROUTE_ICONS } from './sidebar/sidebarIcons'
+import { SIDEBAR_ROUTE_ICONS } from './sidebar/sidebarRouteIcons'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import { DemoDataNotice, RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'

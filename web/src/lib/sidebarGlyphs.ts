@@ -41,7 +41,6 @@ import {
   Globe2,
   Grid3x3,
   Handshake,
-  Inbox,
   HardDriveUpload,
   Hourglass,
   KeySquare,
@@ -84,7 +83,6 @@ import {
 export const SidebarGlyphs = {
   alarmClock: AlarmClock,
   atom: Atom,
-  inbox: Inbox,
   audioWaveform: AudioWaveform,
   axis3d: Axis3d,
   badgeAlert: BadgeAlert,
