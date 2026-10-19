@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { assertCatalogueShortCapture, captureCataloguePanel, captureGeometry } from './dashboardCatalogueCapture';
 import { catalogueObservationSource, recordCatalogueObservationSources } from './dashboardCatalogueObservationAge';
+import { nativeDigitFontFace } from './nativeDigitFont';
 
 async function nativeFixture(page: Page, mode: 'advance' | 'metric' | 'missing' | 'source' | 'occlusion') {
   recordCatalogueObservationSources(page);
@@ -33,7 +34,7 @@ async function nativeFixture(page: Page, mode: 'advance' | 'metric' | 'missing' 
       <div data-testid="fleet-operations-brief"><div class="pt-4"><div>
         <div class="min-w-0"><span class="mt-2 block" id="scope"></span></div>
         <a href="/vehicles/7">Open vehicle</a></div>
-        <dl><div><dt>Oldest reading</dt><dd id="oldest"></dd></div></dl></div></div>
+        <dl><div data-operational-metric><dt>Oldest reading</dt><dd id="oldest" data-operational-value></dd></div></dl></div></div>
       <p id="metric">Verified 1/1</p>
       ${Array.from({ length: 45 }, (_, index) => `<p id="reading-${index}">Native reading ${index}</p>`).join('')}
       </section></div></main><div data-role="appbar"></div><div data-role="status-bar"></div>
@@ -136,7 +137,8 @@ async function nativeDigitAdvance(page: Page, effect: string) {
       main{position:absolute;inset:40px 0;overflow:auto}
       .react-grid-item{height:360px}.widget-panel{height:100%;box-sizing:border-box;width:700px;padding:16px;background:white}
       h2,p,dl,dd{margin:0}span.block{display:block}
-      #oldest{height:32px;white-space:nowrap;font:24px/32px Georgia,serif}
+      ${nativeDigitFontFace}
+      #oldest{height:32px;white-space:nowrap;font:24px/32px TeslaSyncNativeDigits,serif}
       [data-role=appbar]{position:fixed;inset:0 0 auto;height:32px;background:white}
       [data-role=status-bar]{position:fixed;inset:auto 0 0;height:32px;background:white}
     </style></head><body><main><div class="react-grid-item" data-widget-id="review-fleet-posture">
@@ -144,7 +146,7 @@ async function nativeDigitAdvance(page: Page, effect: string) {
       <div data-testid="fleet-operations-brief"><div class="pt-4"><div>
         <div class="min-w-0"><span class="mt-2 block" id="scope"></span></div>
         <a href="/vehicles/7">Open vehicle</a></div>
-        <dl><div><dt>Oldest reading</dt><dd id="oldest"></dd></div></dl></div></div>
+        <dl><div data-operational-metric><dt>Oldest reading</dt><dd id="oldest" data-operational-value></dd></div></dl></div></div>
       <p id="metric">Verified 1/1</p><button id="advance" disabled>Render observed age</button>
       </section></div></main><div data-role="appbar"></div><div data-role="status-bar"></div>
       <script>
@@ -171,6 +173,7 @@ async function nativeDigitAdvance(page: Page, effect: string) {
       </script></body></html>`,
   }));
   await page.goto('/observation-age-digit-fixture', { timeout: remaining() });
+  await page.evaluate(() => document.fonts.ready);
   const panel = page.locator('.widget-panel');
   await expect(page.locator('#oldest')).toHaveText('6s ago', { timeout: remaining() });
   const measure = async () => ({

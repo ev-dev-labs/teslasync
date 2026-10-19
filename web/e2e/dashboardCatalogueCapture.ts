@@ -41,9 +41,9 @@ export async function captureGeometry(panel: Locator, timeout?: number) {
     const brief = widgetId && ['review-fleet-posture', 'state-fleet-posture'].includes(widgetId)
       ? element.querySelector('[data-testid="fleet-operations-brief"]') : null;
     const scopeAge = brief?.querySelector(':scope > .pt-4 > div > .min-w-0 > span.mt-2.block');
-    const oldestLabel = brief ? [...brief.querySelectorAll('dl > div > dt')]
-      .find(node => node.textContent === 'Oldest reading') : null;
-    const oldestAge = oldestLabel?.parentElement?.querySelector('dd');
+    const oldestMetric = brief ? [...brief.querySelectorAll('[data-operational-metric]')]
+      .find(node => node.textContent?.startsWith('Oldest reading')) : null;
+    const oldestAge = oldestMetric?.querySelector('[data-operational-value]');
     const scopeLink = brief?.querySelector(':scope > .pt-4 > div > a[href^="/vehicles/"]');
     const scopeMatch = /^\/vehicles\/(\d+)$/.exec(scopeLink?.getAttribute('href') ?? '');
     const readings = [];
