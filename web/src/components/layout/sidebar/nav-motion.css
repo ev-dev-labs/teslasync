@@ -1,4 +1,6 @@
 .nav-icon-part, .nav-motion-icon { transform-box: view-box; }
+/* Lifted shackles, spreading platters and arrow tips may cross the view box. */
+.nav-motion-icon { overflow: visible; }
 .nav-motion-target { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .nav-phone-icon { width: 22px; height: 22px; }
 .sidenav-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--surface-2); }
@@ -126,7 +128,7 @@
   @keyframes nav-paint3 { 35% { transform: translate(0.8px,0px) scale(1.3); } 100% { transform: none; } }
   .nav-motion-target.is-animating .nav-glyph-display .part-4 { animation-name: nav-paint4; animation-duration: 280ms; animation-delay: 120ms; }
   @keyframes nav-paint4 { 35% { transform: translate(-0.8px,0.2px) scale(1.3); } 100% { transform: none; } }
-  .nav-motion-target.is-animating:has(.nav-glyph-avatar) { animation: nav-avatar 440ms ease-out; }
+  .nav-motion-target.is-animating:has(.nav-glyph-avatar) { animation: nav-avatar 400ms ease-out; }
   @keyframes nav-avatar { 30% { transform: scale(.92); } 70% { transform: scale(1.02); } 100% { transform: none; } }
   .nav-motion-target.is-animating .nav-glyph-more .part-1 { animation-name: nav-more; animation-duration: 260ms; animation-delay: 0ms; }
   .nav-motion-target.is-animating .nav-glyph-more .part-2 { animation-name: nav-more; animation-duration: 260ms; animation-delay: 60ms; }
