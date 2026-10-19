@@ -42,12 +42,12 @@
   {
     "file": "web/src/components/layout/BottomTabBar.tsx",
     "calls": 6,
-    "sha256": "5204ca90ab14101ae434f989bf803e35e9bc7ff820d9f30ee4313b4fdc6bdaa9"
+    "sha256": "f01fbdece2ab96edbf9c45655cfcb6d2ed3839ce441d9f0c9a6dab824b08c7a8"
   },
   {
     "file": "web/src/components/layout/Layout.tsx",
     "calls": 14,
-    "sha256": "96c08ab2902a736838201934e4d2c9c41d0b9a8a8c5d325059d75e88c1f5e807",
+    "sha256": "d5f3c5cffd86f567050cbb461fdbe10c7930c5c695ea2870897954e05a1ef8a1",
     "dependencies": [
       {
         "file": "web/src/lib/routeRegistry.ts",
@@ -162,7 +162,7 @@
   {
     "file": "web/src/components/layout/sidebar/SectionRail.tsx",
     "calls": 13,
-    "sha256": "529a2176772bbbadc86ecd3d8303a180ee4ca8299b2d18a078dfb328bc1d2269"
+    "sha256": "3f635fd4e2ab442c71bd05f55572a05ab90b2affb91d5fb64c766bcb9ff5a4e8"
   },
   {
     "file": "web/src/components/layout/sidebar/SidebarRow.tsx",

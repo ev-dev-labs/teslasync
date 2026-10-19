@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { cloneElement, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/runtime'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { Avatar } from '@/components/data-display/Avatar'
+import { NAV_UTILITY_ICONS } from './NavIcons'
+import { useNavIconMotion } from './useNavIconMotion'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 import { PrefetchNavLink } from '../PrefetchLink'
@@ -37,11 +38,14 @@ export function selectionKey(selection: DeckSelection) {
 }
 export function SectionRail({ sections, selection, onSelect, navSectionTitle, navLabel, panelOpen, pathname, alertCount, appearanceControl, onItemSelect, onUtilityActivate, itemRef, collections = [] }: SectionRailProps) {
   const { t } = useTranslation()
+  const motion = useNavIconMotion()
+  const { alerts: AlertsIcon, display: DisplayIcon, avatar: AvatarIcon } = NAV_UTILITY_ICONS
+  const displayIcon = <span data-nav-motion className="nav-motion-target"><DisplayIcon className="h-5 w-5" aria-hidden /></span>
   const shortLabels: Record<string, string> = {
     'Advanced intelligence': t('nav.sidenav.shortAdvanced', 'Advanced'),
     'Ownership intelligence': t('nav.sidenav.shortOwnership', 'Ownership'),
     'Tesla physics': t('nav.sidenav.shortPhysics', 'Physics'),
-    Notifications: t('nav.sidenav.shortAlerts', 'Alerts'),
+    Notifications: t('nav.sidenav.shortInbox', 'Inbox'),
     Integrations: t('nav.sidenav.shortConnect', 'Connect'),
   }
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -63,7 +67,7 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
     observer?.observe(element)
     return () => { observer?.disconnect(); element.removeEventListener('scroll', update) }
   }, [sections])
-  return <div role="navigation" className="sidenav-rail" aria-label={t('nav.deck.groups', 'Sections and shortcuts')}>
+  return <div {...motion} role="navigation" className="sidenav-rail" aria-label={t('nav.deck.groups', 'Sections and shortcuts')}>
     <div className="sidenav-brand" aria-hidden="true"><Icons.charging className="h-6 w-6" /></div>
     <div className="sidenav-scroll-wrap">
       <div ref={scrollRef} data-testid="rail-scroll" className="sidenav-rail-scroll">
@@ -72,7 +76,7 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
           const short = shortLabels[section.title]
           const Icon = resolveSectionIcon(section.title)
           return <Button key={section.title} ref={element => { buttons.current[index] = element; itemRef?.(`section:${section.title}`, element) }}
-              type="button" variant="ghost" aria-label={label} aria-current={selected === section.title ? 'true' : undefined}
+              data-nav-action type="button" variant="ghost" aria-label={label} aria-current={selected === section.title ? 'true' : undefined}
               aria-expanded={selected === section.title && panelOpen} tabIndex={focusTitle === section.title ? 0 : -1}
               className={cn('sidenav-rail-item', selected === section.title && 'is-selected')}
               onFocus={() => setFocusTitle(section.title)}
@@ -85,7 +89,7 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
                 buttons.current[next]?.focus()
                 buttons.current[next]?.scrollIntoView?.({ block: 'nearest' })
               }} onClick={() => onSelect({ kind: 'section', title: section.title })}>
-              <span className="sidenav-icon"><Icon className="h-5 w-5" aria-hidden /></span>
+              <span data-nav-motion className="sidenav-icon nav-motion-target"><Icon className="h-5 w-5" aria-hidden /></span>
               <span className="sidenav-short-label">{short ?? label}</span>
             </Button>
         })}
@@ -95,19 +99,19 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
     </div>
     <div className="sidenav-utilities">
       <Tooltip content={t('nav.deck.alerts', 'Alerts')} side="right">
-        <PrefetchNavLink to="/notifications/inbox" onClick={() => { onUtilityActivate?.(); onItemSelect?.() }} className="sidenav-utility" aria-label={t('nav.deck.alerts', 'Alerts')}>
-          <Icons.notificationsActive className="h-5 w-5" aria-hidden />
+        <PrefetchNavLink data-nav-action to="/notifications/inbox" onClick={() => { onUtilityActivate?.(); onItemSelect?.() }} className="sidenav-utility" aria-label={t('nav.deck.alerts', 'Alerts')}>
+          <span data-nav-motion className="nav-motion-target"><AlertsIcon className="h-5 w-5" aria-hidden /></span>
           {alertCount > 0 && <span className="sidenav-alert-count" aria-label={t('nav.deck.alertCount', { count: alertCount, defaultValue: '{{count}} unread alerts' })}>{alertCount > 99 ? '99+' : alertCount}</span>}
         </PrefetchNavLink>
       </Tooltip>
       <Tooltip content={t('nav.deck.display', 'Display')} side="right">
-        <div className="sidenav-utility">{appearanceControl ?? <PrefetchNavLink to="/settings#appearance" onClick={() => { onUtilityActivate?.(); onItemSelect?.() }} aria-label={t('nav.deck.display', 'Display')}><Icons.palette className="h-5 w-5" aria-hidden /></PrefetchNavLink>}</div>
+        <div className="sidenav-utility">{(isValidElement<{ triggerIcon?: ReactNode }>(appearanceControl) ? cloneElement(appearanceControl, { triggerIcon: displayIcon }) : appearanceControl) ?? <PrefetchNavLink data-nav-action to="/settings#appearance" onClick={() => { onUtilityActivate?.(); onItemSelect?.() }} aria-label={t('nav.deck.display', 'Display')}>{displayIcon}</PrefetchNavLink>}</div>
       </Tooltip>
       <Tooltip content={t('nav.groups.account', 'Account')} side="right"><details className="sidenav-account" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>
-        <summary className="sidenav-utility" aria-label={t('nav.groups.account', 'Account')} onClick={onUtilityActivate} onKeyDown={event => {
+        <summary data-nav-action className="sidenav-utility" aria-label={t('nav.groups.account', 'Account')} onClick={onUtilityActivate} onKeyDown={event => {
           const account = event.currentTarget.closest('details')
           if (event.key === 'Escape' && account?.open) { event.stopPropagation(); account.open = false }
-        }}><Avatar size="sm" /></summary>
+        }}><span data-nav-motion className="nav-motion-target sidenav-avatar"><AvatarIcon className="h-3.5 w-3.5" aria-hidden /></span></summary>
         <div className="sidenav-account-menu">
           {flattenSidebarItems(sections.find(section => section.title === 'Account')?.items ?? [], collections).map(item => <PrefetchNavLink key={item.to} to={item.to} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); onItemSelect?.() }} onKeyDown={event => {
             const account = event.currentTarget.closest('details')
