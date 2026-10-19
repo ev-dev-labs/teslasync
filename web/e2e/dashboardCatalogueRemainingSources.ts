@@ -3,9 +3,9 @@ import type {
   Alert, Automation, AutomationHistoryListResponse, NotificationLog, NotificationStats,
   YearReview, FleetAnalytics, StatsSummary,
 } from '../src/api/types';
-import type { LifetimeStats } from '../src/api/hooks/useAnalytics';
+import type { LifetimeStats, VehicleStateSummaryResponse } from '../src/api/hooks/useAnalytics';
 import type { AnomalyData } from '../src/api/hooks/useAnomalies';
-import type { MonthlyMileageResponse, MileageStats, StateSummary, TimelineEvent, WeeklyDigestData } from '../src/types/analytics';
+import type { MonthlyMileageResponse, MileageStats, TimelineEvent, WeeklyDigestData } from '../src/types/analytics';
 import type { FSMStats, FSMTransitionResponse } from '../src/types/fsm';
 import { fulfillApiFixture, type MockApiController } from './mockApi';
 
@@ -111,9 +111,13 @@ export function catalogueAnalyticsSources(now: string): CatalogueSources {
     last_365d_km: 1234, drive_count_lifetime: 123, drive_count_30d: 30,
     first_drive_at: earlier, last_drive_at: now,
   };
-  const summary: StateSummary[] = [
-    { state: 'driving', count: 2, totalMin: 120 }, { state: 'parked', count: 1, totalMin: 60 },
-  ];
+  const summary: VehicleStateSummaryResponse = {
+    vehicle_id: 7, days: 7, start: earlier, end: now, total_seconds: 10800,
+    by_state: [
+      { state: 'driving', transition_count: 2, total_seconds: 7200, percentage: 200 / 3 },
+      { state: 'parked', transition_count: 1, total_seconds: 3600, percentage: 100 / 3 },
+    ],
+  };
   const timeline: { transitions: TimelineEvent[] } = {
     transitions: [{ id: 'catalogue-transition', state: 'driving', startDate: earlier, durationMin: 120 }],
   };

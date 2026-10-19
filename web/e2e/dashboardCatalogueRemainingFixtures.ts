@@ -7,6 +7,7 @@ import { catalogueOperationalSources } from './dashboardCatalogueOperationalSour
 import { catalogueSystemSources } from './dashboardCatalogueSystemSources';
 import { fulfillApiFixture, resolveApiFixture, type MockApiController } from './mockApi';
 import { assertCatalogueYAxisTickBounds } from './dashboardCatalogueGeometry';
+import { expectBriefDetails } from './operationalbrief-contracts/disclosure.helpers';
 
 export const remainingBatches = {
   'catalogue-analytics-totals': ['fleet-stats', 'fleet-stats-bar', 'weekly-summary-card', 'weekly-digest',
@@ -34,7 +35,7 @@ export const remainingReadings: Record<string, RegExp> = {
   'fleet-stats-bar': /300\.00/,
   'weekly-summary-card': /42\.00/,
   'weekly-digest': /42\.00/,
-  'fsd-weekly': /Unmeasured is not zero/,
+  'fsd-weekly': /No metric values are available yet\./,
   'monthly-mileage': /123/,
   'lifetime-stats': /1,234\.00/,
   'mileage-stats': /10\.00/,
@@ -70,7 +71,7 @@ export const remainingReadings: Record<string, RegExp> = {
   'media-now-playing': /Catalogue evening drive/,
   'media-history': /Catalogue evening drive/,
   'onboarding-checklist': /Connect your Tesla/i,
-  'fleet-posture': /1 of 1 verified/,
+  'fleet-posture': /Verified\s*1\/1/,
   'quick-nav': /Trip history/,
   'audit-log': /Catalogue settings updated/,
   'backup-monitor': /2\.0(?:0)?\s*MB/,
@@ -290,7 +291,15 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     await expect(panel).toContainText('Setup checklist hidden');
     await panel.getByRole('button', { name: 'Restart checklist', exact: true }).click();
     await expect(panel.getByTestId('checklist-task-connect-vehicle')).toHaveAttribute('data-complete', 'true');
-    await panel.getByRole('button', { name: 'Dismiss', exact: true }).click();
+    const dismiss = panel.getByRole('button', { name: 'Dismiss', exact: true });
+    const expand = panel.locator('..').getByRole('button', { name: 'Expand Setup Checklist', exact: true });
+    await expect.poll(async () => {
+      const a = await dismiss.boundingBox();
+      const b = await expand.boundingBox();
+      return Boolean(a && b && (a.x + a.width <= b.x || b.x + b.width <= a.x
+        || a.y + a.height <= b.y || b.y + b.height <= a.y));
+    }, { message: 'Expand must not overlap the caller-owned Dismiss action' }).toBe(true);
+    await dismiss.click();
     await expect(panel).toContainText('Setup checklist hidden');
     await panel.getByRole('button', { name: 'Restart checklist', exact: true }).click();
     await expect(panel.getByTestId('checklist-task-connect-vehicle')).toHaveAttribute('data-complete', 'true');
@@ -348,11 +357,14 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     await expect(panel.getByRole('img', { name: /Soc trend/i })).toBeVisible();
   }
   if (id === 'fsd-weekly') {
-    await expect(panel.getByTestId('fsd-weekly-distance')).toContainText('—');
+    const weekly = panel.getByTestId('fsd-weekly-distance');
+    await expect(weekly).toContainText('No metric values are available yet.');
+    await expect(weekly.locator('[data-operational-metric]')).toHaveCount(0);
+    await expectBriefDetails(panel.page(), weekly, ['Unmeasured is not zero']);
     await expect(panel.getByTestId('fsd-weekly-distance')).not.toContainText('0.00');
   }
   if (id === 'fleet-posture') {
-    await expect(panel.getByText('1 of 1 verified', { exact: true })).toBeVisible();
+    await expect(panel.getByRole('listitem').filter({ hasText: /^Verified\s*1\/1$/ })).toHaveCount(1);
     await expect(panel.getByTestId('fleet-posture-announcement')).toContainText('All 1 vehicles verified from current telemetry.');
   }
   if (id === 'version-info' && width === 1440) {

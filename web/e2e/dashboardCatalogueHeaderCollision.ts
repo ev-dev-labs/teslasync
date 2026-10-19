@@ -75,7 +75,7 @@ function assertGeometry(frame: Awaited<ReturnType<typeof headerGeometry>>, keybo
   expect(frame.hitOwnExpand, 'Expand center must hit that exact native button').toBe(true);
   expect(frame.hitWidgetId).toBe('review-fleet-posture');
   expect(frame.title).toBe('Fleet posture');
-  const refresh = frame.controls.filter(control => control.text === 'Refresh');
+  const refresh = frame.controls.filter(control => control.label?.startsWith('Refresh data'));
   expect(refresh, 'Visible Refresh must not be dropped to avoid the collision').toHaveLength(1);
   expect(refresh[0].box.right).toBeLessThanOrEqual(frame.expand.left);
   expect(refresh[0].gap, 'Actual Refresh/Expand gap must be at least8px').toBeGreaterThanOrEqual(8);
@@ -85,7 +85,7 @@ function assertGeometry(frame: Awaited<ReturnType<typeof headerGeometry>>, keybo
       .toBeGreaterThanOrEqual(8);
   }
   expect(frame.readings.some(reading => reading.text === 'Fleet posture')).toBe(true);
-  expect(frame.readings.some(reading => reading.text === 'Refresh')).toBe(true);
+  expect(refresh[0].label).toMatch(/^Refresh data/);
   for (const reading of frame.readings) {
     expect(reading.hitInsideHeader, 'Visible header text must not be occluded').toBe(true);
     if (reading.verticalOverlap > 0) expect(reading.gap, 'Vertically overlapping text requires8px gap')
@@ -99,7 +99,7 @@ function assertGeometry(frame: Awaited<ReturnType<typeof headerGeometry>>, keybo
 
 async function assertPosture(panel: Locator) {
   await expect(panel.getByRole('heading', { name: 'Fleet posture', exact: true, level: 3 })).toBeVisible();
-  await expect(panel.getByText('1 of 1 verified', { exact: true })).toBeVisible();
+  await expect(panel.getByRole('listitem').filter({ hasText: /^Verified\s*1\/1$/ })).toHaveCount(1);
   await expect(panel.getByTestId('fleet-posture-announcement'))
     .toContainText('All 1 vehicles verified from current telemetry.');
   await expect(panel.getByRole('link', { name: 'Open vehicle', exact: true })).toHaveAttribute('href', '/vehicles/7');
@@ -111,11 +111,18 @@ async function assertPosture(panel: Locator) {
   await expect(panel.getByText('driving', { exact: true })).toBeVisible();
   await expect(panel).toContainText('Vehicle data is reporting normally.');
   await expect(panel).toContainText('current telemetry');
-  await expect(panel).toContainText('observed, not fetched');
-  const oldestLabel = panel.getByText('Oldest reading', { exact: true }).and(panel.locator('dt'));
+  const brief = panel.getByRole('region', { name: 'Fleet operating posture', exact: true });
+  await brief.getByRole('button', { name: 'Review details', exact: true }).click();
+  const details = panel.page().getByRole('dialog', { name: 'Fleet operating posture details', exact: true });
+  await expect(details).toContainText('1 of 1 verified');
+  await expect(details).toContainText('observed, not fetched');
+  await panel.page().keyboard.press('Escape');
+  await expect(details).toHaveCount(0);
+  const oldest = brief.locator('[data-operational-metric]').filter({ hasText: 'Oldest reading' });
+  const oldestLabel = oldest.getByText('Oldest reading', { exact: true });
   await expect(oldestLabel).toHaveCount(1);
   await expect(oldestLabel).toBeVisible();
-  const oldestValue = oldestLabel.locator('..').locator('dd');
+  const oldestValue = oldest.locator('[data-operational-value]');
   await expect(oldestValue).toHaveCount(1);
   await expect(oldestValue).toBeVisible();
   await expect(oldestValue).toContainText(/^\d+[smhd] ago/);
@@ -128,7 +135,7 @@ async function assertRefresh(page: Page, panel: Locator) {
   const before = await catalogueObservationSource(page, 7);
   const count = (responses: typeof before.responses, path: string) =>
     responses.filter(response => new URL(response.url).pathname === path).length;
-  const refresh = panel.getByRole('button', { name: 'Refresh', exact: true });
+  const refresh = panel.getByRole('button', { name: /^Refresh data/ });
   await expect(refresh).toHaveCount(1);
   await expect(refresh).toBeEnabled();
   await refresh.click();

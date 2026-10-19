@@ -259,7 +259,7 @@ export function LayoutSwitcher({
           role="menu"
           aria-label={t('layout.menuLabel', 'Saved layouts')}
           className={cn(
-            'absolute bottom-full left-0 z-50 mb-1 min-w-[16rem] max-h-[min(18rem,calc(100dvh-8rem))] overflow-y-auto rounded-xl border border-[var(--border-subtle)]',
+            'absolute top-full left-0 z-50 mt-1 min-w-[16rem] max-h-[min(18rem,calc(100dvh-8rem))] overflow-y-auto rounded-xl border border-[var(--border-subtle)]',
             'bg-[var(--surface-1)] p-1.5 shadow-xl sm:bottom-auto sm:top-full sm:mb-0 sm:mt-1',
           )}
         >

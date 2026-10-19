@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 import { beginNativeDashboardDrag } from './dashboardDragPrecondition'
+import { GRID_COLS, resolveBreakpointFromWidth } from '../src/features/dashboard/hooks/useDashboardLayout'
 import { attachDiagnostics, expectNoRuntimeFailures, monitorPage, type PageDiagnostics } from './qualityAssertions'
 
 interface LayoutItem {
@@ -14,10 +15,10 @@ interface LayoutItem {
 async function createCommuter(page: Page) {
   await page.getByRole('button', { name: 'Switch dashboard layout' }).click()
   await page.getByRole('menuitem', { name: 'New from template…' }).click()
-  await page.getByRole('button', { name: /Daily Commuter/ }).click()
+  await page.getByRole('button', { name: /Daily commuter/ }).click()
   await page.getByRole('dialog', { name: 'Create a layout' })
     .getByRole('button', { name: 'Create layout' }).click()
-  await expect(page.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Daily Commuter')
+  await expect(page.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Daily commuter')
 }
 
 async function readLayouts(page: Page): Promise<Record<string, LayoutItem[]>> {
@@ -146,7 +147,9 @@ test('auto arrange compacts every breakpoint without overlaps', async ({ page })
   }
 })
 
-test('docked picker drops onto the grid, rejects duplicates, and adds-and-arranges from the hint', async ({ page }) => {
+for (const width of [1440, 1920]) {
+test(`docked picker drops onto the grid, rejects duplicates, and adds-and-arranges from the hint at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 })
   await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
   const mockApi = await installApiMocks(page, 'populated')
   await page.goto('/', { waitUntil: 'domcontentloaded' })
@@ -162,10 +165,10 @@ test('docked picker drops onto the grid, rejects duplicates, and adds-and-arrang
   const grid = page.locator('.react-grid-layout')
   const box = await grid.boundingBox()
   expect(box).not.toBeNull()
-  const dropBreakpoint = box!.width > 996 ? 'md' : 'sm'
+  const dropBreakpoint = resolveBreakpointFromWidth(box!.width)
   const source = dock.getByRole('button', { name: /Odometer/ })
   await source.dragTo(grid, {
-    targetPosition: { x: box!.width * 0.75, y: Math.min(140, box!.height / 2) },
+    targetPosition: { x: box!.width * ((width === 1920 ? 1 : 0) + 0.25) / GRID_COLS[dropBreakpoint], y: Math.min(140, box!.height / 2) },
     steps: 12,
   })
 
@@ -189,7 +192,7 @@ test('docked picker drops onto the grid, rejects duplicates, and adds-and-arrang
     return dashboards.find((d) => d.id === localStorage.getItem('teslasync-active-dashboard'))
       ?.widgets.find((w) => w.widgetId === 'odometer-counter')?.id
   })
-  expect(layouts[dropBreakpoint].find((item) => item.i === addedId)?.x).toBe(1)
+  expect(layouts[dropBreakpoint].find((item) => item.i === addedId)?.x).toBe(width === 1920 ? 1 : 0)
   await expect(source).toBeDisabled()
   await expect(page.locator('.react-grid-item.dropping')).toHaveCount(0)
 
@@ -200,6 +203,7 @@ test('docked picker drops onto the grid, rejects duplicates, and adds-and-arrang
   expect(countOverlaps((await readLayouts(page))[dropBreakpoint])).toBe(0)
   await expect(page.getByRole('complementary', { name: 'Add Widget' })).toBeVisible()
 })
+}
 
 test('picker leaves the grid unobstructed on desktop and remains usable on a phone', async ({ page }) => {
   await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
@@ -303,7 +307,7 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
   expect(instanceId).toBeTruthy()
   const widget = page.locator(`[data-widget-id="${instanceId}"]`)
   await expect(widget).toBeVisible()
-  await expect(widget.locator('.overflow-auto')).toBeVisible()
+  await expect(widget.getByTestId('widget-body')).toBeVisible()
 
   for (const width of [1920, 1440, 1200, 1024, 996, 768, 481, 480, 390, 320]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
@@ -312,7 +316,7 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
     }
     await expect.poll(async () => widget.evaluate((element) => {
       const panel = element.querySelector<HTMLElement>('.widget-panel')
-      const content = panel?.querySelector<HTMLElement>('.overflow-auto')
+      const content = panel?.querySelector<HTMLElement>('[data-testid="widget-body"]')
       if (!panel || !content) return Number.POSITIVE_INFINITY
       return Math.max(panel.scrollHeight - panel.clientHeight, content.scrollHeight - content.clientHeight)
     }), { message: `widget must fit without an inner scrollbar at ${width}px` }).toBeLessThanOrEqual(4)
@@ -367,7 +371,7 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
     ).toBeGreaterThanOrEqual(minRows * 80)
   }
   const previousHeight = (await readLayouts(page)).md.find((item) => item.i === instanceId)?.h ?? 0
-  await widget.locator('.overflow-auto').evaluate((content) => {
+  await widget.getByTestId('widget-body').evaluate((content) => {
     const lateContent = document.createElement('div')
     lateContent.dataset.autofitProbe = 'true'
     lateContent.style.height = '600px'
@@ -376,7 +380,7 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
   await expect.poll(async () =>
     (await readLayouts(page)).md.find((item) => item.i === instanceId)?.h ?? 0,
   ).toBeGreaterThan(previousHeight)
-  await expect.poll(async () => widget.locator('.overflow-auto').evaluate(
+  await expect.poll(async () => widget.getByTestId('widget-body').evaluate(
     (content) => content.scrollHeight - content.clientHeight,
   )).toBeLessThanOrEqual(4)
   await widget.locator('[data-autofit-probe]').evaluate((probe) => probe.remove())

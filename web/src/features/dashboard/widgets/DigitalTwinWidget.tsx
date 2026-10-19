@@ -105,8 +105,11 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
       }
     >
       {vehicle ? (
-        <div className="h-full min-h-0 flex flex-col items-center justify-center gap-3">
-          <div className="relative flex-1 min-h-[170px] w-full flex items-center justify-center">
+        <div className="h-full min-h-0 flex flex-col items-center gap-3">
+          {/* Keep the scene's intrinsic height measurable by grid auto-fit.
+              Flexing it into a smaller box centered overflow above the body
+              and underestimated the required rows when sm changes to md. */}
+          <div className="relative shrink-0 min-h-[170px] w-full flex items-center justify-center">
             <VehicleTwin
               {...twinState}
               size={twinSize}

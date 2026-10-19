@@ -130,6 +130,20 @@ afterEach(() => {
 });
 
 describe('DashboardGrid — render paths', () => {
+  it('keeps a native, nonzero-height drop grid for an empty dashboard in edit mode', async () => {
+    const { container } = renderGrid({ dashboard: makeDashboard([]), editMode: true });
+    await waitFor(() => expect(container.querySelector('.react-grid-layout')).toHaveClass('min-h-72'));
+  });
+  it('retains native drop and resize surface when editing at the narrowest breakpoint', async () => {
+    setViewport(375);
+    const { container } = renderGrid({
+      dashboard: makeDashboard([{ id: 'wid-1', widgetId: W1_ID }]),
+      editMode: true,
+    });
+    await waitFor(() => expect(container.querySelector('.react-grid-layout')).toBeInTheDocument());
+    expect(screen.queryByTestId('dashboard-mobile-stack')).toBeNull();
+    expect(container.querySelector('.react-resizable-handle')).toBeInTheDocument();
+  });
   it('renders the desktop RGL grid (not the mobile stack) on a wide viewport', () => {
     setViewport(1440);
     const { container } = renderGrid({ dashboard: makeDashboard([
@@ -145,6 +159,7 @@ describe('DashboardGrid — render paths', () => {
     expect(screen.getByRole('button', { name: `Expand ${W1_NAME}` })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Expand ${W2_NAME}` })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Expand ${W1_NAME}` })).toHaveClass('right-12');
+    expect(container.querySelector('.widget-panel')).toHaveClass('[&_[data-role=widget-shell-header]]:pr-28');
     expect(container.querySelector('.widget-container')).not.toHaveClass('[--dashboard-widget-chrome-inset:4rem]');
   });
 

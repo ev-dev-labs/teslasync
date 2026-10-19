@@ -529,6 +529,13 @@ describe('DigitalTwinWidget — vehicle resolution & hook contract', () => {
 // ── Twin scene: size + paint plumbing ────────────────────────────────────────────
 
 describe('DigitalTwinWidget — twin scene', () => {
+  it.each([SMALL, { cols: 2, rows: 5 }])('retains intrinsic scene height for grid auto-fit at %j', (size) => {
+    renderWidget(size);
+    const scene = screen.getByTestId('vehicle-twin').parentElement;
+    expect(scene).toHaveClass('shrink-0');
+    expect(scene).not.toHaveClass('flex-1');
+    expect(scene?.parentElement).not.toHaveClass('justify-center');
+  });
   it('hands the resolved paint (vehicleId + exterior_color) to VehicleTwin', () => {
     setVehicles([makeVehicle({ id: 7, exterior_color: 'DeepBlue' })]);
     renderWidget(SMALL);

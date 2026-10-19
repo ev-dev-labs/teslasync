@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
+import { GRID_COLS, GRID_MARGIN } from '../src/features/dashboard/hooks/useDashboardLayout';
 
 export async function assertCatalogueHeroMigration(
   page: Page, panel: Locator, info: TestInfo, screenshotName: string,
@@ -35,7 +36,7 @@ export async function assertCatalogueHeroMigration(
       history.push({ elapsedMs: Date.now() - startedAt, ...current });
       const signature = JSON.stringify(current);
       const ready = current.activeId === 'review-vehicle' && current.stamp === '2'
-        && current.item.h === 6 && current.height === 560 && current.computedHeight === '560px';
+        && current.item.h === 6 && current.item.w === 2 && current.height === 560 && current.computedHeight === '560px';
       stableSamples = ready ? signature === previous ? stableSamples + 1 : 1 : 0;
       previous = signature;
       return stableSamples;
@@ -71,11 +72,12 @@ export async function assertCatalogueHeroMigration(
         width: rect.width, height: rect.height };
     };
     const main = element.closest('main');
+    const grid = element.closest('.react-grid-layout');
     const identity = [...element.querySelectorAll('h1,h2,h3,h4,h5,h6')]
       .find(node => node.textContent?.trim() === 'Aurora');
-    if (!main || !identity) throw new Error('Missing VehicleHero viewport or identity geometry');
+    if (!main || !identity || !grid) throw new Error('Missing VehicleHero viewport, native grid or identity geometry');
     return {
-      panel: bounds(element), main: bounds(main), identity: bounds(identity),
+      panel: bounds(element), main: bounds(main), grid: bounds(grid), identity: bounds(identity),
       actions: [...element.querySelectorAll('a')].map(node => ({
         href: node.getAttribute('href'), ...bounds(node),
       })),
@@ -86,7 +88,9 @@ export async function assertCatalogueHeroMigration(
   });
   const before = await geometry();
   expect(before.panel.height).toBe(560);
-  expect(before.panel.width, 'Both motion modes retain the same two-column desktop allocation').toBe(752);
+  const columnWidth = (before.grid.width - (GRID_COLS.md - 1) * GRID_MARGIN[0]) / GRID_COLS.md;
+  expect(before.panel.width, 'Both motion modes retain the seeded two-column native desktop allocation')
+    .toBe(Math.round(2 * columnWidth + GRID_MARGIN[0]));
   expect(before.panel.top).toBeGreaterThanOrEqual(before.main.top);
   expect(before.panel.bottom).toBeLessThanOrEqual(before.main.bottom);
   for (const node of [before.identity, ...before.actions]) {

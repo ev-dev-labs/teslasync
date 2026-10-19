@@ -113,7 +113,7 @@ export function WidgetShell({
       data-data-state={dataState?.status}
     >
       {title ? (
-        <div className={dashboardTokens.header}>
+        <div className={dashboardTokens.header} data-role="widget-shell-header">
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-start gap-2">
               {icon && <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--text-secondary)] [&>svg]:size-4">{icon}</span>}

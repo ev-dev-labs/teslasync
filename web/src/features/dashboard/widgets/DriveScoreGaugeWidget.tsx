@@ -43,6 +43,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
 
   const isCompact = size.cols === 1 && size.rows === 1;
   const isTall = size.rows >= 2;
+  const constrained = size.rows <= 5;
 
   // `/drives/score` answers 200 with an all-zero object (grade "F",
   // total_drives 0) for a vehicle that has no completed drives yet — it never
@@ -94,7 +95,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
       onRefresh={() => refetch()}
     >
       {hasScoredDrives ? (
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className={constrained ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
           {overall != null ? <WidgetGaugeHero gauge={gauge} compact={isCompact} /> : (
             <WidgetBigNumber value={null} label={t('widget.driveScoreGauge.weekly', 'Weekly score')} />
           )}
@@ -107,7 +108,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
             })}
             testId="dashboard-drive-score-factors-brief" />}
           {isTall && (
-            <div className="flex flex-col gap-2 w-full">
+            <div className={constrained ? 'flex flex-col gap-0.5 w-full' : 'flex flex-col gap-2 w-full'}>
               {subScores.map((s) => knownNumber(s.value) != null ? (
                 <MetricBar
                   key={s.key}

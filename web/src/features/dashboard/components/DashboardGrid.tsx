@@ -334,7 +334,9 @@ export const DashboardGrid = memo(function DashboardGrid({
   // width `>=` would pick the larger breakpoint while RGL renders the
   // smaller one). xs renders the flex-stack path instead of RGL.
   const activeBreakpoint = useMemo(() => resolveBreakpointFromWidth(width), [width]);
-  const isMobileStack = activeBreakpoint === 'xs';
+  // A docked picker can narrow even a desktop grid to xs. Editing still needs
+  // the native drop/resize surface; the reading-mode mobile stack has neither.
+  const isMobileStack = activeBreakpoint === 'xs' && !editMode;
   activeBreakpointRef.current = activeBreakpoint;
 
   // ── Auto-fit newly added widgets to their content ──────────────────────
@@ -662,6 +664,9 @@ export const DashboardGrid = memo(function DashboardGrid({
             // (RGL v2 merges `react-grid-item` onto the container root, so
             // transform animations must live here, not on the item.)
             'widget-panel w-full overflow-clip rounded-xl',
+            // Reserve the overlay expand target without covering caller-owned
+            // header actions (for example the checklist's Dismiss button).
+            !editMode && '[&_[data-role=widget-shell-header]]:pr-28',
             mobile ? 'flex flex-1 min-h-0 flex-col' : 'h-full',
             showWidgetBorders && 'border border-[var(--border-subtle)]',
             panelStyle && 'kiosk-panel',
@@ -712,7 +717,7 @@ export const DashboardGrid = memo(function DashboardGrid({
           }}
         />
       )}
-      {widgets.length === 0 ? (
+      {widgets.length === 0 && !editMode ? (
         <EmptyState
           title={t('dashboard.grid.emptyTitle', 'No widgets yet')}
           message={t('dashboard.grid.emptyMessage', 'Add widgets to start building your dashboard.')}
@@ -723,7 +728,7 @@ export const DashboardGrid = memo(function DashboardGrid({
             ? { label: t('dashboard.grid.browseTemplates', 'Browse starter layouts'), onClick: onBrowseTemplates }
             : undefined}
         />
-      ) : isMobileStack ? (
+      ) : isMobileStack && widgets.length > 0 ? (
         <div
           className="flex flex-col gap-3"
           data-testid="dashboard-mobile-stack"
@@ -732,6 +737,7 @@ export const DashboardGrid = memo(function DashboardGrid({
         </div>
       ) : (
         <ResponsiveGridLayout
+          className={widgets.length === 0 ? 'min-h-72' : undefined}
           width={width}
           layouts={liveLayouts}
           breakpoints={GRID_BREAKPOINTS}

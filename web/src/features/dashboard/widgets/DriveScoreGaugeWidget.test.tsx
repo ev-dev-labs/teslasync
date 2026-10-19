@@ -139,6 +139,17 @@ beforeEach(() => {
   mockUseDriveScore.mockReturnValue(qr({ data: undefined }));
 });
 
+it('keeps the gauge, all three source factors and detailed bars in the constrained five-row density', () => {
+  mockUseDriveScore.mockReturnValue(qr({ data: makeScore() }));
+  const { container } = renderWidget({ cols: 1, rows: 5 });
+  expect(container.querySelector('.flex-col.gap-1')).toBeInTheDocument();
+  expect(container.querySelector('.flex-col.gap-0\\.5')).toBeInTheDocument();
+  expect(screen.getByText('87.00')).toBeInTheDocument();
+  for (const label of ['Efficiency', 'Smoothness', 'Speed discipline']) {
+    expect(screen.getAllByText(label)).toHaveLength(2);
+  }
+});
+
 it('keeps three real weekly score operands and their drive population alongside the gauge and detailed bars', () => {
   mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ efficiency: 0, smoothness: undefined }) }));
   const { container } = renderWidget(TALL);

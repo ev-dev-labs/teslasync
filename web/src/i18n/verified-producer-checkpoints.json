@@ -518,6 +518,11 @@
     "sha256": "74bbca6be61fc94b3ddc89ebc4f644f571d561778af9b9cdb14cf08fc9754f8b"
   },
   {
+    "file": "web/src/features/dashboard/components/LayoutSwitcher.tsx",
+    "calls": 31,
+    "sha256": "ace5f7599b781480f77733008aaa04bfe115de013abe04ac9257dfb22db38af5"
+  },
+  {
     "file": "web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx",
     "calls": 6,
     "sha256": "0242640832143ebf600b280c1541df3faa3f93f2f281ef54bb4fc71de4fff5dc"
