@@ -69,7 +69,7 @@ describe('RepairCaseDrawer resolution', () => {
     expect(confirm).toBeDisabled();
     const posts = transport.mock.calls.filter(([path]) => path.endsWith('/transition'));
     expect(posts).toHaveLength(1);
-    expect(posts[0][1]).toMatchObject({ method: 'POST', requiresLiveMode: true });
+    expect(posts[0][1]).toMatchObject({ method: 'POST', requiresLiveMode: true, skipAuthRefresh: true });
     expect(JSON.parse(posts[0][1].body)).toEqual({ status: 'resolved', expected_updated_at: initial.updated_at, resolution_note: 'Manual correction verified.' });
     await act(async () => { request.resolve({ ...initial, status: 'resolved', blocked_reason: null, updated_at: '2026-08-25T10:05:00Z' }); });
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Resolve this case?' })).toBeNull());

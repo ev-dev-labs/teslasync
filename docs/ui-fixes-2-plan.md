@@ -59,3 +59,10 @@ Pending.
 ### Final horizontal-layout follow-up
 - Removed Glance QuickAction's outer flex-col as well, so its loading spinner stays beside the caption. Its ordinary child icon already benefits from the shared wrapper; this is within the same 55 affected source call sites, not an additional count.
 - Glance typed translation verification: 90 calls, zero errors. Glance/client/resolve focused run: 166 passed, zero failures (includes three previously counted resolve tests).
+
+### Resolve browser diagnosis: automatic replay
+- Edge reproduced an additional concrete wiring defect hidden by unit-level API mocks: request() first tries directRequest, then automatically replays non-sudo failures through resilientFetch. A 409 transition conflict was therefore retried without another click, hiding the first failure when the second attempt succeeded.
+- useTransitionRepairCase now uses the client's existing skipAuthRefresh=true single-attempt path and retry=false on the mutation. This preserves the existing sudo challenge path and makes ordinary conflicts/errors final until the operator explicitly retries. No shared client/backend policy changed.
+- Real Edge pilot now passes: conflict remains visible with the operator note intact; a second explicit click succeeds; exactly two network POSTs occur for those two clicks. Success/pending/duplicate-click unit coverage still passes.
+- Existing sidenav Edge suite: 22 passed. Route layout guard: 15 passed, checking six routes (dashboard, studio, repair, system-status, db-health, anomaly-detection) at 375/414/768/1280/1920: 30 route/width combinations, no violations.
+- Full lint/audits passed before the final tiny single-attempt/Glance follow-ups; final validation will cover those changes too.

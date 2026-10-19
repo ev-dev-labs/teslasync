@@ -697,9 +697,12 @@ export function useTransitionRepairCase() {
       request<RepairCase>(`/data-repair/cases/${case_id}/transition`, {
         method: 'POST',
         requiresLiveMode: true,
+        // An optimistic-concurrency transition must surface conflicts, not replay them.
+        skipAuthRefresh: true,
         body: JSON.stringify(body),
       }),
     networkMode: 'always',
+    retry: false,
     onSuccess: (updated: RepairCase) => {
       qc.setQueryData<RepairCaseDetailResponse>(dataRepairKeys.case(updated.id), previous =>
         previous ? { ...previous, case: updated } : previous);
