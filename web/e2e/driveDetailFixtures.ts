@@ -18,8 +18,8 @@ const telemetry = Array.from({ length: 5 }, (_, index) => {
     latitude: mockDrive.start_lat + (mockDrive.end_lat - mockDrive.start_lat) * progress,
     longitude: mockDrive.start_lon + (mockDrive.end_lon - mockDrive.start_lon) * progress,
     speed: [0, 12, 17, 29.1, 0][index],
-    // This existing flat telemetry endpoint derives kW from pack V × A / 1000.
-    power: [0, 9.2, -4.2, 18.7, 0][index],
+    // Canonical telemetry power is SI watts; the chart converts at render time.
+    power: [0, 9200, -4200, 18700, 0][index],
     battery_level: mockDrive.start_battery_pct - 10 * progress,
     soc: mockDrive.start_battery_pct - 10 * progress,
     usable_soc: mockDrive.start_battery_pct - 10 * progress,

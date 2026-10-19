@@ -119,7 +119,8 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true, map }: 
   const basics: SummaryMetric[] = [
     {
       ...basicMetric('drive-cost', t('driveDetail.report.driveCost', 'Drive cost'), energyWh),
-      formattedValue: energyWh == null ? undefined : costPerKwh == null ? t('driveDetail.noRateConfigured', 'No rate configured') : formatEnergyCost(energyWh / 1000),
+      formattedValue: energyWh == null ? undefined : pricingState?.hasData === false ? '—'
+        : costPerKwh == null ? t('driveDetail.noRateConfigured', 'No rate configured') : formatEnergyCost(energyWh / 1000),
       description: t('driveDetail.report.costSummaryNote', 'Configured-rate estimate, not a charging invoice'),
     },
     ...rows.filter((row) => row.key === 'distance' || row.key === 'duration'),

@@ -31,6 +31,21 @@ async function expectDriveSections(page: Page) {
 }
 
 for (const theme of ['light', 'dark'] as const) {
+  test(`drive pricing distinguishes a loaded unset rate from unavailable settings in ${theme}`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await seedBrowserState(page, theme, path);
+    const mocks = await installApiMocks(page, 'populated', theme);
+    await installDriveDetailMocks(page, theme, mocks);
+    await page.route('**/api/v1/settings', route => fulfillApiFixture(route, mocks, {
+      json: { ...mockAppSettings, mode: theme, base_cost_per_kwh: 0 },
+    }));
+    await page.goto(path);
+    await waitForHarnessReady(page, mocks);
+    const cost = page.locator('#overview').getByText('Drive cost', { exact: true }).locator('..');
+    await expect(cost).toContainText('No rate configured');
+    await expect(cost).not.toContainText('$0');
+  });
+
   test(`drive pricing stays unknown after settings failure and recovers through retry in ${theme}`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 900 });
     await seedBrowserState(page, theme, path);
@@ -68,7 +83,7 @@ for (const theme of ['light', 'dark'] as const) {
     await expect.poll(() => Date.now() - lastFailureAt).toBeGreaterThanOrEqual(1100);
     await retry.click();
     const expectedCost = new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 1, maximumFractionDigits: 1,
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
     }).format(mockDrive.energy_used_wh / 1000 * 0.15);
     await expect(cost).toContainText(`$${expectedCost}`);
     await expect(retry).toHaveCount(0);
@@ -126,12 +141,12 @@ for (const theme of ['light', 'dark'] as const) {
       await page.goto(path);
       await waitForHarnessReady(page, mocks);
       await expectDriveSections(page);
-      const summary = page.getByRole('group', { name: 'Drive summary', exact: true });
+      const summary = page.getByTestId('drive-canonical-summary');
       await expect(summary).toBeVisible();
-      await expect(summary.locator('[data-drive-metric="odometer"]')).toHaveCount(1);
+      await expect(summary.locator('[data-overview-metric="odometer"]')).toHaveCount(1);
       await expect(summary.getByText('Start odometer', { exact: true })).toHaveCount(0);
       await expect(summary.getByText('End odometer', { exact: true })).toHaveCount(0);
-      const metricSurfaces = await summary.locator('[data-drive-metric]').evaluateAll(elements =>
+      const metricSurfaces = await summary.locator('[data-overview-metric]').evaluateAll(elements =>
         elements.map(element => ({
           border: getComputedStyle(element).borderTopWidth,
           background: getComputedStyle(element).backgroundColor,
@@ -139,7 +154,7 @@ for (const theme of ['light', 'dark'] as const) {
         })));
       expect(metricSurfaces).toHaveLength(7);
       expect(metricSurfaces.every(surface =>
-        surface.border === '1px' && surface.background !== 'rgba(0, 0, 0, 0)' && surface.nestedFrames === 0)).toBe(true);
+        surface.border === '0px' && surface.background === 'rgba(0, 0, 0, 0)' && surface.nestedFrames === 0)).toBe(true);
       const nestedTables = page.locator('main [data-table-variant]');
       await expect(nestedTables.first()).toBeVisible();
       expect(await nestedTables.evaluateAll(elements =>
@@ -154,18 +169,20 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(page.locator('main')).toContainText('Home');
       await expect(page.locator('main')).toContainText('Office');
       await expect(summary).not.toContainText(/NaN|undefined|Infinity/);
-      const journeyTable = page.locator('#journey').getByRole('table', { name: 'Drive timeline', exact: true });
+      const journeyTable = page.locator('#journey').getByRole('list', { name: 'Drive timeline', exact: true });
       const journeyBounds = await journeyTable.evaluate(table => {
         const scroller = table.parentElement;
         if (!scroller) throw new Error('Journey table scroll container is missing');
         return { width: scroller.clientWidth, contentWidth: scroller.scrollWidth };
       });
       expect(journeyBounds.contentWidth).toBeLessThanOrEqual(journeyBounds.width + 1);
-      const powerTable = page.locator('main').getByRole('table', { name: 'Power profile', exact: true });
-      await expect(powerTable.getByRole('row', { name: /Max power/ })).toContainText('19 kW');
-      await expect(powerTable.getByRole('row', { name: /Max regen/ })).toContainText('-4 kW');
-      await expect(powerTable.getByRole('row', { name: /Mean sampled power/ })).toContainText('4.74 kW');
-      await expect(powerTable).not.toContainText(/\b18700\b|\b9200\b|\b4200\b/);
+      const powerSummary = page.locator('main').getByRole('group', { name: 'Power summary', exact: true });
+      for (const [label, value] of [['Max power (kW)', '19'], ['Max regen (kW)', '-4'], ['Mean sampled power (kW)', '4.74']]) {
+        const term = powerSummary.getByRole('term').filter({ hasText: label });
+        await expect(term).toBeVisible();
+        await expect(term.locator('xpath=following-sibling::dd[1]')).toHaveText(value);
+      }
+      await expect(powerSummary).not.toContainText(/\b18700\b|\b9200\b|\b4200\b/);
       await expectNoHorizontalOverflow(page);
       expect(diagnostics.pageErrors).toEqual([]);
       await page.screenshot({
@@ -192,7 +209,7 @@ for (const theme of ['light', 'dark'] as const) {
     await page.goto(path);
     await waitForHarnessReady(page, mocks);
     await expectDriveSections(page);
-    await expect(page.getByRole('group', { name: 'Drive summary', exact: true })).toBeVisible();
+    await expect(page.getByTestId('drive-canonical-summary')).toBeVisible();
     await expect(page.locator('main')).not.toContainText(/NaN|undefined|Infinity/);
     await expectNoHorizontalOverflow(page);
     expect(diagnostics.pageErrors).toEqual([]);
@@ -211,8 +228,8 @@ for (const theme of ['light', 'dark'] as const) {
     await page.goto(path);
     await waitForHarnessReady(page, mocks);
     await expectDriveSections(page);
-    const summary = page.getByRole('group', { name: 'Drive summary', exact: true });
-    const distance = (await summary.textContent() ?? '').match(/Distance\s*([\d.]+)\s*mi/);
+    const summary = page.getByTestId('drive-canonical-summary');
+    const distance = (await summary.textContent() ?? '').match(/Distance:\s*([\d.]+)\s*mi/);
     expect(distance).not.toBeNull();
     expect(Number(distance![1])).toBeCloseTo(mockDrive.distance_m / 1609.344, 1);
     await expect(summary).not.toContainText(/\bkm\b/);
