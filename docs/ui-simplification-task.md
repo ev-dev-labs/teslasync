@@ -83,7 +83,7 @@ Header:
 Review details:
 - Icon-only button, same icon on every card, immediately left of the freshness dot
   (or right-most if the card has no dot).
-- `aria-label` = "Review details" (or "Review <title> details"); tooltip shows that text.
+- `aria-label` = "Review details" (or `Review <title> details`); tooltip shows that text.
 - When a card has several actions, the primary stays text (e.g. "Open Autopilot",
   "Compare drives") and secondary ones become icons.
 - On hover/focus the icon's line "draws" once (~400 ms). No constant glow/pulse.
@@ -302,7 +302,7 @@ Log every decision in the Decision log as: `row # | situation | decision | why`.
   `lib/icons.ts`'s existing set/library.
 - Widget has no refresh interval → manual mode (stale at 15 min). No lastSyncAt and it
   can't be added without backend changes → render no dot, mark C blocked for that row.
-- Empty-state wording → short, plain: "No <thing> yet" or "Select <thing> to see <metrics>".
+- Empty-state wording → short, plain: `No <thing> yet` or `Select <thing> to see <metrics>`.
   Add as new i18n keys.
 - A test failure you can't trace to your change → check the baseline; if pre-existing,
   ignore it and log; if yours, fix it.
