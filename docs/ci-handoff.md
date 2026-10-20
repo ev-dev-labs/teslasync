@@ -7,9 +7,11 @@ PR #198 was squash-merged as `c353a59399`. Active work now starts from
 cherry-pick any former redesign branches. The owner supplied the remaining
 product decisions; `followups-plan.md` is the active execution plan.
 
-Product changes and the security re-check are implemented locally. Full local
-CI verification is in progress before the first push/draft PR. No workflow or
-threshold changes. Tailwind v4 remains a separate, later draft PR, conditional
+Product changes and the security re-check are implemented and the full local
+CI replica passed (2026-10-20 15:38 UTC). Quality2,021, visual49, a11y13,
+engines6, performance9 and affected Edge35 passed; every proxy postcheck0.
+Vitest57,184/0, Go build/test/lint and all static/generated/build gates passed.
+The first draft PR and remote validation are next. No workflow or threshold changes. Tailwind v4 remains a separate, later draft PR, conditional
 on the A/B PR being fully green. Historical PR #198 details below are retained
 as evidence, not as checkout or push instructions for this branch.
 
