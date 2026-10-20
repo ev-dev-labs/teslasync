@@ -45,6 +45,7 @@ function makePlace(overrides: Partial<Geofence> = {}): Geofence {
     alert_on_exit: false,
     origin: 'charging_discovery',
     needs_review: true,
+    is_charging_location: true,
     archived_at: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
@@ -70,7 +71,7 @@ function renderQueue(props: Partial<Parameters<typeof NeedsSetupQueue>[0]> = {})
 describe('NeedsSetupQueue — loading/error/empty', () => {
   it('shows a loading skeleton with no rows or count badge', () => {
     const { container } = renderQueue({ isLoading: true });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Review')).not.toBeInTheDocument();
   });
 
@@ -95,6 +96,18 @@ describe('NeedsSetupQueue — loading/error/empty', () => {
 });
 
 describe('NeedsSetupQueue — rows', () => {
+  it('keeps source ordering, full names and exact review objects during a refresh failure', () => {
+    const first = makePlace({ id: 42, name: 'Long provisional name '.repeat(8) });
+    const second = makePlace({ id: 3, name: 'Second place' });
+    const onReview = vi.fn();
+    renderQueue({ places: [first, second], error: new Error('refresh'), onReview });
+    const actions = screen.getAllByRole('button', { name: 'Review' });
+    expect(actions).toHaveLength(2);
+    expect(screen.getByText(first.name.trim())).toBeInTheDocument();
+    fireEvent.click(actions[0]);
+    expect(onReview).toHaveBeenCalledWith(first);
+    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+  });
   it('renders name, category fallback, discovered-at, and the queue count badge', () => {
     renderQueue({ places: [makePlace({ name: '', category: null })] });
 

@@ -23,14 +23,8 @@ export function ChatWelcome({ onPick }: ChatWelcomeProps) {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
-      <div className="relative">
-        <div
-          className="absolute inset-0 scale-150 rounded-full bg-purple-500/10 blur-xl"
-          aria-hidden="true"
-        />
-        <div className="relative rounded-full border border-[var(--border-subtle)] bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-6">
-          <HelixMark className="h-12 w-12 text-purple-300" aria-hidden="true" />
-        </div>
+      <div className="rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-6">
+        <HelixMark className="h-12 w-12 text-[var(--text-secondary)]" aria-hidden="true" />
       </div>
 
       <div className="space-y-2">

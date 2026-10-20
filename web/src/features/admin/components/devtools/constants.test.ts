@@ -65,23 +65,18 @@ describe('ICON_COLOR_MAP', () => {
     }
   })
 
-  it('builds each class string from its own colour token (no copy-paste bleed)', () => {
+  it('builds every chip from the shared neutral tokens (no per-colour bleed)', () => {
     for (const [color, cls] of Object.entries(ICON_COLOR_MAP)) {
-      expect(cls, `${color} backplate`).toContain(`bg-neon-${color}/`)
-      expect(cls, `${color} icon tint`).toContain(`text-neon-${color}`)
-      expect(cls, `${color} ring`).toContain(`ring-neon-${color}/`)
-      // Guard against a green→cyan style mismatch: no OTHER colour token leaks in.
-      for (const other of Object.keys(ICON_COLOR_MAP)) {
-        if (other !== color) expect(cls).not.toContain(`neon-${other}`)
-      }
+      expect(cls, `${color} chip`).toBe('bg-[var(--surface-2)] text-[var(--text-secondary)]')
     }
   })
 
-  it('is neon-on-chip compliant — every neon text has a matching backplate', () => {
-    // Neon text is only allowed on a chip that ALSO carries a bg-neon backplate.
+  it('keeps every chip on theme tokens — no hardcoded neon utilities', () => {
+    // The re-themed chips carry a surface backplate + secondary icon tint only.
     for (const cls of Object.values(ICON_COLOR_MAP)) {
-      expect(cls).toMatch(/bg-neon-\w+\/\d+/)
-      expect(cls).toMatch(/ring-1/)
+      expect(cls).not.toContain('neon-')
+      expect(cls).toContain('bg-[var(--surface-2)]')
+      expect(cls).toContain('text-[var(--text-secondary)]')
     }
   })
 })

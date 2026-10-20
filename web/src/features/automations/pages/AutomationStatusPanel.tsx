@@ -1,16 +1,18 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { automationNumber } from '@/api/hooks/useAutomations';
 import { MetricBar } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
+import { DataSourceNotice, Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
+import type { DataState } from '@/api/dataState';
 import { Icons } from '@/lib/icons';
 
 export interface AutomationStatusStats {
-  total: number;
-  active: number;
-  disabled: number;
-  autoDisabled: number;
+  total?: number;
+  active?: number;
+  disabled?: number;
+  autoDisabled?: number;
 }
 
 interface AutomationStatusPanelProps {
@@ -18,17 +20,13 @@ interface AutomationStatusPanelProps {
   isLoading: boolean;
   error: unknown;
   onRetry: () => void;
+  dataState?: DataState<unknown>;
 }
 
-/**
- * Status colors mirror the app's semantic status palette (emerald / slate /
- * rose). Passed as data into the shared `<MetricBar color>` prop — the same
- * hex-as-data pattern the reference TimelinePage uses for its state bars.
- */
 const STATUS_COLORS = {
-  active: '#10b981',
-  disabled: '#64748b',
-  autoDisabled: '#f43f5e',
+  active: 'var(--text-secondary)',
+  disabled: 'var(--text-muted)',
+  autoDisabled: 'var(--text-secondary)',
 } as const;
 
 /**
@@ -41,20 +39,20 @@ const STATUS_COLORS = {
  */
 export function AutomationStatusPanel({
   stats,
-  isLoading,
-  error,
+  isLoading: loading,
+  error: sourceError,
   onRetry,
+  dataState,
 }: AutomationStatusPanelProps) {
   const { t } = useTranslation();
+  const isLoading = dataState ? !dataState.hasData && !dataState.isRefreshBlocked && !dataState.fatalError && loading : loading;
+  const error = dataState ? dataState.fatalError : sourceError;
 
-  // Null-safety: a malformed / partial API payload can arrive with missing
-  // counts. Coalesce every field to 0 up front so the empty-state guard fires
-  // correctly and the bars never render "NaN · NaN%" from `undefined / max`.
-  const total = stats.total ?? 0;
-  const active = stats.active ?? 0;
-  const disabled = stats.disabled ?? 0;
-  const autoDisabled = stats.autoDisabled ?? 0;
-  const max = Math.max(total, 1);
+  const total = dataState?.hasData === false ? null : automationNumber(stats.total);
+  const active = dataState?.hasData === false ? null : automationNumber(stats.active);
+  const disabled = dataState?.hasData === false ? null : automationNumber(stats.disabled);
+  const autoDisabled = dataState?.hasData === false ? null : automationNumber(stats.autoDisabled);
+  const max = total != null && total > 0 ? total : null;
 
   const rows = useMemo(
     () =>
@@ -81,7 +79,7 @@ export function AutomationStatusPanel({
         ...r,
         // Clamp to [0, 100] so an inconsistent payload (a count exceeding the
         // total) can never surface a nonsensical ">100%" readout.
-        pct: Math.min(100, Math.max(0, Math.round((r.value / max) * 100))),
+        pct: r.value != null && max != null ? Math.min(100, Math.max(0, Math.round((r.value / max) * 100))) : null,
       })),
     [t, active, disabled, autoDisabled, max],
   );
@@ -89,7 +87,7 @@ export function AutomationStatusPanel({
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Icons.pieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icons.pieChart className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
         {t('automationList.status.title', 'Status breakdown')}
       </PanelTitle>
 
@@ -97,6 +95,12 @@ export function AutomationStatusPanel({
         <Skeleton height={168} />
       ) : error ? (
         <QueryError error={error} onRetry={onRetry} />
+      ) : dataState?.hasData === false && dataState.isRefreshBlocked ? (
+        <DataSourceNotice sources={[{
+          id: 'automation-status',
+          label: t('automationList.status.title', 'Status breakdown'),
+          query: { fetchStatus: 'paused', refetch: dataState.retry ?? onRetry },
+        }]} />
       ) : total === 0 ? (
         <EmptyState
           icon={<Icons.workflow className="h-8 w-8" />}
@@ -106,7 +110,9 @@ export function AutomationStatusPanel({
       ) : (
         <div className="space-y-4">
           <div className="space-y-3">
-            {rows.map((r) => (
+            {rows.map((r) => r.value == null || max == null ? (
+              <Text key={r.key} color="secondary">{r.label}: —</Text>
+            ) : (
               <MetricBar
                 key={r.key}
                 label={r.label}
@@ -117,7 +123,7 @@ export function AutomationStatusPanel({
               />
             ))}
           </div>
-          {autoDisabled > 0 && (
+          {autoDisabled != null && autoDisabled > 0 && (
             <AlertBanner
               variant="warning"
               icon={<Icons.warning className="h-4 w-4" aria-hidden="true" />}

@@ -1,0 +1,43 @@
+{
+  "watch": {
+    "capability": {
+      "notConfigured": "Watch access is not configured",
+      "description": "Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.",
+      "configure": "Manage API keys",
+      "readError": "Watch access could not be checked",
+      "readErrorDescription": "Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible."
+    },
+    "noVehicle": "No vehicle found",
+    "timeToFull": "{{minutes}}m to full",
+    "sentryOn": "Sentry mode on",
+    "sentryOff": "Sentry mode off",
+    "action": {
+      "lock": "Lock vehicle",
+      "unlock": "Unlock vehicle",
+      "climateOn": "Turn climate on",
+      "climateOff": "Turn climate off"
+    },
+    "cached": "Cached",
+    "batteryGauge": "Battery {{battery}}; range {{range}}",
+    "timeToFullUnknown": "Time to full unknown",
+    "updated": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "state": {
+      "driving": "driving",
+      "charging": "charging",
+      "asleep": "asleep",
+      "online": "online",
+      "offline": "offline"
+    },
+    "loading": "Loading watch summary…",
+    "command": {
+      "failed": "Command failed",
+      "success": "Command sent",
+      "error": "Watch command failed: {{message}}"
+    }
+  }
+}

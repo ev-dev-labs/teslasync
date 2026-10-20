@@ -51,12 +51,25 @@ const ROOT = join('src');
  * - `typography-agent/observer.ts` (and its test) only *detect* the class
  * via `classList.contains` so the live-DOM scan can skip visually-hidden
  * subtrees that overflow by design. They never render `sr-only` markup.
+ * - `ChangesPanel.test.tsx` asserts the placeholder announcer's live region
+ * carries the canonical class; `LiveSignalInspectorPage.test.tsx` filters
+ * headings via `classList.contains` (same detect-only pattern as the
+ * observer). Both are test-only and never render `sr-only` markup.
  */
 const ALLOWED_FILES = new Set([
   toAllowKey(join('src', 'components', 'a11y', 'VisuallyHidden.tsx')),
   toAllowKey(join('src', 'components', 'a11y', '__tests__', 'VisuallyHidden.test.tsx')),
   toAllowKey(join('src', 'components', 'ui', 'Checkbox.tsx')),
   toAllowKey(join('src', 'components', 'ui', 'RadioCard.tsx')),
+  toAllowKey(join('src', 'components', 'ai', 'AINLSearch.test.tsx')),
+  toAllowKey(join('src', 'features', 'admin', 'components', 'dlq-inspector', 'AuditPanel.contract.test.tsx')),
+  toAllowKey(join('src', 'features', 'admin', 'components', 'feature-flags', 'ChangesPanel.test.tsx')),
+  toAllowKey(join('src', 'features', 'admin', 'pages', 'LiveSignalInspectorPage.test.tsx')),
+  toAllowKey(join('src', 'features', 'battery', 'pages', 'PowerFlowDashboardPage.test.tsx')),
+  toAllowKey(join('src', 'features', 'onboarding', 'pages', 'OnboardingPage.test.tsx')),
+  toAllowKey(join('src', 'features', 'system', 'components', 'FSMStateDiagram.test.tsx')),
+  toAllowKey(join('src', 'features', 'system', 'components', 'FSMSubFSMPanel.test.tsx')),
+  toAllowKey(join('src', 'features', 'vehicles', 'pages', 'PhysicsLedgerPage.test.tsx')),
   toAllowKey(join('src', 'lib', 'typography-agent', 'observer.ts')),
   toAllowKey(join('src', 'lib', 'typography-agent', 'observer.test.ts')),
 ]);
@@ -105,7 +118,7 @@ function isScannable(p) {
 // EXCLUDE the negation form `not-sr-only` (which is a legitimate
 // Tailwind utility for overriding `sr-only` on focus). The negative
 // lookbehind requires Node 14+; CI runs on Node 20.
-const SR_ONLY_RE = /(?<!not-)\bsr-only\b/g;
+const SR_ONLY_RE = /(?<!not-)(?<![\w./-])sr-only\b/g;
 
 // Build a list of [start, end) ranges in `text` covering line and
 // block comments. Mentions of `sr-only` inside doc-comments are

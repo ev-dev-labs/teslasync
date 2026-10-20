@@ -98,7 +98,7 @@ export function RepairSuggestionWorklists({
       <RepairSuggestionSection
         {...sharedProps}
         items={driveSuggestions}
-        title={t('dataRepair.drives.suggestionsTitle', 'Drive Boundaries')}
+        title={t('dataRepair.drives.suggestionsTitle', 'Drive boundaries')}
         emptyTitle={t('dataRepair.drives.suggestionsEmptyTitle', 'No contradicted drive boundaries')}
         emptyMessage={t(
           'dataRepair.drives.suggestionsEmpty',
@@ -109,7 +109,7 @@ export function RepairSuggestionWorklists({
       <RepairSuggestionSection
         {...sharedProps}
         items={chargingSuggestions}
-        title={t('dataRepair.charging.suggestionsTitle', 'Charging Boundaries')}
+        title={t('dataRepair.charging.suggestionsTitle', 'Charging boundaries')}
         emptyTitle={t(
           'dataRepair.charging.suggestionsEmptyTitle',
           'No contradicted charging boundaries',

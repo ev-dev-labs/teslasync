@@ -1,0 +1,493 @@
+{
+  "item": "phase6-qa-battery-energy-products",
+  "phase": 6,
+  "status": "DONE_SOURCE_QA",
+  "acceptance": "Source inspection and report delivery only. Findings remain open. No native, browser, real-device, full-page, application or implementation-gate acceptance.",
+  "identity": {
+    "component": "EnergyProductsPage",
+    "page": "web\\src\\features\\battery\\pages\\EnergyProductsPage.tsx",
+    "actualRoute": "/energy-products",
+    "routeEvidence": "web\\src\\App.tsx:823",
+    "lazyEvidence": [
+      "web\\src\\App.tsx:76",
+      "web\\src\\lib\\routeLoaders.ts:31"
+    ],
+    "testRouterLimit": "The existing fixture uses /battery/energy-products at EnergyProductsPage.test.tsx:229. It renders the component directly, not the production route; it proves neither that alias nor mounted route reachability.",
+    "scope": "Account-level energy installation discovery and independent per-energy-site cached configuration. Not vehicle battery telemetry, live energy flow, a dated energy ledger or a billing report.",
+    "requestTimestampUTC": "2026-10-13T21:21:02.597Z",
+    "completionTimestampUTC": null,
+    "timestampLimit": "Request timestamp was supplied by the caller. No clock command was run; no fabricated completion time or file modification time.",
+    "currentSourceSHA256": null,
+    "currentHashLimit": "Current bytes were inspected but not freshly hashed. Historical hashes below are not current-file verification."
+  },
+  "alreadyDoneCheck": {
+    "performedFirstAfterMandatorySkillLoad": true,
+    "queueEvidence": "migration-queue.md:337",
+    "existingRowStatus": "[ ]",
+    "attemptsRecordedInQueue": 0,
+    "preexistingReportAndLogSearch": {
+      "tool": "glob",
+      "pattern": "phase6-qa-battery-energy-products.*",
+      "directories": [
+        "docs\\frontend-audits",
+        "web\\logs"
+      ],
+      "rawResult": "No files matched the pattern."
+    },
+    "prerequisite": {
+      "item": "phase5-page-battery-energy-products",
+      "actualSourceStatus": "[x]",
+      "evidence": "migration-queue.md:1740",
+      "acceptedCommit": "a5d78a76d4dd63cde4542760f13c792fbd2b12b2",
+      "limit": "Queue source acceptance, not freshly checked Git state or native acceptance. No queue, dispatch, orchestration or commit operation performed."
+    }
+  },
+  "authority": {
+    "read": [
+      "docs\\frontend-design-contract.md:1-510,510-755",
+      "docs\\frontend-mission.md:1-230,1420-end",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\react-frontend.instructions.md:1-530",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\ARCHITECTURE.md:1106-1149",
+      ".github\\skills\\audit-violations\\audit.sh"
+    ],
+    "skillsLoaded": [
+      "audit-violations",
+      "verify-api-hooks"
+    ],
+    "instructionPrecedence": "Current design contract and SI cutover/ADR-005 govern. Legacy imperial-field and neon/glass examples in older frontend/unit instructions do not authorize reverting canonical SI or modern shared presentation.",
+    "missingReferencedDocument": {
+      "path": ".github\\prompts\\db-refactor\\phase-48-si-canonical\\0000-methodology.prompt.md",
+      "actualViewResult": "Path does not exist.",
+      "limit": "No alternative reconstruction, unit-field edits or remigration attempted. Available frontend SI instructions and ADR-005 were read."
+    },
+    "skillExecutionLimit": "Neither audit.sh nor verify.sh was executed: the assignment prohibits commands, TSC and test/gate execution. Bounded rg/view source checks below are not equivalent to successful script execution."
+  },
+  "inspectedScope": {
+    "coverageMeaning": "Full means returned source was read. Ranges/hits mean only cited portions, not a whole-file audit.",
+    "fullPageAndSixLocalFiles": [
+      "web\\src\\features\\battery\\pages\\EnergyProductsPage.tsx",
+      "web\\src\\features\\battery\\components\\energy-products-modernization\\CapBadge.tsx",
+      "web\\src\\features\\battery\\components\\energy-products-modernization\\EnergySiteCard.tsx",
+      "web\\src\\features\\battery\\components\\energy-products-modernization\\helpers.ts",
+      "web\\src\\features\\battery\\components\\energy-products-modernization\\InfoTile.tsx",
+      "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx",
+      "web\\src\\features\\battery\\components\\energy-products-modernization\\SummaryBand.tsx"
+    ],
+    "fullDirectSupport": [
+      "web\\src\\features\\battery\\components\\TOUSettingsModal.tsx",
+      "web\\src\\features\\battery\\components\\projected-range-modernization\\SourceTrustNotice.tsx",
+      "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "web\\src\\features\\battery\\pages\\EnergyProductsPage.test.tsx",
+      "web\\src\\hooks\\useDataState.ts",
+      "web\\src\\hooks\\useNumberFormatting.ts",
+      "web\\src\\hooks\\useOperationalMetrics.tsx",
+      "web\\src\\lib\\safeArray.ts",
+      "web\\src\\lib\\operationalMode.ts",
+      "web\\src\\lib\\metric-reference\\formatMetric.ts",
+      "web\\src\\lib\\workspaceScope.ts",
+      "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+      "web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts",
+      "web\\src\\components\\ui\\Button.tsx",
+      "web\\src\\components\\ui\\Badge.tsx",
+      "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx",
+      "internal\\api\\energysite\\handler.go",
+      "docs\\frontend-audits\\audit-page-070.json"
+    ],
+    "targetedRangesAndHits": [
+      { "path": "web\\src\\api\\hooks\\useEnergy.ts", "coverage": "181-248 plus double-prefix/camelCase URL pattern scan" },
+      { "path": "web\\src\\types\\energy.ts", "coverage": "357-407,441-469; initial context also read" },
+      { "path": "web\\src\\api\\dataState.ts", "coverage": "1-265" },
+      { "path": "web\\src\\api\\client.ts", "coverage": "26-49,325-420 and live-mode search hits" },
+      { "path": "web\\src\\lib\\numberFormat.ts", "coverage": "1-170" },
+      { "path": "web\\src\\hooks\\useUnits.ts", "coverage": "preference/constants/search hits only" },
+      { "path": "web\\src\\components\\data-display\\stat-reference\\useMetricPreferences.ts", "coverage": "6-12 preference hits" },
+      { "path": "web\\src\\components\\charts\\LinearGauge.tsx", "coverage": "1-160" },
+      { "path": "web\\src\\components\\layout\\PageContainer.tsx", "coverage": "149-end and query/children hits" },
+      { "path": "web\\src\\App.tsx", "coverage": "1-80 and actual route hits" },
+      { "path": "web\\src\\lib\\routeLoaders.ts", "coverage": "31 and immediate context" },
+      { "path": "internal\\api\\router.go", "coverage": "handler import/construction;3598-3623 route hits" },
+      { "path": "internal\\models\\tesla\\tesla.go", "coverage": "1-34" },
+      { "path": "internal\\models\\energy\\energy.go", "coverage": "Full short file read; not the TeslaEnergySite wire owner and not used for the site contract conclusion." },
+      { "path": "migration-queue.md", "coverage": "Exact assigned/prerequisite rows; an initial broad view was truncated." }
+    ],
+    "productionPresentationScanFiles": 10,
+    "inspectionFailuresDisclosed": [
+      "Initial whole migration-queue.md and react-frontend.instructions.md views exceeded tool limits; exact row/range reads replaced them.",
+      "The referenced Phase-48 methodology document is absent.",
+      "An initial metric-reference/catalog.ts probe and initial web/src/routeLoaders.ts probe did not exist. Actual formatMetric.ts and lib/routeLoaders.ts were inspected; no missing route was inferred.",
+      "Related Phase-5 logs/receipts were not found in the searched repository directories. Historical test totals are queue-reported, not recovered native test output."
+    ],
+    "notInspected": [
+      "Current generated locale catalog completeness or locale runtime resolution",
+      "Database contents and live Tesla producer responses",
+      "Authentication/deployment/native host execution",
+      "Entire metric/details/modal/shell accessibility lifecycle",
+      "Historical Git revisions or current source hashes"
+    ]
+  },
+  "lineCounts": {
+    "method": "functions.rg, pattern ^, output_mode count; existing files only",
+    "actual": [
+      { "path": "web\\src\\features\\battery\\pages\\EnergyProductsPage.tsx", "lines": 75 },
+      { "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\CapBadge.tsx", "lines": 16 },
+      { "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\EnergySiteCard.tsx", "lines": 53 },
+      { "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\helpers.ts", "lines": 31 },
+      { "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\InfoTile.tsx", "lines": 11 },
+      { "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx", "lines": 116 },
+      { "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\SummaryBand.tsx", "lines": 43 },
+      { "path": "web\\src\\features\\battery\\components\\TOUSettingsModal.tsx", "lines": 306 },
+      { "path": "web\\src\\features\\battery\\pages\\EnergyProductsPage.test.tsx", "lines": 615 }
+    ],
+    "pagePlusSixLocalFiles": 345,
+    "historicalComparablePagePlusSixLocalFiles": 344,
+    "historicalComparableEvidence": "audit-page-070.json preservation and sourceInventory",
+    "ratioPercentRounded": 100.29,
+    "threshold70Percent": "Satisfied for this comparable source line-count cohort only; not a historical diff/no-loss or rendered parity certification.",
+    "excludedFromComparableTotal": "TOU modal, reused trust/brief/shared components and test; deliberately identical counting boundary to the historical 344 cohort."
+  },
+  "sections": [
+    { "id": "header-discovery", "source": "EnergyProductsPage.tsx:28-39", "content": "Title/subtitle and pending-protected Refresh from Tesla; no second vehicle/date picker." },
+    { "id": "trust-summary", "source": "EnergyProductsPage.tsx:40-47; SummaryBand.tsx:11-40", "content": "Trust notice plus six-metric summary, or its source fatal-error card. Counts and total capacity do not invent sites." },
+    { "id": "installation-cards", "source": "EnergyProductsPage.tsx:49-72; EnergySiteCard.tsx:24-52", "content": "Two loading placeholders, one stable card per discovered DB row, or explicit unavailable/unreceived/authoritatively empty explanation." },
+    { "id": "site-three-metrics", "source": "EnergySiteCard.tsx:16-35", "content": "Charge, capacity and product type, cached-discovery provenance and source site ID." },
+    { "id": "capabilities-storm", "source": "EnergySiteCard.tsx:36-48", "content": "Five capability chips and conditional storm-active badge; F02 retains every identity/state." },
+    { "id": "independent-site-config", "source": "SiteInfoSection.tsx:17-58,109-114", "content": "Persistent configuration heading/refresh/trust, independent skeleton/fatal/empty/data branches and site-bound modal." },
+    { "id": "mode-backup-reserve", "source": "SiteInfoSection.tsx:59-69", "content": "Operation-mode tile and percent reserve meter or unknown dash; denominator 100." },
+    { "id": "rated-config-metrics", "source": "SiteInfoSection.tsx:34-38,70-74", "content": "Powerwall count, rated power and rated energy; independent configuration snapshot/provenance." },
+    { "id": "firmware-timezone-components", "source": "SiteInfoSection.tsx:75-89", "content": "Available firmware/timezone and every boolean component entry; absent metadata is not invented." },
+    { "id": "rate-plan-editor", "source": "SiteInfoSection.tsx:26-33,90-108,113; TOUSettingsModal.tsx:131-306", "content": "Capability-dependent tariff name/no-plan copy; preset/custom tabs, select/JSON preview/editor, validation, Cancel and live-only submit." },
+    { "id": "source-timestamps", "source": "EnergySiteCard.tsx:26-28,34; SiteInfoSection.tsx:73,109-111", "content": "Discovery fetched_at and separate configuration fetched_at. Aggregate intentionally has no invented single observedAt." }
+  ],
+  "sectionCounts": {
+    "logicalPreservationGroups": 11,
+    "historicalLogicalGroups": 11,
+    "sourceJSXMarkersPagePlusSixLocalFiles": {
+      "GlassPanel": 0,
+      "ChartContainer": 0,
+      "LayoutCard": 4,
+      "CardGrid": 2,
+      "StatStrip": 2,
+      "BatteryEvidenceBrief": 1,
+      "section": 2,
+      "LinearGauge": 1,
+      "TOUSettingsModal": 1
+    },
+    "historicalComparableMarkers": {
+      "GlassPanel": 0,
+      "ChartContainer": 0,
+      "LayoutCard": 4,
+      "CardGrid": 2,
+      "StatStrip": 2,
+      "BatteryEvidenceBrief": 1,
+      "section": 2
+    },
+    "limit": "Source occurrences include mutually exclusive branches. No runtime site/card count or mounted section acceptance is claimed. Shared page container receives neither whole-page loading/error nor empty gates from this page."
+  },
+  "contractChecks": {
+    "hookRouteMatches": [
+      { "hook": "useTeslaEnergySites", "hookSource": "web\\src\\api\\hooks\\useEnergy.ts:181-187", "method": "GET", "path": "/tesla/energy-sites", "routerSource": "internal\\api\\router.go:3599", "result": "MATCH_SOURCE_ONLY" },
+      { "hook": "useRefreshTeslaEnergySites", "hookSource": "web\\src\\api\\hooks\\useEnergy.ts:190-201", "method": "POST", "path": "/tesla/energy-sites/refresh", "routerSource": "internal\\api\\router.go:3600", "result": "MATCH_SOURCE_ONLY" },
+      { "hook": "useTeslaEnergySiteInfo", "hookSource": "web\\src\\api\\hooks\\useEnergy.ts:204-211", "method": "GET", "path": "/tesla/energy-sites/{siteID}/site-info", "routerSource": "internal\\api\\router.go:3603,3605", "result": "MATCH_SOURCE_ONLY" },
+      { "hook": "useRefreshTeslaEnergySiteInfo", "hookSource": "web\\src\\api\\hooks\\useEnergy.ts:214-228", "method": "POST", "path": "/tesla/energy-sites/{siteID}/site-info/refresh", "routerSource": "internal\\api\\router.go:3603,3606", "result": "MATCH_SOURCE_ONLY" },
+      { "hook": "useUpdateTOUSettings", "hookSource": "web\\src\\api\\hooks\\useEnergy.ts:231-248", "method": "POST", "path": "/tesla/energy-sites/{siteID}/tou-settings", "routerSource": "internal\\api\\router.go:3603,3622", "result": "MATCH_SOURCE_ONLY" }
+    ],
+    "counts": { "hooksInspected": 5, "methodPathMatches": 5, "methodPathMismatches": 0 },
+    "identityAndWire": {
+      "evidence": "types/energy.ts:357-407; internal/models/tesla/tesla.go:10-31; energysite/handler.go:61-71,123-146,252-321,331-339",
+      "result": "Discovery list is a JSON array; List normalizes nil to []. Snake_case scalar names/nullability match consumed fields. SiteInfo is {data: raw JSON or null, fetched_at: timestamp or null}. EnergySiteCard passes energy_site_id, not DB id, to SiteInfoSection; query and mutation paths use that energy-site identity. Card reconciliation uses DB id.",
+      "limit": "Go omits nil site_info_fetched_at while TS declares a nullable property, but this page does not consume it. IDs are int64 on Go and number on TS; safe-integer producer range unproven. Product completeness/units remain candidates below."
+    },
+    "scopeAndDateBounds": {
+      "source": "workspaceScope.ts:23-77,119,157-168; EnergyProductsPage.tsx:18-25; useEnergy.ts:181-248",
+      "range": false,
+      "vehicle": false,
+      "result": "Actual /energy-products is intentionally absent from RANGE_ENABLED_PATHS and explicitly in VEHICLE_DISABLED_PATHS. Account installation snapshots have no selected vehicle or from/to date filter. No unsupported bounds or vehicle leakage was found in these hooks. No endpoint extension or second selector is indicated for this page."
+    },
+    "SIAndPhysicalSign": {
+      "source": "helpers.ts:6-14; handler.go:280-281,308-309; handler.go:178-205,331-339",
+      "result": "Hooks return unconverted payloads. Presentation treats total_pack_energy/nameplate_energy as Wh and nameplate_power as W, scales by magnitude at 1000, retains sign and preserves measured zero/null distinction. There is no net-import/export flow series, elapsed-energy integration, SOC-derived capacity or costs calculation on this page.",
+      "limit": "Products/site-info handler copies Tesla values verbatim; its field names lack explicit unit metadata. Fixture Wh/W values corroborate intended presentation, not actual upstream unit truth. No conversion corruption or incorrect flow-direction label confirmed.",
+      "negativeGuardFollowup": "Do not clamp or abs the shared signed formatter. Capacity/rating and 0..100 percent plausibility are producer/domain checks, not established bad readings."
+    },
+    "preferences": {
+      "source": "numberFormat.ts:1-49,89-109; useNumberFormatting.ts:19-45; useMetricPreferences.ts:7-12; useOperationalMetrics.tsx:14-23; helpers.ts:6-14; formatMetric.ts:31-61",
+      "result": "Number formatter uses existing locale/precision bridge. Site charge/config reserve subscribe to it; shared metrics subscribe to existing unit/currency preferences. Magnitude-based energy/power formatting is an existing deliberate specialist display rule, not grounds for automatically changing units or importing legacy converters. F03 concerns raw evidence, not a fabricated wrong-locale result.",
+      "limit": "No actual settings change, live preference notification, locale render or unit-conversion test performed."
+    },
+    "stateTrustAndIndependence": {
+      "source": "EnergyProductsPage.tsx:21-26,40-72; SiteInfoSection.tsx:20-24,54-58,70-74; useDataState.ts:31-53; dataState.ts:181-265; SourceTrustNotice.tsx:7-22",
+      "result": "Retained discovery/configuration survive refresh errors and paused states. Only their fatalError replaces the relevant source content. Configuration queries are keyed per site and independent of discovery and neighbors. Explicit cached snapshot provenance, separate observed/fetched times, root unknown versus [] and missing aggregate capacity remain visible.",
+      "limit": "DataState updatedAt is client successful-load time, not a new Tesla observation. Backend fetched_at remains separately displayed. No claim of live telemetry freshness, source completeness or outage recovery execution."
+    },
+    "nullZeroAndDenominators": {
+      "source": "SummaryBand.tsx:11-24; EnergySiteCard.tsx:16-21; SiteInfoSection.tsx:34-38,64-69; LinearGauge.tsx:128-141; formatMetric.ts:24-61",
+      "result": "No snapshot means null metrics. Resolved [] means real zero counts and 0 Wh capacity. Missing/nonfinite capacity on any existing site makes the aggregate unknown, not a partial sum passed off as total. Individual nullable readings remain unknown. Powerwalls is numeric count with safe-integer validation in shared formatter. Capability counts overlap and are not a partition or ratio. Backup reserve has explicit 100-percent denominator; no divide-by-zero cost/efficiency denominator exists.",
+      "limit": "LinearGauge default clamps out-of-range readings; this caller checks finite but not 0..100. No out-of-range real or fabricated payload was supplied; candidate C02, not a demonstrated production defect."
+    },
+    "costsAndActions": {
+      "source": "TOUSettingsModal.tsx:12-124,164-218,287-302; SiteInfoSection.tsx:26-33,47-51,90-113; useEnergy.ts:190-248",
+      "result": "Three existing named utility presets and user custom JSON are configuration options, not measured costs or current bills. Source preserves provider names, raw tariffs and SI quantities. Discovery refresh, GET retry, site refresh, tariff modal, tabs/select/editor/preview, validation, Cancel, pending Submit and after-success configuration refresh remain connected. F01 distinguishes GET retry from rate-limited POST refresh.",
+      "limit": "No billing currency/rate correctness, tariff effective-date validity, mutation success, site permissions or action execution verified."
+    },
+    "liveReplayGuards": {
+      "source": "useEnergy.ts:231-247; api/client.ts:348-372; lib/operationalMode.ts:39-80; PageContainer.tsx:221-225",
+      "result": "TOU POST sets requiresLiveMode:true. request asserts operational mode before network; valid as_of or navigator offline produces read-only and rejects that operational write. Header can show operational-mode badge. Discovery/site refresh POSTs are cache refresh operations, not device settings writes, and do not opt into this flag.",
+      "limit": "Guard is source-proven entry policy, not runtime/native/server authorization or a mid-flight mode-transition test. Submit may still be visible while read-only; do not falsely claim guard bypass. No API or action called."
+    },
+    "i18n": {
+      "source": "EnergyProductsPage.tsx:19,29-38,40-70; helpers.ts:20-31; CapBadge.tsx:6-9; SiteInfoSection.tsx:26-37,84-86; TOUSettingsModal.tsx:132-306",
+      "result": "Page/action/state copy and known resource/operation labels use translation keys/fallbacks. Upstream site names, battery-type/firmware/timezone/tariff names and unknown resource/operation identifiers are source identity, not automatically untranslated English violations. JSON keys/preset payloads are technical data and must not be translated. F05 is specifically known component presentation plus source-preserving handling of unknown keys.",
+      "limit": "Existing fixture stubs i18n to fallbacks. Current generated catalog and non-English resolution were not validated."
+    },
+    "sharedUIAndSourceAccessibility": {
+      "source": "PageLayout.tsx:9-16; LayoutCard.tsx:20-64; CardGrid.tsx:26-43; Button.tsx:35-80; Badge.tsx:37-60; EnergyProductsPage.tsx:32-38; SiteInfoSection.tsx:47-68",
+      "result": "Canonical layout/feedback/motion/controls and typography are used; refresh controls are named and pending-protected. Page header/card heading association and reserve meter name exist in source. Raw native form controls are not introduced in these presentation files. F02, F04 and F07 remain actionable caller gaps.",
+      "limit": "No screen reader, focus, keyboard, composed contrast, generated CSS, forced-colors, reduced-motion or overlay containment acceptance."
+    },
+    "mobile": {
+      "source": "EnergyProductsPage.tsx:32-38; SiteInfoSection.tsx:41-47,59,91-103; CardGrid.tsx:26-43; layoutPolicy.ts:4-28; LayoutCard.tsx:33-64; Badge.tsx:41; TOUSettingsModal.tsx:250-254,286-302",
+      "result": "Root discovery wraps and requests 44px mobile minimum; site refresh requests 44px. Measured-container half cards stack below 1024px and source order is retained. Site headers/tiles/TOU row wrap and tariff text breaks words; preset JSON owns local overflow. Badge/headings use min-width/wrapping support. F07 identifies two source-default 40px modal controls.",
+      "limit": "No viewport mounted or measured. 320/375/390/430/768/1024/1280/1440/1920/2560px, narrow allocated widths, RTL, 200% text, long identifiers/translations, safe-area and native chrome remain NOTRUN."
+    }
+  },
+  "deterministicFindings": [
+    {
+      "id": "EP-F01",
+      "severity": "medium",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "pathsAndLines": [
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx:56",
+        "web\\src\\api\\hooks\\useEnergy.ts:208,214-225",
+        "internal\\api\\router.go:3605-3606",
+        "web\\src\\features\\battery\\pages\\EnergyProductsPage.test.tsx:440-449"
+      ],
+      "mechanism": "The fatal GET configuration QueryError Retry calls refreshMutation.mutate(siteId), sending rate-limited POST site-info/refresh to fetch from Tesla rather than retrying the failed cached GET. The section already has a separate explicit Refresh site info control. The existing fixture explicitly expects this POST retry; its expectation does not resolve the semantic issue.",
+      "minimalFollowup": "Assign only SiteInfoSection and its directly related expectation: wire Retry to infoQuery.refetch/source.retry, retaining the explicit Tesla refresh control, site key and all retained/error states. No hook/router change is required.",
+      "runtimeClaim": "None; no retry or request executed."
+    },
+    {
+      "id": "EP-F02",
+      "severity": "medium",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "pathsAndLines": [
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\CapBadge.tsx:7-14",
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx:84-87"
+      ],
+      "mechanism": "CapBadge displays the same label/icon for true and false; available/unavailable exists only in aria-label and success/neutral styling. Configuration component chips contain only the key-derived label and color variant, without a state word or state icon. Sighted boolean state therefore relies on color; configuration chips also lack explicit named state.",
+      "minimalFollowup": "Use localized visible available/unavailable text or an unambiguous state symbol with textual state for both feature chip paths; preserve every component identity and true/false state. Preserve unknown as unknown if a future producer contract supplies it; do not reinterpret missing booleans without that contract.",
+      "runtimeClaim": "No measured contrast, screen-reader or forced-colors result."
+    },
+    {
+      "id": "EP-F03",
+      "severity": "medium",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "pathsAndLines": [
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\EnergySiteCard.tsx:17-20",
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx:36-37",
+        "web\\src\\lib\\metric-reference\\formatMetric.ts:24-61",
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\SummaryBand.tsx:23-24"
+      ],
+      "mechanism": "Four physical metrics pass already formatted percent/Wh/W strings as metricId:text rawValue. formatMetric's text branch returns those strings as rawValue before numeric preference/formatter handling. The shared metric evidence consequently contains formatted text rather than original numeric measurements, unlike the summary's numeric energy plus specialist formatter. Finite/null guards remain, so this is not a demonstrated bad-payload or sign corruption.",
+      "minimalFollowup": "Map charge/capacity/rated power/rated energy to existing percent/energy/power numeric contracts with existing specialist display.formatter where needed. Preserve raw SI values, locale/precision, magnitude-dependent units, signs, true zeros and unknowns. Do not invent a new formatter or silently change the established display rule.",
+      "runtimeClaim": "No raw-details drawer or preference-change execution."
+    },
+    {
+      "id": "EP-F04",
+      "severity": "low",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "pathsAndLines": [
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\EnergySiteCard.tsx:3-4",
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx:5",
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\SummaryBand.tsx:2"
+      ],
+      "mechanism": "Four feature imports use layout/layout-reference or data-display/stat-reference internals rather than the prescribed category boundaries. Root page category imports do not correct those callers.",
+      "minimalFollowup": "Change only the four caller imports to existing layout/data-display category exports after confirming their current export availability; report any unavailable export to its owner instead of editing a shared barrel or adding a replacement component.",
+      "runtimeClaim": "No chunk/cycle/build outcome inferred."
+    },
+    {
+      "id": "EP-F05",
+      "severity": "low",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "pathsAndLines": [
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx:84-87",
+        "web\\src\\types\\energy.ts:392-399"
+      ],
+      "mechanism": "Every boolean configuration key is recased by key.replace(/_/g,' ') for display, including known solar/battery/grid/load_meter/tou_capable/storm_mode_capable presentation concepts. No translation mapping is used. Unknown technical keys are also modified, rather than retained as original source identifiers.",
+      "minimalFollowup": "Add a bounded feature mapping for known presentation concepts using existing translation keys where available; preserve unknown keys verbatim as source identifiers. Retain all entries and localize only presentation/state, never payload keys, JSON, IDs, provider/product names or arbitrary technical identifiers.",
+      "runtimeClaim": "No current-catalog completeness or non-English failure inferred."
+    },
+    {
+      "id": "EP-F06",
+      "severity": "low",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "pathsAndLines": [
+        "web\\src\\features\\battery\\components\\TOUSettingsModal.tsx:250"
+      ],
+      "mechanism": "Preset JSON preview uses bg-white/[0.03] and border-white/[0.06], unlike adjacent feature-owned surface-2/border-subtle tokens. It is a fixed-white chrome candidate, not a measured contrast failure.",
+      "minimalFollowup": "Replace only the preview surface/border with existing semantic surface/border roles; retain provider JSON, preview visibility, wrapping and local scroll. Do not alter global tokens or preset prices.",
+      "runtimeClaim": "No light/custom theme screenshot or contrast measurement."
+    },
+    {
+      "id": "EP-F07",
+      "severity": "low",
+      "classification": "CONFIRMED_SOURCE_DEFAULT_GEOMETRY",
+      "pathsAndLines": [
+        "web\\src\\features\\battery\\components\\TOUSettingsModal.tsx:286-302",
+        "web\\src\\components\\ui\\Button.tsx:35-46,61-72"
+      ],
+      "mechanism": "The modal's two Cancel/Update Rate Plan buttons specify neither size, mobile minimum nor wrapLabel. Shared Button defaults to md h-10 (40px) and wrapLabel=false. Thus their source default falls below the design contract's 44px mobile minimum and lacks the established growing-label contract. This is source geometry, not observed clipping or measured runtime hit area.",
+      "minimalFollowup": "At the modal caller, use existing wrapLabel and mobile min-h-11/min-w-11 support with a wrapping/stackable footer while retaining pending protection, labels and submit/cancel behavior. Leave Button defaults/global UI untouched; verify actual viewport/footer behavior in a separately authorized QA item.",
+      "runtimeClaim": "No browser/native target, overlap or long-translation result."
+    }
+  ],
+  "unconfirmedCandidates": [
+    {
+      "id": "EP-C01",
+      "category": "producer-units",
+      "source": "internal\\api\\energysite\\handler.go:280-281,308-309,178-205,331-339; helpers.ts:6-14",
+      "candidate": "Actual Tesla products/site-info units are not established by copying unsuffixed fields verbatim. Page/fixture assume Wh and W.",
+      "minimalFollowup": "Separately authorized producer/schema or existing certified wire fixture evidence for total_pack_energy/nameplate_energy/nameplate_power; do not change factors based on naming alone.",
+      "notConfirmed": "No real payload or fabricated alternate unit payload."
+    },
+    {
+      "id": "EP-C02",
+      "category": "producer-physical-validity-and-empty-semantics",
+      "source": "SummaryBand.tsx:11-14; EnergySiteCard.tsx:17-20; SiteInfoSection.tsx:64-68; LinearGauge.tsx:128-141; safeArray.ts:9-13; handler.go:187-188,280-293",
+      "candidate": "Negative capacity/rating, out-of-range percent, missing product booleans, non-array discovery, or an empty configuration object could weaken unknown/invalid distinctions. Gauge clamps by default; safeArray normalizes invalid input; producer booleans default false; refreshed null site-info normalizes to {}.",
+      "minimalFollowup": "Review certified producer contracts/fixtures under a separate explicit owner before altering domain validity or null semantics. Keep signed net-power semantics separate from nonnegative ratings and retain real zero.",
+      "notConfirmed": "No such real payload observed and no synthetic bad payload created/executed. Finite checks alone are not proof these failures occur."
+    },
+    {
+      "id": "EP-C03",
+      "category": "device-product-identity-and-completeness",
+      "source": "handler.go:263-301; internal\\models\\tesla\\tesla.go:11-12; EnergySiteCard.tsx:30,50; types/energy.ts:358-359",
+      "candidate": "Parser skips vehicle/empty resource type and zero energy_site_id. Wall-connector discovery coverage and int64-to-JS safe-integer identity depend on real producer schema/ranges.",
+      "minimalFollowup": "Use existing approved device/product wire evidence to establish product inclusion and identifier representation before any producer/type change.",
+      "notConfirmed": "No missing actual installation, identity collision, precision loss or incorrect site-action target demonstrated."
+    },
+    {
+      "id": "EP-C04",
+      "category": "tariff-cost-and-write-validation",
+      "source": "TOUSettingsModal.tsx:12-124,164-194; handler.go:209-249; types/energy.ts:444-460",
+      "candidate": "Preset rates have no inspected effective-date certification; custom JSON checks object/envelope shape but delegates tariff schema rejection to Tesla. These are not billing results.",
+      "minimalFollowup": "Separately verify preset provenance and approved schema/validation behavior without real settings writes. Preserve provider identities, payload keys and current prices until owned evidence authorizes changes.",
+      "notConfirmed": "No incorrect bill, rejected real tariff, bad custom payload or real mutation was observed."
+    },
+    {
+      "id": "EP-C05",
+      "category": "runtime-native-accessibility-mobile",
+      "source": "PageLayout/CardGrid/LayoutCard/Button/Badge/LinearGauge/TOUSettingsModal source inspected; mission and MDC-040-043/060-070 matrix",
+      "candidate": "Mounted route/auth, current locale, overlay focus/restore, keyboard, contrast, forced-colors, motion, 200% text/RTL, long labels, viewport containment and native safe-area/chrome need runtime evidence.",
+      "minimalFollowup": "Parent may dispatch a separately authorized bounded runtime/native QA after actual ownership release; this worker must not retry helpers or run it.",
+      "notConfirmed": "No native/full-page acceptance; historical empty discovery previews cannot cover real ready/error/open-modal states."
+    }
+  ],
+  "historicalProof": [
+    {
+      "source": "docs\\frontend-audits\\audit-page-070.json",
+      "recordedAuditUTC": "2026-10-07T10:32:33.1893880Z",
+      "historicalRootSHA256": "53fe89d8a57337f0c7780a4328ffff260ba7dd402cbc491ca4cb07fe4bde082d",
+      "historicalLocalHashes": [
+        { "file": "CapBadge.tsx", "sha256": "db16d2f67de046db1c55a2462e9233fe7f78efb620ea875e13cce902ae7cccc8" },
+        { "file": "EnergySiteCard.tsx", "sha256": "c99ad3efe1a0db54c54650f965850042cd8adf9c30e198307bd201e8c040170f" },
+        { "file": "helpers.ts", "sha256": "6efc05a3fd16f10cd0c6483e269ab5c8b650f0639dae590e7b9333694ae7e528" },
+        { "file": "InfoTile.tsx", "sha256": "1b766da85d9ad5077e22b3d9ef719a0b0adfd4629a570cece94076beeb839b62" },
+        { "file": "SiteInfoSection.tsx", "sha256": "518346f684542ab013562094003dfe062a2b0a56e9c333b797c88e192d2ba568" },
+        { "file": "SummaryBand.tsx", "sha256": "bd10aeb312ce2b497a730455084a9733639cf34bbce229314f6db3a12f0fe0fd" },
+        { "file": "..\\TOUSettingsModal.tsx", "sha256": "0d1568ab1c3b35fc74a2abd2567f85fec6660061283cd62daeda2742b81efe7a" }
+      ],
+      "historicalValidation": "Report records exit 0 for JSON/schema/root-hash/line checks and six deduplicated findings, not runtime acceptance.",
+      "limit": "Hashes/timestamp are copied from the inspected historical report only. Not rerun, not proof current files are unchanged."
+    },
+    {
+      "source": "migration-queue.md:1740",
+      "recordedQueueActivityUTC": "2026-10-12T20:41:29.118Z",
+      "activityTimeMeaning": "Existing queue timestamp field; not independently established as the test-run time.",
+      "acceptedSourceCommit": "a5d78a76d4dd63cde4542760f13c792fbd2b12b2",
+      "reportedResults": { "testsPassed": 27, "testsTotal": 27, "testExit": 0, "strictLintExit": 0, "sourceTestStyleFindings": 0, "originalCasesPreserved": 25, "originalAssertionsPreserved": 110 },
+      "reportedPreservation": "345/344 lines and unchanged sections; pending discovery/mobile wrapping/icon regressions added.",
+      "reportedNativeAttempt": "One capture across four dark widths; actual 429/501/503/404 resources and EMPTY discovery only; explicitly not full/native QA; locks released.",
+      "limit": "Historical queue report, not actual native output recovered or any current rerun. The accepted source prerequisite does not clear these Phase-6 findings."
+    },
+    {
+      "source": "web\\src\\features\\battery\\pages\\EnergyProductsPage.test.tsx",
+      "currentStaticItDeclarations": 27,
+      "actualCurrentExecutedCases": 0,
+      "result": "READ_ONLY_NOTRUN",
+      "fixtureEvidence": "makeSite uses 13500 energy and 87.5 percent; makeSiteInfo uses 5000 power/13500 energy/20 reserve; helper tests include 999/1000 scale, negative signed power and zero energy; trust regressions cover retained/offline/missing aggregate and unreceived snapshot.",
+      "limit": "Mocks supply every hook and i18n fallback. No test grading, discovery run, data mutation or runtime pass claimed."
+    }
+  ],
+  "actualChecks": {
+    "executionKind": "Built-in view/glob/rg source tools only; no shell command process",
+    "log": "web\\logs\\phase6-qa-battery-energy-products.log",
+    "scanScope": "The ten production presentation files: page + six local files + TOUSettingsModal + SourceTrustNotice + BatteryEvidenceBrief. Shared primitive raw HTML is outside this rule scan.",
+    "patternResults": {
+      "rawLowercaseFormControls": 0,
+      "inlineStyleAttributes": 0,
+      "directRechartsLeafletFramerImports": 0,
+      "oldRelativeAPIImports": 0,
+      "explicitAnyTypeOrCast": 0,
+      "neonTextShadowGlowMatches": 0,
+      "useEnergyDoublePrefixMatches": 0,
+      "useEnergyCamelCaseIDQueryMatches": 0,
+      "featureInternalReferenceImportLines": 4,
+      "fixedWhitePreviewLines": 1,
+      "automaticComponentKeyRecasingLines": 1
+    },
+    "rawScanResults": [
+      "Raw lowercase controls count scan: No matches found.",
+      "Combined inline style/direct library/old API/explicit any/neon-glow count scan: No matches found.",
+      "useEnergy prefix/camelCase ID URL scan: No matches found.",
+      "Combined internal-reference/fixed-white/key.replace count output: TOUSettingsModal.tsx:1; SummaryBand.tsx:1; SiteInfoSection.tsx:2; EnergySiteCard.tsx:2.",
+      "GlassPanel/ChartContainer JSX count scan: No matches found.",
+      "Existing test it-declaration count output: EnergyProductsPage.test.tsx:27."
+    ],
+    "falsePositiveDisposition": "An earlier broader any-word scan returned TOUSettingsModal.tsx:220, a comment ('Clear any stale validation error'). Explicit any-type/cast scan returned no matches; not a type violation.",
+    "exitCodes": null,
+    "exitCodeLimit": "Source-tool results are not shell process exit codes. No invented grep/audit/test exit status.",
+    "findingCount": 7,
+    "unconfirmedCandidateCount": 5,
+    "freshTestDiscovery": "NOTRUN",
+    "freshTestsPassed": null,
+    "freshTestsFailed": null,
+    "freshTestsSkipped": null,
+    "reportReadback": {
+      "method": "view of persisted JSON/log plus rg of EP-F/EP-C IDs and release markers",
+      "actualConfirmedIDCount": 7,
+      "actualCandidateIDCount": 5,
+      "actualFilesCreatedByPatch": 2,
+      "result": "PERSISTED_SOURCE_READBACK",
+      "automatedJSONParser": "NOTRUN; command execution prohibited. JSON structure manually reviewed; no parser exit or automated schema pass claimed."
+    }
+  },
+  "NOTRUN": [
+    "All shell/PowerShell/Node/Python/Git/gh commands and current hashing/stat/diff verification",
+    "audit.sh and verify.sh",
+    "TSC, tests, lint, build, full suite or application gate",
+    "Browser, native, screenshot/helper, device APIs, real data or any action/mutation",
+    "Server, install, Docker, extensions, external/Discord communication",
+    "Locale catalog generation or current completeness checks",
+    "Scheduled health/parent loop, orchestration, dispatch, agents, queue/handoff changes or commit"
+  ],
+  "delivery": {
+    "writeFiles": [
+      "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-battery-energy-products.json",
+      "D:\\repos\\teslasync\\web\\logs\\phase6-qa-battery-energy-products.log"
+    ],
+    "writeFileCount": 2,
+    "sourceTestCatalogSharedGlobalQueueHandoffEdits": 0,
+    "commandsExecuted": 0,
+    "agentsLaunched": 0,
+    "runtimeNativeApiActions": 0,
+    "mechanism": "apply_patch on exactly the two assigned report/log paths, followed by source-tool readback.",
+    "claims": "ALL SOURCE/REPORT/LOG/COMMAND CLAIMS RELEASED",
+    "postReturnWrites": "NOPOSTRETURNWRITES",
+    "parentFollowup": "Findings are recommendations only. Parent exclusively owns status/queue/dispatch/commit and any separately authorized implementation or runtime work."
+  }
+}

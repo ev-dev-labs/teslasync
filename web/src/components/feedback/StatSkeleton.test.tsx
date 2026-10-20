@@ -59,10 +59,19 @@ describe('StatSkeleton', () => {
     expect(region).toHaveClass('grid', 'grid-cols-2', 'gap-3', 'sm:grid-cols-4')
   })
 
-  it('each card renders a label + value skeleton pair (8 pulses for 4 cards)', () => {
+  it('each card renders a label + value skeleton pair (8 static placeholders for 4 cards)', () => {
     const { container } = render(<StatSkeleton count={4} />)
-    // Skeleton renders one animate-pulse element; two per GlassPanel card.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(8)
+    const selector = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]'
+    expect(container.querySelectorAll(selector)).toHaveLength(8)
+    const cards = container.querySelectorAll('[data-print-card]')
+    expect(cards).toHaveLength(4)
+    for (const card of cards) {
+      const skeletons = card.querySelectorAll(selector)
+      expect(skeletons).toHaveLength(2)
+      expect(skeletons[0]).toHaveClass('h-3', 'w-16')
+      expect(skeletons[1]).toHaveClass('h-7', 'w-24')
+    }
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0)
   })
 
   it('renders the requested number of cards with a matching static column class', () => {

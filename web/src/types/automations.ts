@@ -23,6 +23,7 @@ export type AutomationConditionKind =
 export type AutomationActionKind =
   | 'action_command'
   | 'action_notify'
+  | 'action_wait'
   | 'action_set_setting'
   | 'action_call_automation';
 
@@ -177,6 +178,12 @@ export interface AutomationStepActionCallAutomation extends AutomationStepBase {
   target_automation_id: number;
 }
 
+export interface AutomationStepActionWait extends AutomationStepBase {
+  kind: 'action_wait';
+  /** Integer SI seconds, inclusive range 1 through 3600. */
+  duration_s: number;
+}
+
 export type AutomationTriggerStep =
   | AutomationStepTriggerSignal
   | AutomationStepTriggerGeofence
@@ -193,6 +200,7 @@ export type AutomationActionStep =
   | AutomationStepActionCommand
   | AutomationStepActionNotify
   | AutomationStepActionSetSetting
+  | AutomationStepActionWait
   | AutomationStepActionCallAutomation;
 
 export type AutomationStep =

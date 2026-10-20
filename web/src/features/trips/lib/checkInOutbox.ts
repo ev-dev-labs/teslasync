@@ -5,7 +5,8 @@
  * dedupes idempotently on (session_id, recorded_at) — a double flush
  * is harmless.
  *
- * Corrupt storage degrades to an empty queue, never a throw.
+ * Corrupt storage degrades to an empty queue, never a throw. Failed
+ * writes retain the queue in this page's memory, not across reloads.
  */
 
 export interface QueuedCheckIn {
@@ -13,7 +14,13 @@ export interface QueuedCheckIn {
   recorded_at: string;
 }
 
+export interface OutboxWriteResult {
+  queue: QueuedCheckIn[];
+  persisted: boolean;
+}
+
 const STORAGE_KEY = 'teslasync.journey.checkin-outbox';
+let memoryQueue: QueuedCheckIn[] | null = null;
 
 /** Cap: a dead zone longer than 50 taps keeps the newest 50. */
 const MAX_QUEUED = 50;
@@ -25,6 +32,7 @@ function isEntry(value: unknown): value is QueuedCheckIn {
 }
 
 function readRaw(): QueuedCheckIn[] {
+  if (memoryQueue !== null) return [...memoryQueue];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw == null || raw === '') return [];
@@ -36,12 +44,16 @@ function readRaw(): QueuedCheckIn[] {
   }
 }
 
-function writeRaw(entries: QueuedCheckIn[]): void {
+function writeRaw(entries: QueuedCheckIn[]): OutboxWriteResult {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    memoryQueue = null;
+    return { queue: entries, persisted: true };
   } catch {
-    // Storage full or unavailable: the queue stays in memory for this
-    // session via the hook state. Never throw from a queue write.
+    // The complete queue is authoritative until a later write succeeds,
+    // including removals, so stale storage cannot resurrect replayed taps.
+    memoryQueue = [...entries];
+    return { queue: entries, persisted: false };
   }
 }
 
@@ -51,24 +63,22 @@ export function loadOutbox(): QueuedCheckIn[] {
 }
 
 /** Queues one entry; identical (session, instant) pairs queue once. */
-export function enqueueCheckIn(entry: QueuedCheckIn): QueuedCheckIn[] {
+export function enqueueCheckIn(entry: QueuedCheckIn): OutboxWriteResult {
   const queue = readRaw();
   const dup = queue.some(
     (e) => e.session_id === entry.session_id && e.recorded_at === entry.recorded_at,
   );
   if (!dup) queue.push(entry);
   while (queue.length > MAX_QUEUED) queue.shift();
-  writeRaw(queue);
-  return queue;
+  return writeRaw(queue);
 }
 
 /** Drops one entry after a successful replay. */
-export function dequeueCheckIn(sessionId: number, recordedAt: string): QueuedCheckIn[] {
+export function dequeueCheckIn(sessionId: number, recordedAt: string): OutboxWriteResult {
   const queue = readRaw().filter(
     (e) => !(e.session_id === sessionId && e.recorded_at === recordedAt),
   );
-  writeRaw(queue);
-  return queue;
+  return writeRaw(queue);
 }
 
 /** Loads the queued entries for one session, oldest first. */

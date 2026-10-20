@@ -1,0 +1,810 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-vehicles-day-log",
+  "attempt": 1,
+  "actor": "c38368be-3055-4bdd-9050-3128e11473e6",
+  "page": "web/src/features/vehicles/pages/DayLogPage.tsx",
+  "routes": [
+    "/day-log"
+  ],
+  "mode": "READONLY SOURCE-ONLY",
+  "outcome": "Reported needs; NOT runtime/native/application acceptance",
+  "clocks": {
+    "actualFirstToolUtc": "2026-10-14T01:27:58.3155149Z",
+    "returnByUtc": "2026-10-14T01:44:50.678Z",
+    "generatedUtc": "2026-10-14T01:43:45.9620745Z",
+    "reservedUtc": "2026-10-14T01:24:50.678Z",
+    "hardByUtc": "2026-10-14T01:49:50.678Z"
+  },
+  "authority": {
+    "mission": "Relevant header/layout/mobile/trust/date/accessibility/QA sections read",
+    "queue": "migration-queue.md initial68, current69 [~], attempt1; phase5-page-vehicles-day-log completed current2014",
+    "instructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md"
+    ],
+    "orchestrator": "docs/orchestrator-loop.md all296 lines read",
+    "predecessorCommit": "8d8491072ebf1e6265e5e148a72513e1238921ad",
+    "handoff": "Current recovery/conventions/shared ownership/acceptance limits read",
+    "design": "docs/frontend-design-contract.md all2539 lines read",
+    "inventory": "DayLog229 and integration/library ownership, audit-page-229.json read"
+  },
+  "counts": {
+    "distinctStaticTranslationKeys": 93,
+    "freshDiscovered": null,
+    "unprovedCandidateGroups": 5,
+    "authoredTestCallSites": 63,
+    "freshFailed": null,
+    "pinnedFiles": 58,
+    "freshSkipped": null,
+    "missingCanonicalStaticTranslationKeys": 0,
+    "freshPassed": null,
+    "specificFixNeeds": 8,
+    "sourceExpandedLiteralCases": 72,
+    "coreProductionFilesScanned": 7,
+    "staticTranslationCalls": 106,
+    "authoredFrontendTestFiles": 6,
+    "sourcePinDrift": 0,
+    "runtimeChecksExecuted": 0,
+    "confirmedSourceMechanisms": 8,
+    "mountedSections": 3
+  },
+  "sections": [
+    {
+      "evidence": "DayLogPage98-106, DayLogOperationalSummary35-125",
+      "name": "Operational summary",
+      "preserved": "All six metrics, actual source SI, zero/null distinction, partial/empty qualification, bounds/provenance, retry/drive/charging links"
+    },
+    {
+      "evidence": "DayLogPage110-118, DayLogTimeline59-768",
+      "name": "Timeline",
+      "preserved": "Complete loaded events/order, search/categories/counts, virtual list, positive-reference routes, contextual disclosures, wrapping source/layer/id/raw timestamp/full scalar details"
+    },
+    {
+      "evidence": "DayLogPage122, DayLogSources20-90",
+      "name": "Sources",
+      "preserved": "All rows/counts/status/reasons/unknown identities/feed caveat; shared embedded semantic Table with rowheaders, contained overflow/tabIndex0, retry"
+    }
+  ],
+  "scopeSemantics": {
+    "timezone": "Vehicle mode29-38 uses vehicle tz except absent/literal UTC fallback to user/browser. Response tz preferred for timeline; UTC/future-day policy unproved.",
+    "query": "useDayLog key11-12 vehicle/date/tz/sorted layers; page omits layers, all default producer layers. Snake_case request /day-log with limit2000/offset and cancellation signal; client auto-prefixes /api/v1.",
+    "chronology": "Backend events472-477 stable chronological order/tie assembly; frontend retains it, exact raw timestamps disambiguate repeated DST clocks.",
+    "dateURL": "Page39-59 validates plain YMD or zoned today, clones params changing only date. Previous/next/input/today calendar shifts (daylog87-118), no UTC-YMD reinterpretation.",
+    "range": "DayLog excluded from workspaceScope RANGE_ENABLED_PATHS23-77/156-167; page owns local calendar day, not workspace range.",
+    "bothBounds": "Handler98-143 requires explicit RFC3339 start/end together, ordered, <=48h; date path resolves both IANA-local midnights via AddDate into UTC, preserving23/25h DST. End-exclusive contradiction DL-F01.",
+    "headerVehicle": "Existing workspace header; URL > reconciled store > first fleet (useSelectedVehicle62-85). No duplicate page vehicle picker."
+  },
+  "actions": [
+    "Header vehicle selection uses existing owner; no page range picker",
+    "Prev/next/input/today update date preserving unrelated URL params (Controls30-65/Page52-59)",
+    "Header refresh plus three section retries share one query (Page61-63/98-122), not independent endpoints",
+    "CopyLinkButton39-41 copies verbatim URL: DL-F08",
+    "Timeline search/toggles/clearAll/showAll59-95/202-254 are UI-local; clearAll hides categories, showAll resets search/hidden; no new request",
+    "Exact event-id expansion95 and contextual action/time/id aria names383-403; virtual Home/End/arrows108-131",
+    "daylog387-392 links only positive integral drive/charge references to existing /drives/:id or /charging/:id (routeRegistry78/116)",
+    "Empty-state drive/charging/live navigation preserved; no mutation/export introduced"
+  ],
+  "trust": {
+    "noVehicle": "NoVehicleSelected->PageContainer; hook disabled for invalid vehicle",
+    "partial": "Truncated/unavailable source qualifications retained, completed summary fix stays complete",
+    "initialLoading": "All three sections mounted with loading declarations",
+    "observations": "Producer user_presence unavailable events1099-1107; full recorded history is not complete continuous/occupant observation",
+    "emptyUnknownZero": "Valid raw zero distinct from null/invalid/unavailable. Empty recorded rows never prove continuous off/absence.",
+    "initialPaused": "DL-F03 pending differs from actively fetching",
+    "retainedErrorPaused": "dataState178-270 retains successful records and nonblocking stale/blocked warning; never replaced with fatal full-page failure",
+    "paging": "DL-F02 successful empty later page is not proved complete",
+    "initialFatal": "state.fatalError forwarded to sections with shared retry",
+    "backendFailure": "Repository failures often one handler500, not independent successful source responses"
+  },
+  "provenance": {
+    "evidence": "events289-291/472-477; Timeline95/403-546",
+    "preserved": "Requested vehicle_id, exact source/layer/id/payload/ts; session+boundary, row-id, signal field+UnixNano, gear timestamp, software row+kind identities. First signal/gear observation is baseline, not invented transition.",
+    "unknown": "Unknown future/scalar/user-place identities remain raw fallback data, not untranslated English labels; no actual identity collision/live occupant/location proof obtained."
+  },
+  "display": {
+    "i18n": "106 statically extractable mounted t calls/93 unique keys exist canonical en.json; DayLog leaves also locale-vehicles, shared partial shell. Dynamic known keys inspected; runtime/other locales NOTRUN.",
+    "locale": "useUnits118-140 locale/decimal_precision; clock and percentage bypasses F05/F06. Preserve exact technical YMD/UTC bounds/raw timestamps and event seconds.",
+    "SI": "Network/cache meters/seconds/Wh/raw counts/percent unchanged; summary validates source inputs and established MetricText/unit preference callbacks; timeline SI formatters use useUnits.",
+    "signs": "Energy not abs-converted; finite negative/zero retained. Null contributors remain unknown; whole overlapping-session sums/malformed-duration policy candidateC05."
+  },
+  "accessibility": {
+    "source": "PageLayout adapter->PageContainer/route-focus heading; labeled shared date Input; semantic rowheaders/table tabIndex0/contained overflow; list positions and exact sr-only identity; contextual aria-expanded disclosure; virtual pending focus; min-w-0/wrapped full details; reduced-motion-aware FadeIn",
+    "exceptions": "Computed Timeline259/275-277 heights/transforms exempt; raw/direct imports expected inside building blocks (Table/FadeIn). Unused private accent map not current mounted ink. Legacy DayLogSummary unmounted, not reintroduced.",
+    "native": "No measured layout/contrast/focus/target/RTL/zoom/screen-reader proof; C02",
+    "mobile": "F07 caller sizing declarations; disclosure already44 belowmd acceptable"
+  },
+  "findings": [
+    {
+      "mechanism": "Summary99/106 displays [start,end) end exclusive. internal/api/daylog/events.go293-294 uses !ts.Before(start)&&!ts.After(end). internal/database/daylog/repo.go109/118/128/140/149/158/167-168 use inclusive upper predicates/BETWEEN.",
+      "id": "DL-F01",
+      "file": "web/src/features/vehicles/components/operationalbrief-a-m/DayLogOperationalSummary.tsx",
+      "severity": "high",
+      "repro": "NOT EXECUTED synthetic reasoning: a security/FSM transition exactly at next local midnight equals window_end, is selected and emitted despite the exclusion claim; adjacent next day includes the same start-equality identity.",
+      "status": "confirmed-source",
+      "fix": "N01: existing producer/contract owner must agree half-open instant and overlap semantics and add exact-end/DST tests; do not blindly prorate whole sessions.",
+      "line": 106,
+      "title": "Displayed exclusive end conflicts with inclusive producer",
+      "rule": "exclusive-end-contract",
+      "dedup": "Completed partial-summary task did not own producer interval semantics."
+    },
+    {
+      "mechanism": "Hook48-61 fixes first.total_events as target, breaks on empty next page, returns first metadata plus merged events. Page48-49 marks partial only truncated/unavailable. Timeline169-173 uses loaded array counts;254 claims complete day still loaded. Hook test96-107 authors early-stop success without integrity assertion.",
+      "id": "DL-F02",
+      "file": "web/src/api/hooks/useDayLog.ts",
+      "severity": "high",
+      "repro": "NOT EXECUTED synthetic reasoning: first total_events5/events[a]/truncatedfalse/all otherwise available, then empty page => successful one-event result with total5, no paging shortage marker. Normal user_presence partialness does not identify this cause.",
+      "status": "confirmed-source",
+      "fix": "N02: explicit paging-integrity partial/failure with retained records and retry; never invent signal-cap provenance by simply setting truncated.",
+      "line": 56,
+      "title": "Empty later page returns success without shortage metadata",
+      "rule": "paging-integrity-trust",
+      "dedup": "Partial-summary receipt explicitly leaves hook integrity separately owned; no exact paging fix owner found in queue."
+    },
+    {
+      "mechanism": "Page70 isLoading=query.isPending feeds sections98-122. api/dataState.ts178-270 exposes initial refreshBlocked; StaleRefreshWarning.tsx59 returns null without retained data; Timeline179-182 and Sources35-38 remain loading. DataFreshness.tsx282-285/323-338 does not consume fetchStatus.",
+      "id": "DL-F03",
+      "file": "web/src/features/vehicles/pages/DayLogPage.tsx",
+      "severity": "high",
+      "repro": "NOT EXECUTED synthetic reasoning: no data/statuspending/isPendingtrue/isFetchingfalse/fetchStatuspaused => blocked first load, section skeletons, no authored initial-deferred explanation.",
+      "status": "confirmed-source",
+      "fix": "N03: consume existing blocked trust at page/section caller with explicit initial-deferred explanation; do not infer offline or discard good retained data.",
+      "line": 70,
+      "title": "Initial paused query remains active loading presentation",
+      "rule": "initial-paused-trust",
+      "dedup": "Existing trust primitive already has state; narrow page/test integration, not completed summary/primitive redispatch."
+    },
+    {
+      "mechanism": "Timeline204 advertises time;79-80 only generic translated title + eventKeywords. features/vehicles/lib/daylog.ts271-279 omits event.ts/formatted local time; component-specific title601 can differ from generic search title.",
+      "id": "DL-F04",
+      "file": "web/src/features/vehicles/components/daylog/DayLogTimeline.tsx",
+      "severity": "medium",
+      "repro": "NOT EXECUTED synthetic reasoning: an event displays08:04:05, with no payload containing it; searching08:04:05 rejects the event.",
+      "status": "confirmed-source",
+      "fix": "N04: existing local haystack must match displayed seconds/timezone/component descriptions, preserving server scope, order and loaded counts.",
+      "line": 80,
+      "title": "Advertised time search omits displayed time",
+      "rule": "advertised-local-time-search",
+      "dedup": "Completed timeline-access explicitly excludes library time-search; parent exact lib/caller/test extension required."
+    },
+    {
+      "mechanism": "daylog235-248/252-263 pin Intl.DateTimeFormat en-GB/h23 for seconds and hour labels; Timeline356/384 consumes them. hooks/useDateFormat.ts73-96 is existing locale preference owner.",
+      "id": "DL-F05",
+      "file": "web/src/features/vehicles/lib/daylog.ts",
+      "severity": "medium",
+      "repro": "NOT EXECUTED synthetic reasoning: choosing en-US/ar still invokes en-GB/h23 rather than user locale display/digits.",
+      "status": "confirmed-source",
+      "fix": "N05: existing formatter owner needs locale-aware seconds capability; do not replace with minutes-only helper, lose seconds/DST identity, or translate technical ISO provenance. No unverified time_format preference is asserted.",
+      "line": 239,
+      "title": "Visible seconds clocks hardcode en-GB",
+      "rule": "user-locale-clock-display",
+      "dedup": "Shared formatter/caller integration needs explicit parent owner claim; no parallel formatter framework."
+    },
+    {
+      "mechanism": "Timeline513-514 and749 directly render `${v}%`; useUnits118-140 already exposes locale/decimal_precision. Related direct count231 and raw interpolations169-173/Sources72 need same display-boundary review.",
+      "id": "DL-F06",
+      "file": "web/src/features/vehicles/components/daylog/DayLogTimeline.tsx",
+      "severity": "medium",
+      "repro": "NOT EXECUTED synthetic reasoning: finite12.5 SOC with German locale renders12.5%, not locale decimal presentation; decimal precision preference has no effect on template.",
+      "status": "confirmed-source",
+      "fix": "N06: reuse existing preference-aware percent/count display boundary, preserving raw percentages/SI/IDs. Keep reserved plural count numeric with separately formatted display text.",
+      "line": 513,
+      "title": "Percentage templates bypass locale and precision",
+      "rule": "user-numeric-locale-precision",
+      "dedup": "New narrow caller display need, not completed accessibility/table work. Percentage proof does not depend on unverified i18next number formatting."
+    },
+    {
+      "mechanism": "Timeline223-231 size-sm categories;211/214 default40px actions and202-209 default Input. Controls35/45/56/63 use sm:h-9 below md. Shared ui/Button.tsx35-38 sizes sm36/md40; caller merge66-74. Disclosure Timeline387 already44 belowmd is acceptable.",
+      "id": "DL-F07",
+      "file": "web/src/features/vehicles/components/daylog/DayLogTimeline.tsx",
+      "severity": "medium",
+      "repro": "NOT EXECUTED declaration reasoning: at640-767 controls become36px; categories stay36px belowmd, with no44px caller override/smaller-target policy. This is not a measured native box/spacing claim.",
+      "status": "confirmed-source-declaration",
+      "fix": "N07: narrow caller below-md44px roles, then separately authorized native target/focus/layout proof.",
+      "line": 225,
+      "title": "Mobile controls lack default below-md44px role",
+      "rule": "below-md-target-declaration",
+      "dedup": "Completed timeline-access fixes retained; do not reopen primitive work or alter shared token framework."
+    },
+    {
+      "mechanism": "Page35-42 resolves selected vehicle and missing/invalid date to zoned today, without URL canonicalization;52-59 date action changes only date. hooks/useSelectedVehicle.ts62-85 can resolve store/fleet without vehicle_id. components/layout/CopyLinkButton.tsx39-41 copies window.location.href verbatim.",
+      "id": "DL-F08",
+      "file": "web/src/features/vehicles/pages/DayLogPage.tsx",
+      "severity": "medium",
+      "repro": "NOT EXECUTED synthetic reasoning: enter /day-log with persisted vehicle but no date/vehicle_id; copied URL remains unpinned. Another persisted vehicle or later local day yields a different view; no clipboard/API used.",
+      "status": "confirmed-source",
+      "fix": "N08: parent decide scoped-permalink policy, pin effective vehicle/day or honestly disclose dynamic scope; preserve unrelated params. Timezone sharing policy explicit; do not add sensitive identities/locations or pretend local filters are shareable.",
+      "line": 84,
+      "title": "Copied URL omits effective fallback day/vehicle",
+      "rule": "copied-effective-scope",
+      "dedup": "Existing page/copy owner boundary needs authorization; no new vehicle/scope framework."
+    }
+  ],
+  "candidates": [
+    {
+      "mechanism": "Old exact Show details and unqualified partial-empty expectations conflict with current contextual disclosure/qualified summary.",
+      "kind": "unexecuted-test-oracle",
+      "proof": "Parent-authorized exact tests with safe write boundary; update stale assertions without weakening behavior.",
+      "status": "Runtime failure NOT proved; tests NOTRUN",
+      "id": "DL-C01",
+      "evidence": "DayLogPage.test.tsx250-274/315/331/346"
+    },
+    {
+      "mechanism": "Short viewport, zoom200%, long locales/RTL, pointer target exceptions, themes/forced-colors contrast, reduced motion, actual screenreader/virtual focus need native proof.",
+      "kind": "native-layout-accessibility",
+      "proof": "Separately authorized browser/device/accessibility checks, none here.",
+      "status": "No clipping/contrast/focus defect measured",
+      "id": "DL-C02",
+      "evidence": "DayLogTimeline257-258 inherited55vh/min-h-80;108-131 virtual focus;353/387/405-433 disclosure/details"
+    },
+    {
+      "mechanism": "LiteralUTC vehicle fallback and future Next-day policy are existing behaviors; next not disabled despite input max=today.",
+      "kind": "scope-policy",
+      "proof": "Existing owner must clarify UTC/future-day semantics before change.",
+      "status": "Violation interpretation unproved",
+      "id": "DL-C03",
+      "evidence": "lib/timezone.ts29-38; DayLogControls49/56"
+    },
+    {
+      "mechanism": "SentryModeStateUnknown maps off with explicit established-guard comment and test.",
+      "kind": "domain-unknown-semantics",
+      "proof": "Authoritative vendor/domain semantics must establish inactive versus unobserved meaning; no remapping based on guessed boolean semantics.",
+      "status": "Not promoted from token spelling alone",
+      "id": "DL-C04",
+      "evidence": "internal/api/daylog/events.go408-411/552-558; events_test.go165"
+    },
+    {
+      "mechanism": "Full overlapping-session totals, not daily proration; malformed negative charge duration clamped zero.",
+      "kind": "session-summary-domain",
+      "proof": "Clarify aggregate/invalid-duration policy, retain signed energy/valid zero/NULL distinctions.",
+      "status": "No malformed real record or wrong aggregate observed",
+      "id": "DL-C05",
+      "evidence": "internal/api/daylog/events.go353-357/1041-1080"
+    }
+  ],
+  "needs": [
+    {
+      "authorization": "Parent exact owner/claim required; no queue task/source write created",
+      "ownerDecision": "Completed partial-summary task did not own producer interval semantics.",
+      "id": "N01",
+      "finding": "DL-F01",
+      "description": "N01: existing producer/contract owner must agree half-open instant and overlap semantics and add exact-end/DST tests; do not blindly prorate whole sessions."
+    },
+    {
+      "authorization": "Parent exact owner/claim required; no queue task/source write created",
+      "ownerDecision": "Partial-summary receipt explicitly leaves hook integrity separately owned; no exact paging fix owner found in queue.",
+      "id": "N02",
+      "finding": "DL-F02",
+      "description": "N02: explicit paging-integrity partial/failure with retained records and retry; never invent signal-cap provenance by simply setting truncated."
+    },
+    {
+      "authorization": "Parent exact owner/claim required; no queue task/source write created",
+      "ownerDecision": "Existing trust primitive already has state; narrow page/test integration, not completed summary/primitive redispatch.",
+      "id": "N03",
+      "finding": "DL-F03",
+      "description": "N03: consume existing blocked trust at page/section caller with explicit initial-deferred explanation; do not infer offline or discard good retained data."
+    },
+    {
+      "authorization": "Parent exact owner/claim required; no queue task/source write created",
+      "ownerDecision": "Completed timeline-access explicitly excludes library time-search; parent exact lib/caller/test extension required.",
+      "id": "N04",
+      "finding": "DL-F04",
+      "description": "N04: existing local haystack must match displayed seconds/timezone/component descriptions, preserving server scope, order and loaded counts."
+    },
+    {
+      "authorization": "Parent exact owner/claim required; no queue task/source write created",
+      "ownerDecision": "Shared formatter/caller integration needs explicit parent owner claim; no parallel formatter framework.",
+      "id": "N05",
+      "finding": "DL-F05",
+      "description": "N05: existing formatter owner needs locale-aware seconds capability; do not replace with minutes-only helper, lose seconds/DST identity, or translate technical ISO provenance. No unverified time_format preference is asserted."
+    },
+    {
+      "authorization": "Parent exact owner/claim required; no queue task/source write created",
+      "ownerDecision": "New narrow caller display need, not completed accessibility/table work. Percentage proof does not depend on unverified i18next number formatting.",
+      "id": "N06",
+      "finding": "DL-F06",
+      "description": "N06: reuse existing preference-aware percent/count display boundary, preserving raw percentages/SI/IDs. Keep reserved plural count numeric with separately formatted display text."
+    },
+    {
+      "authorization": "Parent exact owner/claim required; no queue task/source write created",
+      "ownerDecision": "Completed timeline-access fixes retained; do not reopen primitive work or alter shared token framework.",
+      "id": "N07",
+      "finding": "DL-F07",
+      "description": "N07: narrow caller below-md44px roles, then separately authorized native target/focus/layout proof."
+    },
+    {
+      "authorization": "Parent exact owner/claim required; no queue task/source write created",
+      "ownerDecision": "Existing page/copy owner boundary needs authorization; no new vehicle/scope framework.",
+      "id": "N08",
+      "finding": "DL-F08",
+      "description": "N08: parent decide scoped-permalink policy, pin effective vehicle/day or honestly disclose dynamic scope; preserve unrelated params. Timezone sharing policy explicit; do not add sensitive identities/locations or pretend local filters are shareable."
+    }
+  ],
+  "sourcePins": [
+    {
+      "sha256After": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "matches": true,
+      "sha256Before": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "path": ".github/copilot-instructions.md"
+    },
+    {
+      "sha256After": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "matches": true,
+      "sha256Before": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "path": ".github/instructions/react-frontend.instructions.md"
+    },
+    {
+      "sha256After": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "matches": true,
+      "sha256Before": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "path": ".github/instructions/unit-conversion.instructions.md"
+    },
+    {
+      "sha256After": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "matches": true,
+      "sha256Before": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "path": ".github/instructions/frontend-si-cutover.instructions.md"
+    },
+    {
+      "sha256After": "6987DD37F40669E7837B18664DB807BEDF877B3121A2E4370326F48F89549337",
+      "matches": true,
+      "sha256Before": "6987DD37F40669E7837B18664DB807BEDF877B3121A2E4370326F48F89549337",
+      "path": "web/src/api/hooks/useDayLog.ts"
+    },
+    {
+      "sha256After": "FFD12D302F01D216C87FC5A52AE21723F712F149EABB761100658085D24AA1A6",
+      "matches": true,
+      "sha256Before": "FFD12D302F01D216C87FC5A52AE21723F712F149EABB761100658085D24AA1A6",
+      "path": "web/src/features/vehicles/lib/daylog.ts"
+    },
+    {
+      "sha256After": "A089CDB1BC51EF73D33D51AC29BC15F7843517230150136DD7C1F17147D0F61F",
+      "matches": true,
+      "sha256Before": "A089CDB1BC51EF73D33D51AC29BC15F7843517230150136DD7C1F17147D0F61F",
+      "path": "web/src/features/vehicles/components/daylog/DayLogControls.tsx"
+    },
+    {
+      "sha256After": "35AECB03FE8FA89FEF89A888A7666987AD967232446BCC9904C856E138ED8810",
+      "matches": true,
+      "sha256Before": "35AECB03FE8FA89FEF89A888A7666987AD967232446BCC9904C856E138ED8810",
+      "path": "web/src/features/vehicles/components/daylog/DayLogSources.tsx"
+    },
+    {
+      "sha256After": "B9A0C201446B4F3AEC09B38168F3A42D8314377632DDDA82EB5190E3CCD6DAE2",
+      "matches": true,
+      "sha256Before": "B9A0C201446B4F3AEC09B38168F3A42D8314377632DDDA82EB5190E3CCD6DAE2",
+      "path": "web/src/features/vehicles/components/daylog/DayLogTimeline.tsx"
+    },
+    {
+      "sha256After": "8CE40340CA05E1E3B7A271F9A81CF8FE0980283706E668C98F762489CBADB1BA",
+      "matches": true,
+      "sha256Before": "8CE40340CA05E1E3B7A271F9A81CF8FE0980283706E668C98F762489CBADB1BA",
+      "path": "web/src/features/vehicles/components/operationalbrief-a-m/DayLogOperationalSummary.tsx"
+    },
+    {
+      "sha256After": "8BC1B7CBA27E69DD3992A2D94F03AFBF9069C97C6D3D329B417FB424839930E3",
+      "matches": true,
+      "sha256Before": "8BC1B7CBA27E69DD3992A2D94F03AFBF9069C97C6D3D329B417FB424839930E3",
+      "path": "web/src/features/vehicles/pages/DayLogPage.test.tsx"
+    },
+    {
+      "sha256After": "C2C9C3EC09D573B28EFA55D3C33E5BC806E97D49DA55585063DF161B504E5CA6",
+      "matches": true,
+      "sha256Before": "C2C9C3EC09D573B28EFA55D3C33E5BC806E97D49DA55585063DF161B504E5CA6",
+      "path": "web/src/api/hooks/useDayLog.test.ts"
+    },
+    {
+      "sha256After": "D49AA369C3A5A4E3BCFB1C67E8CA3A13F08F988D11DE6607EEBCC1BB54E40E75",
+      "matches": true,
+      "sha256Before": "D49AA369C3A5A4E3BCFB1C67E8CA3A13F08F988D11DE6607EEBCC1BB54E40E75",
+      "path": "web/src/features/vehicles/lib/daylog.test.ts"
+    },
+    {
+      "sha256After": "4AD28023D66B489D88D66688A2F19CDB2332D1929DF39AAC019CCF8499C65843",
+      "matches": true,
+      "sha256Before": "4AD28023D66B489D88D66688A2F19CDB2332D1929DF39AAC019CCF8499C65843",
+      "path": "web/src/features/vehicles/components/daylog/DayLogSources.test.tsx"
+    },
+    {
+      "sha256After": "9EDB6DD6B802C47D4D16954C290F8F624014617A387E3B53ECB7398DE51B3D82",
+      "matches": true,
+      "sha256Before": "9EDB6DD6B802C47D4D16954C290F8F624014617A387E3B53ECB7398DE51B3D82",
+      "path": "web/src/features/vehicles/components/daylog/DayLogTimeline.test.tsx"
+    },
+    {
+      "sha256After": "55837AFA37C2289758BF0831E22319462EB99A4D6815C08A01C1727C879EE8CB",
+      "matches": true,
+      "sha256Before": "55837AFA37C2289758BF0831E22319462EB99A4D6815C08A01C1727C879EE8CB",
+      "path": "web/src/features/vehicles/components/operationalbrief-a-m/DayLogOperationalSummary.test.tsx"
+    },
+    {
+      "sha256After": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "matches": true,
+      "sha256Before": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "path": "web/src/api/dataState.ts"
+    },
+    {
+      "sha256After": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "matches": true,
+      "sha256Before": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "path": "web/src/hooks/useDataState.ts"
+    },
+    {
+      "sha256After": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "matches": true,
+      "sha256Before": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "path": "web/src/hooks/useSelectedVehicle.ts"
+    },
+    {
+      "sha256After": "4DE9F4981D65173697E16DB705CA06B279E9CCB700AC6C98D0D27439F25D5F02",
+      "matches": true,
+      "sha256Before": "4DE9F4981D65173697E16DB705CA06B279E9CCB700AC6C98D0D27439F25D5F02",
+      "path": "web/src/lib/timezone.ts"
+    },
+    {
+      "sha256After": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "matches": true,
+      "sha256Before": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx"
+    },
+    {
+      "sha256After": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "matches": true,
+      "sha256Before": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "path": "web/src/hooks/useUnits.ts"
+    },
+    {
+      "sha256After": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "matches": true,
+      "sha256Before": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "path": "web/src/lib/unitConversion.ts"
+    },
+    {
+      "sha256After": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "matches": true,
+      "sha256Before": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "path": "web/src/lib/dateFormat.ts"
+    },
+    {
+      "sha256After": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "matches": true,
+      "sha256Before": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx"
+    },
+    {
+      "sha256After": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "matches": true,
+      "sha256Before": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "path": "web/src/features/onboarding/components/NoVehicleSelected.tsx"
+    },
+    {
+      "sha256After": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "matches": true,
+      "sha256Before": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "path": "web/vite.config.ts"
+    },
+    {
+      "sha256After": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "matches": true,
+      "sha256Before": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "path": "web/package.json"
+    },
+    {
+      "sha256After": "1A0D101A5838F5FC0E1B8B255E71C5BE49F42112904F3A81904663A5A6DC829B",
+      "matches": true,
+      "sha256Before": "1A0D101A5838F5FC0E1B8B255E71C5BE49F42112904F3A81904663A5A6DC829B",
+      "path": "internal/api/daylog/handler.go"
+    },
+    {
+      "sha256After": "19371ADE309F710AC594E8DA70FA321130F72D30D7A41843C7F92C5008626050",
+      "matches": true,
+      "sha256Before": "19371ADE309F710AC594E8DA70FA321130F72D30D7A41843C7F92C5008626050",
+      "path": "internal/api/daylog/events.go"
+    },
+    {
+      "sha256After": "39B4AE0B0AF30E3110CBFE504B6E2FE07031AFBB6D43186B3EF131BD2F950335",
+      "matches": true,
+      "sha256Before": "39B4AE0B0AF30E3110CBFE504B6E2FE07031AFBB6D43186B3EF131BD2F950335",
+      "path": "internal/database/daylog/repo.go"
+    },
+    {
+      "sha256After": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "matches": true,
+      "sha256Before": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "path": "web/src/lib/workspaceScope.ts"
+    },
+    {
+      "sha256After": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "matches": true,
+      "sha256Before": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "path": "web/src/components/ui/Button.tsx"
+    },
+    {
+      "sha256After": "2C687DDCF37022148906E67B891DDAEC5AEB7A6F18385A93E92DBA2F32095B40",
+      "matches": true,
+      "sha256Before": "2C687DDCF37022148906E67B891DDAEC5AEB7A6F18385A93E92DBA2F32095B40",
+      "path": "web/src/components/ui/Input.tsx"
+    },
+    {
+      "sha256After": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "matches": true,
+      "sha256Before": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "path": "web/src/components/layout/PageContainer.tsx"
+    },
+    {
+      "sha256After": "A8FA120B384518873E769E214494D0F840E6F9C854DDDDBEF7A2F10C55614B78",
+      "matches": true,
+      "sha256Before": "A8FA120B384518873E769E214494D0F840E6F9C854DDDDBEF7A2F10C55614B78",
+      "path": "web/src/features/vehicles/components/vehicle-management/managementData.ts"
+    },
+    {
+      "sha256After": "7CAD5CE5E8E6ACD8F8C50B257F3C941523FA875489291692980AE14CAEC14683",
+      "matches": true,
+      "sha256Before": "7CAD5CE5E8E6ACD8F8C50B257F3C941523FA875489291692980AE14CAEC14683",
+      "path": "internal/api/daylog/events_test.go"
+    },
+    {
+      "sha256After": "8FC555F57B47780A409084158789EB32B392565246A88472FBE5ECEC6DA3A0B2",
+      "matches": true,
+      "sha256Before": "8FC555F57B47780A409084158789EB32B392565246A88472FBE5ECEC6DA3A0B2",
+      "path": "internal/api/daylog/handler_test.go"
+    },
+    {
+      "sha256After": "E307F97EBD98E56819A73527E38E8A04CB084E7BA8B3DCE8F0B028AF1AF67B75",
+      "matches": true,
+      "sha256Before": "E307F97EBD98E56819A73527E38E8A04CB084E7BA8B3DCE8F0B028AF1AF67B75",
+      "path": "internal/database/daylog/repo_test.go"
+    },
+    {
+      "sha256After": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "matches": true,
+      "sha256Before": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "path": "internal/api/router.go"
+    },
+    {
+      "sha256After": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524",
+      "matches": true,
+      "sha256Before": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524",
+      "path": "web/src/api/queryPolicy.ts"
+    },
+    {
+      "sha256After": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "matches": true,
+      "sha256Before": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "path": "web/src/api/client.ts"
+    },
+    {
+      "sha256After": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "matches": true,
+      "sha256Before": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "path": "web/src/hooks/useDateFormat.ts"
+    },
+    {
+      "sha256After": "B61E99F1AEDD878BC422456906B3C04071C3416C53E2B9A517D67A0204310026",
+      "matches": true,
+      "sha256Before": "B61E99F1AEDD878BC422456906B3C04071C3416C53E2B9A517D67A0204310026",
+      "path": "web/src/components/ui/Table.tsx"
+    },
+    {
+      "sha256After": "38ADC5377A3808526CBCB578E66F30C9108FFF2AC8DD41174A33199E5BD5DE2B",
+      "matches": true,
+      "sha256Before": "38ADC5377A3808526CBCB578E66F30C9108FFF2AC8DD41174A33199E5BD5DE2B",
+      "path": "web/src/components/layout/CopyLinkButton.tsx"
+    },
+    {
+      "sha256After": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "matches": true,
+      "sha256Before": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "path": "web/src/components/motion/FadeIn.tsx"
+    },
+    {
+      "sha256After": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "matches": true,
+      "sha256Before": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "path": "web/src/hooks/useOperationalMetrics.tsx"
+    },
+    {
+      "sha256After": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "matches": true,
+      "sha256Before": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "path": "web/src/lib/metric-reference/formatMetric.ts"
+    },
+    {
+      "sha256After": "B14D53F2B61B368238A64F580F457400814235935F0C9AD408461A9E111E9490",
+      "matches": true,
+      "sha256Before": "B14D53F2B61B368238A64F580F457400814235935F0C9AD408461A9E111E9490",
+      "path": "docs/frontend-audits/audit-page-229.json"
+    },
+    {
+      "sha256After": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "matches": true,
+      "sha256Before": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "path": "web/src/i18n/en.json"
+    },
+    {
+      "sha256After": "BCA10AD642E9C5DBF00CE3A1803D001857328AC85719AD9E4BD87465CE79FDFC",
+      "matches": true,
+      "sha256Before": "BCA10AD642E9C5DBF00CE3A1803D001857328AC85719AD9E4BD87465CE79FDFC",
+      "path": "web/src/i18n/en/locale-vehicles.json"
+    },
+    {
+      "sha256After": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+      "matches": true,
+      "sha256Before": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+      "path": "web/src/components/data-display/DataFreshness.tsx"
+    },
+    {
+      "sha256After": "ADF1FB6AE258D169AE7BBFB68FA12F9593ABF44F7B2018399748BC2A974F38E4",
+      "matches": true,
+      "sha256Before": "ADF1FB6AE258D169AE7BBFB68FA12F9593ABF44F7B2018399748BC2A974F38E4",
+      "path": "web/src/features/vehicles/pages/DayLogPage.tsx"
+    },
+    {
+      "sha256After": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "matches": true,
+      "sha256Before": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "path": "web/src/App.tsx"
+    },
+    {
+      "sha256After": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "matches": true,
+      "sha256Before": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "path": "web/src/lib/routeRegistry.ts"
+    },
+    {
+      "sha256After": "EC8C6D42D5E93B3A9E1D8B151769E78B1766DB49BA30595B3F5F687DE11E384B",
+      "matches": true,
+      "sha256Before": "EC8C6D42D5E93B3A9E1D8B151769E78B1766DB49BA30595B3F5F687DE11E384B",
+      "path": "web/src/i18n/en/shell.json"
+    },
+    {
+      "sha256After": "F12336C510017FC79ED588E01D1DAA3C307F05D3FDC20A857FFCF6AA77FC9B0D",
+      "matches": true,
+      "sha256Before": "F12336C510017FC79ED588E01D1DAA3C307F05D3FDC20A857FFCF6AA77FC9B0D",
+      "path": "web/src/i18n/en/runtime-manifest.json"
+    },
+    {
+      "sha256After": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "matches": true,
+      "sha256Before": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "path": "web/src/api/types.ts"
+    }
+  ],
+  "guidelineChecks": {
+    "classifier": "First case-insensitive scan10 uppercase shared controls+2 non-query camelCase candidates; preserved and corrected case-sensitive rerun0/0",
+    "raw": "Exact grep commands/raw output/exits retained in log; narrow candidate regexes not parsers",
+    "backend": "SQL repo interpolation/fmtprintln scans0;15 fmt.Sprintf ID/error contexts not SQL;1 repo203 nil-pool panic wiring invariant explicitly expected by test, not operational panic(err);9 actual DB calls all ctx, tenth grep candidate r.URL.Query not DB.",
+    "correctedCounts": {
+      "directLibraryImport": 0,
+      "fetchUseEffect": 0,
+      "wholeDataEventsSourcesGate": 0,
+      "oldApiImport": 0,
+      "staticSameLineVarStyle": 0,
+      "simpleEnglishJSXText": 0,
+      "camelCaseQueryName": 0,
+      "lowercaseRawHTML": 0,
+      "doubleApiPrefix": 0
+    },
+    "pageContainer": "Resolved adapter and no-vehicle wrapper, not a missing wrapper",
+    "scope": "Seven core frontend production files, direct producer/repository only, NOT repository-wide"
+  },
+  "tests": {
+    "executed": 0,
+    "status": "NOTRUN",
+    "backend": "Three direct backend test files read/pinned only",
+    "limits": "72 manually expanded literal-table cases NOT runtime discovery. Page virtualizer mock mounts all rows; component jsdom fixture not native proof. Historical queue receipts not fresh passes.",
+    "failed": null,
+    "passed": null,
+    "authoredSourceOnly": [
+      "Page24 calls/25 expanded",
+      "Hook5/5",
+      "Lib8/8",
+      "Sources7/8",
+      "Timeline7/12",
+      "Summary12/14"
+    ],
+    "discovered": null,
+    "reason": "Strict two-artifact write boundary; runner cache/temp/setup writes not assumed safe. No tests/lint/TSC/build/native/real-data checks run.",
+    "skipped": null
+  },
+  "validation": {
+    "JSONParse": "Final native ConvertFrom-Json parse/count/pin verification performed below",
+    "failures": [
+      "Artifact command1504 rejected before execution: filename or extension too long (os error206), exit1; recovery split into smaller blocks",
+      "Obsolete PageLayout locator NOT FOUND; actual layout-reference adapter located",
+      "Absent baseline.verification/counts lookup printed null, not validation passes"
+    ],
+    "NOTRUN": [
+      "Vitest",
+      "ESLint",
+      "npx tsc --noEmit",
+      "build/full suites",
+      "browser/API/device/native QA",
+      "real event/identity/location requests"
+    ],
+    "rawCoverage": "Substantive audit check blocks/raw output/exits in log; bootstrap/few locator reads1090,1114,1115,1141,1197,1240,1267 and rejected long construction1504 remain transcript-only. Critical diagnostics repeated. No claim every startup read logged.",
+    "pins": "FINAL MATCH 58/58, drift0"
+  },
+  "release": {
+    "jsonArtifact": "docs/frontend-audits/phase6-qa-vehicles-day-log.json",
+    "logArtifact": "web/logs/phase6-qa-vehicles-day-log.log",
+    "sourceTestsCatalogGitWrites": 0,
+    "actualReleasedUtc": "2026-10-14T01:44:56.5631438Z",
+    "subagents": 0,
+    "servers": 0,
+    "onlyIntentionalWrites": [
+      "docs/frontend-audits/phase6-qa-vehicles-day-log.json",
+      "web/logs/phase6-qa-vehicles-day-log.log"
+    ],
+    "installs": 0,
+    "disposition": "Parent owns intake/exact claims/native proof; no source changes/process to integrate or stop",
+    "realRequests": 0,
+    "queueWrites": 0,
+    "activeCommands": []
+  },
+  "queueDedup": [
+    "phase5-page-vehicles-day-log current2014 commit8d8491072ebf1e6265e5e148a72513e1238921ad historical25",
+    "phase6-daylog-partial-summary current2037 commit76313d539f7cbd05271a5abed3e4b0ad2c88aee9 historical14",
+    "phase6-daylog-timeline-access current2038 commit5b6672ad80127aac1ab5a941913d8adc8c6bb737 historical12",
+    "phase6-daylog-sources-table current2039 commit3550e8093cacaab9059f45a5a93c73a9805c64ce historical8",
+    "Completed phase3-full-test-daylog-review-bounds-fixture not reopened; inventory integration reference is not a queue task. No exact paging/time-search queue owner found. These receipts are source-only/history, not fresh passes."
+  ],
+  "violationsByRule": [
+    {
+      "rule": "advertised-local-time-search",
+      "count": 1
+    },
+    {
+      "rule": "below-md-target-declaration",
+      "count": 1
+    },
+    {
+      "rule": "copied-effective-scope",
+      "count": 1
+    },
+    {
+      "rule": "exclusive-end-contract",
+      "count": 1
+    },
+    {
+      "rule": "initial-paused-trust",
+      "count": 1
+    },
+    {
+      "rule": "paging-integrity-trust",
+      "count": 1
+    },
+    {
+      "rule": "user-locale-clock-display",
+      "count": 1
+    },
+    {
+      "rule": "user-numeric-locale-precision",
+      "count": 1
+    }
+  ],
+  "filesWithMostPrimaryFindings": [
+    {
+      "file": "web/src/features/vehicles/components/daylog/DayLogTimeline.tsx",
+      "count": 3
+    },
+    {
+      "file": "web/src/features/vehicles/pages/DayLogPage.tsx",
+      "count": 2
+    },
+    {
+      "file": "web/src/api/hooks/useDayLog.ts",
+      "count": 1
+    },
+    {
+      "file": "web/src/features/vehicles/components/operationalbrief-a-m/DayLogOperationalSummary.tsx",
+      "count": 1
+    },
+    {
+      "file": "web/src/features/vehicles/lib/daylog.ts",
+      "count": 1
+    }
+  ]
+}

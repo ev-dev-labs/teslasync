@@ -1,0 +1,320 @@
+{
+  "item": "audit-page-138",
+  "page": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+  "routes": ["/navigation"],
+  "purpose": "Read-only Phase 0 audit of the mounted navigation page and its directly relevant presentation/data contracts.",
+  "primaryGoal": "Inspect the selected vehicle's current navigation, location and presence, compare recent speed/distance and presence history, and inspect route details and recorded locations.",
+  "sourceHash": "BDB98EA594DD59E33337CFD57F1CB490605C690BAF9C56BE14884395C24B915A",
+  "dataSources": [
+    {
+      "name": "Fleet selection",
+      "hook": "useSelectedVehicle and useVehicles",
+      "endpoint": "GET /api/v1/vehicles",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:46-78", "web\\src\\api\\hooks\\useVehicles.ts:73-80", "internal\\api\\router.go:3319-3320"],
+      "behavior": "URL vehicle_id, persisted selection and first fleet vehicle precedence; no page vehicle picker. Fleet request forwards AbortSignal, normalizes arrays and retains FAST stale time.",
+      "scope": "getWorkspaceRouteScope('/navigation') resolves vehicle=true, range=false from the inspected route sets. Preserve latest-200 history scope; do not imply an existing shared date range."
+    },
+    {
+      "name": "Current navigation/location",
+      "hook": "useLocationSnapshotLatest(vehicleId ?? 0, 15000)",
+      "endpoint": "GET /api/v1/location-snapshots/latest?vehicle_id={id}",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "backendOwner": "locationSnapshotHandler.Latest, implementation not inspected",
+      "evidence": ["web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx:176-186", "web\\src\\api\\hooks\\useVehicles.ts:491-497", "internal\\api\\router.go:4146-4149"],
+      "behavior": "location-latest key scoped by vehicle; enabled only for positive IDs, AbortSignal forwarded, 15-second polling. Page normalizes null to undefined before deriving live trust, and replaces content only for fatal errors.",
+      "unitEvidence": "Page comments identify speed_mph as m/s and miles_to_arrival as meters. These comments and consumer conversions are source evidence, not producer-unit verification; backend values were not exercised."
+    },
+    {
+      "name": "Recent location history",
+      "hook": "Page-local useQuery<LocationSnapshot[]>",
+      "endpoint": "GET /api/v1/location-snapshots?vehicle_id={id}&limit=200",
+      "owner": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+      "backendOwner": "locationSnapshotHandler.List, implementation not inspected",
+      "evidence": ["web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx:188-203", "internal\\api\\router.go:4146-4149"],
+      "behavior": "location-history key scoped by vehicle; enabled for non-null selection; forwards AbortSignal, inherits query defaults, no page polling override or date bounds. Latest 200 is the advertised source scope, not a complete trip or server-wide result.",
+      "orderingLimit": "Charts explicitly sort timestamps ascending; recent destinations deduplicate in response order. Server response ordering is unverified."
+    },
+    {
+      "name": "Independent arrival energy",
+      "hook": "useChargingTelemetryLatest(vehicleId ?? 0, 15000)",
+      "endpoint": "GET /api/v1/charging-telemetry/latest?vehicle_id={id}",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "backendOwner": "chargingTelemetryHandler.Latest, implementation not inspected",
+      "evidence": ["web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx:205-209", "web\\src\\api\\hooks\\useVehicles.ts:473-479", "internal\\api\\router.go:4127-4130"],
+      "behavior": "charging-telemetry-latest key scoped by vehicle; positive-ID enablement, signal forwarding, 15-second polling. expected_energy_pct_at_arrival is displayed as a percentage and is not derived from route history."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 5, "contract": "Aliases PageContainer props; forwards queries/dataSources/actions; w-full min-w-0 container. Existing shell remains header/workspace owner."},
+    {"name": "MapsOperationalBrief", "kind": "feature composite", "owner": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx", "line": 10, "contract": "title, description, scope, readonly StatMetric[], source label/DataState pairs, loading and optional onRetry; adapts raw metrics with useOperationalMetrics."},
+    {"name": "OperationalBrief", "kind": "shared composite", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 42, "contract": "Existing metrics, status, freshness, provenance, scope and actions; compact/loading and details drawer state. Theme-aware semantic tones at lines 63-68."},
+    {"name": "EmbeddedChart / ChartContainer", "kind": "chart composite", "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx", "line": 18, "contract": "Forwards ChartContainer props; embedded surface avoids nested chrome; defaults exportable/fullscreen=false. Existing ChartContainer data/dataColumns at lines 178-190 provide accessible data alternatives; chartKey supports persisted hidden-series state at lines 201-213."},
+    {"name": "DataTable", "kind": "shared interactive table", "owner": "web\\src\\components\\ui\\DataTable.tsx", "line": 184, "contract": "Stable tableId, columns, data, keyExtractor, pagination, compact, controlled sort; mobilePresentation and expandable/renderExpanded are existing detail-preserving contracts. mobileColumns alone hides omitted cells below md at lines 236-248 and 725."},
+    {"name": "FadeIn", "kind": "motion", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "line": 24, "contract": "Existing useMotionPreference honors reduced motion through initial=false and zero effective delay. Browser/OS behavior not exercised."},
+    {"name": "Existing category primitives", "kind": "primitives and feedback", "owner": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx", "line": 15, "contract": "LayoutCard, GlassPanel, Badge, Button, Text, Caption, TimeStamp, Skeleton, EmptyState, QueryError, AlertBanner and LiveStaleDataBanner are reused through category imports; their complete implementations were not audited."},
+    {"name": "Local RouteField / TrafficDelayBadge", "kind": "page-local presentation", "owner": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx", "line": 99, "contract": "Caption/value fields and traffic duration badge. Preserve unknown display and thresholds until an explicitly coordinated semantics correction."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+      "line": 494,
+      "rule": "MDC-033 / mission 7",
+      "detail": "Traffic delay repeats in route metrics, navigation details and the dedicated traffic card; the latter displays the duration twice as a large value and badge. Other route fields repeat intentionally in summary/detail.",
+      "fix": "Keep all three sections and meanings; reduce repeated visual emphasis, letting the summary orient and detailed panel supply interpretation rather than deleting source information.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedLines": [615, 802, 813, 816]
+    }
+  ],
+  "responsive": {
+    "verified": "source only",
+    "currentStrategy": "Status fields stack then use sm two-column/lg four-column grids; charts stack until xl; route details use md two-column/xl three-column; recent destinations span both md columns. All three tables explicitly select mobileColumns; charts are fixed 260px.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+        "line": 920,
+        "rule": "MDC-031 / MDC-043 / mission 17 preservation",
+        "detail": "Location history omits latitude, longitude and work below md; recent destinations omits time at line 885. No expandable/renderExpanded or mobilePresentation is supplied. DataTable hides omitted cells rather than providing a row-detail substitute.",
+        "fix": "Use the existing DataTable mobile presentation/detail API, or retain all columns with contained horizontal scrolling. Preserve every desktop field and controlled sort, IDs, pagination, filters and loaded-row actions.",
+        "owner": "page",
+        "confidence": "high",
+        "dependencyEvidence": ["web\\src\\components\\ui\\DataTable.tsx:236-248", "web\\src\\components\\ui\\DataTable.tsx:324-329", "web\\src\\components\\ui\\DataTable.tsx:725"],
+        "runtimeLimit": "Actual mobile reachability, overflow, long destinations and all ten specified widths unverified."
+      }
+    ],
+    "unverified": ["320/375/390/430/768/1024/1280/1440/1920/2560px", "allocated container widths", "RTL", "200% text", "long names", "touch target reachability", "dual-axis chart legibility"]
+  },
+  "accessibility": {
+    "verified": "source only",
+    "positiveEvidence": ["Localized section/figure labels; decorative action icons aria-hidden.", "Shared Button and DataTable reused rather than raw interactive elements.", "Persistent chart keys and hidden-series plumbing exist.", "Shared FadeIn reduced-motion branch exists."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+        "line": 677,
+        "rule": "MDC-034 / MDC-040 / mission 30",
+        "detail": "Both charts explicitly waive accessible tables and omit EmbeddedChart data/dataColumns. History is capped at 200, not an unbounded cloud. The visible history table lacks speed, remaining distance and HomeLink, so it is not an equivalent alternative.",
+        "fix": "Pass source-derived chartData/presenceChartData and localized dataColumns to existing EmbeddedChart, with null-aware unit/presence formatters. Keep ariaLabel, series names, chart keys and hidden-series behavior.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedLines": [678, 762, 763],
+        "dependencyEvidence": ["web\\src\\components\\charts\\ChartContainer.tsx:168-190"]
+      }
+    ],
+    "unverified": ["keyboard and focus order", "legend keyboard interactions", "screen-reader output", "details drawer focus restoration", "effective text/UI contrast", "forced colors", "OS reduced motion"]
+  },
+  "states": {
+    "loading": "Navigation, history charts and tables have contextual Skeletons. Operational briefs receive loading independently or combined. Fleet loading without a known selected ID enters the no-vehicle branch; PageLayout receives the fleet query, but mounted ordering has not been tested.",
+    "empty": "No vehicle offers Manage vehicles. Missing current route offers vehicle-navigation guidance. History, presence, destinations, waypoints and snapshots have dedicated empty messages. Route detail headings remain mounted for a selected vehicle.",
+    "error": "fatalError alone selects QueryError for current/history source sections with independent retry. Charging fatal failure is aggregated through PageLayout/route brief rather than a dedicated body retry.",
+    "retained": "deriveDataState retains payload on refresh failure; operational brief summarizes stale/blocked sources with receipt freshness. Global LiveStaleDataBanner and PageLayout dataSources are also supplied.",
+    "offline": "DataState detects fetchStatus paused; helper maps refresh-blocked to retained. Actual offline UI and request recovery are unverified.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+        "line": 576,
+        "rule": "MDC-025 / MDC-026 / mission 25",
+        "detail": "hasActiveRoute is false when latest is absent, so the status action says Inactive during pending/fatal/unavailable navigation. The empty message also conflates an unavailable latest snapshot with an observed vehicle having no active route.",
+        "fix": "Derive the label from latestState first; reserve Inactive for an observed snapshot without a destination, and explicitly retain unknown/loading/unavailable/error meanings and retry.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedLines": [211, 622]
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+        "line": 491,
+        "rule": "MDC-026 / unknown is not measured data",
+        "detail": "Charging nullable data and successful empty history are passed to deriveDataState without unavailable normalization. deriveDataState treats any defined payload (including null/[]) as hasData; MapsOperationalBrief can report available despite absent arrival/history evidence.",
+        "fix": "Normalize source-empty semantics explicitly using existing unavailable options and update the feature brief to distinguish unavailable/partial statuses instead of relying only on hasData. Do not discard retained data on refresh error.",
+        "owner": "shared",
+        "confidence": "high",
+        "relatedLines": [201, 562],
+        "dependencyEvidence": ["web\\src\\api\\dataState.ts:105-110", "web\\src\\api\\dataState.ts:195-198", "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx:23-28"]
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+        "line": 476,
+        "rule": "MDC-026 / mission 24",
+        "detail": "The page Refresh action retries latest and history only, not the independent arrival-energy source shown in its summary. The two brief calls also omit their existing onRetry prop.",
+        "fix": "Clarify refresh scope or refresh all three sources, and wire independent charging recovery without resetting good neighboring data. Retain the existing two-source refresh behavior until deliberate correction is tested.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedLines": [557, 642]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+      "line": 483,
+      "rule": "MDC-010 / MDC-012 / mission 5-7",
+      "detail": "Traffic magnitude uses fixed emerald/amber/rose-300 text with a bold 3xl treatment; presence and waypoint cells also use fixed light accent colors (lines 337, 351, 387-391). Their hierarchy and composed light-theme contrast are unverified. No neon/glow class was found in this page.",
+      "fix": "Use existing theme-aware semantic text/tone tokens and MetricValue roles; prefer restrained neutral presentation for routine values and semantic emphasis for actual warnings. Preserve all status text, charts and user palette choices.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedLines": [337, 351, 387, 813],
+      "referenceOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx:63-68"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+      "line": 105,
+      "rule": "MDC-025 / coherent semantic emphasis",
+      "detail": "TrafficDelayBadge marks positive delays below 300s success, while the large traffic text marks every positive delay up to 300s warning. At 301-900s the text is danger and badge warning. Repeated values carry inconsistent semantic tones.",
+      "fix": "Reconcile the local semantic mapping once and reuse it for both renderers, preserving raw delay and unknown/zero distinction; avoid introducing a new application-wide status registry.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedLines": [483, 813, 816]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+      "line": 188,
+      "rule": "MDC-002 / mission 33",
+      "detail": "History query is defined directly in the 938-line page while the latest sources use domain hooks. Column renderers, sorting, chart projections and metric contracts also live in this file.",
+      "fix": "Move the unchanged history query into its existing domain hook owner under a separately assigned API scope, retaining key, enablement, signal, 200 limit and inherited policy. Extract page-local chart/table presentation only if it improves clarity; retain complete section totals.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+      "line": 317,
+      "rule": "MDC-045 / measured zero differs from unknown",
+      "detail": "History independently renders latitude=0 or longitude=0 as missing, although current location accepts one zero coordinate. Current validity checks type and the (0,0) pair but not finite values or geographic bounds.",
+      "fix": "Resolve the existing source's (0,0) sentinel policy explicitly; consistently preserve valid equator/prime-meridian values, reject invalid coordinates and distinguish missing values without guessing producer behavior.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedLines": [214, 328]
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+      "line": 495,
+      "rule": "MDC-045 / SI contract evidence boundary",
+      "detail": "ETA is described and handled as source minutes (multiply by 60 for the operational metric; divide by 60 to retain original display). LocationSnapshot still exposes speed_mph/miles_to_arrival/minutes_to_arrival at types lines 2282-2286. The producer contract was not inspected, so this audit cannot certify SI units or authorize multiplying canonical seconds.",
+      "fix": "Have the API/SI owner verify and reconcile producer, schema and hook contracts before any field rename/conversion change. Preserve present wire/cache values and display behavior during presentation-only adoption; do not add another compatibility adapter.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedLines": [162, 269, 295, 608]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": ["Preserve mobile hidden fields through existing detail presentation", "Restore accessible chart data alternatives", "Separate unavailable navigation from inactive and normalize empty source trust"],
+    "next": ["Reconcile traffic tones and lower repeated emphasis", "Verify producer SI and coordinate semantics", "Extract only unchanged page-local data/presentation responsibilities"],
+    "runtimeAcceptance": "pending"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "MapsOperationalBrief source-empty trust handling",
+      "existingOwnerFile": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx",
+      "owner": "shared",
+      "file": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx",
+      "line": 23,
+      "rule": "MDC-026",
+      "detail": "Source-defined unavailable/partial states are not considered by current available-status selection.",
+      "fix": "Extend this existing feature composite's status interpretation, not its visual system.",
+      "confidence": "high",
+      "props": "Keep sources: readonly {label: string; state: DataState<unknown>}[], metrics, scope, loading and optional onRetry unchanged; consume DataState.status in addition to hasData.",
+      "variants": ["Existing compact OperationalBrief only; no new surface or universal status registry"],
+      "states": ["initial/loading", "unavailable", "partial", "available", "retained refresh failure", "offline/paused"],
+      "usedBy": ["web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx:557 route metrics", "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx:642 location status"],
+      "dependsOn": ["Page/API owner explicitly normalizing empty/null source results via existing deriveDataState options", "Existing web\\src\\api\\dataState.ts DataState semantics", "Existing OperationalBrief statusLabel/statusTone and raw metric contract"],
+      "acceptance": "Source-empty is not described as available; partial source failure keeps independent metrics and prior receipts; refresh errors retain data; no new defaults or queries.",
+      "scopeLimit": "Other consumers of this helper were not inspected; its owner must assess them before changing shared semantics."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+      "line": 483,
+      "rule": "MDC-002 / MDC-025",
+      "detail": "Page-local traffic text tone logic competes with the local TrafficDelayBadge thresholds at line 105.",
+      "fix": "Share one local interpretation and reuse current Badge/Text primitives.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "BDB98EA594DD59E33337CFD57F1CB490605C690BAF9C56BE14884395C24B915A",
+    "hashAlgorithm": "SHA-256 of original page bytes",
+    "currentLineCount": 938,
+    "pageSpecificInspectedCompositeLineCount": 62,
+    "counts": {"topLevelSelectedVehicleBands": 6, "namedContentSections": 9, "operationalBriefs": 2, "layoutCards": 7, "emptyVehicleGlassPanels": 1, "embeddedCharts": 2, "dataTables": 3, "routeMetrics": 5, "locationMetrics": 6},
+    "sections": [
+      {"name": "Route metrics", "line": 557, "count": 1, "content": ["remaining distance", "ETA", "traffic delay", "positive-measured average speed", "independent expected arrival energy"]},
+      {"name": "Navigation status", "line": 573, "count": 1, "content": ["active/inactive badge", "route last updated", "destination", "ETA", "distance", "traffic badge", "missing GPS information"]},
+      {"name": "Location status", "line": 642, "count": 1, "content": ["latitude", "longitude", "GPS fix", "heading/cardinal", "home/HomeLink", "work", "source receipt/provenance"]},
+      {"name": "Speed profile", "line": 659, "count": 1, "content": ["speed and remaining-distance area series", "independent axes/units", "tooltip", "legend", "null gaps"]},
+      {"name": "Home / work presence", "line": 748, "count": 1, "content": ["home", "work", "HomeLink step series", "yes/no axis", "tooltip", "legend", "null gaps"]},
+      {"name": "Route traffic delay", "line": 802, "count": 1, "content": ["duration value", "threshold badge"]},
+      {"name": "Route waypoints", "line": 825, "count": 1, "content": ["name", "type", "distance", "value filters", "pagination"]},
+      {"name": "Recent destinations", "line": 868, "count": 1, "content": ["time", "destination", "distance", "ETA", "unique names capped at 20", "pagination"]},
+      {"name": "Location history", "line": 900, "count": 1, "content": ["timestamp", "latitude", "longitude", "home", "work", "destination", "controlled sorting", "pagination"]},
+      {"name": "No selected vehicle", "line": 543, "count": 1, "content": ["selection guidance", "Manage vehicles link to /vehicles"]}
+    ],
+    "actions": [
+      {"name": "Header vehicle selection", "owner": "useSelectedVehicle", "behavior": "Retain URL/store/fleet fallback and shared workspace ownership."},
+      {"name": "Refresh", "line": 535, "behavior": "Currently refetches latest and history; charging remains independently polled."},
+      {"name": "Manage vehicles", "line": 548, "behavior": "Navigates to /vehicles from no-selection empty state."},
+      {"name": "Latest/history retries", "line": 596, "behavior": "Existing QueryError buttons refetch only the affected source."},
+      {"name": "Operational brief details", "owner": "OperationalBrief", "behavior": "Retain shared details drawer and source explanations; browser behavior unverified."},
+      {"name": "Legend toggles", "line": 678, "behavior": "Keep nav-speed-history and nav-home-work-presence identities and all hidden-series keys speed/miles/home/work/homelink."},
+      {"name": "Table actions", "line": 839, "behavior": "Retain all tableId identities, waypoint value filtering, pagination, shared persisted controls and any currently exposed loaded-row export actions; no full-result export capability inferred."},
+      {"name": "Location sorting", "line": 431, "behavior": "Initial time descending; same column reverses direction, newly selected column starts ascending."}
+    ],
+    "tableIds": ["maps:navigation-waypoints", "maps:navigation-recent-destinations", "maps:navigation-location-history"],
+    "dataBehavior": [
+      "History limit 200, scoped vehicle keys, existing enablement/cancellation and independent latest/charging 15-second polls.",
+      "Average is computed from positive reported SI speeds; measured history without positives returns zero, missing history stays unknown. Do not silently alter calculation.",
+      "Chart projections sort ascending timestamps and preserve null signal gaps; presence true/false become 1/0, missing remains null.",
+      "Recent destinations use first encountered unique nonempty destination, capped at 20; retain ordering pending backend verification.",
+      "buildWaypoints currently emits only one destination from latest.destination_name; do not invent supercharger stops or unavailable metadata.",
+      "SI-aware conversion remains at display boundary, saved distance/speed/number/duration preferences survive, heading normalization wraps negative degrees.",
+      "Keep independent route/history/charging receipt/provenance, retained-data error behavior, localization keys, route identity and all empty/error guidance.",
+      "No chart export/fullscreen props are enabled by this page; EmbeddedChart defaults both false. Do not claim existing chart export/zoom functionality."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Bounded read-only source inspection, targeted pattern counts and SHA-256; no Git, application requests, mutation, build, lint or project typecheck.",
+    "checks": [
+      {"command": "Get-FileHash web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx -Algorithm SHA256", "exitCode": 0, "output": "BDB98EA594DD59E33337CFD57F1CB490605C690BAF9C56BE14884395C24B915A"},
+      {"command": "Python source-only regex counts via PowerShell here-string", "exitCode": 0, "output": "Page lines: 938\ninline style attributes: 0\nraw restricted controls: 0\ndirect restricted library imports: 0\nlegacy API imports: 0\nneon classes: 0\nLayoutCard: 7\nGlassPanel: 1\nOperational briefs: 2\nEmbeddedChart: 2\nDataTable: 3"},
+      {"command": "Initial PowerShell regex-count expression", "exitCode": 1, "output": "ParserError: Unexpected token ']' in expression or statement.", "resolution": "Replaced with Python source-only regex counting; heartbeat updated successfully with replacement command."},
+      {"command": "bash .github\\skills\\audit-violations\\audit.sh [page]", "status": "NOTRUN", "reason": "Inspected script includes project-wide npx tsc --noEmit; assignment prohibits heavy validation. Scoped source counts used instead; no full audit pass claimed."}
+    ],
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified except source associations/props",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Route existence inspected, handler behavior/order/freshness and wire units unverified.",
+    "ownership": "Only report and heartbeat authorized for writes; all source/shared/route/catalog files read-only. Existing shared API usage does not constitute acceptance.",
+    "sourceSnapshot": "Findings and line citations describe inspected source; concurrent work is not frozen."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx",
+    "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\signalCatalog.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-138.json", ".agent-status\\audit-page-138.txt"]
+}

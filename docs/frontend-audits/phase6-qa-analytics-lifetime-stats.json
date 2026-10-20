@@ -1,0 +1,794 @@
+{
+  "item": "phase6-qa-analytics-lifetime-stats",
+  "status": "DONE",
+  "delivery": "source-only QA report complete WITH findings; NOT whole-page PASS",
+  "createdAtUtc": "2026-10-13T20:03:14.2317473Z",
+  "repository": "D:\\repos\\teslasync",
+  "branch": "fix/dashboard-followups (assignment context; no Git command run)",
+  "page": "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx",
+  "routes": [
+    "/lifetime-stats",
+    "/analytics/lifetime -> /lifetime-stats"
+  ],
+  "purpose": "All-time selected-vehicle driving/charging aggregates, contextual comparisons, records and achievements with separately opt-in AI questions.",
+  "primaryGoal": "Review lifetime progress without pretending a period range or partial source is complete.",
+  "queuePreflight": {
+    "dependency": "phase5-page-analytics-lifetime-stats",
+    "dependencyStatus": "[x]",
+    "dependencyLine": 1657,
+    "matchingExistingQaRows": 1,
+    "qaStatus": "[ ]",
+    "file": "migration-queue.md",
+    "qaReportPreviouslyExists": false,
+    "disposition": "Existing task only; no duplicate completed QA, remigration or queue edit.",
+    "taskLogPreviouslyExists": false,
+    "qaLine": 274
+  },
+  "instructionsRead": [
+    "docs\\orchestrator-loop.md (sole loop, worker contract and remaining sections)",
+    "migration-queue.md current phase, QA worker contract and exact rows",
+    "docs\\session-handoff.md current conventions",
+    "docs\\frontend-design-contract.md architecture/state/numeric/SI/privacy/responsive/a11y/evidence sections",
+    "docs\\frontend-mission.md principles/audit/layout/responsive/states/accessibility/data/performance/definition-of-done sections",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md"
+  ],
+  "supersededReferencesRead": [
+    "agent-loop-playbook.md",
+    "shared-library-loop.md"
+  ],
+  "dataSources": [
+    {
+      "hook": "useLifetimeStats",
+      "sideEffects": "GET handler evaluates/persists achievements and emits SSE; no request invoked.",
+      "route": "internal\\api\\router.go:3210,3941",
+      "contract": "Optional encoded snake_case vehicle_id; query key includes vehicle; signal forwarded; STALE_TIMES.SLOW. No date bounds: actual completed-drive/charge all-time SQL, not dated contract. Undefined vehicle can request fleet totals during resolution.",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "path": "/analytics/lifetime",
+      "wireOwner": "internal\\api\\lifetime\\handler.go",
+      "units": "Actual wire: km, km/h, hours, kWh, Wh/km, kg; preserve these known payloads. Page restores meters/m/s and briefs restore Wh/Wh-per-meter only at existing display boundaries; no guessed SI cutover.",
+      "line": 261
+    },
+    {
+      "contract": "Existing URL/store/fleet selection and header picker retained; no duplicate picker.",
+      "hook": "useSelectedVehicle -> useVehicles",
+      "path": "/vehicles",
+      "route": "internal\\api\\router.go:3362-3363"
+    },
+    {
+      "contract": "Explicit opt-in POST, positive vehicle scope, trimmed <=1024 character question, scopeKey abort/reset; no Ask or stream executed.",
+      "hook": "AILifetimeStatsQA -> useAiStream",
+      "path": "/ai/analytics/lifetime/qa",
+      "route": "internal\\api\\router.go:5086 + internal\\api\\ai_routes.go:134,371"
+    }
+  ],
+  "scopeContract": {
+    "vehicle": true,
+    "range": false,
+    "route": "/lifetime-stats",
+    "evidence": "C03 getWorkspaceRouteScope; workspaceScope.ts:23-76,153-167; WorkspaceHeader.tsx:34-35",
+    "bothDateBounds": "NOT APPLICABLE: actual all-time hook/backend. Do not add date picker, useRangeState or invented start/end parameters."
+  },
+  "components": {
+    "layout": [
+      "PageLayout -> PageContainer",
+      "Section",
+      "CardGrid",
+      "LayoutCard",
+      "SourceContent",
+      "Grid"
+    ],
+    "display": [
+      "OperationalBrief",
+      "AnimatedNumber",
+      "DataFreshnessAuto",
+      "Currency",
+      "KVList",
+      "MetricBar",
+      "ProgressRing"
+    ],
+    "ui": [
+      "GlassPanel",
+      "Text",
+      "Caption",
+      "Icon",
+      "HelpTooltip",
+      "Textarea"
+    ],
+    "feature": [
+      "LifetimeBrief (mounted as LifetimeKeyStats)",
+      "LifetimeContextBrief",
+      "SectionCard",
+      "HeroChip",
+      "SavingsBar",
+      "RecordCard",
+      "AchievementBadge"
+    ],
+    "feedbackAndMotion": [
+      "Skeleton",
+      "EmptyState",
+      "QueryError",
+      "FadeIn",
+      "StaggerContainer",
+      "StaggerItem"
+    ]
+  },
+  "confirmedFindings": [
+    {
+      "priority": "P1",
+      "rule": "source-value-suppression",
+      "confidence": "source-confirmed",
+      "repro": "A vehicle with completed charging sessions costing 25 and no completed positive-distance drives returns total_charging_cost=25 and gas_equivalent_cost=0. Existing lifetimeSectionState({hasData:true,isLoading:false,isError:false,empty:true}) returns empty; no runtime/API invocation was made.",
+      "id": "LS-01",
+      "file": "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx",
+      "fix": "Keep the savings section and each supplied scalar visible, with explicit unavailable comparison explanation when gasoline denominator is zero; do not replace electric cost with an empty panel.",
+      "needs": "One narrowly owned page correction and covering case for charging-only lifetime data; shared SourceContent behavior need not change.",
+      "mechanism": "A populated lifetime payload with gas_equivalent_cost <= 0 selects empty. SourceContent replaces the whole savings body, including known total_charging_cost, instead of only declining a ratio/comparison.",
+      "owner": "page",
+      "related": [
+        "web\\src\\features\\analytics\\components\\lifetime-modernization\\sourceState.ts:12",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:56",
+        "internal\\api\\lifetime\\handler.go:224-266"
+      ],
+      "line": 254
+    },
+    {
+      "priority": "P1",
+      "rule": "inconsistent-paused-trust",
+      "confidence": "source-confirmed",
+      "repro": "C03 existing-function reproduction: retained paused source => stale, isRefreshBlocked=true, refreshError=null, page section retained; brief error=null branch => Returned evidence. Initial paused source => isRefreshBlocked=true but page section empty.",
+      "id": "LS-02",
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx",
+      "fix": "Thread the already-derived DataState to the two mounted brief adapters and use its fatal/retained/blocked/refreshing/age distinctions; initial pause is not authoritative empty. Preserve all retained values and localized individual retry.",
+      "needs": "One explicit page/direct-brief trust scope; any freshness public API change needs the existing shared owner, not a page-local engine.",
+      "mechanism": "Brief status derives only loading, stats and error. Retained fetchStatus=paused/error=null therefore says Returned evidence, while page deriveDataState says stale/isRefreshBlocked. Initial paused/no-payload isLoading=false becomes empty rather than paused/unresolved. DataFreshnessAuto does not accept or forward fetchStatus, so it cannot explain blocked refresh.",
+      "owner": "page/direct-support; shared freshness owner if API expansion is needed",
+      "related": [
+        "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeBrief.tsx:56-59",
+        "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx:67-83",
+        "web\\src\\api\\dataState.ts:200-246",
+        "web\\src\\components\\data-display\\DataFreshness.tsx:282-338"
+      ],
+      "line": 73
+    },
+    {
+      "priority": "P2",
+      "rule": "display-preference-bypass",
+      "confidence": "source-confirmed",
+      "repro": "For avg_efficiency_wh_km=200 and distance=mi, the existing convertEfficiencyFromSI returns 321.86879999999996 Wh/mi; mounted formatter returns 200 Wh/km under both mi and km preferences (C03).",
+      "id": "LS-03",
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx",
+      "fix": "Reuse existing preference-aware efficiency conversion at the display boundary and interpolate the matching unit into help; keep raw wire Wh/km and StatMetric Wh/m unchanged.",
+      "needs": "One mounted LifetimeContextBrief correction; any new interpolation copy is separately parent-owned catalog integration, not a new converter or SI migration.",
+      "mechanism": "The efficiency display formatter always multiplies Wh/m by 1000 and labels Wh/km. formatMetric invokes specialist formatter before its default preference conversion. The distance preference therefore changes headline/records but not activity efficiency or its fixed Wh/km help.",
+      "owner": "page/direct-support",
+      "related": [
+        "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx:18,59",
+        "web\\src\\lib\\metric-reference\\formatMetric.ts:57-62,92-101",
+        "web\\src\\lib\\unitConversion.ts:256-262",
+        "web\\src\\hooks\\useUnits.ts:94-100"
+      ],
+      "line": 60
+    },
+    {
+      "priority": "P2",
+      "rule": "hardcoded-string",
+      "confidence": "source-confirmed",
+      "repro": "Select a non-English locale with achievement id first-drive and most_active_day_of_week=Monday. Source routes First Drive/Complete your first drive/Monday directly to visible or accessible output. C07 counted 17 fixed English achievement definitions. No locale was mounted.",
+      "id": "LS-04",
+      "file": "web\\src\\features\\analytics\\components\\AchievementBadge.tsx",
+      "fix": "Localize known achievement IDs and known weekday identities through existing catalog conventions while retaining unknown/source text fallback, IDs, descriptions, targets and progress. Do not translate arbitrary user data or guess currency/units from English achievement prose.",
+      "needs": "Exact AchievementBadge and LifetimeContextBrief adoption plus separately owned canonical/split catalog entries. One deduplicated i18n cause with three visible rendering sites (name, description, weekday), not a count of every returned badge.",
+      "mechanism": "Backend-defined English achievement names/descriptions are rendered verbatim, including the icon accessible label. Most active weekday also renders the backend English day string as a text metric. These are fixed domain vocabulary, not user-authored free text; t() around surrounding labels does not translate them.",
+      "owner": "page/direct-support + catalog/integration",
+      "related": [
+        "web\\src\\features\\analytics\\components\\AchievementBadge.tsx:45,48,100",
+        "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx:52",
+        "internal\\api\\lifetime\\handler.go:92-113,305-307"
+      ],
+      "line": 95
+    },
+    {
+      "priority": "P2",
+      "rule": "unknown-zero",
+      "confidence": "source-confirmed",
+      "repro": "No completed positive-distance drives makes GROUP BY hour return no row. The error branch leaves mostActiveHour=0; response JSON includes most_active_hour=0; mounted activity formatter yields 0:00 although no active hour exists.",
+      "id": "LS-05",
+      "file": "internal\\api\\lifetime\\handler.go",
+      "fix": "The endpoint/type owner must distinguish absent/failed hour evidence from real zero, e.g. explicit nullable hour or existing source availability metadata; frontend then keeps the metric shell with unknown display. Do not synthesize timestamps or timezone-adjust an hour without a documented producer zone.",
+      "needs": "A separate narrow endpoint/types/consumer contract fix preserving actual midnight. This audit does not change or guess the current wire contract.",
+      "mechanism": "mostActiveHour defaults to 0 and changes only when the aggregate query succeeds. No drives or a failed hour query therefore emits 0, indistinguishable from genuinely measured midnight. LifetimeContextBrief validates it as a nonnegative identifier and formats 0:00.",
+      "owner": "backend/API integration; frontend is consumer",
+      "related": [
+        "internal\\api\\lifetime\\handler.go:309-322,419",
+        "web\\src\\api\\hooks\\useAnalytics.ts:249",
+        "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx:53-54"
+      ],
+      "line": 293
+    },
+    {
+      "priority": "P1",
+      "rule": "gas-unit-calculation",
+      "confidence": "source-confirmed",
+      "repro": "Synthetic source reasoning: total_distance_km=40.2335, mpg=25, price_per_unit=2, gas_unit=liter gives exactly one gallon using this endpoint factor. Endpoint gasoline cost=2 rather than price for one gallon expressed in liters; the existing display pricing path multiplies by the established gallons-to-liters constant. This was not a server/runtime test.",
+      "id": "LS-06",
+      "file": "internal\\api\\lifetime\\handler.go",
+      "fix": "Have the existing lifetime calculation owner honor the actual persisted gas_unit using the existing canonical factor, with explicit gallon/liter parity cases. Preserve response fields, all-time vehicle scope and source calculations; do not recalculate authoritative savings in the page.",
+      "needs": "A separately owned surgical lifetime backend costing correction and covering tests; no page adapter, source write, real API request or guessed unit migration authorized here.",
+      "mechanism": "Lifetime savings reads gas_price_per_unit and gas_efficiency_mpg, computes gallons, then directly multiplies by price. It never reads gas_unit. Existing frontend settings and estimateGasCost explicitly support liter pricing and multiply gallons by GALLONS_TO_LITERS.",
+      "owner": "backend/API integration",
+      "related": [
+        "internal\\api\\lifetime\\handler.go:244-266",
+        "web\\src\\hooks\\useFormatting.ts:77-87",
+        "web\\src\\api\\types.ts:451"
+      ],
+      "line": 261
+    },
+    {
+      "priority": "P2",
+      "rule": "decorative-loop",
+      "confidence": "source-confirmed decorative-loop class; native motion unverified",
+      "repro": "Source branch for unlocked=false and progress=0.9 selects animate-pulse. OS prefers-reduced-motion has a global CSS suppression and is an acceptable exception; no claim that OS reduced motion fails. Saved low-bandwidth preference is not consumed by this component.",
+      "id": "LS-07",
+      "file": "web\\src\\features\\analytics\\components\\AchievementBadge.tsx",
+      "fix": "Use static semantic near-complete emphasis, preserving percentage/unlocked meaning and the separate three-second deep-link cue; if motion remains, use existing preference and bounded lifecycle.",
+      "needs": "One AchievementBadge-only motion correction. Native duration/appearance checks remain NOTRUN.",
+      "mechanism": "Every locked achievement at progress >=0.8 continuously receives animate-pulse without a bounded duration or the existing low-bandwidth motion preference. This is decorative looping, not a transient success/loading cue.",
+      "owner": "feature component",
+      "related": [
+        "web\\src\\features\\analytics\\components\\AchievementBadge.tsx:41-43",
+        "web\\src\\index.css:1434-1447,1468",
+        "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx:100,115-119"
+      ],
+      "line": 58
+    }
+  ],
+  "unpromotedCandidates": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\lifetime-modernization\\SavingsBar.tsx",
+      "kind": "native/visual/theme/contrast",
+      "id": "CAND-01",
+      "needs": "Authorized native synthetic theme/contrast review; no palette edits here.",
+      "line": 8,
+      "detail": "Fixed EV/GAS palette, fixed green environmental ring and yellow/white achievement treatments need mounted theme/contrast review. Source colors alone do not prove measured contrast/geometry failure."
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\AchievementBadge.tsx",
+      "kind": "partial-payload robustness",
+      "id": "CAND-02",
+      "needs": "Confirm supported partial/invalid contract before a new corrective scope.",
+      "line": 41,
+      "detail": "Null progress coalesces to 0 and NaN/Infinity would survive some arithmetic. Current Go endpoint supplies safeFloat non-null progress. No actual current wire violation established; do not promote a guessed nullable migration."
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx",
+      "kind": "time presentation/integration unknown",
+      "id": "CAND-03",
+      "needs": "Confirm producer timezone and supported aggregate-hour display contract.",
+      "line": 54,
+      "detail": "Peak hour uses raw hour:00 and backend does not return its SQL timezone or an instant. Native locale/12-24h appearance and producer zone remain unverified. Do not manufacture a timestamp or guess timezone conversion."
+    },
+    {
+      "file": "internal\\api\\lifetime\\handler.go",
+      "kind": "product sign semantics",
+      "id": "CAND-04",
+      "needs": "Confirm savings semantics and retain signed raw net difference if required without silently changing legacy wire/achievement semantics.",
+      "line": 263,
+      "detail": "Known source behavior clamps negative gasoline-minus-electric delta to zero. Frontend does not remove an incoming negative financial value. Whether total_savings intentionally means positive benefit or must be signed net difference needs product/integration confirmation; no automatic clamp removal authorized."
+    }
+  ],
+  "calculations": {
+    "knownDisplayConversions": "C03 km1.609344 -> mi1; km/h96.56064 -> mph60; preferred efficiency 200Wh/km -> 321.86879999999996Wh/mi.",
+    "denominatorGuards": "Achievement target>0 guard; SavingsBar max=Math.max(evCost,gasCost,1) prevents zero scale. Page zero gas-cost empty gate is data suppression LS-01, not division-by-zero.",
+    "currency": "Existing formatCurrency/Currency retain saved symbol, locale and precision; no ISO code guessed from symbol.",
+    "savings": "Gas estimate uses mpg/gas_price; confirmed liter-unit mismatch LS-06. Negative delta clamp is documented separately as unpromoted sign/product candidate.",
+    "comparisons": "Earth denominator40075km; Moon384400km; tree equivalence21kg; home30kWh/day; road days from measured drive duration. These are estimates/context, not live observations.",
+    "averageEfficiency": "handler.go:202-215 arithmetic AVG of eligible completed per-drive Wh/km (distance>1609.344m, positive known energy), not distance-weighted ratio of total energy/total distance. Zero means no eligible efficiency to frontend. Preserve definition; no guessed reweighting."
+  },
+  "states": {
+    "refresh": "Header manual refetch and source recovery callbacks preserved; runtime refresh action NOTRUN.",
+    "fatal": "deriveDataState fatalError only without data; page SectionCard/SourceContent fatal recovery remains local.",
+    "retained": "Refresh error retains hero, records, gallery and briefs; per-source retry retained. No whole-page data gate.",
+    "unknownZero": "Current page records/savings scalar fallbacks show unknown rather than zero; hour producer still fabricates midnight LS-05; badge partial-progress candidate not promoted.",
+    "paused": "LS-02 inconsistent blocked/retained/unavailable labels; no invented server error.",
+    "initial": "Source-shaped shells and brief loading remain; paused initial maps to empty LS-02.",
+    "sections": "Nine semantic page sections remain independently mounted; AI deliberately feature-gated."
+  },
+  "accessibility": {
+    "source": "Named sections, shared typography/help/forms, localized AI textarea label, shared status/retry semantics, decorative icons, reduced-motion deep-link scroll inspected.",
+    "confirmedSourceMotion": "LS-07 looping class only. Global OS-reduced-motion CSS exists; no OS failure asserted.",
+    "native": "NOTRUN keyboard/focus/screen-reader/forced-colors/touch targets/contrast/200% text/RTL"
+  },
+  "responsive": {
+    "source": "Hero flex wrap/stack, min-w-0, shared half/third CardGrid, records Grid, gallery2/3/4/6/8 columns retained.",
+    "native": "NOTRUN all widths/containers/geometry/overflow/native hosts; no visual PASS"
+  },
+  "duplicatedPatterns": {
+    "trust": "LS-02 manual brief trust mappings compete with derived DataState.",
+    "unmountedReference": "Barrel still exports alternate LifetimeKeyStats; this page mounts LifetimeBrief. Alternate implementation/consumers not audited or deleted."
+  },
+  "architectureIssues": "No new architecture or SI adapter proposed; existing hook/raw payload/category boundaries retained. Frontend RUM not added or invoked.",
+  "requiredSharedChanges": [
+    "Existing freshness owner may need fetchStatus/isRefreshBlocked support after LS-02 scope confirmation; no new registry/store. Catalog owner handles LS-03/LS-04 copy only. Endpoint/types owner handles LS-05/LS-06 separately."
+  ],
+  "competingImplementations": "Reference-only alternate LifetimeKeyStats export; no remigration/retirement inferred.",
+  "preservation": {
+    "sourcePins": [
+      {
+        "sha256": "39E45351D8E1941E42EEFD51806647987E0E04EEBEBFBA397619A2BCCAD50BDC",
+        "lineCount": 367,
+        "file": "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx"
+      },
+      {
+        "sha256": "A462B5B157AC3B2CC23C3605C64A2A4DECBD02910394568842ECC377E6B85097",
+        "lineCount": 65,
+        "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeBrief.tsx"
+      },
+      {
+        "sha256": "82EF30B7FCFC20B613C1D567AFCFC254153E750A73C6EA033E379D4BC996C459",
+        "lineCount": 88,
+        "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx"
+      },
+      {
+        "sha256": "FB5D9D50034AD9DE57A275FFA44A56CE65D56C73F5E385C911D9C3D88C8DB1BA",
+        "lineCount": 39,
+        "file": "web\\src\\features\\analytics\\components\\lifetime-modernization\\SectionCard.tsx"
+      },
+      {
+        "sha256": "EB44BDB18A25095E2BF92715E5AC88328E1314CDBD390C2716BCAC8676E5B5BC",
+        "lineCount": 46,
+        "file": "web\\src\\features\\analytics\\components\\lifetime-modernization\\SavingsBar.tsx"
+      },
+      {
+        "sha256": "D19A9452E6B7CD19702008CFF0F17691DBF2A47E0EAF9194D6BFFF13059ACADB",
+        "lineCount": 12,
+        "file": "web\\src\\features\\analytics\\components\\lifetime-modernization\\HeroChip.tsx"
+      },
+      {
+        "sha256": "C9D913582D45B0BA6466A4EE9F54923C2823DCAC2373AF0BAA74A776B281857F",
+        "lineCount": 19,
+        "file": "web\\src\\features\\analytics\\components\\lifetime-modernization\\RecordCard.tsx"
+      },
+      {
+        "sha256": "14D110560AB4B3E46397D364623D637795463AB154084771B3E884C947303266",
+        "lineCount": 14,
+        "file": "web\\src\\features\\analytics\\components\\lifetime-modernization\\sourceState.ts"
+      },
+      {
+        "sha256": "6816C9F97E02D255CB67FB058392DFC017CAC2DC7FADE8332584D53775A5AA2D",
+        "lineCount": 115,
+        "file": "web\\src\\features\\analytics\\components\\AchievementBadge.tsx"
+      },
+      {
+        "sha256": "F775818AC815813432F0A576AB6E22DBDBBD5106D513AA81FB56B953C5DADB20",
+        "lineCount": 642,
+        "file": "web\\src\\api\\hooks\\useAnalytics.ts"
+      },
+      {
+        "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "lineCount": 434,
+        "file": "web\\src\\api\\dataState.ts"
+      },
+      {
+        "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "lineCount": 168,
+        "file": "web\\src\\lib\\workspaceScope.ts"
+      },
+      {
+        "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+        "lineCount": 500,
+        "file": "web\\src\\lib\\unitConversion.ts"
+      },
+      {
+        "sha256": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+        "lineCount": 74,
+        "file": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx"
+      },
+      {
+        "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "lineCount": 17,
+        "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx"
+      },
+      {
+        "sha256": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+        "lineCount": 342,
+        "file": "web\\src\\components\\data-display\\DataFreshness.tsx"
+      },
+      {
+        "sha256": "D608BC5B02A29A12DDBD34996CAA2F7EE046A85C28224D2559F6759A09073955",
+        "lineCount": 162,
+        "file": "web\\src\\components\\ai\\AILifetimeStatsQA.tsx"
+      },
+      {
+        "sha256": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+        "lineCount": 352,
+        "file": "web\\src\\components\\ai\\AIFeatureCard.tsx"
+      },
+      {
+        "sha256": "C8DAA976D4AFDE78D026170B6D529B8F1FAFB0CB1C9CCFBBB864AD5401022BE1",
+        "lineCount": 636,
+        "file": "internal\\api\\lifetime\\handler.go"
+      }
+    ],
+    "actionCounts": {
+      "helpSites": 2,
+      "aiQuestionInput": 1,
+      "aiAskAction": 1,
+      "explicitLocalActionFamilies": 5,
+      "headerRefetchSite": 1,
+      "achievementDeepLinkLifecycle": 1,
+      "queryRecoveryCallbackSites": 9
+    },
+    "pageLineCount": 367,
+    "sectionCount": 9,
+    "sections": [
+      {
+        "name": "Lifetime hero / ownership context",
+        "line": 155
+      },
+      {
+        "name": "Four key stats",
+        "line": 225
+      },
+      {
+        "name": "Opt-in AI lifetime questions",
+        "line": 238
+      },
+      {
+        "name": "Fun facts",
+        "line": 246
+      },
+      {
+        "name": "Savings versus gasoline",
+        "line": 250
+      },
+      {
+        "name": "Environmental impact",
+        "line": 283
+      },
+      {
+        "name": "Personal records",
+        "line": 287
+      },
+      {
+        "name": "Activity summary",
+        "line": 319
+      },
+      {
+        "name": "Achievements",
+        "line": 328
+      }
+    ],
+    "wrapperRawCounts": {
+      "GlassPanel": 1,
+      "AI": 1,
+      "LayoutCard": 1,
+      "CardGrid": 2,
+      "Section": 1,
+      "SectionCard": 2
+    },
+    "mountedFeatureAggregateLines": 865,
+    "behaviors": [
+      "Actual lifetime scope with selected vehicle and optional fleet resolution fallback",
+      "All four key metrics, fun/environment/activity metrics and help",
+      "Savings cost scalars and comparison scale",
+      "All three personal record values and dates",
+      "Every achievement ID/name/description/icon/progress/unlock state and deep link",
+      "Feature-gated AI, input bound, explicit Ask and scope reset",
+      "Existing cancellation/query identities/preferences and no all-page empty gate"
+    ],
+    "actionCountLimits": "Counts are source sites/families, not simultaneously visible buttons; shared OperationalBrief drill-down control inventory/native actions not fully exercised.",
+    "actionFamilies": [
+      "Lifetime retry/refetch across nine callback sites plus header",
+      "Two contextual help affordances",
+      "Achievement RAF scroll/three-second cue/delete-only-param replace cleanup",
+      "AI question entry with limit",
+      "Explicit gated Ask Helix with scoped stream"
+    ],
+    "referenceComparison": {
+      "existingAudit": "docs\\frontend-audits\\audit-page-046.json",
+      "queueReferenceOriginalLines": 347,
+      "historicalPageLines": 342,
+      "currentVersusAuditReferencePercent": 107.3099415205,
+      "currentVersusQueueReferencePercent": 105.7636887608,
+      "limit": "Historical reference numbers only, not a Git original or rerun preservation gate. No source changed; numerical >=70% does not prove runtime parity."
+    },
+    "historicalIssuesNowResolved": [
+      "Achievement cleanup keeps all other parameters and hash at current page126-129.",
+      "Hero unknown count is dash, not absent=>0.",
+      "Individual records/currency partial fallback no longer fabricates numeric zero."
+    ]
+  },
+  "summary": {
+    "byPriority": {
+      "P1": 3,
+      "P2": 4
+    },
+    "byRule": {
+      "source-value-suppression": 1,
+      "gas-unit-calculation": 1,
+      "decorative-loop": 1,
+      "hardcoded-string": 1,
+      "unknown-zero": 1,
+      "display-preference-bypass": 1,
+      "inconsistent-paused-trust": 1
+    },
+    "priorityFixes": [
+      "Preserve known electric cost with zero gasoline denominator",
+      "Unify paused/retained/fatal trust without hiding retained data",
+      "Honor liter pricing in canonical lifetime calculation"
+    ],
+    "unpromotedCandidates": 4,
+    "primaryFindingFiles": {
+      "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx": 2,
+      "internal\\api\\lifetime\\handler.go": 2,
+      "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx": 1,
+      "web\\src\\features\\analytics\\components\\AchievementBadge.tsx": 2
+    },
+    "countingMethod": "One deduplicated source-backed root cause per LS record; related sites and raw matching-line counts are separate, not guessed AST occurrence totals.",
+    "confirmedRootCauseFindings": 7
+  },
+  "checks": [
+    {
+      "exit": 0,
+      "disposition": "Case-insensitive Textarea and achievement/vehicle_id matches were false positives; corrected C02. useEffect is UI scrolling/URL cleanup, not data loading. No AST/comprehensive i18n acceptance.",
+      "id": "C01",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -LiteralPath $files -Pattern $r.Value (10 mounted source files and ordered regexes shown verbatim in log); Get-Content useAnalytics.ts slice [260..270] | Select-String",
+      "rawCounts": {
+        "doublePrefix": 0,
+        "conditionalShellSameLine": 0,
+        "pageLayout": 1,
+        "inlineStyle": 0,
+        "oldApiImport": 0,
+        "directLibraryImport": 0,
+        "useEffectCandidate": 1,
+        "rawEnglishJsxCandidate": 0,
+        "rawHtmlInsensitive": 1,
+        "camelcaseInsensitive": 1
+      },
+      "name": "Builtin scoped guideline scans"
+    },
+    {
+      "exit": 0,
+      "disposition": "All nine inspected Pool.QueryRow calls receive ctx. Two conditional HeroChips are optional contextual facts, not hidden source panels. Combined forbidden-backend regex has zero matches, not a global backend certification.",
+      "id": "C02",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -LiteralPath $files -CaseSensitive -Pattern $p; Select-String -LiteralPath $page -CaseSensitive -Pattern $p; Select-String -LiteralPath $b -CaseSensitive -Pattern $p (patterns/raw output in log)",
+      "rawCounts": {
+        "CardGrid": 2,
+        "backendSprintfPrintlnPanicNewRequest": 0,
+        "Section": 1,
+        "backendPoolCalls": 9,
+        "SectionCard": 2,
+        "hookCamelcase": 0,
+        "GlassPanel": 1,
+        "recoveryCallbackLines": 9,
+        "rawHtml": 0,
+        "camelcaseParams": 0,
+        "LayoutCard": 1,
+        "contextConditionsPlusCardIds": 7,
+        "AISection": 1
+      },
+      "name": "Corrected case-sensitive scans and source counts"
+    },
+    {
+      "exit": 0,
+      "disposition": "No helper file, tool install, fixtures in app, test runner, React mount, browser or API call; raw numerical results in log. This is not a test-suite pass.",
+      "command": "Set-Location D:\\repos\\teslasync\\web; & C:\\Users\\AtulM\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64\\node.exe --version; & same-node --input-type=module -e $script",
+      "id": "C03",
+      "failedCases": 0,
+      "caseNames": [
+        "all-time workspace scope",
+        "retained paused trust",
+        "initial paused trust",
+        "zero-gas savings section",
+        "known km -> miles",
+        "known km/h -> mph",
+        "known Wh/km -> Wh/mi"
+      ],
+      "assertions": 11,
+      "executedCases": 7,
+      "name": "Synthetic pure existing functions",
+      "nodeVersionExit": 0,
+      "nodeVersion": "v26.11.1"
+    },
+    {
+      "exit": 0,
+      "disposition": "Final validation rechecks every pin; whole-module hashes do not imply whole-module audit coverage.",
+      "id": "C04",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Get-FileHash -LiteralPath $p -Algorithm SHA256; @(Get-Content -LiteralPath $p).Count",
+      "rawCounts": {
+        "pageLines": 367,
+        "pinnedFiles": 19
+      },
+      "name": "Source identity pins"
+    },
+    {
+      "name": "Current mechanism line evidence",
+      "id": "C05",
+      "disposition": "Current source, not inherited audit findings; exact matches in log.",
+      "exit": 0,
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -LiteralPath (Join-Path D:\\repos\\teslasync $entry.Key) -CaseSensitive -Pattern $entry.Value"
+    },
+    {
+      "exit": 0,
+      "disposition": "Presence only; does not cover server English vocabulary, fallback equivalence, all locales or runtime catalog loading.",
+      "id": "C06",
+      "command": "Set-Location D:\\repos\\teslasync\\web; [regex]::Matches(Get-Content -Raw $f, static t()/i18nKey pattern); Get-Content D:\\repos\\teslasync\\web\\src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable; resolve each static dotted key",
+      "rawCounts": {
+        "uniqueStaticKeys": 63,
+        "missingEnglishKeys": 0
+      },
+      "name": "Actual static i18n key presence"
+    },
+    {
+      "name": "Actual hook routes and calculation/localization support",
+      "id": "C07",
+      "exit": 0,
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -LiteralPath (Join-Path D:\\repos\\teslasync $entry.Key) -CaseSensitive -Pattern $entry.Value; Select-String handler.go -CaseSensitive -Pattern ^\\s*\\{ID: .*Name: .*Desc: ",
+      "rawCounts": {
+        "aiRouteMatches": 2,
+        "specialistFormatterLines": 3,
+        "mountAndRedirect": 2,
+        "achievementDisplayAndPulseLines": 5,
+        "gasUnitFormattingLines": 3,
+        "headerScopeLines": 2,
+        "routerPrefixAndLifetimeMatches": 2,
+        "settingsGasUnitField": 1,
+        "englishAchievementDefinitions": 17
+      }
+    },
+    {
+      "error": "Cannot find path D:\\repos\\teslasync\\web\\src\\routes because it does not exist.",
+      "shellId": "5451",
+      "disposition": "Preserved in log; actual App.tsx and routeLoaders.ts subsequently inspected.",
+      "id": "D-FAIL-01",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path D:\\repos\\teslasync\\web\\src\\routes\\*.ts,D:\\repos\\teslasync\\web\\src\\routes\\*.tsx,D:\\repos\\teslasync\\web\\src\\App.tsx -Pattern lifetime-stats|LifetimeStatsPage",
+      "name": "Failed route directory discovery",
+      "exit": 1
+    },
+    {
+      "error": "Cannot find path D:\\repos\\teslasync\\web\\src\\components\\data-display\\DataFreshnessAuto.tsx because it does not exist.",
+      "shellId": "5465",
+      "disposition": "Preserved in log; actual DataFreshness.tsx subsequently found/read.",
+      "id": "D-FAIL-02",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path unitConversion.ts,useUnits.ts,useFormatting.ts,D:\\repos\\teslasync\\web\\src\\components\\data-display\\DataFreshnessAuto.tsx -Pattern efficiency|convertDistanceFromSI|convertSpeedFromSI|fetchStatus|paused|forceStale|formatHour",
+      "name": "Failed freshness filename discovery",
+      "exit": 1
+    },
+    {
+      "id": "C08",
+      "exit": 0,
+      "name": "Owned JSON write and parse",
+      "rawCounts": {
+        "sourcePins": 19,
+        "confirmedFindings": 7,
+        "semanticSections": 9,
+        "unpromotedCandidates": 4
+      },
+      "command": "Set-Location D:\\repos\\teslasync\\web; $report | ConvertTo-Json -Depth 30; [IO.File]::WriteAllText($reportPath,$json); Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json -AsHashtable"
+    },
+    {
+      "rawCounts": {
+        "sections": 9,
+        "sourcePinMismatches": 0,
+        "sourcePinsChecked": 19,
+        "findingRuleSum": 7,
+        "priorFailedCommandsPreserved": 2
+      },
+      "id": "C09",
+      "name": "Final JSON/log/count/pin validation and release",
+      "exit": 0,
+      "command": "Set-Location D:\\repos\\teslasync\\web; Get-Content $rp -Raw | ConvertFrom-Json -AsHashtable; Get-FileHash -LiteralPath $p -Algorithm SHA256 for every recorded source pin; Get-Content line count comparison; sum byRule; Get-Content log and verify named raw evidence/failure tokens",
+      "limits": "Identity/count/document validation only, not global TypeScript, runtime, tests or whole-page PASS."
+    }
+  ],
+  "failedReads": {
+    "numericExitFailures": 2,
+    "viewErrors": [
+      "Path D:\\repos\\teslasync\\docs\\orchestrator-modernization-sole-loop.md does not exist. Please provide a valid path.",
+      "Path D:\\repos\\teslasync\\web\\src\\components\\data-display\\DataFreshnessAuto.tsx does not exist. Please provide a valid path."
+    ],
+    "preservation": "Both failed commands and failed views retained; corrected discovery does not retroactively pass them."
+  },
+  "evidenceLimits": {
+    "contrast": "NOTRUN",
+    "native": "NOTRUN",
+    "tests": "NOTRUN",
+    "runtime": "NOTRUN",
+    "build": "NOTRUN",
+    "git": "NOTRUN per worker authorization",
+    "formalTests": {
+      "skipped": 0,
+      "discovered": 0,
+      "executed": 0,
+      "failed": 0,
+      "passed": 0,
+      "status": "NOTRUN; zero is not a passing suite"
+    },
+    "realApi": "NOTRUN; lifetime GET side effects also avoided",
+    "existingAudits": "Reference only; no historical receipt promoted to fresh acceptance",
+    "performance": "NOTRUN",
+    "geometry": "NOTRUN",
+    "mode": "source-only readonlyQA",
+    "browser": "NOTRUN",
+    "fullPage": "NOTRUN",
+    "fullSuite": "NOTRUN",
+    "globalTSC": "NOTRUN (npx tsc --noEmit not executed; no TypeScript-pass claim)",
+    "privateData": "Not accessed; no live identities/credentials/payloads inspected"
+  },
+  "filesRead": [
+    "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\SectionCard.tsx",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\SavingsBar.tsx",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\HeroChip.tsx",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\RecordCard.tsx",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\sourceState.ts",
+    "web\\src\\features\\analytics\\components\\AchievementBadge.tsx",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\ai\\AILifetimeStatsQA.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "internal\\api\\lifetime\\handler.go",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\index.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\hooks\\useAiStream.ts (selected transport lines only)",
+    "web\\src\\i18n\\en.json (static key presence/selected vocabulary only)",
+    "web\\src\\index.css (motion rules only)",
+    "web\\src\\components\\layout\\WorkspaceHeader.tsx (scope lines only)",
+    "web\\src\\App.tsx (route lines only)",
+    "web\\src\\lib\\routeLoaders.ts (route line only)",
+    "web\\src\\lib\\routePrefetch.ts (route line only)",
+    "web\\src\\lib\\routeRegistry.ts (route line only)",
+    "web\\src\\api\\types.ts (gas_unit line only)",
+    "internal\\api\\router.go (route/import/wiring lines only)",
+    "internal\\api\\ai_routes.go (AI route lines only)",
+    "docs\\frontend-audits\\audit-page-046.json:1-240 (reference only)",
+    ".gitignore (logs ignore lines only)"
+  ],
+  "writeScope": {
+    "logIgnoreEvidence": ".gitignore:80 logs/; no Git check run",
+    "sourceTestsBackendCatalogConfigQueueHandoff": "READONLY",
+    "versioned": [
+      "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-analytics-lifetime-stats.json"
+    ],
+    "ignored": [
+      "D:\\repos\\teslasync\\web\\logs\\phase6-qa-analytics-lifetime-stats.log"
+    ]
+  },
+  "release": {
+    "source": "READONLY; no source lease or edits",
+    "log": "RELEASED after final synchronous validation",
+    "report": "RELEASED after final synchronous validation",
+    "postReturnWrites": "NONE authorized; no background services/agents/helpers created",
+    "commands": "RELEASED; only completed bounded commands"
+  },
+  "needs": "Seven exact future corrective needs are attached to LS-01..LS-07. Four candidates require confirmation, not automatic corrective scopes. No queue/handoff/backend/catalog/source changes made.",
+  "finalValidation": {
+    "sourcePinMismatches": 0,
+    "explicitLocalActionFamilies": 5,
+    "utc": "2026-10-13T20:04:06.6121215Z",
+    "release": "ALL report/log/commands RELEASED after this completed synchronous command; NO POST-RETURN WRITES",
+    "logEvidenceValidated": true,
+    "jsonParsed": true,
+    "semanticSections": 9,
+    "sourceWriteCount": 0
+  }
+}

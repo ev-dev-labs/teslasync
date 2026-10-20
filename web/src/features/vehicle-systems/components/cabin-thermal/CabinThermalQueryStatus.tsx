@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner, EmptyState, QueryError } from '@/components/feedback';
 import { Button, Text } from '@/components/ui';
+import { VehicleSourcePause } from '../VehicleSourcePause';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
 import type { CabinThermalQueryState } from './types';
 
@@ -51,7 +52,7 @@ export function CabinThermalQueryStatus({
         <Text as="p" variant="caption">
           {t(
             'cabinThermal.states.loading',
-            'Loading the climate endpoint’s seven-day history…',
+            'Loading climate history for the selected workspace range…',
           )}
         </Text>
       </AlertBanner>
@@ -85,6 +86,11 @@ export function CabinThermalQueryStatus({
         </div>
       </AlertBanner>
     );
+  }
+  if (state.isPaused) {
+    return <VehicleSourcePause label={t('cabinThermal.title', 'Cabin thermal model')}
+      message={t('cabinThermal.states.paused', 'Climate history loading is paused while the network is unavailable; no empty response is inferred.')}
+      retained={state.isResolved} onRetry={state.onRetry} />;
   }
   if (!state.isResolved) return null;
 

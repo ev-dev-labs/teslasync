@@ -1,0 +1,486 @@
+{
+  "item": "audit-page-054",
+  "page": "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx",
+  "routes": ["/weekly-digest"],
+  "purpose": "Selected vehicle's independent Monday–Sunday digest: weekly driving, charging, battery-at-charge averages, alerts, supervised-driving evidence, previous-week comparisons and optional AI narration.",
+  "primaryGoal": "Review available records for a selected week, compare the previous week, navigate weeks and recover individual failed sources without losing independent sections or specialist explanations.",
+  "dataSources": [
+    {
+      "name": "Digest orchestration and workspace vehicle",
+      "hook": "useWeeklyDigest / useSelectedVehicle / useVehicles",
+      "owner": "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts",
+      "endpoint": "GET /vehicles",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:28-63",
+        "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts:67-111",
+        "web\\src\\api\\hooks\\useVehicles.ts:73-81",
+        "internal\\api\\router.go:3319-3320"
+      ],
+      "behavior": "Vehicle selection is consumed from the existing workspace hook; no local vehicle picker is mounted. Digest week navigation is an independent business period, not a second workspace range selector. Vehicle hook internals and vehicle-error rendering are not inspected."
+    },
+    {
+      "name": "Driving history",
+      "hook": "useDrives",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "endpoint": "GET /drives?vehicle_id=<id>&start=<previous-week-start>&end=<selected-week-end-exclusive>&limit=1000",
+      "evidence": [
+        "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts:108-129",
+        "web\\src\\api\\hooks\\useDriving.ts:104-133",
+        "internal\\api\\router.go:3463-3464"
+      ],
+      "behavior": "AbortSignal forwarded; vehicle-enabled query with safeArray selection and FAST stale time. Selected and previous weeks are filtered locally from a bounded history window; no claim of complete server results. Aggregates retain meters, seconds and Wh; chart conversion is display-only."
+    },
+    {
+      "name": "Charging history",
+      "hook": "useChargingSessionsPaginated",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "endpoint": "GET /charging?vehicle_id=<id>&limit=1000&offset=0&start=<previous-week-start>&end=<selected-week-end-exclusive>",
+      "evidence": [
+        "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts:132-142",
+        "web\\src\\api\\hooks\\useCharging.ts:32-44",
+        "web\\src\\api\\hooks\\useCharging.ts:122-135",
+        "internal\\api\\router.go:3502-3503"
+      ],
+      "behavior": "AbortSignal forwarded; vehicle-enabled, safeArray, FAST stale time. One bounded page, not pagination through the entire result. Cost sums cost_decimal; energy is Wh, power is W, duration fallback uses timestamps; SOC averages are charge-session averages, not live battery state."
+    },
+    {
+      "name": "Alert history",
+      "hook": "useAlertHistory",
+      "owner": "web\\src\\api\\hooks\\useNotifications.ts",
+      "endpoint": "GET /alerts?limit=1000",
+      "evidence": [
+        "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts:144-151",
+        "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts:218-228",
+        "web\\src\\api\\hooks\\useNotifications.ts:275-285",
+        "internal\\api\\router.go:3765-3766"
+      ],
+      "behavior": "Global bounded history query, AbortSignal, MODERATE stale time and safeArray. Client filtering retains alerts within the selected week for the chosen vehicle plus vehicle_id=0. No server week/vehicle bounds or result-completeness proof."
+    },
+    {
+      "name": "Supervised-driving evidence",
+      "hook": "useFsdInsightsRange",
+      "owner": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "endpoint": "GET /analytics/fsd (scoped start/end, vehicle and browser timezone)",
+      "evidence": [
+        "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts:153-165",
+        "web\\src\\api\\hooks\\useAnalytics.ts:583-610",
+        "internal\\api\\router.go:3885-3887"
+      ],
+      "behavior": "Historical query policy, AbortSignal and required vehicle/start/end enablement. Scope builder implementation is not inspected. FSD panel reads cumulative counter changes, nullable distance/share and previous-week changes; it explicitly states absence is not zero and engagement is not exact."
+    },
+    {
+      "name": "Current-week browser notification",
+      "hook": "useFsdWeeklyDigestNotification",
+      "owner": "web\\src\\features\\analytics\\components\\weekly-digest\\useFsdWeeklyDigestNotification.ts",
+      "endpoint": null,
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:57-63",
+        "web\\src\\features\\analytics\\components\\weekly-digest\\useFsdWeeklyDigestNotification.ts:49-97"
+      ],
+      "behavior": "Only current week, ready FSD evidence, existing permission and measured distance. Skips subscribed push devices; deduplicates via teslasync.fsd.weeklyDigest.notified.<vehicle>.<local-week-date>. Notification click navigates /weekly-digest; never prompts for permission here."
+    },
+    {
+      "name": "Opt-in Helix narration",
+      "hook": "AIDigestNarration / useAiStream",
+      "owner": "web\\src\\components\\ai\\AIDigestNarration.tsx",
+      "endpoint": "POST /ai/digests/weekly/narrate",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:99-105,299-306",
+        "web\\src\\components\\ai\\AIDigestNarration.tsx:43-65,93",
+        "internal\\api\\aidigest\\handler.go:34,72,152-153",
+        "internal\\api\\router.go:5048,5055"
+      ],
+      "behavior": "Feature-gated by withAiFeature('digest-narration'); canonical deterministic digest remains independent. Positive finite vehicle enables generation. Body currently fixes week_offset_weeks=0; stream identity includes vehicle only. Handler documents the endpoint and router supplies Digest to guarded AI mounting; exact delegated route registration, stream transport and backend filtering were not inspected."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / CardGrid / Section",
+      "kind": "existing shared layout",
+      "owner": "@/components/layout",
+      "props": ["title", "subtitle", "query", "dataSources", "label", "items.id", "items.size", "items.content", "Section.id", "Section.title"],
+      "usedBy": ["WeeklyDigestPage"],
+      "evidence": ["web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:3,124-296"],
+      "notes": "Six grids, two semantic sections, stable item IDs, full/half allocations; no replacement layout needed. Shared implementation not audited."
+    },
+    {
+      "name": "FadeIn",
+      "kind": "existing shared motion",
+      "owner": "@/components/motion",
+      "props": ["children", "delay"],
+      "usedBy": ["WeeklyDigestPage"],
+      "evidence": ["web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:131,150,174,214,236,276,305"],
+      "notes": "Seven entrance wrappers with staggered delays. Reduced-motion implementation and rendered behavior unverified."
+    },
+    {
+      "name": "WeekNavigation",
+      "kind": "domain presentation",
+      "owner": "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\WeekNavigation.tsx",
+      "props": ["weekLabel", "isCurrentWeek", "onPrevWeek", "onNextWeek"],
+      "usedBy": ["WeeklyDigestPage"],
+      "evidence": ["web\\src\\features\\analytics\\components\\weekly-digest-modernization\\WeekNavigation.tsx:23-55"],
+      "notes": "Existing LayoutCard, Badge, Button, Text; wrapping labels and explicit minimum 44px controls. Preserve Next disabled in the current week."
+    },
+    {
+      "name": "DigestOperationalSummary / FsdOperationalPanel",
+      "kind": "domain adapters to existing OperationalBrief",
+      "owner": "web\\src\\features\\analytics\\components\\operationalbrief-n-z",
+      "props": ["metrics or insights", "period", "comparison", "funFact", "isLoading", "isError", "error", "onRetry", "driveAvailable", "chargingAvailable", "isCurrentWeek"],
+      "usedBy": ["weekly summary", "week comparison", "supervised-driving evidence"],
+      "evidence": [
+        "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\DigestOperationalSummary.tsx:14-92",
+        "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\FsdOperationalPanel.tsx:14-84"
+      ],
+      "notes": "Reuse OperationalBrief and useOperationalMetrics; retain explicit source availability and specialist useUnits/useFormatting/useNumberFormatting callbacks, missing baseline explanations and links."
+    },
+    {
+      "name": "DrivingPanel / ChargingPanel",
+      "kind": "domain chart presentation",
+      "owner": "web\\src\\features\\analytics\\components\\weekly-digest-modernization",
+      "props": ["metrics", "period", "dailyDistanceData or dailyEnergyData", "isLoading", "isError", "error", "onRetry"],
+      "usedBy": ["driving and charging activity"],
+      "evidence": [
+        "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\DrivingPanel.tsx:43-188",
+        "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\ChargingPanel.tsx:40-155"
+      ],
+      "notes": "Existing ChartCard, StatGroup, chart barrel, ChartTooltip, palette/axes/grid/motion; dataColumns supplied for source-backed alternatives. Both keep detail footers separate from plot state."
+    },
+    {
+      "name": "BatteryPanel / BatteryPill / AlertsPanel",
+      "kind": "domain evidence presentation",
+      "owner": "web\\src\\features\\analytics\\components\\weekly-digest-modernization",
+      "props": ["metrics", "period", "alertPieData", "isLoading", "isError", "error", "onRetry", "BatteryPill.level", "BatteryPill.label", "BatteryPill.className"],
+      "usedBy": ["battery health and alerts"],
+      "evidence": [
+        "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\BatteryPanel.tsx:36-90",
+        "web\\src\\features\\analytics\\components\\weekly-digest\\BatteryPill.tsx:15-65",
+        "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\AlertsPanel.tsx:46-146"
+      ],
+      "notes": "Reuse LayoutCard, GlassPanel, StatGroup, feedback, semantic Badge and EmbeddedChart. Battery meter keeps rounded text, clamped geometry and explicit accessible value. Alerts retain severity list and pie/table data."
+    },
+    {
+      "name": "AIDigestNarration / AIFeatureCard",
+      "kind": "existing shared AI surface and page-specific feature",
+      "owner": "web\\src\\components\\ai\\AIDigestNarration.tsx",
+      "props": ["vehicleId", "title", "description", "buttonLabel", "badgeLabel", "emptyHint", "canStart", "stream"],
+      "usedBy": ["optional weekly narration"],
+      "evidence": [
+        "web\\src\\components\\ai\\AIDigestNarration.tsx:66-91",
+        "web\\src\\components\\ai\\AIFeatureCard.tsx:242-353"
+      ],
+      "notes": "Existing feature gate, streaming output scaffold, disabled/busy button and vehicle hint; no replacement AI card. AiOutputPanel and gate internals were not inspected."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx",
+      "line": 157,
+      "rule": "MDC-002 / MDC-033 reuse existing owners",
+      "detail": "Summary and comparison already share DigestOperationalSummary; four domain sources already share retry/loading/error prop shapes. Repeated wiring is orchestration, not evidence that another card or query-state engine is necessary.",
+      "fix": "Keep the existing domain adapters and shared OperationalBrief/ChartCard/StatGroup; standardize trust propagation without duplicating rendering or changing specialist formatting.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "WeeklyDigestPage.tsx:132-296 allocates full-width bands and half-width paired domains through CardGrid.",
+      "WeekNavigation.tsx:24-40 uses min-w-0, wrapping content, break-words and 44px controls.",
+      "DrivingPanel.tsx:93-132 and ChargingPanel.tsx:56-101 use min-w-0 details and wrapping comparative captions.",
+      "BatteryPill.tsx:38-39 truncates its label; AlertsPanel.tsx:126-127 fixes donut radii at 55/90.",
+      "AIFeatureCard.tsx:314-338 uses wrapping headers, min-w-0 and break-words."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\weekly-digest\\BatteryPill.tsx",
+        "line": 38,
+        "rule": "MDC-043 preserve long labels at small allocated widths",
+        "detail": "Battery labels are truncated while a fixed-width meter competes for row width. Long localized labels may lose visible information; actual clipping has not been exercised.",
+        "fix": "Allow label wrapping or an existing accessible disclosure while preserving the meter and full label; test 320px, enlarged text and long translations.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "UNVERIFIED: all ten specified viewport widths, allocated-container widths, zoom, long content, mobile/table controls and donut fit. No browser or screenshots."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "WeekNavigation.tsx:37-54 has shared Buttons, localized names, hidden decorative arrows and explicit min-h-11/min-w-11.",
+      "DrivingPanel.tsx:146-160, ChargingPanel.tsx:111-125 and AlertsPanel.tsx:104-113 supply chart names and dataColumns.",
+      "AlertsPanel.tsx:72-83 declares list/listitem semantics and keeps severity text plus counts.",
+      "BatteryPill.tsx:45-51 supplies meter role, label, clamped range and value text.",
+      "DigestTrend.tsx:40-42 hides decorative icons and provides direction text for non-highlight comparisons.",
+      "FsdOperationalPanel.tsx:79-81 keeps native Link semantics with 44px minimum height and focus outline.",
+      "AIFeatureCard.tsx:296-303 supplies disabled, aria-disabled, aria-busy and action-specific accessible names."
+    ],
+    "issues": [],
+    "verification": "UNVERIFIED: mounted headings/landmarks, keyboard order, focus/restoration, screen reader, target spacing, AA contrast, forced colors, reduced motion and table/export interactions. Supplied source semantics are not acceptance."
+  },
+  "states": {
+    "initialLoading": "Per-domain busy flags also include vehiclesLoading (useWeeklyDigest.ts:172-175). Summary suppresses loading metrics only when both source availability flags are absent; FSD suppresses initial values without insights. Battery/alerts use Skeleton, charts receive loading. Detail footer values are constructed separately, creating the unknown-zero issue below.",
+    "empty": "Driving and charging use positive chart bins for empty plots; top-drive absence links /drives; battery no-session state links /charging; resolved zero alerts have a dedicated message. FSD missing distance has an explanation and /fsd?days=7 action. Summary currently shows returned-record status for a resolved empty array.",
+    "error": "Independent retries flow from page to domain components. Summary and FSD preserve available metrics beside QueryError. Battery/alerts replace retained content on errors; chart-frame retained rendering not inspected.",
+    "staleOfflinePartial": "PageLayout receives four complete freshness query objects and localized source identities, while most child panels receive only loading/error booleans, not explicit freshness/offline/partial state. Shared layout behavior is unverified.",
+    "disabled": "Next is disabled for current week; narration is disabled without a positive finite vehicle or while streaming.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\BatteryPanel.tsx",
+        "line": 41,
+        "rule": "MDC-026 retained data survives refresh failure",
+        "detail": "Any isError replaces the battery evidence with QueryError even if charging data and computed metrics remain cached. AlertsPanel.tsx:60 similarly replaces severity rows and chart. Page passes raw query errors at WeeklyDigestPage.tsx:248-266 without fatal/refresh distinction.",
+        "fix": "Adapt existing query/data-trust state to distinguish no-payload fatal failure from refresh failure; keep cached battery/alerts evidence, show refresh warning and retry, and preserve independent neighbors.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts",
+        "line": 30,
+        "rule": "MDC-026 / MDC-045 unknown is not zero",
+        "detail": "averagePresent returns zero with no measurements; efficiencyWhPerM and chargingPowerW also return zero for unavailable measurements. SOC aggregation at lines 284-285 and BatteryPanel.tsx:36,55-64 can therefore show measured-looking 0% for sessions with missing SOC. DrivingPanel.tsx:58-95 and ChargingPanel.tsx:57-85 format default-zero details even before source resolution; object/array availability alone cannot prove individual fields.",
+        "fix": "Keep raw SI payloads, calculations for known values and true zero counts, but retain field-level missingness and source availability in derived presentation. Suppress initial unavailable detail measurements and display existing unknown/unavailable states rather than fabricated zero.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\DigestTrend.tsx",
+      "line": 32,
+      "rule": "MDC-010 / MDC-012 / mission 43 restrained theme-aware semantic color",
+      "detail": "Highlight trends always use emerald-300/rose-300, while non-highlight trends already use light/dark variants. DrivingPanel.tsx:81-82 and FsdOperationalPanel.tsx:36-43 also fix pale semantic icon colors; AlertsPanel.tsx:26-28 fixes severity icon colors. These are source-level theme/visual-noise risks, not measured contrast failures.",
+      "fix": "Use the existing semantic token/severity owner or existing light/dark treatment consistently; preserve favorable/unfavorable meaning and non-color cues. Measure actual composed contrast in both themes.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 296,
+      "rule": "MDC-010 / mission 43 avoid ornamental saturated emphasis",
+      "detail": "Shared Helix action applies its own cyan borders, tinted backgrounds, text, hover colors and focus ring instead of only the canonical outline treatment. Its badge also uses cyan styling at line 214. Flag for owner review of cumulative accent noise; no neon/glow or measured saturation failure is established.",
+      "fix": "Existing AI shared owner should assess neutral outline/control tokens with restrained branded semantic accent, retaining all labels, gate, disabled/busy states and focus visibility. Do not add page-local overrides or reset user palettes.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\components\\ai\\AIDigestNarration.tsx",
+      "line": 54,
+      "rule": "MDC-032 / MDC-045 preserve actual selected period",
+      "detail": "Page passes vehicleId only at WeeklyDigestPage.tsx:306 while navigation changes the digest week. Narration always posts week_offset_weeks=0 and its scopeKey at line 64 contains only vehicle, so historical-week narration does not share the displayed week or reset when that week changes.",
+      "fix": "Existing AI feature owner should accept the selected digest offset/period from the original digest hook and include vehicle plus week in stream identity. Preserve explicit user-triggered generation, the default current-week behavior, gate and cancellation. Inspect server week semantics before implementation.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\DigestOperationalSummary.tsx",
+      "line": 67,
+      "rule": "MDC-033 / MDC-044 retain raw numeric input; format only at display boundary",
+      "detail": "useWeeklyDigest.ts:356 returns funFact.times already localized by fmtNumber; summary reparses it with Number(funFact.times). Decimal comma/grouped text can yield NaN and fail shared numeric validation even though the text formatter would display the original string.",
+      "fix": "Carry the raw dimensionless ratio alongside localized presentation, feed raw numeric data to the existing multiplier metric and preserve original city-pair description, formatting and threshold. Do not parse localized display text.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\DrivingPanel.tsx",
+      "line": 4,
+      "rule": "MDC-002 component-first category barrels",
+      "detail": "Mounted domain panels bypass canonical layout/data-display barrels for layout-reference/stat-reference imports. ChargingPanel.tsx:4-5, BatteryPanel.tsx:3-4, AlertsPanel.tsx:3 and WeekNavigation.tsx:3 repeat this. presentation.ts:2 also bypasses the data-display barrel for StatMetric.",
+      "fix": "Import the existing identical owners through '@/components/layout' and '@/components/data-display' in feature callers; do not create replacement wrappers or alter shared component internals.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\presentation.ts",
+      "line": 22,
+      "rule": "MDC-033 typed numeric source measurements",
+      "detail": "presentedMetric converts every specialist measurement to metricId='text' with an already formatted string. This preserves legacy display but bypasses raw numeric validation/missingness for domain stats, unlike the page's OperationalBrief adapters.",
+      "fix": "Reuse accepted StatMetric formatter support where equivalence is established; carry raw SI and missingness with display-only existing specialist formatters. KEEP specialist output where generic precision/unit equivalence is unproved.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts",
+      "line": 144,
+      "rule": "MDC-026 bounded results cannot establish complete/healthy weekly evidence",
+      "detail": "Alert history requests 1000 global records without week/vehicle bounds, then filters locally. Older or busy-fleet weeks can lack visible records despite successful query resolution. AlertsPanel.tsx:65 says 'everything looks great' for zero returned alerts; drive/charge requests are also bounded. Actual server caps/order and completeness are unverified.",
+      "fix": "Retain current period provenance and distinguish bounded absence from verified zero; integration owner should inspect server support before adding full-window pagination/filtering. Never fabricate a completeness guarantee or filter only a loaded page and call it complete.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\weekly-digest\\constants.ts",
+      "line": 10,
+      "rule": "MDC-044 localized labels without recasing source identities",
+      "detail": "DAY_LABELS supplies hardcoded Mon–Sun to daily chart axes/data rows. AlertsPanel.tsx:91 displays raw severity; useWeeklyDigest.ts:343 capitalizes severity into pie labels rather than deriving a localized presentation label. FsdOperationalPanel.tsx:44 hardcodes the display unit 'pts'.",
+      "fix": "Localize presentation weekday/severity/percentage-point labels through existing canonical catalogs and locale formatters while preserving Monday-first order, severity keys, grouping, colors, source identity and raw percentage-point values.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "rationale": "Fix selected-week narration mismatch, missing-measurement/retained-data trust and localized multiplier parsing before cosmetic adoption. P2: canonical imports/numeric stats, localized labels and bounded-result honesty. P3: theme-aware accent refinement and responsive review.",
+    "runtimeAcceptance": "NOT CLAIMED"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Extend existing AIDigestNarration period identity",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIDigestNarration.tsx",
+      "props": ["vehicleId?: number (retain)", "selected digest week offset/period input (new; concrete API to be coordinated with existing hook)", "include vehicle and selected week in useAiStream scopeKey"],
+      "variants": ["current week", "historical week"],
+      "states": ["feature off", "no valid vehicle", "idle", "streaming", "scope change", "error"],
+      "usedBy": ["/weekly-digest"],
+      "dependsOn": [
+        "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts: original weekOffset owner",
+        "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:306",
+        "existing useAiStream scope cancellation contract",
+        "server week_offset_weeks semantics inspection"
+      ],
+      "reason": "Concrete mismatch at AIDigestNarration.tsx:54,64; extend the existing feature rather than adding a competing narration component."
+    },
+    {
+      "name": "Review existing shared Helix accent treatment",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "props": ["retain title/description/buttonLabel/badgeLabel", "retain canStart/stream/onAction", "retain buttonPlacement/inputSlot/children"],
+      "variants": ["existing outline action", "existing Helix badge", "inline/below placement"],
+      "states": ["idle", "disabled", "streaming", "hover", "focus", "light/dark theme"],
+      "usedBy": ["AIDigestNarration on /weekly-digest"],
+      "dependsOn": ["existing Button outline tokens", "existing typography/semantic color tokens", "shared AI owner review and mounted contrast evidence"],
+      "reason": "Source-visible custom cyan styling; no new shared public API is needed and no other production consumer was inspected. This is a review requirement, not a measured failure."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\weekly-digest\\index.ts",
+      "line": 5,
+      "rule": "MDC-002 no competing implementations",
+      "detail": "Original barrel still exports WeekSelector, SummaryHeroCards, DrivingSection, ChargingSection, BatteryHealthSection, AlertsSection, FsdSection and WeekOverWeekSummary; modernization barrel also exports DigestSummary/FsdPanel. This page mounts WeekNavigation/domain panels and OperationalBrief adapters instead. Exports alone do not establish other mounted consumers or dead code.",
+      "fix": "Keep existing mounted owner selection; do not modernize both parallel surfaces or delete exports on this audit's evidence. Broader consumer reconciliation belongs to the orchestrator.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "765aac23ab86b1fc38d38f4cfe991999cead181bfea8244f9b6ea54e55a27686",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 310,
+    "sectionNames": [
+      "Week navigation",
+      "Week summary and optional fun fact",
+      "Driving activity and top drive",
+      "Charging activity and weekly energy comparison",
+      "Supervised-driving evidence",
+      "Battery-at-charge averages and estimated range added",
+      "Alerts severity list and distribution",
+      "Week-over-week comparison",
+      "Optional Helix narration"
+    ],
+    "sectionCounts": {
+      "logicalContentSections": 9,
+      "CardGrid": 6,
+      "Section": 2,
+      "FadeIn": 7,
+      "GlassPanelDirectInPage": 0,
+      "ChartContainerDirectInPage": 0,
+      "domainCharts": 3,
+      "OperationalBriefAdapters": 3,
+      "conditionalAINarration": 1
+    },
+    "sectionEvidence": [
+      "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:130-147",
+      "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:149-171",
+      "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:173-212",
+      "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:214-233",
+      "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:235-273",
+      "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:275-297",
+      "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx:299-307"
+    ],
+    "actions": [
+      "Previous week; next week only before current week; Current badge",
+      "Drive retry; charging retry shared by charging and battery; alert retry; FSD retry",
+      "Aggregate retry refetches all four domain queries",
+      "Top-drive empty action to /drives",
+      "Battery empty action to /charging",
+      "FSD empty and measured-evidence links to /fsd?days=7",
+      "Permission-respecting once-per-vehicle/current-week browser notification and click to /weekly-digest",
+      "Feature-gated explicit Helix generation; positive-vehicle disabled state and streaming busy state",
+      "Inherited chart data alternatives via data/dataColumns; shared toolbar/export behavior remains uninspected and must not be removed"
+    ],
+    "metricsAndDetails": {
+      "summary": ["distance", "drive count", "energy used", "charging cost", "estimated CO2 saved", "optional city-pair multiplier and explanation", "per-metric previous-week trends"],
+      "driving": ["seven-day distance", "average efficiency", "total driving time", "efficiency change", "drive count", "top drive date/distance/duration/efficiency"],
+      "charging": ["seven-day energy added", "session count", "total energy added", "average charging power", "total cost", "energy versus last week"],
+      "battery": ["average start SOC", "average end SOC", "average charge gain", "session count", "estimated range added using existing 5.5 m/Wh approximation"],
+      "alerts": ["total", "severity labels and counts", "severity distribution pie and tabular source data", "resolved no-alert message subject to bounded-evidence correction"],
+      "supervisedDriving": ["reported FSD distance", "observed-driving share", "distance change", "share percentage-point change", "missing baseline", "current-week notice", "counter-change honesty explanation", "FSD destination"],
+      "comparison": ["distance", "drive count", "energy", "cost", "efficiency", "CO2", "direction/favorability and magnitudes"]
+    },
+    "dataBehavior": [
+      "Workspace vehicle owner stays unchanged; independent local Monday–Sunday week and inclusive filtering/next-week guard remain.",
+      "Selected and previous week request bounds, limit=1000, charging offset=0, source identities and query policies stay explicit until authorized integration changes.",
+      "Null-safe array iteration and malformed-timestamp rejection remain; fix missingness without altering valid SI measurements or treating true zero as absent.",
+      "Keep raw meters/seconds/Wh/W and FSD SI evidence; convert only at render boundaries with existing specialist formatters and saved preferences.",
+      "Preserve weighted measured-drive efficiency, timestamp power fallback, current/previous sums, top-drive selection, seven Monday-first bins, severity grouping, global vehicle_id=0 alerts, CO2 model and city-pair threshold/selection.",
+      "Preserve incomplete-history provenance/completeness='unknown'; do not claim lifetime/full-window coverage.",
+      "Keep canonical deterministic digest even with AI disabled; coordinate selected-week narration correction rather than deleting it.",
+      "Keep notification deduplication key, permission/subscription guards and destination; no consent prompts or production mutations."
+    ],
+    "sourceOnlyChecks": {
+      "method": "Bounded PowerShell regex counts on the exact page, exit 0",
+      "staticInlineStyles": 0,
+      "rawControls": 0,
+      "directLibraryImports": 0,
+      "legacyApiImports": 0,
+      "neonGlowFixedWhiteMatches": 0,
+      "notes": "Counts apply to the page only, not the feature/shared dependency graph. Dynamic BatteryPill styles are calculated measurements/semantic colors, not static CSS-variable violations. No historical baseline or runtime parity certification."
+    }
+  },
+  "evidenceLimits": [
+    "Atomic Phase0 SOURCE audit only. No source edits, Git commands, TypeScript, lint, build, tests, browser exercise, screenshots, backend requests or production mutations.",
+    "The loaded audit-violations script was inspected but NOT RUN because its final step invokes project-wide npx tsc --noEmit. Assignment and concurrency conventions prohibit project-wide validation; direct bounded page pattern counts were used instead.",
+    "Runtime, route reachability, visual quality, keyboard, contrast, viewport, OS forced-color and reduced-motion behavior remain UNVERIFIED. Supplied route is the task's route, not a tested mount.",
+    "Shared PageLayout/CardGrid/ChartCard/StatGroup/OperationalBrief/EmbeddedChart, selection/formatting/theme owners, useAiStream, withAiFeature and AiOutputPanel internals were not expanded into a foundation audit.",
+    "API hook reads and router/handler reads are bounded relevant excerpts. GET path registrations are source-confirmed; actual server filtering, pagination/order, caps, costs/currency semantics and FSD calculations are not validated. Exact AI delegated registration is not inspected.",
+    "A scoped style search matched export-adjacent modernization files/tests in addition to mounted dependencies; only those returned matching lines were seen, not full unmounted/test implementations. No test fixture entered the application or was used as runtime evidence.",
+    "No neon/glow/fixed-white classes occur in the exact page counts. Mounted domain source does not establish a new neon/glow palette. Shared effective palette and measured saturation/contrast remain unknown; reported visual risks concern fixed pale semantic classes and cumulative cyan chrome.",
+    "No source changes authorized. Shared requirements are deduplicated existing-owner coordination/review, not speculative new components. Only the assigned JSON and heartbeat are owned.",
+    "Mission sections 0,1,15,33,43,44 and complete worker conventions/design contract were read. Broader whole-application inventory and acceptance belong to separate owners."
+  ],
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx",
+    "web\\src\\features\\analytics\\components\\weekly-digest\\index.ts",
+    "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts",
+    "web\\src\\features\\analytics\\components\\weekly-digest\\useFsdWeeklyDigestNotification.ts",
+    "web\\src\\features\\analytics\\components\\weekly-digest\\helpers.ts",
+    "web\\src\\features\\analytics\\components\\weekly-digest\\constants.ts",
+    "web\\src\\features\\analytics\\components\\weekly-digest\\BatteryPill.tsx",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\index.ts",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\WeekNavigation.tsx",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\DrivingPanel.tsx",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\ChargingPanel.tsx",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\BatteryPanel.tsx",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\AlertsPanel.tsx",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\presentation.ts",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\DigestTrend.tsx",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\DigestSummary.tsx",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\FsdPanel.tsx",
+    "web\\src\\features\\analytics\\components\\weekly-digest-modernization\\DigestPresentation.test.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\DigestOperationalSummary.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\FsdOperationalPanel.tsx",
+    "web\\src\\components\\ai\\AIDigestNarration.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useNotifications.ts",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\aidigest\\handler.go"
+  ]
+}

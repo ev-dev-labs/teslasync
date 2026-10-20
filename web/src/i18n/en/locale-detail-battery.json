@@ -1,5 +1,8 @@
 {
   "battery": {
+    "modernization": {
+      "pausedInitial": "This request is paused while the device is offline. No measurements have loaded yet."
+    },
     "aiNarrative": {
       "title": "Explain the battery health forecast",
       "description": "Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast — it grounds every sentence in the same numbers the chart below renders.",
@@ -7,76 +10,196 @@
       "generateButton": "Narrate forecast"
     },
     "cells": {
-      "title": "Battery Cells",
+      "title": "Battery cells",
+      "modernization": {
+        "snapshot": "Latest available snapshot",
+        "snapshotSource": "Vehicle-scoped backend snapshot; cells are synthesized from brick extrema. Request time is not measurement time.",
+        "unknown": "Measurement unavailable",
+        "signalAvailability": "Pack and temperature signal availability is not supplied by this endpoint; reported values alone do not establish health.",
+        "noCellSnapshot": "Cell voltage data is unavailable. Any pack and temperature values reported by the backend remain visible."
+      },
       "insight": {
-        "highSpread": "High Voltage Spread",
+        "highSpread": "High voltage spread",
         "highSpreadDesc": "Cell imbalance is significant. Consider a full charge to 100% to allow BMS balancing, then discharge to 90%.",
-        "watchSpread": "Voltage Spread Increasing",
+        "watchSpread": "Voltage spread increasing",
         "watchSpreadDesc": "Cell balance is slightly off. Periodic full charges can help the BMS equalize cells.",
-        "balanced": "Cells Well Balanced",
+        "balanced": "Cells well balanced",
         "balancedDesc": "Voltage spread is within healthy range. Battery cells are operating normally.",
-        "highTemp": "High Temperature Spread",
+        "highTemp": "High temperature spread",
         "highTempDesc": "Avoid fast charging in extreme temperatures. Allow the battery to precondition before supercharging.",
-        "watchTemp": "Module Temperature Variation",
+        "watchTemp": "Module temperature variation",
         "watchTempDesc": "Some temperature variation is normal. Monitor during fast charging sessions.",
-        "goodTemp": "Thermal Balance Good",
+        "goodTemp": "Thermal balance good",
         "goodTempDesc": "Module temperatures are consistent. Thermal management system is performing well.",
-        "criticalCells": "Critical Cells Detected",
+        "criticalCells": "Critical cells detected",
         "criticalCellsDesc": "{{count}} cell(s) show significant deviation. Consider scheduling a service appointment.",
-        "healthy": "All Cells Healthy",
+        "healthy": "All cells healthy",
         "healthyDesc": "No critical cells detected. Continue current charging habits for long-term health."
       },
       "chart": {
-        "spreadTrend": "Voltage Spread Trend",
-        "voltageSpread": "Voltage Spread (mV)",
-        "noSpreadTrend": "Not enough history for spread trend"
+        "spreadTrend": "Voltage spread trend",
+        "voltageSpread": "Voltage spread (mV)",
+        "noSpreadTrend": "Not enough history for spread trend",
+        "spreadTrendAria": "Battery cell voltage spread trend area chart over time"
       },
       "temp": {
-        "title": "Temperature Summary",
-        "avg": "Avg Temperature",
-        "min": "Min Temperature",
-        "max": "Max Temperature",
-        "spread": "Temp Spread",
+        "title": "Temperature summary",
+        "avg": "Avg temperature",
+        "min": "Min temperature",
+        "max": "Max temperature",
+        "spread": "Temp spread",
         "empty": "No temperature data available"
       },
-      "recommendations": "Health Recommendations",
+      "recommendations": "Health recommendations",
       "noInsights": "Not enough data for recommendations",
       "stat": {
-        "totalCells": "Total Cells",
-        "packVoltage": "Pack Voltage",
-        "avgVoltage": "Avg Cell V",
-        "voltageSpread": "V Spread",
-        "tempSpread": "Temp Spread",
-        "normalCells": "Normal Cells"
+        "totalCells": "Total cells",
+        "packVoltage": "Pack voltage",
+        "avgVoltage": "Avg cell V",
+        "voltageSpread": "V spread",
+        "tempSpread": "Temp spread",
+        "normalCells": "Normal cells"
       },
       "distribution": {
-        "range": "Voltage range"
+        "range": "Voltage range",
+        "title": "Voltage distribution",
+        "empty": "No distribution data available.",
+        "aria": "Distribution of battery cells by voltage range",
+        "count": "Cell count"
       },
-      "time": "Time"
+      "time": "Time",
+      "status": {
+        "unknown": "Unknown",
+        "significant": "Significant deviation",
+        "slight": "Slight deviation",
+        "normal": "Normal"
+      },
+      "kpi": {
+        "totalCells": "Total cells",
+        "avgVoltage": "Avg voltage",
+        "minCell": "Min cell",
+        "maxCell": "Max cell",
+        "imbalance": "Imbalance",
+        "packVoltage": "Pack voltage"
+      },
+      "kpis": "Summary metrics",
+      "summary": "At a glance",
+      "cell": "Cell",
+      "legend": {
+        "nominal": "Nominal",
+        "slight": "Slight deviation",
+        "significant": "Significant deviation"
+      },
+      "table": {
+        "status": "Status",
+        "cell": "Cell #",
+        "voltage": "Voltage (V)",
+        "delta": "Delta (mV)"
+      },
+      "voltage": "Voltage",
+      "ref": {
+        "avg": "Avg",
+        "min": "Min",
+        "max": "Max",
+        "warning": "Warning"
+      },
+      "overTime": {
+        "avg": "Avg voltage",
+        "title": "Cell voltage over time",
+        "empty": "Not enough history yet.",
+        "aria": "Minimum, average, and maximum battery cell voltage over time",
+        "min": "Min voltage",
+        "max": "Max voltage"
+      },
+      "subtitle": "Individual cell voltage monitoring and analysis",
+      "heatmap": {
+        "empty": "No cell readings available.",
+        "title": "Cell voltage heatmap",
+        "subtitle": "Cells colored by deviation from average"
+      },
+      "view": {
+        "bar": "Switch to bar view",
+        "grid": "Switch to grid view",
+        "barLabel": "Bar view",
+        "gridLabel": "Grid view"
+      },
+      "barView": {
+        "aria": "Voltage reading for each battery cell"
+      },
+      "bar": {
+        "title": "Cell voltage bar chart",
+        "empty": "No cell voltages available.",
+        "aria": "Battery cell voltage readings with pack minimum, average, and maximum references"
+      },
+      "imbalance": {
+        "title": "Imbalance trend",
+        "empty": "Not enough history yet.",
+        "aria": "Battery cell voltage imbalance over time with nominal and warning thresholds",
+        "series": "Imbalance (mV)"
+      },
+      "details": {
+        "title": "Cell details",
+        "count": "{{count}} cells",
+        "empty": "No cell details available."
+      }
     },
     "degradation": {
-      "title": "Battery Degradation",
+      "title": "Battery degradation",
+      "sampleWindow": "Available battery history",
+      "estimateEvidence": "Health, capacity, range and forecasts are estimates derived from available telemetry snapshots, not direct pack-capacity measurements.",
+      "noSoh": "Battery health is not available yet.",
+      "predictionAndHabits": "Prediction and charging habits",
+      "analysis": "Range and risk analysis",
+      "guidance": "Recommendations and health factors",
+      "initialPaused": "Battery analytics loading is paused. Reconnect to load this vehicle’s history.",
+      "stressValue": {
+        "Low": "Low",
+        "Medium": "Medium",
+        "High": "High"
+      },
       "prediction": "Prediction",
       "predictionDesc": "At current rate, battery reaches",
       "inApprox": "in approximately",
       "years": "years",
-      "rate": "Degradation Rate",
-      "stress": "Stress Level",
-      "totalCycles": "Total Cycles",
-      "avgDoD": "Avg Depth of Discharge",
+      "rate": "Degradation rate",
+      "stress": "Stress level",
+      "totalCycles": "Total cycles",
+      "avgDoD": "Avg depth of discharge",
       "needMore": "Need more data points to generate prediction (minimum 3 snapshots required)",
-      "trendTitle": "Health Trend & Projection",
+      "trendTitle": "Health trend & projection",
       "warranty": "80% Warranty",
       "confidence": "95% Confidence",
-      "actualHealth": "Actual Health %",
+      "actualHealth": "Actual health %",
       "projected": "Projected %",
-      "rangeLoss": "Range Loss Over Time",
+      "rangeLoss": "Range loss over time",
       "noRange": "Range data will appear once history is available.",
-      "riskFactors": "Risk Factors",
+      "riskFactors": "Risk factors",
+      "riskLabel": {
+        "low": "Low",
+        "moderate": "Moderate",
+        "elevated": "Elevated",
+        "high": "High",
+        "unknown": "Unknown"
+      },
+      "riskDetail": {
+        "fast_charge_ratio": "{{percent}}% of sessions are DC fast charge",
+        "high_soc_charging": "{{percent}}% of sessions charge above {{threshold}}%",
+        "temperature_exposure": "Average cell temperature: {{temperature}}",
+        "cycle_count_rate": "{{cycles}} cycles/month vs ~{{typical}} typical",
+        "deep_discharge_frequency": "{{percent}}% of sessions start below {{threshold}}% SOC"
+      },
+      "recommendation": {
+        "fast_charge_ratio": "Reduce Supercharging frequency — prefer Level 2 home or destination charging",
+        "high_soc_charging": "Reduce daily charge limit to {{threshold}}% for everyday driving",
+        "temperature_exposure": "Park in shade or climate-controlled garage to reduce heat exposure",
+        "cycle_count_rate": "Combine short trips when possible to reduce charge cycle frequency",
+        "deep_discharge_frequency": "Avoid letting battery drop below {{threshold}}% regularly — plug in nightly",
+        "excellent_habits": "Your battery habits are excellent — keep it up!"
+      },
       "noRiskData": "Risk data will appear once charging history is available.",
       "recommendations": "Recommendations",
       "noRecommendations": "Recommendations will appear based on your usage patterns.",
-      "chargingImpact": "Charging Habits Impact",
+      "chargingImpact": "Charging habits impact",
       "fastCharges": "fast charges",
       "deepDischarges": "deep discharges",
       "stressLabel": "stress",
@@ -86,48 +209,101 @@
       "noHistory": "No degradation records found.",
       "noHistoryDescription": "Capacity estimates appear after enough charging, range, and odometer snapshots have accumulated.",
       "date": "Date",
-      "originalRange": "Original Range",
+      "originalRange": "Original range",
+      "retainedRangeBaseline": "First retained range estimate",
+      "rangeSampledAt": "Range sample timestamp",
+      "odometerSampledAt": "Odometer sample timestamp",
+      "baselineSampledAt": "Baseline sample timestamp",
+      "retainedRangeEvidence": "The comparison baseline is the range estimate attached to the first retained history row, not new-pack range. Missing baseline values remain unknown. Sample timestamps identify carried-forward telemetry; the history date is the capacity aggregation day.",
       "currentSoh": "Current SOH",
-      "currentRange": "Current Range",
-      "tempExposure": "Temperature Exposure",
+      "currentRange": "Current range",
+      "tempExposure": "Temperature exposure",
       "sohPct": "SOH %",
       "range": "Range",
       "odometer": "Odometer",
       "lowerBetter": "Lower is better for longevity",
-      "fullCharge": "Full Charge",
-      "fastCharge": "Fast Charge",
-      "estimatedCapacity": "Estimated Capacity",
-      "cycleDepth": "Cycle Depth",
-      "chargeHabits": "Charge Habits",
+      "fullCharge": "Full charge",
+      "fastCharge": "Fast charge",
+      "estimatedCapacity": "Estimated capacity",
+      "cycleDepth": "Cycle depth",
+      "chargeHabits": "Charge habits",
       "capacity": "Capacity",
-      "batteryAge": "Battery Age",
+      "batteryAge": "Battery age",
       "avgDoDLabel": "Avg DoD",
       "monthsCount": "{{count}} months",
       "yearsMonthsShort": "{{y}}y {{m}}m",
       "yearsCount": "{{y}} years",
-      "noRecords": "No degradation records found."
+      "noRecords": "No degradation records found.",
+      "brief": {
+        "prediction": "Degradation model evidence",
+        "summary": "Battery degradation evidence"
+      },
+      "healthTitle": "Battery health",
+      "riskScore": "Risk score",
+      "subtitle": "Health trends, degradation predictions, and charging habit impact",
+      "summary": "Battery health summary",
+      "noStress": "Charging impact will appear once charging history is available.",
+      "rangeLossAria": "First retained comparison baseline and estimated driving range over time",
+      "healthFactors": "Battery health factors",
+      "history": "Degradation history",
+      "trendTitleAria": "Battery health trend and 95% confidence projection chart",
+      "selectVehicleHelp": "Select a vehicle to view its battery history.",
+      "reconnectHelp": "Reconnect to Tesla, then retry to load this vehicle's battery history.",
+      "predictionBandChartAria": "Battery health trend and approximate prediction band chart",
+      "approximatePredictionBand": "Approximate prediction band",
+      "belowThreshold": "Fitted health is already at or below 80%.",
+      "noFutureCrossing": "The fitted trend does not predict a future crossing of 80%.",
+      "crossingUnavailable": "The 80% crossing estimate is unavailable.",
+      "capacityEvidence": "Nominal baseline evidence: capacity_source={{source}}; original_capacity_wh={{capacity}}. This baseline is an assumption, not an observed or calibrated original pack capacity.",
+      "capacityEstimator": "Current capacity is a telemetry-derived estimator: the median of up to eight recent valid daily capacity estimates, or EnergyRemaining / (BatteryLevel / 100) when history is unavailable. SOH compares this estimator with the nominal baseline; it is not a direct capacity measurement.",
+      "capacityEstimatorUnavailable": "Observed current-capacity estimator unavailable; the nominal baseline alone does not establish current capacity or SOH.",
+      "capacityCalibration": "Actual pack-capacity calibration remains candidate BD-C01; no calibration is applied here.",
+      "observationEvidence": "Observation duration is time since the earliest retained battery history, charging session or drive session; it is not true pack age. Start: {{start}}; source: {{source}}. Manufacture and replacement dates are unknown.",
+      "predictionIntervalUnavailable": "Approximate prediction band: fit sample basis and multiplier unavailable. This is not a calibrated 95% confidence interval; empirical coverage remains unmeasured in BD-C01.",
+      "fittedSohTrend": "Fitted SOH trend",
+      "fittedSohTrendHelp": "Signed fitted SOH change in percentage points per year. Negative values indicate declining health; positive values indicate improving fitted health.",
+      "observationDuration": "Observation duration",
+      "driveDropEvidence_one": "Arithmetic mean of start SOC minus end SOC across {{count}} valid recorded drive (0–100% SOC, start ≥ end, including zero drops). This is per-drive SOC change, not depth of a full discharge/recharge cycle. The depth score is 100 minus this mean.",
+      "driveDropEvidence_other": "Arithmetic mean of start SOC minus end SOC across {{count}} valid recorded drives (0–100% SOC, start ≥ end, including zero drops). This is per-drive SOC change, not depth of a full discharge/recharge cycle. The depth score is 100 minus this mean.",
+      "predictionIntervalEvidence_one": "Approximate OLS prediction band for a future SOH observation, not confidence in the fitted mean. Basis: {{count}} valid dated SOH sample (finite, 0–100%); residual degrees of freedom: {{df}}. Half-width = {{multiplier}} × residual standard error × sqrt(1 + 1/n + (x − mean(x))² / Sxx). The fixed multiplier is 2 for 3–30 samples and 1.96 above 30, not a Student-t quantile. Displayed bounds are clipped to 0–100% and rounded to 0.1 percentage point. Linear trend and independent, constant-variance residuals are model assumptions; empirical coverage remains unmeasured in BD-C01, not calibrated 95% coverage.",
+      "predictionIntervalEvidence_other": "Approximate OLS prediction band for a future SOH observation, not confidence in the fitted mean. Basis: {{count}} valid dated SOH samples (finite, 0–100%); residual degrees of freedom: {{df}}. Half-width = {{multiplier}} × residual standard error × sqrt(1 + 1/n + (x − mean(x))² / Sxx). The fixed multiplier is 2 for 3–30 samples and 1.96 above 30, not a Student-t quantile. Displayed bounds are clipped to 0–100% and rounded to 0.1 percentage point. Linear trend and independent, constant-variance residuals are model assumptions; empirical coverage remains unmeasured in BD-C01, not calibrated 95% coverage.",
+      "chargeEquivalentEvidence_one": "Estimated charge equivalents: recorded energy added across {{count}} valid charging session divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption.",
+      "chargeEquivalentEvidence_other": "Estimated charge equivalents: recorded energy added across {{count}} valid charging sessions divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption.",
+      "validFitRequired": "Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)",
+      "risk": {
+        "fast_charge_ratio": "fast charge ratio",
+        "high_soc_charging": "high soc charging",
+        "temperature_exposure": "temperature exposure",
+        "cycle_count_rate": "cycle count rate",
+        "deep_discharge_frequency": "deep discharge frequency"
+      }
     },
     "health": {
       "excellent": "Excellent",
       "good": "Good",
-      "degraded": "Degraded"
+      "degraded": "Degraded",
+      "unavailable": "Not measured",
+      "missingMeasurement": "Capacity measurements are not available yet; battery health cannot be assessed.",
+      "brief": {
+        "capacityScope": "Capacity and range model unavailable"
+      }
     },
     "insight": {
-      "excellentTitle": "Excellent Health",
+      "excellentTitle": "Excellent health",
       "excellentDesc": "Battery health is {{soh}}/100 — performing above average.",
-      "goodTitle": "Good Health",
+      "goodTitle": "Good health",
       "goodDesc": "Battery health is {{soh}}/100 — normal degradation for age.",
-      "concernTitle": "Health Concern",
+      "concernTitle": "Health concern",
       "concernDesc": "Battery health dropped to {{soh}}/100 — consider service check.",
-      "highFastChargeTitle": "High Fast-Charge Usage",
+      "highFastChargeTitle": "High fast-charge usage",
       "highFastChargeDesc": "{{pct}} of sessions are fast-charging. Mix in slow charging for longevity.",
-      "goodHabitsTitle": "Good Charging Habits",
+      "goodHabitsTitle": "Good charging habits",
       "goodHabitsDesc": "Most charges are slow/AC — ideal for battery longevity.",
-      "deepDischargeTitle": "Deep Discharges Detected",
+      "deepDischargeTitle": "Deep discharges detected",
       "deepDischargeDesc": "{{count}} recent sessions started below 10%. Avoid deep discharges when possible.",
-      "highSuperchargerTitle": "High Supercharger Usage",
+      "highSuperchargerTitle": "High Supercharger usage",
       "highSuperchargerDesc": "{{count}} Supercharger sessions. Occasional slow charging helps battery health.",
-      "lowDegTitle": "Low Degradation Rate",
+      "lowDegTitle": "Low degradation rate",
       "lowDegDesc": "{{rate}}% per year — well below industry average of 3–5%."
     },
     "tip": {
@@ -135,9 +311,10 @@
       "avoid100": "Avoid charging to 100% regularly — keep the limit at 80–90%.",
       "avoidDeep": "Try to avoid deep discharges below 20%.",
       "aboveAvg": "Your degradation rate is above average — review charging habits.",
-      "great": "Your battery health looks great — keep up the good habits!"
+      "great": "Your battery health looks great — keep up the good habits!",
+      "needMeasurements": "Keep monitoring as capacity measurements arrive; battery health cannot be assessed yet."
     },
-    "title": "Battery Health",
+    "title": "Battery health",
     "subtitle": "Degradation tracking, prediction, charging habits & longevity insights",
     "empty": "No battery health data available yet.",
     "section": {
@@ -150,10 +327,16 @@
       "capacityRangeFailed": "Capacity & range comparison failed to load",
       "acdcFailed": "AC/DC energy breakdown failed to load",
       "quickLinksFailed": "Quick links failed to load",
-      "recommendationsFailed": "Recommendations failed to load"
+      "recommendationsFailed": "Recommendations failed to load",
+      "overview": "Health score and capacity",
+      "thermalCompare": "Thermal monitoring and capacity comparison",
+      "linksTips": "Related pages and recommendations",
+      "kpis": "Battery health summary metrics",
+      "trends": "Capacity and range trends",
+      "chargingAnalysis": "Charging energy analysis"
     },
     "gauge": {
-      "health": "Health Score",
+      "health": "Health score",
       "capacity": "Capacity",
       "degradation": "Degradation",
       "cycles": "Cycles"
@@ -161,84 +344,119 @@
     "yearsTo80": "Years to 80%",
     "warrantyNote": "warranty threshold",
     "bar": {
-      "capacity": "Current Capacity",
+      "capacity": "Current capacity",
       "degradation": "Degradation",
-      "cycles": "Charge Cycles"
+      "cycles": "Charge cycles"
     },
     "perYear": "per year",
     "warrantyLimit": "Tesla warranty: 1,500 cycles / 70%",
     "metric": {
-      "soh": "State of Health",
-      "currentCap": "Current Capacity",
-      "originalCap": "Original Capacity",
-      "degradation": "Degradation Rate",
-      "cycles": "Total Cycles",
-      "age": "Battery Age",
-      "fullChargeComplete": "Full Charge Complete"
+      "soh": "State of health",
+      "currentCap": "Current capacity",
+      "originalCap": "Original capacity",
+      "degradation": "Degradation rate",
+      "cycles": "Total cycles",
+      "age": "Battery age",
+      "fullChargeComplete": "Full charge complete"
     },
     "yr": "yr",
     "months": "months",
     "thermal": {
-      "title": "Thermal Monitoring",
-      "moduleTempMax": "Module Temp (Max)",
+      "title": "Thermal monitoring",
+      "moduleTempMax": "Module temp (max)",
       "moduleNumber": "Module #{{n}}",
-      "moduleTempMin": "Module Temp (Min)",
-      "heater": "Battery Heater",
-      "tempSpread": "Temperature Spread"
+      "moduleTempMin": "Module temp (min)",
+      "heater": "Battery heater",
+      "tempSpread": "Temperature spread"
     },
     "insights": {
-      "title": "Smart Insights",
+      "title": "Smart insights",
       "empty": "Not enough data for insights yet"
     },
     "chart": {
-      "capacityTrend": "Capacity Trend & Prediction",
+      "capacityTrend": "Capacity trend & prediction",
       "capacityTrendAria": "Battery capacity trend with dashed projection line over time",
       "dashedProjected": "Dashed = projected",
       "actual": "Actual %",
       "predicted": "Predicted %",
       "noTrend": "Not enough snapshots for trend analysis",
-      "rangeTrend": "Estimated Range Over Time",
+      "rangeTrend": "Estimated range over time",
       "rangeTrendAria": "Estimated battery range over time area chart",
       "range": "Range",
       "noRange": "No range data yet",
-      "chargeDist": "Charge Level Distribution",
+      "chargeDist": "Charge level distribution",
       "chargeDistAria": "Distribution of charging-session start and end battery levels",
       "chargeDistSub": "Recent 100 sessions",
       "chargeBand": "Battery level",
-      "chargeStarted": "Charge Started",
-      "chargeEnded": "Charge Ended",
+      "chargeStarted": "Charge started",
+      "chargeEnded": "Charge ended",
       "noSessions": "No charging session data yet",
-      "acdc": "AC / DC Energy Breakdown",
+      "acdc": "AC / DC energy breakdown",
       "acdcAria": "AC versus DC energy share pie chart",
       "chargingType": "Charging type",
       "energyKwh": "Energy (kWh)",
       "noBreakdown": "No charging data for breakdown"
     },
     "habit": {
-      "avgStart": "Avg Start Level",
-      "avgEnd": "Avg End Level",
-      "supercharger": "Supercharger Sessions",
-      "home": "Home Charges"
+      "avgStart": "Avg start level",
+      "avgEnd": "Avg end level",
+      "supercharger": "Supercharger sessions",
+      "home": "Home charges"
     },
     "newVsNow": {
-      "title": "Capacity & Range: New vs Now",
-      "capNew": "Capacity When New",
-      "capNow": "Capacity Now",
-      "rangeNew": "Range When New",
-      "rangeNow": "Range Now",
-      "lost": "lost"
+      "title": "Capacity & range: new vs now",
+      "capNew": "Capacity when new",
+      "capNow": "Capacity now",
+      "rangeNew": "Range when new",
+      "rangeNow": "Range now",
+      "lost": "lost",
+      "brief": {
+        "summary": "Capacity and range evidence",
+        "scope": "Reference capacity and first / latest range snapshots",
+        "description": "Capacity values are modeled estimates; range comparison uses the first and latest available history points, not a controlled capacity test."
+      }
     },
     "stats": {
-      "title": "Charging Statistics",
-      "totalSessions": "Total Sessions",
-      "acSessions": "AC Sessions",
+      "title": "Charging statistics",
+      "totalSessions": "Total sessions",
+      "acSessions": "AC sessions",
       "dcSessions": "DC / Supercharger",
-      "totalEnergy": "Total Energy Added",
-      "cycles": "Charge Cycles",
+      "totalEnergy": "Total energy added",
+      "cycles": "Charge cycles",
       "empty": "No charging statistics yet"
     },
     "recommendations": {
       "title": "Recommendations"
+    },
+    "brief": {
+      "eyebrow": "Battery and energy evidence",
+      "loading": "Loading source evidence",
+      "retained": "Retained source evidence",
+      "available": "Available source readings",
+      "unavailable": "Source readings unavailable"
+    },
+    "glossary": {
+      "lead": "Terms on this page:"
+    },
+    "hero": {
+      "title": "Health Overview"
+    },
+    "bars": {
+      "title": "Capacity & Wear"
+    },
+    "seriesLabel": "Battery %",
+    "delta": {
+      "unknown": "Battery delta unknown",
+      "aria": "Battery {{from}}% to {{to}}%"
+    },
+    "links": {
+      "title": "Explore More",
+      "cells": "Battery Cells",
+      "degradation": "Degradation",
+      "energyFlow": "Energy Flow",
+      "projectedRange": "Projected Range",
+      "vampireDrain": "Vampire Drain",
+      "sleepEfficiency": "Sleep Efficiency"
     }
   }
 }

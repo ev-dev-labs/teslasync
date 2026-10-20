@@ -23,12 +23,13 @@
  *     deterministically while a spy records the (key, fallback) pairs.
  *   - renders are wrapped in MemoryRouter because the back <Link> needs router
  *     context.
- *   - user-event is intentionally NOT a dependency (see web/package.json); the
- *     one interactive control (the wake <button>) is exercised with fireEvent.
+ *   - user-event exercises native keyboard navigation/activation; fireEvent
+ *     retains the existing click coverage.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
 import type { Vehicle, VehicleStatus } from '@/api/types'
 
 // jsdom lacks matchMedia; install a benign stub before anything evaluates in case
@@ -124,12 +125,12 @@ describe('VehicleHeader — status badge', () => {
 
   it('reflects the status→variant mapping in the badge colour', () => {
     const { unmount } = renderHeader({ status: 'online' })
-    // online → 'success' variant → green chip.
-    expect(screen.getByText('Online').className).toMatch(/bg-green/)
+    // online → 'success' variant → theme-aware semantic success chip.
+    expect(screen.getByText('Online').className).toMatch(/bg-\[var\(--semantic-success-bg\)\]/)
     unmount()
     renderHeader({ status: 'offline' })
-    // offline → 'danger' variant → red chip.
-    expect(screen.getByText('Offline').className).toMatch(/bg-red/)
+    // offline → 'danger' variant → theme-aware semantic danger chip.
+    expect(screen.getByText('Offline').className).toMatch(/bg-\[var\(--semantic-danger-bg\)\]/)
   })
 
   it('keeps an unexpected status readable (raw value, not the i18n key)', () => {
@@ -185,6 +186,15 @@ describe('VehicleHeader — VIN', () => {
 })
 
 describe('VehicleHeader — back link a11y', () => {
+  it('fits shared header slots without a second title card', () => {
+    const { container } = renderHeader()
+    expect(container.firstElementChild).toHaveClass('min-w-0')
+    expect(container.firstElementChild).not.toHaveClass('p-6')
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Wake up' })).toBeInTheDocument()
+  })
+
   it('exposes a labelled back link to the vehicles list', () => {
     renderHeader()
     const link = screen.getByRole('link', { name: 'Back' })
@@ -201,24 +211,48 @@ describe('VehicleHeader — back link a11y', () => {
 })
 
 describe('VehicleHeader — wake button', () => {
+  it('keeps full identifiers and wrapping labels with mobile-sized wake targets', () => {
+    const model = 'Model with an unusually long descriptive name'
+    const vin = '5YJ3E1EA7KF123456'
+    renderHeader({ vehicle: makeVehicle({ model, vin }) })
+    expect(screen.getByText(`${model} Performance`)).toHaveClass('max-w-full', 'whitespace-normal', 'break-words')
+    expect(screen.getByText(vin)).toHaveClass('break-all')
+    expect(screen.getByText(vin)).not.toHaveClass('truncate')
+    expect(screen.getByRole('button', { name: 'Wake up' })).toHaveClass(
+      'min-h-11', 'md:min-h-10', 'w-full', 'md:w-auto', 'h-auto',
+    )
+    expect(screen.getByRole('link', { name: 'Back' })).toHaveClass('min-h-11', 'min-w-11', 'shrink-0')
+  })
+
+  it('supports keyboard navigation from back to wake and native activation', async () => {
+    const user = userEvent.setup()
+    const { onWake } = renderHeader()
+    await user.tab()
+    expect(screen.getByRole('link', { name: 'Back' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Wake up' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(onWake).toHaveBeenCalledTimes(1)
+  })
+
   it('renders the wake control and fires onWake once when clicked', () => {
     const { onWake } = renderHeader({ waking: false })
-    const btn = screen.getByRole('button', { name: 'Wake Up' })
+    const btn = screen.getByRole('button', { name: 'Wake up' })
     expect(btn).not.toBeDisabled()
     fireEvent.click(btn)
     expect(onWake).toHaveBeenCalledTimes(1)
-    expect(tSpy).toHaveBeenCalledWith('common.wakeUp', 'Wake Up')
+    expect(tSpy).toHaveBeenCalledWith('common.wakeUp', 'Wake up')
   })
 
   it('hides the decorative power icon from assistive tech', () => {
     renderHeader({ waking: false })
-    const icon = screen.getByRole('button', { name: 'Wake Up' }).querySelector('svg')
+    const icon = screen.getByRole('button', { name: 'Wake up' }).querySelector('svg')
     expect(icon).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('disables the button and marks it busy while waking', () => {
     renderHeader({ waking: true })
-    const btn = screen.getByRole('button', { name: 'Wake Up' })
+    const btn = screen.getByRole('button', { name: 'Wake up' })
     expect(btn).toBeDisabled()
     expect(btn).toHaveAttribute('aria-busy', 'true')
   })

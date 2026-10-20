@@ -44,6 +44,7 @@ import { PAGINATION } from '@/lib/constants';
 import {
   dlqKeys,
   clampAuditLimit,
+  DLQ_AUDIT_MAX_LIMIT,
   useDLQList,
   useDLQEntry,
   useDLQAudit,
@@ -102,8 +103,11 @@ function callArgs(n = 0): [
   ];
 }
 
+// DLQ identifiers are opaque ring strings (128-bit hex), never numeric row ids.
+const ENTRY_ID = '0123456789abcdef0123456789abcdef';
+
 const summary: DLQEntrySummary = {
-  id: 11,
+  id: ENTRY_ID,
   arrived_at: '2025-06-01T00:00:00Z',
   dlq_topic: 'dlq/telemetry',
   parsed_reason: 'codec',
@@ -112,7 +116,6 @@ const summary: DLQEntrySummary = {
   parsed_source_topic: 'telemetry/5YJ3/v/Soc',
   parsed_redeliveries: 2,
   parsed_timestamp: '2025-06-01T00:00:00Z',
-  parse_error: null,
   replayable: true,
   raw_payload_size: 128,
   inner_payload_size: 64,
@@ -133,13 +136,13 @@ const entryPayload: DLQEntryFull = {
 const auditPayload: DLQAuditResponse = {
   count: 0,
   limit: PAGINATION.DEFAULT_LIMIT,
-  dlq_id: 0,
+  dlq_id: '',
   rows: [],
 };
 
 const okReplay: DLQReplayResponse = {
   ok: true,
-  replayed_id: 11,
+  replayed_id: ENTRY_ID,
   dst_topic: 'telemetry/5YJ3/v/Soc',
   result: 'ok',
   audit_id: 99,
@@ -158,13 +161,13 @@ beforeEach(() => {
 describe('dlqKeys', () => {
   it('produces stable, distinct key tuples for every query variant', () => {
     expect(dlqKeys.list).toEqual(['system', 'dlq', 'list']);
-    expect(dlqKeys.entry(11)).toEqual(['system', 'dlq', 'entry', 11]);
+    expect(dlqKeys.entry(ENTRY_ID)).toEqual(['system', 'dlq', 'entry', ENTRY_ID]);
     expect(dlqKeys.audit(50)).toEqual(['system', 'dlq', 'audit', 50]);
-    expect(dlqKeys.entryAudit(11, 25)).toEqual([
+    expect(dlqKeys.entryAudit(ENTRY_ID, 25)).toEqual([
       'system',
       'dlq',
       'entry',
-      11,
+      ENTRY_ID,
       'audit',
       25,
     ]);
@@ -186,12 +189,12 @@ describe('clampAuditLimit', () => {
   it('passes through in-range integers unchanged', () => {
     expect(clampAuditLimit(1)).toBe(1);
     expect(clampAuditLimit(50)).toBe(50);
-    expect(clampAuditLimit(PAGINATION.MAX_LIMIT)).toBe(PAGINATION.MAX_LIMIT);
+    expect(clampAuditLimit(DLQ_AUDIT_MAX_LIMIT)).toBe(DLQ_AUDIT_MAX_LIMIT);
   });
 
   it('caps values above MAX_LIMIT', () => {
-    expect(clampAuditLimit(PAGINATION.MAX_LIMIT + 1)).toBe(PAGINATION.MAX_LIMIT);
-    expect(clampAuditLimit(1_000_000)).toBe(PAGINATION.MAX_LIMIT);
+    expect(clampAuditLimit(DLQ_AUDIT_MAX_LIMIT + 1)).toBe(DLQ_AUDIT_MAX_LIMIT);
+    expect(clampAuditLimit(1_000_000)).toBe(DLQ_AUDIT_MAX_LIMIT);
   });
 
   it('floors fractional limits and lifts sub-1 values to 1', () => {
@@ -241,14 +244,14 @@ describe('useDLQList', () => {
 // ---------------------------------------------------------------------------
 
 describe('useDLQEntry', () => {
-  it('GETs /system/dlq/{id} for a positive integer id and surfaces the payload blobs', async () => {
+  it('GETs /system/dlq/{id} for a non-blank string id and surfaces the payload blobs', async () => {
     mockedRequest.mockResolvedValueOnce(entryPayload);
     const { wrapper } = makeWrapper();
-    const { result } = renderHook(() => useDLQEntry(11), { wrapper });
+    const { result } = renderHook(() => useDLQEntry(ENTRY_ID), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     const [url, opts] = callArgs();
-    expect(url).toBe('/system/dlq/11');
+    expect(url).toBe(`/system/dlq/${ENTRY_ID}`);
     expect(opts).toHaveProperty('signal');
     expect(result.current.data?.raw_payload_b64).toBe('AAAA');
   });
@@ -262,9 +265,9 @@ describe('useDLQEntry', () => {
     expect(result.current.fetchStatus).toBe('idle');
   });
 
-  it('treats a non-integer id as disabled — a path param must be a whole number', async () => {
+  it('treats a blank id as disabled — a path param must be a non-blank id', async () => {
     const { wrapper } = makeWrapper();
-    renderHook(() => useDLQEntry(2.5), { wrapper });
+    renderHook(() => useDLQEntry('   '), { wrapper });
 
     await new Promise((r) => setTimeout(r, 10));
     expect(mockedRequest).not.toHaveBeenCalled();
@@ -272,7 +275,7 @@ describe('useDLQEntry', () => {
 
   it('respects the explicit enabled=false gate even for a valid id', async () => {
     const { wrapper } = makeWrapper();
-    renderHook(() => useDLQEntry(11, false), { wrapper });
+    renderHook(() => useDLQEntry(ENTRY_ID, false), { wrapper });
 
     await new Promise((r) => setTimeout(r, 10));
     expect(mockedRequest).not.toHaveBeenCalled();
@@ -295,13 +298,13 @@ describe('useDLQAudit', () => {
     expect(opts).toHaveProperty('signal');
   });
 
-  it('scopes to /system/dlq/{id}/audit when a positive dlqId is given', async () => {
-    mockedRequest.mockResolvedValueOnce({ ...auditPayload, dlq_id: 11 });
+  it('scopes to /system/dlq/{id}/audit when a non-blank dlqId is given', async () => {
+    mockedRequest.mockResolvedValueOnce({ ...auditPayload, dlq_id: ENTRY_ID });
     const { wrapper } = makeWrapper();
-    renderHook(() => useDLQAudit(11, 25), { wrapper });
+    renderHook(() => useDLQAudit(ENTRY_ID, 25), { wrapper });
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
-    expect(callArgs()[0]).toBe('/system/dlq/11/audit?limit=25');
+    expect(callArgs()[0]).toBe(`/system/dlq/${ENTRY_ID}/audit?limit=25`);
   });
 
   it('clamps an over-large limit down to MAX_LIMIT in the request URL', async () => {
@@ -310,19 +313,19 @@ describe('useDLQAudit', () => {
     renderHook(() => useDLQAudit(null, 999_999), { wrapper });
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
-    expect(callArgs()[0]).toBe(`/system/dlq/audit?limit=${PAGINATION.MAX_LIMIT}`);
+    expect(callArgs()[0]).toBe(`/system/dlq/audit?limit=${DLQ_AUDIT_MAX_LIMIT}`);
   });
 
   it('keys the cache with the clamped limit so cache identity matches the URL that was fetched', async () => {
     mockedRequest.mockResolvedValue(auditPayload);
     const { qc, wrapper } = makeWrapper();
-    renderHook(() => useDLQAudit(11, 999_999), { wrapper });
+    renderHook(() => useDLQAudit(ENTRY_ID, 999_999), { wrapper });
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
     // The raw limit (999_999) must NOT be the cache key…
-    expect(qc.getQueryData(dlqKeys.entryAudit(11, 999_999))).toBeUndefined();
+    expect(qc.getQueryData(dlqKeys.entryAudit(ENTRY_ID, 999_999))).toBeUndefined();
     // …the clamped MAX_LIMIT must be.
-    expect(qc.getQueryData(dlqKeys.entryAudit(11, PAGINATION.MAX_LIMIT))).toEqual(
+    expect(qc.getQueryData(dlqKeys.entryAudit(ENTRY_ID, DLQ_AUDIT_MAX_LIMIT))).toEqual(
       auditPayload,
     );
   });
@@ -340,12 +343,12 @@ describe('useDLQReplay', () => {
     const { result } = renderHook(() => useDLQReplay(), { wrapper });
 
     await act(async () => {
-      const res = await result.current.mutateAsync({ id: 11 });
+      const res = await result.current.mutateAsync({ id: ENTRY_ID });
       expect(res.result).toBe('ok');
     });
 
     const [url, opts] = callArgs();
-    expect(url).toBe('/system/dlq/11/replay');
+    expect(url).toBe(`/system/dlq/${ENTRY_ID}/replay`);
     expect(opts.method).toBe('POST');
     expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['system', 'dlq'] });
@@ -360,14 +363,14 @@ describe('useDLQReplay', () => {
   it('substitutes a placeholder topic when the server omits dst_topic (never "undefined" in the toast)', async () => {
     mockedRequest.mockResolvedValueOnce({
       ok: true,
-      replayed_id: 11,
+      replayed_id: ENTRY_ID,
       result: 'ok',
     } as unknown as DLQReplayResponse);
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useDLQReplay(), { wrapper });
 
     await act(async () => {
-      await result.current.mutateAsync({ id: 11 });
+      await result.current.mutateAsync({ id: ENTRY_ID });
     });
 
     expect(toast.success).toHaveBeenCalledWith(
@@ -383,7 +386,7 @@ describe('useDLQReplay', () => {
     const { result } = renderHook(() => useDLQReplay(), { wrapper });
 
     await act(async () => {
-      await expect(result.current.mutateAsync({ id: 11 })).rejects.toBeInstanceOf(
+      await expect(result.current.mutateAsync({ id: ENTRY_ID })).rejects.toBeInstanceOf(
         SudoCanceledError,
       );
     });
@@ -398,7 +401,7 @@ describe('useDLQReplay', () => {
     const { result } = renderHook(() => useDLQReplay(), { wrapper });
 
     await act(async () => {
-      await expect(result.current.mutateAsync({ id: 11 })).rejects.toBeInstanceOf(
+      await expect(result.current.mutateAsync({ id: ENTRY_ID })).rejects.toBeInstanceOf(
         ApiError,
       );
     });
@@ -413,7 +416,7 @@ describe('useDLQReplay', () => {
     const { result } = renderHook(() => useDLQReplay(), { wrapper });
 
     await act(async () => {
-      await expect(result.current.mutateAsync({ id: 11 })).rejects.toThrow(
+      await expect(result.current.mutateAsync({ id: ENTRY_ID })).rejects.toThrow(
         'publish failed',
       );
     });
@@ -425,3 +428,4 @@ describe('useDLQReplay', () => {
     );
   });
 });
+

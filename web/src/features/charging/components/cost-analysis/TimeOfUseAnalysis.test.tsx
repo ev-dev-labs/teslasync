@@ -262,18 +262,18 @@ describe('TimeOfUseAnalysis — insight cards', () => {
 
     expect(screen.getByText('Cheapest Hour')).toBeInTheDocument();
     expect(screen.getByText('03:00')).toBeInTheDocument();
-    expect(screen.getByText('avg 0.120 / session')).toBeInTheDocument();
+    expect(screen.getByText('avg 0.12 / session')).toBeInTheDocument();
 
     expect(screen.getByText('Priciest Hour')).toBeInTheDocument();
     expect(screen.getByText('17:00')).toBeInTheDocument();
-    expect(screen.getByText('avg 0.350 / session')).toBeInTheDocument();
+    expect(screen.getByText('avg 0.35 / session')).toBeInTheDocument();
 
     expect(screen.getByText('Busiest Hour')).toBeInTheDocument();
     expect(screen.getByText('18:00')).toBeInTheDocument();
     expect(screen.getByText('9 sessions')).toBeInTheDocument();
 
     expect(screen.getByText('Off-Peak Charging')).toBeInTheDocument();
-    expect(screen.getByText('42.5%')).toBeInTheDocument();
+    expect(screen.getByText('42.50%')).toBeInTheDocument();
   });
 
   it('falls back to an empty state (keeping the chart) when there are no insights', () => {
@@ -315,10 +315,21 @@ describe('TimeOfUseAnalysis — section states', () => {
   });
 
   it('shows the skeleton (not the chart or empty copy) while loading', () => {
-    const { container } = renderTou({ isLoading: true });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const { container } = renderTou({ isLoading: true, error: new Error('stale') });
+    const skeleton = container.querySelector('[aria-hidden="true"][style]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle('height: 280px');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
     expect(screen.queryByText('Not enough data')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByText('Cheapest Hour')).toBeNull();
+    expect(screen.queryByText('avg 0.12 / session')).toBeNull();
+    expect(screen.queryByText('42.50%')).toBeNull();
     // Chrome still frames the loading state.
     expect(
       screen.getByRole('heading', { name: /Electricity Rate Analysis/i }),

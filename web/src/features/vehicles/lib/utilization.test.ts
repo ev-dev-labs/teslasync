@@ -51,6 +51,68 @@ function options(overrides: Partial<UtilizationOptions> = {}): UtilizationOption
 }
 
 describe('summarizeUtilization', () => {
+  it('carries missing and partial field coverage into each rollup without erasing inactive zeros or counts', () => {
+    const summary = summarizeUtilization([
+      drive('2026-07-01T08:00:00Z', { durationS: null, distanceM: null, energyUsedWh: null }),
+      drive('2026-07-01T09:00:00Z', { durationS: 1800, distanceM: 12.345, energyUsedWh: 0 }),
+    ], 0.1, options({ rangeEnd: '2026-07-02' }));
+    const coverage = {
+      usableDurationRows: 1, excludedDurationRows: 1, truncatedDurationRows: 0,
+      usableDistanceRows: 1, excludedDistanceRows: 1,
+      usableEnergyRows: 1, excludedEnergyRows: 1,
+    };
+    for (const row of [summary.days[0], summary.months[0], summary.consistency.weeks[0], summary.weekdays[3]]) {
+      expect(row).toMatchObject({ driveCount: 2, distanceM: 12.345, coverage });
+    }
+    expect(summary.days[1]).toMatchObject({ driveCount: 0, drivingS: 0, distanceM: 0, energyWh: 0 });
+    expect(summary.days[1].coverage?.excludedDistanceRows).toBe(0);
+    expect(summary.totalEnergyCost).toBe(0);
+    expect(summary.weekdays[3].averageDistancePerActiveDayM).toBe(12.345);
+  });
+
+  it('keeps unavailable derived operands null while retaining observed inactive zeros', () => {
+    const summary = summarizeUtilization([
+      drive('2026-07-01T08:00:00Z', { durationS: null, distanceM: null, energyUsedWh: null }),
+    ], 0.1, options({ rangeEnd: '2026-08-02' }));
+    expect(summary.drivingShare).toBeNull();
+    expect(summary.distancePerDayM).toBeNull();
+    expect(summary.months[0].drivingShare).toBeNull();
+    expect(summary.months[1]).toMatchObject({ driveCount: 0, drivingShare: 0, distanceM: 0 });
+    expect(summary.weekdays[3].averageDistancePerActiveDayM).toBeNull();
+    expect(summary.weekdays[4].activeDayShare).toBe(0);
+    expect(summary.drives).toBe(1);
+  });
+
+  it('counts finite measured zeros as available and carries clipped-duration coverage', () => {
+    const zero = summarizeUtilization([
+      drive('2026-07-01T08:00:00Z', { durationS: 0, distanceM: 0, energyUsedWh: 0 }),
+    ], 0, options());
+    expect(zero.accounting).toMatchObject({ usableDurationRows: 1, usableDistanceRows: 1, usableEnergyRows: 1 });
+    expect(zero).toMatchObject({ drivingShare: 0, distancePerDayM: 0, totalEnergyCost: 0, costPerKm: null, costPerDrivingHour: null });
+    const clipped = summarizeUtilization([drive('2026-07-31T23:30:00Z')], 0.1, options());
+    expect(clipped.days[0].coverage).toMatchObject({
+      usableDurationRows: 1, truncatedDurationRows: 1, excludedDistanceRows: 1, excludedEnergyRows: 1,
+    });
+    expect(clipped.months[0].coverage).toEqual(clipped.days[0].coverage);
+  });
+
+  it('distinguishes unobserved weekdays from observed inactive days and preserves fractional averages', () => {
+    const summary = summarizeUtilization(
+      [drive('2026-07-01T08:00:00.000Z', { distanceM: 12.345 })],
+      null,
+      options({ rangeEnd: '2026-07-02' }),
+    );
+    expect(summary.weekdays[0]).toMatchObject({
+      observedDays: 0, activeDayShare: null, averageDistancePerActiveDayM: null,
+    });
+    expect(summary.weekdays[4]).toMatchObject({
+      observedDays: 1, activeDays: 0, activeDayShare: 0, averageDistancePerActiveDayM: null,
+    });
+    expect(summary.weekdays[3]).toMatchObject({
+      observedDays: 1, activeDays: 1, activeDayShare: 1, averageDistancePerActiveDayM: 12.345,
+    });
+  });
+
   it('measures utilization from the first eligible drive to the frozen boundary', () => {
     const summary = summarizeUtilization(
       [

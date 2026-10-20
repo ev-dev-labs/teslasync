@@ -1,0 +1,1560 @@
+{
+  "item": "phase6-qa-charging-tesla-charging-sessions",
+  "status": "DONE",
+  "mode": "READ_ONLY_SOURCE_QA",
+  "page": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+  "routes": [
+    "/tesla-charging-sessions"
+  ],
+  "startedUTC": "2026-10-14T00:48:19.7483898Z",
+  "createdUTC": "2026-10-14T01:01:03.073756+00:00",
+  "deadlines": {
+    "returnUTC": "2026-10-14T01:05:28Z",
+    "hardUTC": "2026-10-14T01:10:28Z",
+    "clocksNotReset": true
+  },
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-charging-tesla-charging-sessions.json",
+    "web/logs/phase6-qa-charging-tesla-charging-sessions.log"
+  ],
+  "sourceWrites": [],
+  "testWrites": [],
+  "catalogWrites": [],
+  "queueWrites": false,
+  "gitOperations": false,
+  "tasksCreated": [],
+  "firstExistingReportCheck": {
+    "result": "ABSENT",
+    "noOverwrite": true,
+    "noDuplicateReport": true
+  },
+  "exactQueue": {
+    "file": "migration-queue.md",
+    "line": 361,
+    "statusObserved": "[~]",
+    "attempt": 1,
+    "actor": "596b028d-d96a-4607-95f8-abc2a7978705",
+    "dependsOn": "phase5-page-charging-tesla-charging-sessions"
+  },
+  "acceptedSource": {
+    "queueLine": 1825,
+    "status": "[x]",
+    "commitFromQueue": "b980622bb34530dc128209d761df9e1fd6aa41ae",
+    "notGitVerified": true,
+    "acceptance": "SOURCE ONLY remains accepted; no remigration or reopened completed phases/tests",
+    "noSourceChangeNeededForAcceptedMigration": true,
+    "historicalOnly": "Queue1082/original1046,sixsections;lint0/style1 three inherited page heights;Vitest startup1/zero executed. Not fresh passes. Matching retained receipt glob searches found none on this host."
+  },
+  "confirmedIssues": [
+    {
+      "id": "F01",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 145,
+      "rule": "scope-unresolved-widening",
+      "confidence": "high",
+      "priority": "P1",
+      "detail": "Sessions are enabled on !vehiclesLoading alone. Failed/paused unresolved vehicle lookup can leave selectedVehicle null/queryVin undefined while numeric selection persists. Undefined VIN reads fleet; refresh also falls back to undefined, not an explicit All vehicles choice. Vehicle-source trust is not rendered.",
+      "fix": "Distinguish explicit vin=* fleet from unresolved selected VIN; gate read/import until scope resolves, expose vehicle-source trust/retry, preserve retained sessions and bookmarks.",
+      "owner": "page",
+      "relatedEvidence": [
+        {
+          "file": "web/src/hooks/useSelectedVehicle.ts",
+          "line": 165
+        },
+        {
+          "file": "web/src/hooks/useVehicleVinFilter.ts",
+          "line": 88
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 231
+        },
+        {
+          "file": "web/src/api/hooks/useCharging.ts",
+          "line": 327
+        }
+      ],
+      "occurrenceLines": [
+        145
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F02",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 323,
+      "rule": "missing-range-hook-bounds",
+      "confidence": "high",
+      "priority": "P1",
+      "detail": "Hook accepts VIN/enabled only, keys by VIN and sends no start/end bounds. Registered header range is applied only to returned rows. Exact client half-open filtering is now correct; backend cap/completeness/bound support UNKNOWN.",
+      "fix": "Reuse historical read-scope integration need; establish actual backend contract before separately leasing typed hook/key/caller bound integration. Preserve lifetime summary/cancellation/VIN; no guessed params.",
+      "owner": "integration",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 159
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 165
+        },
+        {
+          "file": "web/src/api/hooks/useCharging.ts",
+          "line": 318
+        }
+      ],
+      "occurrenceLines": [
+        323
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F03",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 97,
+      "rule": "source-currency-aggregation",
+      "confidence": "high",
+      "priority": "P1",
+      "detail": "Monthly, site and operational sums combine total_cost without currency_code partition/conversion and use user currency presentation. Monthly accessible header embeds ($). Table/evidence already use source currency; actual mixed-currency payload not observed.",
+      "fix": "Preserve source currency in aggregates/rank/chart, qualify unsupported mixed/unknown currency; never invent FX. Preserve refund signs, lifetime scope and sections.",
+      "owner": "page",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 121
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 256
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 365
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 831
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 955
+        }
+      ],
+      "occurrenceLines": [
+        97
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F04",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsMap.tsx",
+      "line": 88,
+      "rule": "source-currency-display",
+      "confidence": "high",
+      "priority": "P1",
+      "detail": "Popup formats session cost with user-symbol formatCurrency, ignoring known session.currency_code; a nonpreferred currency can be mislabeled even in a single-currency collection.",
+      "fix": "Use existing row-currency formatter with effective locale/precision; qualify unknown currency, preserve escaping/signs/IDs.",
+      "owner": "integration",
+      "relatedEvidence": [
+        {
+          "file": "web/src/hooks/useFormatting.ts",
+          "line": 54
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 525
+        }
+      ],
+      "occurrenceLines": [
+        88
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F05",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 1037,
+      "rule": "export-unit-mismatch",
+      "confidence": "high",
+      "priority": "P1",
+      "detail": "Built-in export supplies raw total_energy_added_wh as energy under Energy (kWh) column header. DataTable exports flattened values with visible headers. Built-in schema also omits currency. Separate bulk CSV correctly labels energy_wh and preserves currency.",
+      "fix": "Keep raw SI and use an explicitly unit/currency-qualified built-in schema via existing export APIs, or deliberately matched display units. Preserve separate raw selected CSV; no wire/cache conversion.",
+      "owner": "page",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 482
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 487
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 600
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 897
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 919
+        }
+      ],
+      "occurrenceLines": [
+        1037
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F06",
+      "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+      "line": 153,
+      "rule": "retained-source-trust",
+      "confidence": "high",
+      "priority": "P1",
+      "detail": "sitesState/forecastState surface only fatalError and retry. Retained source refreshError/blocked/stale data renders without an independent warning/retry; the page warning covers only sessionsQuery.",
+      "fix": "Reuse existing nonblocking trust feedback per oracle source while retaining payload/last-success metadata. Paused does not prove offline.",
+      "owner": "integration",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+          "line": 71
+        },
+        {
+          "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+          "line": 82
+        },
+        {
+          "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+          "line": 168
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 698
+        }
+      ],
+      "occurrenceLines": [
+        153
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F07",
+      "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+      "line": 244,
+      "rule": "hidden-section",
+      "confidence": "high",
+      "priority": "P1",
+      "detail": "With sites available but no forecast payload/loading/fatal error, the forecast/evidence/chart ends in null. Sites paused before data also falls into authoritative no-sites wording.",
+      "fix": "Retain forecast/chart shell with unavailable/unknown/paused fallback; distinguish unresolved sites from authoritative empty. Preserve independent site/arrival controls.",
+      "owner": "integration",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+          "line": 148
+        },
+        {
+          "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+          "line": 155
+        },
+        {
+          "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+          "line": 170
+        },
+        {
+          "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+          "line": 215
+        }
+      ],
+      "occurrenceLines": [
+        244
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F08",
+      "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+      "line": 90,
+      "rule": "unknown-as-zero",
+      "confidence": "high",
+      "priority": "P1",
+      "detail": "Hourly and headline expected_wait_s use ??0; absent wait becomes measured zero minutes. This is confirmed fallback code, not evidence the nonnullable endpoint actually returned null.",
+      "fix": "Keep missing/invalid wait unknown and chart gaps/table unknowns while converting valid SI seconds only at display; retain genuine zero.",
+      "owner": "integration",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+          "line": 176
+        },
+        {
+          "file": "web/src/api/hooks/useCharging.ts",
+          "line": 344
+        },
+        {
+          "file": "web/src/api/hooks/useCharging.ts",
+          "line": 350
+        }
+      ],
+      "occurrenceLines": [
+        90,
+        176
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F09",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 81,
+      "rule": "hardcoded-string",
+      "confidence": "high",
+      "priority": "P2",
+      "detail": "Duration helper emits literal h/m suffixes and raw digits; table/mobile/operational duration reuse it rather than localized duration units/number formatting.",
+      "fix": "Adopt existing localized duration display with helper compatibility/null/nonfinite/negative guards and raw-second export intact.",
+      "owner": "page",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 508
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 687
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 988
+        }
+      ],
+      "occurrenceLines": [
+        81,
+        82
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F10",
+      "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+      "line": 179,
+      "rule": "hardcoded-string",
+      "confidence": "high",
+      "priority": "P2",
+      "detail": "Known English verdict is rendered directly; known English confidence is interpolated unchanged into translated text. Hook types enumerate quiet/steady/busy/packed and high/medium/low.",
+      "fix": "Localize known enum labels through existing canonical copy owner; preserve raw enums/thresholds/unknown fallback. Catalog existence not inspected.",
+      "owner": "integration",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+          "line": 182
+        },
+        {
+          "file": "web/src/api/hooks/useCharging.ts",
+          "line": 356
+        },
+        {
+          "file": "web/src/api/hooks/useCharging.ts",
+          "line": 357
+        }
+      ],
+      "occurrenceLines": [
+        179,
+        182
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F11",
+      "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+      "line": 127,
+      "rule": "mobile-target",
+      "confidence": "high",
+      "priority": "P2",
+      "detail": "Four arrival presets use Button size=sm with no mobile minimum override. Inspected sm role is h-9, 36px at a16px root, below mobile44. Source arithmetic is not measured native geometry or a spacing exception.",
+      "fix": "Use existing mobile min-h-11/min-w-11 and explicit desktop restoration; preserve actions/selected state/wrapping/focus. No global Button resize.",
+      "owner": "integration",
+      "relatedEvidence": [
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 36
+        },
+        {
+          "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+          "line": 123
+        }
+      ],
+      "occurrenceLines": [
+        127
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F12",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsMap.tsx",
+      "line": 127,
+      "rule": "fixed-palette",
+      "confidence": "high",
+      "priority": "P2",
+      "detail": "Caller forces saturated #22d3ee marker default, not a theme-aware restrained role, supplied vehicle paint or saved preference.",
+      "fix": "Use existing restrained default at DOM marker boundary; preserve points/popups/explicit paint, no new palette.",
+      "owner": "integration",
+      "relatedEvidence": [],
+      "occurrenceLines": [
+        127
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F13",
+      "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+      "line": 46,
+      "rule": "fixed-palette",
+      "confidence": "high",
+      "priority": "P2",
+      "detail": "Four hardcoded saturated fills map 75/50/25 busyness thresholds. Conditional computation is NOT static-inline-style violation, but bypasses restrained chart/severity roles.",
+      "fix": "Reuse existing restrained equivalent roles while preserving thresholds/text/numeric/table evidence; no new registry.",
+      "owner": "integration",
+      "relatedEvidence": [],
+      "occurrenceLines": [
+        46,
+        47,
+        48,
+        49
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F14",
+      "file": "web/src/components/maps/MarkerCluster.tsx",
+      "line": 90,
+      "rule": "decorative-glow",
+      "confidence": "high",
+      "priority": "P2",
+      "detail": "Directly rendered cluster/dot HTML unconditionally emits 12px and6px glow box shadows. Marker bloom is decorative, not vehicle material or evidence; caller paint change alone cannot remove it.",
+      "fix": "Reserve only existing MarkerCluster renderer for bounded restrained ink/glow correction, then recheck caller. Preserve public/custom renderer/paint/point/keyboard/popup lifecycle.",
+      "owner": "shared",
+      "relatedEvidence": [
+        {
+          "file": "web/src/components/maps/MarkerCluster.tsx",
+          "line": 111
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsMap.tsx",
+          "line": 125
+        }
+      ],
+      "occurrenceLines": [
+        90,
+        111
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    },
+    {
+      "id": "F15",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 1073,
+      "rule": "filtered-empty-state",
+      "confidence": "high",
+      "priority": "P2",
+      "detail": "Loaded source with allSessions>0 but zero date matches gets the same no-fleet-sessions-yet/import-more table message as no underlying records. Operational attention correctly mentions the window, but the table contradicts it.",
+      "fix": "Distinguish filtered no-match, authoritative empty and unavailable in existing fallback; preserve shell and localized scope/clear guidance.",
+      "owner": "page",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 158
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 163
+        },
+        {
+          "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+          "line": 289
+        }
+      ],
+      "occurrenceLines": [
+        1073
+      ],
+      "evidenceClass": "Confirmed source-only; conditional trigger stated, no runtime reproduction claimed"
+    }
+  ],
+  "counts": {
+    "confirmedIssues": 15,
+    "confirmedByRule": {
+      "scope-unresolved-widening": 1,
+      "missing-range-hook-bounds": 1,
+      "source-currency-aggregation": 1,
+      "source-currency-display": 1,
+      "export-unit-mismatch": 1,
+      "retained-source-trust": 1,
+      "hidden-section": 1,
+      "unknown-as-zero": 1,
+      "hardcoded-string": 2,
+      "mobile-target": 1,
+      "fixed-palette": 2,
+      "decorative-glow": 1,
+      "filtered-empty-state": 1
+    },
+    "confirmedByFile": {
+      "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx": 5,
+      "web/src/api/hooks/useCharging.ts": 1,
+      "web/src/features/charging/pages/TeslaChargingSessionsMap.tsx": 2,
+      "web/src/features/charging/components/WaitOraclePanel.tsx": 6,
+      "web/src/components/maps/MarkerCluster.tsx": 1
+    },
+    "distinctCandidates": 9,
+    "deduplicatedNeeds": 10,
+    "sourcePins": 27,
+    "filesRead": 44,
+    "pageSections": 6,
+    "sectionShellsAlwaysPresent": 6,
+    "contentBlocks": 9,
+    "actionGroups": 12,
+    "pagePhysicalLines": 1082,
+    "directPageSpecificPhysicalLines": 1535,
+    "charts": 2,
+    "barSeries": 2,
+    "tableColumns": 9,
+    "scopedMetrics": 4,
+    "lifetimeMetrics": 5,
+    "confirmedOccurrenceSitesByRule": {
+      "scope-unresolved-widening": 1,
+      "missing-range-hook-bounds": 1,
+      "source-currency-aggregation": 1,
+      "source-currency-display": 1,
+      "export-unit-mismatch": 1,
+      "retained-source-trust": 1,
+      "hidden-section": 1,
+      "unknown-as-zero": 2,
+      "hardcoded-string": 4,
+      "mobile-target": 1,
+      "fixed-palette": 5,
+      "decorative-glow": 2,
+      "filtered-empty-state": 1
+    },
+    "countingConvention": "15 distinct confirmed defect records, not runtime failures; occurrence sites additionally counted where listed. Related evidence lines are not additional findings. Nine candidates not promoted."
+  },
+  "distinctCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 1019,
+      "rule": "session-identity-global-uniqueness",
+      "confidence": "medium",
+      "detail": "Table/map use session_id; narrative uses DB id plus recordId=session_id; selection persists across VIN/date changes.",
+      "notConfirmedBecause": "No DB uniqueness or duplicate payload evidence. Distinct IDs/persistent selection alone do not prove collision. Preserve both IDs.",
+      "promotionRequirement": "Separate authorized evidence; not a queued fix or accepted violation"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 448,
+      "rule": "date-preference-wiring",
+      "confidence": "medium",
+      "detail": "Pure formatDateTime is called without explicit locale/tz in page/map; monthly getFullYear/getMonth is browser-local. Existing useDateFormat binds preferences.",
+      "notConfirmedBecause": "Pure date helper/timezone store outside traversal; no actual preference change exercised. Candidate, not demonstrated runtime zone defect.",
+      "promotionRequirement": "Separate authorized evidence; not a queued fix or accepted violation"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 228,
+      "rule": "sync-time-scope",
+      "confidence": "medium",
+      "detail": "Last synced uses first date-filtered row fetched_at and disappears for no matches.",
+      "notConfirmedBecause": "Source ordering/fetched_at semantics and source-wide sync metadata unestablished; no wrong real timestamp asserted.",
+      "promotionRequirement": "Separate authorized evidence; not a queued fix or accepted violation"
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 192,
+      "rule": "unplaceable-map",
+      "confidence": "medium",
+      "detail": "Parent eligibility is non-null coords; child finite guard may remove all and default to San Francisco. Child does not check geographic bounds.",
+      "notConfirmedBecause": "No malformed payload/Leaflet behavior exercised; fallback center is not fake session data.",
+      "promotionRequirement": "Separate authorized evidence; not a queued fix or accepted violation"
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsMap.tsx",
+      "line": 115,
+      "rule": "map-application-a11y",
+      "confidence": "medium",
+      "detail": "role=application carries specialist keyboard/screen-reader obligations; marker names/table alternative present.",
+      "notConfirmedBecause": "Keyboard/popups/focus/screen reader/contrast/device behavior NOTRUN; source role alone not proven failure.",
+      "promotionRequirement": "Separate authorized evidence; not a queued fix or accepted violation"
+    },
+    {
+      "id": "C06",
+      "file": "web/src/components/maps/MarkerCluster.tsx",
+      "line": 139,
+      "rule": "map-point-cap",
+      "confidence": "medium",
+      "detail": "Shared renderer slices to5000 without caller omitted-point notice; table still carries loaded records.",
+      "notConfirmedBecause": "No >5000 mounted data, profile or approved preview semantics read. Do not change established cap speculatively.",
+      "promotionRequirement": "Separate authorized evidence; not a queued fix or accepted violation"
+    },
+    {
+      "id": "C07",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 288,
+      "rule": "legacy-power-unit-contract",
+      "confidence": "medium",
+      "detail": "Typed session/summary retain peak_power_kw/max_charge_rate_kw/per_kwh_rate/avg_cost_per_kwh; metric summary multiplies kW by1000 while exports keep original.",
+      "notConfirmedBecause": "Router is not backend unit truth. No model/store/handler/migration evidence. Preserve raw fields; no rename or dual-shape adapter.",
+      "promotionRequirement": "Separate authorized evidence; not a queued fix or accepted violation"
+    },
+    {
+      "id": "C08",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 255,
+      "rule": "partial-energy-nonfinite-aggregation",
+      "confidence": "medium",
+      "detail": "Sums precede finite coverage counts; any valid group reading marks availability. All-missing totals now null but partial energy/nonfinite contamination unqualified.",
+      "notConfirmedBecause": "Energy declared nonnullable; real partial/nonfinite data and validated metric rendering untested. Missing-cost coverage already warned, not duplicated as finding.",
+      "promotionRequirement": "Separate authorized evidence; not a queued fix or accepted violation"
+    },
+    {
+      "id": "C09",
+      "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+      "line": 77,
+      "rule": "relative-arrival-time",
+      "confidence": "medium",
+      "detail": "Relative arrival ISO memoized until custom/preset changes; invalid custom parse returns null=now.",
+      "notConfirmedBecause": "Frozen versus rolling business semantics/native datetime validation untested; independent arrival is not workspace duplication.",
+      "promotionRequirement": "Separate authorized evidence; not a queued fix or accepted violation"
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "issueIds": [
+        "F01"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+        "web/src/hooks/useVehicleVinFilter.ts"
+      ],
+      "objective": "Explicit-fleet versus unresolved VIN source trust/gating for read/import; preserve selection and retained content.",
+      "status": "NEEDS_PARENT_QUEUE_DECISION; NOT_CREATED_OR_DISPATCHED",
+      "exactQueuedFix": null,
+      "historicalNeed": null,
+      "dedup": "No exact queued corrective row found. Reuse historical need, never redispatch completed migration/test rows. Serialize overlapping future writers.",
+      "allowedHere": "report only"
+    },
+    {
+      "id": "N02",
+      "issueIds": [
+        "F02"
+      ],
+      "existingOwnerFiles": [
+        "web/src/api/hooks/useCharging.ts",
+        "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx"
+      ],
+      "objective": "Establish actual read-bounds/full-result contract before typed hook/key/caller integration; backend support UNKNOWN, no guessed API params.",
+      "status": "NEEDS_PARENT_QUEUE_DECISION; NOT_CREATED_OR_DISPATCHED",
+      "exactQueuedFix": null,
+      "historicalNeed": "audit-page-090 existing fleet-session read-scope integration",
+      "dedup": "No exact queued corrective row found. Reuse historical need, never redispatch completed migration/test rows. Serialize overlapping future writers.",
+      "allowedHere": "report only"
+    },
+    {
+      "id": "N03",
+      "issueIds": [
+        "F03"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx"
+      ],
+      "objective": "Currency-qualified monthly/site/operational totals/rank/chart heading; retain refunds and lifetime scope, no FX.",
+      "status": "NEEDS_PARENT_QUEUE_DECISION; NOT_CREATED_OR_DISPATCHED",
+      "exactQueuedFix": null,
+      "historicalNeed": "audit-page-090 currency finding",
+      "dedup": "No exact queued corrective row found. Reuse historical need, never redispatch completed migration/test rows. Serialize overlapping future writers.",
+      "allowedHere": "report only"
+    },
+    {
+      "id": "N04",
+      "issueIds": [
+        "F04"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/charging/pages/TeslaChargingSessionsMap.tsx"
+      ],
+      "objective": "Per-row popup currency/locale/precision correction, preserving escaping/IDs.",
+      "status": "NEEDS_PARENT_QUEUE_DECISION; NOT_CREATED_OR_DISPATCHED",
+      "exactQueuedFix": null,
+      "historicalNeed": "audit-page-090 session-map requirement",
+      "dedup": "No exact queued corrective row found. Reuse historical need, never redispatch completed migration/test rows. Serialize overlapping future writers.",
+      "allowedHere": "report only"
+    },
+    {
+      "id": "N05",
+      "issueIds": [
+        "F05"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx"
+      ],
+      "objective": "Built-in export unit/currency schema correction, preserving raw selected CSV and loaded-scope distinctions.",
+      "status": "NEEDS_PARENT_QUEUE_DECISION; NOT_CREATED_OR_DISPATCHED",
+      "exactQueuedFix": null,
+      "historicalNeed": null,
+      "dedup": "No exact queued corrective row found. Reuse historical need, never redispatch completed migration/test rows. Serialize overlapping future writers.",
+      "allowedHere": "report only"
+    },
+    {
+      "id": "N06",
+      "issueIds": [
+        "F06",
+        "F07",
+        "F08"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/charging/components/WaitOraclePanel.tsx"
+      ],
+      "objective": "One deduplicated independent oracle retained/unavailable/unknown-wait correction; shell/controls/individual retries/real zero retained.",
+      "status": "NEEDS_PARENT_QUEUE_DECISION; NOT_CREATED_OR_DISPATCHED",
+      "exactQueuedFix": null,
+      "historicalNeed": "audit-page-090 oracle trust/partial requirement",
+      "dedup": "No exact queued corrective row found. Reuse historical need, never redispatch completed migration/test rows. Serialize overlapping future writers.",
+      "allowedHere": "report only"
+    },
+    {
+      "id": "N07",
+      "issueIds": [
+        "F09"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx"
+      ],
+      "objective": "Localized duration display with exported-helper compatibility/raw seconds/guards; copy availability parent-owned.",
+      "status": "NEEDS_PARENT_QUEUE_DECISION; NOT_CREATED_OR_DISPATCHED",
+      "exactQueuedFix": null,
+      "historicalNeed": "audit-page-090 duration finding",
+      "dedup": "No exact queued corrective row found. Reuse historical need, never redispatch completed migration/test rows. Serialize overlapping future writers.",
+      "allowedHere": "report only"
+    },
+    {
+      "id": "N08",
+      "issueIds": [
+        "F10",
+        "F11",
+        "F13"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/charging/components/WaitOraclePanel.tsx"
+      ],
+      "objective": "Separate narrow oracle presentation lease: known enum labels, mobile targets and restrained same-threshold palette; no API/business changes.",
+      "status": "NEEDS_PARENT_QUEUE_DECISION; NOT_CREATED_OR_DISPATCHED",
+      "exactQueuedFix": null,
+      "historicalNeed": "audit-page-090 enum/palette plus new Button source target evidence",
+      "dedup": "No exact queued corrective row found. Reuse historical need, never redispatch completed migration/test rows. Serialize overlapping future writers.",
+      "allowedHere": "report only"
+    },
+    {
+      "id": "N09",
+      "issueIds": [
+        "F12",
+        "F14"
+      ],
+      "existingOwnerFiles": [
+        "web/src/components/maps/MarkerCluster.tsx",
+        "web/src/features/charging/pages/TeslaChargingSessionsMap.tsx"
+      ],
+      "objective": "Existing cluster renderer glow correction then separately leased caller default-role adoption; preserve custom renderer/paint/lifecycle.",
+      "status": "NEEDS_PARENT_QUEUE_DECISION; NOT_CREATED_OR_DISPATCHED",
+      "exactQueuedFix": null,
+      "historicalNeed": "audit-page-090 map ink plus directly rendered shared source evidence",
+      "dedup": "No exact queued corrective row found. Reuse historical need, never redispatch completed migration/test rows. Serialize overlapping future writers.",
+      "allowedHere": "report only"
+    },
+    {
+      "id": "N10",
+      "issueIds": [
+        "F15"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx"
+      ],
+      "objective": "Table fallback distinguishes filtered no-match, authoritative empty and unavailable; preserve shell/scope guidance.",
+      "status": "NEEDS_PARENT_QUEUE_DECISION; NOT_CREATED_OR_DISPATCHED",
+      "exactQueuedFix": null,
+      "historicalNeed": null,
+      "dedup": "No exact queued corrective row found. Reuse historical need, never redispatch completed migration/test rows. Serialize overlapping future writers.",
+      "allowedHere": "report only"
+    }
+  ],
+  "sourcePins": [
+    {
+      "file": "web/src/api/hooks/useCharging.ts",
+      "sha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
+      "physicalLines": 643,
+      "inspectedRanges": [
+        [
+          279,
+          447
+        ]
+      ],
+      "coverage": "bounded ranges/matches only"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "physicalLines": 1898,
+      "inspectedRanges": [
+        [
+          1,
+          93
+        ]
+      ],
+      "coverage": "bounded ranges/matches only"
+    },
+    {
+      "file": "web/src/hooks/useRangeState.ts",
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "physicalLines": 694,
+      "inspectedRanges": [
+        [
+          298,
+          694
+        ]
+      ],
+      "coverage": "bounded ranges/matches only"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "physicalLines": 1707,
+      "inspectedRanges": [
+        [
+          867,
+          925
+        ]
+      ],
+      "coverage": "bounded ranges/matches only"
+    },
+    {
+      "file": "web/src/components/maps/index.ts",
+      "sha256": "68bb915ea5f964d5ba6e5c83002b35c5e0b84bc0aa721a3770d5497668c77e43",
+      "physicalLines": 38,
+      "inspectedRanges": [
+        [
+          8,
+          11
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "coverage": "bounded ranges/matches only"
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "physicalLines": 127,
+      "inspectedRanges": [
+        [
+          20,
+          20
+        ]
+      ],
+      "coverage": "bounded ranges/matches only"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "physicalLines": 919,
+      "inspectedRanges": [
+        [
+          60,
+          60
+        ],
+        [
+          811,
+          811
+        ]
+      ],
+      "coverage": "bounded ranges/matches only"
+    },
+    {
+      "file": "internal/api/router.go",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "physicalLines": 5363,
+      "inspectedRanges": [
+        [
+          3210,
+          3210
+        ],
+        [
+          3362,
+          3362
+        ],
+        [
+          3565,
+          3630
+        ],
+        [
+          4020,
+          4032
+        ]
+      ],
+      "coverage": "bounded ranges/matches only"
+    },
+    {
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "sha256": "854b0186dee664b1d0bc3b5e8d2128fd01a53db6c90db7b89b63e2c35fb1033a",
+      "physicalLines": 1082,
+      "inspectedRanges": [
+        [
+          1,
+          1082
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsMap.tsx",
+      "sha256": "182b2293bb49e361e2015f712fa6f3b22cad6f8789d1fbf603ae5c9301460689",
+      "physicalLines": 133,
+      "inspectedRanges": [
+        [
+          1,
+          133
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+      "sha256": "8db9d662ed3aef6775b1f1722b07d192b024387ebc5441f571dbfdaf86ba9a27",
+      "physicalLines": 247,
+      "inspectedRanges": [
+        [
+          1,
+          247
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+      "physicalLines": 73,
+      "inspectedRanges": [
+        [
+          1,
+          73
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/hooks/useVehicleVinFilter.ts",
+      "sha256": "a7810eef50ada532b72536f378499ac1f307eae2dc79935f1d3893b6a3e299b5",
+      "physicalLines": 84,
+      "inspectedRanges": [
+        [
+          1,
+          84
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "physicalLines": 174,
+      "inspectedRanges": [
+        [
+          1,
+          174
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "physicalLines": 65,
+      "inspectedRanges": [
+        [
+          1,
+          65
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "physicalLines": 194,
+      "inspectedRanges": [
+        [
+          1,
+          194
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "physicalLines": 106,
+      "inspectedRanges": [
+        [
+          1,
+          106
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "physicalLines": 47,
+      "inspectedRanges": [
+        [
+          1,
+          47
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "physicalLines": 24,
+      "inspectedRanges": [
+        [
+          1,
+          24
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "physicalLines": 146,
+      "inspectedRanges": [
+        [
+          1,
+          146
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "physicalLines": 148,
+      "inspectedRanges": [
+        [
+          1,
+          148
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "physicalLines": 17,
+      "inspectedRanges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "physicalLines": 93,
+      "inspectedRanges": [
+        [
+          1,
+          93
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/components/maps/MarkerCluster.tsx",
+      "sha256": "9aa994693e81c8326d315e502e9c514f98790298d7a86bb6a12247e4939c8d80",
+      "physicalLines": 233,
+      "inspectedRanges": [
+        [
+          1,
+          233
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "physicalLines": 165,
+      "inspectedRanges": [
+        [
+          1,
+          165
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "physicalLines": 115,
+      "inspectedRanges": [
+        [
+          1,
+          115
+        ]
+      ],
+      "coverage": "FULL"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "physicalLines": 168,
+      "inspectedRanges": [
+        [
+          1,
+          168
+        ]
+      ],
+      "coverage": "FULL"
+    }
+  ],
+  "filesRead": [
+    ".agents/state.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".gitignore",
+    "docs/frontend-audits/audit-page-090.json",
+    "docs/frontend-audits/phase6-qa-charging-charging-detail.json",
+    "docs/frontend-audits/phase6-qa-charging-charging-list.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/progress-log.md",
+    "docs/session-handoff.md",
+    "internal/api/router.go",
+    "migration-queue.md",
+    "web/src/App.tsx",
+    "web/src/api/hooks/useCharging.ts",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/maps/MarkerCluster.tsx",
+    "web/src/components/maps/index.ts",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/ui/MobileDataTableAdapter.tsx",
+    "web/src/features/charging/components/WaitOraclePanel.tsx",
+    "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+    "web/src/features/charging/pages/TeslaChargingSessionsMap.tsx",
+    "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useSettings.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useVehicleVinFilter.ts",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/workspaceScope.ts"
+  ],
+  "documentReadCoverage": {
+    "designContract": "FULL1-EOF2540; truncated range reads resumed at507 and1957",
+    "orchestratorLoop": "FULL1-EOF",
+    "latestHandoff": "Latest recovery1-200/relevant source acceptance1050-1095 and exact matches",
+    "mission": "Relevant0-27,30-37,43-45",
+    "applicableInstructions": "copilot/react-frontend/frontend-si-cutover/unit-conversion read through EOF; ancestor AGENTS none found in inspected scope",
+    "history": "audit-page-090 FULL;progress/state/inventory exact item matching; neighbors bounded schema/direct-owner matching only"
+  },
+  "dedup": {
+    "authority": "migration-queue.md exact current item/status/files; no edits",
+    "exactQueuedCorrectiveObjectives": [],
+    "noCompletedRedispatch": true,
+    "historicalNeedsReused": "audit-page-090 unresolved owners cross-referenced, resolved historical findings removed; no repeated Phase0/3/migration objective",
+    "relatedNotDuplicates": [
+      "phase6-fix-relative-future-dates is shared future-relative wording, not duration/month/date candidate",
+      "phase6-fix-advanced-evidence-date-preferences owns different advanced-intelligence callers"
+    ],
+    "candidateFixesQueued": false
+  },
+  "purpose": "Review synchronized Tesla business-account Fleet Charging sessions, independent lifetime summary, scoped costs/energy/sites and independent wait forecasts.",
+  "sections": [
+    {
+      "name": "Fleet charging info",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 764,
+      "alwaysRenderedShell": true,
+      "content": "Business note,403,source last-sync"
+    },
+    {
+      "name": "Summary metrics",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 796,
+      "alwaysRenderedShell": true,
+      "content": "Five lifetime/unknown-period metrics, distinct from analysis totals"
+    },
+    {
+      "name": "Wait forecast",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 811,
+      "alwaysRenderedShell": true,
+      "content": "Independent sites/arrival/prediction/confidence/probability/stalls/best-hour/evidence/hourly chart"
+    },
+    {
+      "name": "Cost analysis",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 820,
+      "alwaysRenderedShell": true,
+      "content": "Monthly chart/data/export and charger-type energy breakdown"
+    },
+    {
+      "name": "Session locations",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 900,
+      "alwaysRenderedShell": true,
+      "content": "Lazy clustered map/popups and top-six site spend"
+    },
+    {
+      "name": "Charging sessions table",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 972,
+      "alwaysRenderedShell": true,
+      "content": "Nine fields and full native/mobile details,filters/sort/selection/paging/preferences/virtualization/two exports"
+    }
+  ],
+  "actions": [
+    {
+      "name": "Local VIN and All vehicles",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 632,
+      "behavior": "Required local selection because header vehicle is disabled; existing bridge/vin=* bookmarks"
+    },
+    {
+      "name": "Header analysis range",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 159,
+      "behavior": "Shared exact half-open bounds; no duplicate range picker"
+    },
+    {
+      "name": "Refresh from Tesla",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 643,
+      "behavior": "Real POST pending/403/error/success toast; not invoked"
+    },
+    {
+      "name": "Session retry",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 705,
+      "behavior": "Independent read refetch; retained warning at698; not invoked"
+    },
+    {
+      "name": "Oracle site/presets/custom/retry",
+      "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+      "line": 110,
+      "behavior": "Site,Now/+1/+2/+3/custom datetime and individual fatal retry; independent business arrival; not invoked"
+    },
+    {
+      "name": "Monthly chart data/export",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 825,
+      "behavior": "Canonical frame/dataColumns/exportData/retry; not invoked"
+    },
+    {
+      "name": "Map interactions",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsMap.tsx",
+      "line": 118,
+      "behavior": "Zoom5,tiles,clusters,keyboard markers,popups; not mounted"
+    },
+    {
+      "name": "Table filters and sort",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 1016,
+      "behavior": "Nine columns; date/energy/peak/cost direction sorting; not invoked"
+    },
+    {
+      "name": "Table pagination/preferences",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 1023,
+      "behavior": "25 default;25/50/100;stable tableId,visibility/reorder,sticky600px,virtual56px rows"
+    },
+    {
+      "name": "Table selection/mobile quick view",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 1044,
+      "behavior": "session_id multiselection; localized site/date labels; all columns/native details,masked VIN; not invoked"
+    },
+    {
+      "name": "Built-in CSV/JSON",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 1031,
+      "behavior": "Visible-column filtered-loaded or selected-loaded schema; no exportAll/fullResult claim"
+    },
+    {
+      "name": "Selected raw CSV",
+      "file": "web/src/features/charging/pages/TeslaChargingSessionsPage.tsx",
+      "line": 593,
+      "behavior": "Ten fields incl energy_wh,duration_seconds,currency; full VIN retained,quote handling; not invoked"
+    }
+  ],
+  "dataSources": [
+    {
+      "hook": "useTeslaChargingSessions",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 323,
+      "endpoint": "GET /tesla/charging/sessions?vin=<optional>",
+      "behavior": "Raw historical sessions/independent summary;VIN key,SLOW staleTime,AbortSignal;no read bounds"
+    },
+    {
+      "hook": "useRefreshTeslaChargingSessions",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 408,
+      "endpoint": "POST /tesla/charging/sessions/refresh",
+      "behavior": "Optional vin/date_from/date_to;page VIN only;real success invalidation/toast and error toast;never invoked"
+    },
+    {
+      "hook": "useVehicles",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 73,
+      "endpoint": "GET /vehicles",
+      "behavior": "VIN bridge/local selector;source resolution issue F01"
+    },
+    {
+      "hook": "useWaitOracleSites",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 374,
+      "endpoint": "GET /waitoracle/sites?q=<optional>",
+      "behavior": "Independent historical/cancellable source,not selected VIN/range"
+    },
+    {
+      "hook": "useWaitOracleForecast",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 388,
+      "endpoint": "GET /waitoracle/forecast?site=<site>&arrive_at=<optional>",
+      "behavior": "Nonempty site,independent business instant;null arrival=now;cancellable"
+    }
+  ],
+  "routeEvidence": [
+    {
+      "file": "web/src/App.tsx",
+      "line": 811,
+      "detail": "SafeRoute lazy mount /tesla-charging-sessions"
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "line": 20,
+      "detail": "Loads exact audited page"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "line": 71,
+      "detail": "Header range enabled"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "line": 131,
+      "detail": "Header vehicle disabled; local VIN control intentional"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 3584,
+      "source": "r.Route(\"/tesla/charging\", func(r chi.Router) {"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 3585,
+      "source": "r.Route(\"/history\", func(r chi.Router) {"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 3586,
+      "source": "r.Get(\"/\", teslaChargingHistoryHandler.List)"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 3587,
+      "source": "r.Get(\"/sites\", teslaChargingHistoryHandler.Sites)"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 3588,
+      "source": "r.With(httprate.LimitByIP(5, 1*time.Minute)).Post(\"/refresh\", teslaChargingHistoryHandler.Refresh)"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 3590,
+      "source": "r.Get(\"/invoice/{contentID}\", teslaChargingHistoryHandler.Invoice)"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 3592,
+      "source": "r.Route(\"/sessions\", func(r chi.Router) {"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 3593,
+      "source": "r.Get(\"/\", teslaChargingSessionHandler.List)"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 3594,
+      "source": "r.With(httprate.LimitByIP(5, 1*time.Minute)).Post(\"/refresh\", teslaChargingSessionHandler.Refresh)"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 4025,
+      "source": "r.Route(\"/waitoracle\", func(r chi.Router) {"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 4026,
+      "source": "r.Get(\"/sites\", waitoracleHandler.Sites)"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 4027,
+      "source": "r.Get(\"/forecast\", waitoracleHandler.Forecast)"
+    }
+  ],
+  "preservation": {
+    "currentVsCompleted": "No live FSM/current-state query or inferred completed status. Historical synchronized business sessions are not ongoing telemetry. Nullable charge_stop_datetime preserved in raw/mobile details; endpoint ongoing/completed inclusion UNKNOWN.",
+    "identity": "Table/map session_id; narrative DB id plus source recordId retained; collision/uniqueness unproven, no IDs changed.",
+    "timeVehicleScopes": "Correct [startInstant,endInstantExclusive) client filter retained. Lifetime summary separately qualified at799-804. Header vehicle disabled,local VIN control intentional; oracle arrival independent. Backend full-result/bounds remain unknown.",
+    "rawSIAndSigns": "Wire/cache/hooks untouched;raw energyWh,durationS retained,display-only kWh/minutes. Existing source power/rate fields retained;no rename/dual-shape remigration. Row/raw CSV monetary signs not abs/clamped. Negative duration is invalid and stays dash,not a valid refund. Unknown/all-missing scoped totals now null and missing cost warning retained.",
+    "preferences": "Stable tableId/column/paging choices and locale/precision/unit/currency hooks retained;no settings/theme/range resets. useUnits centralizes fixed energykWh/powerkW defaults,not claimed configurable energy preferences.",
+    "trust": "Sessions fatalError and loading are retained-data-aware; source warning/blocked-unresolved notice/provenance/skeletons/per-section retries remain. Independent oracle trust defects F06-F08 distinct from session state.",
+    "sections": "Six explicit shells,plus scoped brief and split cost/location blocks give nine content blocks. Source presence is not native reachability proof.",
+    "actions": "Twelve source action groups preserved/documented. Refresh mutation never executed; only real hook outcome owns invalidation/toast. Built-in versus selected raw exports remain separate.",
+    "sourceA11yMobile": "Localized section/chart/marker/row names and chart table alternatives present. Mobile adapter preserves nine columns plus masked-VIN native details/Close. Page Refresh and bulk CSV use44px minima. Oracle36px source finding remains. Keyboard/focus/contrast/device matrix NOTRUN.",
+    "resolvedHistoricalFindings": [
+      "Precise client range instants now used,not old calendar-day assumptions.",
+      "Page ordinary measurement text now primary/secondary;monthly Bar uses CHART_COLORS rather than fixed cyan gradient.",
+      "Source-unresolved operational values/narrative now guarded and blocked brief unavailable status present.",
+      "All-missing scoped energy/cost now null;group availability guards exist. Do not repeat historical blanket zero defect.",
+      "Location text and hero wrappers use min-w-0/break-words."
+    ],
+    "historicalLimit": "audit0901046-line hash differs;queue1082/six-section acceptance is historical context. No original source/test replay or fresh parity gate."
+  },
+  "checks": [
+    {
+      "name": "Bounded case-sensitive frontend regex greps",
+      "command": "PowerShell Python here-string over four rendered files plus useCharging279-431; exact patterns/output in owned log",
+      "exit": 0,
+      "rawMatchCounts": {
+        "static-inline-style": 0,
+        "raw-html": 0,
+        "direct-library-import": 0,
+        "old-api-import": 0,
+        "double-prefix": 0,
+        "camelcase-param": 0,
+        "fetch-useeffect-candidate": 0,
+        "hidden-section-candidate": 3,
+        "hardcoded-string-candidate": 2,
+        "page-wrapper-present": 1,
+        "arbitrary-height-candidate": 6
+      },
+      "classification": "Execution only,not green UI. Hidden grep has two optional-chain false positives plus actual forecast gate. PageLayout forwards PageContainer. RechartsAPI/dynamicCHART_COLORS/shared building-block imports/raw controls acceptable. Six height sites are geometry candidates;three page sites historical. Semantic read additionally confirms unlocalized enums."
+    },
+    {
+      "name": "Exact semantic-location grep",
+      "exit": 0,
+      "rawOutput": "Owned log contains all exact money/export/identity/mobile/trust/palette/glow locations"
+    },
+    {
+      "name": "Exact queue and neighboring report dedup grep",
+      "exit": 0,
+      "rawOutput": "Owned log lists current QA,completed audit090/phase3 tests/phase5 page. No exact corrective source row. Neighbor list/detail owner matches0. No queue writes"
+    },
+    {
+      "name": "Final JSON/source/count/no-drift validation",
+      "command": "PowerShell Python assertions: exactitem/routes;15 issue tuples;9 candidates;10needs;6sections;12actions;44readfiles;27SHA pins;initial4page-specific pins;ignored logs rule;deadline",
+      "exit": 0,
+      "sourcePinsMatched": 27,
+      "initialSourcesUnchanged": 4,
+      "runtimeAcceptance": false
+    }
+  ],
+  "evidenceLimits": {
+    "native": "NOTRUN",
+    "browser": "NOTRUN",
+    "runtime": "NOTRUN",
+    "TypeScript": "NOTRUN:npx tsc --noEmit forbidden by exact scope;no compiler pass",
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "API": "NOTRUN",
+    "mutations": "NOTRUN",
+    "server": "NOTRUN",
+    "Docker": "NOTRUN",
+    "fullSuites": "NOTRUN",
+    "viewportMatrix": "NOTRUN320/375/390/430/768/1024/1280/1440/1920/2560,narrow allocated containers,RTL,200%text,long labels,theme/forced colors/reduced motion",
+    "a11y": "Source only;keyboard/focus/screen-reader/composed contrast/device touch not exercised",
+    "backend": "Only scoped router registrations;no model/handler/store/SQL,completeness,currency,uniqueID,current/completed or legacy unit proof",
+    "catalogs": "Not read/written;key installation/projections/translation quality UNKNOWN",
+    "historicalReceipts": "Queue/handoff/audit context only;no inherited fresh green claim",
+    "sourceStability": "Final pins verify inspected sources only,not global working tree/Git cleanliness",
+    "probeFailures": [
+      "Initial table-format search printed blank fields;corrected explicit-string probes used.",
+      "Broad searches tool-truncated;locator only,never passing clean scan.",
+      "Missing web/src/routes/routeLoaders.ts probe error despite shell0;actual web/src/lib/routeLoaders.ts:20 found.",
+      "Overlong inline artifact command failed before start Windows206/shell369exit1;split bounded commands succeeded."
+    ],
+    "forbiddenActionsNotPerformed": [
+      "source/tests/catalog/Git/subagents/installs/server/Docker/heartbeat/fullsuites/browser/API/mutations"
+    ],
+    "notClaimed": [
+      "Whole-page runtime/visual/QA acceptance",
+      "Phase6/Phase7 completion",
+      "TypeScript/lint/test/build green",
+      "Live/backend units/currency/completeness proof"
+    ]
+  },
+  "priority": {
+    "P1": [
+      "Vehicle source scope gating",
+      "Read bounds/completeness contract",
+      "Source currency and SI export identity",
+      "Independent oracle trust/unknown fallback"
+    ],
+    "P2": [
+      "Localize duration/enums",
+      "Oracle touch minima",
+      "Restrained map/oracle ink",
+      "Filtered-empty table guidance"
+    ],
+    "mostIssues": {
+      "WaitOraclePanel.tsx": 6,
+      "TeslaChargingSessionsPage.tsx": 5
+    },
+    "noRemigration": true
+  },
+  "release": {
+    "status": "RELEASED",
+    "releasedAtUTC": "2026-10-14T01:04:01.924022+00:00",
+    "ownedClaims": "Requested report and ignored web log returned; no further writes after final validation",
+    "sourceAuthority": "Never held source/test/catalog authority",
+    "nativeLock": "None",
+    "acceptedSourceRemains": "SOURCE ONLY;no remigration/runtime green"
+  },
+  "finalValidatedUTC": "2026-10-14T01:04:01.924022+00:00"
+}

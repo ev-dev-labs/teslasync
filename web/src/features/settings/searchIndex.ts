@@ -52,7 +52,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       id: 'fleet.setup',
       href: '/settings/fleet-setup',
       section: 'fleet',
-      title: t('search.entries.fleet.setup.title', 'Fleet Setup'),
+      title: t('search.entries.fleet.setup.title', 'Fleet setup'),
       description: t(
         'search.entries.fleet.setup.desc',
         'Connect Tesla, keep the Fleet token fresh, subscribe telemetry on a vehicle, and confirm streaming.',
@@ -210,7 +210,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       href: '/settings#general',
       section: 'general',
       title: t('search.entries.general.temperature.title', 'Temperature unit'),
-      description: t('search.entries.general.temperature.desc', 'Show temperatures in Celsius or Fahrenheit.'),
+      description: t('search.entries.general.temperature.desc', 'Show temperatures in celsius or fahrenheit.'),
       keywords: ['celsius', 'fahrenheit', 'c', 'f'],
     },
     {
@@ -218,7 +218,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       href: '/settings#general',
       section: 'general',
       title: t('search.entries.general.pressure.title', 'Tire pressure unit'),
-      description: t('search.entries.general.pressure.desc', 'Show tire pressure in Bar or PSI.'),
+      description: t('search.entries.general.pressure.desc', 'Show tire pressure in bar or PSI.'),
       keywords: ['psi', 'bar', 'tire', 'tyre'],
     },
     {
@@ -375,7 +375,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       id: 'quiet-hours.windows',
       href: '/notifications/quiet-hours',
       section: 'quiet-hours',
-      title: t('search.entries.quietHours.windows.title', 'Quiet hours windows'),
+      title: t('search.entries.quietHours.windows.title', 'Quiet hours Windows'),
       description: t('search.entries.quietHours.windows.desc', 'Defer non-critical notifications during sleep, work meetings, or any time-of-day window.'),
       keywords: ['dnd', 'do not disturb', 'sleep', 'mute', 'silence', 'night'],
     },

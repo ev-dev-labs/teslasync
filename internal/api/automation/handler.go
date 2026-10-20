@@ -914,7 +914,10 @@ func (h *AutomationHandler) loadAutomationExportActions(ctx context.Context, ste
 		  FROM automation_step_action_set_setting a WHERE step_id = ANY($1)
 		UNION ALL
 		SELECT step_id, 'call_automation' AS kind, to_jsonb(a.*) AS payload
-		  FROM automation_step_action_call_automation a WHERE step_id = ANY($1)`
+		  FROM automation_step_action_call_automation a WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'wait' AS kind, to_jsonb(a.*) AS payload
+		  FROM automation_step_action_wait a WHERE step_id = ANY($1)`
 	rows, err := h.db.Pool.Query(ctx, query, stepIDs)
 	if err != nil {
 		return fmt.Errorf("load export actions: %w", err)
@@ -933,6 +936,12 @@ func (h *AutomationHandler) loadAutomationExportActions(ctx context.Context, ste
 			row := &models.AutomationAction{}
 			if err := json.Unmarshal(payload, row); err != nil {
 				return fmt.Errorf("decode export command action %d: %w", stepID, err)
+			}
+			out[stepID] = row
+		case "wait":
+			row := &models.AutomationStepActionWait{}
+			if err := json.Unmarshal(payload, row); err != nil {
+				return fmt.Errorf("decode export wait action %d: %w", stepID, err)
 			}
 			out[stepID] = row
 		case "notify":
@@ -1130,6 +1139,14 @@ func automationStepRawMessage(step models.AutomationStep, payload any) (json.Raw
 			Kind:               step.Kind,
 			StepOrder:          &order,
 			TargetAutomationID: p.TargetAutomationID,
+		})
+	case models.AutomationStepKindActionWait:
+		p, err := automationDecodePayload[models.AutomationStepActionWait](step, payload)
+		if err != nil {
+			return nil, err
+		}
+		return automationMarshalStep(automationActionWaitDTO{
+			Kind: step.Kind, StepOrder: &order, DurationS: p.DurationS,
 		})
 	default:
 		return nil, fmt.Errorf("unsupported step kind %q", step.Kind)

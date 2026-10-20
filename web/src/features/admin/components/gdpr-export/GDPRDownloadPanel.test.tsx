@@ -7,7 +7,7 @@
  *
  *   loading (and no artifact yet) → skeleton placeholders (never a blank panel)
  *   downloadUrl present           → a hint + a single download control
- *   otherwise                     → a status-aware caption explaining why the
+ *   otherwise                     → a manifest-aware caption explaining why the
  *                                   bundle can't be downloaded yet
  *
  * Coverage for the sole export (`GDPRDownloadPanel`):
@@ -17,9 +17,14 @@
  *      <button> nested inside an <a> (the fix: `nested-interactive` produced two
  *      tab stops for a single action). Keyboard-focusable + click dispatches.
  *   3. downloadUrl precedence — a non-null URL wins even over an inconsistent
- *      `expired` status (the URL is the source of truth).
- *   4. Unavailable captions — queued/running → "wait", expired → "expired",
- *      failed / complete-without-url / no-artifact → the generic fallback.
+ *      expired manifest (the parent-supplied URL is the source of truth).
+ *   4. Original job-scenario crosswalk (names retained, no job fields invented):
+ *      queued → valid local_fs manifest, but no eligible parent href;
+ *      running → unknown storage/expiry metadata;
+ *      failed → unsupported storage kind, not evidence of a failed export;
+ *      expired → real expires_at boundary;
+ *      complete-without-url → valid manifest without file-availability proof;
+ *      no-artifact → missing lookup result.
  *   5. Loading — skeletons on first load; but a background refetch (artifact
  *      already present) keeps the resolved content, never a skeleton.
  *   6. Structure — the panel heading is always present and `className` is
@@ -61,20 +66,30 @@ vi.mock('react-i18next', async () => {
 });
 
 import { GDPRDownloadPanel } from './GDPRDownloadPanel';
-import type {
-  GDPRExportArtifact,
-  GDPRArtifactStatus,
-} from '@/types/admin-operator-confidence';
+import type { GDPRExportArtifact } from '@/types/admin-operator-confidence';
 
 const DOWNLOAD_URL =
   'http://localhost:8080/api/v1/admin/gdpr/exports/exp_123/download';
+const NOW = Date.parse('2026-01-01T01:00:00Z');
+const UNAVAILABLE_CAPTION =
+  'No eligible download link was supplied. Refresh the artifact manifest; metadata does not confirm that the stored file is available.';
+const UNKNOWN_CAPTION =
+  'Download eligibility is unknown because storage or a valid expiry is missing. Refresh the artifact manifest to check its metadata.';
+const MISSING_CAPTION =
+  'No artifact result is available. Look up an artifact or retry the lookup to inspect download eligibility.';
 
 function makeArtifact(over: Partial<GDPRExportArtifact> = {}): GDPRExportArtifact {
   return {
     id: 'exp_123',
-    status: 'complete',
-    format: 'zip',
+    export_job_id: 'job_123',
+    vehicle_id: 4,
+    storage_kind: 'local_fs',
+    storage_path: 'synthetic/exp_123.zip',
+    sha256: 'a'.repeat(64),
+    byte_count: 1024,
     created_at: '2026-01-01T00:00:00Z',
+    expires_at: '2026-01-02T00:00:00Z',
+    download_count: 0,
     ...over,
   };
 }
@@ -84,6 +99,7 @@ interface RenderProps {
   downloadUrl?: string | null;
   loading?: boolean;
   className?: string;
+  now?: number;
 }
 
 function renderPanel(props: RenderProps = {}) {
@@ -93,26 +109,28 @@ function renderPanel(props: RenderProps = {}) {
       downloadUrl={props.downloadUrl ?? null}
       loading={props.loading}
       className={props.className}
+      now={props.now ?? NOW}
     />,
   );
 }
 
 /** The rendered GlassPanel root (a div tagged with data-print-card). */
 function panelRoot(container: HTMLElement): HTMLElement {
-  const root = container.querySelector('[data-print-card]');
+  const root = container.querySelector<HTMLElement>('[data-print-card]');
   if (!root) throw new Error('panel root not found');
-  return root as HTMLElement;
+  return root;
 }
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
 describe('GDPRDownloadPanel — download available', () => {
   it('renders the hint and a single, correctly-wired download control', () => {
     const { container } = renderPanel({
-      artifact: makeArtifact({ status: 'complete' }),
+      artifact: makeArtifact(),
       downloadUrl: DOWNLOAD_URL,
     });
 
@@ -123,9 +141,12 @@ describe('GDPRDownloadPanel — download available', () => {
     expect(
       screen.getByText(/bundle streams from the backend/i),
     ).toBeInTheDocument();
+    expect(screen.getByText(/file is missing.*best effort, not a durable audit record/i))
+      .toBeInTheDocument();
 
     // Exactly one interactive control: an <a> that points at the bundle.
     const link = screen.getByRole('link', { name: 'Download bundle' });
+    expect(link.tagName).toBe('A');
     expect(link.getAttribute('href')).toBe(DOWNLOAD_URL);
     expect(link.hasAttribute('download')).toBe(true);
 
@@ -135,10 +156,12 @@ describe('GDPRDownloadPanel — download available', () => {
 
     // No "can't download yet" caption while a URL is present.
     expect(
-      screen.queryByText(/Download becomes available/),
+      screen.queryByText(UNAVAILABLE_CAPTION),
     ).toBeNull();
     // And no skeleton placeholder.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(panelRoot(container).querySelector(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toBeNull();
   });
 
   it('exposes ONE anchor and ZERO buttons (nested-interactive a11y fix)', () => {
@@ -164,18 +187,29 @@ describe('GDPRDownloadPanel — download available', () => {
 
     // Activating it fires a real click. Navigation is prevented so jsdom does
     // not attempt an unimplemented navigation.
-    const onClick = vi.fn((e: MouseEvent) => e.preventDefault());
-    link.addEventListener('click', onClick as EventListener);
-    fireEvent.click(link);
+    const onClick = vi.fn((event: Event) => event.preventDefault());
+    link.addEventListener('click', onClick);
+    // Measure only activation's scheduling delta, after render and focus.
+    const timeout = vi.spyOn(globalThis, 'setTimeout');
+    const interval = vi.spyOn(globalThis, 'setInterval');
+    const timeoutBaseline = timeout.mock.calls.length;
+    const intervalBaseline = interval.mock.calls.length;
+    expect(fireEvent.click(link)).toBe(false);
     expect(onClick).toHaveBeenCalledTimes(1);
-    link.removeEventListener('click', onClick as EventListener);
+    expect(onClick.mock.calls[0]?.[0].defaultPrevented).toBe(true);
+    expect(timeout.mock.calls.length).toBe(timeoutBaseline);
+    expect(interval.mock.calls.length).toBe(intervalBaseline);
+    expect(link).toHaveFocus();
+    expect(link).toHaveAttribute('href', DOWNLOAD_URL);
+    expect(link).toHaveAttribute('download');
+    link.removeEventListener('click', onClick);
   });
 
   it('prefers a non-null downloadUrl even over an inconsistent expired status', () => {
     // downloadUrl is the source of truth: if the parent handed us a URL, show
-    // the control regardless of a stale/contradictory status field.
+    // the control even if its retained manifest has reached expires_at.
     renderPanel({
-      artifact: makeArtifact({ status: 'expired' }),
+      artifact: makeArtifact({ expires_at: new Date(NOW).toISOString() }),
       downloadUrl: DOWNLOAD_URL,
     });
 
@@ -189,26 +223,33 @@ describe('GDPRDownloadPanel — download available', () => {
 });
 
 describe('GDPRDownloadPanel — unavailable captions', () => {
-  it.each<GDPRArtifactStatus>(['queued', 'running'])(
+  it.each<[string, Partial<GDPRExportArtifact>, string]>([
+    ['queued', {}, UNAVAILABLE_CAPTION],
+    ['running', { storage_kind: '', expires_at: '' }, UNKNOWN_CAPTION],
+  ])(
     'shows the "wait for completion" caption while %s',
-    (status) => {
+    (_originalScenario, manifest, caption) => {
       const { container } = renderPanel({
-        artifact: makeArtifact({ status }),
+        artifact: makeArtifact(manifest),
         downloadUrl: null,
       });
 
       expect(
-        screen.getByText('Download becomes available once the export completes.'),
+        screen.getByText(caption),
       ).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Download' })).toBeInTheDocument();
+      expect(screen.queryByText('Download becomes available once the export completes.')).toBeNull();
       // No download control in this branch.
       expect(screen.queryByRole('link')).toBeNull();
-      expect(container.querySelector('.animate-pulse')).toBeNull();
+      expect(panelRoot(container).querySelector(
+        '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+      )).toBeNull();
     },
   );
 
   it('shows the "expired" caption when the artifact has expired', () => {
     renderPanel({
-      artifact: makeArtifact({ status: 'expired' }),
+      artifact: makeArtifact({ expires_at: new Date(NOW).toISOString() }),
       downloadUrl: null,
     });
 
@@ -220,22 +261,23 @@ describe('GDPRDownloadPanel — unavailable captions', () => {
 
   it('falls back to the generic caption for a failed artifact', () => {
     renderPanel({
-      artifact: makeArtifact({ status: 'failed' }),
+      artifact: makeArtifact({ storage_kind: 's3' }),
       downloadUrl: null,
     });
 
-    expect(screen.getByText(/No bundle available/)).toBeInTheDocument();
+    expect(screen.getByText('Downloads are not supported for this artifact’s storage kind.'))
+      .toBeInTheDocument();
     expect(screen.queryByRole('link')).toBeNull();
   });
 
   it('falls back to the generic caption when complete but no URL was provided', () => {
-    // Defensive branch: status says complete yet the parent handed no URL.
+    // A persisted manifest alone does not prove an available file.
     renderPanel({
-      artifact: makeArtifact({ status: 'complete' }),
+      artifact: makeArtifact(),
       downloadUrl: null,
     });
 
-    expect(screen.getByText(/No bundle available/)).toBeInTheDocument();
+    expect(screen.getByText(UNAVAILABLE_CAPTION)).toBeInTheDocument();
     expect(screen.queryByRole('link')).toBeNull();
   });
 
@@ -243,7 +285,7 @@ describe('GDPRDownloadPanel — unavailable captions', () => {
     // No artifact, not loading, no URL → the em-dash-free fallback, never a crash.
     renderPanel({ artifact: undefined, downloadUrl: null, loading: false });
 
-    expect(screen.getByText(/No bundle available/)).toBeInTheDocument();
+    expect(screen.getByText(MISSING_CAPTION)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Download' })).toBeInTheDocument();
   });
 });
@@ -254,10 +296,29 @@ describe('GDPRDownloadPanel — loading', () => {
 
     // Heading stays mounted; the body is skeleton placeholders.
     expect(screen.getByRole('heading', { name: 'Download' })).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const placeholders = panelRoot(container).querySelectorAll(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(placeholders.length).toBeGreaterThan(0);
+    expect(placeholders).toHaveLength(2);
+    placeholders.forEach((placeholder, index) => {
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder).toHaveClass('rounded', 'bg-[var(--skeleton-bg)]');
+      expect(placeholder).toHaveStyle({
+        width: index === 0 ? '90%' : '55%',
+        height: index === 0 ? '14px' : '44px',
+      });
+      expect(placeholder).toBeEmptyDOMElement();
+    });
+    expect(panelRoot(container).querySelectorAll('.animate-pulse')).toHaveLength(0);
     // No control and no caption while the first load is in flight.
     expect(screen.queryByRole('link')).toBeNull();
-    expect(screen.queryByText(/No bundle available/)).toBeNull();
+    expect(screen.queryByText(MISSING_CAPTION)).toBeNull();
+    expect(screen.queryByText(UNKNOWN_CAPTION)).toBeNull();
+    expect(screen.queryByText(UNAVAILABLE_CAPTION)).toBeNull();
+    expect(screen.queryByText(/bundle streams from the backend/i)).toBeNull();
+    expect(screen.queryByText('Download becomes available once the export completes.')).toBeNull();
+    expect(screen.queryByText('This artifact has expired and is no longer downloadable.')).toBeNull();
   });
 
   it('keeps the resolved download control during a background refetch', () => {
@@ -265,27 +326,31 @@ describe('GDPRDownloadPanel — loading', () => {
     // so the panel must keep showing content, not blank it with a skeleton.
     const { container } = renderPanel({
       loading: true,
-      artifact: makeArtifact({ status: 'complete' }),
+      artifact: makeArtifact(),
       downloadUrl: DOWNLOAD_URL,
     });
 
     expect(
       screen.getByRole('link', { name: 'Download bundle' }),
     ).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(panelRoot(container).querySelector(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toBeNull();
   });
 
   it('keeps the status caption during a background refetch of a queued artifact', () => {
     const { container } = renderPanel({
       loading: true,
-      artifact: makeArtifact({ status: 'queued' }),
+      artifact: makeArtifact(),
       downloadUrl: null,
     });
 
     expect(
-      screen.getByText('Download becomes available once the export completes.'),
+      screen.getByText(UNAVAILABLE_CAPTION),
     ).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(panelRoot(container).querySelector(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toBeNull();
   });
 });
 

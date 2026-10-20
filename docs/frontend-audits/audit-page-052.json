@@ -1,0 +1,434 @@
+{
+  "item": "audit-page-052",
+  "page": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+  "routes": ["/timeline"],
+  "purpose": "Explore the selected vehicle's FSM transitions and independent dwell-time summary for the workspace analysis window.",
+  "primaryGoal": "Understand how the vehicle changed state, compare state dwell times and daily transition counts, inspect trigger evidence, and navigate to related records.",
+  "dataSources": [
+    {
+      "name": "useTimelinePageTimeline",
+      "owner": "web\\src\\api\\hooks\\useTimelinePage.ts",
+      "file": "web\\src\\api\\hooks\\useTimelinePage.ts",
+      "line": 38,
+      "endpoint": "/vehicle-states/timeline",
+      "parameters": ["vehicle_id", "start", "end"],
+      "routeEvidence": "internal\\api\\router.go:4223-4233",
+      "consumerEvidence": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:136-137",
+      "behavior": "String selected-vehicle ID; encoded instant bounds; enabled only for nonempty ID; query key ['vehicle-timeline', activeId, startInstant, endInstantExclusive]; AbortSignal forwarded to request; no local retry, stale-time or polling override. Expected envelope contains transitions with ts/from_state/to_state/trigger_field/trigger_value.",
+      "backendOwnership": "Router constructs vehicleStatesHandler with VehicleStatesRepo; route comments identify fsm_transitions restricted to fsm_name='vehicle'. Handler/repository behavior, pagination/completeness and actual boundary filtering were not inspected."
+    },
+    {
+      "name": "useTimelinePageSummary",
+      "owner": "web\\src\\api\\hooks\\useTimelinePage.ts",
+      "file": "web\\src\\api\\hooks\\useTimelinePage.ts",
+      "line": 57,
+      "endpoint": "/vehicle-states/summary",
+      "parameters": ["vehicle_id", "start", "end"],
+      "routeEvidence": "internal\\api\\router.go:4223-4234",
+      "consumerEvidence": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:139-140",
+      "behavior": "Independent query key ['vehicle-summary', activeId, startInstant, endInstantExclusive], same vehicle/range enablement and signal forwarding. Expected scalar envelope includes total_seconds and by_state rows with state, total_seconds, percentage, transition_count. SI seconds and returned percentages remain raw.",
+      "backendOwnership": "Same router-owned vehicleStatesHandler; coverage, missing-state meaning and dwell calculation remain unknown without handler/repository or runtime evidence."
+    },
+    {
+      "name": "useVehicles",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoint": "/vehicles",
+      "consumerEvidence": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:132,405-409",
+      "behavior": "Only the error is consumed by this page; query uses vehicleKeys.all, STALE_TIMES.FAST, safeArray and request AbortSignal. Exact /vehicles router registration was not inspected in this bounded audit; no endpoint mismatch is claimed."
+    },
+    {
+      "name": "Workspace vehicle, date range and timezone",
+      "owner": "Existing useSelectedVehicle/useRangeState/useTimezone and shell View settings",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 119,
+      "endpoint": null,
+      "behavior": "Global selected vehicle; vehicle timezone; persistKey timeline.range; default 7d; startInstant/endInstantExclusive passed to both source hooks. No competing page picker. /timeline is registered in workspaceScope.ts:72. The hook implementations, actual URL persistence and DST behavior were not exercised."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout, CardGrid, LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference",
+      "kind": "existing layout owners",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 8,
+      "contract": "One PageLayout delegates to PageContainer; four single-item full-width CardGrids supply accessible group labels; LayoutCard provides title association, container-aware padding and min-w-0 content. Retain page title/subtitle/header actions and all four full-width bands."
+    },
+    {
+      "name": "ChartCard and category chart exports",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "kind": "existing canonical chart-frame adapter",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 511,
+      "contract": "ChartCard forwards children/data/dataColumns/state/size props into EmbeddedChart within LayoutCard. Page supplies four stacked bars, accessible label, UTC explanation, chartKey, hidden-series callbacks and source-state footer. Do not invent exports/fullscreen settings not explicitly supplied by the page."
+    },
+    {
+      "name": "OperationalBrief and useOperationalMetrics",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "kind": "existing summary and formatting pipeline",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 412,
+      "contract": "compact, timeline-summary testId, four source-backed metrics, source status/tone, scope/provenance and initial-loading suppression. The owner exposes a details Drawer; its source includes loading suppression in both summary and drawer. Adapter implementation and mounted interactions were not inspected."
+    },
+    {
+      "name": "TimelineSource",
+      "owner": "web\\src\\features\\analytics\\components\\timeline-modernization\\TimelineSource.tsx",
+      "kind": "existing page-specific presentation owner",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 40,
+      "contract": "Facts enabled/available/loading/paused/error plus label/children; source-local skeleton, selection prompt, error, paused, unknown debugger recovery, retained error and retained paused notices. Preserve independent neighbors."
+    },
+    {
+      "name": "CompositionRail",
+      "owner": "web\\src\\components\\data-display\\CompositionRail.tsx",
+      "kind": "existing categorical composition",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 469,
+      "contract": "size lg; summary; unique segment IDs; label/detail/color/widthPercent/hideFromTrack. Validates finite 0-100 segment widths; hiding small decorative fills retains every readable legend entry. Supports fillClassName and caller CSS colors."
+    },
+    {
+      "name": "MetricBar",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "kind": "existing quantitative track",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 576,
+      "contract": "label/value/max/color/sublabel; default gradient fill; existing fill='solid' supports theme variables. Uses progressbar semantics and reduced-motion preference. Page owns dwell arithmetic, missingness and formatting."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "kind": "existing table pipeline",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 599,
+      "contract": "embedded; stable tableId analytics:timeline-transitions; value filters; six columns; pagination; mobile columns/roles/displayValue/onOpenRow/inlineActions/allDetails. Shared persistence/sort/resize/reorder/export capabilities remain owner-controlled; effective mounted export behavior was not verified."
+    },
+    {
+      "name": "EntityPreviewDrawer",
+      "owner": "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx",
+      "kind": "existing entity inspection",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 640,
+      "contract": "open/onClose; localized eyebrow/title/description; destination status; five evidence fields; seven related links. Delegates overlay behavior to Drawer; shared Close action and link-click closure are source-present."
+    },
+    {
+      "name": "DataFreshnessAuto",
+      "owner": "web\\src\\components\\data-display\\DataFreshness.tsx",
+      "kind": "existing query trust/action owner",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 402,
+      "contract": "timelineQuery only; default refetchable=true. Existing props query/source/compact/refetchable/forceStaleAfterMs permit source-specific metadata without a replacement freshness engine."
+    },
+    {
+      "name": "Badge, Button, Text, Caption; feedback; FadeIn",
+      "owner": "Existing ui/feedback/motion category barrels",
+      "kind": "existing primitives",
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 9,
+      "contract": "Preserve semantic state badges, localized action names, minimum-height page inspect/refresh controls, typography roles, empty/error notices and six entrance wrappers. Primitive implementations beyond the listed page-specific owners were not independently audited."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 489,
+      "rule": "MDC-002/MDC-034: reuse category presentation",
+      "detail": "The distribution has CompositionRail's returned-state legend plus a hand-built eight-state palette key. They overlap but are not equivalent: the static key includes states absent from returned rows.",
+      "fix": "Keep all eight category meanings and all returned duration/percentage details; compose the established category/legend owner rather than silently dropping the static key. No speculative new shared component is justified by this one consumer.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\timeline-modernization\\TimelineSummary.tsx",
+      "line": 16,
+      "rule": "MDC-002/MDC-033: one summary owner",
+      "detail": "The inspected page-specific barrel still exports an alternate TimelineSummary with the same four occurrence IDs and a StatStrip/text-duration pipeline, while the mounted page uses OperationalBrief/numeric duration metrics.",
+      "fix": "Keep OperationalBrief as the mounted summary owner. Resolve alternate adoption/removal only with confirmed callers; do not revert the page to text metrics or claim this export is globally unused.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "PageLayout.tsx:12 maintains w-full/min-w-0 and container ownership.",
+      "TimelinePage.tsx:437,508,563,594 declares four full-width bands rather than a cramped chart/list pair.",
+      "TimelinePage.tsx:449-464,489-500 uses wrapping lists/key; CompositionRail.tsx uses wrapped, breakable legend entries.",
+      "TimelinePage.tsx:606-632 supplies mobile prioritization, duration/trigger fields, row opening, explicit inspect action and trigger_value details.",
+      "EntityPreviewDrawer.tsx:112,140-143 reflows evidence/navigation from one to two columns."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\data-display\\MetricBar.tsx",
+        "line": 65,
+        "rule": "MDC-043: long content and narrow containers",
+        "detail": "The time-by-state header places the visible state and formatted duration/percentage in a single justify-between flex row without an explicit wrap strategy. Long localized labels or large percentages are a source-level narrow-container risk, not observed clipping.",
+        "fix": "Use the existing header contract first; test 320px/200%-text/RTL/long state names and, if reproduced, have the MetricBar owner add wrapping/min-width behavior without dropping labels or readouts.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "viewportChecks": "NOT RUN: 320/375/390/430/768/1024/1280/1440/1920/2560; allocated-width, RTL and 200%-text behavior unverified."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "TimelinePage.tsx:363-379,387-395 has localized inspect/refresh names and min-h-11 targets; refresh icon is aria-hidden.",
+      "TimelinePage.tsx:514,531-537 supplies chart accessible name and data columns.",
+      "CompositionRail.tsx:59-62 supplies image label and a readable list of every segment; color is accompanied by state/detail text.",
+      "MetricBar.tsx:57-62 provides progressbar name, bounds and missing-value text.",
+      "EntityPreviewDrawer.tsx:78-108 delegates overlay to Drawer and includes explicit Close; related links close the preview at :153-155."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx",
+        "line": 151,
+        "rule": "MDC-040: stronger mobile 44px target",
+        "detail": "Related-context links explicitly use h-10 (40px), smaller than the page's min-h-11 inspect/refresh controls. WCAG spacing exceptions and actual hit geometry were not measured.",
+        "fix": "Existing EntityPreviewDrawer owner should use a minimum 44px link target that can grow for long labels; retain Link semantics, BUTTON_BASE/outline treatment, every destination and onClose/onNavigate.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+        "line": 578,
+        "rule": "MDC-044: localized presentation without source recasing",
+        "detail": "Time-by-state labels capitalize raw state identities; badges, distribution and preview expose raw identities, while duration helpers emit literal h/m/s suffixes and nonlocalized digits. Raw state evidence is legitimate, but the presentation has inconsistent localization/recasing.",
+        "fix": "Keep raw state/trigger identities in data/export/details; use the existing localized state-label and formatting policy for presentation, preserving specialist single-rounding behavior and exposing raw evidence where needed.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Keyboard order, focus trap/restoration, screen reader output, chart alternative reachability, composed contrast, forced colors and reduced-motion behavior NOT RUN."
+  },
+  "states": {
+    "initialLoading": "Independent summary OperationalBrief loading at page:427 and TimelineSource skeleton at dependency:41-45; chart loading at page:515; permanent sections retained.",
+    "empty": "Valid empty distributions/dwell lists/table/chart retain their frame and section-specific copy at page:442-446,516-525,568-572,608.",
+    "unavailableOrUnknown": "Array shape determines transition/summary availability at page:155-171. TimelineSource distinguishes no vehicle, malformed/missing envelope, paused and errors; unknown response can link to /state-debugger.",
+    "fatalError": "Independent source ErrorDisplay/ChartCard error with retained neighbors; vehicles error is a separate AlertBanner. Error recovery is uneven.",
+    "retainedRefreshFailure": "TimelineSource.tsx:52-58 retains children with a warning. Daily chart uses footer warning at page:526-529; summary labels retained source rather than replacing the metric region.",
+    "offlinePaused": "Page passes each query's isPaused separately; TimelineSource has no-data paused and retained-paused branches; reconnect behavior remains TanStack-owned and was not exercised.",
+    "stale": "Header DataFreshnessAuto describes timelineQuery only; no summaryQuery successful-fetch age is shown. Retained summary errors/pauses are source-present, not proof of freshness.",
+    "disabled": "Both domain hooks disabled for empty vehicle ID; TimelineSource asks for workspace vehicle selection. Page refresh and freshness remain rendered without an explicit enabled guard.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+        "line": 164,
+        "rule": "MDC-026/MDC-045: unavailable measurement is not zero",
+        "detail": "Any by_state array, including empty, is considered available. Missing driving/charging rows default to zero at lines 261-268 and summary rawValues become numeric zeros at lines 269-288, even while the distribution/dwell panels report no state data. An array shape alone does not prove observed zero dwell or continuous coverage.",
+        "fix": "Resolve the summary endpoint's empty/missing-state semantics with its integration owner. Preserve legitimate measured zeros, but pass null/missing reasons when dwell is unobserved; never infer completeness from the requested window.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+        "line": 387,
+        "rule": "MDC-026: source-local recovery and freshness",
+        "detail": "Both the refresh icon and default-refetchable DataFreshnessAuto target only timelineQuery. Summary-dependent metrics/distribution/dwell have no supplied manual retry or successful-fetch age; TimelineSourceFacts has no retry field and ErrorDisplay is not passed an onRetry callback.",
+        "fix": "Keep source independence; add an explicit summary refetch/retry and source-labeled summary freshness using existing DataFreshnessAuto and feedback APIs, without changing query keys/policies or treating timeline freshness as summary freshness.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 61,
+      "rule": "MDC-010/MDC-034 and mission 43: restrained semantic color",
+      "detail": "Eight fixed hex state colors include chromatic emerald, cyan, amber, blue and purple. The same palette drives distribution/key/dwell/chart; bars use 0.85 opacity and MetricBar defaults to gradient fill. These bypass theme-aware palette ownership and can create saturated multicolor noise. Actual rendered saturation/contrast is unverified; semantic differentiation must survive.",
+      "fix": "Reuse canonical state/chart semantic colors and subdued theme-aware surfaces, preserve state identities and series visibility, and use MetricBar's existing fill='solid' when passing CSS variables. Do not concatenate alpha suffixes onto var(...) through the default gradient path or reset saved chart/theme preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 545,
+      "rule": "MDC-013/MDC-040: typography and legibility",
+      "detail": "Both chart axes hardcode fontSize 10, outside the shared typography preference pipeline. Tick color already uses --text-muted; effective readability is unmeasured.",
+      "fix": "Use current chart typography tokens/preference-aware defaults while retaining UTC day labels, integer count axis and preserveStartEnd/minTickGap behavior; test long labels and small widths.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 135,
+      "rule": "MDC-002: accurate query ownership documentation",
+      "detail": "The page comment says cancellation is unforwarded, but the inspected current useTimelinePage hooks forward signal in both request calls at lines 47-50 and 66-69. This is stale documentation, not a cancellation defect.",
+      "fix": "Correct the local comment when the page is modernized; retain hook-owned AbortSignal forwarding and original cache/enablement policies.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 130,
+      "rule": "MDC-032/MDC-044: consistent timezone context",
+      "detail": "Range labels explicitly use vehicle timezone, but previewDay calls localDayKey without timezone; table and preview timestamps call formatDateTime without overrides. dateFormat.ts documents browser defaults. Related day links may describe a different calendar day from the vehicle-scoped analysis window near midnight.",
+      "fix": "Resolve and consistently apply the existing vehicle timezone and saved locale at the presentation/context-link boundary; retain explicitly UTC daily aggregation and its explanatory subtitle rather than silently changing buckets.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 105,
+      "rule": "MDC-045: preserve and distinguish inferred versus measured duration",
+      "detail": "Table/preview duration is derived from the next fetched transition or Date.now() for the last row. A historic bounded result's last row can therefore extend to the present outside the requested end; there is no explicit timer in this page. This is separate from summary dwell, and successor availability beyond the requested window is unknown.",
+      "fix": "Have the integration owner resolve the intended current-state versus bounded-history duration contract. Preserve original evidence and disclose incomplete successor coverage; do not silently alter summary arithmetic or claim inferred table duration equals measured window dwell.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "line": 269,
+      "rule": "Mission 33 / MDC-002: pages orchestrate",
+      "detail": "A 771-line page combines query/source adaptation, transition ordering, UTC aggregation, state arithmetic, specialist duration formatting, table rendering and context-link assembly. Typed hooks and several canonical presentation owners are already correctly separated.",
+      "fix": "Extract only page-specific pure derivations and render contracts into the existing feature structure, maintaining all six content regions, four metrics, raw SI, query policies, IDs, exports and actions. Do not introduce another summary/formatting/query engine.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve zero-versus-unobserved summary measurements, bounded duration interpretation and independent summary recovery before aesthetic consolidation. Existing layout/chart/table/preview/source owners already provide substantial modernization coverage.",
+    "order": [
+      "Integration: summary missing-state and successor/duration semantics",
+      "Page: source-local summary recovery/freshness and consistent timezone/locale",
+      "Shared: EntityPreviewDrawer related-link target sizing",
+      "Page: semantic palette/solid dwell bars, typography and duplicated legend/summary reconciliation",
+      "Parent: mounted responsive/accessibility/state/theme/visual acceptance"
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "EntityPreviewDrawer related-context link target sizing",
+      "owner": "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx",
+      "file": "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx",
+      "line": 151,
+      "rule": "MDC-040",
+      "detail": "Existing relatedActions links have a fixed 40px height; reuse this owner, not a page-only preview replacement.",
+      "fix": "Minimum 44px, growable link targets with long-label wrapping and visible keyboard focus; preserve native Link behavior, close-on-navigation and optional onNavigate.",
+      "confidence": "high",
+      "props": ["relatedActions: readonly { key, label, to, icon?, onNavigate? }[]", "open", "onClose"],
+      "variants": ["existing BUTTON_VARIANTS.outline"],
+      "states": ["open", "keyboard focus", "long localized labels", "320px mobile", "200%-text", "RTL"],
+      "usedBy": ["web\\src\\features\\analytics\\pages\\TimelinePage.tsx:702-765"],
+      "dependsOn": ["existing Drawer overlay/focus owner", "existing BUTTON_BASE and BUTTON_VARIANTS", "parent-mounted accessibility validation"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\timeline-modernization\\TimelineSummary.tsx",
+      "line": 16,
+      "rule": "MDC-002/MDC-033",
+      "detail": "Alternate exported StatStrip summary overlaps mounted OperationalBrief with identical occurrence IDs but text rather than numeric duration metrics. Other consumers were intentionally not searched.",
+      "fix": "Resolve confirmed consumers under the feature owner; keep mounted numeric-source OperationalBrief and specialist duration rounding. This audit does not authorize deletion.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "CC814C7A816A49FD97D83CA6AADA48A2A408334B1D1747B02305F41EDECC9A65",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 771,
+    "sectionCount": 6,
+    "sections": [
+      {"name": "Summary metrics", "line": 412, "count": 1, "metrics": ["Total transitions", "Driving time", "Charging time", "Idle / sleep time"], "metricCount": 4},
+      {"name": "State distribution", "line": 437, "count": 1, "preserve": "Proportional rail, invalid-composition individual evidence fallback, returned-state durations/percentages, sub-0.3% readable entries and complete eight-state key"},
+      {"name": "Daily breakdown", "line": 508, "count": 1, "seriesCount": 4, "preserve": "UTC transition-count buckets, driving/charging/idle/sleeping stacks, tooltip, legend, hidden-series callback, chartKey, accessible data columns and subtitle"},
+      {"name": "Time by state", "line": 563, "count": 1, "preserve": "Positive-dwell rows sorted descending, state name, duration, percentage, proportional track and independent summary source"},
+      {"name": "State transitions", "line": 594, "count": 1, "columnCount": 6, "columns": ["ts", "from_state", "to_state", "duration", "trigger_field", "actions"], "preserve": "Embedded table, value filters, sorting, pagination, shared preferences/export pipeline, mobile quick view and trigger_value details"},
+      {"name": "Transition preview", "line": 640, "count": 1, "fieldCount": 5, "relatedActionCount": 7, "preserve": "Recorded timestamp/title/status, from/to/duration/trigger field/value, Close and every related-context link"}
+    ],
+    "auxiliaryRegions": [
+      "Page title/subtitle and timeline freshness",
+      "Timeline refresh action",
+      "Independent vehicles-load error banner",
+      "Source-specific loading/selection/error/paused/unknown/retained notices",
+      "OperationalBrief-owned details drawer"
+    ],
+    "sourceElementCounts": {"PageLayout": 1, "OperationalBrief": 1, "CardGrid": 4, "LayoutCard": 3, "ChartCard": 1, "CompositionRail": 1, "MetricBar": 1, "DataTable": 1, "EntityPreviewDrawer": 1, "FadeIn": 6, "GlassPanel": 0, "ChartContainer": 0},
+    "actions": [
+      "Workspace vehicle selection and View settings date range remain shell-owned",
+      "Refresh icon refetches timelineQuery",
+      "DataFreshnessAuto default refresh refetches timelineQuery",
+      "Table time/from/to/trigger sorting; value filters; pagination; shared persistence/export capabilities",
+      "Chart legend/hidden-series interaction through timeline-daily-breakdown key",
+      "Desktop Inspect and mobile row-open/inline Inspect",
+      "Mobile shared quick-view details including trigger_value",
+      "Entity preview Close and close-on-related-navigation",
+      "Related vehicle /vehicles/{vehicleId}",
+      "Related /drives, /charging, /locations, /notifications/inbox with preview-day from/to",
+      "Related /maintenance",
+      "Related /signals with preview-day from/to and trigger-field signal selection",
+      "Unknown-source /state-debugger recovery"
+    ],
+    "dataBehavior": [
+      "No fixtures or fabricated measurements; preserve raw transition identities, nullable triggers and SI seconds.",
+      "Keep two independent vehicle/range query keys, nonempty-ID enablement, inherited policies and AbortSignal forwarding.",
+      "Retain defensive array-shape checks and source-local retained-data warnings without hiding neighbors.",
+      "Sort transitions ascending for successor duration math independently of table sort; retain original raw records and current index keys until explicit identity-contract review.",
+      "Daily buckets are UTC dates; count destination states; online/parked/idle fold into idle and asleep/sleeping/offline into sleeping; invalid timestamps are skipped.",
+      "Summary counts sum returned transition_count; dwell comes from summary, not timeline transition counts; idle and sleep group all original six states.",
+      "Retain single rounding to total minutes before h/m split and sub-minute rounded seconds; do not reintroduce 60m/60s boundary errors.",
+      "Distribution uses total_seconds denominator, guards nonfinite/negative/oversized individual dwell, and preserves individual evidence when proportional display is invalid.",
+      "Small rail segments omit only decorative track fill, never their readable details.",
+      "Unknown completeness remains unknown; resolve zero/missing-state and latest-row inference issues explicitly rather than silently changing calculation contracts.",
+      "Keep timeline.range, analytics:timeline-transitions, timeline-daily-breakdown, timeline-summary and all four occurrence IDs."
+    ],
+    "noSourceEdits": true
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 source inspection only",
+    "routeMountEvidence": "web\\src\\App.tsx:161 lazy import and :663 timeline SafeRoute declaration; not a mounted runtime check.",
+    "backendEvidence": "Only relevant router block inspected; timeline/summary endpoints source-matched. No handler/repository execution, server filtering, completeness or actual response assertions.",
+    "runtime": "NOT RUN",
+    "visual": "NOT RUN",
+    "keyboardAndScreenReader": "NOT RUN",
+    "contrastAndForcedColors": "NOT RUN",
+    "viewportsThemesRTLReducedMotion": "NOT RUN",
+    "typescriptLintTestsBuild": "NOT RUN: assignment prohibits full-repository validation; shared concurrent work is not accepted from this report.",
+    "skillScript": "Inspected .github\\skills\\audit-violations\\audit.sh; did not execute because it unconditionally runs project TypeScript. Used read-only page-scoped source pattern counts instead.",
+    "sourceScan": {
+      "command": "PowerShell Get-Content of assigned page with [regex]::Matches counts for static inline CSS variables, raw controls, direct libraries, old API imports, /api/v1 prefix, neon/glow, fixed white and hex palette",
+      "exitCode": 0,
+      "rawOutput": "staticInlineCssVar=0\nrawControls=0\ndirectLibraries=0\noldApiImport=0\napiDoublePrefix=0\nneonGlow=0\nfixedWhite=0\nhexPalette=8\nSource-only regex scan; TypeScript/runtime/visual/keyboard/viewport not run",
+      "scope": "Assigned page only; zero literal-pattern matches are not whole-page acceptance or proof of inherited shared visual behavior."
+    },
+    "assumptions": [
+      "Supplied exact /timeline route retained; source declaration corroborates it.",
+      "No other production consumers searched; no claim that TimelineSummary is globally dead or that proposed shared capabilities have two independent consumers.",
+      "MetricBar wrapping concern is conditional on mounted reproduction; existing solid fill is sufficient and needs no new API.",
+      "Neon/glow/pure-white literals were absent in this page-only scan; fixed semantic hex colors and inherited gradient bars remain source-backed noise concerns.",
+      "No Git, source edits, full-repo lint/build, browser requests, production mutations or edits to another worker's artifacts."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+    "web\\src\\api\\hooks\\useTimelinePage.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "internal\\api\\router.go",
+    "web\\src\\features\\analytics\\components\\timeline-modernization\\TimelineSource.tsx",
+    "web\\src\\features\\analytics\\components\\timeline-modernization\\TimelineSummary.tsx",
+    "web\\src\\features\\analytics\\components\\timeline-modernization\\index.ts",
+    "web\\src\\components\\data-display\\CompositionRail.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\drivesAggregation.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\contextNavigation.ts",
+    "web\\src\\App.tsx"
+  ]
+}

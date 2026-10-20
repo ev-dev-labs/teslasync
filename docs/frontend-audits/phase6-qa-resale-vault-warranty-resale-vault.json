@@ -1,0 +1,1264 @@
+{
+  "item": "phase6-qa-resale-vault-warranty-resale-vault",
+  "attempt": 1,
+  "status": "RELEASED_WITH_SOURCE_FINDINGS",
+  "started_at": "2026-10-14T02:28:04.978829+00:00",
+  "source_test_hashes_before": {
+    "web/src/features/resale-vault/components/AuditTrailPanel.test.tsx": "86435781ff717fd39ecb83a1535211afa5be98b12b34cf25821cd4cffd5f8a94",
+    "web/src/features/resale-vault/components/AuditTrailPanel.tsx": "26fc47cf87228149ee5209f494d1cea3bd4591f0d26fcc72ea2968a7f5a16fc7",
+    "web/src/features/resale-vault/components/BatteryCertificatePanel.test.tsx": "149d899baad8cca57dad5105560a664d36b5aae228021410e9167ced6bbbecae",
+    "web/src/features/resale-vault/components/BatteryCertificatePanel.tsx": "4dfdd868657436bcfaa57401bf72c7782d0d5a268683c459db20453786dfab6d",
+    "web/src/features/resale-vault/components/BatterySummaryPanel.test.tsx": "0368983f38db99d98db66aab6ee2a33c833d219d1ef1905a8b98eac42fe20deb",
+    "web/src/features/resale-vault/components/BatterySummaryPanel.tsx": "2656a03658f9fae36899bc701f0d1f7ac79e55fcb839d952d0f21b81521c276a",
+    "web/src/features/resale-vault/components/DisclosureProfileBuilder.test.tsx": "97689bbebecbc8318181cb963ee573f49b0c3b65c5a18d509f0a52515a0c5fa7",
+    "web/src/features/resale-vault/components/DisclosureProfileBuilder.tsx": "af142d52a2248499c8ea2e6f38ed79af9517ecf043f31d41a6134789eaeb688f",
+    "web/src/features/resale-vault/components/DrivingChargingSummaryPanel.test.tsx": "04aa80ba806ca231ffb810f451a05b93a2702b6cf258d00e4b4edc928bbce680",
+    "web/src/features/resale-vault/components/DrivingChargingSummaryPanel.tsx": "5c0ab9f03380643378996da8ef6d1b27da50314a93ac7cc64675693923081078",
+    "web/src/features/resale-vault/components/EvidenceInventoryPanel.test.tsx": "5796506b408b536ffd0e3a2ff09171e72141533f60672fe2fca0aea582dcb8be",
+    "web/src/features/resale-vault/components/EvidenceInventoryPanel.tsx": "a0bb6bf5dcae1976fc273439c0bd524afaab060d67d32cfd13b80947295fef50",
+    "web/src/features/resale-vault/components/ExportReportPanel.preservation.test.tsx": "900ad026a02a2d47f0050d26a020a66fc8dc4e4a1f3d9a91971edd41c5e779a0",
+    "web/src/features/resale-vault/components/ExportReportPanel.test.tsx": "c17337c916e14ef4529149783311b51de8216a7956af89bae913b34561f3ab52",
+    "web/src/features/resale-vault/components/ExportReportPanel.tsx": "e4fd1d9e9ffbfa8b84ea7eeb8b0e4866a223ff4c2f5cabf53b91b7e1f24927e4",
+    "web/src/features/resale-vault/components/ImportVerifyPanel.preservation.test.tsx": "56ccd3d4d902bf877c92b52533e7f69ef6064d684db656a3a3722cec719c7f05",
+    "web/src/features/resale-vault/components/ImportVerifyPanel.test.tsx": "9fdef6a92f259879700b520ce3960c5b81172cb06348e5b85f1fae9bd1e96de8",
+    "web/src/features/resale-vault/components/ImportVerifyPanel.tsx": "ce620a4a777a59245e5d9b5ecca011baaf6e84c18310da9f6370881d73a78d53",
+    "web/src/features/resale-vault/components/IncidentSummaryPanel.test.tsx": "12e13dd91a105b80616e80c7aae4de9ffa96118b5fff8d538a7c9fe5e4299d71",
+    "web/src/features/resale-vault/components/IncidentSummaryPanel.tsx": "583d93e7b88362d962237699b9bc837d55cb924528ea0fd7933b5c515533cade",
+    "web/src/features/resale-vault/components/index.ts": "c0aa3af31b8e423654f87fd9bca3de9a4809903bb9ac6ecfe04c327f488d06e1",
+    "web/src/features/resale-vault/components/MaintenanceSummaryPanel.test.tsx": "fa5639765a8d808a33ad7861f68f8adcd6e15ce8161bbe585515bf5e58d9d7a7",
+    "web/src/features/resale-vault/components/MaintenanceSummaryPanel.tsx": "fdbdd57fae383c9eafa7811c73c848b8f414b1b91477485db19dc469fe70bcb9",
+    "web/src/features/resale-vault/components/operationalbrief-all/VaultSummaryBrief.test.tsx": "18b304bfaa959e4b49f8c0e1d6b2053f028b47769db1158c7ee10a6c1fc284cf",
+    "web/src/features/resale-vault/components/operationalbrief-all/VaultSummaryBrief.tsx": "ab90390cae7c181f2deac452cf1673e1eda3aa71e54cb4dec0cf22da77c08ea6",
+    "web/src/features/resale-vault/components/PrivacyPreviewPanel.test.tsx": "287eed29154023aa977fa0539e7ffced6e7caf03280e87e5eb1b6a38b9d2c18b",
+    "web/src/features/resale-vault/components/PrivacyPreviewPanel.tsx": "9b4eae9cb1e1f1bf4e2eadc4d7143b9d3cb6167c16a76ce8a5a2783fe037ff7b",
+    "web/src/features/resale-vault/components/sectionLabels.ts": "77e29ae212680118a39f25770a53b653f30f61506883653c0a62c174430baad1",
+    "web/src/features/resale-vault/components/SignatureKeyPanel.test.tsx": "8963b387ba5069c45524ae556b2ba4468dbd7e17a5d79d0b9a9580dcd01b8df4",
+    "web/src/features/resale-vault/components/SignatureKeyPanel.tsx": "ac570320c59a8525fa54b334563a56b1df85b8679ce3b2add015ae19d6b208b4",
+    "web/src/features/resale-vault/components/SoftwareUpdateSummaryPanel.test.tsx": "be47cb8ebf3cb97265ab7d04e046932495ffffe382f655e6b0dd8854e928d1d4",
+    "web/src/features/resale-vault/components/SoftwareUpdateSummaryPanel.tsx": "8d55f391c6e9f47c5cad814a2b81807f8eeaf70ef7b0e953354f597d9679bc47",
+    "web/src/features/resale-vault/components/WarrantySummaryPanel.test.tsx": "4619685d52e15ada9235363871ec0b2afebeb901c45369d366ca4775b8243eb1",
+    "web/src/features/resale-vault/components/WarrantySummaryPanel.tsx": "df9b99199156308336b582c6e485e0896691e2f359627570a02d42555649322b",
+    "web/src/features/resale-vault/hooks/useDisclosureSelection.test.tsx": "864a149de5bda2c4e0b3c05e6ec77cee4fb372a4441a0a5967c76bf2f544e1da",
+    "web/src/features/resale-vault/hooks/useDisclosureSelection.ts": "6a36ecc0946d97b045c58d190822a3670dd4f5017464770973be5b515492b2e5",
+    "web/src/features/resale-vault/hooks/useSigningVault.test.tsx": "9de81d9ea9581012f91cd00dcb2d5e1d969d674bec3235c037bca983165367ad",
+    "web/src/features/resale-vault/hooks/useSigningVault.ts": "0484d9ed625bd47fa6804ca43f050d145274427682e3177e3b96914126044e5d",
+    "web/src/features/resale-vault/hooks/useVaultEvidence.test.tsx": "0eaf2146db802f0bfa993616e940ae30d295c9da3e20c7b623a37d474886dea9",
+    "web/src/features/resale-vault/hooks/useVaultEvidence.ts": "20e0f73e83535147fcbfedd3a6ee6b225524bed73e18558d7543ad0c1b128af0",
+    "web/src/features/resale-vault/lib/auditTrail.test.ts": "3c0a61d08ee05a8e86ee8af86213db3f1b377ac766a7e7bb5819d2e4851caead",
+    "web/src/features/resale-vault/lib/auditTrail.ts": "89793d983b795bd51dd621c8d1128010a4ed795218191c3399d666d2e01afc55",
+    "web/src/features/resale-vault/lib/canonicalJson.test.ts": "e2990094a33070746895e9a355dd7d1f4044002b85c496eaa1666f76ab4e6424",
+    "web/src/features/resale-vault/lib/canonicalJson.ts": "84fa9765a42c9b174469a25cd8c7e1b284fcc27384ce50652f099c84f4a71e92",
+    "web/src/features/resale-vault/lib/constants.ts": "63e15f0a54c572491825c1d839f18a4034c9bbde2efc9f7bcb394eccfc242534",
+    "web/src/features/resale-vault/lib/cryptoAvailability.test.ts": "222daa129fe789321cf387a5f5816458b5d03d56b8dca7297ef28d1cb1ad492b",
+    "web/src/features/resale-vault/lib/cryptoAvailability.ts": "dd843fa1fe7a46e02f54ff23f388c902f2f0c8d52f6a4ec25c2970290b3a10ef",
+    "web/src/features/resale-vault/lib/evidenceNormalizers.test.ts": "25d90740811dcf2d50dc63ba1f18cae2535d87f1897745db27fadbb2b81a4dd2",
+    "web/src/features/resale-vault/lib/evidenceNormalizers.ts": "2d0957a1071fe43000f2911760e4878cf13e3f8e8534887b0af2f4058a6d2680",
+    "web/src/features/resale-vault/lib/fakeIndexedDb.ts": "059033d3e88a738097c7913ebc13cf78e7a3208eecf49ca292efa63e416bd979",
+    "web/src/features/resale-vault/lib/redaction.test.ts": "3693fd03366af8ff37a34b662770497c03a9c527030f71a8c66cd6371c791605",
+    "web/src/features/resale-vault/lib/redaction.ts": "381f2fb48148a04ccc859fbaa67b7d989ad27287c205370d986cb33ef37d5eee",
+    "web/src/features/resale-vault/lib/reportBuilder.test.ts": "67ca10df32dda5ab169dfe5c4d0821aac77d7dbf8756472eb56f70ddc3dd0749",
+    "web/src/features/resale-vault/lib/reportBuilder.ts": "fff76f09e822e7a841ecdf340b7be2236d4b4256ee93ab96f4946f7394122459",
+    "web/src/features/resale-vault/lib/reportSigner.test.ts": "1ab7bdcda6b2315040b7f8f6cf599e9ac8b22af0596e5d8a84fe4c20eae33c9d",
+    "web/src/features/resale-vault/lib/reportSigner.ts": "1cbf73e491ebf7f0b41f45cab67b0f4d1a671f74af008a40e935816cdd11b4f1",
+    "web/src/features/resale-vault/lib/reportVerifier.ts": "b1897373369a73177f080e363027108c5c4a59f6f73ddda3ceaa8365985ceba0",
+    "web/src/features/resale-vault/lib/signingKeyRepository.test.ts": "f3e90a8a7181b48c989a9c29f1a49777471284ea5912c440bb185f4f7e5d6eac",
+    "web/src/features/resale-vault/lib/signingKeyRepository.ts": "767634c6ab252f6a45bfd4b4cb5a3c49087693b5ec2920bb41be806be233ca78",
+    "web/src/features/resale-vault/lib/testFixtures.ts": "f43d97ea335bbce458db807553501e66f8d3a9da60011e940e87f4fc1d1c944e",
+    "web/src/features/resale-vault/lib/types.ts": "a2d09f8894ace9be8387cc7058640efead22cd5e8caad3f76e7a9f580dd32829",
+    "web/src/features/resale-vault/lib/vaultDb.test.ts": "1461875a27e25b19482d88d81bb08549ce0c053a897852d540aa2631298acdd6",
+    "web/src/features/resale-vault/lib/vaultDb.ts": "ffc727bd644a19af67113e76713e6b8f35ff6a5a9edac496a419a2e1f2050e37",
+    "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.test.tsx": "5e747b7d9ce8f80cc4a6435179d148069f67e0d56d2f0fd75e798f342c105913",
+    "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx": "557193073763de9d3e03d14c8d486c296034cbc26307a28efda1a2f2fa7cdb05",
+    "web/src/api/hooks/useVehicles.ts": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+    "web/src/api/hooks/useBatteryPassport.ts": "b573ba4f6ff49c7cecac834c80bf6980c888d90c8d21018090ab54b51b22a195",
+    "web/src/api/hooks/useBatteryCertificate.ts": "b20fea0401991d23080947feb0b558e834050be9a5126df3fff70ba535a46903",
+    "web/src/api/hooks/useVehicleSystems.ts": "06474d1dc7e0b1d63be82589d14abbb39ac33a29e5319a888a1236a295881c8d",
+    "web/src/api/hooks/useDriving.ts": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+    "web/src/api/hooks/useCharging.ts": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
+    "web/src/api/hooks/useGuard.ts": "f43823638c4a80a4d57a44447a28524ccf29a3ebd70260daa6a7895ac6c71218",
+    "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+    "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+    "web/src/hooks/useSelectedVehicle.ts": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+    "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+    "web/src/components/ui/Tabs.tsx": "6754cd3469dbec346cc6069fa5c12d6660204dd2b721e4ab2752f6ecb0fb82bf",
+    "web/src/components/ui/CopyButton.tsx": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+    "web/src/components/feedback/InlineCallout.tsx": "3e58e0b84d4b4f18d8e214f759657af40e6e18d8314477a232ccc92af3cf6331",
+    "web/src/hooks/useDateFormat.ts": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+    "web/src/hooks/useUnits.ts": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+    "web/src/components/data-display/Timeline.tsx": "1acf2206f830d56d2a8e7a9a329c34e92bae5d2eae6696a5d55dd18d4b9ac92b",
+    "web/src/components/layout/layout-reference/SourceContent.tsx": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+    "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+    "web/src/components/feedback/StaleRefreshWarning.tsx": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+    "web/src/features/onboarding/components/NoVehicleSelected.tsx": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+    "web/src/hooks/usePageTitle.ts": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b"
+  },
+  "guideline_grep_raw_output": "UTC 2026-10-14T02:31:19.356835+00:00\nSCOPE: 33 production feature TS/TSX files; excluded tests, fakeIndexedDb and testFixtures. Regex matches are candidates, not confirmed counts.\nCHECK static-inline-style: 0 matching lines; pattern=style\\s*=\\s*\\{\\{\nCHECK raw-html: 0 matching lines; pattern=<(?:button|input|textarea|select|table)(?:\\s|>)\nCHECK direct-library-import: 0 matching lines; pattern=(?:from\\s*|import\\s*)['\"](?:recharts|react-leaflet|framer-motion)['\"]\nCHECK old-api-import: 0 matching lines; pattern=from\\s*['\"](?:\\.\\./){1,2}api['\"]\nCHECK double-prefix: 0 matching lines; pattern=/api/v1/\nCHECK camelcase-param: 0 matching lines; pattern=[?&][a-z]+[A-Z][A-Za-z]*=\nCHECK fetch-useeffect: 3 matching lines; pattern=\\bfetch\\s*\\(|\\buseEffect\\s*\\(\nweb\\src\\features\\resale-vault\\components\\AuditTrailPanel.tsx:68: useEffect(() => {\nweb\\src\\features\\resale-vault\\components\\BatteryCertificatePanel.tsx:47: useEffect(() => {\nweb\\src\\features\\resale-vault\\hooks\\useSigningVault.ts:60: useEffect(() => {\nCHECK hidden-section: 18 matching lines; pattern=\\{[\\w.]+\\s*&&\\s*(?:\\(|<)\nweb\\src\\features\\resale-vault\\components\\BatteryCertificatePanel.tsx:75: {verified && (\nweb\\src\\features\\resale-vault\\components\\BatteryCertificatePanel.tsx:144: {verificationFailed && (\nweb\\src\\features\\resale-vault\\components\\BatterySummaryPanel.tsx:55: {battery.thermal_exposure && (\nweb\\src\\features\\resale-vault\\components\\BatterySummaryPanel.tsx:77: {battery.source_provenance_hash && (\nweb\\src\\features\\resale-vault\\components\\DisclosureProfileBuilder.tsx:123: {selection.sensitive.exactTimestamps && (\nweb\\src\\features\\resale-vault\\components\\DrivingChargingSummaryPanel.tsx:90: {driving && (\nweb\\src\\features\\resale-vault\\components\\EvidenceInventoryPanel.tsx:38: {hasPartialErrors && (\nweb\\src\\features\\resale-vault\\components\\ExportReportPanel.tsx:88: {error && (\nweb\\src\\features\\resale-vault\\components\\ExportReportPanel.tsx:103: {signed && (\nweb\\src\\features\\resale-vault\\components\\ExportReportPanel.tsx:111: {signed.local_key_status.revoked && (\nweb\\src\\features\\resale-vault\\components\\ImportVerifyPanel.tsx:115: {fileName && <HelperText className=\"ms-2 break-words\">{fileName}</HelperText>}\nweb\\src\\features\\resale-vault\\components\\ImportVerifyPanel.tsx:118: {isVerifying && <HelperText>{t('resaleVault.import.verifying', 'Verifyingâ€¦')}</HelperText>}\nweb\\src\\features\\resale-vault\\components\\ImportVerifyPanel.tsx:120: {error && (\nweb\\src\\features\\resale-vault\\components\\ImportVerifyPanel.tsx:144: {result.isKnownLocalKey && (\nweb\\src\\features\\resale-vault\\components\\MaintenanceSummaryPanel.tsx:72: {record.notes && <p className=\"mt-1 text-[var(--text-secondary)]\">{record.notes}</p>}\nweb\\src\\features\\resale-vault\\components\\SignatureKeyPanel.tsx:37: {error && (\nweb\\src\\features\\resale-vault\\components\\SignatureKeyPanel.tsx:56: {activeKey && (\nweb\\src\\features\\resale-vault\\components\\SignatureKeyPanel.tsx:83: {key.revoked_at && (\nCHECK hardcoded-string: 4 matching lines; pattern=>\\s*[A-Z][A-Za-z ]{3,}<\nweb\\src\\features\\resale-vault\\hooks\\useSigningVault.ts:30: generateKey: () => Promise<void>;\nweb\\src\\features\\resale-vault\\hooks\\useSigningVault.ts:31: rotateKey: () => Promise<void>;\nweb\\src\\features\\resale-vault\\hooks\\useSigningVault.ts:32: revokeKey: (keyId: string, reason: string) => Promise<void>;\nweb\\src\\features\\resale-vault\\hooks\\useSigningVault.ts:33: refresh: () => Promise<void>;\nCHECK missing-page-container: 2 matching lines; pattern=<(?:PageLayout|PageContainer|NoVehicleSelected)\\b\nweb\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.tsx:84: return <NoVehicleSelected pageTitle={pageTitle} />;\nweb\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.tsx:88: <PageLayout\nBACKEND CHECKS: NOTRUN / NOT APPLICABLE; no internal/**/*.go in assigned source scope.",
+  "guideline_grep_scope": [
+    "web/src/features/resale-vault/components/AuditTrailPanel.tsx",
+    "web/src/features/resale-vault/components/BatteryCertificatePanel.tsx",
+    "web/src/features/resale-vault/components/BatterySummaryPanel.tsx",
+    "web/src/features/resale-vault/components/DisclosureProfileBuilder.tsx",
+    "web/src/features/resale-vault/components/DrivingChargingSummaryPanel.tsx",
+    "web/src/features/resale-vault/components/EvidenceInventoryPanel.tsx",
+    "web/src/features/resale-vault/components/ExportReportPanel.tsx",
+    "web/src/features/resale-vault/components/ImportVerifyPanel.tsx",
+    "web/src/features/resale-vault/components/IncidentSummaryPanel.tsx",
+    "web/src/features/resale-vault/components/index.ts",
+    "web/src/features/resale-vault/components/MaintenanceSummaryPanel.tsx",
+    "web/src/features/resale-vault/components/operationalbrief-all/VaultSummaryBrief.tsx",
+    "web/src/features/resale-vault/components/PrivacyPreviewPanel.tsx",
+    "web/src/features/resale-vault/components/sectionLabels.ts",
+    "web/src/features/resale-vault/components/SignatureKeyPanel.tsx",
+    "web/src/features/resale-vault/components/SoftwareUpdateSummaryPanel.tsx",
+    "web/src/features/resale-vault/components/WarrantySummaryPanel.tsx",
+    "web/src/features/resale-vault/hooks/useDisclosureSelection.ts",
+    "web/src/features/resale-vault/hooks/useSigningVault.ts",
+    "web/src/features/resale-vault/hooks/useVaultEvidence.ts",
+    "web/src/features/resale-vault/lib/auditTrail.ts",
+    "web/src/features/resale-vault/lib/canonicalJson.ts",
+    "web/src/features/resale-vault/lib/constants.ts",
+    "web/src/features/resale-vault/lib/cryptoAvailability.ts",
+    "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+    "web/src/features/resale-vault/lib/redaction.ts",
+    "web/src/features/resale-vault/lib/reportBuilder.ts",
+    "web/src/features/resale-vault/lib/reportSigner.ts",
+    "web/src/features/resale-vault/lib/reportVerifier.ts",
+    "web/src/features/resale-vault/lib/signingKeyRepository.ts",
+    "web/src/features/resale-vault/lib/types.ts",
+    "web/src/features/resale-vault/lib/vaultDb.ts",
+    "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx"
+  ],
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "severity": "high",
+      "rule": "privacy-boundary-copy",
+      "file": "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx",
+      "line": 101,
+      "owner": "N1",
+      "title": "Local-only assurance contradicts automatic server verification",
+      "mechanism": "Intro says nothing leaves browser until export. Default Evidence mounts certificate panel; effect submits certificate/signature through existing public POST verify hook before export. Local ECDSA assembly and server certificate are distinct boundaries.",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx",
+          "start_line": 98,
+          "end_line": 102,
+          "excerpt": "          <HelperText>\n            {t(\n              'resaleVault.intro.body',\n              'Nothing leaves your browser until you explicitly export it. The VIN, precise locations, coordinates, tokens, raw trip paths, and driver identity are never included unless you opt in (VIN) or are always excluded (everything else).',\n            )}"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/BatteryCertificatePanel.tsx",
+          "start_line": 38,
+          "end_line": 52,
+          "excerpt": "  const certQuery = useBatteryCertificate(vehicleId);\n  const certState = useDataState(certQuery);\n  const verifyMutation = useVerifyBatteryCertificate();\n\n  const issued = certQuery.data ?? null;\n  const signature = issued?.signature ?? null;\n  const lastAttempt = useRef<typeof issued>(null);\n\n  // A previous success must not attest a newly issued certificate.\n  useEffect(() => {\n    if (issued && issued !== lastAttempt.current && !verifyMutation.isPending) {\n      lastAttempt.current = issued;\n      verifyMutation.mutate({ certificate: issued.certificate, signature: issued.signature });\n    }\n  }, [issued, verifyMutation]);"
+        },
+        {
+          "file": "web/src/api/hooks/useBatteryCertificate.ts",
+          "start_line": 67,
+          "end_line": 74,
+          "excerpt": "export function useVerifyBatteryCertificate() {\n  return useMutation({\n    mutationFn: (params: { certificate: BatteryCertificate; signature: string }) =>\n      request<BatteryCertificateVerifyResponse>('/public/battery-certificate/verify', {\n        method: 'POST',\n        body: JSON.stringify(params),\n      }),\n  });"
+        }
+      ],
+      "repro": "UNEXECUTED source trace: synthetic selected vehicle -> certificate data -> effect mutate -> POST. No API/browser/action performed.",
+      "fix": "Accurately scope local-only copy; disclose server certificate fetching/verification without removing existing proof workflow.",
+      "testEvidence": "web/src/features/resale-vault/components/BatteryCertificatePanel.test.tsx:143-181",
+      "testGap": "Auto-verification covered by declarations, not consistency with page privacy assurance.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime reproduction NOTRUN",
+      "test_execution": "NOTRUN; existing declarations read only"
+    },
+    {
+      "id": "F02",
+      "severity": "high",
+      "rule": "signed-snapshot-scope",
+      "file": "web/src/features/resale-vault/components/ExportReportPanel.tsx",
+      "line": 43,
+      "owner": "N2",
+      "title": "Retained download has no old-snapshot/current-vehicle distinction",
+      "mechanism": "signed state survives report prop changes. Download serializes signed.report while sibling preview displays current report. Page preview tab stays mounted on non-null vehicle change; Export has no scope key/reset and shows no signed report ID/vehicle/selection or stale-preview warning. In-flight settlement also lacks scope guard. Retention is intentional; unlabelled scope confusion is the defect.",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/components/ExportReportPanel.tsx",
+          "start_line": 41,
+          "end_line": 75,
+          "excerpt": "export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) {\n  const { t } = useTranslation();\n  const [signed, setSigned] = useState<SignedVaultReport | null>(null);\n  const [isSigning, setIsSigning] = useState(false);\n  const [error, setError] = useState<string | null>(null);\n\n  const handleSign = async () => {\n    setIsSigning(true);\n    setError(null);\n    try {\n      const result = await signReport(report);\n      setSigned(result);\n      onSigned?.(result);\n      await recordAuditEvent('report_signed', `Signed report ${report.report_id} with key ${result.signature.key_id}.`);\n    } catch (err) {\n      if (err instanceof CryptoUnavailableError) {\n        setError(err.message);\n      } else {\n        setError(getErrorMessage(err, t('error.unexpected', 'An unexpected error occurred')));\n      }\n    } finally {\n      setIsSigning(false);\n    }\n  };\n\n  const handleDownload = async () => {\n    if (!signed) return;\n    setError(null);\n    try {\n      downloadJson(`${signed.report.report_id}.json`, signed);\n      await recordAuditEvent('report_exported', `Exported signed report ${signed.report.report_id} as JSON.`);\n    } catch (err) {\n      setError(getErrorMessage(err, t('error.unexpected', 'An unexpected error occurred')));\n    }\n  };"
+        },
+        {
+          "file": "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx",
+          "start_line": 162,
+          "end_line": 172,
+          "excerpt": "\n        {activeTab === 'preview' && (\n          <FadeIn>\n            <div className=\"space-y-4\">\n              <PrivacyPreviewPanel report={report} />\n              <SignatureKeyPanel vault={vault} />\n              <ExportReportPanel report={report} />\n            </div>\n          </FadeIn>\n        )}\n"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/ExportReportPanel.preservation.test.tsx",
+          "start_line": 140,
+          "end_line": 180,
+          "excerpt": "\n  it('retains the previously signed report through a denied re-sign and does not rename it to the changed preview', async () => {\n    const first = signedReport(completeReport());\n    const next = { ...completeReport(), report_id: 'report_next_selection' };\n    const onSigned = vi.fn();\n    vi.mocked(signReport).mockResolvedValueOnce(first);\n    const { rerender } = render(<ExportReportPanel report={first.report} onSigned={onSigned} />);\n    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));\n    await waitFor(() => expect(onSigned).toHaveBeenCalledOnce());\n\n    rerender(<ExportReportPanel report={next} onSigned={onSigned} />);\n    vi.mocked(signReport).mockRejectedValueOnce(new DOMException('Signing permission denied', 'NotAllowedError'));\n    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));\n    expect(await screen.findByText('Signing permission denied')).toBeInTheDocument();\n    expect(screen.getByText(first.digest_sha256_hex)).toBeInTheDocument();\n    expect(screen.getByRole('button', { name: 'Download JSON' })).toBeEnabled();\n    expect(onSigned).toHaveBeenCalledTimes(1);\n\n    fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));\n    await waitFor(() => expect(downloadedName).toBe(`${first.report.report_id}.json`));\n    const blob = createObjectURL.mock.calls[0]?.[0];\n    if (!blob) throw new Error('Retained signed report did not download');\n    expect(JSON.parse(await readBlob(blob))).toEqual(first);\n    expect(recordAuditEvent).toHaveBeenCalledWith('report_exported', `Exported signed report ${first.report.report_id} as JSON.`);\n    expect(screen.queryByText('Signing permission denied')).not.toBeInTheDocument();\n\n    const recovered = signedReport(next);\n    vi.mocked(signReport).mockResolvedValueOnce(recovered);\n    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));\n    await waitFor(() => expect(onSigned).toHaveBeenLastCalledWith(recovered));\n    expect(signReport).toHaveBeenLastCalledWith(next);\n    fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));\n    await waitFor(() => expect(downloadedName).toBe(`${next.report_id}.json`));\n  });\n\n  it('keeps signing caller-driven, prevents duplicate pending actions and recovers from an initial denial', async () => {\n    let rejectSign: (reason: Error) => void = () => { throw new Error('Signing was not started'); };\n    vi.mocked(signReport).mockImplementationOnce(() => new Promise((_, reject) => { rejectSign = reject; }));\n    const report = completeReport();\n    render(<ExportReportPanel report={report} />);\n    expect(signReport).not.toHaveBeenCalled();"
+        }
+      ],
+      "repro": "UNEXECUTED synthetic case: sign A; keep Preview mounted; switch selected vehicle to B or replace evidence; preview changes but old A envelope remains downloadable. Existing preservation test explicitly retains old signed envelope after changed preview/denied re-sign. Disclosure-tab changes unmount Export, so that is NOT asserted as a page repro.",
+      "fix": "Preserve retained signed bytes, display immutable snapshot identity/scope and older-preview warning; separately scope/reset vehicle-local export and guard obsolete settlements. Do not silently relabel or delete retained export behavior.",
+      "testEvidence": "web/src/features/resale-vault/components/ExportReportPanel.preservation.test.tsx:140-180",
+      "testGap": "Retained filename/bytes asserted, not visible snapshot distinction or vehicle switch race.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime reproduction NOTRUN",
+      "test_execution": "NOTRUN; existing declarations read only"
+    },
+    {
+      "id": "F03",
+      "severity": "high",
+      "rule": "disclosure-date-precision",
+      "file": "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+      "line": 148,
+      "owner": "N1",
+      "title": "Day precision bypassed by software and opaque warranty values",
+      "mechanism": "Software normalizer has no precision parameter and copies installedAt. Warranty coarsens fetched_at only; string values pass scrubber unchanged. Manifest claims all report timestamps truncated. Report generation/signature instants describe artifact and are intentional exceptions, not this finding.",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+          "start_line": 141,
+          "end_line": 161,
+          "excerpt": "export function normalizeSoftwareUpdates(updates: SoftwareUpdate[] | undefined): SoftwareUpdateEvidence | null {\n  if (!updates || updates.length === 0) return null;\n  const installed = updates.filter((u) => u.status === 'installed' && u.installedAt);\n  const sortedByInstall = [...installed].sort((a, b) => (b.installedAt ?? '').localeCompare(a.installedAt ?? ''));\n  return {\n    update_count: updates.length,\n    installed_versions: installed.map((u) => ({ version: u.version, installed_at: u.installedAt })),\n    latest_version: sortedByInstall[0]?.version ?? null,\n  };\n}\n\n/** Opaque, untyped Tesla warranty payload for the selected vehicle â†’ scrubbed `WarrantyEvidence`. */\nexport function normalizeWarranty(\n  envelope: { data: Record<string, unknown> | null; fetched_at: string | null } | null | undefined,\n  precision: DatePrecision,\n): WarrantyEvidence | null {\n  if (!envelope || !envelope.data) return null;\n  return {\n    fetched_at: applyDatePrecision(envelope.fetched_at, precision),\n    data: scrubSensitiveRecord(envelope.data) as Record<string, unknown>,\n  };"
+        },
+        {
+          "file": "web/src/features/resale-vault/lib/redaction.ts",
+          "start_line": 77,
+          "end_line": 81,
+          "excerpt": "export function scrubSensitiveRecord(value: unknown): unknown {\n  if (value === null || value === undefined) return null;\n  const t = typeof value;\n  if (t === 'string' || t === 'boolean') return value;\n  if (t === 'number') return Number.isFinite(value as number) ? value : null;"
+        },
+        {
+          "file": "web/src/features/resale-vault/lib/redaction.ts",
+          "start_line": 151,
+          "end_line": 161,
+          "excerpt": "      field: 'timestamps',\n      reason:\n        'Exact timestamps (to the second) were explicitly selected instead of the default day-level precision. ' +\n        'Warning: precise timestamps can make it easier to correlate this report with other data sources ' +\n        '(e.g. location logs) and may reveal usage patterns you did not intend to share.',\n    });\n  } else {\n    coarsened.push({\n      field: 'timestamps',\n      reason: 'All report timestamps are truncated to day precision (YYYY-MM-DD) by default.',\n    });"
+        }
+      ],
+      "repro": "UNEXECUTED synthetic input: exactTimestamps=false, installedAt=2030-01-02T12:34:56Z and warranty expires_at ISO instant -> exact strings survive report precision=day. No real warranty/document used.",
+      "fix": "Apply precision to documented evidence instants; classify opaque business dates explicitly without guessing unknown string semantics. Keep artifact instants exact with honest exception copy.",
+      "testEvidence": "web/src/features/resale-vault/lib/evidenceNormalizers.test.ts:144-177; lib/reportBuilder.test.ts:137-145",
+      "testGap": "Software version/count and warranty fetched_at/key scrub tests do not cover nested evidence precision.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime reproduction NOTRUN",
+      "test_execution": "NOTRUN; existing declarations read only"
+    },
+    {
+      "id": "F04",
+      "severity": "high",
+      "rule": "hard-exclusion-free-text",
+      "file": "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+      "line": 135,
+      "owner": "N1",
+      "title": "Free text defeats unconditional hard-exclusion assurance",
+      "mechanism": "Service notes/user-defined display_name pass unchanged. Warranty scrubber drops sensitive key names but retains string content under neutral keys. Manifest always says driver identity/street addresses excluded; it cannot establish that for arbitrary notes/name values.",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+          "start_line": 70,
+          "end_line": 79,
+          "excerpt": "  if (!vehicle) return null;\n  const vinFields = resolveVinDisclosure(vehicle.vin, vinDisclosure);\n  return {\n    vin_disclosure: vinDisclosure,\n    ...vinFields,\n    display_name: vehicle.display_name ?? vehicle.displayName ?? null,\n    model: vehicle.model ?? null,\n    trim_badging: vehicle.trim_badging ?? vehicle.trimBadging ?? null,\n    exterior_color: vehicle.exterior_color ?? vehicle.exteriorColor ?? null,\n    wheel_type: vehicle.wheel_type ?? vehicle.wheelType ?? null,"
+        },
+        {
+          "file": "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+          "start_line": 128,
+          "end_line": 136,
+          "excerpt": "    scheduled_item_count: items?.length ?? 0,\n    service_record_count: records?.length ?? 0,\n    service_records: (records ?? []).map((r) => ({\n      item_id: r.itemId,\n      date: applyDatePrecision(r.date, precision) ?? r.date,\n      odometer_m: r.odometerKm != null ? r.odometerKm * METERS_PER_KM : null,\n      notes: r.notes ?? '',\n    })),\n    categories,"
+        },
+        {
+          "file": "web/src/features/resale-vault/lib/redaction.ts",
+          "start_line": 77,
+          "end_line": 81,
+          "excerpt": "export function scrubSensitiveRecord(value: unknown): unknown {\n  if (value === null || value === undefined) return null;\n  const t = typeof value;\n  if (t === 'string' || t === 'boolean') return value;\n  if (t === 'number') return Number.isFinite(value as number) ? value : null;"
+        },
+        {
+          "file": "web/src/features/resale-vault/lib/redaction.ts",
+          "start_line": 111,
+          "end_line": 117,
+          "excerpt": "const HARD_EXCLUSION_REASONS: Record<(typeof HARD_EXCLUDED_CATEGORIES)[number], string> = {\n  authentication_tokens: 'Authentication/API tokens are never included in a disclosure report under any profile or selection.',\n  precise_gps_coordinates: 'Precise GPS coordinates are never included â€” there is no legitimate warranty/resale use case for exact vehicle locations.',\n  street_addresses: 'Street addresses (home, work, charging locations) are never included.',\n  raw_trip_paths: 'Raw trip path/waypoint data is never included, only aggregate distance/duration/energy summaries.',\n  driver_identity: 'Driver/owner identity fields are never included.',\n};"
+        }
+      ],
+      "repro": "UNEXECUTED synthetic neutral notes/display_name containing [SYNTHETIC PRIVATE DETAIL] passes unchanged into selected evidence while unconditional exclusion claim stays. No actual name/address/token inspected or created.",
+      "fix": "Govern free-text disclosure using explicit safe contracts/allowlists and consent/review; do not claim content-sensitive guarantees from key-name scrubbing alone. Preserve safe service facts.",
+      "testEvidence": "web/src/features/resale-vault/lib/redaction.test.ts:61-105; lib/evidenceNormalizers.test.ts:115-139",
+      "testGap": "Sensitive keys and safe notes tested, not sensitive values under neutral keys.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime reproduction NOTRUN",
+      "test_execution": "NOTRUN; existing declarations read only"
+    },
+    {
+      "id": "F05",
+      "severity": "medium",
+      "rule": "unknown-as-zero",
+      "file": "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+      "line": 129,
+      "owner": "N3",
+      "title": "Missing companion maintenance source becomes measured zero",
+      "mechanism": "If either schedule or service has rows, missing companion source array becomes count 0. This may be unresolved/failed, not successful empty. Warnings do not restore missingness in signed numeric facts.",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+          "start_line": 116,
+          "end_line": 138,
+          "excerpt": "export function normalizeMaintenance(\n  items: MaintenanceItem[] | undefined,\n  records: ServiceRecord[] | undefined,\n  precision: DatePrecision,\n): MaintenanceEvidence | null {\n  const hasItems = items != null && items.length > 0;\n  const hasRecords = records != null && records.length > 0;\n  if (!hasItems && !hasRecords) return null;\n\n  const categories = Array.from(new Set((items ?? []).map((i) => i.category).filter(Boolean))).sort();\n\n  return {\n    scheduled_item_count: items?.length ?? 0,\n    service_record_count: records?.length ?? 0,\n    service_records: (records ?? []).map((r) => ({\n      item_id: r.itemId,\n      date: applyDatePrecision(r.date, precision) ?? r.date,\n      odometer_m: r.odometerKm != null ? r.odometerKm * METERS_PER_KM : null,\n      notes: r.notes ?? '',\n    })),\n    categories,\n  };\n}"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/MaintenanceSummaryPanel.tsx",
+          "start_line": 28,
+          "end_line": 38,
+          "excerpt": "  const description = t('resaleVault.brief.maintenance.description', 'Account-wide scheduled items and service records, not verified per-vehicle attribution.');\n  const metrics: readonly StatMetric[] = [\n    { metricId: 'count', occurrenceId: 'scheduled-items', label: t('resaleVault.maintenance.scheduledCount', 'Scheduled items'), rawValue: maintenance?.scheduled_item_count, description, display: { notation: 'source' } },\n    { metricId: 'count', occurrenceId: 'service-records', label: t('resaleVault.maintenance.recordCount', 'Service records'), rawValue: maintenance?.service_record_count, description, display: { notation: 'source' } },\n  ];\n\n  return (\n    <LayoutCard title={t('resaleVault.maintenance.title', 'Maintenance & service')}>\n      <VaultSummaryBrief id=\"maintenance\" title={t('resaleVault.brief.maintenance.title', 'Maintenance record counts')}\n        description={description} metrics={metrics} hasEvidence={maintenance != null} sources={sources}\n        scope={t('resaleVault.brief.maintenance.scope', 'Account-wide source; observation bounds unavailable')} />"
+        }
+      ],
+      "repro": "UNEXECUTED: nonempty records plus items=undefined -> scheduled count 0; nonempty items plus records=undefined -> service count 0.",
+      "fix": "Keep absent counts nullable/unknown and successful [] distinct; preserve independent coverage in display/export.",
+      "testEvidence": "web/src/features/resale-vault/lib/evidenceNormalizers.test.ts:121-139",
+      "testGap": "No independently unresolved companion source case.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime reproduction NOTRUN",
+      "test_execution": "NOTRUN; existing declarations read only"
+    },
+    {
+      "id": "F06",
+      "severity": "medium",
+      "rule": "unknown-as-zero",
+      "file": "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+      "line": 198,
+      "owner": "N3",
+      "title": "Unknown charging energy/cost become zero or unlabelled subtotal",
+      "mechanism": "Absent energy/cost fields contribute 0 to reducers. All-missing records yield total 0; mixed records yield partial known subtotal labelled total. UI null metric support cannot recover information already lost.",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+          "start_line": 192,
+          "end_line": 212,
+          "excerpt": "  sessions: ChargingSession[] | undefined,\n  precision: DatePrecision,\n): ChargingHistoryEvidence | null {\n  if (!sessions || sessions.length === 0) return null;\n\n  const totalEnergyWh = sessions.reduce((sum, s) => sum + (s.total_energy_added_wh ?? 0), 0);\n  const peakPowers = sessions.map((s) => s.peak_power_w).filter((v): v is number => v != null);\n  const fastChargeCount = sessions.filter((s) => isDcFastChargeSession(s.charger_type)).length;\n  const totalCost = sessions.reduce((sum, s) => sum + (s.cost ?? s.cost_decimal ?? 0), 0);\n  const timestamps = sessions.map((s) => s.started_at ?? s.start_ts).filter(Boolean);\n  const { earliest, latest } = minMaxDates(timestamps);\n\n  return {\n    observed_session_count: sessions.length,\n    total_energy_added_wh: totalEnergyWh,\n    fast_charge_session_count: fastChargeCount,\n    avg_peak_power_w: avg(peakPowers),\n    total_cost: totalCost,\n    earliest_session_at: applyDatePrecision(earliest, precision),\n    latest_session_at: applyDatePrecision(latest, precision),\n  };"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/DrivingChargingSummaryPanel.tsx",
+          "start_line": 54,
+          "end_line": 62,
+          "excerpt": "  const chargingMetrics: readonly StatMetric[] = [\n    { metricId: 'count', occurrenceId: 'sessions', label: t('resaleVault.usage.sessions', 'Sessions observed'), rawValue: charging?.observed_session_count, description, display: { notation: 'source' } },\n    { metricId: 'energy', occurrenceId: 'energy-added', label: t('resaleVault.usage.energyAdded', 'Total energy added'), rawValue: charging?.total_energy_added_wh, description, display: { formatter: (raw) => ({ value: formatEnergy(raw), unit: '' }) } },\n    { metricId: 'count', occurrenceId: 'fast-charge-sessions', label: t('resaleVault.usage.fastCharge', 'Fast-charge sessions'), rawValue: charging?.fast_charge_session_count, description, display: { notation: 'source' } },\n    { metricId: 'power', occurrenceId: 'peak-power', label: t('resaleVault.usage.peakPower', 'Avg. peak power'), rawValue: charging?.avg_peak_power_w, description, display: { formatter: (raw) => ({ value: formatPower(raw), unit: '' }) } },\n    { metricId: 'currency', occurrenceId: 'cost', label: t('resaleVault.usage.cost', 'Total cost'), rawValue: charging?.total_cost,\n      description: t('resaleVault.brief.cost.description', 'Recorded cost; the source does not supply a currency denomination. No currency conversion is applied.'),\n      display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: '' }) } },\n  ];"
+        }
+      ],
+      "repro": "UNEXECUTED synthetic session with null energy/cost -> both totals 0; known plus missing session -> unqualified subtotal. No financial data used.",
+      "fix": "Keep unknown totals null or explicit partial known/total coverage; retain measured zero and unknown currency denomination.",
+      "testEvidence": "web/src/features/resale-vault/lib/evidenceNormalizers.test.ts:237-270; components/DrivingChargingSummaryPanel.test.tsx:56-108",
+      "testGap": "UI missingness tests bypass normalization; sums tested with complete energy/cost inputs.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime reproduction NOTRUN",
+      "test_execution": "NOTRUN; existing declarations read only"
+    },
+    {
+      "id": "F07",
+      "severity": "high",
+      "rule": "local-key-trust-binding",
+      "file": "web/src/features/resale-vault/lib/reportVerifier.ts",
+      "line": 133,
+      "owner": "N4",
+      "title": "Known local key is recognized by unsigned ID, not public key",
+      "mechanism": "ECDSA verifies against embedded public JWK, but registry recognition finds by key_id alone. ID lies outside canonical report bytes. A valid external signature can claim local key ID without matching local public key, obtaining incorrect known/revocation status; not a signature forgery.",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/lib/reportVerifier.ts",
+          "start_line": 99,
+          "end_line": 115,
+          "excerpt": "      const publicKey = await subtle.importKey(\n        'jwk',\n        signed.signature.public_key_jwk,\n        { name: 'ECDSA', namedCurve: 'P-256' },\n        true,\n        ['verify'],\n      );\n      const signatureBytes = base64ToBytes(signed.signature.signature_b64);\n      signatureValid = await subtle.verify(\n        { name: 'ECDSA', hash: 'SHA-256' },\n        publicKey,\n        signatureBytes.slice(),\n        bytes.slice(),\n      );\n      if (!signatureValid) {\n        errors.push(\n          'ECDSA signature verification failed: either the report content was altered after signing, or the signature does not correspond to the embedded public key.',"
+        },
+        {
+          "file": "web/src/features/resale-vault/lib/reportVerifier.ts",
+          "start_line": 129,
+          "end_line": 140,
+          "excerpt": "  try {\n    const localKeys = await listSigningKeys();\n    const match = localKeys.find((k) => k.key_id === keyId);\n    if (match) {\n      isKnownLocalKey = true;\n      localKeyRevoked = match.revoked_at !== null;\n      if (localKeyRevoked) {\n        errors.push(\n          `This report was signed with local key \"${keyId}\", which has since been revoked in this browser's key registry. The signature is still cryptographically valid for the content at signing time, but the key is no longer trusted for new signatures.`,\n        );\n      }\n    }"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/ImportVerifyPanel.tsx",
+          "start_line": 144,
+          "end_line": 151,
+          "excerpt": "            {result.isKnownLocalKey && (\n              <Badge variant={result.localKeyRevoked ? 'danger' : 'info'}>\n                {result.localKeyRevoked\n                  ? t('resaleVault.import.knownRevoked', 'Signed with a locally-known, revoked key')\n                  : t('resaleVault.import.knownKey', 'Signed with a key known to this browser')}\n              </Badge>\n            )}\n          </div>"
+        }
+      ],
+      "repro": "UNEXECUTED synthetic case: registry key A, valid external signature B; relabel only envelope key_id to A. Signed report bytes/B signature untouched; recognition follows claimed ID. No crypto action performed.",
+      "fix": "Bind local recognition/revocation to canonical public-key identity or curve/x/y comparison. Preserve valid external-but-unknown signatures.",
+      "testEvidence": "web/src/features/resale-vault/lib/reportSigner.test.ts:68-106",
+      "testGap": "Swapped public key test breaks math; valid external signature with relabelled unsigned ID untested.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime reproduction NOTRUN",
+      "test_execution": "NOTRUN; existing declarations read only"
+    },
+    {
+      "id": "F08",
+      "severity": "high",
+      "rule": "import-schema-render-safety",
+      "file": "web/src/features/resale-vault/components/ImportVerifyPanel.tsx",
+      "line": 31,
+      "owner": "N4",
+      "title": "Malformed nested report fields can reach unsafe React rendering",
+      "mechanism": "Shape guard accepts any report/signature objects and digest string. Verifier returns invalid results rather than validating report_id type; result branch renders imported.report.report_id directly. An object value is not a valid React child.",
+      "repro": "UNEXECUTED synthetic envelope: report={report_id:{unexpected:true}}, digest_sha256_hex=\"synthetic\", signature={}. Guard accepts; invalid verification result can reach object-child rendering. No file/browser/action performed.",
+      "fix": "Validate supported schema and field types before verify/render; use localized recoverable invalid-document feedback.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN",
+      "testEvidence": "components/ImportVerifyPanel.test.tsx:57-71 wrong top-level shape only",
+      "test_execution": "NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/components/ImportVerifyPanel.tsx",
+          "start_line": 27,
+          "end_line": 37,
+          "excerpt": "function isSignedVaultReportShape(value: unknown): value is SignedVaultReport {\n  if (!value || typeof value !== 'object') return false;\n  const record = value as Record<string, unknown>;\n  return (\n    typeof record.report === 'object' &&\n    record.report !== null &&\n    typeof record.digest_sha256_hex === 'string' &&\n    typeof record.signature === 'object' &&\n    record.signature !== null\n  );\n}"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/ImportVerifyPanel.tsx",
+          "start_line": 170,
+          "end_line": 173,
+          "excerpt": "          <div className=\"text-[var(--text-muted)]\">\n            {t('resaleVault.import.reportId', 'Report ID')}: {imported.report.report_id}\n          </div>\n"
+        },
+        {
+          "file": "web/src/features/resale-vault/lib/reportVerifier.ts",
+          "start_line": 120,
+          "end_line": 125,
+          "excerpt": "        `Could not verify signature (malformed key or signature data): ${err instanceof Error ? err.message : String(err)}`,\n      );\n    }\n  } else {\n    errors.push('Report is missing a usable signature, public key, or algorithm tag.');\n  }"
+        }
+      ]
+    },
+    {
+      "id": "F09",
+      "severity": "medium",
+      "rule": "initial-paused-misclassified",
+      "file": "web/src/features/resale-vault/hooks/useVaultEvidence.ts",
+      "line": 147,
+      "owner": "N5",
+      "title": "Initially paused evidence is shown as absent",
+      "mechanism": "Loading uses isLoading only. Initially paused pending queries have no data and isLoading=false. DataState correctly marks initial/isRefreshBlocked, but inventory says No data and brief No evidence supplied; blocked considered only with retained data. Certificate repeats isLoading-only initial gate.",
+      "repro": "UNEXECUTED source input: undefined data,isPending=true,isLoading=false,fetchStatus=paused,no error. No network-mode change performed.",
+      "fix": "Use existing initial/blocked/pending state distinctly from successful empty/fatal/retained; do not guess offline cause.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN",
+      "testEvidence": "components/operationalbrief-all/VaultSummaryBrief.test.tsx:58-78 covers retained paused, not initially paused",
+      "test_execution": "NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/hooks/useVaultEvidence.ts",
+          "start_line": 145,
+          "end_line": 149,
+          "excerpt": "    ...source,\n    loading: query.isLoading && query.data === undefined,\n    state: deriveDataState<unknown>(query),\n  }));\n"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/EvidenceInventoryPanel.tsx",
+          "start_line": 54,
+          "end_line": 72,
+          "excerpt": "          const pending = sources\n            ? sources.some((source) => source.section === section && source.loading)\n            : isLoading;\n          const failed = sources?.some((source) => source.section === section && source.state.fatalError != null) ?? false;\n          return (\n            <tr key={section}>\n              <th scope=\"row\"><span className=\"text-sm text-[var(--text-primary)]\">{t(labels.key, labels.fallback)}</span></th>\n              <td>\n                <Badge variant={hasData ? 'success' : 'neutral'}>\n                  {pending && !hasData\n                    ? t('resaleVault.inventory.loading', 'Loading…')\n                    : hasData\n                      ? t('resaleVault.inventory.dataFound', 'Data found')\n                      : failed\n                        ? t('resaleVault.inventory.unavailable', 'Unavailable')\n                        : t('resaleVault.inventory.noData', 'No data')}\n                </Badge>\n              </td>\n              <td>"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/operationalbrief-all/VaultSummaryBrief.tsx",
+          "start_line": 33,
+          "end_line": 38,
+          "excerpt": "  const loading = !hasEvidence && sources.some((source) => source.loading);\n  const retained = sources.some((source) =>\n    source.state.hasData && (source.state.refreshError != null || source.state.isRefreshBlocked || source.state.status === 'stale'));\n  const incomplete = sources.some((source) => source.state.fatalError != null);\n  const refreshing = sources.some((source) => source.state.isRefreshing);\n  const status = loading ? 'loading' : retained ? 'retained' : incomplete ? 'partial' : refreshing ? 'refreshing' : hasEvidence ? 'available' : 'missing';"
+        }
+      ]
+    },
+    {
+      "id": "F10",
+      "severity": "medium",
+      "rule": "signing-readiness-trust",
+      "file": "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx",
+      "line": 170,
+      "owner": "N2",
+      "title": "Signing surface loses source readiness/coverage warnings",
+      "mechanism": "Evidence receives source loading/errors; preview/export receive only report. Report exists with null evidence; Sign button is only guarded by its own in-flight operation. Initial/failed/blocked/partial source status is not disclosed beside signing.",
+      "repro": "UNEXECUTED synthetic pending/failed evidence -> activate Preview before settlement -> Sign remains actionable without source status there.",
+      "fix": "Carry actual source readiness into preview and immutable signed snapshot; allow intentional retained/partial evidence only with honest policy/warnings, not blanket deletion.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN",
+      "testEvidence": "pages/WarrantyResaleVaultPage.test.tsx:121-210 covers retained signing, not initial-paused/all-fatal sign readiness",
+      "test_execution": "NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx",
+          "start_line": 63,
+          "end_line": 70,
+          "excerpt": "  const disclosure = useDisclosureSelection();\n  const { evidence, isLoading, hasPartialErrors, sources } = useVaultEvidence(vehicleId, disclosure.selection.sensitive);\n  const vault = useSigningVault();\n\n  const report = useMemo(\n    () => buildVaultReport({ disclosure: disclosure.selection, evidence }),\n    [disclosure.selection, evidence],\n  );"
+        },
+        {
+          "file": "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx",
+          "start_line": 162,
+          "end_line": 172,
+          "excerpt": "\n        {activeTab === 'preview' && (\n          <FadeIn>\n            <div className=\"space-y-4\">\n              <PrivacyPreviewPanel report={report} />\n              <SignatureKeyPanel vault={vault} />\n              <ExportReportPanel report={report} />\n            </div>\n          </FadeIn>\n        )}\n"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/ExportReportPanel.tsx",
+          "start_line": 94,
+          "end_line": 101,
+          "excerpt": "      <div className=\"flex flex-wrap items-center gap-2\">\n        <Button wrapLabel size=\"sm\" onClick={() => void handleSign()} loading={isSigning}>\n          {t('resaleVault.export.sign', 'Sign report')}\n        </Button>\n        <Button wrapLabel size=\"sm\" variant=\"secondary\" onClick={() => void handleDownload()} disabled={!signed} icon={<Download className=\"h-3.5 w-3.5\" />}>\n          {t('resaleVault.export.download', 'Download JSON')}\n        </Button>\n      </div>"
+        }
+      ]
+    },
+    {
+      "id": "F11",
+      "severity": "medium",
+      "rule": "key-registry-reconciliation",
+      "file": "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx",
+      "line": 170,
+      "owner": "N6",
+      "title": "Key panel is stale after first-sign auto-generation or partial rotation failure",
+      "mechanism": "signReport auto-generates first key directly; Export has no onSigned callback to vault.refresh and hook has no registry subscription. Rotation revokes old key before generating next; generation denial reaches hook catch without reconciling changed registry.",
+      "repro": "UNEXECUTED: loaded empty vault then first sign -> export key ID but panel none. Or deny generation after old key revoked during rotation -> panel still old Active. No key/sign/revoke action performed.",
+      "fix": "Reconcile existing registry authority after automatic generation and partially applied failures while preserving error; guard cross-panel pending settlements.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN",
+      "testEvidence": "lib/reportSigner.test.ts:29-34 and hooks/useSigningVault.test.tsx:36-52 test operations separately, not page synchronization",
+      "test_execution": "NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/lib/reportSigner.ts",
+          "start_line": 63,
+          "end_line": 69,
+          "excerpt": "export async function signReport(report: VaultReport): Promise<SignedVaultReport> {\n  const subtle = requireSubtleCrypto();\n\n  let activeKey = await getActiveSigningKeyRecord();\n  if (!activeKey) {\n    activeKey = await generateSigningKey();\n  }"
+        },
+        {
+          "file": "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx",
+          "start_line": 166,
+          "end_line": 171,
+          "excerpt": "              <PrivacyPreviewPanel report={report} />\n              <SignatureKeyPanel vault={vault} />\n              <ExportReportPanel report={report} />\n            </div>\n          </FadeIn>\n        )}"
+        },
+        {
+          "file": "web/src/features/resale-vault/hooks/useSigningVault.ts",
+          "start_line": 89,
+          "end_line": 104,
+          "excerpt": "  const rotateKey = useCallback(async () => {\n    setIsMutating(true);\n    setError(null);\n    try {\n      const record = await rotateSigningKey();\n      await recordAuditEvent(\n        'key_rotated',\n        `Rotated signing key — new active key ${record.key_id}${record.rotated_from ? ` (previous: ${record.rotated_from})` : ''}.`,\n      );\n      await refresh();\n    } catch (err) {\n      setError(err instanceof Error ? err.message : String(err));\n    } finally {\n      setIsMutating(false);\n    }\n  }, [refresh]);"
+        },
+        {
+          "file": "web/src/features/resale-vault/lib/signingKeyRepository.ts",
+          "start_line": 273,
+          "end_line": 283,
+          "excerpt": "export async function rotateSigningKey(reason = 'rotated'): Promise<SigningKeyRecord> {\n  const current = await getActiveSigningKeyRecord();\n  if (current) {\n    await markRevoked(current.key_id, reason);\n  }\n  const next = await generateSigningKey();\n  if (!current) return next;\n  const linked: SigningKeyRecord = { ...next, rotated_from: current.key_id };\n  const idx = memoryRegistry.findIndex((k) => k.key_id === next.key_id);\n  if (idx !== -1) memoryRegistry = [...memoryRegistry.slice(0, idx), linked, ...memoryRegistry.slice(idx + 1)];\n  await persistRegistryEntry(linked);"
+        }
+      ]
+    },
+    {
+      "id": "F12",
+      "severity": "medium",
+      "rule": "hardcoded-string",
+      "file": "web/src/features/resale-vault/components/ExportReportPanel.tsx",
+      "line": 131,
+      "owner": "N7",
+      "title": "Important application-authored copy bypasses i18n",
+      "mechanism": "English disclaimer constants rendered directly; preview reasons/limitations/attestation, verifier errors/capability reasons and locally authored audit details pass raw into UI. Surrounding translated headings do not translate them. Technical IDs/backend user text should not be automatically translated.",
+      "repro": "UNEXECUTED non-English locale trace: t headings react but raw constants/reasons do not call translation. No locale/catalog/browser action.",
+      "fix": "Localize UI explanations via codes/parameters/canonical keys; preserve signed artifact bytes and user text. Catalog owner must integrate separately.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN",
+      "testEvidence": "components/PrivacyPreviewPanel.test.tsx:6-26 uses English fallback mock; no real non-English disclaimer coverage",
+      "test_execution": "NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/lib/constants.ts",
+          "start_line": 93,
+          "end_line": 102,
+          "excerpt": "export const LOCAL_ATTESTATION_NOTE =\n  'A valid signature only proves this exact report content was signed by an ECDSA P-256 ' +\n  'private key generated and held in a browser — it does NOT verify the identity of the ' +\n  'person who generated it, and it is NOT an attestation, warranty, or notarization by ' +\n  'Tesla, a government authority, or any third party.';\n\n/** Shown wherever a bare SHA-256 digest is displayed, to prevent it being mistaken for proof of authorship. */\nexport const DIGEST_IS_NOT_A_SIGNATURE_NOTE =\n  'The SHA-256 digest only proves the report content has not changed since it was computed. ' +\n  'By itself it does not prove who created the report — only the ECDSA signature (below) does that.';"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/ExportReportPanel.tsx",
+          "start_line": 130,
+          "end_line": 132,
+          "excerpt": "      <InlineCallout variant=\"info\" icon={<ShieldAlert />}>\n        {DIGEST_IS_NOT_A_SIGNATURE_NOTE}\n      </InlineCallout>"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/PrivacyPreviewPanel.tsx",
+          "start_line": 105,
+          "end_line": 115,
+          "excerpt": "      <div>\n        <HelperText className=\"mb-1\">{t('resaleVault.preview.limitations', 'Limitations')}</HelperText>\n        <ul className=\"list-disc ps-5 text-[var(--text-secondary)] space-y-1\">\n          {report.limitations.map((limitation, i) => (\n            <li key={i}>{limitation}</li>\n          ))}\n        </ul>\n      </div>\n\n      <InlineCallout variant=\"info\" icon={<ShieldCheck />}>\n        {report.attestation_statement}"
+        }
+      ]
+    },
+    {
+      "id": "F13",
+      "severity": "medium",
+      "rule": "date-time-display-preferences",
+      "file": "web/src/features/resale-vault/components/SignatureKeyPanel.tsx",
+      "line": 80,
+      "owner": "N7",
+      "title": "Raw ISO activity/business times bypass display preferences",
+      "mechanism": "Key timestamps/export signed_at/service dates/software times/warranty fetched_at/evidence windows/audit Timeline.time render raw strings. Timeline uses caller time verbatim. Date formatting exists for certificate expiry/source load times but not these displays.",
+      "repro": "UNEXECUTED source case: two locale/timezone preferences with same ISO input -> JSX source string identical because no formatter. No preference action.",
+      "fix": "Use existing context-aware date formatting at display boundary; distinguish calendar dates from instants; keep original signed/copied values unchanged.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN",
+      "testEvidence": "components/SoftwareUpdateSummaryPanel.test.tsx:26-30 asserts raw date, not reactive preference display",
+      "test_execution": "NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/components/SignatureKeyPanel.tsx",
+          "start_line": 79,
+          "end_line": 86,
+          "excerpt": "              <div className=\"mt-1 text-[var(--text-muted)]\">\n                {t('resaleVault.keys.created', 'Created')}: {key.created_at}\n                {key.rotated_from && ` · ${t('resaleVault.keys.rotatedFrom', 'Rotated from')} ${key.rotated_from}`}\n              </div>\n              {key.revoked_at && (\n                <div className=\"mt-1 text-[var(--text-muted)]\">\n                  {t('resaleVault.keys.revokedAt', 'Revoked at')} {key.revoked_at}\n                  {key.revoked_reason && ` (${key.revoked_reason})`}"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/ExportReportPanel.tsx",
+          "start_line": 123,
+          "end_line": 125,
+          "excerpt": "          <div className=\"text-[var(--text-secondary)]\">\n            <span className=\"font-medium text-[var(--text-primary)]\">{t('resaleVault.export.signedAt', 'Signed at')}:</span>{' '}\n            {signed.signature.signed_at}"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/AuditTrailPanel.tsx",
+          "start_line": 119,
+          "end_line": 122,
+          "excerpt": "              return {\n                title: <Badge variant={ACTION_BADGE_VARIANT[entry.action] ?? 'info'}>{t(key, fallback)}</Badge>,\n                time: entry.ts,\n                subtitle: entry.detail,"
+        }
+      ]
+    },
+    {
+      "id": "F14",
+      "severity": "high",
+      "rule": "persistence-readiness-claim",
+      "file": "web/src/features/resale-vault/lib/signingKeyRepository.ts",
+      "line": 206,
+      "owner": "N6",
+      "title": "Survives-reload assurance ignores registry write failure and commit",
+      "mechanism": "persisted reflects key-pair write alone; registry mirror failure swallowed. Reload active-key discovery requires registry metadata. idbPut waits request success, not transaction complete/abort. UI says persisted survives reload even when registry durability missing.",
+      "repro": "UNEXECUTED synthetic storage case: probe and pair write succeed, deny registry put or abort transaction after request success -> persisted=true can survive in-memory while registry cannot restore active key. No IDB/key action performed.",
+      "fix": "Await transaction completion/errors and require coherent key plus registry durable success; truthfully downgrade failed persistence to session-only.",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN",
+      "testEvidence": "lib/signingKeyRepository.test.ts:90-116 happy fake reload; fakeIndexedDb has no transaction completion/abort",
+      "test_execution": "NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/resale-vault/lib/signingKeyRepository.ts",
+          "start_line": 168,
+          "end_line": 179,
+          "excerpt": "async function persistRegistryEntry(record: SigningKeyRecord): Promise<void> {\n  const capability = await detectKeyPersistenceCapability();\n  if (!capability.supported) return;\n  try {\n    const db = await openVaultDb();\n    await idbPut<SigningKeyRecord>(db, STORE_KEY_REGISTRY, record);\n    db.close();\n  } catch {\n    // Non-fatal: the in-memory registry (source of truth for this session)\n    // already has the record; a failed mirror write just means the next\n    // reload starts fresh, same as the \"unsupported\" case.\n  }"
+        },
+        {
+          "file": "web/src/features/resale-vault/lib/signingKeyRepository.ts",
+          "start_line": 200,
+          "end_line": 219,
+          "excerpt": "export async function generateSigningKey(): Promise<SigningKeyRecord> {\n  await hydrateFromIndexedDbIfNeeded();\n  const pair = await generateEcdsaKeyPair();\n  const keyId = newKeyId();\n  const publicJwk = await exportPublicJwk(pair.publicKey);\n  memoryKeyPairs.set(keyId, { privateKey: pair.privateKey, publicKey: pair.publicKey });\n  const persisted = await persistKeyPair(keyId, pair);\n\n  const record: SigningKeyRecord = {\n    key_id: keyId,\n    public_jwk: publicJwk,\n    created_at: new Date().toISOString(),\n    revoked_at: null,\n    revoked_reason: null,\n    rotated_from: null,\n    persisted,\n  };\n  memoryRegistry = [...memoryRegistry, record];\n  await persistRegistryEntry(record);\n  return record;"
+        },
+        {
+          "file": "web/src/features/resale-vault/lib/vaultDb.ts",
+          "start_line": 63,
+          "end_line": 73,
+          "excerpt": "function runRequest<T>(request: IDBRequest<T>): Promise<T> {\n  return new Promise((resolve, reject) => {\n    request.onsuccess = () => resolve(request.result);\n    request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'));\n  });\n}\n\nexport async function idbPut<T>(db: IDBDatabase, store: string, value: T): Promise<void> {\n  const tx = db.transaction(store, 'readwrite');\n  await runRequest(tx.objectStore(store).put(value));\n}"
+        },
+        {
+          "file": "web/src/features/resale-vault/components/SignatureKeyPanel.tsx",
+          "start_line": 57,
+          "end_line": 60,
+          "excerpt": "          <Badge variant={activeKey.persisted ? 'success' : 'warning'}>\n            {activeKey.persisted\n              ? t('resaleVault.keys.persisted', 'Persisted (survives reload)')\n              : t('resaleVault.keys.sessionOnly', 'Session-only (lost on reload)')}"
+        }
+      ]
+    }
+  ],
+  "artifact_compose_failure": {
+    "shell_id": "2891",
+    "exit": 1,
+    "raw": "<error: The filename or extension is too long. (os error 206)>",
+    "resolution": "Artifact serialization split into bounded inline commands; no helper/source files created."
+  },
+  "candidates": [
+    {
+      "id": "C01",
+      "rule": "theme-material",
+      "file": "web/src/features/resale-vault/components/BatteryCertificatePanel.tsx",
+      "line": 74,
+      "detail": "Fixed emerald icon/white-alpha surfaces and direct Lucide renderers: composed contrast/theme/forced-colors unmeasured.",
+      "status": "SOURCE_CANDIDATE_OR_CONTRACT_UNKNOWN; NOT_NATIVE_CONFIRMED"
+    },
+    {
+      "id": "C02",
+      "rule": "mobile-target-declaration",
+      "file": "web/src/features/resale-vault/components/ExportReportPanel.tsx",
+      "line": 95,
+      "detail": "size sm declares nominal h-9/min-h-9=36px; no mobile44 override on many actions/CopyButton. Actual target rectangles/spacing exception must be measured.",
+      "status": "SOURCE_CANDIDATE_OR_CONTRACT_UNKNOWN; NOT_NATIVE_CONFIRMED"
+    },
+    {
+      "id": "C03",
+      "rule": "long-content-reflow",
+      "file": "web/src/features/resale-vault/components/SignatureKeyPanel.tsx",
+      "line": 54,
+      "detail": "Active key/raw timestamps/rotation linkage/preview report-ID badge lack explicit break-all; overflow not measured.",
+      "status": "SOURCE_CANDIDATE_OR_CONTRACT_UNKNOWN; NOT_NATIVE_CONFIRMED"
+    },
+    {
+      "id": "C04",
+      "rule": "export-coverage-contract",
+      "file": "web/src/features/resale-vault/lib/reportBuilder.ts",
+      "line": 83,
+      "detail": "Up-to1000 record limitation versus unbounded driving aggregates and list-derived time bounds. UI warns windows differ; actual backend coverage not verified.",
+      "status": "SOURCE_CANDIDATE_OR_CONTRACT_UNKNOWN; NOT_NATIVE_CONFIRMED"
+    },
+    {
+      "id": "C05",
+      "rule": "certificate-document-readiness",
+      "file": "web/src/features/resale-vault/components/BatteryCertificatePanel.tsx",
+      "line": 58,
+      "detail": "Exact-payload verify badge is separate from expiry/issuer/official warranty readiness. Backend signature-only versus expiry-valid meaning unknown; no local expiry status.",
+      "status": "SOURCE_CANDIDATE_OR_CONTRACT_UNKNOWN; NOT_NATIVE_CONFIRMED"
+    },
+    {
+      "id": "C06",
+      "rule": "complete-content-preview",
+      "file": "web/src/features/resale-vault/components/PrivacyPreviewPanel.tsx",
+      "line": 35,
+      "detail": "Preview shows manifest not full payload; vehicle identity only inventory row and battery trend retained in export but not rendered. No historical deletion/new required chart proven.",
+      "status": "SOURCE_CANDIDATE_OR_CONTRACT_UNKNOWN; NOT_NATIVE_CONFIRMED"
+    }
+  ],
+  "requiredSharedChanges": [
+    {
+      "id": "N1",
+      "name": "Privacy boundary/precision/free-text policy",
+      "findings": [
+        "F01",
+        "F03",
+        "F04"
+      ],
+      "owner": "existing page, evidenceNormalizers/redaction/certificate; coordinate G163/P307"
+    },
+    {
+      "id": "N2",
+      "name": "Immutable snapshot scope and signing readiness",
+      "findings": [
+        "F02",
+        "F10"
+      ],
+      "owner": "page/ExportReportPanel/PrivacyPreview/reportBuilder; preserve retained export tests"
+    },
+    {
+      "id": "N3",
+      "name": "Unknown partial normalization",
+      "findings": [
+        "F05",
+        "F06"
+      ],
+      "owner": "evidenceNormalizers/types/hooks; typed schema integration"
+    },
+    {
+      "id": "N4",
+      "name": "Safe schema and public-key-bound trust",
+      "findings": [
+        "F07",
+        "F08"
+      ],
+      "owner": "ImportVerifyPanel/reportVerifier/types"
+    },
+    {
+      "id": "N5",
+      "name": "Blocked initial state adoption",
+      "findings": [
+        "F09"
+      ],
+      "owner": "useVaultEvidence/inventory/brief/certificate; existing DataState already exposes flags"
+    },
+    {
+      "id": "N6",
+      "name": "Registry reconciliation and durable persistence",
+      "findings": [
+        "F11",
+        "F14"
+      ],
+      "owner": "useSigningVault/signingKeyRepository/vaultDb/page"
+    },
+    {
+      "id": "N7",
+      "name": "UI i18n and business-date formatting",
+      "findings": [
+        "F12",
+        "F13"
+      ],
+      "owner": "existing feature panels/constants/reasons; canonical catalog serialized parent-owned"
+    }
+  ],
+  "sectionCoverage": [
+    {
+      "tab": "evidence",
+      "components": [
+        "EvidenceInventoryPanel",
+        "BatterySummaryPanel",
+        "BatteryCertificatePanel",
+        "MaintenanceSummaryPanel",
+        "SoftwareUpdateSummaryPanel",
+        "WarrantySummaryPanel",
+        "DrivingChargingSummaryPanel",
+        "IncidentSummaryPanel"
+      ],
+      "review": "Eight evidence inventory rows and seven detailed summary/certificate panels; all null shells retained; source retry isolated; raw SI metrics; account-wide maintenance caveat; opaque warranty not interpreted eligibility."
+    },
+    {
+      "tab": "disclosure",
+      "components": [
+        "DisclosureProfileBuilder"
+      ],
+      "review": "Four profiles/eight checkboxes/three VIN modes/exact timestamp toggle/warnings/hard exclusions. Built-in membership fixed, custom editable. Fresh visit safe defaults intentionally not persisted."
+    },
+    {
+      "tab": "preview",
+      "components": [
+        "PrivacyPreviewPanel",
+        "SignatureKeyPanel",
+        "ExportReportPanel"
+      ],
+      "review": "Manifest/bounds/limitations/key history/capability/generate/rotate/revoke confirm/cancel/sign/download; F02/F10 readiness/snapshot gaps."
+    },
+    {
+      "tab": "import",
+      "components": [
+        "ImportVerifyPanel"
+      ],
+      "review": "Labelled local JSON input, filename/busy/errors/result/digest/signature/known/revoked disclaimers; attempt counters guard obsolete result; reselect same-file recovery. F07/F08 trust/schema."
+    },
+    {
+      "tab": "audit",
+      "components": [
+        "AuditTrailPanel"
+      ],
+      "review": "Local newest-first timeline/empty/loading/fatal/retained/Refresh/Retry; not exported or transmitted. Repository best-effort hydration can hide physical storage denial as empty; native unknown."
+    }
+  ],
+  "actions": [
+    "5-tab navigation",
+    "4-profile selection",
+    "8 custom section toggles",
+    "3 VIN modes",
+    "exact-timestamp toggle",
+    "independent source Retry/Refresh",
+    "7 actual metric detail drawer placements",
+    "automatic certificate POST verification",
+    "manual certificate verification retry",
+    "copy complete certificate JSON with feedback",
+    "copy complete signature with feedback",
+    "generate local key",
+    "rotate active key",
+    "begin revoke",
+    "danger confirm revoke guarded while busy",
+    "cancel revoke",
+    "explicit sign with busy guard",
+    "download whole signed envelope with URL cleanup",
+    "choose local file/read/verify with ownership guard",
+    "refresh local audit"
+  ],
+  "action_execution": "NONE; 20 source-declared action families reviewed",
+  "states": {
+    "loading": "Per-source flags/inventory/brief busy/certificate skeleton; F09/F10 gaps. No all-page loading/data gate.",
+    "fatal": "Per-source inventory/certificate SourceContent errors and retries retain neighbors.",
+    "retained": "Query bytes retained; StaleRefreshWarning nonblocking; audit retained; older signed export intentionally retained but not identified F02.",
+    "initial_paused": "F09 misclassified as absent.",
+    "unknown": "Battery/usage null metrics supported; maintenance/charging normalize absent as0 F05/F06.",
+    "empty": "All14 domain panel shells survive absent data; selected tab gating intentional navigation; NoVehicleSelected owns PageContainer.",
+    "capability_readiness": "WebCrypto refuses weak fallback; session-only persistence reasons shown. F10/F14 readiness/durability gaps. No actual permissions/auth checked.",
+    "confirmation_feedback": "Revoke target/confirm/cancel and busy guards preserved; copy toasts/attempt ownership, export errors, import reselection/async guards declared. No outcome exercised."
+  },
+  "businessDatesVersusWorkspaceRange": {
+    "vehicle": "useSelectedVehicle is sole workspace owner; no duplicate picker; outgoing signed-snapshot scope F02. Keys/audit browser-local, import independent.",
+    "range": "/resale-vault absent from RANGE_ENABLED_PATHS; no page range picker/useRangeState. Certificate issue/expiry, warranty business dates and observed evidence bounds are not competing workspace selectors. No range violation asserted.",
+    "coverage": "Bounded1000 drive/charging lists; account-wide maintenance caveat; distinct aggregates C04. Currency denomination unknown, not guessed.",
+    "preferences": "Existing SI/unit/numeric formatters used at display, no settings IDs reset. Disclosure safety defaults intentionally not persisted. F12/F13 UI localization/date gaps; ISO bytes remain signed/copy truth."
+  },
+  "accessibility": {
+    "source_declarations": "useId/idBase links five tabs to named focusable active panel; shared arrows/Home/End/roving tabindex; labelled table with8 rowheaders and shared fields/file input; status text/icons; CopyButton polite feedback; real details drawer tests declared. Historical tab linkage source defect fixed, not reopened.",
+    "native": "NOTRUN keyboard/screen-reader/contrast/forced-colors/touch/reduced-motion/RTL/scaled text; no acceptance claimed."
+  },
+  "responsive": {
+    "declarations": "PageLayout/PageContainer min-w-0, disclosure base1/sm2 grids, wrapping toolbars, intentionally scrolling tabstrip and existing break-all digest/import/provenance.",
+    "widths_not_run": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "limits": "No viewport/overflow/hitbox/overlay safe-area measurements."
+  },
+  "nativeAcceptance": [
+    {
+      "id": "NATIVE-1",
+      "status": "NOTRUN",
+      "need": "mounted route/auth/readiness/document availability"
+    },
+    {
+      "id": "NATIVE-2",
+      "status": "NOTRUN",
+      "need": "ten mission widths/narrow containers/mobile chrome"
+    },
+    {
+      "id": "NATIVE-3",
+      "status": "NOTRUN",
+      "need": "dark/light/saved custom visual themes"
+    },
+    {
+      "id": "NATIVE-4",
+      "status": "NOTRUN",
+      "need": "keyboard/action/overlay focus restoration"
+    },
+    {
+      "id": "NATIVE-5",
+      "status": "NOTRUN",
+      "need": "screen reader names/live/error feedback"
+    },
+    {
+      "id": "NATIVE-6",
+      "status": "NOTRUN",
+      "need": "touch rectangles/RTL/long text/200%"
+    },
+    {
+      "id": "NATIVE-7",
+      "status": "NOTRUN",
+      "need": "OS forced colors/composed contrast"
+    },
+    {
+      "id": "NATIVE-8",
+      "status": "NOTRUN",
+      "need": "reduced motion/low bandwidth/native crypto/IDB/clipboard/download denial"
+    }
+  ],
+  "governingDocuments": {
+    "orchestrator": "docs/orchestrator-loop.md1-296 FULLY READ; supersedes historical root playbooks",
+    "contract": "docs/frontend-design-contract.md core1-606 read; unrelated later atomic addenda not claimed full",
+    "mission": "docs/frontend-mission.md1-1593 read; relevant0/1/15-26/30-37/43-45",
+    "inventory": "frontend-inventory217 resale route plus518 G163/P307 integration inspected",
+    "handoff": "session-handoff1-47 currentphase;504-563 Phase6;2186-2250 shared/conventions;2311-2356 limits",
+    "instructions": "frontend-worker-conventions fully read; applicable copilot/react/SI-unit instructions read. User stricter no-run/two-artifact limits prevail."
+  },
+  "queueEvidence": [
+    {
+      "line": 133,
+      "raw": "| [~] | 6 | phase6-qa-resale-vault-warranty-resale-vault | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-resale-vault-warranty-resale-vault.json; web\\logs\\phase6-qa-resale-vault-warranty-resale-vault.log | phase5-page-resale-vault-warranty-resale-vault | 1 | reserved02:22:14.747Z; actor pending | - | WarrantyResaleVaultPage/direct supports; source-only, no actual identity/warranty/financial/documents/API/browser actions. |"
+    },
+    {
+      "line": 1998,
+      "raw": "| [-] | 4 | phase4-inherited-readiness-ownership | ownership, resale-vault, service-intelligence | - | - | - | - | see archived receipts | Excluded historical provenance/revalidation/repair-loop bookkeeping; not an active original-plan assignment. Evidence preserved in archive (original line 426); no retry or acceptance waiver. |"
+    },
+    {
+      "line": 2039,
+      "raw": "| [x] | 4 | phase4-warranty-tab-panel-identity | resale-vault/pages/WarrantyResaleVaultPage.tsx and exact .test.tsx | - | - | - | - | see archived receipts | 1 / Worker idleDONE/released/report246759f6; parent intake604facd1/73pins/source-only accepted. Instance-safe useId consumes existing Tabs.idBase and connects active panel ID/label. All5tabs/14domainpanelcomponents/actions preserved,8original callbacks/fixtures exact,3new tests; parent32coupled tests/scopedESLint/audit+TypeScript native0. Worker launcher failures and out-of-cadence bundled compiler retained; parent independently serialized final validation. No certificate wording/schema/shared changes or browser/phase acceptance. |"
+    },
+    {
+      "line": 2042,
+      "raw": "| [b] | 5 | phase5-feature-migration | original plan | - | phase5-page-action-center-action-center; phase5-page-admin-apikeys; phase5-page-admin-api-logs; phase5-page-admin-api-playground; phase5-page-admin-audit-log; phase5-page-admin-backup-restore; phase5-page-admin-data-quality; phase5-page-admin-dev-tools; phase5-page-admin-disk-forecast; phase5-page-admin-dlqinspector; phase5-page-admin-feature-flags; phase5-page-admin-feedback-queue; phase5-page-admin-fleet-api; phase5-page-admin-fleet-telemetry-coverage; phase5-page-admin-gas-price-auto-poll; phase5-page-admin-gdprexport; phase5-page-admin-ingest-xray; phase5-page-admin-live-signal-inspector; phase5-page-admin-redis-signal-viewer; phase5-page-admin-schema-drift; phase5-page-admin-secret-rotation; phase5-page-admin-security-access; phase5-page-admin-slow-queries; phase5-page-admin-tesla-feature-flags; phase5-page-admin-tesla-orders; phase5-page-admin-tesla-region; phase5-page-admin-vehicle-cost; phase5-page-advanced-intelligence-behavioral-sentinel; phase5-page-advanced-intelligence-causal-experimentation; phase5-page-advanced-intelligence-charging-forensics; phase5-page-advanced-intelligence-charging-site-twin; phase5-page-advanced-intelligence-component-survival; phase5-page-advanced-intelligence-emergency-resilience; phase5-page-advanced-intelligence-federated-learning-studio; phase5-page-advanced-intelligence-firmware-canary; phase5-page-advanced-intelligence-journey-assurance; phase5-page-advanced-intelligence-road-hazard-mesh; phase5-page-advanced-intelligence-tcooptimizer; phase5-page-advanced-intelligence-twin-lab; phase5-page-analytics-analytics; phase5-page-analytics-carbon-intelligence; phase5-page-analytics-drive-archetypes; phase5-page-analytics-drive-calendar; phase5-page-analytics-firmware-impact; phase5-page-analytics-fleet-compare; phase5-page-analytics-lifetime-stats; phase5-page-analytics-mileage-budget; phase5-page-analytics-mileage; phase5-page-analytics-milestones; phase5-page-analytics-period-compare; phase5-page-analytics-statistics; phase5-page-analytics-timeline; phase5-page-analytics-true-cost; phase5-page-analytics-weekly-digest; phase5-page-analytics-year-review; phase5-page-automations-automation-builder; phase5-page-automations-automation-history; phase5-page-automations-automation-list; phase5-page-automations-automations-list; phase5-page-battery-battery-care; phase5-page-battery-battery-cells; phase5-page-battery-battery-degradation; phase5-page-battery-battery-health; phase5-page-battery-battery-passport; phase5-page-battery-charge-advisor; phase5-page-battery-cycle-stress; phase5-page-battery-energy-flow; phase5-page-battery-energy-ledger; phase5-page-battery-energy; phase5-page-battery-energy-products; phase5-page-battery-pack-capacity; phase5-page-battery-power-flow-dashboard; phase5-page-battery-projected-range; phase5-page-battery-sleep-efficiency; phase5-page-battery-vampire-drain; phase5-page-benchmarks-privacy-benchmarks; phase5-page-charging-charge-departure-alignment; phase5-page-charging-charge-interruption; phase5-page-charging-charger-health; phase5-page-charging-charger-resilience; phase5-page-charging-charging-curve; phase5-page-charging-charging-detail; phase5-page-charging-charging-heatmap; phase5-page-charging-charging-list; phase5-page-charging-charging-thermal-tax; phase5-page-charging-cost-analysis; phase5-page-charging-powershare; phase5-page-charging-smart-charge; phase5-page-charging-tesla-charging-history; phase5-page-charging-tesla-charging-sessions; phase5-page-dashboard-glance; phase5-page-dashboard-quick-stats; phase5-page-dashcam-dashcam-intelligence; phase5-page-diagnostics-anomaly-dashboard; phase5-page-diagnostics-remaining-useful-life; phase5-page-diagnostics-root-cause-intelligence; phase5-page-diagnostics-service-evidence-pack; phase5-page-driving-arrival-reliability; phase5-page-driving-cold-start; phase5-page-driving-departure-forecast; phase5-page-driving-destination-transitions; phase5-page-driving-drive-compare; phase5-page-driving-drive-detail; phase5-page-driving-drive-dna; phase5-page-driving-drive-score; phase5-page-driving-drivetrain-health; phase5-page-driving-driving-dynamics; phase5-page-driving-driving-rhythm; phase5-page-driving-efficiency; phase5-page-driving-efficiency-target; phase5-page-driving-explorer; phase5-page-driving-fsdinsights; phase5-page-driving-journey-fragmentation; phase5-page-driving-range-buffer; phase5-page-driving-regen-efficiency; phase5-page-driving-route-efficiency; phase5-page-driving-seasonal-efficiency; phase5-page-driving-segments; phase5-page-driving-speed-profile; phase5-page-driving-speed-sweet-spot; phase5-page-driving-trip-logbook; phase5-page-driving-trip-planner; phase5-page-driving-what-if; phase5-page-explore-explore; phase5-page-exports-exports; phase5-page-fleet-ops-fleet-operations; phase5-page-home-energy-whole-home-energy; phase5-page-intelligence-packs-intelligence-pack-marketplace; phase5-page-maps-geofences; phase5-page-maps-locations; phase5-page-maps-map-overview; phase5-page-maps-navigation-route; phase5-page-maps-temperature-impact; phase5-page-notifications-alert-packs; phase5-page-notifications-alert-rules; phase5-page-notifications-alert-studio; phase5-page-notifications-archived; phase5-page-notifications-audit-log; phase5-page-notifications-browser-notifications; phase5-page-notifications-channels; phase5-page-notifications-inbox; phase5-page-notifications-notification-health; phase5-page-notifications-quiet-hours; phase5-page-onboarding-onboarding; phase5-page-ownership-charging-reconciliation; phase5-page-ownership-consumables-lifecycle; phase5-page-ownership-data-governance; phase5-page-ownership-driver-attribution; phase5-page-ownership-insurance-telematics; phase5-page-ownership-jurisdiction-compliance; phase5-page-ownership-model-trust; phase5-page-ownership-subscription-roi; phase5-page-ownership-tariff-lab; phase5-page-ownership-warranty-command; phase5-page-power-user-dashboards; phase5-page-power-user-grafana-panel; phase5-page-power-user-sql-playground; phase5-page-resale-vault-warranty-resale-vault; phase5-page-science-science-lab; phase5-page-server-connect; phase5-page-service-intelligence-service-intelligence; phase5-page-settings-active-sessions; phase5-page-settings-fleet-setup; phase5-page-settings-helix; phase5-page-settings-privacy; phase5-page-settings-safety; phase5-page-settings-two-factor-auth; phase5-page-sharing-share-card; phase5-page-sharing-shared-drive; phase5-page-sharing-sharing-trips; phase5-page-system-activity-timeline; phase5-page-system-chatbot; phase5-page-system-command-history; phase5-page-system-command-reliability; phase5-page-system-commands; phase5-page-system-data-export; phase5-page-system-data-repair; phase5-page-system-dbhealth; phase5-page-system-help; phase5-page-system-incident-timeline; phase5-page-system-my-activity; phase5-page-system-not-found; phase5-page-system-outage-autobiography; phase5-page-system-roadmap; phase5-page-system-search; phase5-page-system-state-machine-debugger; phase5-page-system-status-api-docs; phase5-page-system-system-status; phase5-page-system-tesla-account; phase5-page-system-tesla-api-usage; phase5-page-telemetry-live-signal-monitor; phase5-page-telemetry-mqttinspector; phase5-page-telemetry-signal-change-points; phase5-page-telemetry-signal-correlation; phase5-page-telemetry-signal-deadband; phase5-page-telemetry-signal-diff; phase5-page-telemetry-signal-entropy; phase5-page-telemetry-signal-explorer; phase5-page-telemetry-signal-gap-detector; phase5-page-telemetry-signal-log-viewer; phase5-page-telemetry-signal-mutual-information; phase5-page-telemetry-signals-workspace; phase5-page-telemetry-signal-trend; phase5-page-trips-journeys; phase5-page-trips-trip-detail; phase5-page-trips-trip-list; phase5-page-trips-trip-replay; phase5-page-vehicle-systems-cabin-thermal; phase5-page-vehicle-systems-climate-control; phase5-page-vehicle-systems-comfort-consistency; phase5-page-vehicle-systems-guard-mode; phase5-page-vehicle-systems-hvac-cycling; phase5-page-vehicle-systems-maintenance; phase5-page-vehicle-systems-media-player; phase5-page-vehicle-systems-preconditioning-effectiveness; phase5-page-vehicle-systems-safety-settings; phase5-page-vehicle-systems-software-updates; phase5-page-vehicle-systems-tire-differential-drift; phase5-page-vehicle-systems-tire-pressure; phase5-page-vehicles-day-log; phase5-page-vehicles-digital-twin; phase5-page-vehicles-parking-analytics; phase5-page-vehicles-physics-cockpit; phase5-page-vehicles-physics-ledger; phase5-page-vehicles-tesla-physics; phase5-page-vehicles-time-machine; phase5-page-vehicles-utilization; phase5-page-vehicles-vehicle-access; phase5-page-vehicles-vehicle-detail; phase5-page-vehicles-vehicle-list; phase5-page-vehicles-vehicle-management; phase5-page-watch-watch-face | - | - | see archived receipts | Original Phase5: one page per worker using existing inventory after pilot acceptance; keep data behavior, remove real duplicates, use screenshot tooling. Page assignments not yet expanded; do not count audits as migrations. Original next-phase concurrency expanded into234 unique nonpilot page assignments directly from existing production inventory237minus3pilots, no audit restart or fake tasks. Aggregate blocked on real page completions; individual source work proceeds while current pilot QA finishes as expressly required. |"
+    },
+    {
+      "line": 2223,
+      "raw": "| [x] | 5 | phase5-page-resale-vault-warranty-resale-vault | original-page-migration | web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.tsx; web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.test.tsx | - | 1 | 2026-10-12T13:32:36.2461510Z | 225aacc2140c2f8a89739d36c7d64d1afe524ea8 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/resale-vault; audit=docs\\frontend-audits\\audit-page-166.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fresh previously unstarted scope reserved for rolling dispatch; original Page+namedtest only. Returning fixture has actual5173 origin; E2E_STORAGE_STATE supported variable. Parent-owned generator closure, no worker catalog edits/bypass. Original source/fullQA separation and all preservation/helper budget rules remain. Actual worker=8d9ee1a3-af3d-4026-9de3-8c40ba1e21ed; lifecycle=awaitingterminalnotification; doNOTpoll/duplicate/rereadownedsource. Supported instructions in session files; separate path/private screenshot boundaries. Actual parent wave2 scoped run: 12 executed, 0 failed; file=passed. Evidence logs\\phase5-parent-wave2-blocked-tests.json. Passed source delivery awaits exact reported-file Git intake; full/native QA unaccepted. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual unchanged parent600case receipt: own file 12 cases passed,0failed/0pending. Existing worker scoped lint/style/section/line/hook evidence retained, no cases rerun for provenance. Source-only acceptance; inherited geometry/static/preservation/native resource/privacy failures remain explicitly UNACCEPTED in own receipt; no page/application QA claim.; commit=225aacc2140c2f8a89739d36c7d64d1afe524ea8; pushed. |"
+    }
+  ],
+  "ownerDeduplication": "Seven consolidated owner requests, not new queue tasks. Existing G163/P307 source/type/scope integration reused. phase4 tab identity and phase5 source acceptance remain closed; excluded readiness-history loop not revived. Historical audit-page-166 defects re-confirmed, not claimed new regressions. Queue positions drifted concurrently; final content search used.",
+  "guidelineScreenDisposition": {
+    "scope": "33 production feature files; raw grep output retained in report/log",
+    "zero_match_rules": [
+      "static-inline-style",
+      "raw-html",
+      "direct-library-import",
+      "old-api-import",
+      "double-prefix",
+      "camelcase-param"
+    ],
+    "fetch_useeffect": "3 hits: local IndexedDB hydration (not server fetch), typed certificate POST effect F01; not generic fetch loading violations.",
+    "hidden_section": "18 hits conditional details/status in persistent shells; no confirmed hidden section. Active tab gating intentional.",
+    "hardcoded_string": "4 regex Promise type false positives; independent source tracing confirms F12 raw application constants/copy.",
+    "missing_page_container": "PageLayout adapts PageContainer; NoVehicleSelected also owns it; acceptable existing composition.",
+    "backend": "N/A no internal Go in scope; NOTRUN."
+  },
+  "existingTestEvidence": {
+    "files_read": 30,
+    "execution": "NOTRUN_BY_USER",
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "note": "Counts are execution0, not passed gate/skipped test receipt. Every existing feature test/helper read; parameterized declarations not executed counts. Historical12 phase5 source cases not rerun/adopted. Fake IDB stores references and lacks transaction completion; no native durability proof."
+  },
+  "failures": [
+    {
+      "tool": "powershell",
+      "shell_id": "2557",
+      "exit": 1,
+      "raw": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+      "resolution": "Built-in reads/inline regex, no install."
+    },
+    {
+      "tool": "powershell",
+      "shell_id": "2583",
+      "exit": 1,
+      "raw": "UnicodeEncodeError: 'charmap' codec can't encode character '\\u2192' in position 1178: character maps to <undefined>",
+      "resolution": "Independent bounded UTF8 reads; incomplete output not accepted."
+    },
+    {
+      "tool": "view",
+      "exit": null,
+      "raw": "Invalid view_range: start line (261) is beyond the end of the file. The file has 152 lines.",
+      "resolution": "Actual full152 lines already read in independent1-260 call."
+    },
+    {
+      "shell_id": "2891",
+      "exit": 1,
+      "raw": "<error: The filename or extension is too long. (os error 206)>",
+      "resolution": "Artifact serialization split into bounded inline commands; no helper/source files created."
+    }
+  ],
+  "evidenceLimits": [
+    "No real identities/warranties/financial records/documents/API/browser/application actions",
+    "No code/tests/catalog/Git writes, subagents/installs/servers/fresh tests/lint/build/global TSC/helpers or passing reruns",
+    "Backend route/auth/capability/expiry/aggregate units/coverage only frontend declaration, not acceptance",
+    "Source/test review and historical receipts not native/page/application acceptance",
+    "No historical baseline recapture or inferred modernization regression; all future repairs require exact parent claims"
+  ],
+  "filesRead": [
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useBatteryCertificate.ts",
+    "web/src/api/hooks/useBatteryPassport.ts",
+    "web/src/api/hooks/useCharging.ts",
+    "web/src/api/hooks/useDriving.ts",
+    "web/src/api/hooks/useGuard.ts",
+    "web/src/api/hooks/useVehicleSystems.ts",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/components/data-display/Timeline.tsx",
+    "web/src/components/feedback/InlineCallout.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/SourceContent.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/CopyButton.tsx",
+    "web/src/components/ui/Tabs.tsx",
+    "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+    "web/src/features/resale-vault/components/AuditTrailPanel.test.tsx",
+    "web/src/features/resale-vault/components/AuditTrailPanel.tsx",
+    "web/src/features/resale-vault/components/BatteryCertificatePanel.test.tsx",
+    "web/src/features/resale-vault/components/BatteryCertificatePanel.tsx",
+    "web/src/features/resale-vault/components/BatterySummaryPanel.test.tsx",
+    "web/src/features/resale-vault/components/BatterySummaryPanel.tsx",
+    "web/src/features/resale-vault/components/DisclosureProfileBuilder.test.tsx",
+    "web/src/features/resale-vault/components/DisclosureProfileBuilder.tsx",
+    "web/src/features/resale-vault/components/DrivingChargingSummaryPanel.test.tsx",
+    "web/src/features/resale-vault/components/DrivingChargingSummaryPanel.tsx",
+    "web/src/features/resale-vault/components/EvidenceInventoryPanel.test.tsx",
+    "web/src/features/resale-vault/components/EvidenceInventoryPanel.tsx",
+    "web/src/features/resale-vault/components/ExportReportPanel.preservation.test.tsx",
+    "web/src/features/resale-vault/components/ExportReportPanel.test.tsx",
+    "web/src/features/resale-vault/components/ExportReportPanel.tsx",
+    "web/src/features/resale-vault/components/ImportVerifyPanel.preservation.test.tsx",
+    "web/src/features/resale-vault/components/ImportVerifyPanel.test.tsx",
+    "web/src/features/resale-vault/components/ImportVerifyPanel.tsx",
+    "web/src/features/resale-vault/components/IncidentSummaryPanel.test.tsx",
+    "web/src/features/resale-vault/components/IncidentSummaryPanel.tsx",
+    "web/src/features/resale-vault/components/MaintenanceSummaryPanel.test.tsx",
+    "web/src/features/resale-vault/components/MaintenanceSummaryPanel.tsx",
+    "web/src/features/resale-vault/components/PrivacyPreviewPanel.test.tsx",
+    "web/src/features/resale-vault/components/PrivacyPreviewPanel.tsx",
+    "web/src/features/resale-vault/components/SignatureKeyPanel.test.tsx",
+    "web/src/features/resale-vault/components/SignatureKeyPanel.tsx",
+    "web/src/features/resale-vault/components/SoftwareUpdateSummaryPanel.test.tsx",
+    "web/src/features/resale-vault/components/SoftwareUpdateSummaryPanel.tsx",
+    "web/src/features/resale-vault/components/WarrantySummaryPanel.test.tsx",
+    "web/src/features/resale-vault/components/WarrantySummaryPanel.tsx",
+    "web/src/features/resale-vault/components/index.ts",
+    "web/src/features/resale-vault/components/operationalbrief-all/VaultSummaryBrief.test.tsx",
+    "web/src/features/resale-vault/components/operationalbrief-all/VaultSummaryBrief.tsx",
+    "web/src/features/resale-vault/components/sectionLabels.ts",
+    "web/src/features/resale-vault/hooks/useDisclosureSelection.test.tsx",
+    "web/src/features/resale-vault/hooks/useDisclosureSelection.ts",
+    "web/src/features/resale-vault/hooks/useSigningVault.test.tsx",
+    "web/src/features/resale-vault/hooks/useSigningVault.ts",
+    "web/src/features/resale-vault/hooks/useVaultEvidence.test.tsx",
+    "web/src/features/resale-vault/hooks/useVaultEvidence.ts",
+    "web/src/features/resale-vault/lib/auditTrail.test.ts",
+    "web/src/features/resale-vault/lib/auditTrail.ts",
+    "web/src/features/resale-vault/lib/canonicalJson.test.ts",
+    "web/src/features/resale-vault/lib/canonicalJson.ts",
+    "web/src/features/resale-vault/lib/constants.ts",
+    "web/src/features/resale-vault/lib/cryptoAvailability.test.ts",
+    "web/src/features/resale-vault/lib/cryptoAvailability.ts",
+    "web/src/features/resale-vault/lib/evidenceNormalizers.test.ts",
+    "web/src/features/resale-vault/lib/evidenceNormalizers.ts",
+    "web/src/features/resale-vault/lib/fakeIndexedDb.ts",
+    "web/src/features/resale-vault/lib/redaction.test.ts",
+    "web/src/features/resale-vault/lib/redaction.ts",
+    "web/src/features/resale-vault/lib/reportBuilder.test.ts",
+    "web/src/features/resale-vault/lib/reportBuilder.ts",
+    "web/src/features/resale-vault/lib/reportSigner.test.ts",
+    "web/src/features/resale-vault/lib/reportSigner.ts",
+    "web/src/features/resale-vault/lib/reportVerifier.ts",
+    "web/src/features/resale-vault/lib/signingKeyRepository.test.ts",
+    "web/src/features/resale-vault/lib/signingKeyRepository.ts",
+    "web/src/features/resale-vault/lib/testFixtures.ts",
+    "web/src/features/resale-vault/lib/types.ts",
+    "web/src/features/resale-vault/lib/vaultDb.test.ts",
+    "web/src/features/resale-vault/lib/vaultDb.ts",
+    "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.test.tsx",
+    "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/usePageTitle.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/lib/workspaceScope.ts",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/frontend-audits/audit-page-166.json",
+    "migration-queue.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md"
+  ],
+  "inspectionRanges": "All65 feature files read; API supports only direct hook function ranges, not unrelated functions; shared direct supports full except dataState1-295. No transitive full-repository audit.",
+  "source_test_hashes_after": {
+    "web/src/features/resale-vault/components/AuditTrailPanel.test.tsx": "86435781ff717fd39ecb83a1535211afa5be98b12b34cf25821cd4cffd5f8a94",
+    "web/src/features/resale-vault/components/AuditTrailPanel.tsx": "26fc47cf87228149ee5209f494d1cea3bd4591f0d26fcc72ea2968a7f5a16fc7",
+    "web/src/features/resale-vault/components/BatteryCertificatePanel.test.tsx": "149d899baad8cca57dad5105560a664d36b5aae228021410e9167ced6bbbecae",
+    "web/src/features/resale-vault/components/BatteryCertificatePanel.tsx": "4dfdd868657436bcfaa57401bf72c7782d0d5a268683c459db20453786dfab6d",
+    "web/src/features/resale-vault/components/BatterySummaryPanel.test.tsx": "0368983f38db99d98db66aab6ee2a33c833d219d1ef1905a8b98eac42fe20deb",
+    "web/src/features/resale-vault/components/BatterySummaryPanel.tsx": "2656a03658f9fae36899bc701f0d1f7ac79e55fcb839d952d0f21b81521c276a",
+    "web/src/features/resale-vault/components/DisclosureProfileBuilder.test.tsx": "97689bbebecbc8318181cb963ee573f49b0c3b65c5a18d509f0a52515a0c5fa7",
+    "web/src/features/resale-vault/components/DisclosureProfileBuilder.tsx": "af142d52a2248499c8ea2e6f38ed79af9517ecf043f31d41a6134789eaeb688f",
+    "web/src/features/resale-vault/components/DrivingChargingSummaryPanel.test.tsx": "04aa80ba806ca231ffb810f451a05b93a2702b6cf258d00e4b4edc928bbce680",
+    "web/src/features/resale-vault/components/DrivingChargingSummaryPanel.tsx": "5c0ab9f03380643378996da8ef6d1b27da50314a93ac7cc64675693923081078",
+    "web/src/features/resale-vault/components/EvidenceInventoryPanel.test.tsx": "5796506b408b536ffd0e3a2ff09171e72141533f60672fe2fca0aea582dcb8be",
+    "web/src/features/resale-vault/components/EvidenceInventoryPanel.tsx": "a0bb6bf5dcae1976fc273439c0bd524afaab060d67d32cfd13b80947295fef50",
+    "web/src/features/resale-vault/components/ExportReportPanel.preservation.test.tsx": "900ad026a02a2d47f0050d26a020a66fc8dc4e4a1f3d9a91971edd41c5e779a0",
+    "web/src/features/resale-vault/components/ExportReportPanel.test.tsx": "c17337c916e14ef4529149783311b51de8216a7956af89bae913b34561f3ab52",
+    "web/src/features/resale-vault/components/ExportReportPanel.tsx": "e4fd1d9e9ffbfa8b84ea7eeb8b0e4866a223ff4c2f5cabf53b91b7e1f24927e4",
+    "web/src/features/resale-vault/components/ImportVerifyPanel.preservation.test.tsx": "56ccd3d4d902bf877c92b52533e7f69ef6064d684db656a3a3722cec719c7f05",
+    "web/src/features/resale-vault/components/ImportVerifyPanel.test.tsx": "9fdef6a92f259879700b520ce3960c5b81172cb06348e5b85f1fae9bd1e96de8",
+    "web/src/features/resale-vault/components/ImportVerifyPanel.tsx": "ce620a4a777a59245e5d9b5ecca011baaf6e84c18310da9f6370881d73a78d53",
+    "web/src/features/resale-vault/components/IncidentSummaryPanel.test.tsx": "12e13dd91a105b80616e80c7aae4de9ffa96118b5fff8d538a7c9fe5e4299d71",
+    "web/src/features/resale-vault/components/IncidentSummaryPanel.tsx": "583d93e7b88362d962237699b9bc837d55cb924528ea0fd7933b5c515533cade",
+    "web/src/features/resale-vault/components/index.ts": "c0aa3af31b8e423654f87fd9bca3de9a4809903bb9ac6ecfe04c327f488d06e1",
+    "web/src/features/resale-vault/components/MaintenanceSummaryPanel.test.tsx": "fa5639765a8d808a33ad7861f68f8adcd6e15ce8161bbe585515bf5e58d9d7a7",
+    "web/src/features/resale-vault/components/MaintenanceSummaryPanel.tsx": "fdbdd57fae383c9eafa7811c73c848b8f414b1b91477485db19dc469fe70bcb9",
+    "web/src/features/resale-vault/components/operationalbrief-all/VaultSummaryBrief.test.tsx": "18b304bfaa959e4b49f8c0e1d6b2053f028b47769db1158c7ee10a6c1fc284cf",
+    "web/src/features/resale-vault/components/operationalbrief-all/VaultSummaryBrief.tsx": "ab90390cae7c181f2deac452cf1673e1eda3aa71e54cb4dec0cf22da77c08ea6",
+    "web/src/features/resale-vault/components/PrivacyPreviewPanel.test.tsx": "287eed29154023aa977fa0539e7ffced6e7caf03280e87e5eb1b6a38b9d2c18b",
+    "web/src/features/resale-vault/components/PrivacyPreviewPanel.tsx": "9b4eae9cb1e1f1bf4e2eadc4d7143b9d3cb6167c16a76ce8a5a2783fe037ff7b",
+    "web/src/features/resale-vault/components/sectionLabels.ts": "77e29ae212680118a39f25770a53b653f30f61506883653c0a62c174430baad1",
+    "web/src/features/resale-vault/components/SignatureKeyPanel.test.tsx": "8963b387ba5069c45524ae556b2ba4468dbd7e17a5d79d0b9a9580dcd01b8df4",
+    "web/src/features/resale-vault/components/SignatureKeyPanel.tsx": "ac570320c59a8525fa54b334563a56b1df85b8679ce3b2add015ae19d6b208b4",
+    "web/src/features/resale-vault/components/SoftwareUpdateSummaryPanel.test.tsx": "be47cb8ebf3cb97265ab7d04e046932495ffffe382f655e6b0dd8854e928d1d4",
+    "web/src/features/resale-vault/components/SoftwareUpdateSummaryPanel.tsx": "8d55f391c6e9f47c5cad814a2b81807f8eeaf70ef7b0e953354f597d9679bc47",
+    "web/src/features/resale-vault/components/WarrantySummaryPanel.test.tsx": "4619685d52e15ada9235363871ec0b2afebeb901c45369d366ca4775b8243eb1",
+    "web/src/features/resale-vault/components/WarrantySummaryPanel.tsx": "df9b99199156308336b582c6e485e0896691e2f359627570a02d42555649322b",
+    "web/src/features/resale-vault/hooks/useDisclosureSelection.test.tsx": "864a149de5bda2c4e0b3c05e6ec77cee4fb372a4441a0a5967c76bf2f544e1da",
+    "web/src/features/resale-vault/hooks/useDisclosureSelection.ts": "6a36ecc0946d97b045c58d190822a3670dd4f5017464770973be5b515492b2e5",
+    "web/src/features/resale-vault/hooks/useSigningVault.test.tsx": "9de81d9ea9581012f91cd00dcb2d5e1d969d674bec3235c037bca983165367ad",
+    "web/src/features/resale-vault/hooks/useSigningVault.ts": "0484d9ed625bd47fa6804ca43f050d145274427682e3177e3b96914126044e5d",
+    "web/src/features/resale-vault/hooks/useVaultEvidence.test.tsx": "0eaf2146db802f0bfa993616e940ae30d295c9da3e20c7b623a37d474886dea9",
+    "web/src/features/resale-vault/hooks/useVaultEvidence.ts": "20e0f73e83535147fcbfedd3a6ee6b225524bed73e18558d7543ad0c1b128af0",
+    "web/src/features/resale-vault/lib/auditTrail.test.ts": "3c0a61d08ee05a8e86ee8af86213db3f1b377ac766a7e7bb5819d2e4851caead",
+    "web/src/features/resale-vault/lib/auditTrail.ts": "89793d983b795bd51dd621c8d1128010a4ed795218191c3399d666d2e01afc55",
+    "web/src/features/resale-vault/lib/canonicalJson.test.ts": "e2990094a33070746895e9a355dd7d1f4044002b85c496eaa1666f76ab4e6424",
+    "web/src/features/resale-vault/lib/canonicalJson.ts": "84fa9765a42c9b174469a25cd8c7e1b284fcc27384ce50652f099c84f4a71e92",
+    "web/src/features/resale-vault/lib/constants.ts": "63e15f0a54c572491825c1d839f18a4034c9bbde2efc9f7bcb394eccfc242534",
+    "web/src/features/resale-vault/lib/cryptoAvailability.test.ts": "222daa129fe789321cf387a5f5816458b5d03d56b8dca7297ef28d1cb1ad492b",
+    "web/src/features/resale-vault/lib/cryptoAvailability.ts": "dd843fa1fe7a46e02f54ff23f388c902f2f0c8d52f6a4ec25c2970290b3a10ef",
+    "web/src/features/resale-vault/lib/evidenceNormalizers.test.ts": "25d90740811dcf2d50dc63ba1f18cae2535d87f1897745db27fadbb2b81a4dd2",
+    "web/src/features/resale-vault/lib/evidenceNormalizers.ts": "2d0957a1071fe43000f2911760e4878cf13e3f8e8534887b0af2f4058a6d2680",
+    "web/src/features/resale-vault/lib/fakeIndexedDb.ts": "059033d3e88a738097c7913ebc13cf78e7a3208eecf49ca292efa63e416bd979",
+    "web/src/features/resale-vault/lib/redaction.test.ts": "3693fd03366af8ff37a34b662770497c03a9c527030f71a8c66cd6371c791605",
+    "web/src/features/resale-vault/lib/redaction.ts": "381f2fb48148a04ccc859fbaa67b7d989ad27287c205370d986cb33ef37d5eee",
+    "web/src/features/resale-vault/lib/reportBuilder.test.ts": "67ca10df32dda5ab169dfe5c4d0821aac77d7dbf8756472eb56f70ddc3dd0749",
+    "web/src/features/resale-vault/lib/reportBuilder.ts": "fff76f09e822e7a841ecdf340b7be2236d4b4256ee93ab96f4946f7394122459",
+    "web/src/features/resale-vault/lib/reportSigner.test.ts": "1ab7bdcda6b2315040b7f8f6cf599e9ac8b22af0596e5d8a84fe4c20eae33c9d",
+    "web/src/features/resale-vault/lib/reportSigner.ts": "1cbf73e491ebf7f0b41f45cab67b0f4d1a671f74af008a40e935816cdd11b4f1",
+    "web/src/features/resale-vault/lib/reportVerifier.ts": "b1897373369a73177f080e363027108c5c4a59f6f73ddda3ceaa8365985ceba0",
+    "web/src/features/resale-vault/lib/signingKeyRepository.test.ts": "f3e90a8a7181b48c989a9c29f1a49777471284ea5912c440bb185f4f7e5d6eac",
+    "web/src/features/resale-vault/lib/signingKeyRepository.ts": "767634c6ab252f6a45bfd4b4cb5a3c49087693b5ec2920bb41be806be233ca78",
+    "web/src/features/resale-vault/lib/testFixtures.ts": "f43d97ea335bbce458db807553501e66f8d3a9da60011e940e87f4fc1d1c944e",
+    "web/src/features/resale-vault/lib/types.ts": "a2d09f8894ace9be8387cc7058640efead22cd5e8caad3f76e7a9f580dd32829",
+    "web/src/features/resale-vault/lib/vaultDb.test.ts": "1461875a27e25b19482d88d81bb08549ce0c053a897852d540aa2631298acdd6",
+    "web/src/features/resale-vault/lib/vaultDb.ts": "ffc727bd644a19af67113e76713e6b8f35ff6a5a9edac496a419a2e1f2050e37",
+    "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.test.tsx": "5e747b7d9ce8f80cc4a6435179d148069f67e0d56d2f0fd75e798f342c105913",
+    "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx": "557193073763de9d3e03d14c8d486c296034cbc26307a28efda1a2f2fa7cdb05",
+    "web/src/api/hooks/useVehicles.ts": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+    "web/src/api/hooks/useBatteryPassport.ts": "b573ba4f6ff49c7cecac834c80bf6980c888d90c8d21018090ab54b51b22a195",
+    "web/src/api/hooks/useBatteryCertificate.ts": "b20fea0401991d23080947feb0b558e834050be9a5126df3fff70ba535a46903",
+    "web/src/api/hooks/useVehicleSystems.ts": "06474d1dc7e0b1d63be82589d14abbb39ac33a29e5319a888a1236a295881c8d",
+    "web/src/api/hooks/useDriving.ts": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+    "web/src/api/hooks/useCharging.ts": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
+    "web/src/api/hooks/useGuard.ts": "f43823638c4a80a4d57a44447a28524ccf29a3ebd70260daa6a7895ac6c71218",
+    "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+    "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+    "web/src/hooks/useSelectedVehicle.ts": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+    "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+    "web/src/components/ui/Tabs.tsx": "6754cd3469dbec346cc6069fa5c12d6660204dd2b721e4ab2752f6ecb0fb82bf",
+    "web/src/components/ui/CopyButton.tsx": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+    "web/src/components/feedback/InlineCallout.tsx": "3e58e0b84d4b4f18d8e214f759657af40e6e18d8314477a232ccc92af3cf6331",
+    "web/src/hooks/useDateFormat.ts": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+    "web/src/hooks/useUnits.ts": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+    "web/src/components/data-display/Timeline.tsx": "1acf2206f830d56d2a8e7a9a329c34e92bae5d2eae6696a5d55dd18d4b9ac92b",
+    "web/src/components/layout/layout-reference/SourceContent.tsx": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+    "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+    "web/src/components/feedback/StaleRefreshWarning.tsx": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+    "web/src/features/onboarding/components/NoVehicleSelected.tsx": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+    "web/src/hooks/usePageTitle.ts": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b"
+  },
+  "preservation": {
+    "pins": 87,
+    "changed_paths": [],
+    "unchanged": true,
+    "page_lines": 187,
+    "tabs": 5,
+    "domain_panels": 14,
+    "inventory_categories": 8,
+    "profiles": 4,
+    "vin_modes": 3,
+    "action_families": 20,
+    "feature_files": 65,
+    "test_files": 30
+  },
+  "summary": {
+    "confirmed_findings": 14,
+    "source_candidates": 6,
+    "deduplicated_needs": 7,
+    "native_NOTRUN_groups": 8,
+    "by_rule": {
+      "privacy-boundary-copy": 1,
+      "signed-snapshot-scope": 1,
+      "disclosure-date-precision": 1,
+      "hard-exclusion-free-text": 1,
+      "unknown-as-zero": 2,
+      "local-key-trust-binding": 1,
+      "import-schema-render-safety": 1,
+      "initial-paused-misclassified": 1,
+      "signing-readiness-trust": 1,
+      "key-registry-reconciliation": 1,
+      "hardcoded-string": 1,
+      "date-time-display-preferences": 1,
+      "persistence-readiness-claim": 1
+    },
+    "by_severity": {
+      "high": 7,
+      "medium": 7
+    },
+    "most_issues": {
+      "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx": 3,
+      "web/src/features/resale-vault/components/ExportReportPanel.tsx": 2,
+      "web/src/features/resale-vault/lib/evidenceNormalizers.ts": 4,
+      "web/src/features/resale-vault/lib/reportVerifier.ts": 1,
+      "web/src/features/resale-vault/components/ImportVerifyPanel.tsx": 1,
+      "web/src/features/resale-vault/hooks/useVaultEvidence.ts": 1,
+      "web/src/features/resale-vault/components/SignatureKeyPanel.tsx": 1,
+      "web/src/features/resale-vault/lib/signingKeyRepository.ts": 1
+    },
+    "priority": "Privacy/redaction; snapshot vehicle scope; key trust/import safety; durability; unknown/paused/readiness; UI i18n/date preferences",
+    "application_acceptance": "NOT_ACCEPTED_SOURCE_ONLY"
+  },
+  "phase": 6,
+  "readOnly": true,
+  "page": "web/src/features/resale-vault/pages/WarrantyResaleVaultPage.tsx",
+  "routes": [
+    "/resale-vault"
+  ],
+  "writable_files": [
+    "docs/frontend-audits/phase6-qa-resale-vault-warranty-resale-vault.json",
+    "web/logs/phase6-qa-resale-vault-warranty-resale-vault.log"
+  ],
+  "released_at": "2026-10-14T02:43:10.412421+00:00",
+  "soft_deadline_utc": "2026-10-14T02:42:14.747Z",
+  "hard_deadline_utc": "2026-10-14T02:47:14.747Z",
+  "release": "RELEASE two artifact claims; source-write claim NONE. All14 mechanisms confirmed statically, all repros NOTRUN. Seven owner needs, six candidates, eight native NOTRUN groups; no further application commands authorized.",
+  "commands": {
+    "ran": "Scoped read-only directory/doc/source/test inspections; SHA256 baseline/after; ten-rule regex grep; exact numbered evidence/queue owner searches; artifact JSON serialization; final JSON/citation/pin validation",
+    "process_failures": 3,
+    "view_failures": 1,
+    "NOTRUN": [
+      "npx tsc --noEmit",
+      "vitest/npm tests",
+      "npm run lint",
+      "npm run build",
+      "frontend QA/preservation helpers",
+      "Playwright/browser/API/actions",
+      "Git/servers/installs/subagents"
+    ],
+    "raw_log": "web/logs/phase6-qa-resale-vault-warranty-resale-vault.log"
+  }
+}

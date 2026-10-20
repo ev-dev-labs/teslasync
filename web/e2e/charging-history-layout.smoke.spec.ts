@@ -13,7 +13,7 @@ for (const width of [1200, 1920]) {
     const panel = (title: string) => page.getByText(title, { exact: true }).first()
       .locator('xpath=ancestor::*[@data-print-card][1]')
     const [spending, locations, radar, sessions] = await Promise.all(
-      ['Monthly Spending', 'Top Locations', 'Price Radar', 'Charging Sessions']
+      ['Monthly spending', 'Top locations', 'Price Radar', 'Charging sessions']
         .map(async title => panel(title).boundingBox()),
     )
     for (const box of [spending, locations, radar, sessions]) expect(box).not.toBeNull()

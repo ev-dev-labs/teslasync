@@ -2,49 +2,123 @@
  * DrivingDynamicsPage — orchestration contract + hardening tests.
  *
  * DrivingDynamicsPage is a pure orchestration page: it selects a vehicle,
- * fans four data hooks (`useMotorLatest`, `useMotorHistory`, `useDrives`,
- * `useDrivingCoach`) into eleven presentational sections, derives cross-section
- * state (motor stats + throttle style via the real `helpers`), filters drives to
- * a shared date window, and threads SI→display unit converters down to the
- * children.
+ * scopes two drive-list hooks to the selected workspace, passes the selected
+ * ride window into independently subscribed presenters, and threads display
+ * converters to retained analytics. Modern stat presenters own useUnits().
  *
  * Strategy:
  *   - The four data hooks + `useSelectedVehicle` are mocked at the hook boundary
  *     so every branch (has-vehicle / no-vehicle, has-data / empty) is
  *     deterministic and no network is touched.
- *   - The `driving-dynamics` child barrel is replaced with lightweight test
- *     doubles that surface the props the page computes (filtered-drive counts,
- *     motor stats, throttle style, the converted output of each unit converter,
- *     and the wired date-range callbacks). This lets the test assert the page's
- *     OWN logic — filtering, derivation, unit wiring, vehicle propagation —
- *     rather than the children's internal rendering (already covered by their
- *     own suites).
- *   - `helpers` (computeMotorStats / getThrottleStyle) and `useUnits` (→ the
- *     file-level `useSettings` mock) render for real, so the SI→display
- *     conversion boundary is exercised for BOTH metric (km / km/h / °C) and
- *     imperial (mi / mph / °F) preferences.
+ *   - Both presenter barrels have prop-surfacing doubles for page-owned scope,
+ *     vehicle propagation and analytics converters.
+ *   - Conversion cases also mount the actual modern SummaryStats and
+ *     SpeedGearPanel with measured SI fixtures. Their shared stat formatting,
+ *     computeMotorStats and useUnits run for real for metric and imperial
+ *     preferences; no StatStrip/StatTile output is fabricated.
  *
  * System time is pinned (Date only — timers stay real so userEvent works) so
  * the shared URL window is fixed at [2025-06-09, 2025-06-15].
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { readFileSync } from 'node:fs';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, QueryObserver, type UseQueryResult } from '@tanstack/react-query';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
+import type { MotorSnapshot } from '@/api/types';
+import type { DataStateSource } from '@/api/dataState';
+import type { Drive, DrivingCoachData } from '@/types/driving';
+import type { Vehicle } from '@/types/vehicle';
+import i18n from 'i18next';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+
+const paletteState = vi.hoisted(() => ({
+  colors: ['var(--semantic-info)', 'var(--semantic-purple)'],
+}));
+vi.mock('@/hooks/useChartPalette', () => ({
+  useChartPalette: () => paletteState.colors,
+}));
+vi.mock('@/components/charts', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+    AreaChart: ({ children, data }: { children: ReactNode; data: unknown[] }) =>
+      <div data-testid="palette-area-chart" data-points={JSON.stringify(data)}>{children}</div>,
+    LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) =>
+      <div data-testid="palette-line-chart" data-points={JSON.stringify(data)}>{children}</div>,
+    Area: ({ dataKey, stroke, fill, connectNulls, hide }: {
+      dataKey: string; stroke: string; fill: string; connectNulls: boolean; hide: boolean;
+    }) => <div data-testid={`palette-area-${dataKey}`} data-stroke={stroke}
+      data-fill={fill} data-connect-nulls={String(connectNulls)} data-hidden={String(hide)} />,
+    Line: ({ dataKey, stroke, connectNulls, hide }: {
+      dataKey: string; stroke: string; connectNulls: boolean; hide: boolean;
+    }) => <div data-testid={`palette-line-${dataKey}`} data-stroke={stroke}
+      data-connect-nulls={String(connectNulls)} data-hidden={String(hide)} />,
+    XAxis: ({ dataKey }: { dataKey: string }) => <div data-axis-key={dataKey} />,
+    YAxis: ({ unit }: { unit: string }) => <div data-axis-unit={unit} />,
+    Tooltip: () => null,
+    ChartLegend: ({ state }: { state: { toggle: (key: string) => void } }) =>
+      <Button onClick={() => state.toggle('front')}>Toggle front series</Button>,
+  };
+});
+
+describe('Driving dynamics layout import boundary', () => {
+  it.each([
+    'components/driving-dynamics-modernization/DrivingTips.tsx',
+    'components/driving-dynamics-modernization/DynamicsPlacement.tsx',
+    'components/driving-dynamics-modernization/DynamicsTripToolbar.tsx',
+    'components/driving-dynamics-modernization/GForcePanel.tsx',
+    'components/driving-dynamics-modernization/LiveMotorStatus.tsx',
+    'components/driving-dynamics-modernization/MotorHistoryCharts.tsx',
+    'components/driving-dynamics-modernization/PedalUsage.tsx',
+    'components/driving-dynamics-modernization/PowertrainSummary.tsx',
+    'components/driving-dynamics-modernization/RideOverview.tsx',
+    'components/driving-dynamics-modernization/SpeedGearPanel.tsx',
+    'components/driving-dynamics/DrivingCoachSection.tsx',
+    'components/driving-dynamics/GrokDynamicsBriefing.tsx',
+    'components/operationalbrief-a-m/MotorSamplesBrief.tsx',
+    'pages/DrivingDynamicsPage.tsx',
+  ])('%s uses only the public layout category boundary', (file) => {
+    const source = readFileSync(`src/features/driving/${file}`, 'utf8');
+    expect(source).not.toMatch(/from\s+['"]@\/components\/layout\//);
+    if (file.includes('driving-dynamics-modernization') || file.startsWith('pages/')) {
+      expect(source).toMatch(/from\s+['"]@\/components\/layout['"]/);
+    }
+    if (file.endsWith('DynamicsTripToolbar.tsx')) {
+      expect(source).toContain('className="max-md:min-h-11 max-md:min-w-11"');
+      expect(source).toContain('id="dynamics-drive"');
+      expect(source).toContain('size="auto"');
+      expect(source).toContain('onChange={event => onSelectDrive(event.target.value)}');
+    } else if (file.endsWith('RideOverview.tsx')) {
+      expect(source).toContain('min-h-11 min-w-11');
+      expect(source).toContain('md:min-h-6 md:min-w-0');
+      expect(source).toContain('to={`/drives/${drive.id}`}');
+    } else {
+      expect(source).toContain('max-md:[&_button]:min-h-11');
+      expect(source).toContain('max-md:[&_button]:min-w-11');
+    }
+  });
+});
 
 // i18n stub: echo the fallback string so assertions target rendered English.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallbackOrOpts?: unknown) => {
-      if (typeof fallbackOrOpts === 'string') return fallbackOrOpts;
-      if (fallbackOrOpts && typeof fallbackOrOpts === 'object') {
-        const o = fallbackOrOpts as Record<string, unknown>;
-        if (typeof o.defaultValue === 'string') return o.defaultValue;
-      }
-      return key;
+    t: (key: string, fallbackOrOpts?: unknown, maybeOptions?: unknown) => {
+      const text = typeof fallbackOrOpts === 'string' ? fallbackOrOpts
+        : (fallbackOrOpts && typeof fallbackOrOpts === 'object' && 'defaultValue' in fallbackOrOpts
+          && typeof fallbackOrOpts.defaultValue === 'string')
+          ? fallbackOrOpts.defaultValue
+          : key;
+      const values = {
+        ...(fallbackOrOpts && typeof fallbackOrOpts === 'object' ? fallbackOrOpts as Record<string, unknown> : {}),
+        ...(maybeOptions && typeof maybeOptions === 'object' ? maybeOptions as Record<string, unknown> : {}),
+      };
+      return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match: string, name: string) =>
+        values[name] != null ? String(values[name]) : '');
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
@@ -54,10 +128,11 @@ vi.mock('react-i18next', () => ({
 
 // Mutable unit preference so one file exercises both the metric and imperial
 // display-conversion branches. Hoisted so the settings factory can close over it.
-const unitState = vi.hoisted(() => ({
-  length: 'km' as 'km' | 'mi',
-  temp: 'C' as 'C' | 'F',
+const unitState = vi.hoisted((): { length: 'km' | 'mi'; temp: 'C' | 'F' } => ({
+  length: 'km',
+  temp: 'C',
 }));
+const presenterState = vi.hoisted(() => ({ failed: new Set<string>() }));
 
 // File-level useSettings mock (overrides the global test-setup stub) so
 // `useUnits()` derives real converters from a flippable preference.
@@ -126,6 +201,16 @@ vi.mock('@/api/hooks/useDriving', async (importActual) => {
   const actual = await importActual<typeof import('@/api/hooks/useDriving')>();
   return { ...actual, useDrives: vi.fn(), useDrivingCoach: vi.fn() };
 });
+vi.mock('@/api/hooks/useAnnotations', async (importActual) => {
+  const actual = await importActual<typeof import('@/api/hooks/useAnnotations')>();
+  return {
+    ...actual,
+    useChartAnnotations: () => qr({ data: [] }),
+    useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+    useUpdateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+    useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  };
+});
 vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   const actual = await importActual<typeof import('@/hooks/useSelectedVehicle')>();
   return { ...actual, useSelectedVehicle: vi.fn() };
@@ -137,6 +222,10 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
 vi.mock('@/hooks/useSignalQueryInvalidation', () => ({
   useSignalQueryInvalidation: vi.fn(),
 }));
+vi.mock('@/lib/errorReporter', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/errorReporter')>();
+  return { ...actual, reportFrontendError: vi.fn() };
+});
 
 vi.mock('@/components/forms', async (importActual) => {
   const actual = await importActual<typeof import('@/components/forms')>();
@@ -149,64 +238,98 @@ vi.mock('@/components/forms', async (importActual) => {
       <div>
         <span data-testid="range-start">{p.value.start}</span>
         <span data-testid="range-end">{p.value.end}</span>
-        <button
+        <Button
           type="button"
           data-testid="widen-range"
           onClick={() => p.onChange({ start: '2000-01-01', end: '2999-12-31' })}
         >
           widen
-        </button>
+        </Button>
       </div>
     ),
   };
 });
 
-// Replace the child barrel with prop-surfacing doubles. Each double renders the
-// exact page-computed props the assertions care about; DriveAnalyticsSection
-// also exposes the wired date-range callbacks as buttons for interaction tests.
-vi.mock('../components/driving-dynamics', () => ({
-  SummaryStats: (p: any) => (
-    <div data-testid="summary">
-      <span data-testid="summary-vid">{String(p.vehicleId)}</span>
-      <span data-testid="summary-temp">{p.toTemperatureDisplay(100)}</span>
-      <span data-testid="summary-tunit">{p.tempUnit}</span>
-    </div>
+type ModernPanels = typeof import('../components/driving-dynamics-modernization');
+vi.mock('../components/operationalbrief-a-m/MotorSamplesBrief', async () => ({
+  MotorSamplesBrief: (await import('../components/driving-dynamics-modernization')).SummaryStats,
+}));
+
+// Orchestration doubles follow the actual split barrels. Unit cases additionally
+// mount the real stat presenters below, because they now own useUnits().
+vi.mock('../components/driving-dynamics-modernization', () => ({
+  DynamicsPlacement: ({ children }: { children: ReactNode }) => <>{children}</>,
+  LiveSourceWarnings: () => null,
+  RideOverview: (p: ComponentProps<ModernPanels['RideOverview']>) => (
+    <div data-testid="ride-overview">{p.drive?.id ?? 'none'}</div>
   ),
-  LiveMotorStatus: (p: any) => (
+  PowertrainSummary: (p: ComponentProps<ModernPanels['PowertrainSummary']>) => {
+    if (presenterState.failed.has('powertrain-summary')) throw new Error('Synthetic powertrain render failure');
+    return (
+      <div data-testid="powertrain-summary">
+        <span data-testid="history-window">{JSON.stringify(p.historyQuery)}</span>
+      </div>
+    );
+  },
+  SummaryStats: (p: ComponentProps<ModernPanels['SummaryStats']>) => (
+    <div data-testid="summary"><span data-testid="summary-vid">{String(p.vehicleId)}</span></div>
+  ),
+  LiveMotorStatus: (p: ComponentProps<ModernPanels['LiveMotorStatus']>) => (
     <div data-testid="live-motor">
       <span data-testid="live-vid">{String(p.vehicleId)}</span>
       <span data-testid="live-temp">{p.toTemperatureDisplay(100)}</span>
       <span data-testid="live-tunit">{p.tempUnit}</span>
     </div>
   ),
-  PedalUsage: (p: any) => <div data-testid="pedal">{String(p.vehicleId)}</div>,
-  GForcePanel: (p: any) => <div data-testid="gforce">{String(p.vehicleId)}</div>,
-  AutopilotSection: (p: any) => <div data-testid="autopilot">{String(p.vehicleId)}</div>,
-  SpeedGearPanel: (p: any) => (
+  PedalUsage: (p: ComponentProps<ModernPanels['PedalUsage']>) => {
+    if (presenterState.failed.has('pedal')) throw new Error('Synthetic pedal render failure');
+    return <div data-testid="pedal">{String(p.vehicleId)}</div>;
+  },
+  GForcePanel: (p: ComponentProps<ModernPanels['GForcePanel']>) => <div data-testid="gforce">{String(p.vehicleId)}</div>,
+  SpeedGearPanel: (p: ComponentProps<ModernPanels['SpeedGearPanel']>) => (
     <div data-testid="speed-gear">
       <span data-testid="sg-vid">{String(p.vehicleId)}</span>
       <span data-testid="sg-count">{p.filteredDrives.length}</span>
-      <span data-testid="sg-speed">{p.toSpeedDisplay(10)}</span>
-      <span data-testid="sg-sunit">{p.speedUnit}</span>
     </div>
   ),
-  MotorEfficiencyInsights: (p: any) => (
+  MotorHistoryCharts: (p: ComponentProps<ModernPanels['MotorHistoryCharts']>) => {
+    if (presenterState.failed.has('motor-history')) throw new Error('Synthetic history render failure');
+    return <div data-testid="motor-history"><span data-testid="mh-vid">{String(p.vehicleId)}</span></div>;
+  },
+  DrivingTips: (p: ComponentProps<ModernPanels['DrivingTips']>) => (
+    <div data-testid="tips"><span data-testid="tips-vid">{String(p.vehicleId)}</span></div>
+  ),
+  DynamicsTripToolbar: (p: ComponentProps<ModernPanels['DynamicsTripToolbar']>) => (
+    <div data-testid="trip-toolbar">
+      <span data-testid="tt-count">{p.drives.length}</span>
+      <span data-testid="tt-drive">{p.selectedDriveId}</span>
+      <span data-testid="tt-start">{p.startDate}</span>
+      <span data-testid="tt-end">{p.endDate}</span>
+      <Button onClick={() => p.onSelectDrive('2')}>Select second ride</Button>
+    </div>
+  ),
+}));
+
+// Retained complex presenters still import from the original barrel.
+type DomainPanels = typeof import('../components/driving-dynamics');
+vi.mock('../components/driving-dynamics', () => ({
+  AutopilotSection: (p: ComponentProps<DomainPanels['AutopilotSection']>) => <div data-testid="autopilot">{String(p.vehicleId)}</div>,
+  MotorEfficiencyInsights: (p: ComponentProps<DomainPanels['MotorEfficiencyInsights']>) => (
     <div data-testid="efficiency">
       <span data-testid="eff-vid">{String(p.vehicleId)}</span>
       <span data-testid="eff-tunit">{p.tempUnit}</span>
     </div>
   ),
-  MotorHistoryCharts: (p: any) => (
-    <div data-testid="motor-history">
-      <span data-testid="mh-vid">{String(p.vehicleId)}</span>
-      <span data-testid="mh-speed">{p.toSpeedDisplay(10)}</span>
-      <span data-testid="mh-sunit">{p.speedUnit}</span>
-    </div>
-  ),
-  DrivingCoachSection: (p: any) => (
-    <div data-testid="coach">{String(p.vehicleId)}</div>
-  ),
-  DriveAnalyticsSection: (p: any) => (
+  DrivingCoachSection: (p: ComponentProps<DomainPanels['DrivingCoachSection']>) => {
+    if (presenterState.failed.has('coach')) throw new Error('Synthetic coach render failure');
+    return (
+      <div data-testid="coach">
+        {String(p.vehicleId)}
+        <span data-testid="coach-table-visible">{String(p.showPerDriveScores)}</span>
+      </div>
+    );
+  },
+  DriveAnalyticsSection: (p: ComponentProps<DomainPanels['DriveAnalyticsSection']>) => (
     <div data-testid="drive-analytics">
       <span data-testid="da-count">{p.filteredDrives.length}</span>
       <span data-testid="da-dunit">{p.distanceUnit}</span>
@@ -215,27 +338,14 @@ vi.mock('../components/driving-dynamics', () => ({
       <span data-testid="da-speed">{p.toSpeedDisplay(10)}</span>
     </div>
   ),
-  DrivingTips: (p: any) => (
-    <div data-testid="tips">
-      <span data-testid="tips-vid">{String(p.vehicleId)}</span>
-    </div>
-  ),
-  GrokDynamicsBriefing: (p: any) => (
+  GrokDynamicsBriefing: (p: ComponentProps<DomainPanels['GrokDynamicsBriefing']>) => (
     <div data-testid="grok-briefing">{String(p.vehicleId)}</div>
-  ),
-  DynamicsTripToolbar: (p: any) => (
-    <div data-testid="trip-toolbar">
-      <span data-testid="tt-count">{p.drives.length}</span>
-      <span data-testid="tt-drive">{p.selectedDriveId}</span>
-      <span data-testid="tt-start">{p.startDate}</span>
-      <span data-testid="tt-end">{p.endDate}</span>
-    </div>
   ),
 }));
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) reads it.
 if (typeof window.matchMedia !== 'function') {
-  window.matchMedia = ((query: string) => ({
+  window.matchMedia = (query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -244,7 +354,7 @@ if (typeof window.matchMedia !== 'function') {
     addListener: () => {},
     removeListener: () => {},
     dispatchEvent: () => false,
-  })) as unknown as typeof window.matchMedia;
+  });
 }
 
 import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
@@ -260,24 +370,25 @@ const mockCoach = vi.mocked(useDrivingCoach);
 const mockSelectedVehicle = vi.mocked(useSelectedVehicle);
 const mockSignalSync = vi.mocked(useSignalQueryInvalidation);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. DataFreshness fields). */
-function qr(over: Record<string, unknown> = {}): any {
-  return {
-    data: undefined,
-    isLoading: false,
-    error: null,
-    isError: false,
-    isStale: false,
-    isFetching: false,
-    dataUpdatedAt: Date.now(),
-    refetch: vi.fn(),
-    ...over,
-  };
+function qr<T = never>(over: DataStateSource<T> = {}): UseQueryResult<T, Error> {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  const queryKey = ['dynamics-test-source'];
+  const query = client.getQueryCache().build<T, Error>(client, { queryKey });
+  query.setState({
+    data: over.data,
+    error: over.error instanceof Error ? over.error : null,
+    status: over.isError ? 'error' : over.data === undefined ? 'pending' : 'success',
+    fetchStatus: over.fetchStatus ?? (over.isLoading || over.isFetching ? 'fetching' : 'idle'),
+    dataUpdatedAt: over.dataUpdatedAt ?? Date.now(),
+  });
+  const result = new QueryObserver<T, Error>(client, { queryKey, enabled: false }).getCurrentResult();
+  return { ...result, refetch: vi.fn<UseQueryResult<T, Error>['refetch']>().mockResolvedValue(result) };
 }
 
-function motorSnap(over: Record<string, unknown> = {}): any {
+function motorSnap(over: Partial<MotorSnapshot> = {}): MotorSnapshot {
   return {
     ts: '2025-06-15T12:00:00Z',
+    created_at: '2025-06-15T12:00:00Z',
     power_kw: 0,
     regen_kw: 0,
     torque_nm_front: null,
@@ -286,6 +397,17 @@ function motorSnap(over: Record<string, unknown> = {}): any {
     motor_temp_c_rear: null,
     motor_rpm_front: null,
     motor_rpm_rear: null,
+    di_torque: null,
+    inverter_temp_c: null,
+    inverter_temp_rear: null,
+    heatsink_temp_front: null,
+    heatsink_temp_rear: null,
+    motor_current_front: null,
+    motor_current_rear: null,
+    state_front: null,
+    state_rear: null,
+    vbat_front: null,
+    vbat_rear: null,
     shift_state: 'D',
     ...over,
   };
@@ -297,7 +419,52 @@ const AGGRESSIVE_HISTORY = [
   motorSnap({ power_kw: 110, torque_nm_front: 120, torque_nm_rear: 180, motor_temp_c_front: 60, motor_temp_c_rear: 70, regen_kw: -30 }),
 ];
 
-function drive(over: Record<string, unknown> = {}): any {
+describe('Driving dynamics motor chart palette adoption', () => {
+  it('changes colors without changing points, signs, gaps, axes, or persisted series visibility', async () => {
+    const { default: MotorHistoryCharts } = await vi.importActual<
+      typeof import('../components/driving-dynamics-modernization/MotorHistoryCharts')
+    >('../components/driving-dynamics-modernization/MotorHistoryCharts');
+    const samples = [
+      motorSnap({ power_kw: -0.5, regen_kw: 0, torque_nm_front: -25, torque_nm_rear: 75, motor_rpm_front: -120, motor_rpm_rear: 400 }),
+      motorSnap({ power_kw: null, regen_kw: -2, torque_nm_front: null, torque_nm_rear: 0, motor_rpm_front: null, motor_rpm_rear: 0 }),
+    ];
+    mockMotorHistory.mockReturnValue(qr({ data: samples }));
+    const client = new QueryClient();
+    const ui = () => <MemoryRouter><QueryClientProvider client={client}>
+      <MotorHistoryCharts vehicleId={1} historyQuery={{ enabled: true }} />
+    </QueryClientProvider></MemoryRouter>;
+    const view = render(ui());
+    const points = screen.getAllByTestId(/palette-(area|line)-chart/).map(chart => chart.getAttribute('data-points'));
+    expect(points).toHaveLength(3);
+    expect(JSON.parse(points[0]!)).toEqual([
+      expect.objectContaining({ power: -0.5, regen: 0 }),
+      expect.objectContaining({ power: null, regen: -2 }),
+    ]);
+    expect(screen.getByTestId('palette-area-power')).toHaveAttribute('data-stroke', paletteState.colors[0]);
+    expect(screen.getByTestId('palette-area-regen')).toHaveAttribute('data-stroke', paletteState.colors[1]);
+    expect(screen.getAllByRole('button', { name: 'Export chart' })).toHaveLength(3);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Toggle front series' })[1]);
+    expect(screen.getAllByTestId('palette-line-front')[0]).toHaveAttribute('data-hidden', 'true');
+    paletteState.colors = ['var(--semantic-purple)', 'var(--semantic-info)'];
+    view.rerender(ui());
+    expect(screen.getAllByTestId(/palette-(area|line)-chart/).map(chart => chart.getAttribute('data-points'))).toEqual(points);
+    expect(screen.getByTestId('palette-area-power')).toHaveAttribute('data-stroke', paletteState.colors[0]);
+    expect(screen.getByTestId('palette-area-power')).toHaveAttribute('data-fill', 'url(#powerAreaGrad)');
+    expect(screen.getAllByTestId('palette-line-front')[0]).toHaveAttribute('data-hidden', 'true');
+    expect(screen.getAllByRole('button', { name: 'Export chart' })).toHaveLength(3);
+    expect(view.container.querySelector('#powerAreaGrad stop')).toHaveAttribute('stop-color', paletteState.colors[0]);
+    expect(view.container.querySelector('#regenAreaGrad stop')).toHaveAttribute('stop-color', paletteState.colors[1]);
+    expect(view.container.querySelector('#powerAreaGrad stop')).toHaveAttribute('stop-opacity', '0.08');
+    for (const line of screen.getAllByTestId(/palette-(area|line)-(power|regen|front|rear)$/)) {
+      expect(line).toHaveAttribute('data-connect-nulls', 'false');
+    }
+    expect(view.container.querySelectorAll('[data-axis-key="time"]')).toHaveLength(3);
+    expect(Array.from(view.container.querySelectorAll('[data-axis-unit]'), axis => axis.getAttribute('data-axis-unit')))
+      .toEqual([' kW', ' Nm', ' rpm']);
+  });
+});
+
+function drive(over: Partial<Drive> = {}): Drive {
   return {
     id: 1,
     vehicleId: 1,
@@ -308,6 +475,21 @@ function drive(over: Record<string, unknown> = {}): any {
     avgSpeedMps: 14,
     maxSpeedMps: 30,
     avgPowerW: 20_000,
+    startAddress: null,
+    endAddress: null,
+    startLat: null,
+    startLon: null,
+    endLat: null,
+    endLon: null,
+    startBatteryPct: null,
+    endBatteryPct: null,
+    energyUsedWh: null,
+    regenEnergyWh: null,
+    outsideTempAvgC: null,
+    insideTempAvgC: null,
+    endedStatus: null,
+    createdAt: '2025-06-01T11:00:00Z',
+    updatedAt: '2025-06-01T11:00:00Z',
     score: 80,
     ...over,
   };
@@ -315,29 +497,48 @@ function drive(over: Record<string, unknown> = {}): any {
 
 // One in the default window, one before it, one after it, and one with a
 // missing timestamp (exercises the `?? ''` guard — always excluded).
-const DRIVES = [
+const DRIVES: (Drive | { id: number; startTs: null })[] = [
   drive({ id: 1, startTs: '2025-06-12T10:00:00Z' }), // in window
   drive({ id: 2, startTs: '2025-03-01T10:00:00Z' }), // before window
   drive({ id: 3, startTs: '2025-12-01T10:00:00Z' }), // after window
-  drive({ id: 4, startTs: null }), // undated — never in any window
+  { id: 4, startTs: null }, // undated — never in any window
 ];
+
+function vehicle(id: number, display_name: string): Vehicle {
+  return {
+    id, vehicle_id: id, display_name, vin: `SYNTHETIC-${id}`, model: '3',
+    trim_badging: '', exterior_color: '', wheel_type: '', state: 'unknown', healthy: false,
+    created_at: '2025-06-01T00:00:00Z', updated_at: '2025-06-01T00:00:00Z',
+  };
+}
 
 function installHappyPath() {
   mockSelectedVehicle.mockReturnValue({
     vehicleId: 1,
     vehicle: null,
     vehicles: [
-      { id: 1, display_name: 'Car One', vin: 'VIN1' },
-      { id: 2, display_name: 'Car Two', vin: 'VIN2' },
-    ] as any,
+      vehicle(1, 'Car One'),
+      vehicle(2, 'Car Two'),
+    ],
     setVehicleId: vi.fn(),
   });
   mockMotorLatest.mockReturnValue(
     qr({ data: motorSnap({ shift_state: 'D', power_kw: 42, motor_temp_c_front: 30, motor_temp_c_rear: 35 }) }),
   );
   mockMotorHistory.mockReturnValue(qr({ data: AGGRESSIVE_HISTORY }));
-  mockDrives.mockReturnValue(qr({ data: DRIVES }));
-  mockCoach.mockReturnValue(qr({ data: { score: 88, style: 'efficient', trend: [] } }));
+  mockDrives.mockImplementation((_vehicleId, options) => {
+    const window = typeof options === 'number' ? undefined : options;
+    return qr({
+      data: DRIVES.filter((item): item is Drive => item.startTs !== null && (!window?.start ||
+        (item.startTs >= window.start && item.startTs < (window.end ?? '9999')))),
+    });
+  });
+  mockCoach.mockReturnValue(qr<DrivingCoachData>({ data: {
+    overall_score: 88, efficiency_wh_km: 160, best_efficiency_wh_km: 145,
+    total_drives_analyzed: 3, style_breakdown: { efficient: 3 },
+    patterns: { hard_accel_pct: 0, hard_brake_pct: 0, highway_pct: 0, short_trip_pct: 0, cold_start_pct: 0 },
+    weekly_trend: [], recommendations: [], per_drive_scores: [],
+  } }));
 }
 
 function HeaderRangeControl() {
@@ -366,8 +567,56 @@ function renderPage(route = '/') {
 
 const num = (testId: string) => Number(screen.getByTestId(testId).textContent);
 
+async function renderRealUnitPresenters() {
+  const [{ default: SummaryStats }, { default: SpeedGearPanel }] = await Promise.all([
+    vi.importActual<typeof import('../components/driving-dynamics-modernization/SummaryStats')>(
+      '../components/driving-dynamics-modernization/SummaryStats',
+    ),
+    vi.importActual<typeof import('../components/driving-dynamics-modernization/SpeedGearPanel')>(
+      '../components/driving-dynamics-modernization/SpeedGearPanel',
+    ),
+  ]);
+  mockMotorHistory.mockReturnValue(qr({ data: [
+    motorSnap({ motor_temp_c_front: 100, motor_temp_c_rear: 100 }),
+  ] }));
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <section aria-label="Real unit presenters">
+          <SummaryStats vehicleId={1} historyQuery={{ enabled: true }} />
+          <SpeedGearPanel vehicleId={1} filteredDrives={[
+            drive({ avgSpeedMps: 10, maxSpeedMps: 10 }),
+          ]} />
+        </section>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const region = screen.getByRole('region', { name: 'Real unit presenters' });
+  const metric = (label: string) => {
+    const tile = within(region).getByText(label).closest('[data-stat], [data-operational-metric]');
+    expect(tile).not.toBeNull();
+    const value = tile!.querySelector('[data-stat-value], [data-operational-value]');
+    const unit = tile!.querySelector('[data-stat-unit]');
+    expect(value).not.toBeNull();
+    // OperationalBrief renders the real formatted value and unit as one string.
+    if (tile!.hasAttribute('data-operational-metric')) {
+      const formatted = value!.textContent?.match(/^(-?\d+(?:\.\d+)?)\s*(.+)$/);
+      expect(formatted).not.toBeNull();
+      return { value: Number(formatted![1]), unit: formatted![2] };
+    }
+    return { value: Number(value!.textContent), unit: unit?.textContent };
+  };
+  return metric;
+}
+
+beforeAll(async () => {
+  await i18n.init({ lng: 'en', resources: { en: { translation: {} } }, initAsync: false });
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
+  presenterState.failed.clear();
   unitState.length = 'km';
   unitState.temp = 'C';
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -384,37 +633,37 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Driving Dynamics' }),
+      screen.getByRole('heading', { level: 1, name: 'Driving dynamics' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Live motor telemetry, G-forces, and Grok’s powertrain read'),
+      screen.getByText('Understand one ride: energy outcome, powertrain evidence, and the signals behind it.'),
     ).toBeInTheDocument();
 
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
 
     // Every <section aria-label> becomes an accessible region.
     const regions = screen.getAllByRole('region');
-    expect(regions).toHaveLength(10);
+    expect(regions).toHaveLength(4);
     expect(screen.getByRole('region', { name: 'Trip review' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Live cockpit' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: "Grok's powertrain read" })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Motor efficiency' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Drive Analytics' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Vehicle now' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Inside this ride' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Beyond this ride' })).toBeInTheDocument();
+    expect(screen.getByTestId('coach-table-visible')).toHaveTextContent('false');
+    expect(screen.getByTestId('ride-overview')).toBeInTheDocument();
+    expect(screen.getByTestId('powertrain-summary')).toBeInTheDocument();
     expect(screen.getByTestId('grok-briefing')).toHaveTextContent('1');
   });
 
   it('sets the document title via usePageTitle', () => {
     renderPage();
-    expect(document.title).toContain('Driving Dynamics');
+    expect(document.title).toContain('Driving dynamics');
   });
 
   it('wires the page-owned data hooks with SI/snake_case-correct arguments', () => {
     renderPage();
-    // Only two queries stay at page level: the live-motor query (PageContainer
-    // needs it for the header freshness chip) and the drives list (the
-    // shared date filter narrows it for two different panels). Everything
-    // else is owned by the panel that renders it, at its own cadence.
-    expect(mockMotorLatest).toHaveBeenCalledWith(1, 5000);
+    // The history observer owns one source notice with the same panel key.
+    // Current motor state and coaching remain independently panel-owned.
+    expect(mockMotorLatest).not.toHaveBeenCalled();
     expect(mockDrives).toHaveBeenCalledWith(
       '1',
       expect.objectContaining({ limit: 1000, refetchInterval: 30000 }),
@@ -423,8 +672,9 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
       '1',
       expect.objectContaining({ limit: 5, refetchInterval: 30000 }),
     );
-    // History stays in the trip panels (shared drive window), not the page.
-    expect(mockMotorHistory).not.toHaveBeenCalled();
+    expect(mockMotorHistory).toHaveBeenCalledWith(1, expect.objectContaining({
+      limit: 200, enabled: true, refetchInterval: false,
+    }));
     expect(mockCoach).not.toHaveBeenCalled();
   });
 
@@ -450,11 +700,12 @@ describe('DrivingDynamicsPage — live push bridge', () => {
     renderPage();
 
     expect(mockSignalSync).toHaveBeenCalled();
-    const arg = mockSignalSync.mock.calls.at(-1)?.[0] as any;
+    const arg = mockSignalSync.mock.calls.at(-1)?.[0];
+    if (!arg) throw new Error('Expected page signal bindings');
     expect(arg.vehicleId).toBe(1);
 
     const byKey = new Map<string, string[]>(
-      arg.bindings.map((b: any) => [JSON.stringify(b.queryKey), [...b.fields]]),
+      arg.bindings.map((b) => [JSON.stringify(b.queryKey), [...b.fields]]),
     );
 
     // Field names must match the backend projections verbatim — motorMappings
@@ -474,10 +725,56 @@ describe('DrivingDynamicsPage — live push bridge', () => {
       'BrakePedalPos',
       'BrakePedal',
     ]);
+    expect(byKey.get(JSON.stringify(['signal-observations', 1]))).toEqual([
+      'CruiseSetSpeed', 'CruiseFollowDistance', 'VehicleSpeed',
+    ]);
   });
 });
 
 describe('DrivingDynamicsPage — drive date filtering', () => {
+  it('uses the explicitly selected ride timestamps and stops completed-trip polling', () => {
+    mockDrives.mockReturnValue(qr({ data: [
+      drive({ id: 1, startTs: '2025-06-12T10:00:00Z', endTs: '2025-06-12T11:00:00Z' }),
+      drive({ id: 2, startTs: '2025-06-13T12:00:00Z', endTs: '2025-06-13T12:30:00Z' }),
+    ] }));
+    renderPage('/driving/dynamics?drive=1');
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('1');
+    expect(JSON.parse(screen.getByTestId('history-window').textContent!)).toEqual({
+      start: '2025-06-12T10:00:00Z', end: '2025-06-12T11:00:01.000Z',
+      refetchInterval: false, enabled: true,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Select second ride' }));
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('2');
+    expect(JSON.parse(screen.getByTestId('history-window').textContent!).start).toBe('2025-06-13T12:00:00Z');
+  });
+
+  it('prefers the in-progress drive only when no explicit trip is requested', () => {
+    mockDrives.mockReturnValue(qr({ data: [
+      drive({ id: 1 }),
+      drive({ id: 2, startTs: '2025-06-15T11:00:00Z', endTs: null }),
+    ] }));
+    renderPage();
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('2');
+    expect(JSON.parse(screen.getByTestId('history-window').textContent!).refetchInterval).toBe(30000);
+  });
+
+  it('disables historical motor queries rather than falling back to vehicle-wide history', () => {
+    mockDrives.mockReturnValue(qr({ data: [] }));
+    renderPage();
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('none');
+    expect(JSON.parse(screen.getByTestId('history-window').textContent!)).toEqual({ enabled: false });
+    expect(screen.getByRole('region', { name: 'Vehicle now' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Beyond this ride' })).toBeInTheDocument();
+  });
+
+  it('does not drop server-scoped trips by comparing UTC dates to local calendar bounds', () => {
+    mockDrives.mockReturnValue(qr({ data: [drive({
+      id: 1, startTs: '2025-06-16T03:00:00Z', endTs: '2025-06-16T04:00:00Z',
+    })] }));
+    renderPage('/driving/dynamics?from=2025-06-15&to=2025-06-15');
+    expect(screen.getByTestId('tt-drive')).toHaveTextContent('1');
+    expect(num('da-count')).toBe(1);
+  });
   it('filters drives to the shared URL window', () => {
     renderPage('/driving/dynamics?from=2025-06-09&to=2025-06-15');
     expect(screen.queryByTestId('range-start')).not.toBeInTheDocument();
@@ -514,34 +811,125 @@ describe('DrivingDynamicsPage — drive date filtering', () => {
 });
 
 describe('DrivingDynamicsPage — unit conversion boundary', () => {
-  it('threads metric SI→display converters and units to children', () => {
+  it('lets one history owner annotate retained data while every real evidence panel keeps its content', async () => {
+    const [
+      { default: PowertrainSummary },
+      { default: MotorHistoryCharts },
+      { default: DrivingTips },
+      { MotorSamplesBrief },
+    ] = await Promise.all([
+      vi.importActual<typeof import('../components/driving-dynamics-modernization/PowertrainSummary')>(
+        '../components/driving-dynamics-modernization/PowertrainSummary',
+      ),
+      vi.importActual<typeof import('../components/driving-dynamics-modernization/MotorHistoryCharts')>(
+        '../components/driving-dynamics-modernization/MotorHistoryCharts',
+      ),
+      vi.importActual<typeof import('../components/driving-dynamics-modernization/DrivingTips')>(
+        '../components/driving-dynamics-modernization/DrivingTips',
+      ),
+      vi.importActual<typeof import('../components/operationalbrief-a-m/MotorSamplesBrief')>(
+        '../components/operationalbrief-a-m/MotorSamplesBrief',
+      ),
+    ]);
+    mockMotorHistory.mockReturnValue(qr({
+      data: [motorSnap({ power_kw: 0, torque_nm_front: 0, motor_rpm_front: 0 })],
+      error: new Error('Retained history failure'), isError: true,
+    }));
+    const props = { vehicleId: 1, historyQuery: { enabled: true }, showSourceNotice: false };
+    render(<QueryClientProvider client={new QueryClient()}><MemoryRouter>
+      <PowertrainSummary {...props} />
+      <MotorSamplesBrief {...props} />
+      <MotorHistoryCharts {...props} />
+      <DrivingTips {...props} />
+    </MemoryRouter></QueryClientProvider>);
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByText('Power & regeneration')).toBeInTheDocument();
+    expect(screen.getByText('How to read this ride')).toBeInTheDocument();
+    expect(screen.getAllByTestId(/palette-(area|line)-chart/)).toHaveLength(3);
+    const count = screen.getByText('Total Readings').closest('[data-operational-metric]');
+    expect(count?.querySelector('[data-operational-value]')).toHaveTextContent('1');
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+
+  it.each([
+    { name: 'unresolved', result: qr<MotorSnapshot[]>({ data: undefined }), expected: 'missing' },
+    { name: 'loading', result: qr<MotorSnapshot[]>({ isLoading: true }), expected: 'missing' },
+    { name: 'fatal', result: qr<MotorSnapshot[]>({ isError: true, error: new Error('history failed') }), expected: 'missing' },
+    { name: 'resolved empty', result: qr<MotorSnapshot[]>({ data: [] }), expected: 'value' },
+    { name: 'resolved samples', result: qr<MotorSnapshot[]>({ data: [motorSnap({ power_kw: 0 })] }), expected: 'value' },
+  ])('keeps the motor sample count honest for $name evidence', async ({ name, result, expected }) => {
+    const { MotorSamplesBrief } = await vi.importActual<typeof import('../components/operationalbrief-a-m/MotorSamplesBrief')>(
+      '../components/operationalbrief-a-m/MotorSamplesBrief',
+    );
+    mockMotorHistory.mockReturnValue(result);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter>
+      <MotorSamplesBrief vehicleId={1} historyQuery={{ enabled: true }} />
+    </MemoryRouter></QueryClientProvider>);
+    if (expected === 'missing' && name !== 'loading') {
+      // Unresolved/fatal evidence omits the tile from the face and counts it hidden.
+      assertOperationalMetricUnavailable(
+        screen.getByRole('region', { name: 'Selected-drive motor samples' }), 'Total Readings');
+      return;
+    }
+    const metric = screen.getByText('Total Readings').closest('[data-operational-metric]');
+    expect(metric).toHaveAttribute('data-value-state', expected);
+    if (expected === 'value') {
+      expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent(String(result.data?.length));
+    } else {
+      expect(metric?.querySelector('[data-operational-value]')?.textContent ?? '').not.toBe('0');
+    }
+  });
+
+  it('excludes missing and invalid speeds without changing the measured-sample denominator', async () => {
+    const { default: SpeedGearPanel } = await vi.importActual<typeof import('../components/driving-dynamics-modernization/SpeedGearPanel')>(
+      '../components/driving-dynamics-modernization/SpeedGearPanel',
+    );
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><MemoryRouter>
+      <SpeedGearPanel vehicleId={1} filteredDrives={[
+        drive({ avgSpeedMps: 0, maxSpeedMps: 0 }),
+        drive({ avgSpeedMps: -0.5, maxSpeedMps: 1.25 }),
+        drive({ avgSpeedMps: null, maxSpeedMps: null }),
+        drive({ avgSpeedMps: NaN, maxSpeedMps: Infinity }),
+      ]} />
+    </MemoryRouter></QueryClientProvider>);
+    expect(screen.getByText('Avg Drive Speed').closest('[data-operational-metric]')).toHaveTextContent('-0.90 km/h');
+    expect(screen.getByText('Top Drive Speed').closest('[data-operational-metric]')).toHaveTextContent('4.50 km/h');
+  });
+
+  it('threads metric SI→display converters and units to children', async () => {
     renderPage();
+    const metric = await renderRealUnitPresenters();
     // km / km/h / °C.
     expect(screen.getByTestId('da-dunit')).toHaveTextContent('km');
-    expect(screen.getByTestId('sg-sunit')).toHaveTextContent('km/h');
-    expect(screen.getByTestId('summary-tunit')).toHaveTextContent('°C');
+    expect(metric('Avg Drive Speed').unit).toBe('km/h');
+    expect(metric('Avg Motor Temp').unit).toBe('°C');
     // convertDistanceFromSI(1000, 'km') = 1; convertSpeedFromSI(10, 'km/h') = 36;
     // convertTempFromSI(100, '°C') = 100.
     expect(num('da-distance')).toBe(1);
-    expect(num('sg-speed')).toBe(36);
-    expect(num('mh-speed')).toBe(36);
-    expect(num('summary-temp')).toBe(100);
+    expect(metric('Avg Drive Speed').value).toBe(36);
+    // Motor history charts carry power/torque/RPM, not a speed converter.
+    // Preserve the second speed assertion on the real maximum-speed tile.
+    expect(metric('Top Drive Speed').value).toBe(36);
+    expect(metric('Avg Motor Temp').value).toBe(100);
     expect(num('live-temp')).toBe(100);
   });
 
-  it('threads imperial converters and units when preferences flip', () => {
+  it('threads imperial converters and units when preferences flip', async () => {
     unitState.length = 'mi';
     unitState.temp = 'F';
     renderPage();
+    const metric = await renderRealUnitPresenters();
 
     expect(screen.getByTestId('da-dunit')).toHaveTextContent('mi');
-    expect(screen.getByTestId('sg-sunit')).toHaveTextContent('mph');
-    expect(screen.getByTestId('summary-tunit')).toHaveTextContent('°F');
+    expect(metric('Avg Drive Speed').unit).toBe('mph');
+    expect(metric('Avg Motor Temp').unit).toBe('°F');
     // convertSpeedFromSI(10, 'mph') ≈ 22.37; convertDistanceFromSI(1000, 'mi') ≈ 0.621;
     // convertTempFromSI(100, '°F') = 212.
-    expect(num('sg-speed')).toBeCloseTo(22.37, 2);
+    expect(metric('Avg Drive Speed').value).toBeCloseTo(22.37, 2);
     expect(num('da-distance')).toBeCloseTo(0.621, 3);
-    expect(num('summary-temp')).toBe(212);
+    expect(metric('Avg Motor Temp').value).toBe(212);
   });
 });
 
@@ -550,7 +938,7 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
     mockSelectedVehicle.mockReturnValue({
       vehicleId: null,
       vehicle: null,
-      vehicles: [] as any,
+      vehicles: [],
       setVehicleId: vi.fn(),
     });
     mockMotorLatest.mockReturnValue(qr({ data: undefined }));
@@ -564,7 +952,7 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
 
     // vehicleId ?? 0 → the live hook receives 0 (its `enabled` gate);
     // the drives list receives undefined.
-    expect(mockMotorLatest).toHaveBeenCalledWith(0, 5000);
+    expect(mockMotorLatest).not.toHaveBeenCalled();
     expect(mockDrives).toHaveBeenCalledWith(
       undefined,
       expect.objectContaining({ refetchInterval: 30000 }),
@@ -579,10 +967,201 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
   it('still renders every section and hides the picker for an empty fleet', () => {
     renderPage();
     // No blank page: all labelled regions remain, filtered list is empty.
-    expect(screen.getAllByRole('region')).toHaveLength(10);
+    expect(screen.getAllByRole('region')).toHaveLength(4);
     expect(num('da-count')).toBe(0);
     expect(screen.getByTestId('coach')).toHaveTextContent('undefined');
     // The page does not render a local vehicle selector when the fleet is empty.
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
+  });
+});
+
+describe('DrivingDynamicsPage — independent source recovery', () => {
+  it('shows an initial paused range source, retains the independent ride, and retries only the paused source', () => {
+    const range = qr<Drive[]>({ fetchStatus: 'paused' });
+    const latest = qr({ data: [drive({ id: 7, endTs: null })] });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : latest,
+    );
+    const view = renderPage('/driving-dynamics');
+    expect(screen.getByText('The initial evidence query is paused; no empty result is inferred.')).toBeInTheDocument();
+    expect(screen.queryByText(/device is offline/i)).toBeNull();
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('7');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(range.refetch).toHaveBeenCalledTimes(1);
+    expect(latest.refetch).not.toHaveBeenCalled();
+    mockDrives.mockReturnValue(qr({ data: [] }));
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><DrivingDynamicsPage /></QueryClientProvider></MemoryRouter>);
+    expect(screen.queryByText(/initial evidence query is paused/)).toBeNull();
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+  });
+
+  it('keeps all four groups mounted during initial range loading', () => {
+    const range = qr<Drive[]>({ isLoading: true, isFetching: true });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : qr({ data: [] }),
+    );
+    const { container } = renderPage('/driving-dynamics');
+
+    expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('none');
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+    expect(screen.getByTestId('coach')).toHaveTextContent('1');
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('shows one history pause notice without hiding independent live panels and recovers to empty', () => {
+    const history = qr<MotorSnapshot[]>({ fetchStatus: 'paused' });
+    mockMotorHistory.mockReturnValue(history);
+    const view = renderPage('/driving-dynamics');
+    expect(screen.getAllByText('The initial evidence query is paused; no empty result is inferred.')).toHaveLength(1);
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+    expect(screen.getByTestId('pedal')).toBeInTheDocument();
+    expect(screen.getByTestId('gforce')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(history.refetch).toHaveBeenCalledTimes(1);
+    mockMotorHistory.mockReturnValue(qr({ data: [] }));
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><DrivingDynamicsPage /></QueryClientProvider></MemoryRouter>);
+    expect(screen.queryByText(/initial evidence query is paused/)).toBeNull();
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByTestId('summary')).toBeInTheDocument();
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+  });
+
+  it('keeps active history loading distinct from a pause or measured zero', () => {
+    mockMotorHistory.mockReturnValue(qr<MotorSnapshot[]>({ isLoading: true, isFetching: true }));
+    renderPage('/driving-dynamics');
+    expect(screen.queryByText(/initial evidence query is paused/)).toBeNull();
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByTestId('summary')).toBeInTheDocument();
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+  });
+
+  it('offers exactly one retained history refresh and clears it on recovery without retrying live sources', () => {
+    const history = qr({
+      data: [motorSnap({ power_kw: 0 })],
+      error: new Error('Synthetic history refresh failure'), isError: true,
+    });
+    const live = qr({ data: motorSnap() });
+    mockMotorHistory.mockReturnValue(history);
+    mockMotorLatest.mockReturnValue(live);
+    const view = renderPage('/driving-dynamics');
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(history.refetch).toHaveBeenCalledTimes(1);
+    expect(live.refetch).not.toHaveBeenCalled();
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+    expect(screen.getByTestId('powertrain-summary')).toBeInTheDocument();
+    mockMotorHistory.mockReturnValue(qr({ data: [motorSnap({ power_kw: 0 })] }));
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><DrivingDynamicsPage /></QueryClientProvider></MemoryRouter>);
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByTestId('motor-history')).toBeInTheDocument();
+  });
+
+  it('recovers the failed range source without discarding an independently returned open drive', () => {
+    const range = qr<Drive[]>({ error: new Error('Synthetic range failure'), isError: true });
+    const latest = qr({ data: [drive({ id: 7, startTs: '2025-06-15T11:00:00Z', endTs: null })] });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : latest,
+    );
+    renderPage('/driving-dynamics');
+
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('7');
+    expect(screen.getByTestId('tt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('mh-vid')).toHaveTextContent('1');
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(range.refetch).toHaveBeenCalledTimes(1);
+    expect(latest.refetch).not.toHaveBeenCalled();
+  });
+
+  it('retains the selected completed ride on a failed range refresh and retries only that source', () => {
+    const range = qr({
+      data: [drive({ id: 1, startTs: '2025-06-12T10:00:00Z', endTs: '2025-06-12T11:00:00Z' })],
+      error: new Error('Synthetic retained range failure'), isError: true,
+      dataUpdatedAt: Date.parse('2025-06-15T11:00:00Z'),
+    });
+    const latest = qr({ data: [] });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : latest,
+    );
+    renderPage('/driving-dynamics?drive=1');
+
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('1');
+    expect(JSON.parse(screen.getByTestId('history-window').textContent!)).toEqual({
+      start: '2025-06-12T10:00:00Z', end: '2025-06-12T11:00:01.000Z',
+      enabled: true, refetchInterval: false,
+    });
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('Previously loaded data remains visible while affected sources recover.');
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(range.refetch).toHaveBeenCalledTimes(1);
+    expect(latest.refetch).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+  });
+
+  it('keeps recorded range evidence and retries only an unavailable current-drive source', () => {
+    const range = qr({ data: [drive({ id: 1 })] });
+    const latest = qr<Drive[]>({ error: new Error('Synthetic latest failure'), isError: true });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : latest,
+    );
+    renderPage('/driving-dynamics?drive=1');
+
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('1');
+    expect(screen.getByTestId('da-count')).toHaveTextContent('1');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(latest.refetch).toHaveBeenCalledTimes(1);
+    expect(range.refetch).not.toHaveBeenCalled();
+  });
+
+  it('shows blocked refresh without inventing an offline or fatal source failure', () => {
+    const range = qr({ data: [drive()], fetchStatus: 'paused' });
+    const latest = qr({ data: [] });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : latest,
+    );
+    renderPage('/driving-dynamics');
+
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('1');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/connection lost|paused offline/i)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { case: 'selected powertrain', failed: 'powertrain-summary', region: 'Trip review' },
+    { case: 'selected motor history', failed: 'motor-history', region: 'Inside this ride' },
+    { case: 'current pedals', failed: 'pedal', region: 'Vehicle now' },
+    { case: 'independent coaching', failed: 'coach', region: 'Beyond this ride' },
+  ])('isolates and retries $case without removing other sources', ({ failed, region }) => {
+    const loggedError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      presenterState.failed.add(failed);
+      renderPage('/driving-dynamics?drive=1');
+
+      expect(screen.getAllByRole('region')).toHaveLength(4);
+      const affected = screen.getByRole('region', { name: region });
+      expect(within(affected).getByText('Component failed to load')).toBeInTheDocument();
+      expect(screen.queryByTestId(failed)).not.toBeInTheDocument();
+      expect(screen.getByTestId('ride-overview')).toHaveTextContent('1');
+      expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+      expect(screen.getByTestId('da-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('tips-vid')).toHaveTextContent('1');
+
+      presenterState.failed.delete(failed);
+      fireEvent.click(within(affected).getByRole('button', { name: 'Retry' }));
+      expect(screen.getByTestId(failed)).toBeInTheDocument();
+      expect(within(affected).queryByText('Component failed to load')).not.toBeInTheDocument();
+      expect(screen.getByTestId('tt-drive')).toHaveTextContent('1');
+    } finally {
+      loggedError.mockRestore();
+    }
   });
 });

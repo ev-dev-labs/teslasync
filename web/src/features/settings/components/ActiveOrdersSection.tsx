@@ -1,6 +1,7 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { useTranslation } from 'react-i18next'
 import { useTeslaUserOrders, useRefreshTeslaOrders } from '@/api/hooks/useUser'
-import { GlassPanel, Button, IconBox, Badge } from '@/components/ui'
+import { GlassPanel, IconBox, Badge } from '@/components/ui'
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
@@ -24,7 +25,7 @@ function formatOrderStatus(status: string | undefined | null): string {
   return status
     .replace(/_/g, ' ')
     .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/^\w/, (c) => c.toUpperCase())
 }
 
 export function ActiveOrdersSection() {
@@ -45,7 +46,7 @@ export function ActiveOrdersSection() {
               <ShoppingCart className="h-5 w-5" />
             </IconBox>
             <div>
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('orders.title', 'Active Orders')}</h2>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('orders.title', 'Active orders')}</h2>
               <p className="text-xs text-[var(--text-muted)]">{t('orders.subtitle', 'Vehicle orders and delivery tracking from Tesla')}</p>
             </div>
           </div>
@@ -55,18 +56,10 @@ export function ActiveOrdersSection() {
                 {t('orders.lastSynced', 'Synced')} {formatDateTime(ordersData.fetched_at)}
               </span>
             )}
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<RefreshCw className={cn('h-3.5 w-3.5', ordersRefresh.isPending && 'animate-spin')} />}
-              onClick={() => ordersRefresh.mutate(undefined, {
+            <IconButton icon={<RefreshCw className={cn('h-3.5 w-3.5', ordersRefresh.isPending && 'animate-spin')} />} label={t('orders.refresh', 'Refresh')} onClick={() => ordersRefresh.mutate(undefined, {
                 onSuccess: () => toast.success(t('toast.ordersRefreshed', 'Orders refreshed')),
                 onError: (err: Error) => toast.error(t('toast.ordersFailed', 'Failed to refresh orders'), err.message),
-              })}
-              disabled={ordersRefresh.isPending}
-            >
-              {t('orders.refresh', 'Refresh')}
-            </Button>
+              })} disabled={ordersRefresh.isPending} />
           </div>
         </div>
 
@@ -108,7 +101,7 @@ export function ActiveOrdersSection() {
                   )}
                   {order.delivery_date && (
                     <div className="flex justify-between">
-                      <span className="text-[var(--text-muted)]">{t('orders.deliveryDate', 'Delivery Date')}</span>
+                      <span className="text-[var(--text-muted)]">{t('orders.deliveryDate', 'Delivery date')}</span>
                       <span className="flex items-center gap-1 text-[var(--text-primary)]">
                         <Calendar className="h-3 w-3" aria-hidden="true" />
                         {formatDeliveryDate(order.delivery_date)}

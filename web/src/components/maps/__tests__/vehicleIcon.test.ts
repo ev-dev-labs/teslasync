@@ -24,21 +24,15 @@ import {
   DEFAULT_VEHICLE_COLOR,
 } from '../vehicleIcon';
 
-type IconOptions = {
-  className: string;
-  iconSize: [number, number];
-  iconAnchor: [number, number];
-  popupAnchor: [number, number];
-  html: string;
-};
-
-function optionsOf(icon: unknown): IconOptions {
-  return (icon as unknown as { options: IconOptions }).options;
+function optionsOf(icon: L.DivIcon) {
+  const { html } = icon.options;
+  if (typeof html !== 'string') throw new Error('Expected marker HTML string');
+  return { ...icon.options, html };
 }
 
 describe('DEFAULT_VEHICLE_COLOR', () => {
-  it('is the neon-cyan accent hex used across the map surfaces', () => {
-    expect(DEFAULT_VEHICLE_COLOR).toBe('#00f0ff');
+  it('intentionally replaces the old cyan default with the trusted DOM info role', () => {
+    expect(DEFAULT_VEHICLE_COLOR).toBe('var(--semantic-info)');
   });
 });
 
@@ -46,8 +40,8 @@ describe('sanitizeColor', () => {
   it('falls back to the default for nullish / non-string input', () => {
     expect(sanitizeColor(undefined)).toBe(DEFAULT_VEHICLE_COLOR);
     expect(sanitizeColor(null)).toBe(DEFAULT_VEHICLE_COLOR);
-    expect(sanitizeColor(0xff as unknown as string)).toBe(DEFAULT_VEHICLE_COLOR);
-    expect(sanitizeColor({} as unknown as string)).toBe(DEFAULT_VEHICLE_COLOR);
+    expect(Reflect.apply(sanitizeColor, undefined, [0xff])).toBe(DEFAULT_VEHICLE_COLOR);
+    expect(Reflect.apply(sanitizeColor, undefined, [{}])).toBe(DEFAULT_VEHICLE_COLOR);
   });
 
   it('falls back to the default for blank / whitespace-only strings', () => {
@@ -91,6 +85,15 @@ describe('sanitizeColor', () => {
   ])('rejects the unsafe / malformed value %j and uses the default', (bad) => {
     expect(sanitizeColor(bad)).toBe(DEFAULT_VEHICLE_COLOR);
   });
+
+  it.each([
+    'var(--caller-paint)',
+    'var(--semantic-info, red)',
+    'var(--semantic-info);background:url(javascript:alert(1))',
+  ])('rejects untrusted CSS reference %j without broadening the grammar', (bad) => {
+    expect(sanitizeColor(bad)).toBe('var(--semantic-info)');
+    expect(optionsOf(vehicleIcon(bad)).html).not.toContain(bad);
+  });
 });
 
 describe('vehicleIcon', () => {
@@ -103,18 +106,21 @@ describe('vehicleIcon', () => {
     expect(L.divIcon).toHaveBeenCalled();
   });
 
-  it('embeds the default color and pulse animation when called with no args', () => {
+  it('embeds the default color without ambient animation or glow', () => {
     const { html } = optionsOf(vehicleIcon());
     expect(html).toContain(`background:${DEFAULT_VEHICLE_COLOR}`);
-    expect(html).toContain(`box-shadow:0 0 10px ${DEFAULT_VEHICLE_COLOR}`);
-    expect(html).toContain('@keyframes vehicle-pulse');
-    expect(html).toContain('animation:vehicle-pulse 2s ease-in-out infinite');
+    expect(html.match(/background:var\(--semantic-info\)/g) ?? []).toHaveLength(2);
+    expect(html).not.toContain('box-shadow');
+    expect(html).not.toContain('<style');
+    expect(html).not.toContain('animation:');
+    expect(html).toContain('border:2px solid var(--surface-1)');
+    expect(html).not.toContain('solid white');
   });
 
   it('embeds a supplied valid color at every paint site', () => {
     const { html } = optionsOf(vehicleIcon('#ff3366'));
-    // two backgrounds + one box-shadow glow all use the supplied color
-    expect(html.match(/#ff3366/g) ?? []).toHaveLength(3);
+    // Both backgrounds retain the supplied color without a decorative glow.
+    expect(html.match(/#ff3366/g) ?? []).toHaveLength(2);
     expect(html).not.toContain(DEFAULT_VEHICLE_COLOR);
   });
 
@@ -122,6 +128,24 @@ describe('vehicleIcon', () => {
     const { html } = optionsOf(vehicleIcon(''));
     expect(html).toContain(`background:${DEFAULT_VEHICLE_COLOR}`);
     expect(html).not.toContain('background:;');
+  });
+
+  it('retains the marker DOM, fixed geometry and static halo', () => {
+    const host = document.createElement('div');
+    host.innerHTML = optionsOf(vehicleIcon('#abcdef')).html;
+    const root = host.firstElementChild;
+    expect(host.children).toHaveLength(1);
+    expect(root?.tagName).toBe('DIV');
+    expect(root?.getAttribute('style')).toBe('width:28px;height:28px;position:relative');
+    expect(root?.children).toHaveLength(2);
+    const halo = root?.children[0];
+    const dot = root?.children[1];
+    expect(halo?.tagName).toBe('DIV');
+    expect(halo?.getAttribute('style')).toContain('position:absolute;inset:0;border-radius:50%');
+    expect(halo?.getAttribute('style')).toContain('background:#abcdef;opacity:0.25');
+    expect(dot?.tagName).toBe('DIV');
+    expect(dot?.getAttribute('style')).toContain('position:absolute;inset:5px;border-radius:50%');
+    expect(dot?.getAttribute('style')).toContain('background:#abcdef;border:2px solid var(--surface-1)');
   });
 
   it('never lets an injection payload reach the marker HTML', () => {
@@ -132,5 +156,45 @@ describe('vehicleIcon', () => {
     expect(html).not.toContain('alert(1)');
     // falls back to the safe default instead of the attacker-controlled value
     expect(html).toContain(`background:${DEFAULT_VEHICLE_COLOR}`);
+  });
+
+  it.each([
+    undefined,
+    null,
+    '',
+    ' \t\n ',
+    '#12',
+    '#fff"></div><img src=x onerror=alert(1)>',
+    'var(--caller-paint)',
+    DEFAULT_VEHICLE_COLOR,
+  ])('uses only the trusted info default at both paint sites for %j', (color) => {
+    const icon = Reflect.apply(vehicleIcon, undefined, [color]);
+    const { html } = optionsOf(icon);
+    expect(html.match(/background:var\(--semantic-info\)/g) ?? []).toHaveLength(2);
+    expect(html).not.toContain('#00f0ff');
+    expect(html).not.toContain('onerror');
+    expect(html).not.toContain('--caller-paint');
+    expect(html).not.toContain('animation:');
+    expect(html).not.toContain('box-shadow');
+    expect(html).toContain('opacity:0.25');
+    expect(html).toContain('border:2px solid var(--surface-1)');
+  });
+
+  it.each([
+    '#fff',
+    '#ffff',
+    '#00f0ff',
+    '#00f0ffcc',
+    '#ABCDEF',
+    'rgb(0, 240, 255)',
+    'rgba(0,240,255,0.5)',
+    'hsl(187, 100%, 50%)',
+    'hsla(187,100%,50%,0.5)',
+    'red',
+    'cornflowerblue',
+  ])('preserves explicit physical/custom paint %j exactly at both sites', (color) => {
+    const { html } = optionsOf(vehicleIcon(color));
+    expect(html.split(`background:${color}`).length - 1).toBe(2);
+    expect(html).not.toContain('var(--semantic-info)');
   });
 });

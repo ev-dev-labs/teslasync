@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 
 import { DataProvenanceBadge } from '@/components/data-display';
 
-import { PageContainer } from '@/components/layout';
-import { Button, Text } from '@/components/ui';
+import { PageLayout, SourceContent } from '@/components/layout';
+import { QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Button, CopyButton, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
   ElectrochemPanel,
@@ -16,45 +18,90 @@ import { ScienceEvidenceOverview } from '@/features/science/components/ScienceEv
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAnalysisWindow } from '@/hooks/useAnalysisWindow';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
 
 const WINDOW_PRESETS = [7, 30] as const;
 
 export default function ScienceLabPage() {
+  const { formatDateTime } = useDateFormat();
   const { t: translate } = useTranslation();
   const t: Translate = (key, fallback, options) => String(translate(key, fallback, options));
   const { selected: days, window, pickWindow } = useAnalysisWindow('days', WINDOW_PRESETS, 7);
+  const location = useLocation();
 
-  const title = t('science.title', 'Science Lab');
+  const title = t('science.title', 'Science lab');
   usePageTitle(title);
-  const { vehicleId } = useSelectedVehicle();
+  const { vehicleId, vehicles, vehiclesState } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
+  const fleetLabel = t('dataSources.labels.vehicleRegistry', 'Vehicle registry');
+  const fleetFeedback = (
+    <>
+      <StaleRefreshWarning state={vehiclesState} label={fleetLabel} />
+      {vehiclesState.fatalError ? (
+        <QueryError error={vehiclesState.fatalError} onRetry={vehiclesState.retry ?? undefined} resourceName={fleetLabel} />
+      ) : !vehiclesState.hasData ? (
+        <SourceContent
+          state="loading"
+          label={fleetLabel}
+          emptyMessage=""
+          errorMessage=""
+          loadingContent={vehiclesState.isRefreshBlocked ? (
+            <Text as="p" color="secondary">
+              {t('system.outage.pausedSource', 'Waiting for a connection before this source can load. Missing evidence remains unknown.')}
+            </Text>
+          ) : undefined}
+        >
+          {null}
+        </SourceContent>
+      ) : null}
+    </>
+  );
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={title} />;
+    if (vehiclesState.status === 'unavailable' && vehicles.length === 0) {
+      return <NoVehicleSelected pageTitle={title} />;
+    }
+    return <PageLayout title={title}>{fleetFeedback}</PageLayout>;
   }
 
   const scope = { vehicleId: vehicleIdStr, start: window.start, end: window.end };
+  const copyUrl = new URL(location.pathname, globalThis.window.location.origin);
+  copyUrl.search = location.search;
+  copyUrl.hash = location.hash;
+  copyUrl.searchParams.set('vehicle_id', String(vehicleId));
+  copyUrl.searchParams.set('start', window.start);
+  copyUrl.searchParams.set('end', window.end);
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t('science.subtitle', 'Every claim is a fit: n, uncertainty, firmware epoch, holdout.')}
-      copyLink
-      contextActions={(
+      overflowActions={(
+        <CopyButton
+          text={copyUrl.toString()}
+          ariaLabel={t('common.copyLink.label', 'Copy link to this view')}
+          iconOnly
+          withToast
+          className="h-11 w-11 justify-center p-0 md:h-9 md:w-9"
+        />
+      )}
+      metadataActions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <DataProvenanceBadge provenance="historical" />
         </div>
       )}
     >
+      {fleetFeedback}
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('science.window.label', 'Window')}>
         {WINDOW_PRESETS.map((preset) => (
           <Button
             key={preset}
             variant={preset === days ? 'primary' : 'secondary'}
             size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
             onClick={() => { pickWindow(preset); }}
             aria-pressed={preset === days}
           >
@@ -74,6 +121,6 @@ export default function ScienceLabPage() {
         <section id="science-tires" className="scroll-mt-24"><TiresPanel window={scope} /></section>
         <section id="science-notebook" className="scroll-mt-24"><NotebookPanel window={scope} /></section>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

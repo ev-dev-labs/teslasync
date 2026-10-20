@@ -12,11 +12,11 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  CHART_COLORS,
   axisTick,
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { cn } from '@/lib/cn';
 
 import type { ExplorerSummary } from '../../lib/explorer';
@@ -34,6 +34,7 @@ export function MonthlyExplorationChart({
   className,
 }: MonthlyExplorationChartProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const rows = summary.monthlyExploration;
   const hasRows = rows.length > 0;
 
@@ -48,7 +49,7 @@ export function MonthlyExplorationChart({
     >
       <ChartContainer
         className={cn('h-full')}
-        title={t('explorer.discoveries', 'New Places per Month')}
+        title={t('explorer.discoveries', 'New places per month')}
         subtitle={t(
           'explorer.monthly.subtitle',
           'First arrivals, return arrivals, and cumulative observed destinations',
@@ -127,7 +128,7 @@ export function MonthlyExplorationChart({
                   dataKey="newPlaces"
                   name={t('explorer.newPlaces', 'New places')}
                   stackId="arrivals"
-                  fill={CHART_COLORS[1]}
+                  fill={palette[1]}
                   radius={[0, 0, 3, 3]}
                   hide={hiddenSeries?.isHidden('newPlaces')}
                 />
@@ -138,7 +139,7 @@ export function MonthlyExplorationChart({
                     'Repeat arrivals',
                   )}
                   stackId="arrivals"
-                  fill={CHART_COLORS[0]}
+                  fill={palette[0]}
                   radius={[3, 3, 0, 0]}
                   hide={hiddenSeries?.isHidden('repeatArrivals')}
                 />
@@ -149,7 +150,7 @@ export function MonthlyExplorationChart({
                     'explorer.monthly.cumulativeSeries',
                     'Cumulative places',
                   )}
-                  stroke={CHART_COLORS[4]}
+                  stroke={palette[4]}
                   strokeWidth={2}
                   dot={false}
                   hide={hiddenSeries?.isHidden('cumulativePlaces')}

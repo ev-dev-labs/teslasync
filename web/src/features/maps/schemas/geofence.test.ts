@@ -11,13 +11,27 @@
  * or non-finite value must yield a single "must be a number" issue and MUST NOT
  * additionally emit the range ("must be between") issue.
  */
-import { describe, it, expect, expectTypeOf } from 'vitest'
+import { afterEach, beforeAll, describe, it, expect, expectTypeOf } from 'vitest'
+import i18n from 'i18next'
 import {
   geofenceFormSchema,
   toGeofencePayload,
   type GeofenceFormData,
   type GeofencePayload,
 } from './geofence'
+
+beforeAll(async () => {
+  await i18n.init({
+    lng: 'en',
+    fallbackLng: 'en',
+    resources: { en: { translation: {} } },
+    interpolation: { escapeValue: false },
+  })
+})
+
+afterEach(async () => {
+  await i18n.changeLanguage('en')
+})
 
 // A known-good form. Individual tests clone + override a single field so the
 // failure is unambiguously attributable to that field.
@@ -201,5 +215,131 @@ describe('toGeofencePayload', () => {
       category: 'home',
     })
     expectTypeOf(payload).toEqualTypeOf<GeofencePayload>()
+  })
+})
+
+describe('geofenceFormSchema — localized validation', () => {
+  const translatedValidation = {
+    nameRequired: 'Name fehlt',
+    nameMaxLength: 'Name: höchstens {{max}} Zeichen',
+    latitudeRequired: 'Breitengrad fehlt',
+    latitudeNumber: 'Breitengrad muss eine Zahl sein',
+    latitudeRange: 'Breitengrad zwischen {{min}} und {{max}}',
+    longitudeRequired: 'Längengrad fehlt',
+    longitudeNumber: 'Längengrad muss eine Zahl sein',
+    longitudeRange: 'Längengrad zwischen {{min}} und {{max}}',
+    radiusRequired: 'Radius fehlt',
+    radiusNumber: 'Radius muss eine Zahl sein',
+    radiusRange: 'Radius zwischen {{min}} und {{max}}',
+  }
+
+  async function useTranslatedValidation() {
+    i18n.addResourceBundle('de', 'translation', {
+      geofences: { validation: translatedValidation },
+    }, true, true)
+    await i18n.changeLanguage('de')
+  }
+
+  it.each([
+    ['name', '', 'Name fehlt'],
+    ['name', '   ', 'Name fehlt'],
+    ['name', 'x'.repeat(121), 'Name: höchstens 120 Zeichen'],
+    ['latitude', '', 'Breitengrad fehlt'],
+    ['longitude', '   ', 'Längengrad fehlt'],
+    ['radius', '', 'Radius fehlt'],
+    ['latitude', '-90.001', 'Breitengrad zwischen -90 und 90'],
+    ['latitude', '90.001', 'Breitengrad zwischen -90 und 90'],
+    ['longitude', '-180.001', 'Längengrad zwischen -180 und 180'],
+    ['longitude', '180.001', 'Längengrad zwischen -180 und 180'],
+    ['radius', '9.999', 'Radius zwischen 10 und 50000'],
+    ['radius', '50000.001', 'Radius zwischen 10 und 50000'],
+  ] as const)('localizes %s=%s without changing its field association', async (field, value, message) => {
+    await useTranslatedValidation()
+    const result = geofenceFormSchema.safeParse(form({ [field]: value }))
+    expect(result.success).toBe(false)
+    if (result.success) throw new Error('expected parse to fail')
+    expect(result.error.issues.every((issue) => issue.path[0] === field)).toBe(true)
+    expect(result.error.issues.map((issue) => issue.message)).toContain(message)
+  })
+
+  it.each(['latitude', 'longitude', 'radius'] as const)(
+    'keeps a single localized numeric issue for every non-finite %s value',
+    async (field) => {
+      await useTranslatedValidation()
+      const expected = {
+        latitude: 'Breitengrad muss eine Zahl sein',
+        longitude: 'Längengrad muss eine Zahl sein',
+        radius: 'Radius muss eine Zahl sein',
+      }
+      for (const value of ['abc', 'NaN', 'Infinity', '-Infinity', '1e400', '-1e400']) {
+        expect(messagesFor(form({ [field]: value }), field)).toEqual([expected[field]])
+      }
+    },
+  )
+
+  it('uses the current language on each parse of the same exported schema', async () => {
+    expect(messagesFor(form({ name: '' }), 'name')).toEqual(['Name is required'])
+    await useTranslatedValidation()
+    expect(messagesFor(form({ name: '' }), 'name')).toEqual(['Name fehlt'])
+    expect(messagesFor(form({ latitude: '' }), 'latitude')).toEqual(['Breitengrad fehlt'])
+    expect(messagesFor(form({ radius: 'Infinity' }), 'radius')).toEqual(['Radius muss eine Zahl sein'])
+    await i18n.changeLanguage('en')
+    expect(messagesFor(form({ name: '' }), 'name')).toEqual(['Name is required'])
+    expect(messagesFor(form({ longitude: '181' }), 'longitude')).toEqual([
+      'Longitude must be between -180 and 180',
+    ])
+  })
+
+  it('retains simultaneous field associations and existing Zod issue codes', async () => {
+    await useTranslatedValidation()
+    const result = geofenceFormSchema.safeParse(form({
+      name: 'x'.repeat(121), latitude: '91', longitude: 'NaN', radius: '9',
+    }))
+    expect(result.success).toBe(false)
+    if (result.success) throw new Error('expected parse to fail')
+    expect(result.error.issues.map(({ path, code, message }) => ({ path, code, message }))).toEqual([
+      { path: ['name'], code: 'too_big', message: 'Name: höchstens 120 Zeichen' },
+      { path: ['latitude'], code: 'custom', message: 'Breitengrad zwischen -90 und 90' },
+      { path: ['longitude'], code: 'custom', message: 'Längengrad muss eine Zahl sein' },
+      { path: ['radius'], code: 'custom', message: 'Radius zwischen 10 und 50000' },
+    ])
+  })
+
+  it('keeps whitespace-only numeric validation behavior and issue order', async () => {
+    await useTranslatedValidation()
+    expect(messagesFor(form({ latitude: '   ' }), 'latitude')).toEqual(['Breitengrad fehlt'])
+    expect(messagesFor(form({ longitude: '   ' }), 'longitude')).toEqual(['Längengrad fehlt'])
+    expect(messagesFor(form({ radius: '   ' }), 'radius')).toEqual([
+      'Radius fehlt', 'Radius zwischen 10 und 50000',
+    ])
+  })
+
+  it.each([
+    ['0', '0', '10'],
+    ['-0', '0', '50000'],
+    ['-90', '-180', '10'],
+    ['90', '180', '50000'],
+    ['-12.5', '1e2', '250.75'],
+  ])('preserves physical payload values across locales: %s,%s,%s', async (latitude, longitude, radius) => {
+    await useTranslatedValidation()
+    const result = geofenceFormSchema.safeParse(form({ latitude, longitude, radius }))
+    expect(result.success).toBe(true)
+    if (!result.success) throw new Error('expected parse to succeed')
+    expect(toGeofencePayload(result.data)).toEqual({
+      ...VALID_FORM,
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      radius: Number(radius),
+    })
+  })
+
+  it('does not widen input types or accepted category values', async () => {
+    await useTranslatedValidation()
+    for (const field of ['name', 'latitude', 'longitude', 'radius'] as const) {
+      for (const value of [null, undefined, 0, false, {}]) {
+        expect(geofenceFormSchema.safeParse(form({ [field]: value })).success).toBe(false)
+      }
+    }
+    expect(geofenceFormSchema.safeParse(form({ category: 'unknown' })).success).toBe(false)
   })
 })

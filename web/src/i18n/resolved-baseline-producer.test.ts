@@ -1,0 +1,267 @@
+import { createHash } from 'node:crypto'
+import { afterEach, describe, expect, it } from 'vitest'
+import catalog from './en.json'
+import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
+import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-recovery.test'
+import baseline from './known-missing-keys.json'
+import shell from './en/shell.json'
+import dashboard from './en/locale-dashboard.json'
+import runtimeManifest from './en/runtime-manifest.json'
+import usageManifest from './en/usage-manifest.json'
+import i18n, { flushPendingEnglishResourcesForTest, loadEnglishNamespace } from './index'
+import { copyOwnerAdditions, drivesEmptyAddition, featureOwnedAdditions } from './excluded-feature-owned-producers.test'
+
+type Json = Record<string, unknown>
+
+const additions = [
+  ['browserNotifications.toast.alertTitle', 'TeslaSync Alert'],
+  ['browserNotifications.toast.exportFailedBody', 'Data export failed. Check the exports page for details.'],
+  ['browserNotifications.toast.exportFailedTitle', 'Export Failed'],
+  ['browserNotifications.toast.exportReadyBody', '{{filename}} is ready for download'],
+  ['browserNotifications.toast.exportReadyBodyGeneric', 'Your data export is ready for download'],
+  ['browserNotifications.toast.exportReadyTitle', 'Export Ready'],
+  ['error.forbidden.message', 'Your account does not have permission to view or change this resource.'],
+  ['error.forbidden.title', 'Permission denied'],
+  ['error.request.message', 'Review the request and try again. No changes were applied.'],
+  ['error.timeout.message', 'The service did not respond in time. Existing data has not been changed.'],
+  ['error.timeout.title', 'Request timed out'],
+  ['error.unavailable.message', 'A required service is temporarily unavailable. Try again after it recovers.'],
+  ['error.unsupported.message', 'This feature is not available with the current server or deployment configuration.'],
+  ['replay.shortcuts.seekBack', '⏪ −{{n}}s'],
+  ['replay.shortcuts.seekForward', '⏩ +{{n}}s'],
+  ['table.genericName', 'Data table'],
+  ['table.selection.deselectRowNamed', 'Deselect {{row}}'],
+  ['table.selection.selectRowNamed', 'Select {{row}}'],
+] as const
+
+// Accepted after the frozen projection: phase4-sticky-control-localization (1),
+// phase4-watch-key-capability (5), and phase4-signal-catalog-canonical-repair (6).
+// Do not exclude their whole namespaces or the pre-existing observation labels.
+const phase4Additions = [
+  ['a11y.scrollToTop', '{{region}} — scroll to top'],
+  ['watch.capability.notConfigured', 'Watch access is not configured'],
+  ['watch.capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.'],
+  ['watch.capability.configure', 'Manage API keys'],
+  ['watch.capability.readError', 'Watch access could not be checked'],
+  ['watch.capability.readErrorDescription', 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.'],
+  ['widget.signalCatalog.destination', 'Destination: {{destination}}'],
+  ['widget.signalCatalog.valueKind', 'Value kind'],
+  ['widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.'],
+  ['widget.signalCatalog.totalSamples', 'Total observations: {{count}}'],
+  ['widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}'],
+  ['widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}'],
+] as const
+
+// Exact accepted later producers; only these keys may leave the original fingerprint.
+const laterAdditions = [
+  ['progressRing.ariaLabel', 'Progress: {{percent}}%'],
+  ['demoMode.label', 'DEMO DATA — synthetic sample, not your vehicle'],
+  ['signalConfig.deselectCategory', 'Deselect all {{category}} signals'],
+  ['signalConfig.selectCategory', 'Select all {{category}} signals'],
+  ['signalConfig.setCategoryInterval', 'Set interval for all {{category}} signals'],
+  ['admin.slowQueries.kpiAnalyzedSub', 'Top {{limit}} by {{metric}}'],
+  ['admin.security.brief.scope', 'Vehicle {{vehicle}} · History {{start}} to {{end}} (exclusive). Current status comes from a separate latest-state query.'],
+  ['admin.diskForecast.tableCount', '{{count}} hypertables'],
+  ['admin.teslaOrders.card.aria', '{{model}} order, {{status}}'],
+  ['widget.backupHistory.summaryScope', 'Energy site {{siteId}}; history since {{since}}, no explicit exclusive end bound'],
+  ['widget.energyStats.summary.scope', 'Vehicle {{id}} · source period {{days}} days'],
+  ['widget.fsdWeekly.summary.scope', 'Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}'],
+  ['widget.lifetimeStats.summary.scope', 'Vehicle {{id}} · lifetime'],
+  ['widget.mileageStats.summary.scope', 'Vehicle {{id}} · rolling 30 days / lifetime'],
+  ['widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day'],
+  ['widget.yearReview.summary.scope', 'Vehicle {{id}} · year {{year}}'],
+  ['physicsLedger.drive.empty', 'No drive interval in this window.'],
+  ['driving.brief.awaiting', 'Awaiting evidence'],
+  ['driveScore.brief.average', 'Average computed score for the returned scored-drive cohort, on a 0–100 scale.'],
+  ['driveScore.brief.best', 'Highest computed score among the returned scored drives, on a 0–100 scale.'],
+  ['driveScore.brief.count', 'Returned scored drives, not the independent server score total.'],
+  ['driveScore.brief.efficiency', 'Average consumption in the returned scored-drive cohort.'],
+  ['driveScore.brief.description', 'Computed driving scores and consumption retain their source cohort; the overall score gauge uses its independent assessment source.'],
+  ['driveScore.brief.scope', 'Returned scored-drive subset in the selected period; independent score-assessment coverage may differ'],
+  ['driveScore.brief.source', 'Computed scored-drive cohort; the retained trend label comes from the independent score assessment.'],
+  ['coldStart.brief.window', '{{start}}–{{end}}; returned selected-window drives'],
+  ['driving.brief.window', '{{start}}–{{end}}; returned drive subset, not a server-wide aggregate'],
+  ['rhythm.brief.window', '{{start}}–{{end}} · {{timezone}}'],
+  ['fsd.brief.window', '{{start}}–{{end}} (exclusive end) · {{timezone}}'],
+  ['notifications.channels.providers.subtitle', '{{inUse}} of {{total}} provider types in use'],
+  ['notifications.channels.providers.configured', '{{count}} configured'],
+  ['fleetSetup.progress.token.title', 'Keep the Fleet token fresh'],
+  ['search.entries.fleet.setup.desc', 'Connect Tesla, keep the Fleet token fresh, subscribe telemetry on a vehicle, and confirm streaming.'],
+  ['search.entries.workspace.persona.desc', 'Prioritize navigation for an owner, fleet operator, analyst, or administrator.'],
+  ['search.entries.workspace.landing.desc', 'Choose the first page shown when TeslaSync opens.'],
+  ['search.entries.workspace.vehicle.desc', 'Choose the vehicle used for the global scope on a fresh app load.'],
+  ['search.entries.workspace.range.desc', 'Choose the default time range used by global analysis controls.'],
+  ['search.entries.workspace.discovery.title', 'Help and release highlights'],
+  ['search.entries.workspace.discovery.desc', 'Control contextual explanations and product-change highlights.'],
+  ['search.entries.security.totpEnroll.desc', 'Set up TOTP from your authenticator app to protect destructive admin actions.'],
+  ['search.entries.security.totpBackupCodes.desc', 'Regenerate or download the backup codes used when you lose access to your authenticator.'],
+  ['search.entries.security.totpDisable.desc', 'Remove the TOTP credential and revoke all backup codes for the current subject.'],
+  ['search.entries.security.sessionsList.desc', 'See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions.'],
+  ['search.entries.security.sessionsRevokeAll.desc', 'Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer.'],
+  ['search.entries.privacy.recentPagesClear.title', 'Clear recently viewed pages'],
+  ['search.entries.privacy.recentPagesClear.desc', 'Wipe the local list of pages used by the status bar and the Recent section in the command palette.'],
+  ['search.entries.privacy.consentManage.desc', 'Re-grant, withdraw, or reset the cookie / analytics consent banner state for this browser.'],
+  ['search.entries.webhooks.list.desc', 'Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver.'],
+  ['search.entries.webhooks.signing.desc', 'Sign outbound webhooks with a shared secret so receivers can verify authenticity via the X-TeslaSync-Signature header.'],
+  ['search.entries.webhooks.test.desc', 'Fire a test event at a configured webhook to verify your receiver and signature pipeline.'],
+  ['search.entries.reset.section.desc', 'Wipe one section at a time — alert rules, geofences, channels, automations, dashboard layouts, quiet hours, or general/appearance preferences.'],
+  ['search.entries.reset.all.desc', 'Danger zone — wipe every user-discoverable preference, alert rule, channel, geofence, automation, and dashboard layout in one transaction. Requires typing RESET to confirm.'],
+  ['search.entries.helix.integration.title', 'Helix (AI integration)'],
+  ['search.entries.helix.integration.desc', 'Optional AI integration — provider, API key, cost cap, and per-feature opt-in toggles. Off by default.'],
+  ['activity.myActivity.trend.aria', '{{total}} actions across {{days}} days'],
+  ['help.commandReliability.overall', 'Three successes out of three is not the same evidence as ninety-seven out of a hundred, even though both read as a high percentage. The Wilson score interval accounts for how much evidence there actually is, so a command is only graded reliable once its pessimistic lower bound clears the bar — not merely its lucky average.'],
+  ['activity.myActivity.brief.range', 'Loaded activity for {{start}} – {{end}}; at most {{limit}} actions.'],
+  ['telemetry.sparkline.trend', '{{signal}} trend, {{count}} samples in the last hour'],
+  ['physicsLedger.charge.empty', 'No charge interval in this window.'],
+  ['physicsLedger.park.empty', 'No park interval in this window.'],
+  ['a11y.summary.route.fromTo', 'Route map from {{start}} to {{end}}'],
+  ['a11y.summary.route.distance', 'Distance {{distance}}'],
+  ['a11y.summary.route.duration', 'Duration {{duration}}'],
+  ['a11y.summary.gauge.value', '{{label}}: {{value}}'],
+  ['a11y.summary.gauge.range', 'Scale {{min}} to {{max}}'],
+  ['a11y.summary.state.current', '{{label}}: {{state}}'],
+  ['a11y.summary.timeline.empty', '{{label}}: no entries'],
+  ['a11y.summary.timeline.count', '{{label}}: {{count}} entries'],
+  ['a11y.summary.timeline.span', 'From {{start}} to {{end}}'],
+  ['a11y.status.loaded', '{{label}} loaded'],
+  ['a11y.status.loadedCount', '{{label}} loaded, {{count}} items'],
+  ['a11y.status.empty', 'No {{label}} to show'],
+  ['a11y.status.refreshError', 'Could not refresh {{label}}'],
+  ['a11y.status.saveError', 'Could not save {{label}}'],
+  ['a11y.status.bulkPartial', '{{action}}: {{succeeded}} succeeded, {{failed}} failed'],
+  ['a11y.status.bulkDone', '{{action}}: {{succeeded}} items'],
+  ['a11y.status.selectionCount', '{{selectedCount}} of {{totalCount}} rows selected'],
+  ['a11y.status.streamConnected', '{{scope}} connected'],
+  ['a11y.status.streamReconnecting', '{{scope}} reconnecting'],
+  ['a11y.status.streamDisconnected', '{{scope}} disconnected'],
+  ['a11y.status.streamUpdated', '{{scope}} updated'],
+] as const
+
+const remaining = [
+  'error.request.title',
+  'error.unavailable.title',
+  'error.unsupported.title',
+]
+
+const generated = import.meta.glob<{ default: Json }>('./en/locale-detail-*.json', { eager: true })
+
+function nested(object: unknown, key: string): unknown {
+  return key.split('.').reduce<unknown>((value, segment) =>
+    value && typeof value === 'object' ? (value as Json)[segment] : undefined, object)
+}
+
+function leaves(object: Json, prefix = ''): [string, unknown][] {
+  return Object.entries(object).flatMap(([key, value]) => {
+    const path = prefix ? `${prefix}.${key}` : key
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? leaves(value as Json, path)
+      : [[path, value] as [string, unknown]]
+  })
+}
+
+afterEach(() => {
+  flushPendingEnglishResourcesForTest()
+})
+
+describe('resolved known-missing canonical producers', () => {
+  it.each(copyOwnerAdditions)('preserves the exact accepted copy split %s', (key, value) => {
+    expect(nested(catalog, key)).toBe(value)
+  })
+
+  it.each(featureOwnedAdditions)('preserves the exact accepted feature-owned addition %s', (key, value) => {
+    expect(nested(catalog, key)).toBe(value)
+  })
+
+  it.each(laterAdditions)('preserves the exact accepted later canonical value for %s', (key, value) => {
+    expect(nested(catalog, key)).toBe(value)
+  })
+
+  it.each(additions)('ships the source-proven value for %s in canonical and generated resources', (key, value) => {
+    expect(nested(catalog, key)).toBe(value)
+    expect(nested(shell, key)).toBe(value)
+    const namespace = key.split('.')[0]
+    expect(nested(generated[`./en/locale-detail-${namespace}.json`].default, key)).toBe(value)
+  })
+
+  it('preserves every old English leaf, including Settings and critical PWA copy', () => {
+    expect(drivesEmptyAddition).toEqual(['drives.emptyForCollection.title', 'No drives in this view'])
+    expect(nested(catalog, drivesEmptyAddition[0])).toBe(drivesEmptyAddition[1])
+    expect(laterAdditions).toHaveLength(81)
+    expect(featureOwnedAdditions).toHaveLength(806)
+    expect(copyOwnerAdditions).toHaveLength(10)
+    expect(catalog.systemStatus.incidents.updateCount_other).toBe('{{count}} updates')
+    const addedKeys = new Set<string>([...additions, ...laterAdditions, ...featureOwnedAdditions, ...copyOwnerAdditions, drivesEmptyAddition].map(([key]) => key))
+    expect(addedKeys.size).toBe(916)
+    addedKeys.add('systemStatus.incidents.updateCount_other')
+    for (const [key, value] of [...authorizedCanonicalAdditions, ...ownerRecoveryAdditions, ...finalFourAdditions]) {
+      expect(nested(catalog, key)).toBe(value)
+      addedKeys.add(key)
+    }
+    expect(phase4Additions).toHaveLength(12)
+    for (const [key, value] of phase4Additions) {
+      expect(addedKeys.has(key), key).toBe(false)
+      expect(nested(catalog, key), key).toBe(value)
+      const namespace = key.split('.')[0]
+      const resource = namespace === 'a11y' ? shell
+        : namespace === 'widget' ? dashboard
+          : generated[`./en/locale-detail-${namespace}.json`].default
+      expect(nested(resource, key), key).toBe(value)
+      addedKeys.add(key)
+    }
+    const oldEntries = leaves(catalog)
+      .filter(([key]) => !addedKeys.has(key))
+      .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+    expect(oldEntries).toHaveLength(30028)
+    // User-approved current checkpoint; preserve every exact leaf/value in this partition.
+    expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
+      .toBe("bfd0b367d31dc47e731d0afab57fb57de2aa9e6d8eaa15f6f6a8dd3598cd789a")
+    expect(leaves(catalog)).toHaveLength(32977)
+    expect(catalog.settings.title).toBe('Settings')
+    expect(catalog.pwa.offline.banner).toBe(
+      'Showing cached data. Operational changes stay disabled until you reconnect.',
+    )
+    expect(shell.pwa.offline).toEqual(catalog.pwa.offline)
+    expect(shell.pwa.update).toEqual(catalog.pwa.update)
+    expect(shell.pwa.cache).toEqual(catalog.pwa.cache)
+    expect(catalog.pwa).toMatchObject(shell.pwa)
+  })
+
+  it('retains the eighteen resolved producers and proves the exact three titles now resolve', () => {
+    expect(additions).toHaveLength(18)
+    expect(baseline).toEqual([])
+    expect(runtimeManifest.missing).toEqual([])
+    expect(usageManifest.knownMissingKeys).toEqual([])
+    for (const key of remaining) {
+      const value = ownerRecoveryAdditions.find(([candidate]) => candidate === key)?.[1]
+      expect(value).toBeDefined()
+      expect(nested(catalog, key)).toBe(value)
+      expect(nested(shell, key)).toBe(value)
+      expect(nested(generated['./en/locale-detail-error.json'].default, key)).toBe(value)
+    }
+    expect(usageManifest.shellCriticalKeys).toEqual(expect.arrayContaining([
+      ...remaining,
+      ...additions.map(([key]) => key),
+    ]))
+  })
+
+  it('resolves actual generated English through the existing i18next loader and interpolator', async () => {
+    await Promise.all(['browserNotifications', 'error', 'replay', 'table', 'settings', 'pwa']
+      .map(namespace => loadEnglishNamespace(namespace)))
+    for (const [key, value] of additions) {
+      expect(i18n.exists(key, { lng: 'en' })).toBe(true)
+      expect(i18n.t(key, { lng: 'en', defaultValue: '__unresolved__', skipInterpolation: true }))
+        .toBe(value)
+    }
+    expect(i18n.t('browserNotifications.toast.exportReadyBody', { lng: 'en', filename: 'fleet.csv' }))
+      .toBe('fleet.csv is ready for download')
+    expect(i18n.t('replay.shortcuts.seekBack', { lng: 'en', n: 30 })).toBe('⏪ −30s')
+    expect(i18n.t('replay.shortcuts.seekForward', { lng: 'en', n: 5 })).toBe('⏩ +5s')
+    expect(i18n.t('table.selection.selectRowNamed', { lng: 'en', row: 'Drive 42' })).toBe('Select Drive 42')
+    expect(i18n.t('table.selection.deselectRowNamed', { lng: 'en', row: 'Drive 42' })).toBe('Deselect Drive 42')
+    expect(i18n.t('settings.title', { lng: 'en' })).toBe('Settings')
+    for (const [key, value] of leaves(catalog.pwa, 'pwa')) {
+      expect(i18n.t(key, { lng: 'en', skipInterpolation: true })).toBe(value)
+    }
+    for (const key of remaining) expect(i18n.exists(key, { lng: 'en' })).toBe(true)
+  })
+})

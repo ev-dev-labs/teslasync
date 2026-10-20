@@ -1,0 +1,1285 @@
+{
+  "item": "phase6-qa-maps-map-overview",
+  "attempt": 1,
+  "started_at_utc": "2026-10-14T01:43:56.7644227Z",
+  "status": "DONE_SOURCE_QA_FINDINGS_RECORDED",
+  "source_test_pins": [
+    {
+      "path": "web/src/features/maps/pages/MapOverviewPage.tsx",
+      "sha256_before": "70a4360582754f3c08558221be552576baf42351003459994306688eeb9e73bf",
+      "pinned_at_utc": "2026-10-14T01:44:59.835052+00:00",
+      "sha256_after": "70a4360582754f3c08558221be552576baf42351003459994306688eeb9e73bf",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/maps/pages/MapOverviewPage.test.tsx",
+      "sha256_before": "92b3808bb582fadad70d993397c59d46ecbb52ff16c407cbae91b31e6375dff0",
+      "pinned_at_utc": "2026-10-14T01:44:59.850927+00:00",
+      "sha256_after": "92b3808bb582fadad70d993397c59d46ecbb52ff16c407cbae91b31e6375dff0",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256_before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "pinned_at_utc": "2026-10-14T01:46:08.267148+00:00",
+      "sha256_after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256_before": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "pinned_at_utc": "2026-10-14T01:46:08.268886+00:00",
+      "sha256_after": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useRangeState.ts",
+      "sha256_before": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "pinned_at_utc": "2026-10-14T01:46:08.269325+00:00",
+      "sha256_after": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256_before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "pinned_at_utc": "2026-10-14T01:46:08.269696+00:00",
+      "sha256_after": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256_before": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "pinned_at_utc": "2026-10-14T01:46:08.269856+00:00",
+      "sha256_after": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256_before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "pinned_at_utc": "2026-10-14T01:46:08.270062+00:00",
+      "sha256_after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/maps/index.ts",
+      "sha256_before": "68bb915ea5f964d5ba6e5c83002b35c5e0b84bc0aa721a3770d5497668c77e43",
+      "pinned_at_utc": "2026-10-14T01:46:08.270338+00:00",
+      "sha256_after": "68bb915ea5f964d5ba6e5c83002b35c5e0b84bc0aa721a3770d5497668c77e43",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/maps/MapLayerSwitcher.tsx",
+      "sha256_before": "cb03bb913a14e1ce666652f35065badd226d773d9a22bade62343eae7780ab41",
+      "pinned_at_utc": "2026-10-14T01:46:08.270511+00:00",
+      "sha256_after": "cb03bb913a14e1ce666652f35065badd226d773d9a22bade62343eae7780ab41",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/maps/MapTileLayer.tsx",
+      "sha256_before": "9f63c7228617637cd37a2c02d9fb1420c67a3fd5826a32a93f39cb60b37f5b44",
+      "pinned_at_utc": "2026-10-14T01:46:08.270682+00:00",
+      "sha256_after": "9f63c7228617637cd37a2c02d9fb1420c67a3fd5826a32a93f39cb60b37f5b44",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/maps/RoutePlayback.tsx",
+      "sha256_before": "ab89740a1706f68b75a8927e39bba99a4655358b3de550add93ffed20e9e3581",
+      "pinned_at_utc": "2026-10-14T01:46:08.270888+00:00",
+      "sha256_after": "ab89740a1706f68b75a8927e39bba99a4655358b3de550add93ffed20e9e3581",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256_before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "pinned_at_utc": "2026-10-14T01:46:08.271220+00:00",
+      "sha256_after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "sha256_before": "ed6e0166d7e517333dc30920c5dc8c5de66f012a175eb3dfb41ce57dad097ed6",
+      "pinned_at_utc": "2026-10-14T01:46:08.271415+00:00",
+      "sha256_after": "ed6e0166d7e517333dc30920c5dc8c5de66f012a175eb3dfb41ce57dad097ed6",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/data-display/TimeStamp.tsx",
+      "sha256_before": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+      "pinned_at_utc": "2026-10-14T01:46:08.272029+00:00",
+      "sha256_after": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256_before": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "pinned_at_utc": "2026-10-14T01:46:08.272514+00:00",
+      "sha256_after": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "sha256_before": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "pinned_at_utc": "2026-10-14T01:46:08.273605+00:00",
+      "sha256_after": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256_before": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "pinned_at_utc": "2026-10-14T01:46:56.598190+00:00",
+      "sha256_after": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256_before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "pinned_at_utc": "2026-10-14T01:46:56.598443+00:00",
+      "sha256_after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256_before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "pinned_at_utc": "2026-10-14T01:46:56.598636+00:00",
+      "sha256_after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/node_modules/react-leaflet/lib/Polyline.js",
+      "sha256_before": "515ee8e105250e4fed0d74188b3645610b37d0d15cece73b50ccadd6c00941ae",
+      "pinned_at_utc": "2026-10-14T01:48:00.378179+00:00",
+      "sha256_after": "515ee8e105250e4fed0d74188b3645610b37d0d15cece73b50ccadd6c00941ae",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/node_modules/react-leaflet/lib/Polyline.d.ts",
+      "sha256_before": "dc21879e45f3a023b5fe459c3da5f2f3cf995f21a1ac533049d8950ce394c045",
+      "pinned_at_utc": "2026-10-14T01:48:00.387733+00:00",
+      "sha256_after": "dc21879e45f3a023b5fe459c3da5f2f3cf995f21a1ac533049d8950ce394c045",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/node_modules/react-leaflet/lib/MapContainer.js",
+      "sha256_before": "e55d48bc9f7b2fc38a144dfb42133c42ad2caa34168bc4c7103e576251b9ed42",
+      "pinned_at_utc": "2026-10-14T01:48:00.388183+00:00",
+      "sha256_after": "e55d48bc9f7b2fc38a144dfb42133c42ad2caa34168bc4c7103e576251b9ed42",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/node_modules/@react-leaflet/core/lib/path.js",
+      "sha256_before": "c4a7ef5878c8fee94ac0755b91b057fbaeafd4afe7c7b8ebe6603f95c47f47e4",
+      "pinned_at_utc": "2026-10-14T01:48:00.388537+00:00",
+      "sha256_after": "c4a7ef5878c8fee94ac0755b91b057fbaeafd4afe7c7b8ebe6603f95c47f47e4",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/feedback/DataSourceNotice.tsx",
+      "sha256_before": "79b11817e939f044a2c1f6fbfa1617b61a435c8461dc84b99b6014f54059afc6",
+      "pinned_at_utc": "2026-10-14T01:48:00.388772+00:00",
+      "sha256_after": "79b11817e939f044a2c1f6fbfa1617b61a435c8461dc84b99b6014f54059afc6",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256_before": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "pinned_at_utc": "2026-10-14T01:48:00.389311+00:00",
+      "sha256_after": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256_before": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "pinned_at_utc": "2026-10-14T01:48:00.390125+00:00",
+      "sha256_after": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx",
+      "sha256_before": "040f8069d31c2d4ff52af8fd62cf411521ca29259ad43d5ab6985fc73890ae7b",
+      "pinned_at_utc": "2026-10-14T01:49:06.714017+00:00",
+      "sha256_after": "040f8069d31c2d4ff52af8fd62cf411521ca29259ad43d5ab6985fc73890ae7b",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/maps/__tests__/MapLayerSwitcher.test.tsx",
+      "sha256_before": "998d6c78c1493800ea1308361e500004228e8309951cd80b4b65e1cfb268c4eb",
+      "pinned_at_utc": "2026-10-14T01:49:06.730818+00:00",
+      "sha256_after": "998d6c78c1493800ea1308361e500004228e8309951cd80b4b65e1cfb268c4eb",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/maps/MapTileLayer.test.tsx",
+      "sha256_before": "a4ddc62e5b37d663ff5d52969c359eb3c09818195241126b9ebd05f8ea4b5265",
+      "pinned_at_utc": "2026-10-14T01:49:06.744326+00:00",
+      "sha256_after": "a4ddc62e5b37d663ff5d52969c359eb3c09818195241126b9ebd05f8ea4b5265",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/maps/__tests__/MapTileLayer.test.tsx",
+      "sha256_before": "63301fc9a1518e8124cc9d5c595322629a9111a41e58f831bf4fc629ac9af6f3",
+      "pinned_at_utc": "2026-10-14T01:49:06.759778+00:00",
+      "sha256_after": "63301fc9a1518e8124cc9d5c595322629a9111a41e58f831bf4fc629ac9af6f3",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/maps/__tests__/RoutePlayback.test.tsx",
+      "sha256_before": "e50559ea3aee853844a1467a3cadf9d187edb4202393e9cad6872b6b14146cac",
+      "pinned_at_utc": "2026-10-14T01:49:06.776804+00:00",
+      "sha256_after": "e50559ea3aee853844a1467a3cadf9d187edb4202393e9cad6872b6b14146cac",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/feedback/DataSourceNotice.test.tsx",
+      "sha256_before": "77837e22dcf1f00beb8ea068582fd60bbf0d0670c4e377c5f3f28c41fbe250d8",
+      "pinned_at_utc": "2026-10-14T01:49:06.779142+00:00",
+      "sha256_after": "77837e22dcf1f00beb8ea068582fd60bbf0d0670c4e377c5f3f28c41fbe250d8",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/feedback/__tests__/DataSourceNotice.classifier.test.tsx",
+      "sha256_before": "6a5de80443f67253b1bb8219386a2ba2eeb4c3f29dd90e27910afd8fe0a10a24",
+      "pinned_at_utc": "2026-10-14T01:49:06.793060+00:00",
+      "sha256_after": "6a5de80443f67253b1bb8219386a2ba2eeb4c3f29dd90e27910afd8fe0a10a24",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/maps/vehicleIcon.ts",
+      "sha256_before": "a74365b5dffe241f69c8380360ff21c2e4b4ba9715b4b0c64729717d5eb90c54",
+      "pinned_at_utc": "2026-10-14T01:49:06.794687+00:00",
+      "sha256_after": "a74365b5dffe241f69c8380360ff21c2e4b4ba9715b4b0c64729717d5eb90c54",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/feedback/LiveStaleDataBanner.tsx",
+      "sha256_before": "4123e66757ad0099044fae22ed314ec2250f049d8e289d678aa679dfee52cd19",
+      "pinned_at_utc": "2026-10-14T01:49:06.795086+00:00",
+      "sha256_after": "4123e66757ad0099044fae22ed314ec2250f049d8e289d678aa679dfee52cd19",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+      "sha256_before": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+      "pinned_at_utc": "2026-10-14T01:49:06.795474+00:00",
+      "sha256_after": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256_before": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "pinned_at_utc": "2026-10-14T01:49:06.795774+00:00",
+      "sha256_after": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/node_modules/@tanstack/query-core/src/queryObserver.ts",
+      "sha256_before": "4f8557df7b4d9426f4acca24634cd565fcac81af315377cceae1c7a4c0283262",
+      "pinned_at_utc": "2026-10-14T01:49:06.796774+00:00",
+      "sha256_after": "4f8557df7b4d9426f4acca24634cd565fcac81af315377cceae1c7a4c0283262",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/routeRegistry.ts",
+      "sha256_before": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "pinned_at_utc": "2026-10-14T01:51:13.569573+00:00",
+      "sha256_after": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/App.tsx",
+      "sha256_before": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "pinned_at_utc": "2026-10-14T01:51:13.569962+00:00",
+      "sha256_after": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/main.tsx",
+      "sha256_before": "0f6618142f999757db4bbe8633bb5a422132f09fa3350274f3265ee77daf5d04",
+      "pinned_at_utc": "2026-10-14T01:52:02.929557+00:00",
+      "sha256_after": "0f6618142f999757db4bbe8633bb5a422132f09fa3350274f3265ee77daf5d04",
+      "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+      "unchanged": true
+    }
+  ],
+  "native_acceptance": "NOTRUN; not source/native/application acceptance",
+  "scope": {
+    "primary_page": "web/src/features/maps/pages/MapOverviewPage.tsx",
+    "route": "/live",
+    "support_review": "Pinned direct domain/map/trust/scope/formatting/table supports and relevant source/test sections; broad support greps are candidate locators, not a full transitive-library correctness audit.",
+    "writable_files": [
+      "docs/frontend-audits/phase6-qa-maps-map-overview.json",
+      "web/logs/phase6-qa-maps-map-overview.log"
+    ],
+    "source_tests": "read-only",
+    "real_locations_accessed": false,
+    "network_api_browser_captures": false
+  },
+  "clock": {
+    "reservation_utc": "2026-10-14T01:39:44.162Z",
+    "return_by_utc": "2026-10-14T01:59:44.162Z",
+    "hard_by_utc": "2026-10-14T02:04:44.162Z",
+    "actual_start_utc": "2026-10-14T01:43:56.7644227Z",
+    "effective_deadline": "earlier reservation deadline retained; not renewed"
+  },
+  "authorities_read": {
+    "orchestrator": {
+      "path": "docs/orchestrator-loop.md",
+      "lines": [
+        1,
+        296
+      ],
+      "entire_file_read": true
+    },
+    "design_contract": {
+      "path": "docs/frontend-design-contract.md",
+      "relevant_ranges": [
+        [
+          1,
+          72
+        ],
+        [
+          419,
+          654
+        ],
+        [
+          1065,
+          1253
+        ],
+        [
+          1721,
+          1781
+        ]
+      ],
+      "limit": "Other unrelated append-only cohorts not re-audited."
+    },
+    "mission": "docs/frontend-mission.md: principles; 5-8,15-17,27-37,43-45",
+    "inventory": "docs/frontend-inventory.md MapOverviewPage joins and docs/frontend-audits/audit-page-137.json",
+    "handoff": "docs/session-handoff.md:1-47,2186-2270,2311-2356",
+    "instructions": [
+      ".github/copilot-instructions.md applicable frontend/integrity/SI portions",
+      ".github/instructions/react-frontend.instructions.md applicable workspace/data/styling/state/i18n/SI/a11y portions",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md (historical legacy unit guidance superseded by current SI-only contract)",
+      "docs/CONTRIBUTING.md: privacy/read-only limits"
+    ],
+    "exact_queue": {
+      "file": "migration-queue.md",
+      "line": 67,
+      "item": "phase6-qa-maps-map-overview",
+      "status_at_read": "[~]",
+      "attempt": 1,
+      "claim": "report/log only"
+    }
+  },
+  "confirmed_findings": [
+    {
+      "id": "MAP-QA-001",
+      "rule": "routing-action-contract",
+      "severity": "high",
+      "title": "All three quick links write obsolete hash targets under BrowserRouter",
+      "confirmation": "confirmed-source-mechanism; reproduction is reasoned from pinned source, NOT EXECUTED",
+      "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+      "line": 459,
+      "evidence": [
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 459,
+          "end_line": 459,
+          "source": "                  onClick={() => { window.location.hash = '#/maps/navigation-route'; }}"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 468,
+          "end_line": 468,
+          "source": "                  onClick={() => { window.location.hash = '#/maps/geofences'; }}"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 477,
+          "end_line": 477,
+          "source": "                  onClick={() => { window.location.hash = '#/maps/locations'; }}"
+        },
+        {
+          "file": "web/src/main.tsx",
+          "line": 142,
+          "end_line": 142,
+          "source": "          <BrowserRouter>"
+        },
+        {
+          "file": "web/src/App.tsx",
+          "line": 634,
+          "end_line": 634,
+          "source": "        <Route path=\"geofences\" element={<SafeRoute name=\"Geofences\"><Geofences /></SafeRoute>} />"
+        },
+        {
+          "file": "web/src/App.tsx",
+          "line": 663,
+          "end_line": 663,
+          "source": "        <Route path=\"locations\" element={<SafeRoute name=\"Locations\"><Locations /></SafeRoute>} />"
+        },
+        {
+          "file": "web/src/App.tsx",
+          "line": 828,
+          "end_line": 828,
+          "source": "        <Route path=\"navigation\" element={<SafeRoute name=\"NavigationRoute\"><NavigationRoute /></SafeRoute>} />"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.test.tsx",
+          "line": 567,
+          "end_line": 578,
+          "source": "  it('routes the quick links through the hash router', async () => {\n    renderPage()\n\n    fireEvent.click(await screen.findByRole('button', { name: 'Navigation route' }))\n    expect(window.location.hash).toBe('#/maps/navigation-route')\n\n    fireEvent.click(screen.getByRole('button', { name: 'Geofences' }))\n    expect(window.location.hash).toBe('#/maps/geofences')\n\n    fireEvent.click(screen.getByRole('button', { name: 'Locations' }))\n    expect(window.location.hash).toBe('#/maps/locations')\n  })"
+        }
+      ],
+      "mechanism": "Each action changes only window.location.hash, leaving /live as the pathname. The mounted router is BrowserRouter, not HashRouter. App routes are /navigation, /geofences and /locations, not /maps/*; the source search found no routing hash bridge. The test asserts fragment strings in MemoryRouter rather than destination routing.",
+      "reproduction": {
+        "mode": "synthetic source walkthrough only; no application, tests, locations or requests used",
+        "steps": [
+          "Start on the source-defined /live route with synthetic cached page data.",
+          "Trace each click handler: pathname remains /live while its fragment becomes the hardcoded #/maps/... value."
+        ],
+        "expected": "Each action navigates to its registered destination while preserving intended selected-vehicle scope and navigation guards.",
+        "observed_source_path": "Each action changes only window.location.hash, leaving /live as the pathname. The mounted router is BrowserRouter, not HashRouter. App routes are /navigation, /geofences and /locations, not /maps/*; the source search found no routing hash bridge. The test asserts fragment strings in MemoryRouter rather than destination routing."
+      },
+      "fix": "Use the existing guarded/link/router navigation contract and registered paths; replace the hash-only assertion with real destination routing coverage in the authorized page test.",
+      "owner_need": "page/test repair; no route-registry or catalog writes required",
+      "test_gap": "Existing case at test:567 confirms obsolete hash values, not mounted route reachability."
+    },
+    {
+      "id": "MAP-QA-002",
+      "rule": "initial-paused-not-empty",
+      "severity": "high",
+      "title": "Initial paused fleet is treated as setup-required and paused sources as established emptiness",
+      "confirmation": "confirmed-source-mechanism; reproduction is reasoned from pinned source, NOT EXECUTED",
+      "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+      "line": 304,
+      "evidence": [
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 304,
+          "end_line": 305,
+          "source": "  if (vehicleId == null && !vehiclesLoading && !vehiclesError) {\n    return <NoVehicleSelected pageTitle={t('mapOverview.title', 'Map overview')} />;"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 137,
+          "end_line": 137,
+          "source": "  const latestLoading = latestQuery.isLoading && !latestState.hasData;"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 154,
+          "end_line": 154,
+          "source": "  const historyLoading = historyQuery.isLoading && !historyState.hasData;"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 171,
+          "end_line": 171,
+          "source": "  const locationLoading = locationQuery.isLoading && !locationState.hasData;"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 513,
+          "end_line": 538,
+          "source": "          {historyLoading ? (\n            <Skeleton lines={6} height={16} className=\"mt-2\" />\n          ) : historyError ? (\n            <QueryError error={historyError} onRetry={() => historyQuery.refetch()} />\n          ) : historyRows.length > 0 ? (\n            <DataTable<PositionRecord>\n              tableId=\"maps:overview-history\"\n              variant=\"embedded\"\n              columns={historyColumns}\n              mobileColumns={['time', 'latitude', 'longitude', 'speed', 'heading']}\n              mobilePresentation={historyMobilePresentation}\n              data={historyRows}\n              keyExtractor={(r) => r.id}\n              emptyMessage={t('mapOverview.noHistory', 'No location history found.')}\n              compact\n              pagination\n            />\n          ) : (\n            // no-action: location history appears automatically after valid GPS reports.\n            <EmptyState\n              icon={<Clock className=\"h-8 w-8\" aria-hidden=\"true\" />}\n              message={t('mapOverview.noHistory', 'No location history found.')}\n              description={t(\n                'mapOverview.noHistoryDescription',\n                'Location history appears after the selected vehicle reports valid GPS positions.',\n              )}"
+        },
+        {
+          "file": "web/node_modules/@tanstack/query-core/src/queryObserver.ts",
+          "line": 688,
+          "end_line": 693,
+          "source": "    const isFetching = newState.fetchStatus === 'fetching'\n    const isPending = status === 'pending'\n    const isError = status === 'error'\n\n    const isLoading = isPending && isFetching\n    const hasData = data !== undefined"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 204,
+          "end_line": 226,
+          "source": "  if (!hasData) {\n    const failed = error != null || (source.isError ?? false)\n    return {\n      data: undefined,\n      hasData: false,\n      status: failed ? 'initialFailure' : 'initial',\n      // A failed or not-yet-resolved load has established nothing about\n      // provenance — claiming `live` here would be a lie.\n      provenance: 'unknown',\n      isRefreshing: false,\n      isRefreshBlocked: isPaused,\n      refreshError: null,\n      fatalError: failed ? (error ?? new Error('Request failed')) : null,\n      updatedAt: null,\n      ageMs: null,\n      retry,\n    }\n  }\n\n  const base = {\n    data,\n    hasData: true as const,\n    isRefreshing,"
+        }
+      ],
+      "mechanism": "TanStack isLoading is isPending && isFetching, so pending+paused has isLoading=false. With no fleet result/selection and no fatal error, line304 returns NoVehicleSelected without a successful empty fleet. With a cached fleet/selection but first paused history, historyLoading is false and historyRows is [], so the page says No location history found although no history response exists. Map/location/playback have analogous empty fallthroughs. DataSourceNotice can say Paused offline but does not correct these panel claims; the fleet early return omits that notice.",
+      "reproduction": {
+        "mode": "synthetic source walkthrough only; no application, tests, locations or requests used",
+        "steps": [
+          "Walk through fleet data=undefined, status=pending, fetchStatus=paused, error=null, vehicleId=null: line304 passes.",
+          "Separately use a synthetic selected vehicle with cached fleet and history data=undefined/status=pending/fetchStatus=paused: line513 is not loading and line517 is false."
+        ],
+        "expected": "Show selection/load-blocked/initial-paused feedback without claiming a resolved empty fleet or absent GPS/history; retain source shells and independent retry.",
+        "observed_source_path": "TanStack isLoading is isPending && isFetching, so pending+paused has isLoading=false. With no fleet result/selection and no fatal error, line304 returns NoVehicleSelected without a successful empty fleet. With a cached fleet/selection but first paused history, historyLoading is false and historyRows is [], so the page says No location history found although no history response exists. Map/location/playback have analogous empty fallthroughs. DataSourceNotice can say Paused offline but does not correct these panel claims; the fleet early return omits that notice."
+      },
+      "fix": "Require successful fleet resolution for the no-vehicle/setup guard and use existing source-state/paused feedback before authoritative empty branches.",
+      "owner_need": "page/test repair; shared DataState and DataSourceNotice already expose required facts",
+      "test_gap": "Page tests cover in-flight loading and fatal errors, not paused-before-first-success. Supporting brief/notice tests cover paused state but do not exercise the page guard."
+    },
+    {
+      "id": "MAP-QA-003",
+      "rule": "independent-source-preservation",
+      "severity": "high",
+      "title": "Location snapshot loading/fatal failure hides a valid independent position odometer",
+      "confirmation": "confirmed-source-mechanism; reproduction is reasoned from pinned source, NOT EXECUTED",
+      "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+      "line": 400,
+      "evidence": [
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 400,
+          "end_line": 404,
+          "source": "              {locationLoading ? (\n                <Skeleton lines={4} height={20} />\n              ) : locationError ? (\n                <QueryError error={locationError} onRetry={() => locationQuery.refetch()} />\n              ) : (latest || locationDetails) ? ("
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 436,
+          "end_line": 444,
+          "source": "                  {/* Odometer */}\n                  <StatusRow\n                    icon={<Navigation className={cn('h-5 w-5', typography.color.muted)} />}\n                    label={t('mapOverview.odometer', 'Odometer')}\n                  >\n                    <Text size=\"sm\" weight=\"semibold\" color=\"primary\" className=\"tabular-nums\">\n                      {formatDistance(latest?.odometer ?? null)}\n                    </Text>\n                  </StatusRow>"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.test.tsx",
+          "line": 497,
+          "end_line": 505,
+          "source": "  it('isolates a location-snapshot failure to the Location Details rail', async () => {\n    install({ locationError: true })\n    renderPage()\n\n    // Map hero still renders (latest is fine) …\n    expect(await screen.findByTestId('map-container')).toBeInTheDocument()\n    // … while the location rail shows its own error, not a blank panel.\n    expect(screen.getByRole('heading', { name: 'Location details' })).toBeInTheDocument()\n    expect(screen.getByText(\"Can't reach server\")).toBeInTheDocument()"
+        }
+      ],
+      "mechanism": "Odometer reads latest.odometer, not locationDetails. The enclosing rail first branches on locationLoading/locationError, replacing all rows with the snapshot skeleton/error even when latest supplies an authoritative nonnull odometer. A snapshot failure therefore erases usable independent position content.",
+      "reproduction": {
+        "mode": "synthetic source walkthrough only; no application, tests, locations or requests used",
+        "steps": [
+          "Supply a synthetic successful latest position with odometer=1000 SI metres.",
+          "Leave location snapshot pending, or give it an initial fatal error without retained snapshot data.",
+          "Trace the location rail: skeleton/QueryError wins before the latest-backed odometer row."
+        ],
+        "expected": "Keep the position-backed odometer visible while presence rows show their own snapshot loading/failure/retry state.",
+        "observed_source_path": "Odometer reads latest.odometer, not locationDetails. The enclosing rail first branches on locationLoading/locationError, replacing all rows with the snapshot skeleton/error even when latest supplies an authoritative nonnull odometer. A snapshot failure therefore erases usable independent position content."
+      },
+      "fix": "Isolate snapshot presence feedback from the latest-position odometer using existing source APIs; preserve every rail field.",
+      "owner_need": "page/test repair",
+      "test_gap": "Snapshot failure case asserts map/heading/error only, not independent odometer preservation."
+    },
+    {
+      "id": "MAP-QA-004",
+      "rule": "date-preference-bypass",
+      "severity": "medium",
+      "title": "Page observation date and mobile history dates bypass saved locale/timezone",
+      "confirmation": "confirmed-source-mechanism; reproduction is reasoned from pinned source, NOT EXECUTED",
+      "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+      "line": 34,
+      "evidence": [
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 34,
+          "end_line": 34,
+          "source": "import { formatDateTime } from '@/lib/dateFormat';"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 223,
+          "end_line": 223,
+          "source": "    { metricId: 'text', occurrenceId: 'overview-updated', rawValue: latest?.created_at ? formatDateTime(latest.created_at) : null, label: t('mapOverview.lastUpdated', 'Last updated'), description: t('mapOverview.autoRefresh', 'Auto-refreshes every 15 s') },"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 287,
+          "end_line": 287,
+          "source": "          case 'time': return formatDateTime(row.created_at);"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 37,
+          "end_line": 62,
+          "source": "function intlOpts(base: Intl.DateTimeFormatOptions, opts?: FormatOptions): Intl.DateTimeFormatOptions {\n  if (opts?.tz) {\n    return { ...base, timeZone: opts.tz }\n  }\n  return base\n}\n\nfunction intlLocale(opts?: FormatOptions): string | undefined {\n  const raw = opts?.locale\n  // Empty / whitespace-only strings would throw RangeError if handed to\n  // `Intl.*`. Treat them as \"no override\" so the runtime falls back to\n  // the browser's default locale.\n  if (typeof raw === 'string' && raw.trim().length > 0) return raw\n  return undefined\n}\n\n/** Full date + time: \"Apr 4, 2026, 2:30 AM\" */\nexport function formatDateTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {\n  if (!iso) return '—'\n  const d = new Date(iso)\n  if (isNaN(d.getTime())) return '—'\n  return d.toLocaleString(intlLocale(opts), intlOpts({\n    year: 'numeric', month: 'short', day: 'numeric',\n    hour: '2-digit', minute: '2-digit',\n  }, opts))\n}"
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 75,
+          "end_line": 94,
+          "source": "  // `??` only substitutes null/undefined, so an empty string or a legacy\n  // out-of-union value persisted in `tz_display_default` would slip through\n  // and defeat the previous `as TzMode` cast (yielding an invalid mode).\n  // Validate against the known set and fall back to the 'vehicle' default —\n  // the same normalisation posture useSettings already applies to a blank\n  // `locale`.\n  const requestedMode = mode ?? settings.tz_display_default\n  const effectiveMode: TzMode = isTzMode(requestedMode) ? requestedMode : 'vehicle'\n  const tz = useTimezone(effectiveMode)\n\n  const opts = useMemo<FormatOptions>(() => ({ locale, tz }), [locale, tz])\n\n  const formatDate = useCallback<DateFormatter>(\n    (value, override) => libFormatDate(value, { ...opts, ...override }),\n    [opts],\n  )\n  const formatDateTime = useCallback<DateFormatter>(\n    (value, override) => libFormatDateTime(value, { ...opts, ...override }),\n    [opts],\n  )"
+        },
+        {
+          "file": "web/src/components/data-display/TimeStamp.tsx",
+          "line": 42,
+          "end_line": 64,
+          "source": "export function TimeStamp({ value, format = 'auto', in: mode, className }: TimeStampProps) {\n  const pref = useTimeFormatPreference();\n  const { formatDateTime, formatRelative } = useDateFormat(mode);\n\n  if (value == null) {\n    return <span className={className}>—</span>;\n  }\n\n  const date = value instanceof Date ? value : new Date(value);\n  if (Number.isNaN(date.getTime())) {\n    return <span className={className}>—</span>;\n  }\n\n  const effective = format === 'auto' ? pref : format;\n  const primary = effective === 'relative' ? formatRelative(date) : formatDateTime(date);\n  const secondary = effective === 'relative' ? formatDateTime(date) : formatRelative(date);\n\n  return (\n    <Tooltip content={secondary}>\n      <span className={className}>{primary}</span>\n    </Tooltip>\n  );\n}"
+        }
+      ],
+      "mechanism": "Both calls use the pure lib formatDateTime without options: it uses browser locale/timezone. Desktop history uses preference-bound TimeStamp instead. A saved locale/timezone different from the browser therefore yields inconsistent observation/mobile versus desktop dates, including date-boundary differences.",
+      "reproduction": {
+        "mode": "synthetic source walkthrough only; no application, tests, locations or requests used",
+        "steps": [
+          "Use a synthetic ISO instant near a UTC day boundary.",
+          "Choose saved UTC and de-DE while the browser defaults differ.",
+          "Trace the KPI/mobile helper call (no options) against desktop TimeStamp -> useDateFormat (effective locale/tz)."
+        ],
+        "expected": "The same raw instant is presented consistently using effective saved locale/timezone across KPI, desktop and mobile disclosures.",
+        "observed_source_path": "Both calls use the pure lib formatDateTime without options: it uses browser locale/timezone. Desktop history uses preference-bound TimeStamp instead. A saved locale/timezone different from the browser therefore yields inconsistent observation/mobile versus desktop dates, including date-boundary differences."
+      },
+      "fix": "Use the existing useDateFormat hook at the page and include its formatter in mobile memo dependencies; keep raw ISO values unchanged.",
+      "owner_need": "page/test repair; do not edit the active shared dateFormat owner",
+      "test_gap": "No page locale/timezone reactivity or date-boundary parity case; tests fix en-US and mock settings."
+    },
+    {
+      "id": "MAP-QA-005",
+      "rule": "date-preference-bypass",
+      "severity": "medium",
+      "title": "MapsOperationalBrief receipt freshness dates use browser defaults",
+      "confirmation": "confirmed-source-mechanism; reproduction is reasoned from pinned source, NOT EXECUTED",
+      "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "line": 8,
+      "evidence": [
+        {
+          "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+          "line": 8,
+          "end_line": 8,
+          "source": "import { formatDateTime } from '@/lib/dateFormat';"
+        },
+        {
+          "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+          "line": 54,
+          "end_line": 59,
+          "source": "      freshness={sources.map(({ label, state }) => (\n        <Text as=\"span\" key={label} size=\"xs\" color=\"muted\" className=\"min-w-0 break-words\">\n          {label}: {state.updatedAt != null\n            ? formatDateTime(new Date(state.updatedAt).toISOString())\n            : t('mapsBrief.freshness.unknown', 'Receipt time unknown')}\n        </Text>"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 37,
+          "end_line": 62,
+          "source": "function intlOpts(base: Intl.DateTimeFormatOptions, opts?: FormatOptions): Intl.DateTimeFormatOptions {\n  if (opts?.tz) {\n    return { ...base, timeZone: opts.tz }\n  }\n  return base\n}\n\nfunction intlLocale(opts?: FormatOptions): string | undefined {\n  const raw = opts?.locale\n  // Empty / whitespace-only strings would throw RangeError if handed to\n  // `Intl.*`. Treat them as \"no override\" so the runtime falls back to\n  // the browser's default locale.\n  if (typeof raw === 'string' && raw.trim().length > 0) return raw\n  return undefined\n}\n\n/** Full date + time: \"Apr 4, 2026, 2:30 AM\" */\nexport function formatDateTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {\n  if (!iso) return '—'\n  const d = new Date(iso)\n  if (isNaN(d.getTime())) return '—'\n  return d.toLocaleString(intlLocale(opts), intlOpts({\n    year: 'numeric', month: 'short', day: 'numeric',\n    hour: '2-digit', minute: '2-digit',\n  }, opts))\n}"
+        },
+        {
+          "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx",
+          "line": 149,
+          "end_line": 153,
+          "source": "    expect(within(band).getByText(receipt)).toBeInTheDocument();\n    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));\n    const drawer = screen.getByRole('dialog', { name: 'Vehicle status details' });\n    expect(within(drawer).getByText(receipt)).toBeInTheDocument();\n    expect(within(drawer).getByText(`${sourceLabel}: cached; Route history: ${otherState.provenance}`)).toBeInTheDocument();"
+        }
+      ],
+      "mechanism": "The domain adapter formats state.updatedAt using the pure lib helper with no effective options. Receipt timestamps ignore saved locale/timezone; existing tests derive their expected receipt with the same helper and thus mirror the defect.",
+      "reproduction": {
+        "mode": "synthetic source walkthrough only; no application, tests, locations or requests used",
+        "steps": [
+          "Give the adapter a synthetic nonnull dataUpdatedAt instant.",
+          "Set saved locale/timezone different from browser defaults.",
+          "Trace freshness line57: no preference-aware formatter or options are supplied."
+        ],
+        "expected": "Receipt time honors effective locale/timezone and changes reactively without changing the source timestamp.",
+        "observed_source_path": "The domain adapter formats state.updatedAt using the pure lib helper with no effective options. Receipt timestamps ignore saved locale/timezone; existing tests derive their expected receipt with the same helper and thus mirror the defect."
+      },
+      "fix": "Adopt existing useDateFormat in this adapter and add direct saved-preference/reactivity/date-boundary expectations.",
+      "owner_need": "separate MapsOperationalBrief/test lease; not a shared dateFormat refactor",
+      "test_gap": "Expected freshness at support test:150 uses the same pure helper; no independent saved-preference expectations."
+    },
+    {
+      "id": "MAP-QA-006",
+      "rule": "map-scope-camera-identity",
+      "severity": "high",
+      "title": "Hero camera remains on the previous vehicle when switching warmed caches",
+      "confirmation": "confirmed-source-mechanism; reproduction is reasoned from pinned source, NOT EXECUTED",
+      "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+      "line": 120,
+      "evidence": [
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 120,
+          "end_line": 123,
+          "source": "  const selectedId = vehicleId != null ? String(vehicleId) : '';\n\n  const latestQuery = useQuery<PositionRecord | null>({\n    queryKey: ['position-latest', selectedId],"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 365,
+          "end_line": 377,
+          "source": "                <MapContainer\n                  center={[latest.latitude, latest.longitude]}\n                  zoom={15}\n                  scrollWheelZoom\n                  zoomAnimation={!reduce}\n                  fadeAnimation={!reduce}\n                  markerZoomAnimation={!reduce}\n                  className=\"h-full w-full\"\n                >\n                  <MapTileLayer style={mapStyle} />\n                  <MapInvalidator />\n                  <Marker position={[latest.latitude, latest.longitude]} icon={vehicleIcon()}>\n                    <Popup>{vehicle?.display_name ?? t('mapOverview.vehicle', 'Vehicle')}</Popup>"
+        },
+        {
+          "file": "web/src/components/maps/MapTileLayer.tsx",
+          "line": 94,
+          "end_line": 110,
+          "source": "export function MapInvalidator() {\n  const map = useMap()\n  useEffect(() => {\n    const invalidate = () => map.invalidateSize({ animate: false })\n    const timer = setTimeout(invalidate, 100)\n    const container = map.getContainer()\n    const observer = container && typeof ResizeObserver !== 'undefined'\n      ? new ResizeObserver(invalidate)\n      : undefined\n    if (container && observer) observer.observe(container)\n    return () => {\n      clearTimeout(timer)\n      observer?.disconnect()\n    }\n  }, [map])\n  return null\n}"
+        },
+        {
+          "file": "web/node_modules/react-leaflet/lib/MapContainer.js",
+          "line": 28,
+          "end_line": 42,
+          "source": "    const mapRef = useCallback((node)=>{\n        if (node !== null && context === null) {\n            const map = new LeafletMap(node, options);\n            if (center != null && zoom != null) {\n                map.setView(center, zoom);\n            } else if (bounds != null) {\n                map.fitBounds(bounds, boundsOptions);\n            }\n            if (whenReady != null) {\n                map.whenReady(whenReady);\n            }\n            setContext(createLeafletContext(map));\n        }\n    // eslint-disable-next-line react-hooks/exhaustive-deps\n    }, []);"
+        }
+      ],
+      "mechanism": "MapContainer initializes center only when first created; its callback is memoized with []. The page supplies a new center prop and Marker position but no vehicle identity key or camera-update child. MapInvalidator changes size only. If both vehicles have usable cached latest data, the same container stays mounted and the marker moves to B while the viewport remains on A.",
+      "reproduction": {
+        "mode": "synthetic source walkthrough only; no application, tests, locations or requests used",
+        "steps": [
+          "Use two synthetic vehicle IDs with already cached usable latest records at distinct invented points A and B.",
+          "Mount A, then change the shared selected vehicle to B while both reads stay immediately usable.",
+          "Trace MapContainer reuse: initialization callback does not rerun; Marker receives B."
+        ],
+        "expected": "The map viewport/identity is appropriate to the newly selected vehicle, with genuine user pan and reduced-motion behavior preserved.",
+        "observed_source_path": "MapContainer initializes center only when first created; its callback is memoized with []. The page supplies a new center prop and Marker position but no vehicle identity key or camera-update child. MapInvalidator changes size only. If both vehicles have usable cached latest data, the same container stays mounted and the marker moves to B while the viewport remains on A."
+      },
+      "fix": "Use caller-owned vehicle identity/remount or an existing controlled map camera mechanism with explicit follow/recenter policy. Do not assume updating center props updates Leaflet.",
+      "owner_need": "page/test repair; no shared MapInvalidator change needed",
+      "test_gap": "Inert page MapContainer mock ignores center and never creates a real Leaflet map. No warmed-cache vehicle switch or camera assertion."
+    },
+    {
+      "id": "MAP-QA-007",
+      "rule": "map-scope-camera-identity",
+      "severity": "high",
+      "title": "Equal-length vehicle history switch retains previous replay camera and cursor",
+      "confirmation": "confirmed-source-mechanism; reproduction is reasoned from pinned source, NOT EXECUTED",
+      "file": "web/src/components/maps/RoutePlayback.tsx",
+      "line": 150,
+      "evidence": [
+        {
+          "file": "web/src/components/maps/RoutePlayback.tsx",
+          "line": 150,
+          "end_line": 156,
+          "source": "    }\n    // Only re-fit when the trail length actually changes.\n  }, [map, trail.length, reduce]);\n  return null;\n}\n\nfunction MapPaintContext({ onContext }: { onContext: (context: HTMLElement) => void }) {"
+        },
+        {
+          "file": "web/src/components/maps/RoutePlayback.tsx",
+          "line": 264,
+          "end_line": 273,
+          "source": "\n  useEffect(() => {\n    speedRef.current = speed;\n  }, [speed]);\n\n  useEffect(() => {\n    offsetsRef.current = offsets;\n    totalRef.current = totalMs;\n    // If the new dataset is shorter than the current cursor, clamp it.\n    if (currentIndex >= offsets.length) {"
+        },
+        {
+          "file": "web/src/components/maps/RoutePlayback.tsx",
+          "line": 293,
+          "end_line": 304,
+          "source": "      setCurrentIndex(list.length - 1);\n      setIsPlaying(false);\n      if (intervalRef.current) {\n        clearInterval(intervalRef.current);\n        intervalRef.current = null;\n      }\n      return;\n    }\n    setCurrentIndex(indexAtTime(list, elapsedRef.current));\n  }, []);\n\n  useEffect(() => {"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 495,
+          "end_line": 500,
+          "source": "          ) : playbackPoints.length > 1 ? (\n            <RoutePlayback\n              points={playbackPoints}\n              height={360}\n              ariaLabel={t('mapOverview.playbackLabel', 'Recent route playback map')}\n            />"
+        },
+        {
+          "file": "web/src/components/maps/RoutePlayback.tsx",
+          "line": 152,
+          "end_line": 152,
+          "source": "  }, [map, trail.length, reduce]);"
+        }
+      ],
+      "mechanism": "FitTrail depends on trail.length, not point identity. MapOverview reuses RoutePlayback without selected-vehicle identity. A warmed-cache vehicle switch with the same history count changes points but does not refit the camera. Replay elapsed/index/playing state is also retained unless the new array is shorter. The B route can be offscreen while A playback phase remains.",
+      "reproduction": {
+        "mode": "synthetic source walkthrough only; no application, tests, locations or requests used",
+        "steps": [
+          "Prepare two synthetic warmed vehicle histories with equal count >=2 and distinct invented trails/timestamps.",
+          "Seek/play A, then select B without an intervening empty/loading unmount.",
+          "Trace FitTrail dependencies and offsets effect: length unchanged means no refit; shorter-only clamp does not reset elapsed/index."
+        ],
+        "expected": "A new selected-vehicle history receives the correct map scope and an explicit playback reset policy rather than another vehicle's camera/phase.",
+        "observed_source_path": "FitTrail depends on trail.length, not point identity. MapOverview reuses RoutePlayback without selected-vehicle identity. A warmed-cache vehicle switch with the same history count changes points but does not refit the camera. Replay elapsed/index/playing state is also retained unless the new array is shorter. The B route can be offscreen while A playback phase remains."
+      },
+      "fix": "For this page, pass caller-owned selected-vehicle identity (for example a key) to the existing replay boundary. A generic shared points-identity API would require a separate justified owner/lease.",
+      "owner_need": "prefer page/test identity correction; completed RoutePlayback scopes must not be redispatched as a whole remigration",
+      "test_gap": "Shared tests cover shorter dataset clamping and paint-only camera preservation, not equal-length cross-vehicle identity. Page stub records count only."
+    },
+    {
+      "id": "MAP-QA-008",
+      "rule": "historical-not-live-claim",
+      "severity": "medium",
+      "title": "Historical position is still described as live location/current speed",
+      "confirmation": "confirmed-source-mechanism; reproduction is reasoned from pinned source, NOT EXECUTED",
+      "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+      "line": 133,
+      "evidence": [
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 133,
+          "end_line": 138,
+          "source": "  const latestState = deriveDataState(latestQuery, {\n    provenance: 'historical',\n    unavailable: latestQuery.isSuccess && latest == null,\n  });\n  const latestLoading = latestQuery.isLoading && !latestState.hasData;\n  const latestError = latestState.fatalError;"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 217,
+          "end_line": 223,
+          "source": "  const briefScope = t('mapOverview.brief.scope', 'Selected vehicle · latest position only. Map trail and playback use a separate latest-50-position history request.');\n  const briefMetrics = [\n    { metricId: 'speed', occurrenceId: 'overview-speed', rawValue: latest?.speed, label: t('mapOverview.currentSpeed', 'Current speed'), description: briefScope, display: { formatter: (raw: number) => ({ value: formatSpeed(raw), unit: '' }) } },\n    { metricId: 'number', occurrenceId: 'overview-heading', rawValue: latest?.heading, label: t('mapOverview.heading', 'Heading'), description: t('mapOverview.brief.heading', 'Reported heading in degrees.'), display: { formatter: (raw: number) => ({ value: `${fmtNumber(raw)}°`, unit: '' }) } },\n    { metricId: 'number', occurrenceId: 'overview-latitude', rawValue: hasValidLocation ? latest?.latitude : null, label: t('mapOverview.colLat', 'Lat'), description: t('mapOverview.latLon', 'Lat / lon'), context: hasValidLocation && latest ? `${fmtScientificNumber(latest.latitude, 4)}, ${fmtScientificNumber(latest.longitude, 4)}` : undefined, display: { formatter: (raw: number) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) } },\n    { metricId: 'number', occurrenceId: 'overview-longitude', rawValue: hasValidLocation ? latest?.longitude : null, label: t('mapOverview.colLon', 'Lon'), description: t('mapOverview.latLon', 'Lat / lon'), display: { formatter: (raw: number) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) } },\n    { metricId: 'text', occurrenceId: 'overview-updated', rawValue: latest?.created_at ? formatDateTime(latest.created_at) : null, label: t('mapOverview.lastUpdated', 'Last updated'), description: t('mapOverview.autoRefresh', 'Auto-refreshes every 15 s') },"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 310,
+          "end_line": 324,
+          "source": "    <PageLayout\n      title={t('mapOverview.title', 'Map overview')}\n      subtitle={t(\n        'mapOverview.subtitle',\n        'Live vehicle location and recent history',\n      )}\n      loading={vehiclesLoading && !latestState.hasData && !historyState.hasData && !locationState.hasData}\n      error={!latestState.hasData && !historyState.hasData && !locationState.hasData ? vehiclesState.fatalError : null}\n      query={latestQuery}\n      dataSources={[\n        { id: 'vehicles', label: t('mapOverview.vehicle', 'Vehicle'), query: vehiclesQuery },\n        { id: 'latest-position', label: t('mapOverview.mapRegion', 'Live location map'), query: latestQuery, enabled: selectedId !== '' },\n        { id: 'position-history', label: t('mapOverview.recentHistory', 'Recent location history'), query: historyQuery, enabled: selectedId !== '' },\n        { id: 'location-details', label: t('mapOverview.locationDetails', 'Location details'), query: locationQuery, enabled: selectedId !== '' },\n      ]}"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 351,
+          "end_line": 354,
+          "source": "          <GlassPanel\n            role=\"region\"\n            aria-label={t('mapOverview.mapRegion', 'Live location map')}\n            className=\"relative h-[380px] overflow-hidden sm:h-[460px] xl:col-span-2 xl:h-[600px]\""
+        },
+        {
+          "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+          "line": 54,
+          "end_line": 61,
+          "source": "      freshness={sources.map(({ label, state }) => (\n        <Text as=\"span\" key={label} size=\"xs\" color=\"muted\" className=\"min-w-0 break-words\">\n          {label}: {state.updatedAt != null\n            ? formatDateTime(new Date(state.updatedAt).toISOString())\n            : t('mapsBrief.freshness.unknown', 'Receipt time unknown')}\n        </Text>\n      ))}\n      provenance={sources.map(({ label, state }) => `${label}: ${state.provenance}`).join('; ')}"
+        }
+      ],
+      "mechanism": "Latest-state provenance is correctly historical, but the primary speed label says Current speed, subtitle says Live vehicle location, and map/source accessible labels say Live location map. There is no created_at recency test; fresh HTTP receipt updatedAt is distinct from observation time. Any old but successful position follows the same live/current presentation. Historical provenance in the details drawer does not make those primary claims current.",
+      "reproduction": {
+        "mode": "synthetic source walkthrough only; no application, tests, locations or requests used",
+        "steps": [
+          "Supply a synthetic historical latest record dated well before the audit with nonnull speed and valid invented GPS data.",
+          "Assume a successful recent HTTP receipt; no GPS/streaming call is made in this audit.",
+          "Trace line219 and map labels: current/live wording is unchanged regardless of created_at age."
+        ],
+        "expected": "Describe latest-known/historical position and reported speed honestly unless independently supported observation freshness establishes current/live evidence.",
+        "observed_source_path": "Latest-state provenance is correctly historical, but the primary speed label says Current speed, subtitle says Live vehicle location, and map/source accessible labels say Live location map. There is no created_at recency test; fresh HTTP receipt updatedAt is distinct from observation time. Any old but successful position follows the same live/current presentation. Historical provenance in the details drawer does not make those primary claims current."
+      },
+      "fix": "Use source-honest wording and distinguish observation from receipt age with existing trust contracts. Report any missing timestamp/freshness envelope to integration; do not infer freshness from SSE or polling.",
+      "owner_need": "page/test wording/trust correction; canonical copy integration remains parent-owned",
+      "test_gap": "Existing fixtures are historical; tests check historical provenance only in details, not that primary labels avoid unsupported live/current claims."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "MAP-CAND-001",
+      "topic": "workspace range / both bounds",
+      "evidence": [
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 140,
+          "end_line": 148,
+          "source": "  const historyQuery = useQuery<PositionRecord[]>({\n    queryKey: ['position-history', selectedId],\n    queryFn: ({ signal }) =>\n      request<PositionRecord[]>(\n        `/vehicles/${selectedId}/positions?limit=50`,\n        { signal },\n      ),\n    enabled: selectedId !== '',\n  });"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 217,
+          "end_line": 217,
+          "source": "  const briefScope = t('mapOverview.brief.scope', 'Selected vehicle · latest position only. Map trail and playback use a separate latest-50-position history request.');"
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 23,
+          "end_line": 76,
+          "source": "export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([\n  '/activity',\n  '/analytics',\n  '/analytics/carbon',\n  '/api-logs',\n  '/automations/history',\n  '/charging',\n  '/charging-curve',\n  '/charging-heatmap',\n  '/charging/costs',\n  '/charging/curves',\n  '/cold-start',\n  '/command-history',\n  '/command-reliability',\n  '/cost-analysis',\n  '/drive-calendar',\n  '/drive-score',\n  '/drives',\n  '/drivetrain-health',\n  '/driving-dynamics',\n  '/driving-rhythm',\n  '/efficiency',\n  '/energy',\n  '/energy-flow',\n  '/fsd',\n  '/locations',\n  '/logbook',\n  '/media-player',\n  '/me/activity',\n  '/notifications/archived',\n  '/notifications/inbox',\n  '/parking',\n  '/power-flow',\n  '/range-buffer',\n  '/regen-efficiency',\n  '/route-efficiency',\n  '/security-access',\n  '/share-card',\n  '/signal-explorer',\n  '/signal-log',\n  '/signals',\n  '/sleep-efficiency',\n  '/software-updates',\n  '/speed-profile',\n  '/speed-sweetspot',\n  '/state-debugger',\n  '/statistics',\n  '/tesla-charging-history',\n  '/tesla-charging-sessions',\n  '/timeline',\n  '/tire-pressure',\n  '/trips',\n  '/utilization',\n  '/vehicle-systems/software',"
+        }
+      ],
+      "observation": "/live is not RANGE_ENABLED_PATHS. The page consumes shared vehicle selection but no useRangeState; all three requests omit startInstant/endInstantExclusive and history is explicitly latest50, not full-range.",
+      "why_not_confirmed": "No misleading full-range total is claimed. A latest-only /live workflow can deliberately disable analysis range; source alone cannot settle whether the separate history panel must become a dated route.",
+      "need": "Parent/product/integration decision; if range ownership is required, register actual route and support both server bounds through an existing typed hook, preserving independent latest reads. No loaded-row-only filtering."
+    },
+    {
+      "id": "MAP-CAND-002",
+      "topic": "snapshot identity / observation freshness / provenance",
+      "evidence": [
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 46,
+          "end_line": 52,
+          "source": "interface LocationSnapshot {\n  located_at_home?: boolean | null;\n  located_at_work?: boolean | null;\n  locatedAtHome?: boolean | null;\n  locatedAtWork?: boolean | null;\n  homelink_nearby?: boolean | null;\n}"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 157,
+          "end_line": 170,
+          "source": "  const locationQuery = useQuery<LocationSnapshot | null>({\n    queryKey: ['location-latest', selectedId],\n    queryFn: ({ signal }) =>\n      request<LocationSnapshot | null>(\n        `/location-snapshots/latest?vehicle_id=${selectedId}`,\n        { signal },\n      ),\n    enabled: selectedId !== '',\n  });\n  const { data: locationDetails } = locationQuery;\n  const locationState = deriveDataState(locationQuery, {\n    provenance: 'unknown',\n    unavailable: locationQuery.isSuccess && locationDetails == null,\n  });"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 214,
+          "end_line": 216,
+          "source": "  const atHome = locationDetails?.located_at_home ?? locationDetails?.locatedAtHome;\n  const atWork = locationDetails?.located_at_work ?? locationDetails?.locatedAtWork;\n  const homelinkNearby = locationDetails?.homelink_nearby;"
+        }
+      ],
+      "observation": "Snapshot request/query key includes selectedId and cancellation, but local shape exposes no source observation timestamp or returned vehicle identity. Historical positions and untimestamped presence may describe different observation times; snapshot itself has no interval.",
+      "why_not_confirmed": "No live payloads/backends were queried. Missing identity/freshness envelope is an integration unknown, not proof a wrong vehicle or stale boolean was rendered.",
+      "need": "Existing typed/API contract and integration owner must establish identity/provenance/observation-age semantics before current-presence claims; do not infer freshness from HTTP receipt or global pipe health."
+    },
+    {
+      "id": "MAP-CAND-003",
+      "topic": "extreme geometry/timestamps/numeric hardening",
+      "evidence": [
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 176,
+          "end_line": 207,
+          "source": "  const hasValidLocation = !!latest\n    && typeof latest.latitude === 'number'\n    && typeof latest.longitude === 'number'\n    && (latest.latitude !== 0 || latest.longitude !== 0);\n\n  const trailPositions = useMemo(\n    () => (history ?? [])\n      .filter((s) => typeof s.latitude === 'number' && typeof s.longitude === 'number' && (s.latitude !== 0 || s.longitude !== 0))\n      .map((s) => [s.latitude, s.longitude] as [number, number]),\n    [history],\n  );\n\n  /* Time-ordered points for the optional `<RoutePlayback>` widget. The\n     /positions endpoint returns most-recent-first, so we sort ascending. */\n  const playbackPoints = useMemo<PlaybackPoint[]>(() => {\n    const list = (history ?? [])\n      .filter(\n        (s) =>\n          typeof s.latitude === 'number' &&\n          typeof s.longitude === 'number' &&\n          (s.latitude !== 0 || s.longitude !== 0) &&\n          !!s.created_at,\n      )\n      .map((s) => ({\n        lat: s.latitude,\n        lng: s.longitude,\n        timestamp: s.created_at,\n        speed: s.speed ?? undefined,\n        soc: s.battery_level ?? undefined,\n        power: s.power ?? undefined,\n      }));\n    list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());"
+        },
+        {
+          "file": "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "line": 274,
+          "end_line": 274,
+          "source": "          <Text variant=\"bodySm\">{r.heading != null ? `${fmtNumber(r.heading)}°` : '—'}</Text>"
+        },
+        {
+          "file": "web/src/lib/numberFormat.ts",
+          "line": 63,
+          "end_line": 65,
+          "source": "}\n\n/**"
+        }
+      ],
+      "observation": "Page coordinates use typeof-number plus 0,0 sentinel, not finite/bounds checks; playback timestamps are merely truthy before sorting. Nonnull history heading reaches fmtNumber, whose safeNumber can substitute zero for non-finite input.",
+      "why_not_confirmed": "The allowed review did not establish that invalid/non-finite/out-of-range records are a supported API payload. JSON cannot carry NaN/Infinity literals. No invalid-data test or browser was run; potential malformed-data consequences remain candidates, not observed production failures.",
+      "need": "Authorized synthetic contract coverage for malformed coordinates/times/headings; confirm upstream validity contract and avoid manufacturing zero. Preserve actual zero speed/heading and legitimate signed geographic coordinates."
+    }
+  ],
+  "source_coverage": {
+    "section_count": 6,
+    "sections": [
+      {
+        "name": "Vehicle status / review details",
+        "lines": [
+          335,
+          345
+        ],
+        "source": "latest position",
+        "actions": [
+          "Review details"
+        ],
+        "notes": "Five metrics: SI speed, heading, latitude, longitude, observation time; source receipt/provenance remain distinct."
+      },
+      {
+        "name": "Hero map",
+        "lines": [
+          350,
+          395
+        ],
+        "source": "latest position + independent history trail",
+        "actions": [
+          "four URL-backed map layers",
+          "vehicle marker popup",
+          "map gestures/zoom"
+        ],
+        "notes": "Named region; reduced-motion flags; no phantom marker for 0,0."
+      },
+      {
+        "name": "Location details",
+        "lines": [
+          399,
+          451
+        ],
+        "source": "snapshot tri-state presence + latest odometer",
+        "actions": [
+          "snapshot retry on fatal failure"
+        ],
+        "notes": "Home/work/HomeLink true/false/null preserved; independent odometer hiding confirmed."
+      },
+      {
+        "name": "Quick links",
+        "lines": [
+          453,
+          483
+        ],
+        "actions": [
+          "Navigation route",
+          "Geofences",
+          "Locations"
+        ],
+        "notes": "Three actionable controls present but routing mechanism confirmed wrong."
+      },
+      {
+        "name": "Recent route playback",
+        "lines": [
+          488,
+          508
+        ],
+        "source": "history sorted ascending",
+        "actions": [
+          "Play",
+          "Pause",
+          "Stop/reset",
+          "seek",
+          "speed",
+          "map layers/zoom"
+        ],
+        "notes": "Raw optional SI speed/SOC/power preserved; no autoPlay supplied."
+      },
+      {
+        "name": "Recent location history",
+        "lines": [
+          510,
+          542
+        ],
+        "source": "latest50 history rows",
+        "actions": [
+          "pagination",
+          "mobile Quick view",
+          "shared table column/export controls where default-enabled"
+        ],
+        "notes": "Stable maps:overview-history identity; all five original fields supplied including mobile hidden-detail coordinates. No full-history/backend/export-completeness acceptance."
+      }
+    ],
+    "vehicle_identity": "useSelectedVehicle is the only page selection owner; each local query key and URL include selectedId, enabled only with selection and forwards signal. No duplicate selector, page mutation or command. Shared-camera identity findings are separate from correctly scoped query keys.",
+    "trust": "fatalError drives per-source replacement; retained payloads stay mounted after refresh failure and DataSourceNotice owns independent recovery. Successful null latest/empty history annotate unavailable. Initial-paused fallthrough confirmed; stream banner is pipe health, not GPS observation age.",
+    "si_preferences": "useUnits formats SI speed/distance at display; replay optional SI values remain unconverted inputs. useNumberFormatting is reactive; fmtScientificNumber floors 4/5 decimals but takes max(saved precision,floor), so these are not hardcoded-precision violations. TimeStamp binds date preferences; pure page/adapter date calls do not. Separate 12/24-hour preference behavior not established by this bounded review.",
+    "a11y_mobile": "Named map/KPI regions, shared buttons with localized names, non-color tri-state text, decorative icon hiding, 44px quick links/layer toggles and stacked grids exist in source. History supplies all five mobile fields and authored Quick-view coverage. This does not prove runtime reachability, hit sizes, focus, contrast or overflow.",
+    "map_semantics": "Installed react-leaflet4.2.1 exports are used through shared barrel. Top-level Polyline options are valid on construction, not an ignored-prop finding. MapInvalidator preserves center on resize. RoutePlayback resolves path paint at mounted context; vehicleIcon is DOM theme paint with safe sanitizer and static halo, not live proof. No renderer/network/tile behavior was exercised."
+  },
+  "historical_findings_disposition": {
+    "source_only_receipt": "migration-queue.md:1948 phase5-page-maps-map-overview [x], commit7763033010849462a07a9c7a87017bf82a361914, accepted SOURCE ONLY. Historical final tests were external catalog startup exit1/zero cases and native route capture rejected; not a fresh pass.",
+    "present_fixes_not_reopened": [
+      "HomeLink no longer defaults unknown to false: page216/226-229.",
+      "Latest/history are historical and annotate successful null/empty unavailable: page133-153.",
+      "All five mobile fields and Quick-view presenter exist: page281-297/522-523; authored test679.",
+      "Hero reduced-motion flags exist: page369-371.",
+      "Shared switcher has min-h-11/min-w-11; marker default is semantic-info with static halo."
+    ],
+    "inherited_debt": "Phase5 receipt records style exit1/three inherited geometry candidates UNACCEPTED. No style scanner was run here and no style-clean claim is made. Original source/test baseline byte parity was not independently reconstructed."
+  },
+  "queue_deduplication": {
+    "method": "Read exact row67 and source acceptance1948; search canonical queue for map-overview/RoutePlayback/MapTileLayer/MapsOperationalBrief/camera/scope/freshness/date-owner targets before proposing needs. Queue was not written.",
+    "completed_not_redispatched": [
+      "phase5-page-maps-map-overview",
+      "phase3-map-layer-switcher",
+      "phase3-map-tile-layer",
+      "phase3-map-renderer-color-root",
+      "phase3-maps-operational-brief",
+      "phase3-page-container",
+      "phase3-data-source-notice",
+      "phase3-route-playback",
+      "phase3-route-playback-paint-adoption",
+      "phase6-fix-navigation-route-caption-prop",
+      "phase6-live-vehicle-identity-reset"
+    ],
+    "active_related_owner": {
+      "item": "phase6-fix-relative-future-dates",
+      "queue_line": 381,
+      "files": [
+        "web/src/lib/dateFormat.ts",
+        "web/src/lib/dateFormat.contract.test.ts"
+      ],
+      "dedup": "Active shared future-relative-date semantics owner is not this audit's page/adapter default-options defect; preserve its source lease, do not duplicate or edit it."
+    },
+    "no_existing_exact_fix_found": "The searched Phase6 item/file targets did not expose an exact owner for the confirmed page/adapter mechanisms. This is a bounded search, not a claim about every queue note or actor lifecycle.",
+    "needs": [
+      {
+        "need_id": "MAP-NEED-PAGE",
+        "finding_ids": [
+          "MAP-QA-001",
+          "MAP-QA-002",
+          "MAP-QA-003",
+          "MAP-QA-004",
+          "MAP-QA-006",
+          "MAP-QA-007",
+          "MAP-QA-008"
+        ],
+        "proposed_exclusive_files": [
+          "web/src/features/maps/pages/MapOverviewPage.tsx",
+          "web/src/features/maps/pages/MapOverviewPage.test.tsx"
+        ],
+        "instruction": "Parent may queue bounded contract corrections with original 26 authored cases preserved; source release required before writer launch. For this caller, vehicle identity can reset both map/replay without a new shared public API. Not a whole-page remigration. Catalog needs report to parent only."
+      },
+      {
+        "need_id": "MAP-NEED-BRIEF-DATE",
+        "finding_ids": [
+          "MAP-QA-005"
+        ],
+        "proposed_exclusive_files": [
+          "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+          "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx"
+        ],
+        "instruction": "Parent-owned separate adapter lease using existing preference-aware formatter; independent of active shared relative-future-date fix."
+      }
+    ]
+  },
+  "native_NOTRUN": [
+    {
+      "area": "responsive/visual",
+      "required": "Mission widths320/375/390/430/768/1024/1280/1440/1920/2560, allocated narrow containers, saved light/dark/custom, RTL, long labels,200% text and inherited geometry candidates",
+      "status": "NOTRUN: browser/captures prohibited"
+    },
+    {
+      "area": "accessibility",
+      "required": "Keyboard map entry/exit, zoom/layer/popup focus, review/mobile drawer focus/return, screen-reader alternatives/live notices and actual44px targets",
+      "status": "NOTRUN: source presence is not interaction proof"
+    },
+    {
+      "area": "renderer/maps",
+      "required": "Actual SVG/Canvas paths, tile/provider failure/recovery, theme/forced-colors resolution, marker contrast and reduced-motion camera behavior",
+      "status": "NOTRUN: no tiles or map rendering permitted"
+    },
+    {
+      "area": "application identity/trust",
+      "required": "Mounted route navigation, shared desktop/mobile selection, warmed-cache vehicle transitions, first-paused/retained/fatal/empty source matrix and timestamped snapshot contract with privacy-safe fixtures",
+      "status": "NOTRUN: no network/API/browser/application execution permitted"
+    },
+    {
+      "area": "performance/privacy/export",
+      "required": "Real map resize/large-data cost, contained-scroll/export scopes and safe fixture/consent boundaries",
+      "status": "NOTRUN: no profiling, captures or real locations permitted"
+    }
+  ],
+  "guideline_candidate_checks": {
+    "page_and_domain_adapter_files": [
+      "web/src/features/maps/pages/MapOverviewPage.tsx",
+      "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx"
+    ],
+    "raw_grep_exit_codes": {
+      "static-inline-style": 1,
+      "raw-html": 1,
+      "direct-library-import": 1,
+      "old-api-import": 1,
+      "double-prefix": 1,
+      "camelcase-param": 1,
+      "hidden-section": 0,
+      "hardcoded-string": 1,
+      "missing-page-container": 0,
+      "fetch-useeffect": 1
+    },
+    "matching_lines": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 35,
+      "hardcoded-string": 0,
+      "missing-page-container": 6,
+      "fetch-useeffect": 0
+    },
+    "confirmed_for_these_ten_rules": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 0,
+      "missing-page-container": 0,
+      "fetch-useeffect": 0
+    },
+    "interpretation": "Exact candidate greps were executed, then source inspected. 35 conditional lines are predicates/optional warning/trail/actions or in-panel alternatives, not data-gated panel shells. PageLayout and NoVehicleSelected delegate to PageContainer. Eight application-contract findings above remain real even though none is one of these ten syntactic rules. Grep coverage is not lint/TS/i18n-catalog acceptance.",
+    "support_exceptions": "Raw table is inside components/ui; direct Leaflet imports are shared renderer/barrel building blocks. Dynamic RoutePlayback height and DataTable widths are allowed. Client double-prefix string is a comment; Azure tilesetId is third-party provider contract, not backend camelCase query parameter. Attribution brand strings are explicit exceptions. Effects are camera/paint/connection/lifecycle/state sync, not page fetch-useEffect loading. Initial broad grep matched refetch and used inadequate quote patterns; corrected patterns and raw results are retained."
+  },
+  "checks": {
+    "tests": {
+      "status": "NOTRUN",
+      "statically_authored_page_cases": 26,
+      "regular_it_declarations": 20,
+      "it_each_declarations": 2,
+      "explicit_each_rows": 6,
+      "discovered": null,
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "reason": "No fresh tests or passing reruns authorized. Static declarations are not discovery/results."
+    },
+    "lint": "NOTRUN prohibited",
+    "tsc": "NOTRUN prohibited; no TypeScript-pass claim",
+    "build": "NOTRUN prohibited",
+    "helpers_servers_installs_subagents": "NOTRUN prohibited; none started",
+    "network_browser_locations": "NOTRUN prohibited; no actual location payloads inspected",
+    "raw_command_log": "web/logs/phase6-qa-maps-map-overview.log",
+    "command_failures": [
+      {
+        "exit": 1,
+        "step": "initial full orchestrator/design print",
+        "cause": "Unicode console encoding failed near design-contract start; entire orchestrator output retained and read, UTF-8 relevant contract reads completed."
+      },
+      {
+        "exit": 1,
+        "step": "broad source route locator",
+        "cause": "UnicodeDecodeError byte0x97 in unprinted unrelated route file after successful preceding support reads; replaced with targeted byte-safe git grep."
+      }
+    ],
+    "tool_read_failures": [
+      {
+        "numeric_exit": null,
+        "raw": "Invalid view_range: start line (290) is beyond the end of the file. The file has 173 lines.",
+        "resolution": "Corrected numberFormat read1-173; not a source/test failure."
+      }
+    ],
+    "path_locator_notes": [
+      "MapInvalidator.tsx absent: actual owner is MapTileLayer.tsx:94. No nonexistent file was treated as audited."
+    ],
+    "prohibited_writes": "No source/test/catalog/queue/handoff/Git writes; only the two authorized artifacts were written by these commands. Ambient unrelated dirty files were preserved. No global clean-working-tree claim."
+  },
+  "summary": {
+    "confirmed_finding_records": 8,
+    "counting_method": "One source-mechanism record per issue/owner. Three quick-link action sites are grouped as one routing finding; date bypass is two independently owned production-file findings. Candidates and nativeNOTRUN are excluded.",
+    "confirmed_by_rule": {
+      "routing-action-contract": 1,
+      "initial-paused-not-empty": 1,
+      "independent-source-preservation": 1,
+      "date-preference-bypass": 2,
+      "map-scope-camera-identity": 2,
+      "historical-not-live-claim": 1
+    },
+    "confirmed_by_primary_file": {
+      "web/src/features/maps/pages/MapOverviewPage.tsx": 6,
+      "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx": 1,
+      "web/src/components/maps/RoutePlayback.tsx": 1
+    },
+    "candidate_records": 3,
+    "bounded_source_fix_needs": 2,
+    "native_NOTRUN_groups": 5,
+    "priority_order": [
+      "routing actions",
+      "initial paused/independent source retention",
+      "vehicle camera/replay identity",
+      "effective date preferences",
+      "historical/current wording"
+    ],
+    "source_writes": 0,
+    "test_writes": 0,
+    "tests_executed": 0
+  },
+  "pin_check": {
+    "status": "MATCH",
+    "checked_at_utc": "2026-10-14T01:56:20.632169+00:00",
+    "pin_count": 42,
+    "drifted_files": [],
+    "limit": "Pins cover the full bytes of listed source/test/installed dependency inputs, even where review was targeted to relevant sections. No immutable-original baseline replacement."
+  },
+  "completed_at_utc": "2026-10-14T01:56:20.632169+00:00",
+  "release": {
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-maps-map-overview.json",
+      "web/logs/phase6-qa-maps-map-overview.log"
+    ],
+    "source_write_claim": "none acquired",
+    "commands": "all audit commands bounded synchronous; no audit async/helper/server session started",
+    "state": "RELEASED on successful final command completion",
+    "at_utc": "2026-10-14T01:57:29.790710+00:00",
+    "artifacts_released": true,
+    "commands_released": true,
+    "audit_owned_running_async_commands": 0,
+    "note": "No source/test lease was acquired. Only this report/log claim is released; unrelated owners/processes are untouched."
+  },
+  "schema_version": 1,
+  "final_validation": {
+    "at_utc": "2026-10-14T01:57:29.790710+00:00",
+    "json_reparsed_from_disk": true,
+    "counts_consistent": true,
+    "exact_source_citations_checked": 51,
+    "source_test_dependency_pins_checked": 42,
+    "drift_count": 0,
+    "meaning": "Documentation/source-pin validation only; NOT a test/lint/build/TypeScript/native pass."
+  }
+}

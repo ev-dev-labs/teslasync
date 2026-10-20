@@ -7,14 +7,15 @@
  * isolation.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { MetricSwitcherChart, type MetricSwitcherMetric } from '../MetricSwitcherChart';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string) => fallback,
+    t: (_key: string, fallback: string, options?: { title?: string }) =>
+      fallback.replace('{{title}}', options?.title ?? '{{title}}'),
   }),
   Trans: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -31,6 +32,7 @@ vi.mock('@/hooks/useChartExport', () => ({
 }));
 
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [] }),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
@@ -64,6 +66,42 @@ function renderWithProviders(ui: React.ReactNode) {
 }
 
 describe('MetricSwitcherChart', () => {
+  it('keeps an unavailable cost metric visible without plotting invented zero prices', () => {
+    renderWithProviders(
+      <MetricSwitcherChart
+        title="Cost"
+        ariaLabel="Cost"
+        series={{ cost: series.drives }}
+        metrics={[{ key: 'cost', label: 'Cost', getValue: () => null }]}
+        activeMetric="cost"
+        onMetricChange={() => undefined}
+        emptyMessage="Pricing unavailable"
+      />,
+    );
+
+    expect(screen.getByRole('tab', { name: 'Cost' })).toBeInTheDocument();
+    expect(screen.getByText('Pricing unavailable')).toBeInTheDocument();
+  });
+
+  it('preserves missing readings beside known values in the accessible chart table', () => {
+    renderWithProviders(
+      <MetricSwitcherChart
+        title="Cost"
+        ariaLabel="Cost"
+        series={{ cost: [{ date: 'Apr 13', value: null }, { date: 'Apr 20', value: 5 }] }}
+        metrics={[{ key: 'cost', label: 'Cost', getValue: point => point.value, formatValue: value => `$${value}` }]}
+        activeMetric="cost"
+        onMetricChange={() => undefined}
+        emptyMessage="Pricing unavailable"
+      />,
+    );
+
+    const table = within(screen.getByRole('table'));
+    expect(table.getByRole('cell', { name: '—', exact: true })).toBeInTheDocument();
+    expect(table.getByRole('cell', { name: '$5', exact: true })).toBeInTheDocument();
+    expect(table.queryByRole('cell', { name: '$0', exact: true })).toBeNull();
+  });
+
   it('renders the title and pill buttons for every metric', () => {
     renderWithProviders(
       <MetricSwitcherChart
@@ -79,6 +117,7 @@ describe('MetricSwitcherChart', () => {
     );
 
     expect(screen.getByText('Drives over time')).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'Drives over time metric' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Drives' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Distance' })).toBeInTheDocument();
   });

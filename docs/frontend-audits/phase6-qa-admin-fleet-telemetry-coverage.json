@@ -1,0 +1,459 @@
+{
+  "item": "phase6-qa-admin-fleet-telemetry-coverage",
+  "kind": "read-only-finished-page-source-QA",
+  "reportStatus": "COMPLETED_WITH_SOURCE_FINDINGS",
+  "pageAcceptance": "NOT_ACCEPTED",
+  "native": "NOTRUN",
+  "summary": {
+    "checks": 33,
+    "sourcePass": 20,
+    "sourceFail": 8,
+    "notRun": 5,
+    "confirmedIssues": 8,
+    "candidates": 3,
+    "meaning": "Counts classify bounded source checks only; there is no blanket page/application acceptance."
+  },
+  "startedAt": "2026-10-13T09:20:09.495-07:00",
+  "returnBoundary": "2026-10-13T09:40:09.495-07:00",
+  "hardBoundary": "2026-10-13T09:45:09.495-07:00",
+  "sourceEvidenceAt": "2026-10-13T16:29:39.8225933Z",
+  "route": "/admin/telemetry/coverage",
+  "scope": {
+    "applicationFiles": "READ_ONLY",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-qa-admin-fleet-telemetry-coverage.json",
+      "web\\logs\\phase6-qa-admin-fleet-telemetry-coverage.log"
+    ],
+    "logLocationReason": "migration-queue.md:158-186 explicitly assigns ignored web\\logs\\<item>.log; cwd is web.",
+    "prohibitedOperationsPerformed": [],
+    "limitations": "No browser, network/API execution, telemetry reconfiguration, real identities/VIN captures, source/tests/catalog/config edits, Git, subagents, installs, helpers/extensions, servers, full suites or Docker operations.",
+    "evidenceMeaning": "PASS means the named bounded source property was inspected, not mounted/native/application acceptance. Issue reproductions below are deterministic source traces or future synthetic scenarios, not executed browser/API reproductions."
+  },
+  "authoritiesRead": [
+    "migration-queue.md:158-186,201 and exact phase5-page-admin-fleet-telemetry-coverage row",
+    "docs\\orchestrator-loop.md:1-289",
+    "docs\\session-handoff.md:1-94",
+    "docs\\frontend-design-contract.md:MDC-002,020-026,031-034,040-047,060,070",
+    "docs\\frontend-mission.md:0,15-18,22-27,30-31,43-45",
+    "docs\\frontend-audits\\audit-page-014.json",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\ARCHITECTURE.md:588-697,1189-1210"
+  ],
+  "checks": [
+    {
+      "id": "C01",
+      "status": "PASS",
+      "check": "Exclusive report-only scope and existing queue authority",
+      "evidence": ["migration-queue.md:158-186", "migration-queue.md:201", "docs\\orchestrator-loop.md:111-141"],
+      "result": "Existing Phase6 source QA objective only; no replacement inventory or migration. Application files were read only."
+    },
+    {
+      "id": "C02",
+      "status": "PASS",
+      "check": "Hook URL, HTTP method, query parameters, cancellation and router agreement",
+      "evidence": ["web\\src\\api\\hooks\\useFleetTelemetry.ts:35-49", "web\\src\\api\\client.ts:73-94", "internal\\api\\router.go:3210", "internal\\api\\router.go:3626-3638", "web\\src\\lib\\constants.ts:60"],
+      "result": "request('/tesla/fleet-telemetry/coverage', {signal}) uses default GET, no query parameters or /api/v1 prefix. Exact nested GET route exists, rate limit60/min. Stable query key and five-minute staleTime remain; no telemetry mutation is exposed."
+    },
+    {
+      "id": "C03",
+      "status": "PASS",
+      "check": "Declared response JSON contract",
+      "evidence": ["web\\src\\api\\types.ts:3175-3196", "internal\\api\\fleettelemetry\\handler.go:71-100", "internal\\api\\fleettelemetry\\handler.go:186-201"],
+      "result": "Snake_case field/category/response interfaces agree with Go JSON tags. omitted column/also_signal_log/orphan_fields are intentional; subscribed and total_fields are nonnullable server values. Endpoint is DB-free configuration evidence."
+    },
+    {
+      "id": "C04",
+      "status": "FAIL",
+      "check": "Production client preserves destination dictionary identities",
+      "evidence": ["web\\src\\lib\\resilience.ts:22-40", "web\\src\\api\\client.ts:288", "web\\src\\lib\\resilience.ts:862", "web\\src\\api\\hooks\\useFleetTelemetry.ts:44-46", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:97-105", "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx:26"],
+      "issues": ["F01"],
+      "result": "Recursive camelCaseKeys adds aliases inside opaque destination dictionaries; both variants are enumerated as separate destinations."
+    },
+    {
+      "id": "C05",
+      "status": "PASS",
+      "check": "Section inventory and conditional content boundaries",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:155-160", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:161-291", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:293-330", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:332-410", "web\\src\\components\\layout\\PageContainer.tsx:245-265"],
+      "result": "Five bands retained: six-metric summary, destination chart plus reading legend, conditional orphan warning, filter/results, category detail. Page does not pass whole-page loading/error/empty replacement props. Conditional orphan warning is intentional evidence-only messaging, not concealment of an ordinary section."
+    },
+    {
+      "id": "C06",
+      "status": "PASS",
+      "check": "Actively fetching initial load",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:129", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:177-179", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:361-366", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:61-62"],
+      "result": "Initial active fetch without payload uses chart/list skeletons and loading OperationalBrief, not fabricated readings. This PASS excludes paused initial load."
+    },
+    {
+      "id": "C07",
+      "status": "PASS",
+      "check": "Fatal error and retry isolation",
+      "evidence": ["web\\src\\api\\dataState.ts:204-221", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:92-93", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:177", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:367-375"],
+      "result": "Only fatalError without retained payload replaces chart/category content; localized QueryError and refetch retry remain. Legend/filter/summary shells are not erased."
+    },
+    {
+      "id": "C08",
+      "status": "PASS",
+      "check": "Retained snapshot during refresh and refresh failure",
+      "evidence": ["web\\src\\api\\dataState.ts:224-244", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:91-93", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:129", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:56-73", "web\\src\\components\\feedback\\DataSourceNotice.tsx:81-127"],
+      "result": "RefreshError downgrades trust without blanking snapshot/categories/destinations/orphans/filter. Local retained status and named shared stale notice/retry are wired. Native announcement behavior not exercised."
+    },
+    {
+      "id": "C09",
+      "status": "PASS",
+      "check": "Paused refresh with retained data",
+      "evidence": ["web\\src\\api\\dataState.ts:191-192", "web\\src\\api\\dataState.ts:246-253", "web\\src\\components\\feedback\\DataSourceNotice.tsx:82-84", "web\\src\\components\\feedback\\DataSourceNotice.tsx:170-173", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:138-139"],
+      "result": "Paused retained source is stale/refresh-blocked, not a fabricated server error; shared Paused offline status is reachable and content stays rendered."
+    },
+    {
+      "id": "C10",
+      "status": "FAIL",
+      "check": "Paused initial query versus authoritative empty",
+      "evidence": ["web\\node_modules\\@tanstack\\query-core\\src\\queryObserver.ts:688-692", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:129", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:177-186", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:376-385"],
+      "issues": ["F03"],
+      "result": "A pending paused query without payload has isLoading=false and reaches No categories returned/No destinations reported, contradicting shared unavailable/paused notices and the summary's initial loading status."
+    },
+    {
+      "id": "C11",
+      "status": "PASS",
+      "check": "Authoritatively empty snapshot and filtered-empty distinction",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:184-186", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:376-395"],
+      "result": "Successfully returned empty categories have explicit explanatory content; no-match filter has separate message and reachable filter control. This PASS does not certify malformed responses or paused first load."
+    },
+    {
+      "id": "C12",
+      "status": "PASS",
+      "check": "Coverage denominator and dual-write accounting algorithm",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:11-45", "internal\\api\\fleettelemetry\\handler.go:145-149", "internal\\api\\fleettelemetry\\handler.go:173-183", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:171-175"],
+      "result": "Numerator is subscribed recognized routed field rows; denominator is all recognized routed field rows, not all proto fields, fan-out destinations, vehicle observations or time coverage. Orphans are counted separately and excluded from recognized categories. Parent subscription membership intentionally propagates to flattened children. Empty denominator uses explicitly documented existing0% convention. Destination fan-out correctly explains legitimate dual writes; F01 is separate accidental alias duplication."
+    },
+    {
+      "id": "C13",
+      "status": "PASS",
+      "check": "No snapshot means unknown metrics, not measured zero",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:15-25", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:39-45", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.test.tsx:351-362"],
+      "result": "All six summary rawValue inputs are null when snapshot absent. Existing source tests cover initial failure unknowns; not rerun."
+    },
+    {
+      "id": "C14",
+      "status": "NOTRUN",
+      "check": "Malformed/partial/negative/NaN/null runtime payload robustness",
+      "evidence": ["web\\src\\api\\hooks\\useFleetTelemetry.ts:44-46", "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx:20-23,63-71,77", "internal\\api\\fleettelemetry\\handler.go:71-100"],
+      "candidates": ["U01"],
+      "result": "No runtime payload injection authorized. Current server guarantees required names/counts/booleans; malformed-shape defensive fallbacks are candidates, not proof this backend emits unknown values."
+    },
+    {
+      "id": "C15",
+      "status": "FAIL",
+      "check": "Subscription trust claim matches available evidence",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:280-285", "web\\src\\i18n\\en.json:35976", "internal\\api\\fleettelemetry\\handler.go:67-69,123-126", "internal\\tesla\\config\\config.go:83-113"],
+      "issues": ["F04"],
+      "result": "Legend claims Tesla is currently pushing a field, but subscribed is only generated desired-configuration membership; no applied-vehicle subscription or received telemetry is checked."
+    },
+    {
+      "id": "C16",
+      "status": "PASS",
+      "check": "Fetch freshness versus vehicle telemetry freshness",
+      "evidence": ["web\\src\\api\\dataState.ts:193-198", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts:13-17", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:68-72"],
+      "result": "Freshness is correctly labeled Fetched from query dataUpdatedAt; absent timestamp says Fetch time not supplied. Package snapshot provenance is explicit; no last-vehicle-payload age or two-minute live freshness is invented. Date preference formatting is separately failing C17."
+    },
+    {
+      "id": "C17",
+      "status": "FAIL",
+      "check": "Freshness timestamp respects application locale/timezone/time-format preferences",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts:13-16", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:69", "web\\src\\lib\\dateFormat.ts:29-34,54", "docs\\frontend-design-contract.md:491-506"],
+      "issues": ["F07"],
+      "result": "sourceFreshness formats using argument-free Date.toLocaleString, so host defaults override saved/app locale/timezone/time preferences."
+    },
+    {
+      "id": "C18",
+      "status": "PASS",
+      "check": "SI, counts, signs and presentation boundaries",
+      "evidence": ["web\\src\\api\\types.ts:3175-3196", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:18-45", "web\\src\\hooks\\useNumberFormatting.ts:21-40", "web\\src\\hooks\\useOperationalMetrics.tsx:12-25"],
+      "result": "This page displays dimensionless counts/percentage/configuration identifiers, not physical telemetry measurements. No unit conversion is necessary for destination/column names; no legacy converter or SI rewrite introduced. Numeric formatting/percentage precision use existing preference-aware owners."
+    },
+    {
+      "id": "C19",
+      "status": "PASS",
+      "check": "Category/field/destination/column filters preserve snapshot-wide totals",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:111-125,356,403", "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx:16-25,99-106", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.test.tsx:263-304"],
+      "result": "Trimmed case-insensitive category match passes empty row filter to preserve all fields; other searches narrow matching fields. Destination chart/summary stay snapshot-wide. Stable tableId, row identities, all five desktop columns, filters and complete option-source fields are supplied. Prior category-only false no-match and missing live-region findings are no longer present."
+    },
+    {
+      "id": "C20",
+      "status": "PASS",
+      "check": "Workspace filter ownership",
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:23-77,95-98,156-167", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:95,336-353", "web\\src\\App.tsx:707"],
+      "result": "Undated fleet/package admin route intentionally has no workspace range or selected-vehicle scope. Only a page-local text filter is rendered; no duplicate vehicle/date picker or misleading bounds are added."
+    },
+    {
+      "id": "C21",
+      "status": "FAIL",
+      "check": "Canonical i18n key agreement",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:17-27", "web\\src\\i18n\\en.json:35962-35964"],
+      "issues": ["F05"],
+      "result": "Actual canonical lookup checked64 distinct source-used static/explicit dynamic keys;59 exist,5 are missing. Five summary labels therefore rely on English fallback. Catalog absence is source-proven, not a locale/runtime acceptance claim."
+    },
+    {
+      "id": "C22",
+      "status": "PASS",
+      "check": "Accessible names, result status and color-independent alternatives in source",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:148-151,163,182-194,237-242,343-355", "web\\src\\components\\layout\\PageContainer.tsx:183-193", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:23-41", "web\\src\\components\\ui\\DataTable.tsx:1448-1480"],
+      "result": "Refresh has localized text, icons are decorative, chart has ariaLabel/table data and visible destination text chips, filter has aria-label, result count is atomic polite status, named headings and native table/caption/header semantics are supplied. Actual keyboard/AT/contrast remain NOTRUN."
+    },
+    {
+      "id": "C23",
+      "status": "FAIL",
+      "check": "Persistent visible label for filter input",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:336-353", "web\\src\\components\\ui\\Input.tsx:8,39-40,66-73", "docs\\frontend-design-contract.md:277"],
+      "issues": ["F08"],
+      "result": "Filter has accessible name but no label prop or external visible label; placeholder disappears after entry. This is a design-contract visible-label failure, not a claim that the control lacks a screen-reader name."
+    },
+    {
+      "id": "C24",
+      "status": "FAIL",
+      "check": "All field evidence remains reachable on mobile",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx:43-58,98-107", "web\\src\\components\\ui\\DataTable.tsx:505,715-725,1386-1397,1522", "docs\\frontend-design-contract.md:511-516"],
+      "issues": ["F02"],
+      "result": "Column and dual-write values are unconditionally hidden below md; no mobile presentation/expansion preserves them. Scroll/column visibility cannot override the static allow-list."
+    },
+    {
+      "id": "C25",
+      "status": "PASS",
+      "check": "Canonical chart frame, full data and textual/table alternatives",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:181-242", "web\\src\\components\\charts\\EmbeddedChart.tsx:19-40", "web\\src\\components\\charts\\ChartContainer.tsx:499-507,890-949"],
+      "result": "Incoming bar chart is inside EmbeddedChart/ChartContainer, with the full enumerated destination dataset and labeled fallback columns. Visible text list is independent of chart color. This does not clear F01 duplicated dictionary identities or native narrow-width clipping."
+    },
+    {
+      "id": "C26",
+      "status": "FAIL",
+      "check": "Column dash legend matches all configured destinations",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:259-264", "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx:47-50", "internal\\tesla\\router\\routing.yaml:851-858", "internal\\tesla\\protomodel\\signal_metadata_gen.go:1640-1644", "internal\\api\\fleettelemetry\\handler.go:169-171"],
+      "issues": ["F06"],
+      "result": "Setting*Unit routes have destination unit_history with no column; rendered dash does not imply storage in signal_log as the legend claims."
+    },
+    {
+      "id": "C27",
+      "status": "PASS",
+      "check": "Bounded prohibited-pattern source scans",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:30-75", "web\\src\\api\\hooks\\useFleetTelemetry.ts:18-21,38-46", "web\\logs\\phase6-qa-admin-fleet-telemetry-coverage.log"],
+      "result": "Actual five-file scans: static var inline0, corrected case-sensitive raw controls0, direct vendor imports0, old API imports0, quoted /api/v1 paths0, camelCase query params0, any0, neon text0, legacy unit helpers0, direct fetch/EventSource/useEffect loading0. Scope-only matches, not whole-repository zero violations. Initial PowerShell rg command failed1; native Select-String recovery passed0. Initial insensitive raw scan2 matched shared Button/Input and was explicitly corrected."
+    },
+    {
+      "id": "C28",
+      "status": "PASS",
+      "check": "Current line counts and section markers versus retained baseline receipt",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:1-411", "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx:1-113", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:1-73", "migration-queue.md:phase5-page-admin-fleet-telemetry-coverage", "web\\logs\\phase6-qa-admin-fleet-telemetry-coverage.log"],
+      "result": "Actual411+113+73=597 composed component lines versus historical accepted original599, above70% floor; sourceMetadata17 is additionally inspected but not needed for this comparison. Current direct markers: GlassPanel2, LayoutCard3 including one per-category template, EmbeddedChart1, ChartContainer0 direct, DataTable1, CoverageOperationalBrief1, CoverageCategory1. Five bands/six metric definitions remain. No Git/original source retrieval or fresh baseline regeneration was performed; original599 is retained receipt evidence only."
+    },
+    {
+      "id": "C29",
+      "status": "NOTRUN",
+      "check": "Current TypeScript execution",
+      "evidence": ["docs\\session-handoff.md:65-71", "web\\logs\\phase5-requested-typecheck-gate.log"],
+      "result": "No unchanged passing rerun allowed. Handoff records prior Node26.11.1 npx tsc --noEmit EXIT0; inspected log is empty and does not independently prove numeric exit. This report makes no fresh compiler pass claim."
+    },
+    {
+      "id": "C30",
+      "status": "NOTRUN",
+      "check": "Fresh tests/lint/build and skill audit scripts",
+      "evidence": ["migration-queue.md:phase5-page-admin-fleet-telemetry-coverage", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.test.tsx:130-364", ".github\\skills\\audit-violations\\audit.sh:126-164"],
+      "result": "Prior queue receipt records13/13 passing scoped cases/lint0/style0; not rerun. New test counts/exits are NOTRUN, not13 new passes. audit.sh/verify.sh invoke forbidden helpers; audit.sh also reruns whole-project compiler. Direct scoped scans and source router trace substitute without claiming script success."
+    },
+    {
+      "id": "C31",
+      "status": "NOTRUN",
+      "check": "Native/browser responsive, keyboard, AT, contrast, theme and motion matrix",
+      "evidence": ["docs\\frontend-design-contract.md:511-543,584-592", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:164,219,334,396-399", "web\\src\\components\\motion\\FadeIn.tsx:23-34"],
+      "result": "Browser not granted. All320/375/390/430/768/1024/1280/1440/1920/2560, allocated container, dark/light/custom/RTL/200% text/forced-colors/reduced-motion/low-bandwidth checks NOTRUN. Source reflow and reduced-motion wiring are observations, not rendered passes.",
+      "candidates": ["U02", "U03"]
+    },
+    {
+      "id": "C32",
+      "status": "PASS",
+      "check": "Read-only/privacy and observability boundaries",
+      "evidence": ["web\\src\\api\\hooks\\useFleetTelemetry.ts:38-49", "internal\\api\\fleettelemetry\\handler.go:103-201", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:141-151", ".github\\instructions\\observability.instructions.md:16", "web\\logs\\phase6-qa-admin-fleet-telemetry-coverage.log"],
+      "result": "Only read/refresh action and local filter are exposed. No vehicle-specific identifiers, credentials, per-page RUM bootstrap or executable console logging in scoped files. The one lexical VIN scan match was an error-vins endpoint comment, not identity capture. Backend SLO/span compliance is not a separate campaign in this frontend report."
+    },
+    {
+      "id": "C33",
+      "status": "NOTRUN",
+      "check": "Mounted/deployed endpoint, authorization, real freshness and ingestion agreement",
+      "evidence": ["internal\\api\\router.go:3638", "internal\\api\\fleettelemetry\\handler.go:103-201", "web\\src\\App.tsx:707"],
+      "result": "No API/browser/native execution permitted; route registration/source JSON agreement is not proof of deployed200/auth correctness, applied subscriptions, streaming freshness or runtime ingestion health."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "F01",
+      "severity": "high",
+      "title": "camelCaseKeys duplicates opaque destination-map identities",
+      "proof": "Source-proven production data-path mechanism; runtime NOTRUN.",
+      "evidence": ["web\\src\\lib\\resilience.ts:22-40,862", "web\\src\\api\\client.ts:288", "web\\src\\api\\hooks\\useFleetTelemetry.ts:45", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:99-105,237-242", "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx:26,80-90", "internal\\api\\fleettelemetry\\handler.go:177-183"],
+      "mechanism": "Client recursively preserves each snake_case key and adds its camelCase alias, including dictionary keys such as signal_log/drive_telemetry/unit_history. Hook forwards transformed dictionaries; Object.entries treats original/alias as distinct destinations, duplicating bars/chips/category totals without adding real routes. Legitimate fan-out explanation does not justify aliases.",
+      "repro": "Synthetic source trace: destination_totals:{signal_log:2} -> transformed destination_totals:{signal_log:2,signalLog:2} -> two bars/chips of2, though backend reports one destination. Repeat with category.destinations. No API call or executable helper was used.",
+      "coverageLimit": "Page tests mock api/client request at FleetTelemetryCoveragePage.test.tsx:19-25 and supply pre-transform payloads, so the existing passing receipt is not evidence against this mechanism.",
+      "needs": "One narrow assigned fix protecting opaque dictionary keys or normalizing this typed endpoint's destination dictionaries using established contract ownership; add a covering real-client-boundary regression in that future fix. Do not globally delete dual-shape behavior without auditing its other consumers."
+    },
+    {
+      "id": "F02",
+      "severity": "high",
+      "title": "Mobile category tables lose column and dual-write evidence",
+      "proof": "Source/CSS-path proven; native NOTRUN.",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx:43-58,98-107", "web\\src\\components\\ui\\DataTable.tsx:505,715-725,1386-1397,1522"],
+      "mechanism": "mobileColumns allows only field/destination/subscribed. DataTable adds hidden md:table-cell to column/also_signal_log regardless of column-picker selection. mobilePresentation is opt-in and absent; no expandable renderer is supplied.",
+      "repro": "Future synthetic375px review of a BrakePedal row with column brake_pedal and also_signal_log:true: its two metadata cells remain display:none below768px; scrolling/toggling columns does not remove allow-list CSS. Current source trace establishes the lost rendering path, not a measured screenshot.",
+      "needs": "One narrow CoverageCategory mobile evidence fix using existing DataTable full-details/mobilePresentation contract or contained all-column scrolling; preserve stable tableId, filters, sort, exports and every field."
+    },
+    {
+      "id": "F03",
+      "severity": "medium",
+      "title": "Paused first load is presented as an empty routing snapshot",
+      "proof": "Source-proven TanStack/state branch; runtime NOTRUN.",
+      "evidence": ["web\\node_modules\\@tanstack\\query-core\\src\\queryObserver.ts:688-692", "web\\src\\api\\dataState.ts:204-221", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:129,177-186,376-385"],
+      "mechanism": "isLoading is isPending && isFetching. Offline-paused initial query is pending but not fetching, so firstLoad=false; fatalError=null; categories default[] reaches No categories returned, and chart reaches No destinations reported, even though no response exists.",
+      "repro": "Symbolic query state data:undefined,isPending:true,fetchStatus:'paused',isError:false,isLoading:false,isFetching:false produces both false empty claims. Shared Paused offline notice and loading summary coexist but do not correct those section claims.",
+      "needs": "One narrow page trust-state fix that distinguishes unresolved/refresh-blocked initial source from authoritatively returned empty data, preserving section shells, retained content and retries."
+    },
+    {
+      "id": "F04",
+      "severity": "medium",
+      "title": "Subscription legend overstates generated policy as current ingestion",
+      "proof": "Source-proven producer/consumer semantic disagreement; real ingestion NOTRUN.",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:282-285", "web\\src\\i18n\\en.json:35976", "internal\\api\\fleettelemetry\\handler.go:67-69,123-126", "internal\\tesla\\config\\config.go:83-113"],
+      "mechanism": "Subscribed is membership in NewBuilder().SubscriptionFields, not confirmation a vehicle applied the policy or Tesla currently pushes the field. Legend says currently pushing, conflicting with package-only source/provenance.",
+      "repro": "Source scenario: identical package/configuration with no connected vehicles or a disconnected stream still yields the same subscribed:true field policy, while the legend asserts active pushing. No real vehicle/stream scenario was executed.",
+      "needs": "One narrow source-and-existing-catalog copy correction explaining configured desired subscription membership, not observed ingestion; no telemetry reconfiguration or invented runtime endpoint."
+    },
+    {
+      "id": "F05",
+      "severity": "medium",
+      "title": "Five summary i18n labels are absent from canonical English",
+      "proof": "Actual64-key canonical source lookup;5 missing.",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:17-27", "web\\src\\i18n\\en.json:35962-35964", "web\\logs\\phase6-qa-admin-fleet-telemetry-coverage.log"],
+      "missingKeys": ["coverage.stat.categories", "coverage.stat.routedFields", "coverage.stat.subscribed", "coverage.stat.routedNotSubscribed", "coverage.stat.orphans"],
+      "mechanism": "Dynamic count tuples call t(key,fallback), but coverage.stat contains only subscriptionCoverage in canonical en.json. English fallback masks missing canonical localization.",
+      "repro": "Executed read-only ConvertFrom-Json lookup of all64 distinct static/explicit dynamic keys prints these exact5 missing keys. Current canonical stat object at35962-35964 confirms absence.",
+      "needs": "One narrow assigned adapter/catalog integration item: map to suitable existing canonical labels or integrate only these proven missing leaves through the normal catalog owner; no guard/baseline bypass."
+    },
+    {
+      "id": "F06",
+      "severity": "medium",
+      "title": "Dash-column legend incorrectly identifies unit_history routes as signal_log",
+      "proof": "Source-proven current embedded route counterexample.",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:261-263", "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx:47-50", "internal\\tesla\\router\\routing.yaml:851-858", "internal\\tesla\\protomodel\\signal_metadata_gen.go:1640-1644", "internal\\api\\fleettelemetry\\handler.go:169-171"],
+      "mechanism": "All four Setting*Unit entries route to unit_history without per-field column. Handler returns that destination and omits empty column; UI renders dash. Legend says every dash means field stored in signal_log.",
+      "repro": "Source-derived SettingDistanceUnit response row has destination:'unit_history' and omitted column. Its rendered dash contradicts legend even in a healthy unchanged package. No response was fetched.",
+      "needs": "One narrow existing legend/catalog correction describing absence of per-field column without assuming a destination; retain explicit destination and unit-history evidence."
+    },
+    {
+      "id": "F07",
+      "severity": "medium",
+      "title": "Fetch timestamp bypasses saved locale/timezone/time display",
+      "proof": "Source-proven preference bypass; native formatting NOTRUN.",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts:13-16", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx:69", "web\\src\\lib\\dateFormat.ts:29-34,54"],
+      "mechanism": "sourceFreshness accepts updatedAt/t only and calls Date.toLocaleString without locale/options; changing application locale/timezone or clock preferences cannot affect this timestamp formatter.",
+      "repro": "Future synthetic fixed dataUpdatedAt with browser en-US/America-Los_Angeles and differing saved/app preferences remains browser-default output despite localized Fetched wrapper. No preferences were saved or browser invoked.",
+      "needs": "One narrow existing sourceMetadata preference-aware display adoption through existing date/format hooks; evaluate its shared consumers and preserve last-success timestamp/unknown handling."
+    },
+    {
+      "id": "F08",
+      "severity": "low",
+      "title": "Filter has no persistent visible label",
+      "proof": "Source-proven design-contract omission; accessible name is present.",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:336-353", "web\\src\\components\\ui\\Input.tsx:66-73"],
+      "mechanism": "Only placeholder and aria-label are passed. Shared Input renders visible Label only when label supplied; placeholder vanishes with entered text.",
+      "repro": "Source state filter='BrakePedal' removes the placeholder from visual input presentation; no persistent visible filter label exists in its surrounding JSX. Screen readers still receive aria-label.",
+      "needs": "One narrow page visible-label adoption using shared Input and canonical localized copy, preserving filter behavior/result live region."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "U01",
+      "status": "NOTRUN",
+      "title": "Malformed responses conflate missing collections/counts/booleans with empty/zero/no",
+      "evidence": ["web\\src\\api\\hooks\\useFleetTelemetry.ts:44-46", "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx:20-23,63-71,77,92-95", "internal\\api\\fleettelemetry\\handler.go:71-100"],
+      "reasonNotConfirmed": "Current Go handler guarantees required category counts, strings and subscribed bool. Missing collections are normalized; absent total_fields falls back0; null subscribed displays no; an externally supplied empty category shows filter-no-match even with empty filter. These malformed-input branches are visible in source, but no evidence current producer emits those invalid required values or empty categories.",
+      "nextEvidence": "Only a separately authorized bounded synthetic malformed/partial fixture review; do not infer real unknown readings or launch a source repair automatically."
+    },
+    {
+      "id": "U02",
+      "status": "NOTRUN",
+      "title": "Narrow chart/identifier clipping and long-label reflow",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:209-219,237-242,334", "web\\src\\components\\layout\\Masonry.tsx:28-35"],
+      "reasonNotConfirmed": "Fixed148px Y-axis plus margins reduces available narrow plot width; CSS reflow/wrapping exists. No measured clipping, horizontal page overflow, visual reading-order or200% text result is available.",
+      "nextEvidence": "Future authorized native matrix using safe synthetic destination identifiers; retain every destination and accessible fallback."
+    },
+    {
+      "id": "U03",
+      "status": "NOTRUN",
+      "title": "Default refresh/filter touch targets may be below44px mobile contract",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx:141-151,336-353", "web\\src\\components\\ui\\Button.tsx:36-39,62", "web\\src\\components\\ui\\Input.tsx:29-33,46", "web\\src\\components\\layout\\PageActions.tsx:138-144"],
+      "reasonNotConfirmed": "Page supplies no mobile size override: Button default h-10 and Input min-h-10 imply40px at ordinary root scale, but actual composed dimensions/spacing/saved scale were not measured. Do not claim native target failure or WCAG failure from classes alone.",
+      "nextEvidence": "Future authorized native rectangles/hit targets at320/375/390/430; use existing contract and documented exceptions, no source edit in this report."
+    }
+  ],
+  "retainedEvidence": {
+    "sourceAcceptance": "Original Phase5 queue receipt13/13 cases/lint0/style0 and composed597/original599; source-only. Historical audit's category-name/no-live-result concerns are repaired in current source, not rerun.",
+    "compiler": "Handoff records prior npx tsc --noEmit EXIT0 on Node26.11.1. Current inspected log length0; numeric exit not independently recoverable from that file. No fresh current-source compiler claim.",
+    "baseline": "Original599 line count is historical accepted receipt; current literal counts411+113+73=597 were executed. No baseline regeneration or Git use.",
+    "native": "All historical capture limitations remain historical; no fresh native evidence."
+  },
+  "commands": [
+    {
+      "id": "K01",
+      "command": "PowerShell Get-FileHash -Algorithm SHA256 for the five listed sourceHashes; @(Get-Content -LiteralPath $file).Count; attempted rg -n --glob '*.ts' --glob '*.tsx' scoped pattern scans",
+      "exit": 1,
+      "result": "Hashes/line counts printed; first rg attempt failed because rg executable absent from shell PATH. No scan pass inferred."
+    },
+    {
+      "id": "K02",
+      "command": "PowerShell Select-String -Path the five listed sourceHashes -Pattern the twelve exact patterns printed in ignored log; Select-String section/frame marker pattern",
+      "exit": 0,
+      "result": "Raw scoped matches printed. Initial rawControls2 were case-insensitive shared-component false positives, corrected by K03; VIN lexical match is endpoint documentation only."
+    },
+    {
+      "id": "K03",
+      "command": "Select-String -Path scoped-four production page/adapters -Pattern '<(?:button|input|textarea|select|table)\\b' -CaseSensitive; Get-Content .\\src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable; exact64 source-used key lookups",
+      "exit": 0,
+      "result": "Correct rawControls0; i18n64 checked,5 missing with exact names printed. No helper file created."
+    },
+    {
+      "id": "K04",
+      "command": "PowerShell Select-String exact hook/router/client/transform/paused/mobile and Go JSON evidence, with path:line output",
+      "exit": 0,
+      "result": "Current route/shape and deterministic F01/F03 source traces retained in ignored log; symbolic reproductions explicitly not executed."
+    },
+    {
+      "id": "K05",
+      "command": "Get-Content ..\\docs\\frontend-audits\\phase6-qa-admin-fleet-telemetry-coverage.json -Raw | ConvertFrom-Json -AsHashtable; inspect all33 check statuses/evidence; Get-FileHash -Algorithm SHA256 for the five listed sourceHashes and compare retained values",
+      "exit": 0,
+      "observedAt": "2026-10-13T16:33:50.6038004Z",
+      "result": "JSON parsed;33 checks,20 PASS/8 FAIL/5 NOTRUN;0 invalid status/empty evidence;8 confirmed issues/3 candidates;all5 audited source hashes unchanged,0 differences. Raw output in ignored log."
+    }
+  ],
+  "sourceHashes": [
+    {"file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx", "sha256": "54200CE15E101BDF667A843C4EDC23BBC55D77119187F46A8A22FF8AAD341809", "lines": 411},
+    {"file": "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx", "sha256": "52A1E89F13B0938EF174DCA364C7A871E119AA33487D1D380E41059943CB2F74", "lines": 113},
+    {"file": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx", "sha256": "33575B9FCE028E83AD9C273EE972E9F5B96827B208FC3ACF0D425841D4C77E14", "lines": 73},
+    {"file": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts", "sha256": "14D38A157277FDA878018450DC0134F396E9DA6F4EA42F1CDF3D17FADC93B329", "lines": 17},
+    {"file": "web\\src\\api\\hooks\\useFleetTelemetry.ts", "sha256": "9A176B51F557D28976BDC080D1079C84493A4E1D85785698087C8371EAB4A9EA", "lines": 51}
+  ],
+  "needs": [
+    "Parent triage/queue one narrow fix per confirmed issue F01-F08; no source fixes made by this QA item.",
+    "Keep F01 opaque-map alias duplication and F02 mobile metadata loss high priority; neither is cleared by13 prior mocked-client tests.",
+    "Native/full-page/application acceptance remains NOTRUN and must not be inferred from source report completion.",
+    "No automatic candidate repair or unchanged passing rerun; only separately authorized targeted validation."
+  ],
+  "ownershipRelease": {
+    "effective": "ON_RETURN",
+    "allOwnershipReleasedOnReturn": true,
+    "applicationWriteOwnership": "NONE_CLAIMED",
+    "reportAndLogOwnership": "RELEASED_ON_RETURN",
+    "browserLocks": "NONE_CLAIMED",
+    "activeOwnedCommandsOrProcesses": [],
+    "postReturnWrites": "NONE"
+  }
+}

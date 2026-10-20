@@ -1,0 +1,29 @@
+{
+  "landscape": {
+    "mph": "mph",
+    "kmh": "km/h",
+    "whPerMi": "Wh/mi",
+    "whPerKm": "Wh/km",
+    "browseDrives": "Browse drives",
+    "title": "Efficiency Landscape",
+    "sweetCell": "Happiest Conditions",
+    "brief": {
+      "best": "Lowest distance-weighted consumption among supported condition cells.",
+      "worst": "Highest distance-weighted consumption among supported condition cells.",
+      "mapped": "Returned drives with speed, temperature, distance and energy evidence.",
+      "description": "Observed distance-weighted consumption across speed and temperature cells; thin evidence remains visible in the field.",
+      "source": "Returned drive history; distance-weighted speed × temperature cells."
+    },
+    "painCell": "Harshest Conditions",
+    "spread": "Condition Spread",
+    "spreadHint": "harshest vs happiest",
+    "analyzed": "Drives Mapped",
+    "subtitle": "Your car’s real consumption across speed and temperature",
+    "kpis": "Landscape summary metrics",
+    "noData": "No drives with speed, temperature, and energy data in this period.",
+    "field": {
+      "title": "Consumption Field",
+      "aria": "Grid of consumption by speed band and temperature band; best {{best}}, worst {{worst}}"
+    }
+  }
+}

@@ -2,7 +2,7 @@
  * StatusHero — large at-a-glance status card.
  *
  * Surfaces the answer to "is my instance healthy?" in <1 second.
- * Status drives icon, headline, ring colour, and (optionally) glow.
+ * Status drives icon, headline, and ring colour.
  *
  * Reusable across:
  *   - SystemStatusPage hero
@@ -11,6 +11,7 @@
  */
 
 import { type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CheckCircle, AlertTriangle, XCircle, HelpCircle, Wrench, RefreshCw } from 'lucide-react'
 import { GlassPanel, Button, Text } from '@/components/ui'
 import { LiveIndicator } from '@/components/data-display'
@@ -18,19 +19,26 @@ import { cn } from '@/lib/cn'
 
 export type HeroStatus = 'healthy' | 'degraded' | 'unhealthy' | 'unknown' | 'maintenance'
 
+const STATUS_HEADLINE_KEYS: Record<HeroStatus, string> = {
+  healthy: 'statusHero.headline.healthy',
+  degraded: 'statusHero.headline.degraded',
+  unhealthy: 'statusHero.headline.unhealthy',
+  unknown: 'statusHero.headline.unknown',
+  maintenance: 'statusHero.headline.maintenance',
+}
+
 const STATUS_CONFIG: Record<HeroStatus, {
   icon: typeof CheckCircle
   ring: string
   bg: string
   text: string
-  glowRgba: string
   defaultHeadline: string
 }> = {
-  healthy:     { icon: CheckCircle,  ring: 'ring-green-500/40',  bg: 'bg-green-500/15',  text: 'text-green-400',  glowRgba: 'rgba(34,197,94,0.35)',  defaultHeadline: 'All systems operational' },
-  degraded:    { icon: AlertTriangle, ring: 'ring-amber-500/40', bg: 'bg-amber-500/15', text: 'text-amber-400', glowRgba: 'rgba(245,158,11,0.35)', defaultHeadline: 'Degraded performance' },
-  unhealthy:   { icon: XCircle,      ring: 'ring-red-500/40',    bg: 'bg-red-500/15',    text: 'text-red-400',    glowRgba: 'rgba(239,68,68,0.35)',  defaultHeadline: 'Service outage' },
-  unknown:     { icon: HelpCircle,   ring: 'ring-zinc-500/40',   bg: 'bg-zinc-500/15',   text: 'text-zinc-400',   glowRgba: 'rgba(113,113,122,0.25)', defaultHeadline: 'Status unknown' },
-  maintenance: { icon: Wrench,       ring: 'ring-blue-500/40',   bg: 'bg-blue-500/15',   text: 'text-blue-400',   glowRgba: 'rgba(59,130,246,0.35)', defaultHeadline: 'Scheduled maintenance' },
+  healthy:     { icon: CheckCircle,  ring: 'ring-green-500/40',  bg: 'bg-green-500/15',  text: 'text-green-400',  defaultHeadline: 'All systems operational' },
+  degraded:    { icon: AlertTriangle, ring: 'ring-amber-500/40', bg: 'bg-amber-500/15', text: 'text-amber-400', defaultHeadline: 'Degraded performance' },
+  unhealthy:   { icon: XCircle,      ring: 'ring-red-500/40',    bg: 'bg-red-500/15',    text: 'text-red-400',    defaultHeadline: 'Service outage' },
+  unknown:     { icon: HelpCircle,   ring: 'ring-zinc-500/40',   bg: 'bg-zinc-500/15',   text: 'text-zinc-400',   defaultHeadline: 'Status unknown' },
+  maintenance: { icon: Wrench,       ring: 'ring-blue-500/40',   bg: 'bg-blue-500/15',   text: 'text-blue-400',   defaultHeadline: 'Scheduled maintenance' },
 }
 
 export interface StatusHeroProps {
@@ -57,15 +65,15 @@ export function StatusHero({
   id,
   className,
 }: StatusHeroProps) {
+  const { t } = useTranslation()
   const cfg = STATUS_CONFIG[status]
   const Icon = cfg.icon
-  const heading = headline ?? cfg.defaultHeadline
+  const heading = headline ?? t(STATUS_HEADLINE_KEYS[status], cfg.defaultHeadline)
 
   return (
     <GlassPanel
       id={id}
       className={cn('p-4 md:p-5', className)}
-      style={{ boxShadow: `0 0 60px ${cfg.glowRgba}` }}
     >
       <div className="flex flex-col items-center gap-4 text-center md:flex-row md:items-center md:gap-6 md:text-left">
         <div
@@ -92,7 +100,13 @@ export function StatusHero({
               {subline}
               {live && (
                 <span className="inline-flex items-center gap-1.5">
-                  <LiveIndicator variant="dot" />
+                  {/* Decorative inside this live region: the hero's own
+                      role="status" already announces the "Live" label, and
+                      connection drops are spoken via the global status
+                      announcer — a nested live region would double-announce. */}
+                  <span aria-hidden="true" className="inline-flex">
+                    <LiveIndicator variant="dot" />
+                  </span>
                   <Text as="span" size="xs" color="muted" className="uppercase tracking-wider">Live</Text>
                 </span>
               )}

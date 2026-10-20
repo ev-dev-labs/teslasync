@@ -11,13 +11,13 @@
       "cancel": "Cancel",
       "inputLabel": "Date and time"
     },
-    "title": "Vehicle Time Machine",
+    "title": "Vehicle time machine",
     "subtitle": "Scrub the DVR of your car's mind — reconstruct every signal at any past instant",
     "noVehicles": "No vehicles found. Add a vehicle to travel through its signal history.",
     "timeline": "Timeline",
     "scrubberLabel": "Reconstruction instant",
     "overview": "Overview",
-    "signalState": "Reconstructed Signal State",
+    "signalState": "Reconstructed signal state",
     "now": "Now",
     "presetHour": "−1h",
     "presetDay": "−1d",
@@ -37,13 +37,26 @@
     "ageMinutes": "{{value}}m",
     "ageHours": "{{value}}h",
     "ageDays": "{{value}}d",
+    "ageFresh": "Fresh",
+    "ageStale": "Stale",
+    "ageVeryStale": "Very stale",
+    "fieldAge": "{{status}} · {{age}}",
+    "fieldAgeLabel": "{{status}} observation, changed {{age}} before the reconstruction instant",
+    "invalidHistory": "Timeline bounds unavailable",
+    "invalidHistoryHint": "Recorded timeline bounds could not be interpreted. No reconstruction instant has been selected.",
+    "pendingReconstruction": "The selected instant is pending. Any retained signals and resolved scope still belong to the previously reconstructed instant.",
+    "selectInstant": "A usable timeline is required before a reconstruction instant can be selected.",
     "category": {
-      "battery": "Battery & Charge",
+      "battery": "Battery & charge",
       "climate": "Climate",
-      "motion": "Motion & Drive",
+      "motion": "Motion & drive",
       "tires": "Tires",
-      "security": "Security & Access",
-      "other": "Other Signals"
-    }
+      "security": "Security & access",
+      "other": "Other signals"
+    },
+    "sourceError": "Signal reconstruction could not be loaded.",
+    "summary": "Reconstruction summary",
+    "summarySource": "Historical signal reconstruction",
+    "briefDescription": "Reconstructed signals belong to the resolved instant; tracked fields and history span come from the independent timeline source."
   }
 }

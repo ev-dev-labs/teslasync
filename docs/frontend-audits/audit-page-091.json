@@ -1,0 +1,699 @@
+{
+  "item": "audit-page-091",
+  "phase": 0,
+  "page": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+  "routes": [
+    {
+      "path": "/",
+      "file": "web\\src\\App.tsx",
+      "line": 574,
+      "detail": "Index Dashboard under Layout at line 573; lazy import at line 31. Route declaration inspected, not mounted in a browser."
+    }
+  ],
+  "purpose": "Configurable fleet-operations workspace combining vehicle readiness, current evidence, recent activity and workflow navigation, with saved dashboards, widget discovery and presentation/export tools.",
+  "primaryGoal": "Understand the fleet and selected vehicle from trustworthy source readings, investigate exceptions, and customize the workspace without losing saved layouts or independent widget capabilities.",
+  "auditScope": {
+    "mode": "Read-only source audit of ONE mounted page and bounded dependencies; only report and heartbeat writes.",
+    "excludedPages": [
+      "GlancePage",
+      "QuickStatsPage"
+    ],
+    "migrationPolicy": "Preserve the existing source migration, DashboardSourceBrief/OperationalBrief adoption, trust-aware fleet batch, SI display adapters and custom grid implementation. No restart, old-source transplant or widget deletion.",
+    "ownedFiles": [
+      "docs\\frontend-audits\\audit-page-091.json",
+      ".agent-status\\audit-page-091.txt"
+    ],
+    "inspectionDate": "2026-10-07",
+    "dependencyBound": "Full page; nine seeded widget entry implementations; selected grid, layout, picker, presentation, brief and dialog excerpts; targeted hook/router/shell/CSS evidence. Registry index imports sixteen categories; vehicle registry metadata was fully read and six other category files were searched only for seeded ID-to-component mappings. Neither all registry widget bodies nor a claimed 194-file graph were audited."
+  },
+  "dataSources": [
+    {
+      "name": "Vehicle inventory",
+      "hooks": ["useVehicles", "useDataState"],
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 392,
+      "endpoint": "GET /api/v1/vehicles",
+      "endpointEvidence": {"file": "web\\src\\api\\hooks\\useVehicles.ts", "line": 76},
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 3320},
+      "behavior": "Shared vehicles cache, FAST stale time, AbortSignal forwarding and safeArray select. Root inventory controls skeleton, layout controls, onboarding and grid entry. Widgets observe the same cache."
+    },
+    {
+      "name": "Tesla authorization and explicit inventory sync",
+      "hooks": ["useAuthStatus", "useSyncVehicles"],
+      "owner": "web\\src\\api\\hooks\\useSettings.ts and web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 380,
+      "endpoints": ["GET /api/v1/auth/status", "POST /api/v1/vehicles/sync"],
+      "endpointEvidence": [
+        {"file": "web\\src\\api\\hooks\\useSettings.ts", "line": 62},
+        {"file": "web\\src\\api\\hooks\\useVehicles.ts", "line": 339}
+      ],
+      "routeEvidence": [
+        {"file": "internal\\api\\router.go", "line": 3247},
+        {"file": "internal\\api\\router.go", "line": 3326}
+      ],
+      "behavior": "Sync is user-triggered, live-mode guarded, networkMode always, invalidates/broadcasts inventory and uses existing mutation toasts. Page imports sync from useVehicles, not the separate useSettings export."
+    },
+    {
+      "name": "Saved dashboard hydration and persistence",
+      "hooks": ["useDashboardLayout", "useDashboardLayouts", "useSaveDashboardLayouts"],
+      "owner": "web\\src\\features\\dashboard\\hooks\\useDashboardLayout.ts",
+      "file": "web\\src\\features\\dashboard\\hooks\\useDashboardLayout.ts",
+      "line": 549,
+      "endpoints": ["GET /api/v1/settings/dashboard-layouts", "PUT /api/v1/settings/dashboard-layouts"],
+      "endpointEvidence": [
+        {"file": "web\\src\\api\\hooks\\useSettings.ts", "line": 236},
+        {"file": "web\\src\\api\\hooks\\useSettings.ts", "line": 246}
+      ],
+      "routeEvidence": [
+        {"file": "internal\\api\\router.go", "line": 3664},
+        {"file": "internal\\api\\router.go", "line": 3665}
+      ],
+      "behavior": "Local-first snapshots, two-second debounced server saves, pending-save dirty state, newer-server hydration, registry reconciliation, cross-tab broadcast and undo history. Keep storage identities and unsynced local edits."
+    },
+    {
+      "name": "Selected and widget-specific vehicle state",
+      "hooks": ["useSelectedVehicle", "useVehicleState", "useVehicleLive", "useUnits"],
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\features\\dashboard\\widgets\\VehicleHeroWidget.tsx",
+      "line": 28,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/state, optional as_of",
+      "endpointEvidence": {"file": "web\\src\\api\\hooks\\useVehicles.ts", "line": 269},
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 3333},
+      "behavior": "Widget config vehicle overrides dashboard settings vehicle, then workspace vehicle; individual widget fallback is typically first inventory vehicle. Hero uses actual observedAt/verified fields, bounded recovery polling while evidence is not fresh and live firmware fallback. BatteryGauge and ChargeStatus share state cache. as_of disables automatic polling. useVehicleLive implementation was not followed beyond its hero caller."
+    },
+    {
+      "name": "Fleet posture",
+      "hooks": ["useFleetStates", "useVehicles", "useDataState"],
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\features\\dashboard\\widgets\\FleetPostureWidget.tsx",
+      "line": 16,
+      "endpoint": "GET /api/v1/vehicles/states?vehicle_ids=...&limit=500",
+      "endpointEvidence": {"file": "web\\src\\api\\hooks\\useVehicles.ts", "line": 706},
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 3325},
+      "behavior": "One request per bounded batch, server summary plus retained per-vehicle evidence, live recovery and partial/unavailable distinctions. FleetOperationsBrief retains total/verified/attention/oldest-reading metrics, active vehicle evidence and details navigation. No fabricated zero summary while pending."
+    },
+    {
+      "name": "Current climate and security",
+      "hooks": ["useClimateLatest", "useSecurityLatest"],
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\features\\dashboard\\widgets\\ClimateStatusWidget.tsx",
+      "line": 22,
+      "endpoints": ["GET /api/v1/climate/latest?vehicle_id=...", "GET /api/v1/security/latest?vehicle_id=..."],
+      "endpointEvidence": [
+        {"file": "web\\src\\api\\hooks\\useVehicles.ts", "line": 437},
+        {"file": "web\\src\\api\\hooks\\useVehicles.ts", "line": 446}
+      ],
+      "routeEvidence": [
+        {"file": "internal\\api\\router.go", "line": 4118},
+        {"file": "internal\\api\\router.go", "line": 4124}
+      ],
+      "behavior": "Five-second widget refresh request, enabled only for positive IDs, cancellable reads. Preserve cabin/outside temperatures, HVAC resolution, defrost/heater details and lock/sentry/door/window distinctions. Handler timestamp/freshness semantics not audited."
+    },
+    {
+      "name": "Recent five drives",
+      "hooks": ["Local useQuery", "useUnits", "useDateFormat", "useNumberFormatting"],
+      "owner": "web\\src\\features\\dashboard\\widgets\\RecentDrivesWidget.tsx",
+      "file": "web\\src\\features\\dashboard\\widgets\\RecentDrivesWidget.tsx",
+      "line": 29,
+      "endpoint": "GET /api/v1/drives?vehicle_id=...&limit=5",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 3464},
+      "behavior": "Key ['drives', id, 'recent-5']; distance_m, duration_s, start/end SOC and timestamp feed links to /drives/{id} plus View all. Historical provenance and unknown values remain; this is a recent-five widget, not a whole-page range aggregate."
+    },
+    {
+      "name": "Onboarding source evidence",
+      "hooks": ["useChecklistTasks", "useVehicles", "useAlertRules", "useNotificationChannels"],
+      "owner": "web\\src\\features\\onboarding\\checklist (caller inspected; implementation not read)",
+      "file": "web\\src\\features\\dashboard\\widgets\\OnboardingChecklistWidget.tsx",
+      "line": 55,
+      "endpoints": ["GET /api/v1/vehicles", "GET /api/v1/alerts/rules", "GET /api/v1/notifications"],
+      "endpointEvidence": [
+        {"file": "web\\src\\api\\hooks\\useNotifications.ts", "line": 510},
+        {"file": "web\\src\\api\\hooks\\useNotifications.ts", "line": 741}
+      ],
+      "routeEvidence": [
+        {"file": "internal\\api\\router.go", "line": 3769},
+        {"file": "internal\\api\\router.go", "line": 4027}
+      ],
+      "behavior": "Combined source trust, unknown-source badges, localized CTAs, command-palette bridge, progress, dismissal and restart. Checklist policy and push/auth internals remain outside this bounded inspection."
+    },
+    {
+      "name": "Realtime invalidation and local preferences",
+      "hooks": ["useRealtimeEvents", "useTheme", "useKioskMode", "useLayoutKeyboard"],
+      "owner": "web\\src\\hooks\\useRealtimeEvents.ts; existing presentation/theme/workspace owners",
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 386,
+      "endpoint": "SSE /api/v1/events",
+      "endpointEvidence": {"file": "web\\src\\hooks\\useRealtimeEvents.ts", "line": 6},
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4345},
+      "behavior": "Singleton SSE subscription; vehicle events invalidate inventory and fallback invalidates queries. Theme/hint dismissal, kiosk config and layout preferences are browser-local. QuickNav has no independent backend source. No new request client or server state store."
+    },
+    {
+      "name": "Optional generated starter and nonseed widgets",
+      "owner": "web\\src\\features\\dashboard\\components\\HelixDashboardDraft.tsx; split widget registry category owners",
+      "file": "web\\src\\features\\dashboard\\components\\TemplateGallery.tsx",
+      "line": 8,
+      "endpoint": null,
+      "behavior": "TemplateGallery exposes __helix__ widget_ids preview and applies explicitly selected draft at lines 94-103. Draft query owner and the nonseed widget APIs were not inspected; preserve them without inventing endpoint capabilities."
+    }
+  ],
+  "components": [
+    {
+      "layer": "layout",
+      "names": ["PageLayout", "PageContainer", "PageActions"],
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 577,
+      "detail": "Already consumes semantic context/secondary/primary/overflow slots and min-w-0 container behavior. PageLayout is the existing PageContainer adapter, not a migration stub."
+    },
+    {
+      "layer": "primitives and feedback",
+      "names": ["Button", "Badge", "Heading", "Text", "Caption", "GlassPanel", "Popover", "ConfirmDialog", "PrintButton", "VisuallyHidden", "AlertBanner", "Skeleton", "StaleRefreshWarning", "LiveStaleDataBanner", "FadeIn"],
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 12,
+      "detail": "Most imports already use category barrels; useTheme remains a concrete ThemeProvider import at line 34. No direct recharts/react-leaflet/framer-motion import in page."
+    },
+    {
+      "layer": "dashboard domain owners",
+      "names": ["DashboardGrid", "WidgetEditChrome", "WidgetPicker", "LayoutSwitcher", "TemplateGallery", "WidgetSettingsModal", "ExportModal", "ImportPreviewModal", "KioskSettingsModal", "DashboardSettingsModal"],
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 37,
+      "detail": "Preserve feature ownership and existing react-grid-layout engine. Grid independently owns desktop gestures, mobile order, discrete arrange actions, lazy loading, error isolation and fullscreen."
+    },
+    {
+      "layer": "existing source-migration composites",
+      "names": ["WidgetShell", "DashboardSourceBrief", "OperationalBrief", "DataProvenanceBadge", "WidgetStatusGrid", "WidgetEventFeed", "WidgetBigNumber", "LinearGauge", "FleetOperationsBrief"],
+      "file": "web\\src\\features\\dashboard\\components\\operationalbrief-all\\DashboardSourceBrief.tsx",
+      "line": 4,
+      "detail": "Current migration is real: climate/charge/fleet metrics use typed source bridges and existing operational formatter. Gauge/status/feed bodies remain specialist components; do not flatten to a generic KPI list."
+    },
+    {
+      "layer": "local page helpers",
+      "names": ["ThemeFirstRunBanner", "DashboardMoreMenu", "EmptyOnboarding", "LoadingSkeleton"],
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 95,
+      "detail": "Four local nonexported helpers plus one exported page. Local helper count is not five competing exported page components."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\dashboard\\widgets\\VehicleHeroWidget.tsx",
+      "line": 132,
+      "rule": "MDC-002/MDC-031: explicit presentation contracts",
+      "detail": "Hero adapter overrides nested .relative/.p-4/.mt-6/.text-2xl class shapes to suppress padding, gradient and density. This is coupling to child internals rather than a typed embedded variant.",
+      "fix": "Keep both existing renderers; add an explicit embedded/compact presentation contract to VehicleHero in an assigned dashboard follow-up and remove only the equivalent structural overrides.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\components\\operationalbrief-all\\DashboardSourceBrief.tsx",
+      "line": 37,
+      "rule": "MDC-013/MDC-033 and mission section 7: hierarchy",
+      "detail": "Compact climate/charge widgets stack WidgetShell title/freshness with OperationalBrief eyebrow/title/description/scope/provenance/freshness. Both layers preserve important evidence but may make metadata heavier than the readings in one-column cards. Geometry was not rendered.",
+      "fix": "Reuse existing compact OperationalBrief and WidgetShell options; establish one primary title/reading hierarchy and keep complete source explanations reachable. Do not delete trust metadata or replace prior migration.",
+      "owner": "page",
+      "confidence": "medium",
+      "relatedEvidence": [
+        {"file": "web\\src\\features\\dashboard\\widgets\\ClimateStatusWidget.tsx", "line": 63},
+        {"file": "web\\src\\features\\dashboard\\widgets\\ChargeStatusWidget.tsx", "line": 93}
+      ]
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 432,
+      "rule": "Preserve existing shared confirmation owner",
+      "detail": "Page header/command reset and LayoutSwitcher reset intentionally use the same danger-confirm text and useConfirm contract. This is existing behavior, not a reason to remove either reset entry.",
+      "fix": "Retain confirmations and both entry points; any later DRY extraction should remain dashboard-local and preserve the distinct reset callback wiring.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "SOURCE_INSPECTED_RUNTIME_UNVERIFIED",
+    "existingStrategies": [
+      {"file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 636, "detail": "Page/picker stack below xl; horizontal min-w-0 composition above xl."},
+      {"file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 516, "detail": "Header actions wrap; icon-only add/arrange labels remain via aria-label when visible text hides below sm."},
+      {"file": "web\\src\\features\\dashboard\\components\\DashboardGrid.tsx", "line": 336, "detail": "Measured container selects active breakpoint; xs flex stack shares same widget body rather than dropping widgets."},
+      {"file": "web\\src\\features\\dashboard\\hooks\\useDashboardLayout.ts", "line": 35, "detail": "lg/md/sm/xs thresholds 1200/996/768/480, columns 4/3/2/1; strict threshold resolution. xs branch is selected through widths <=768 by resolver, not an assumed 480px viewport-only rule."},
+      {"file": "web\\src\\features\\dashboard\\components\\DashboardGrid.tsx", "line": 568, "detail": "Saved mobile order retained; intrinsic stack sizing with chart/map height floor."},
+      {"file": "web\\src\\features\\dashboard\\components\\WidgetPicker.tsx", "line": 388, "detail": "Dock has bounded 60dvh mobile height and own list scroll; xl sticky 340px sidebar."},
+      {"file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 918, "detail": "Onboarding split only at xl; features stack 1/2/4 columns; loading skeleton has corresponding responsive geometry."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\dashboard\\components\\LayoutSwitcher.tsx",
+        "line": 262,
+        "rule": "MDC-043: allocated-width responsive reachability",
+        "detail": "Layout menu has absolute left-0 positioning and min-width 16rem with no local max-width/clamp in this class. Long labels, narrow allocated width and zoom require actual review; no overflow failure is claimed.",
+        "fix": "Test open menu at 320/375px, zoom and long localized names; retain all actions and use existing Popover anchoring/clamping if a real failure is reproduced.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewportQA": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "unverified": "All real viewport/allocated-width screenshots, touch, RTL, 200% text, nested scroll, fullscreen and kiosk behavior."
+  },
+  "accessibility": {
+    "status": "SOURCE_INSPECTED_RUNTIME_UNVERIFIED",
+    "existingSupport": [
+      {"file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 172, "detail": "More trigger has localized accessible name, dialog popup semantics and expanded state; uses shared Popover."},
+      {"file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 585, "detail": "Named dashboard layouts/widgets regions, localizable actions and loading status/VisuallyHidden at lines 1039-1046."},
+      {"file": "web\\src\\features\\dashboard\\components\\DashboardGrid.tsx", "line": 92, "detail": "Fullscreen uses existing fullscreen Modal and autofocus close control."},
+      {"file": "web\\src\\features\\dashboard\\components\\WidgetEditChrome.tsx", "line": 78, "detail": "44px edit actions and shared Popover; discrete arrangement provides an alternative to dragging, with announcements and initial panel focus."},
+      {"file": "web\\src\\features\\dashboard\\components\\WidgetPicker.tsx", "line": 301, "detail": "Enter adds matching widget; Ctrl/Meta+Enter adds/closes; announcements and next-addable focus at lines 216-281. Category pills are filters, not false tabs."},
+      {"file": "web\\src\\features\\dashboard\\components\\FleetOperationsBrief.tsx", "line": 199, "detail": "Fleet posture changes have VisuallyHidden live announcement; text accompanies status color."},
+      {"file": "web\\src\\features\\dashboard\\widgets\\OnboardingChecklistWidget.tsx", "line": 167, "detail": "Progressbar min/max/value and localized label; task unknown badges, CTA names and restart remain."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\dashboard\\components\\DashboardGrid.tsx",
+        "line": 644,
+        "rule": "MDC-040/MDC-043: touch discoverability",
+        "detail": "Fullscreen button is opacity-0 until group hover or focus-visible, including the mobile stack. Keyboard visibility exists; persistent touch discoverability does not appear in this class.",
+        "fix": "Keep the action and localized name; make chrome visible for coarse-pointer/non-hover or small-container presentation without competing with widget freshness controls.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\dashboard\\components\\WidgetPicker.tsx",
+        "line": 398,
+        "rule": "MDC-040: 44px default mobile targets",
+        "detail": "Dock close uses explicit h-9 w-9 (36px), unlike adjacent widget edit/fullscreen actions that explicitly use 44px. Effective computed sizing and spacing exception are unverified.",
+        "fix": "Use the existing Button 44px sizing for mobile or document a measured WCAG spacing exception; preserve search/Escape behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\dashboard\\components\\LayoutSwitcher.tsx",
+        "line": 133,
+        "rule": "MDC-024/MDC-040: one overlay/form system",
+        "detail": "Duplicate/save-as and rename use native window.prompt (rename at line 176), outside the themed shared form/dialog composition. Menu key handler at lines 114-127 only handles Escape; role=menu is set at line 259 without menu roving keys in the inspected local handler.",
+        "fix": "Retain duplicate and rename functionality/names; use existing Modal/Input for the prompt and shared keyboard popup behavior or ordinary dialog/list semantics. Do not create another focus engine.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\dashboard\\hooks\\useLayoutKeyboard.ts",
+        "line": 73,
+        "rule": "MDC-024/MDC-040: keyboard scope across overlays",
+        "detail": "Global shortcut listener skips inputs/selects/contenteditable, but no explicit dialog-open guard is visible. E or Escape while focused on a popup button may also toggle/exit dashboard edit mode. Actual event arbitration by shared overlays was not exercised.",
+        "fix": "Verify Modal/Popover shortcut arbitration first; if reproduced, integrate with the existing overlay/shortcut owner, preserving E/Escape/undo/redo/Alt+1-9 and cheatsheet registration.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["Keyboard traversal/restoration", "Screen-reader announcements", "Effective contrast", "Forced colors", "Reduced-motion and low-bandwidth rendered behavior", "Touch targets after shared CSS composition"]
+  },
+  "states": {
+    "loading": {
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 695,
+      "detail": "Inventory-only skeleton swaps primary body; header remains live. Widget lazy Suspense and WidgetShell initial source skeletons remain independent."
+    },
+    "empty": {
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 753,
+      "detail": "Zero vehicles shows contextual EmptyOnboarding with account-connect or inventory-sync CTA, exploration, privacy and setup progress. Empty saved layout has separate Add widgets/Browse starter layouts CTAs in DashboardGrid:715-725."
+    },
+    "error": {
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 633,
+      "detail": "Fatal inventory failure is passed to PageLayout unless auth is pending or explicitly disconnected; PageContainer:247-268 then replaces children with ErrorDisplay. Retained inventory error is nonfatal. WidgetShell:191-205 distinguishes initial/fatal error from retained children and retries; standard grid body has SectionErrorBoundary."
+    },
+    "staleOfflinePartial": {
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 638,
+      "detail": "Registry StaleRefreshWarning, live stale banner and shared source-state widgets coexist. SSE fallback invalidates queries. Fleet trust combines discovery/partial evidence and retained results; hero uses real observation freshness. Shared offline/banner implementations were not semantically inspected."
+    },
+    "successDisabled": {
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 523,
+      "detail": "Undo/redo disabled by history; refresh/sync loading indicators; layout dirty signal goes to switcher; picker already-added controls disabled; import validation, export overlength warning and existing mutation toasts retained."
+    },
+    "issues": [
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+        "line": 422,
+        "rule": "MDC-026: complete asynchronous recovery",
+        "detail": "handleRefresh clears isRefreshing only after Promise.all succeeds, not in finally. An exceptional invalidation promise can leave the refresh action busy. No runtime rejection was reproduced.",
+        "fix": "Preserve every invalidation key and wrap busy reset in finally; route exceptional feedback through existing error/toast mechanisms.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\dashboard\\components\\DashboardGrid.tsx",
+        "line": 99,
+        "rule": "Mission section 36/MDC-026: independent failure isolation",
+        "detail": "Fullscreen widget render has Suspense but not the SectionErrorBoundary used by normal widget body at line 671. A widget throw inside fullscreen lacks the same local recovery surface.",
+        "fix": "Reuse SectionErrorBoundary inside existing fullscreen Modal, preserving header/close, widget props and retry; do not replace the fullscreen capability.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+        "line": 753,
+        "rule": "MDC-026: unknown versus disconnected",
+        "detail": "If auth status fails with no data while inventory is empty, EmptyOnboarding receives authenticated=false through auth?.authenticated ?? false at line 755. No local auth-error/pending recovery is passed, so unknown authorization can look like a definite setup-required state.",
+        "fix": "Preserve onboarding and account-connect/sync actions, but distinguish pending/failed authorization using the existing data-state contract rather than a boolean fallback alone.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtimeAcceptance": "UNVERIFIED: no loading/empty/failure/retained/offline/partial fixture or live browser execution."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\dashboard\\widgets\\ClimateStatusWidget.tsx",
+      "line": 52,
+      "rule": "MDC-010/MDC-016; mission sections 5/7",
+      "detail": "Climate heading icon retains text-neon-cyan despite surrounding migrated source summary. This is a concrete residual accent, not evidence that the whole Dashboard is neon.",
+      "fix": "Use existing restrained icon/semantic text token; retain the thermometer cue, values and all HVAC/defrost/heater states.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\widgets\\WidgetShell.tsx",
+      "line": 133,
+      "rule": "MDC-010/MDC-042; mission section 7",
+      "detail": "Each changed request timestamp can activate a hardcoded green 12px glow for 1.5 seconds (effect lines 80-97). On independently refreshed widgets this adds decorative competing freshness emphasis; it is not source-observation evidence. OS motion-reduce shadow suppression exists.",
+      "fix": "Reuse the visible DataFreshness/trust feedback and restrained transient surface/border if needed; remove hardcoded glow without removing refresh/error/retained-data controls.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\index.css",
+      "line": 1363,
+      "rule": "MDC-042; mission section 31: avoid ambient loops",
+      "detail": "Desktop edit-mode panels wobble indefinitely at two-second intervals. Drag/resize pauses and OS reduced-motion override exist, but all idle editable panels remain animated in normal mode.",
+      "fix": "Shared stylesheet owner should replace continuous wobble with static edit chrome; preserve drag geometry, resize handles, explicit reduced-motion behavior and short user-action drop feedback.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\components\\WidgetPicker.tsx",
+      "line": 338,
+      "rule": "MDC-010/MDC-012/MDC-015: theme-aware surfaces",
+      "detail": "Picker cards/icons/dividers/search-result block use fixed translucent white fills/borders at lines 338-345,453,462. Parent dock already uses neutral surface/border variables; these interior exceptions can lose distinction in light mode.",
+      "fix": "Reuse surface/control/border tokens for card/rest/hover/disabled states and typography roles. Preserve search highlighting, icons, descriptions, grid footprint, categories and added-state badge.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\components\\ExportModal.tsx",
+      "line": 62,
+      "rule": "MDC-010/MDC-012/MDC-024: canonical overlay surface",
+      "detail": "Export explicitly overrides Modal with bg-[#0f1218], white border and text-on-accent while descendants use text-primary/muted. This hardcodes a dark surface into a theme-aware overlay.",
+      "fix": "Use existing Modal surface/border/text defaults; preserve preview, name/date/count/bytes, JSON download, clipboard and URL limit feedback.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\components\\VehicleHero.tsx",
+      "line": 187,
+      "rule": "MDC-042: motion is feedback, not ambient decoration",
+      "detail": "Charging icon pulses continuously while status is charging. The background gradient at line 92 is neutral and is already suppressed by the embedded adapter, so it is not counted as an active page neon violation.",
+      "fix": "Use static semantic charging cue; retain text, power/rate/ETA details and charging-specific gauges. Preserve global OS reduced-motion policy.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\dashboard\\widgets\\RecentDrivesWidget.tsx",
+      "line": 31,
+      "rule": "MDC-002/MDC-046 and mission section 33: cancellable typed hook ownership",
+      "detail": "RecentDrives owns a local useQuery/request in presentation and ignores the query AbortSignal. Other inspected reads forward signal. It is enabled per vehicle but obsolete scope/unmount work is not cancelled by this caller.",
+      "fix": "Move this exact recent-five read to the existing driving API-hook owner in an assigned integration item; preserve key, limit, historical provenance, raw SI values and behavior while forwarding signal.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 67,
+      "rule": "MDC-046: one source of default composition",
+      "detail": "Default widget-ID set is manually mirrored for the delayed customization hint; actual seed lives in useDashboardLayout:291-310. Current nine IDs match. The comment points to an older line 182; future composition drift can change hint behavior.",
+      "fix": "Preserve the current matched seed and hint timing; reuse a stable default-ID helper from the existing layout owner if later refactoring this concern, without exporting a cyclic state graph.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\widgets\\ClimateStatusWidget.tsx",
+      "line": 55,
+      "rule": "MDC-026/MDC-033: source age versus fetch time",
+      "detail": "Climate passes query dataUpdatedAt to freshness; SecurityStatusWidget:139 and ChargeStatusWidget:79 also do. Hero deliberately uses observedAt instead. Whether latest endpoints provide a trustworthy observation timestamp was not followed into handlers, so source-age correctness remains an integration question, not a proven backend defect.",
+      "fix": "Verify returned timestamp contracts before changing display; reuse observation-aware freshness when established and distinguish fetched/cached time from telemetry age. Never synthesize observation freshness.",
+      "owner": "integration",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\components\\ExportModal.tsx",
+      "line": 40,
+      "rule": "MDC-030/MDC-046: real route and import preservation",
+      "detail": "Share URL uses /dashboard#import= while audited mounted route is /. Targeted App route search found no Dashboard alias declaration, but redirect normalization elsewhere was not traced. Page command comment also refers to /dashboard at lines 481-483.",
+      "fix": "Verify alias/deep-link handling before changing; ensure exported URL reaches the canonical Dashboard with hash preserved and validated preview. Keep existing links compatible; no unsupported missing-route claim.",
+      "owner": "integration",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\components\\WidgetSettingsModal.tsx",
+      "line": 93,
+      "rule": "MDC-046: preserve settings without pretending consumption",
+      "detail": "Modal persists refreshRate/timeRange/showTitle config. Inspected seed widgets often destructure only vehicleId/size and hardcode/default polling; no common consumption of these options was established in the sampled bodies. This is a bounded settings-effect gap, not permission to remove controls.",
+      "fix": "Trace each configurable widget in a separate bounded integration task and wire unsupported settings through existing owners only after confirming intended semantics. Keep saved config and widget-level independent scope intact.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "P1 targeted preservation and trust follow-up; P2 residual presentation cleanup",
+    "rationale": "The page is already a substantial migrated operations workspace, not a skeleton. Highest follow-up value is fullscreen failure isolation, unknown auth handling, cancellable recent-drive query, and real keyboard/touch checks. Visual work is limited to residual glows/loops/hardcoded surfaces, not a restart.",
+    "orderedConcerns": [
+      "Preserve exact widget/layout/action/data inventory before implementation.",
+      "Confirm fullscreen error recovery and authorization unknown state.",
+      "Integration-check scope cancellation, observation freshness, deep-link alias and settings consumption.",
+      "Remove residual neon/glow/ambient motion; align picker/export surfaces with existing tokens.",
+      "Perform actual viewport/theme/keyboard/state QA through parent-owned validation."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Static dashboard edit affordance instead of ambient wobble",
+      "existingOwnerFile": "web\\src\\index.css",
+      "file": "web\\src\\index.css",
+      "line": 1362,
+      "owner": "shared",
+      "confidence": "high",
+      "propsVariantsStates": {
+        "props": "No new public component props required.",
+        "variants": ["Existing .edit-mode desktop widget panel", "Existing drag/resize active classes", "Existing .widget-just-dropped transient feedback"],
+        "states": ["Idle editing uses static chrome", "Dragging/resizing retains react-grid-layout transform ownership", "Reduced motion remains nonanimated", "Short explicit drop feedback remains distinct from ambient looping"]
+      },
+      "usedBy": [
+        "DashboardGrid desktop saved dashboard body",
+        "Every widget instance mounted under DashboardGrid edit-mode panels"
+      ],
+      "dependsOn": [
+        "Existing WidgetEditChrome static edit/arrange affordance",
+        "Preserve react-grid-layout positioning and reduced-motion rules",
+        "Parent shared-styles exclusive ownership; page auditor must not edit global CSS"
+      ],
+      "fix": "Remove continuous idle widget-wobble animation without changing layout data, saved defaults, dimensions or action capability.",
+      "scopeNote": "This is a change to an existing concrete shared stylesheet contract, not a speculative new composite requiring a whole-app consumer claim."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\dashboard\\widgets\\registry\\vehicle.ts",
+      "line": 10,
+      "detail": "Registry exposes vehicle-hero/VehicleHeroWidget and vehicle-hero-card/VehicleHeroCardWidget (line 21), plus full/mini digital twin variants. Only seeded VehicleHeroWidget body was inspected. Different optional widget IDs are preserved capabilities, not proven redundant replacements.",
+      "decision": "KEEP; do not consolidate or remove based on names."
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\widgets\\registry\\index.ts",
+      "line": 21,
+      "detail": "One canonical assembled registry and O(1) getWidgetDef index; registry.ts is compatibility re-export. Sixteen category modules are metadata owners, not sixteen separate pages.",
+      "decision": "REUSE existing registry; no second widget catalog."
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\components\\operationalbrief-all\\DashboardSourceBrief.tsx",
+      "line": 21,
+      "detail": "Existing dashboard bridge adapts source metrics/trust to shared OperationalBrief; fleet retains specialist FleetOperationsBrief. This is inherited source migration, not a parallel new design system.",
+      "decision": "KEEP and refine composition only; do not rerun migration."
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "line": 840,
+      "detail": "Kiosk mounts the same DashboardGrid into a body portal while regular page composition remains present in source. PresentationMode isolation and actual duplicate query/render cost were not traced.",
+      "decision": "KEEP kiosk behavior; inspect actual mounted isolation/performance before altering it."
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "D9C39E2A4EB5E9BCBDCD37D71D5C3FBAA9C00AEB4D392204501BB103CD897C09",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 1063,
+    "hashReadback": "Same hash at start, mid-audit and final source readback; report validation confirmed 1063 lines and exact SHA-256.",
+    "historicalLineCount": null,
+    "lineCountComparison": "Read-only audit: no source delta. No historical original or all-feature extraction baseline was read, so no invented 70% preservation claim.",
+    "sectionCounts": {
+      "pageNamedSectionTags": 2,
+      "pageGlassPanelTags": 1,
+      "pageChartContainerTags": 0,
+      "pageDashboardGridInstancesInSource": 2,
+      "defaultSeedWidgetInstances": 9,
+      "pageDialogSurfaces": 6,
+      "pageSeparatePickerDock": 1,
+      "pageResetConfirmSurface": 1,
+      "localNonexportedPageHelpers": 4,
+      "countsMeaning": "Source callsite counts, not mounted counts. Six dialogs are TemplateGallery, WidgetSettingsModal, ExportModal, ImportPreviewModal, KioskSettingsModal and DashboardSettingsModal; confirm is separate. Dynamic grid can host any saved widget set. GlassPanel/ChartContainer count alone does not describe widget sections."
+    },
+    "sections": [
+      {"name": "Fleet operations header and saved layouts context", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 577},
+      {"name": "Utility/edit/primary/overflow action zones", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 516},
+      {"name": "Vehicle-registry trust notice", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 638},
+      {"name": "Conditional theme/live-stale/customization/auth banner cluster", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 646},
+      {"name": "Responsive initial inventory skeleton", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 1033},
+      {"name": "Dashboard widgets and arrange/drop affordance", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 700},
+      {"name": "No-vehicle onboarding: connect/sync/explore, privacy, three setup steps, four capability descriptions", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 861},
+      {"name": "Widget discovery dock", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 761},
+      {"name": "Template/widget/export/import/kiosk/dashboard-settings dialogs", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 771},
+      {"name": "Kiosk body portal and shared grid", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 830},
+      {"name": "Reset confirmation", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 855}
+    ],
+    "seededWidgetSections": [
+      {"id": "onboarding-checklist", "file": "web\\src\\features\\dashboard\\widgets\\OnboardingChecklistWidget.tsx", "line": 49, "preserve": "Source-aware task rows/progress, CTA destinations/command palette, unknown sources, completion/dismissal/restart."},
+      {"id": "vehicle-hero", "file": "web\\src\\features\\dashboard\\widgets\\VehicleHeroWidget.tsx", "line": 28, "preserve": "Vehicle identity/model/VIN, verified status/freshness/provenance, battery/range/temperature and context driving/charging gauges, charging power/rate/ETA, contextual/always-visible stats and Details/Commands/Live map/Digital twin links."},
+      {"id": "battery-gauge", "file": "web\\src\\features\\dashboard\\widgets\\BatteryGaugeWidget.tsx", "line": 26, "preserve": "Battery reading and 0-100 scale, unknown neutral gauge, charging badge, refresh and empty recovery."},
+      {"id": "climate-status", "file": "web\\src\\features\\dashboard\\widgets\\ClimateStatusWidget.tsx", "line": 18, "preserve": "Cabin/outside source summary, temperature preferences, HVAC unknown/on/off, conditional defrost and heater detail."},
+      {"id": "recent-drives", "file": "web\\src\\features\\dashboard\\widgets\\RecentDrivesWidget.tsx", "line": 21, "preserve": "Five returned drives, distance/duration/start-end SOC/date, each details link and View all."},
+      {"id": "charge-status", "file": "web\\src\\features\\dashboard\\widgets\\ChargeStatusWidget.tsx", "line": 17, "preserve": "Charging power/range-addition rate/battery/ETA or idle/unknown battery/range, source caveats and refresh."},
+      {"id": "security-status", "file": "web\\src\\features\\dashboard\\widgets\\SecurityStatusWidget.tsx", "line": 13, "preserve": "Lock, sentry, doors/windows and explicit unknown values; no missing reading becomes all-closed."},
+      {"id": "quick-nav", "file": "web\\src\\features\\dashboard\\widgets\\QuickNavWidget.tsx", "line": 10, "preserve": "/drives, /charging, /analytics, /battery links with descriptions and keyboard focus."},
+      {"id": "fleet-posture", "file": "web\\src\\features\\dashboard\\widgets\\FleetPostureWidget.tsx", "line": 12, "preserve": "Fleet/verified/attention/oldest observation, taxonomy/honesty semantics owned by fleet-posture helpers, selected vehicle evidence and navigation; full helper internals not inspected."}
+    ],
+    "actions": [
+      {"group": "Saved dashboards", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 590, "items": ["Switch", "Create blank", "Duplicate/save as with entered name", "Rename", "Delete with danger confirmation", "Reorder", "Pin/unpin to vehicle", "Open settings", "Choose starter/template", "Reset with danger confirmation"]},
+      {"group": "Layout editing", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 516, "items": ["Customize", "Done", "Undo", "Redo", "Undo count", "Add widget", "Auto arrange", "Reset"]},
+      {"group": "Widget lifecycle", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 340, "items": ["Picker single/batch add", "Validated arrange-drop", "Positioned grid drop", "Remove", "Settings save", "Drag/resize", "Discrete position/size controls", "Fullscreen/exit", "Empty layout add/browse"]},
+      {"group": "Data recovery", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 410, "items": ["Refresh all listed query domains", "Independent widget retry/refresh", "Explicit vehicle sync", "Reconnect settings link"]},
+      {"group": "Tools", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 194, "items": ["JSON download", "JSON copy", "Shareable URL copy with 2000-char limit", "File/paste/URL import and validation preview", "Print snapshot", "Kiosk settings/enter/rotation via presentation owner"]},
+      {"group": "Discovery and onboarding", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 121, "items": ["Open theme picker", "Maybe later/dismiss", "Delayed customize hint add/dismiss", "Connect Tesla", "Sync vehicles", "Explore capabilities", "Checklist CTAs/dismiss/restart"]},
+      {"group": "Keyboard/events/deep links", "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "line": 474, "items": ["dashboard:toggle-edit/add-widget/reset event bridge", "One-shot queued role-preset adoption", "#import preview/URL cleanup", "?kiosk=settings and ?kiosk=true", "E/Escape/Ctrl-or-Meta undo-redo/Alt+1-9/shortcut help"]},
+      {"group": "Domain navigation", "file": "web\\src\\features\\dashboard\\components\\VehicleHero.tsx", "line": 239, "items": ["Vehicle details", "Commands", "Live map", "Digital twin", "Drive detail", "View all drives", "Charging", "Analytics", "Battery", "Fleet selected vehicle details"]}
+    ],
+    "dataBehavior": [
+      "Keep all saved/nonseed widgets and IDs/configs/layouts; nine seed widgets are not the total capability inventory.",
+      "Keep local/server hydration ordering, pending-save protection, undo/redo, cross-tab updates and explicit one-shot preset adoption; remount must not overwrite customized layouts.",
+      "Keep config vehicle > dashboard settings vehicle > workspace vehicle, then existing widget-specific first-vehicle fallback; fleet posture still totals all registered vehicles.",
+      "Preserve header workspace ownership: / has vehicle scope and is not in RANGE_ENABLED_PATHS. Do not add another global vehicle/range picker; widget/dashboard pinning and independent chart timeRange are persisted dashboard settings.",
+      "Keep complete raw SI drive/temperature/distance values and display-only conversion. ChargeStatus explicitly documents charger_power as existing kW contract and time_to_full_charge wire-unit uncertainty; preserve rather than guessing/rescaling under a visual audit.",
+      "Unknown is not measured zero, offline, not charging or setup-incomplete. Preserve verified observation semantics, retained payloads, historical provenance and missing reasons.",
+      "Keep singleton SSE, fleet batch and per-state cache contracts, enablement/retries, query keys, signal forwarding where present, live-only sync guard and existing print/import/export boundaries.",
+      "Keep default/compact/borders, dashboard name/icon/vehicle/refresh settings, widget vehicle/refresh/time-range/title settings, theme IDs/dismissal and kiosk opacity/rotation/cursor/dim/clock preferences.",
+      "Preserve source/widget errors without flattening successful neighbor widgets or replacing the page with a generic empty gate."
+    ]
+  },
+  "evidenceLimits": {
+    "sourceOnly": true,
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "testsAndBuild": "NOTRUN: no TypeScript, lint, tests, build or browser execution authorized for this read-only Phase 0 item.",
+    "auditSkillLimit": "audit-violations skill and audit.sh were read. Script was not executed because it unconditionally invokes project-wide npx tsc --noEmit, conflicting with this bounded audit/centralized validation convention. Exact-page case-sensitive pattern inspection was executed instead; it is not AST/runtime acceptance.",
+    "patternEvidence": {
+      "file": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "command": "PowerShell Select-String against the exact page; raw-controls count corrected with -CaseSensitive",
+      "exitCode": 0,
+      "output": [
+        "staticInline=0",
+        "rawControlsCaseSensitive=0",
+        "directLibraries=0",
+        "oldApi=0",
+        "neon=0",
+        "glassPanel=1",
+        "chartContainer=0",
+        "namedSections=2",
+        "dynamicStyles=1"
+      ],
+      "interpretation": "Page itself has no matched raw form/table controls, forbidden direct libraries, old API imports or listed neon/glow/white/gradient classes. Dynamic kioskBackgroundStyle is not a static-inline-style violation. This does not certify dependencies clean.",
+      "correctedProbe": "First combined heartbeat/pattern command failed PowerShell quoting (exit 1) before execution. Corrected command ran (exit 0); its default case-insensitive rawControls=16 matched shared <Button>, so a subsequent -CaseSensitive result 0 supersedes that invalid count."
+    },
+    "routeVerification": "Known direct/seed endpoints matched actual router registrations only; handlers, auth middleware behavior, database storage/freshness and response-unit guarantees were not audited.",
+    "uninspectedDependencies": [
+      "Remaining nonseed widget bodies and fifteen nonvehicle registry category implementations",
+      "GlancePage and QuickStatsPage",
+      "HelixDashboardDraft query implementation",
+      "Full fleet-posture helper taxonomy/honesty implementation and shared event/status/gauge bodies",
+      "useChecklistTasks, useVehicleLive, usePresentationMode, useSelectedVehicle and ThemeProvider internals",
+      "Complete import validator, layout storage migrations, undo implementation and download serializer",
+      "Shared overlay focus/Popover/Modal internals and global live/offline banners",
+      "Full router/handler/backend data path and external redirect normalization"
+    ],
+    "coverageHonesty": "Paths enumerated by glob are not treated as semantically reviewed. filesRead records actual full/range/scanned evidence below. No fictitious 194-file review, full API audit, historical parity percentage or prior receipt acceptance.",
+    "reportValidation": {
+      "command": "PowerShell ConvertFrom-Json; assert all 19 Phase 0 required fields; assert 22 issue records contain file/line/rule/detail/fix/owner/confidence; Test-Path and citation line-bound checks; Get-FileHash and page line count",
+      "exitCode": 0,
+      "rawOutputBeforeFinalMetadataAdditions": [
+        "JSON_VALID | required_fields=19 | issues=22 | filesRead=45",
+        "SOURCE_UNCHANGED | SHA256=D9C39E2A4EB5E9BCBDCD37D71D5C3FBAA9C00AEB4D392204501BB103CD897C09 | lines=1063"
+      ],
+      "meaning": "Report syntax/schema/citation bounds and page fingerprint checks, not UI acceptance. Seven actual registry-search paths were then added to filesRead."
+    },
+    "concurrency": "Live source may evolve under other owners; findings describe inspected source snapshots. Final page hash recheck detects page drift, not all dependency drift."
+  },
+  "filesRead": [
+    {"path": "docs\\frontend-worker-conventions.md", "mode": "full"},
+    {"path": "docs\\frontend-design-contract.md", "mode": "range reads", "ranges": [[1,260],[187,245],[245,430]], "note": "Initial first range output truncated; overlapping and continuation ranges read governing contract."},
+    {"path": "docs\\frontend-mission.md", "mode": "range reads and heading search", "ranges": [[1,230],[238,442],[485,581],[651,778],[812,965],[981,1081],[1416,1487]]},
+    {"path": ".github\\skills\\audit-violations\\audit.sh", "mode": "full, read-only; not executed"},
+    {"path": "web\\src\\features\\dashboard\\pages\\DashboardPage.tsx", "mode": "full via ranges", "ranges": [[1,370],[371,750],[751,1100]]},
+    {"path": "web\\src\\features\\dashboard\\components\\DashboardGrid.tsx", "mode": "range reads and targeted pattern search", "ranges": [[1,280],[460,780]]},
+    {"path": "web\\src\\features\\dashboard\\widgets\\registry.ts", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\registry\\index.ts", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\registry\\vehicle.ts", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\registry\\battery.ts", "mode": "seeded battery-gauge mapping search, lines 9-19 only"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\registry\\climate.ts", "mode": "seeded climate-status mapping search, lines 7-17 only"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\registry\\charging.ts", "mode": "seeded charge-status mapping search, lines 9-19 only"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\registry\\driving.ts", "mode": "seeded recent-drives mapping search, lines 10-20 only"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\registry\\system.ts", "mode": "seeded onboarding-checklist/fleet-posture/quick-nav mapping search, lines 10-20,26-36,59-69 only"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\registry\\security.ts", "mode": "seeded security-status mapping search, lines 7-17 only"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\registry\\security.test.ts", "mode": "incidental search match, lines 63-73 only; not a semantic test review or execution"},
+    {"path": "web\\src\\features\\dashboard\\hooks\\useDashboardLayout.ts", "mode": "bounded ranges and targeted storage/preset search", "ranges": [[1,75],[280,335],[539,700]]},
+    {"path": "web\\src\\features\\dashboard\\hooks\\useKioskMode.ts", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\hooks\\useLayoutKeyboard.ts", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\components\\WidgetPicker.tsx", "mode": "ranges 1-465 and residual-pattern search", "ranges": [[1,215],[215,465]], "note": "Tail after line 465 not semantically read."},
+    {"path": "web\\src\\features\\dashboard\\widgets\\VehicleHeroWidget.tsx", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\BatteryGaugeWidget.tsx", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\ClimateStatusWidget.tsx", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\RecentDrivesWidget.tsx", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\ChargeStatusWidget.tsx", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\SecurityStatusWidget.tsx", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\QuickNavWidget.tsx", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\FleetPostureWidget.tsx", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\widgets\\OnboardingChecklistWidget.tsx", "mode": "full via ranges", "ranges": [[1,190],[190,300]]},
+    {"path": "web\\src\\features\\dashboard\\widgets\\WidgetShell.tsx", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\components\\VehicleHero.tsx", "mode": "targeted pattern search and ranges", "ranges": [[73,270],[270,375]], "note": "Imports/first 72 lines only partially evidenced by targeted search."},
+    {"path": "web\\src\\features\\dashboard\\components\\FleetOperationsBrief.tsx", "mode": "range 1-240", "note": "Remaining component/helper bodies not read."},
+    {"path": "web\\src\\features\\dashboard\\components\\operationalbrief-all\\DashboardSourceBrief.tsx", "mode": "full"},
+    {"path": "web\\src\\features\\dashboard\\components\\LayoutSwitcher.tsx", "mode": "targeted pattern scan and ranges", "ranges": [[110,218],[255,286]]},
+    {"path": "web\\src\\features\\dashboard\\components\\WidgetEditChrome.tsx", "mode": "targeted pattern scan and range 37-150"},
+    {"path": "web\\src\\features\\dashboard\\components\\TemplateGallery.tsx", "mode": "targeted pattern scan and range 1-123"},
+    {"path": "web\\src\\features\\dashboard\\components\\ExportModal.tsx", "mode": "targeted pattern scan and range 18-140"},
+    {"path": "web\\src\\features\\dashboard\\components\\ImportPreviewModal.tsx", "mode": "targeted pattern scan and range 72-139", "note": "Full validation rendering/validator implementation not read."},
+    {"path": "web\\src\\features\\dashboard\\components\\DashboardSettingsModal.tsx", "mode": "targeted pattern scan and range 90-137"},
+    {"path": "web\\src\\features\\dashboard\\components\\KioskSettingsModal.tsx", "mode": "targeted pattern scan only", "note": "Not a complete modal review."},
+    {"path": "web\\src\\features\\dashboard\\components\\WidgetSettingsModal.tsx", "mode": "targeted pattern scan and range 28-143"},
+    {"path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "mode": "full"},
+    {"path": "web\\src\\components\\layout\\PageContainer.tsx", "mode": "full via ranges", "ranges": [[1,210],[210,315]]},
+    {"path": "web\\src\\api\\hooks\\useVehicles.ts", "mode": "bounded ranges and hook/request searches", "ranges": [[45,105],[260,290],[295,319],[335,351],[430,449],[679,718],[1260,1350]]},
+    {"path": "web\\src\\api\\hooks\\useSettings.ts", "mode": "bounded ranges and hook/request searches", "ranges": [[55,67],[130,173],[220,257]]},
+    {"path": "web\\src\\api\\hooks\\useNotifications.ts", "mode": "targeted hook/endpoint search only"},
+    {"path": "web\\src\\api\\client.ts", "mode": "targeted path/request search and range 68-96"},
+    {"path": "web\\src\\hooks\\useRealtimeEvents.ts", "mode": "full"},
+    {"path": "web\\src\\lib\\workspaceScope.ts", "mode": "full via ranges", "ranges": [[1,45],[45,175]]},
+    {"path": "web\\src\\index.css", "mode": "targeted dashboard animation search and range 1340-1445 only"},
+    {"path": "web\\src\\App.tsx", "mode": "targeted lazy-import/route/alias search only"},
+    {"path": "internal\\api\\router.go", "mode": "targeted route searches and ranges", "ranges": [[3238,3255],[3318,3337],[3458,3469]], "note": "Only route registration evidence, not whole backend audit."}
+  ]
+}

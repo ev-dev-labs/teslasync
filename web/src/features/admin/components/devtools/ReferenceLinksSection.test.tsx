@@ -194,7 +194,7 @@ describe('ReferenceLinksSection', () => {
       expect(screen.getByText(link.url as string)).toBeInTheDocument()
     }
     // The English defaults render (never a raw `devtools.ref.*` key).
-    expect(screen.getByText('Fleet API Overview')).toBeInTheDocument()
+    expect(screen.getByText('Fleet API overview')).toBeInTheDocument()
     expect(screen.queryByText('devtools.ref.fleetOverview')).toBeNull()
   })
 })

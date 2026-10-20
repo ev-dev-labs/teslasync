@@ -18,6 +18,7 @@ import { MemoryRouter } from 'react-router-dom';
 import '../../../i18n';
 
 import { AutomationStatusPanel, type AutomationStatusStats } from './AutomationStatusPanel';
+import { deriveDataState } from '@/api/dataState';
 
 vi.mock('framer-motion', () => ({
   motion: new Proxy(
@@ -55,6 +56,32 @@ function setup(overrides: Partial<PanelProps> = {}) {
 }
 
 describe('AutomationStatusPanel', () => {
+  it('explains paused initial data and does not present derived zero as a successful empty summary', () => {
+    const retry = vi.fn();
+    setup({ isLoading: true, dataState: deriveDataState({ fetchStatus: 'paused', refetch: retry }) });
+    expect(screen.getByRole('heading', { name: 'Status breakdown' })).toBeInTheDocument();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('No automations to summarize yet')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Status breakdown' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves real zero counters in a retained summary despite refresh failure', () => {
+    setup({
+      stats: { total: 1, active: 1, disabled: 0, autoDisabled: 0 },
+      isLoading: true, error: new Error('Refresh failed'),
+      dataState: deriveDataState({ data: [{}], error: new Error('Refresh failed'), isFetching: true }),
+    });
+    expect(screen.getByText('1 · 100%')).toBeInTheDocument();
+    expect(screen.getAllByText('0 · 0%')).toHaveLength(2);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('keeps a paused initial inventory unknown rather than reporting successful zero', () => {
+    setup({ stats: { total: undefined }, isLoading: false });
+    expect(screen.getByText('Active: —')).toBeInTheDocument();
+    expect(screen.queryByText('No automations to summarize yet')).not.toBeInTheDocument();
+  });
   // The panel header is rendered outside every conditional branch, so it is a
   // stable anchor the other branch-specific assertions can lean on.
   it('always renders the panel title regardless of state', () => {
@@ -112,7 +139,7 @@ describe('AutomationStatusPanel', () => {
       stats: { total: 5, active: 3, disabled: 2, autoDisabled: 0 },
     });
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('No automations to summarize yet')).not.toBeInTheDocument();
@@ -138,7 +165,8 @@ describe('AutomationStatusPanel', () => {
   it('treats an all-undefined payload as empty without rendering NaN', () => {
     setup({ stats: {} as unknown as AutomationStatusStats });
 
-    expect(screen.getByText('No automations to summarize yet')).toBeInTheDocument();
+    expect(screen.getByText('Active: —')).toBeInTheDocument();
+    expect(screen.queryByText('No automations to summarize yet')).not.toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
@@ -150,7 +178,8 @@ describe('AutomationStatusPanel', () => {
     // active 2/2 → 100%.
     expect(screen.getByText('2 · 100%')).toBeInTheDocument();
     // disabled + auto-disabled both default to 0 → two "0 · 0%" readouts.
-    expect(screen.getAllByText('0 · 0%')).toHaveLength(2);
+    expect(screen.getByText('Disabled: —')).toBeInTheDocument();
+    expect(screen.getByText('Auto-disabled: —')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
     // Coalesced auto-disabled = 0 → no warning banner.
     expect(screen.queryByText('Attention needed')).not.toBeInTheDocument();

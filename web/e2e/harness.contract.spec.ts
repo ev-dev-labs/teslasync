@@ -160,13 +160,25 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
   const workflow = load(readFileSync(
     resolve(process.cwd(), '..', '.github', 'workflows', 'frontend-quality.yml'), 'utf8',
   )) as { jobs: Record<string, {
-    needs?: string;
+    needs?: string | string[];
+    if?: string;
     steps: WorkflowStep[];
-    strategy?: { matrix?: { shard?: number[] } };
+    strategy?: { matrix?: { shard?: number[]; browser?: string[]; include?: Array<{ suite: string; shard: string }> } };
   }> };
   const build = workflow.jobs['browser-build'];
   const visualShards = workflow.jobs['visual-tests'].strategy?.matrix?.shard ?? [];
-  expect(visualShards).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  expect(visualShards).toEqual(Array.from({ length: 64 }, (_, index) => index + 1));
+  const chromiumRows = workflow.jobs['chromium-tests'].strategy?.matrix?.include ?? [];
+  for (const [suite, count] of [['quality', 64], ['a11y', 13], ['performance', 1]] as const) {
+    expect(chromiumRows.filter(row => row.suite === suite).map(row => row.shard))
+      .toEqual(Array.from({ length: count }, (_, index) => `${index + 1}/${count}`));
+  }
+  expect(workflow.jobs['cross-browser-tests'].strategy?.matrix)
+    .toEqual({ browser: ['firefox', 'webkit'], shard: [1, 2, 3] });
+  const engines = workflow.jobs['cross-browser'];
+  expect(engines.if).toBe('always()');
+  expect(engines.needs).toEqual(['contract', 'browser-build', 'cross-browser-tests']);
+  expect(engines.steps.find(step => step.run?.includes('all(job["result"] == "success"'))).toBeDefined();
   const buildSteps = Object.values(workflow.jobs).flatMap(job =>
     job.steps.filter(step => step.run?.includes('npm run e2e:build')));
   expect(buildSteps).toHaveLength(1);
@@ -176,8 +188,8 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
     .toMatchObject({ name: 'e2e-app', path: 'web/e2e/.app-dist/', 'if-no-files-found': 'error' });
 
   for (const [id, command] of [
-    ['chromium-tests', 'npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }}'],
-    ['cross-browser', 'npm run e2e -- --project=${{ matrix.browser }}-smoke'],
+    ['chromium-tests', "npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }} ${{ matrix.suite == 'a11y' && '--fully-parallel' || '' }}"],
+    ['cross-browser-tests', 'npm run e2e -- --project=${{ matrix.browser }}-smoke --shard=${{ matrix.shard }}/3'],
     ['visual-tests', `npm run e2e:visual -- --shard=\${{ matrix.shard }}/${visualShards.length} --workers=2`],
   ]) {
     const job = workflow.jobs[id];

@@ -1,3 +1,4 @@
+import { IconButton } from '@/components/ui/IconButton';
 /**
  * TeslaRegionPage — Tesla account Region & Fleet API endpoint surface.
  *
@@ -10,19 +11,21 @@
 
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
-import { PageContainer } from '@/components/layout'
-import { Button } from '@/components/ui'
+import { PageLayout } from '@/components/layout'
+import { Icon } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
+import { OperationalWriteNotice } from '@/components/feedback'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { cn } from '@/lib/cn'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
+import { deriveDataState } from '@/api/dataState'
 import { useTeslaUserRegion, useRefreshTeslaRegion } from '@/api/hooks/useUser'
 import {
-  RegionKpiBand,
-  RegionEndpointPanel,
   RegionAboutPanel,
   parseEndpoint,
   REGION_ZONE_FALLBACK,
 } from '../components/tesla-region'
+import { RegionOperationalBrief } from '../components/statstrip-tesla-account-privacy/RegionOperationalBrief'
+import { RegionEndpointDetails } from '../components/continuation-admin-2/RegionEndpointDetails'
 
 export default function TeslaRegionPage() {
   const { t } = useTranslation('settings')
@@ -31,10 +34,14 @@ export default function TeslaRegionPage() {
 
   const regionQuery = useTeslaUserRegion()
   const regionRefresh = useRefreshTeslaRegion()
+  const { canWrite, writeBlockReason } = useOperationalMode()
 
   // The hook already emits success/error toasts — call mutate() bare so a
   // refresh surfaces exactly one toast rather than two.
-  const refresh = () => regionRefresh.mutate()
+  const refresh = () => {
+    if (regionRefresh.isPending || !canWrite) return
+    regionRefresh.mutate()
+  }
 
   const envelope = regionQuery.data
   const region = envelope?.data?.region ?? null
@@ -42,6 +49,10 @@ export default function TeslaRegionPage() {
   const fetchedAt = envelope?.fetched_at ?? null
   const { host, scheme, regionKey } = parseEndpoint(baseUrl)
   const configured = Boolean(region || baseUrl)
+  const source = deriveDataState(regionQuery, {
+    unavailable: !configured,
+    partial: configured && (!region || !baseUrl || !host || !scheme),
+  })
 
   const regionLabel =
     regionKey === 'na'
@@ -53,39 +64,30 @@ export default function TeslaRegionPage() {
           : null
 
   const actions = (
-    <Button
-      variant="secondary"
-      size="sm"
-      icon={
-        <RefreshCw
-          className={cn('h-3.5 w-3.5', regionRefresh.isPending && 'animate-spin')}
-          aria-hidden="true"
-        />
-      }
-      onClick={refresh}
-      disabled={regionRefresh.isPending}
-      aria-busy={regionRefresh.isPending || undefined}
-    >
-      {t('region.refresh', 'Refresh')}
-    </Button>
+    <IconButton icon={<Icon icon={RefreshCw} size="sm" />} label={t('region.refresh', 'Refresh')} onClick={refresh} busy={regionRefresh.isPending} disabled={regionRefresh.isPending || !canWrite} />
   )
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t('region.subtitle', 'Tesla account region and Fleet API endpoint')}
-      actions={actions}
+      secondaryActions={actions}
       query={regionQuery}
+      dataSources={[{ id: 'tesla-region', label: title, query: regionQuery }]}
     >
+      <OperationalWriteNotice />
       <FadeIn>
         <section aria-label={t('region.kpi.section', 'Region overview')}>
-          <RegionKpiBand
+          <RegionOperationalBrief
+            known={source.hasData}
+            sourceStatus={source.status}
             regionKey={regionKey}
             regionLabel={regionLabel}
             scheme={scheme}
             fetchedAt={fetchedAt}
             configured={configured}
-            isLoading={regionQuery.isLoading}
+            isLoading={source.status === 'initial'}
+            isPaused={source.isRefreshBlocked && !source.hasData}
           />
         </section>
       </FadeIn>
@@ -93,7 +95,7 @@ export default function TeslaRegionPage() {
       <FadeIn delay={0.1}>
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <section className="xl:col-span-2" aria-label={t('region.endpoint.title', 'Fleet API endpoint')}>
-            <RegionEndpointPanel
+            <RegionEndpointDetails
               region={region}
               baseUrl={baseUrl}
               host={host}
@@ -101,11 +103,16 @@ export default function TeslaRegionPage() {
               regionKey={regionKey}
               regionLabel={regionLabel}
               fetchedAt={fetchedAt}
-              isLoading={regionQuery.isLoading}
-              isError={regionQuery.isError}
-              error={regionQuery.error}
+              isLoading={regionQuery.isLoading && !source.hasData}
+              isInitial={source.status === 'initial'}
+              isPaused={source.isRefreshBlocked && !source.hasData}
+              isError={Boolean(source.fatalError)}
+              error={source.fatalError}
               onRetry={() => regionQuery.refetch()}
               onRefresh={refresh}
+              isRefreshing={regionRefresh.isPending}
+              refreshDisabled={!canWrite}
+              refreshBlockReason={writeBlockReason}
             />
           </section>
           <section className="xl:col-span-1" aria-label={t('region.about.title', 'About your region')}>
@@ -113,6 +120,6 @@ export default function TeslaRegionPage() {
           </section>
         </div>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

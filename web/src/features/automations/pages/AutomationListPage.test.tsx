@@ -10,8 +10,7 @@
  *   2. `filtered` derivation — status filter + case-insensitive name/description
  *      search, combined.
  *   3. `vehicleLookup` build with display-name-or-VIN fallback.
- *   4. Selection pruning — `effectiveSelected` drops keys no longer visible
- *      after a filter change, and drives the bulk toolbar count.
+ *   4. Selection retains loaded IDs across filters and reviews them before writes.
  *   5. `runBulk` — numeric-id mutation, clear-on-success, keep-on-failure
  *      (and no unhandled rejection when the mutation rejects).
  *   6. Confirm-gated delete, loading / error propagation, retry + navigation.
@@ -24,13 +23,71 @@
  * render deterministic.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor, within, act, fireEvent } from '@testing-library/react';
+import { render, renderHook, screen, waitFor, within, act, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { Automation } from '@/api/types';
+import { automationNumber, automationTimestamp, automationStatus, assertAutomationInventory } from '@/api/hooks/useAutomations';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { request } from '@/api/client';
 import type { Vehicle } from '@/types/vehicle';
+
+vi.mock('@/api/client', () => ({ request: vi.fn() }));
+
+describe('automation inventory hook boundary', () => {
+  const base = {
+    id: 1, name: 'Supported base row', enabled: false,
+    created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+  };
+
+  it('accepts base rows without nonexistent extension counters and measured zero', () => {
+    expect(assertAutomationInventory([base])).toEqual([base]);
+    expect(assertAutomationInventory([])).toEqual([]);
+    expect(assertAutomationInventory([{ ...base, execution_count: 0, failure_count: 0 }])).toHaveLength(1);
+  });
+
+  it('preserves nullable status and finite signed and fractional values at the hook boundary', () => {
+    const rows = [
+      { ...base, enabled: null, auto_disabled: null, execution_count: -2, failure_count: 0.25 },
+      { ...base, id: 2, enabled: undefined, execution_count: -0.5, failure_count: 0 },
+    ];
+    expect(assertAutomationInventory(rows)).toEqual(rows);
+    for (const row of rows) expect(automationStatus(row)).toBeNull();
+  });
+
+  it.each([
+    null, {}, { items: [] }, [null], [{ ...base, enabled: 'false' }],
+    [{ ...base, name: 3 }], [{ ...base, vehicle_id: '1' }],
+    [{ ...base, execution_count: NaN }], [{ ...base, failure_count: Infinity }],
+    [{ ...base, execution_count: '0' }], [{ ...base, last_triggered_at: 'bad' }],
+  ])('rejects malformed inventory %j', (payload) => {
+    expect(() => assertAutomationInventory(payload)).toThrow('Invalid automation inventory response');
+  });
+
+  it('keeps valid cache data on invalid refresh and recovers with successful empty data', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAutomations')>('@/api/hooks/useAutomations');
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    vi.mocked(request).mockResolvedValueOnce([base]).mockResolvedValueOnce({ items: [] }).mockResolvedValueOnce([]);
+    const { result, unmount } = renderHook(() => actual.useAutomationList(), {
+      wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    // Refreshes are driven through invalidation (the production refresh path);
+    // the observer snapshot does not follow observer.refetch() failures.
+    const key = actual.automationKeys.all;
+    await waitFor(() => expect(result.current.data).toEqual([base]));
+    await act(async () => { await client.invalidateQueries({ queryKey: key, exact: true }); });
+    await waitFor(() => expect(client.getQueryState(key)?.status).toBe('error'));
+    expect(client.getQueryState(key)?.error).toMatchObject({ message: 'Invalid automation inventory response' });
+    expect(client.getQueryData(key)).toEqual([base]);
+    await act(async () => { await client.invalidateQueries({ queryKey: key, exact: true }); });
+    await waitFor(() => expect(client.getQueryData(key)).toEqual([]));
+    await waitFor(() => expect(client.getQueryState(key)?.status).toBe('success'));
+    unmount();
+    client.clear();
+  });
+});
 
 vi.mock('../components/RoutineWizard', () => ({
   RoutineWizard: ({ actionsDisabled }: { actionsDisabled?: boolean }) => (
@@ -57,6 +114,147 @@ vi.hoisted(() => {
   }
 });
 
+describe('AutomationListPage source recovery and partial bulk outcomes', () => {
+  it('keeps initial inventory totals unknown when fetching is paused without data', () => {
+    useAutomationsMock.mockReturnValue({
+      ...makeQuery(), isPending: true, fetchStatus: 'paused',
+    });
+    renderPage();
+    expect(captured.table.hasData).toBe(false);
+    expect(captured.table.isLoading).toBe(false);
+    expect(captured.status.stats).toMatchObject({ total: undefined });
+    expect(captured.table.dataState).toMatchObject({ hasData: false, isRefreshBlocked: true });
+    expect(captured.status.dataState).toMatchObject({ hasData: false, isRefreshBlocked: true });
+  });
+
+  it('explains paused vehicle names independently and restores their lookup after recovery', () => {
+    const refetch = vi.fn();
+    useVehiclesMock.mockReturnValue({ ...makeQuery(), fetchStatus: 'paused', refetch });
+    const view = renderPage();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Vehicles' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(captured.table.isLoading).toBe(false);
+    useVehiclesMock.mockReturnValue(makeQuery({ data: VEHICLES }));
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter><AutomationListPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(captured.table.vehicleLookup.size).toBeGreaterThan(0);
+  });
+
+  it('distinguishes invalid inputs from measured zero, signed and fractional values', () => {
+    for (const input of [null, undefined, '', '0', NaN, Infinity, -Infinity, false]) {
+      expect(automationNumber(input)).toBeNull();
+    }
+    for (const input of [0, -2, 0.25, -0.5]) expect(automationNumber(input)).toBe(input);
+    for (const input of [null, undefined, '', 'not-a-date', 0]) expect(automationTimestamp(input)).toBeNull();
+    expect(automationTimestamp('2024-01-01T00:00:00Z')).toBe('2024-01-01T00:00:00Z');
+    expect(automationStatus({ ...AUTOMATIONS[0], auto_disabled: undefined })).toBeNull();
+  });
+
+  it('keeps incomplete inventory counters and status totals unknown', () => {
+    useAutomationsMock.mockReturnValue(makeQuery({
+      data: [{ ...AUTOMATIONS[0], execution_count: undefined, failure_count: NaN, auto_disabled: undefined }],
+    }));
+    renderPage();
+    expect(captured.status.stats).toMatchObject({
+      total: 1, active: undefined, disabled: undefined, autoDisabled: undefined,
+      totalRuns: undefined, totalFailures: undefined,
+    });
+  });
+  it('retains failed bulk IDs with their reasons and retries only those IDs', async () => {
+    const mutateAsync = vi.fn()
+      .mockResolvedValueOnce({ updated: 1, failed: [{ id: 2, reason: 'Rule unavailable' }] })
+      .mockResolvedValueOnce({ updated: 1, failed: [] });
+    useBulkMock.mockReturnValue({ mutateAsync });
+    renderPage();
+    selectRows([1, 2]);
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
+
+    await waitFor(() => expect(captured.table.selectedKeys).toEqual([2]));
+    expect(mutateAsync).toHaveBeenNthCalledWith(1, { ids: [1, 2], op: 'enable' });
+    expect(screen.getByText('Error')).toBeInTheDocument();
+    expect(screen.getByText('#2: Rule unavailable')).toBeInTheDocument();
+    expect(ids(captured.table.automations)).toEqual([1, 2, 3, 4]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenNthCalledWith(2, { ids: [2], op: 'enable' }));
+    await waitFor(() => expect(captured.table.selectedKeys).toEqual([]));
+    expect(screen.queryByText('Error')).not.toBeInTheDocument();
+  });
+
+  it('preserves newly selected IDs outside the submitted bulk operation', async () => {
+    let finish: (result: { updated: number; failed: { id: number; reason: string }[] }) => void = () => {};
+    const mutateAsync = vi.fn(() => new Promise((resolve) => { finish = resolve; }));
+    useBulkMock.mockReturnValue({ mutateAsync });
+    renderPage();
+    selectRows([1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ ids: [1], op: 'enable' }));
+    selectRows([1, 3]);
+
+    await act(async () => finish({ updated: 1, failed: [] }));
+    expect(captured.table.selectedKeys).toEqual([3]);
+    expect(screen.getByRole('region', { name: /bulk actions/i })).toHaveTextContent('1 selected');
+  });
+
+  it('keeps all inventory sections while vehicle names are loading', () => {
+    useVehiclesMock.mockReturnValue(makeQuery({ isLoading: true }));
+    renderPage();
+
+    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Loading');
+    expect(ids(captured.table.automations)).toEqual([1, 2, 3, 4]);
+    expect(captured.table.isLoading).toBe(false);
+    expect(captured.table.vehicleLookup).toEqual(new Map());
+    expect(screen.getByTestId('stub-status')).toBeInTheDocument();
+    expect(screen.getByTestId('routine-wizard')).toBeInTheDocument();
+  });
+
+  it('retries failed vehicle names independently without replacing automation rows', () => {
+    const refetchVehicles = vi.fn();
+    const query = makeQuery({ data: AUTOMATIONS });
+    useAutomationsMock.mockReturnValue(query);
+    useVehiclesMock.mockReturnValue(makeQuery({
+      isError: true, error: new Error('Vehicle names unavailable'), refetch: refetchVehicles,
+    }));
+    renderPage();
+    selectRows([2]);
+
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetchVehicles).toHaveBeenCalledTimes(1);
+    expect(query.refetch).not.toHaveBeenCalled();
+    expect(captured.table.error).toBeNull();
+    expect(captured.table.selectedKeys).toEqual([2]);
+    expect(ids(captured.table.automations)).toEqual([1, 2, 3, 4]);
+    expect(screen.getByTestId('routine-wizard')).toBeInTheDocument();
+  });
+
+  it('keeps retained vehicle names and independently refreshes their stale source', () => {
+    const refetchVehicles = vi.fn();
+    useVehiclesMock.mockReturnValue({
+      data: VEHICLES, isLoading: false, isError: true, error: new Error('Vehicle refresh failed'),
+      isFetching: false, dataUpdatedAt: Date.now(), refetch: refetchVehicles,
+    });
+    renderPage();
+    selectRows([2]);
+
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Vehicles may be out of date');
+    expect((captured.table.vehicleLookup as Map<number, string>).get(1)).toBe('Model 3');
+    expect((captured.table.vehicleLookup as Map<number, string>).get(2)).toBe('VIN-2');
+    expect(captured.table.selectedKeys).toEqual([2]);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetchVehicles).toHaveBeenCalledTimes(1);
+    expect(captured.table.error).toBeNull();
+  });
+});
+
 // Shared, hoisted test doubles so the mock factories below and the specs can
 // both reach them.
 const { useAutomationsMock, useBulkMock, useVehiclesMock, navigateMock, captured } =
@@ -72,6 +270,7 @@ const operationalMode = vi.hoisted(() => ({
   canWrite: true,
   writeBlockReason: null as string | null,
 }));
+const realTable = vi.hoisted(() => ({ enabled: false }));
 
 vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => operationalMode,
@@ -117,6 +316,7 @@ vi.mock('@/api/hooks/useAutomations', async () => {
   return {
     ...actual,
     useAutomations: () => useAutomationsMock(),
+    useAutomationList: () => useAutomationsMock(),
     useBulkAutomationsUpdate: () => useBulkMock(),
   };
 });
@@ -143,9 +343,11 @@ vi.mock('react-router-dom', async () => {
 // KPI MetricCards and BulkActionToolbar so the page's real derivation logic runs.
 vi.mock('./AutomationListTable', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
+  const actual = await vi.importActual<typeof import('./AutomationListTable')>('./AutomationListTable');
   return {
-    AutomationListTable: function Stub(props: Record<string, unknown>) {
-      captured.table = props;
+    AutomationListTable: function Stub(props: React.ComponentProps<typeof actual.AutomationListTable>) {
+      captured.table = { ...props };
+      if (realTable.enabled) return React.createElement(actual.AutomationListTable, props);
       return React.createElement('div', { 'data-testid': 'stub-table' });
     },
   };
@@ -312,6 +514,8 @@ function selectRows(keys: number[]) {
 }
 
 beforeEach(() => {
+  realTable.enabled = false;
+  window.localStorage.clear();
   useAutomationsMock.mockReset();
   useBulkMock.mockReset();
   useVehiclesMock.mockReset();
@@ -329,11 +533,71 @@ beforeEach(() => {
 });
 
 describe('AutomationListPage', () => {
+  it('reviews every retained selection hidden by table value filters before disabling', async () => {
+    realTable.enabled = true;
+    renderPage();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Night Charge' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Runs filter' }));
+    const filter = screen.getByRole('dialog', { name: 'Runs filter' });
+    fireEvent.click(within(filter).getByRole('checkbox', { name: '50' }));
+    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('link', { name: 'Night Charge' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    expect(captured.table.selectedKeys).toEqual([2, 1, 3, 4]);
+    fireEvent.click(screen.getByRole('button', { name: 'Disable' }));
+    const review = await screen.findByRole('dialog');
+    for (const row of AUTOMATIONS) expect(review).toHaveTextContent(`#${row.id}: ${row.name}`);
+    expect(useBulkMock().mutateAsync).not.toHaveBeenCalled();
+    fireEvent.click(within(review).getByRole('button', { name: 'Disable' }));
+    await waitFor(() => expect(useBulkMock().mutateAsync).toHaveBeenCalledWith({ ids: [2, 1, 3, 4], op: 'disable' }));
+  });
+
+  it('reviews cumulative counters without claiming a known window or changing selected rules', () => {
+    const mutation = vi.fn();
+    useBulkMock.mockReturnValue({ mutateAsync: mutation });
+    renderPage();
+    selectRows([2]);
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Rule inventory details' });
+    expect(within(drawer).getAllByText('Cumulative counters on loaded rules; their start time is not supplied.').length).toBeGreaterThan(0);
+    expect(within(drawer).getByText('360')).toBeInTheDocument();
+    expect(within(drawer).getByText('28')).toBeInTheDocument();
+    expect(captured.table.selectedKeys).toEqual([2]);
+    expect(mutation).not.toHaveBeenCalled();
+  });
+  it('states unfiltered loaded selection scope without treating a filter as select-all', async () => {
+    renderPage();
+    selectRows([1, 2, 3]);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Filter automations by status' }), {
+      target: { value: 'active' },
+    });
+    const toolbar = screen.getByRole('region', { name: /bulk actions/i });
+    expect(toolbar).toHaveAttribute('data-selection-scope', 'loaded');
+    expect(toolbar).toHaveTextContent('3 selected · All loaded rules · unfiltered');
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Enable' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
+    await waitFor(() => expect(useBulkMock().mutateAsync).toHaveBeenCalledWith({ ids: [1, 2, 3], op: 'enable' }));
+  });
+
+  it('retains the KPI, table, status and selected IDs during failed background recovery', () => {
+    useAutomationsMock.mockReturnValue(makeQuery({
+      data: AUTOMATIONS, isError: true, error: new Error('Refresh offline'),
+    }));
+    const { container } = renderPage();
+    selectRows([2]);
+    expect(container.querySelector('[data-layout-reference]')).not.toBeNull();
+    expect(within(kpiRegion()).getByText('Total runs')).toBeInTheDocument();
+    expect(captured.table.error).toBeNull();
+    expect(captured.status.error).toBeNull();
+    expect(captured.table.selectedKeys).toEqual([2]);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
+
   it('renders the page shell, KPI band and both bento sections', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Automation Rules' }),
+      screen.getByRole('heading', { level: 1, name: 'Automation rules' }),
     ).toBeInTheDocument();
 
     // KPI band present with all six tiles (scoped so the "Active"/"Disabled"
@@ -360,7 +624,15 @@ describe('AutomationListPage', () => {
       screen.getByRole('combobox', { name: 'Filter automations by status' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search automations' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search automations' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'context');
+    expect(screen.getByRole('combobox', { name: 'Filter automations by status' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'context');
+    expect(screen.getByRole('button', { name: 'New' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
+    const heading = screen.getByRole('heading', { level: 1, name: 'Automation rules' });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
   });
 
   it('renders the read-only explanation outside the disabled create action', () => {
@@ -462,8 +734,9 @@ describe('AutomationListPage', () => {
     expect(captured.table.isLoading).toBe(true);
     expect(captured.status.isLoading).toBe(true);
     expect(captured.table.totalCount).toBe(0);
-    // KPI tiles are replaced by skeletons during the first load.
-    expect(within(kpiRegion()).queryByText('Total runs')).not.toBeInTheDocument();
+    expect(within(kpiRegion()).getByText('Total runs')).toBeInTheDocument();
+    expect(screen.getByTestId('automation-rules-brief')).toHaveAttribute('aria-busy', 'true');
+    expect(kpiRegion().querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
 
   it('propagates an error to both sections without hiding them', () => {
@@ -479,7 +752,13 @@ describe('AutomationListPage', () => {
     expect(screen.getByTestId('stub-table')).toBeInTheDocument();
     expect(screen.getByTestId('stub-status')).toBeInTheDocument();
     // KPI band shows the error with retry — never fabricated zeros.
-    expect(within(kpiRegion()).queryByText('Total')).not.toBeInTheDocument();
+    expect(kpiRegion().querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Total', 'Active', 'Disabled', 'Auto-disabled', 'Total runs', 'Failures']) {
+      assertOperationalMetricUnavailable(kpiRegion(), label);
+    }
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('6 empty fields are hidden.');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     const retry = within(kpiRegion()).getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
     expect(query.refetch).toHaveBeenCalledTimes(1);
@@ -503,7 +782,7 @@ describe('AutomationListPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/automations/new');
   });
 
-  it('drives the bulk toolbar from selection and prunes to visible rows on filter', async () => {
+  it('retains and reviews loaded selections hidden by header filters before enabling', async () => {
     renderPage();
 
     // No toolbar until something is selected.
@@ -515,13 +794,21 @@ describe('AutomationListPage', () => {
     expect(screen.getByText(/3 selected/i)).toBeInTheDocument();
     expect(captured.table.selectedKeys).toEqual([1, 2, 3]);
 
-    // Narrow to "active" (only #1 visible) — selection prunes to the visible id.
+    // Only #1 is visible, but the review still includes every selected loaded rule.
     fireEvent.change(screen.getByRole('combobox', { name: 'Filter automations by status' }), {
       target: { value: 'active' },
     });
 
-    await waitFor(() => expect(screen.getByText(/1 selected/i)).toBeInTheDocument());
-    expect(captured.table.selectedKeys).toEqual([1]);
+    expect(screen.getByText(/3 selected/i)).toBeInTheDocument();
+    expect(captured.table.selectedKeys).toEqual([1, 2, 3]);
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('#1: Morning Precondition');
+    expect(dialog).toHaveTextContent('#2: Night Charge');
+    expect(dialog).toHaveTextContent('#3: Sentry Guard');
+    expect(useBulkMock().mutateAsync).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Enable' }));
+    await waitFor(() => expect(useBulkMock().mutateAsync).toHaveBeenCalledWith({ ids: [1, 2, 3], op: 'enable' }));
   });
 
   it('runs a bulk enable with numeric ids and clears the selection on success', async () => {
@@ -534,6 +821,7 @@ describe('AutomationListPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
 
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
     await waitFor(() =>
       expect(mutateAsync).toHaveBeenCalledWith({ ids: [1, 2], op: 'enable' }),
     );
@@ -592,6 +880,7 @@ describe('AutomationListPage', () => {
       selectRows([1, 2]);
       fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
 
+      fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
       await waitFor(() =>
         expect(mutateAsync).toHaveBeenCalledWith({ ids: [1, 2], op: 'enable' }),
       );

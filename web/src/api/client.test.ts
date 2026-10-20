@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { __resetDocumentCancellationForTests } from '../lib/documentCancellation'
+import { documentLifecycleDriver } from '../test/documentLifecycle'
 
 /**
  * Comprehensive coverage for the api/client foundation module.
@@ -75,6 +77,7 @@ function urlOf(callIndex: number): string {
 }
 
 beforeEach(() => {
+  __resetDocumentCancellationForTests()
   __resetSudoStateForTests()
   resilientFetchMock.mockReset()
   fetchMock = vi.spyOn(globalThis, 'fetch')
@@ -82,8 +85,44 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  __resetDocumentCancellationForTests()
   __resetSudoStateForTests()
   vi.restoreAllMocks()
+})
+
+describe('request — late document starts', () => {
+  it('rejects a new direct read after document unload without entering fetch or retry', async () => {
+    const lifecycle = documentLifecycleDriver()
+    fetchMock.mockImplementation(async () => jsonResponse({ id: 7 }))
+    await request('/vehicles')
+    lifecycle('beforeunload')
+    await expect(request('/vehicles')).rejects.toMatchObject({ name: 'AbortError' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  it('preserves the exact caller signal and resumes reads after cancelled navigation', async () => {
+    vi.useFakeTimers()
+    const caller = new AbortController()
+    const lifecycle = documentLifecycleDriver()
+    fetchMock.mockImplementation(async () => jsonResponse({ id: 7 }))
+    await request('/vehicles', { signal: caller.signal })
+    const prevent = (event: Event) => event.preventDefault()
+    window.addEventListener('beforeunload', prevent)
+    try {
+      lifecycle('beforeunload')
+      await expect(request('/vehicles', { signal: caller.signal })).rejects.toMatchObject({ name: 'AbortError' })
+      await vi.runAllTimersAsync()
+      await expect(request('/vehicles', { signal: caller.signal })).resolves.toEqual({ id: 7 })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      for (const call of fetchMock.mock.calls) expect(call[1]).toHaveProperty('signal', caller.signal)
+      expect(caller.signal.aborted).toBe(false)
+      expect(resilientFetchMock).not.toHaveBeenCalled()
+    } finally {
+      window.removeEventListener('beforeunload', prevent)
+      vi.useRealTimers()
+    }
+  })
 })
 
 describe('module constants + re-exports', () => {
@@ -267,6 +306,261 @@ describe('request() — error handling', () => {
 
     expect((caught as ApiError).status).toBe(503)
     expect((caught as ApiError).message).toBe('gateway down')
+  })
+})
+
+describe('request() — wire error normalization', () => {
+  const transports = [
+    { transport: 'direct', skipAuthRefresh: true },
+    { transport: 'resilient', skipAuthRefresh: false },
+  ]
+
+  beforeEach(async () => {
+    const actual = await vi.importActual<typeof import('../lib/resilience')>('../lib/resilience')
+    resilientFetchMock.mockImplementation(actual.resilientFetch)
+  })
+
+  it.each(transports)('preserves nested subsystem message code and status via $transport', async ({ skipAuthRefresh }) => {
+    fetchMock.mockImplementation(async () => jsonResponse({
+      error: {
+        code: 'SUBSYSTEM_NOT_CONFIGURED',
+        message: 'schema_drift subsystem not configured on this deployment',
+      },
+    }, 503))
+
+    await expect(request('/admin/observability/schema-drift', { skipAuthRefresh })).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 503,
+      code: 'SUBSYSTEM_NOT_CONFIGURED',
+      message: 'schema_drift subsystem not configured on this deployment',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(skipAuthRefresh ? 1 : 2)
+  })
+
+  it.each(transports)('preserves nested failure details via $transport', async ({ skipAuthRefresh }) => {
+    fetchMock.mockImplementation(async () => jsonResponse({
+      error: { code: 'SCHEMA_DRIFT_FAILED', message: 'schema comparison failed' },
+    }, 500))
+
+    await expect(request('/admin/observability/schema-drift', { skipAuthRefresh })).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 500,
+      code: 'SCHEMA_DRIFT_FAILED',
+      message: 'schema comparison failed',
+    })
+  })
+
+  it('preserves a nested error first received by the resilient fallback', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('direct transport unavailable'))
+      .mockResolvedValueOnce(jsonResponse({
+        error: { code: 'SUBSYSTEM_NOT_CONFIGURED', message: 'resilient subsystem unavailable' },
+      }, 503))
+
+    await expect(request('/admin/observability/schema-drift')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 503,
+      code: 'SUBSYSTEM_NOT_CONFIGURED',
+      message: 'resilient subsystem unavailable',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it.each(transports)('preserves flat error string code and status via $transport', async ({ skipAuthRefresh }) => {
+    fetchMock.mockImplementation(async () => jsonResponse({ error: 'forbidden', code: 'RBAC_DENY' }, 403))
+
+    await expect(request('/admin/observability/schema-drift', { skipAuthRefresh })).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 403,
+      code: 'RBAC_DENY',
+      message: 'forbidden',
+    })
+  })
+
+  const fallbackCases: Array<{ caseName: string; body: unknown }> = [
+    { caseName: 'unknown envelope', body: { detail: 'not an error envelope' } },
+    { caseName: 'invalid nested fields', body: { error: { message: 42, code: false } } },
+    { caseName: 'null body', body: null },
+    { caseName: 'array body', body: [{ error: 'not an envelope' }] },
+    { caseName: 'string body', body: 'not an envelope' },
+    { caseName: 'number body', body: 42 },
+    { caseName: 'boolean body', body: false },
+    { caseName: 'empty nested message', body: { error: { message: '' } } },
+    { caseName: 'whitespace nested message', body: { error: { message: '  ' } } },
+    { caseName: 'empty flat error', body: { error: '', code: '' } },
+    { caseName: 'array error', body: { error: [42], code: false } },
+  ]
+
+  for (const { transport, skipAuthRefresh } of transports) {
+    it.each(fallbackCases)(`uses the standard HTTP fallback for $caseName via ${transport}`, async ({ body }) => {
+      fetchMock.mockImplementation(async () => jsonResponse(body, 503))
+
+      const error: unknown = await request('/admin/observability/schema-drift', { skipAuthRefresh }).catch((caught: unknown) => caught)
+      expect(error).toBeInstanceOf(ApiError)
+      expect(error).toMatchObject({
+        name: 'ApiError',
+        status: 503,
+        message: 'HTTP 503',
+      })
+      expect(error).toHaveProperty('code', undefined)
+    })
+  }
+
+  it.each(transports)('uses the standard HTTP fallback for malformed JSON via $transport', async ({ skipAuthRefresh }) => {
+    fetchMock.mockImplementation(async () => new Response('{', {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+
+    await expect(request('/admin/observability/schema-drift', { skipAuthRefresh })).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 503,
+      message: 'HTTP 503',
+    })
+  })
+
+  it('preserves an AbortError raised while decoding an error body', async () => {
+    const aborted = new DOMException('cancelled during decode', 'AbortError')
+    const response = jsonResponse({ error: 'unused' }, 503)
+    vi.spyOn(response, 'json').mockRejectedValueOnce(aborted)
+    fetchMock.mockResolvedValueOnce(response)
+
+    await expect(request('/admin/observability/schema-drift')).rejects.toBe(aborted)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('replays a nested sudo challenge through the existing auth interceptor', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({
+        error: { code: 'SUDO_REQUIRED', message: 'step-up reauth required' },
+      }, 401))
+      .mockResolvedValueOnce(jsonResponse({ ok: true }))
+    const provider: SudoChallengeProvider = vi.fn(async (): Promise<SudoCredential> => ({
+      mode: 'session',
+      token: 'nested-mint',
+    }))
+    registerSudoChallengeProvider(provider)
+
+    await expect(request('/api-keys/42', { method: 'DELETE' })).resolves.toEqual({ ok: true })
+    expect(provider).toHaveBeenCalledWith('/api-keys/42')
+    expect(headersOf(1).get('X-Sudo-Token')).toBe('nested-mint')
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  for (const { transport, skipAuthRefresh } of transports) {
+    it(`preserves top level code precedence via ${transport}`, async () => {
+      fetchMock.mockImplementation(async () => jsonResponse({
+        code: 'TOP_LEVEL_DENY',
+        error: { code: 'NESTED_DENY', message: 'permission denied' },
+      }, 403))
+      await expect(request('/admin/check', { skipAuthRefresh })).rejects.toMatchObject({
+        name: 'ApiError', status: 403, code: 'TOP_LEVEL_DENY', message: 'permission denied',
+      })
+    })
+
+    it(`preserves meaningful reason phrase fallback via ${transport}`, async () => {
+      fetchMock.mockImplementation(async () => new Response('null', {
+        status: 502, statusText: 'Bad Gateway', headers: { 'Content-Type': 'application/json' },
+      }))
+      await expect(request('/admin/check', { skipAuthRefresh })).rejects.toMatchObject({
+        name: 'ApiError', status: 502, message: 'Bad Gateway', code: undefined,
+      })
+    })
+
+    it(`preserves text error details via ${transport}`, async () => {
+      fetchMock.mockImplementation(async () => textResponse('gateway maintenance', 503))
+      await expect(request('/admin/check', { skipAuthRefresh })).rejects.toMatchObject({
+        name: 'ApiError', status: 503, message: 'gateway maintenance', code: undefined,
+      })
+    })
+  }
+
+  it('reuses the token minted by a nested sudo challenge', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 'SUDO_REQUIRED', message: 'confirm' } }, 401))
+      .mockResolvedValueOnce(jsonResponse({ deleted_id: 42 }))
+      .mockResolvedValueOnce(jsonResponse({ deleted_id: 43 }))
+    const provider = vi.fn(async (): Promise<SudoCredential> => ({ mode: 'session', token: 'nested-cache' }))
+    registerSudoChallengeProvider(provider)
+    await expect(request('/api-keys/42', { method: 'DELETE' })).resolves.toEqual({ deleted_id: 42, deletedId: 42 })
+    await expect(request('/api-keys/43', { method: 'DELETE' })).resolves.toEqual({ deleted_id: 43, deletedId: 43 })
+    expect(provider).toHaveBeenCalledTimes(1)
+    expect(headersOf(2).get('X-Sudo-Token')).toBe('nested-cache')
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  it('replays nested open mode challenge without minting a token', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 'SUDO_REQUIRED', message: 'confirm' } }, 401))
+      .mockResolvedValueOnce(jsonResponse({ ok: true }))
+    registerSudoChallengeProvider(vi.fn(async (): Promise<SudoCredential> => ({ mode: 'open' })))
+    await expect(request('/api-keys/42', { method: 'DELETE' })).resolves.toEqual({ ok: true })
+    expect(headersOf(1).has('X-Sudo-Token')).toBe(false)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  it('preserves cancellation of a nested sudo challenge without replay', async () => {
+    const cancelled = new SudoCanceledError('nested confirmation cancelled')
+    fetchMock.mockResolvedValueOnce(jsonResponse({ error: { code: 'SUDO_REQUIRED', message: 'confirm' } }, 401))
+    registerSudoChallengeProvider(vi.fn(async () => { throw cancelled }))
+    await expect(request('/api-keys/42', { method: 'DELETE' })).rejects.toBe(cancelled)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  it('propagates a decode AbortError first received by the resilient fallback', async () => {
+    const aborted = new DOMException('fallback decode cancelled', 'AbortError')
+    const response = jsonResponse({ error: 'unused' }, 503)
+    vi.spyOn(response, 'json').mockRejectedValueOnce(aborted)
+    fetchMock
+      .mockRejectedValueOnce(new Error('direct transport unavailable'))
+      .mockResolvedValueOnce(response)
+    const eventSpy = vi.spyOn(document, 'dispatchEvent')
+
+    await expect(request('/admin/observability/schema-drift')).rejects.toBe(aborted)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(resilientFetchMock).toHaveBeenCalledTimes(1)
+    expect(eventSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not challenge or retry again when a nested sudo replay is rejected', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 'SUDO_REQUIRED', message: 'confirm' } }, 401))
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 'RBAC_DENY', message: 'still forbidden' } }, 403))
+    const provider = vi.fn(async (): Promise<SudoCredential> => ({ mode: 'session', token: 'one-replay' }))
+    registerSudoChallengeProvider(provider)
+
+    await expect(request('/api-keys/42', { method: 'DELETE' })).rejects.toMatchObject({
+      name: 'ApiError', status: 403, code: 'RBAC_DENY', message: 'still forbidden',
+    })
+    expect(provider).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps caller headers and cancellation options through a nested-error fallback', async () => {
+    const controller = new AbortController()
+    const headers = new Headers({ 'X-Test-Scope': 'original' })
+    setCachedSudoToken({ token: 'retained-token', expiresAtMs: Date.now() + 60_000 })
+    fetchMock.mockImplementation(async () => jsonResponse({
+      error: { code: 'SCHEMA_DRIFT_FAILED', message: 'comparison failed' },
+    }, 500))
+
+    await expect(request('/admin/observability/schema-drift', {
+      signal: controller.signal, headers,
+    })).rejects.toMatchObject({
+      name: 'ApiError', status: 500, code: 'SCHEMA_DRIFT_FAILED', message: 'comparison failed',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(resilientFetchMock.mock.calls[0][1]).toMatchObject({ signal: controller.signal })
+    expect(headers.get('X-Sudo-Token')).toBeNull()
+    for (const index of [0, 1]) {
+      expect(headersOf(index).get('X-Test-Scope')).toBe('original')
+      expect(headersOf(index).get('X-Sudo-Token')).toBe('retained-token')
+    }
+    expect(fetchMock.mock.calls[0][1]).toHaveProperty('signal', controller.signal)
+    expect(fetchMock.mock.calls[1][1]?.signal).toBeInstanceOf(AbortSignal)
   })
 })
 

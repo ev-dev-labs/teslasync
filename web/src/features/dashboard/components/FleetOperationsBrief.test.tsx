@@ -19,7 +19,7 @@
  * read the English defaults without booting the i18n runtime.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, within, cleanup } from '@testing-library/react'
+import { render, screen, within, cleanup, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@/components/feedback'
@@ -37,6 +37,7 @@ vi.mock('react-i18next', () => ({
 
 import type { FleetServerSummary, FleetStateEntry } from '@/api/hooks/useVehicles'
 import type { Vehicle } from '@/types/vehicle'
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import { FleetOperationsBrief } from './FleetOperationsBrief'
 
 function makeVehicle(id: number, name = `Car ${id}`): Vehicle {
@@ -111,10 +112,28 @@ function serverSummary(over: Partial<FleetServerSummary> = {}): FleetServerSumma
   }
 }
 
+function postureBrief(): HTMLElement {
+  return screen.getByTestId('fleet-posture-operational-brief')
+}
+
+function openDrawer(): HTMLElement {
+  const brief = postureBrief()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+  return screen.getByRole('dialog')
+}
+
+function closeDrawer(dialog: HTMLElement) {
+  fireEvent.keyDown(dialog, { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
 /** Taxonomy/metric value for a label, read out of its own <dd>. */
 function valueFor(label: string): string {
   const panel = screen.getByTestId('fleet-operations-brief')
-  return within(panel).getByText(label).parentElement?.querySelector('dd')?.textContent ?? ''
+  const el = within(panel).getByText(label)
+  const metric = el.closest('[data-operational-metric]')
+  return metric?.textContent ?? el.parentElement?.querySelector('dd')?.textContent ?? ''
 }
 
 afterEach(cleanup)
@@ -126,11 +145,18 @@ describe('FleetOperationsBrief — taxonomy', () => {
     // The panel is NEVER hidden on no data.
     expect(screen.getByTestId('fleet-operations-brief')).toBeInTheDocument()
     expect(screen.getByTestId('fleet-posture-taxonomy')).toBeInTheDocument()
-    expect(screen.getByText('Checking live state')).toBeInTheDocument()
-    expect(document.querySelector('[data-provenance="unknown"]')).toHaveAttribute(
-      'data-data-status',
-      'initial',
-    )
+    expect(Array.from(screen.getByTestId('fleet-posture-taxonomy').querySelectorAll('dt'))
+      .every(node => !node.classList.contains('truncate'))).toBe(true)
+    assertOperationalBriefDisclosure(postureBrief(), 'Checking live state')
+    const drawer = openDrawer()
+    try {
+      expect(drawer.querySelector('[data-provenance="unknown"]')).toHaveAttribute(
+        'data-data-status',
+        'initial',
+      )
+    } finally {
+      closeDrawer(drawer)
+    }
     // Counts are em dashes, not a confident zero.
     expect(valueFor('Reporting')).toBe('—')
     expect(valueFor('Offline')).toBe('—')
@@ -184,7 +210,7 @@ describe('FleetOperationsBrief — taxonomy', () => {
       ],
     })
 
-    expect(screen.getByText('2 of 3 verified')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(postureBrief(), '2 of 3 verified')
     expect(valueFor('Verified')).toContain('2/3')
   })
 
@@ -208,7 +234,12 @@ describe('FleetOperationsBrief — taxonomy', () => {
     })
 
     expect(valueFor('Oldest reading')).toContain('3h ago')
-    expect(valueFor('Oldest reading')).toContain('observed, not fetched')
+    const oldestDrawer = openDrawer()
+    try {
+      expect(within(within(oldestDrawer).getByRole('group', { name: 'Oldest reading' })).getByText('observed, not fetched')).toBeInTheDocument()
+    } finally {
+      closeDrawer(oldestDrawer)
+    }
   })
 
   it('says so explicitly when there is no verified observation at all', () => {
@@ -220,7 +251,7 @@ describe('FleetOperationsBrief — taxonomy', () => {
       })],
     })
 
-    expect(valueFor('Oldest reading')).toContain('no verified observation')
+    assertOperationalMetricUnavailable(postureBrief(), 'Oldest reading')
   })
 })
 
@@ -243,7 +274,7 @@ describe('FleetOperationsBrief — server-derived summary', () => {
     expect(valueFor('Unverified')).toBe('1')
     expect(valueFor('Verified')).toContain('3/4')
     expect(valueFor('Attention')).toContain('1')
-    expect(screen.getByText('3 of 4 verified')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(postureBrief(), '3 of 4 verified')
     expect(valueFor('Oldest reading')).toContain('1m ago')
   })
 
@@ -321,12 +352,34 @@ describe('FleetOperationsBrief — server-derived summary', () => {
     renderBrief({ vehicles: [makeVehicle(1)], fleetStates: undefined, summary: null, isPending: true })
 
     expect(valueFor('Reporting')).toBe('—')
-    expect(valueFor('Verified')).toContain('—')
-    expect(screen.getByText('Checking live state')).toBeInTheDocument()
+    expect(screen.getByTestId('fleet-posture-operational-brief')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('fleet-posture-operational-brief').querySelector('[data-operational-metric="count:1"]')).toHaveAttribute('data-value-state', 'missing')
+    assertOperationalBriefDisclosure(postureBrief(), 'Checking live state')
   })
 })
 
 describe('FleetOperationsBrief — trust and accessibility', () => {
+  it('retains source fractions, real observation age and taxonomy in the review drawer', () => {
+    const vehicle = makeVehicle(1, 'Falcon')
+    const observedAt = Date.now() - 3 * 60 * 60_000
+    renderBrief({
+      vehicles: [vehicle], selectedVehicle: vehicle, isError: true,
+      fleetStates: [entry(vehicle, { observedAt, outcome: 'failed', stale: true, freshness: 'stale' })],
+    })
+    const brief = screen.getByTestId('fleet-posture-operational-brief')
+    expect(brief).toHaveAttribute('data-operational-brief')
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
+    expect(valueFor('Verified')).toContain('0/1')
+    expect(valueFor('Oldest reading')).toContain('3h ago')
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    expect(within(drawer).getByRole('heading', { name: 'Fleet operating posture details' })).toBeInTheDocument()
+    expect(within(drawer).getByText('0/1')).toBeInTheDocument()
+    expect(within(drawer).getByText('3h ago')).toBeInTheDocument()
+    expect(within(drawer).getByText(/oldest reading is a real backend observation/)).toBeInTheDocument()
+    expect(screen.getByTestId('fleet-posture-taxonomy')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open vehicle' })).toHaveAttribute('href', '/vehicles/1')
+  })
   it('announces the posture headline in a polite live region', () => {
     const vehicles = [makeVehicle(1), makeVehicle(2)]
     renderBrief({
@@ -337,10 +390,15 @@ describe('FleetOperationsBrief — trust and accessibility', () => {
     const announcement = screen.getByTestId('fleet-posture-announcement')
     expect(announcement).toHaveAttribute('aria-live', 'polite')
     expect(announcement).toHaveTextContent('All 2 vehicles verified from current telemetry.')
-    expect(document.querySelector('[data-provenance="live"]')).toHaveAttribute(
-      'data-data-status',
-      'ok',
-    )
+    const liveDrawer = openDrawer()
+    try {
+      expect(liveDrawer.querySelector('[data-provenance="live"]')).toHaveAttribute(
+        'data-data-status',
+        'ok',
+      )
+    } finally {
+      closeDrawer(liveDrawer)
+    }
   })
 
   it('distinguishes a transport failure from a fleet of offline cars', () => {
@@ -356,16 +414,21 @@ describe('FleetOperationsBrief — trust and accessibility', () => {
       })],
     })
 
-    expect(screen.getByText('Live state unavailable')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(postureBrief(), 'Live state unavailable')
     expect(screen.getByTestId('fleet-posture-announcement')).toHaveTextContent(
       'Live state could not be read.',
     )
     expect(valueFor('Offline')).toBe('0')
     expect(valueFor('Last known')).toBe('1')
-    expect(document.querySelector('[data-provenance="cached"]')).toHaveAttribute(
-      'data-data-status',
-      'stale',
-    )
+    const staleDrawer = openDrawer()
+    try {
+      expect(staleDrawer.querySelector('[data-provenance="cached"]')).toHaveAttribute(
+        'data-data-status',
+        'stale',
+      )
+    } finally {
+      closeDrawer(staleDrawer)
+    }
   })
 
   it('keeps the scoped vehicle Unknown rather than claiming offline', () => {

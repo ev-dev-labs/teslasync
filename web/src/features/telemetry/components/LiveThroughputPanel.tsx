@@ -8,7 +8,7 @@
  * so the panel is always visible.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Radio } from 'lucide-react';
 
@@ -27,18 +27,15 @@ import {
   areaGradient,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
-import { formatTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+
 import { cn } from '@/lib/cn';
 import type { ThroughputPoint } from '../hooks/useThroughputHistory';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const LINE_COLOR = chartTokens.series[5];
 const GRADIENT_ID = 'live-throughput-gradient';
 const CHART_MARGIN = { top: 8, right: 12, bottom: 4, left: 0 } as const;
-
-// Stable, module-level formatter so the memoised recharts axis + tooltip
-// children don't get a fresh function identity on every ~1 Hz sample tick.
-const formatTs = (v: unknown): string => formatTime(v as string);
 
 export interface LiveThroughputPanelProps {
   history: ThroughputPoint[];
@@ -55,6 +52,12 @@ export function LiveThroughputPanel({
   connected,
   className,
 }: LiveThroughputPanelProps) {
+  const { fmtInt } = useNumberFormatting();
+  const { formatTime } = useDateFormat();
+  const formatTs = useCallback(
+    (value: unknown) => formatTime(typeof value === 'string' ? value : null),
+    [formatTime],
+  );
   const { t } = useTranslation();
   const points = history ?? [];
   const hasData = points.length >= 2;
@@ -64,16 +67,16 @@ export function LiveThroughputPanel({
   );
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <PanelTitle className="flex items-center gap-2">
+    <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+      <div className="mb-3 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
           <Radio
-            className={connected ? 'h-4 w-4 text-rose-400' : 'h-4 w-4 text-[var(--text-muted)]'}
+            className={connected ? 'h-4 w-4 shrink-0 text-[var(--text-secondary)]' : 'h-4 w-4 shrink-0 text-[var(--text-muted)]'}
             aria-hidden="true"
           />
-          {t('liveMonitor.throughputTitle', 'Signal Throughput')}
+          {t('liveMonitor.throughputTitle', 'Signal throughput')}
         </PanelTitle>
-        <Caption className="sm:ml-auto">
+        <Caption className="min-w-0 break-words tabular-nums sm:ms-auto">
           {t('liveMonitor.throughputNow', 'Now')}: {fmtInt(rate ?? 0)}/s ·{' '}
           {t('liveMonitor.throughputPeak', 'Peak')}: {fmtInt(peak ?? 0)}/s
         </Caption>
@@ -87,7 +90,7 @@ export function LiveThroughputPanel({
       </div>
 
       <EmbeddedChart
-        title={t('liveMonitor.throughputTitle', 'Signal Throughput')}
+        title={t('liveMonitor.throughputTitle', 'Signal throughput')}
         ariaLabel={t(
           'liveMonitor.throughputAria',
           'Live signals per second over the recent window',
@@ -100,7 +103,7 @@ export function LiveThroughputPanel({
         }
         data={chartRows}
         dataColumns={[
-          { key: 'ts', label: t('liveMonitor.time', 'Time') },
+          { key: 'ts', label: t('liveMonitor.time', 'Time'), format: formatTs },
           { key: 'rate', label: t('liveMonitor.sigPerSec', 'Signals / sec') },
         ]}
       >

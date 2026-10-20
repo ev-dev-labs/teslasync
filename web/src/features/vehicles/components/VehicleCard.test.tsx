@@ -40,7 +40,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
-import type { Vehicle, VehicleState } from '@/api/types'
+import type { Vehicle, VehicleStateReadings } from '@/api/types'
 
 // ── Spy unit formatters shared with the `useUnits` mock. Finite → a tagged,
 //    assertable string; null / undefined / NaN → the lib em-dash fallback. ──
@@ -91,10 +91,10 @@ vi.mock('@/components/data-display/TeslaCarViz', async (importActual) => {
     ...actual,
     TeslaCarViz: (props: {
       model?: string
-      batteryLevel?: number
-      isCharging?: boolean
-      isLocked?: boolean
-      sentryMode?: boolean
+      batteryLevel?: number | null
+      isCharging?: boolean | null
+      isLocked?: boolean | null
+      sentryMode?: boolean | null
     }) => (
       <div
         data-testid="car-viz"
@@ -151,7 +151,7 @@ function makeVehicle(over: Partial<Vehicle> = {}): Vehicle {
   }
 }
 
-function makeState(over: Partial<VehicleState> = {}): VehicleState {
+function makeState(over: Partial<VehicleStateReadings> = {}): VehicleStateReadings {
   return {
     vehicle_id: 1,
     state: 'online',
@@ -184,8 +184,11 @@ function stateQuery(over: Record<string, unknown> = {}): any {
 }
 
 /** Resolved happy query carrying a live `VehicleState`. */
-function withState(state: Partial<VehicleState> = {}) {
-  return stateQuery({ data: { state: makeState(state), live: true } })
+function withState(state: Partial<VehicleStateReadings> = {}) {
+  return stateQuery({ data: {
+    state: makeState(state), live: true, observedAt: Date.now(),
+    freshness: 'fresh', verifiedFields: ['state', 'is_charging', 'speed'],
+  } })
 }
 
 function renderCard(
@@ -231,10 +234,10 @@ describe('VehicleCard — header', () => {
 })
 
 describe('VehicleCard — status derivation (real getVehicleStatus)', () => {
-  it('shows "offline" when there is no live state', () => {
+  it('does not claim offline when no state is available', () => {
     mockUseVehicleState.mockReturnValue(stateQuery())
     renderCard()
-    expect(screen.getByTestId('status-badge')).toHaveAttribute('data-status', 'offline')
+    expect(screen.getByTestId('status-badge')).not.toHaveAttribute('data-status')
   })
 
   it('shows "charging" when the vehicle is charging', () => {
@@ -274,13 +277,13 @@ describe('VehicleCard — silhouette wiring', () => {
     expect(viz).toHaveAttribute('data-battery', '30')
   })
 
-  it('defaults the silhouette to a locked, mid-charge car when state is absent', () => {
+  it('keeps silhouette readings unknown when state is absent', () => {
     mockUseVehicleState.mockReturnValue(stateQuery())
     renderCard()
     const viz = screen.getByTestId('car-viz')
-    expect(viz).toHaveAttribute('data-battery', '50')
-    expect(viz).toHaveAttribute('data-locked', 'true')
-    expect(viz).toHaveAttribute('data-charging', 'false')
+    expect(viz).toHaveAttribute('data-battery', 'null')
+    expect(viz).toHaveAttribute('data-locked', 'null')
+    expect(viz).toHaveAttribute('data-charging', 'null')
   })
 })
 
@@ -373,30 +376,33 @@ describe('VehicleCard — non-happy live-state branches', () => {
 })
 
 describe('VehicleCard — null safety (regression guards)', () => {
-  it('renders "0%" and a zeroed gauge when battery_level is null', () => {
+  it('renders an unknown battery reading instead of claiming zero percent', () => {
     mockUseVehicleState.mockReturnValue(
-      withState({ battery_level: null as unknown as number }),
+      withState({ battery_level: null }),
     )
     renderCard()
-    expect(screen.getByText('0%')).toBeInTheDocument()
+    expect(screen.queryByText('0%')).not.toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.getByTestId('car-viz')).toHaveAttribute('data-battery', 'null')
     const ring = screen.getByTestId('progress-ring')
     expect(ring).toHaveAttribute('data-value', '0')
     expect(ring.getAttribute('data-value')).not.toContain('NaN')
   })
 
-  it('renders "0 kW" when charging with a null charger_power', () => {
+  it('keeps missing charging power unknown', () => {
     mockUseVehicleState.mockReturnValue(
-      withState({ is_charging: true, charger_power: null as unknown as number }),
+      withState({ is_charging: true, charger_power: null }),
     )
     renderCard()
-    expect(screen.getByText('0 kW')).toBeInTheDocument()
+    expect(screen.queryByText('0 kW')).not.toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
   })
 
   it('falls back to an em dash when range and temperature are null', () => {
     mockUseVehicleState.mockReturnValue(
       withState({
-        rated_range: null as unknown as number,
-        inside_temp: null as unknown as number,
+        rated_range: null,
+        inside_temp: null,
       }),
     )
     renderCard()

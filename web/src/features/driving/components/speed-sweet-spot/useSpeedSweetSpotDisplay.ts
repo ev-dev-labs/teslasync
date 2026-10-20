@@ -2,15 +2,18 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   convertDistanceFromSI,
   convertDistanceToSI,
   convertSpeedFromSI,
 } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 /** Unit-aware render-boundary helpers for the SI-canonical evidence model. */
 export function useSpeedSweetSpotDisplay() {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -21,7 +24,7 @@ export function useSpeedSweetSpotDisplay() {
       : t('sweetSpot.whPerKm', 'Wh/km');
   const efficiencyScale = convertDistanceToSI(1, distanceUnit) / 1_000;
 
-  const convertEfficiency = useCallback(
+  const toEfficiencyDisplay = useCallback(
     (whPerKm: number) => whPerKm * efficiencyScale,
     [efficiencyScale],
   );
@@ -39,36 +42,36 @@ export function useSpeedSweetSpotDisplay() {
   );
 
   const formatEfficiency = useCallback(
-    (whPerKm: number | null | undefined, precision = 0) =>
+    (whPerKm: number | null | undefined, precision = getGlobalPrecision()) =>
       whPerKm != null && Number.isFinite(whPerKm)
-        ? `${fmtNumber(convertEfficiency(whPerKm), precision)} ${efficiencyUnit}`
+        ? `${fmtNumber(toEfficiencyDisplay(whPerKm), precision)} ${efficiencyUnit}`
         : '—',
-    [convertEfficiency, efficiencyUnit],
+    [toEfficiencyDisplay, efficiencyUnit, fmtNumber, displayPrecision, displayLocale],
   );
   const formatSignedEfficiency = useCallback(
-    (whPerKm: number | null | undefined, precision = 1) => {
+    (whPerKm: number | null | undefined, precision = getGlobalPrecision()) => {
       if (whPerKm == null || !Number.isFinite(whPerKm)) return '—';
-      const converted = convertEfficiency(whPerKm);
+      const converted = toEfficiencyDisplay(whPerKm);
       const sign = converted > 0 ? '+' : converted < 0 ? '−' : '';
       return `${sign}${fmtNumber(Math.abs(converted), precision)} ${efficiencyUnit}`;
     },
-    [convertEfficiency, efficiencyUnit],
+    [toEfficiencyDisplay, efficiencyUnit, fmtNumber, displayPrecision, displayLocale],
   );
   const formatDistance = useCallback(
-    (distanceM: number | null | undefined, precision = 1) =>
+    (distanceM: number | null | undefined, precision = getGlobalPrecision()) =>
       distanceM != null && Number.isFinite(distanceM)
         ? `${fmtNumber(convertDistance(distanceM), precision)} ${distanceUnit}`
         : '—',
-    [convertDistance, distanceUnit],
+    [convertDistance, distanceUnit, fmtNumber, displayPrecision, displayLocale],
   );
   const formatBand = useCallback(
     (fromKph: number, toKph: number) =>
       t('sweetSpot.band.range', '{{from}}–{{to}} {{unit}}', {
-        from: fmtNumber(convertBandSpeed(fromKph), 0),
-        to: fmtNumber(convertBandSpeed(toKph), 0),
+        from: fmtNumber(convertBandSpeed(fromKph)),
+        to: fmtNumber(convertBandSpeed(toKph)),
         unit: speedUnit,
       }),
-    [convertBandSpeed, speedUnit, t],
+    [convertBandSpeed, speedUnit, t, fmtNumber],
   );
   const formatMonth = useCallback(
     (month: string) => {
@@ -97,7 +100,7 @@ export function useSpeedSweetSpotDisplay() {
     distanceUnit,
     speedUnit,
     efficiencyUnit,
-    convertEfficiency,
+    toEfficiencyDisplay,
     convertBandSpeed,
     convertDriveSpeed,
     convertDistance,

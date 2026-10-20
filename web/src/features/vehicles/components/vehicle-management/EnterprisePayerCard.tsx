@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next'
 import type { TeslaOpaqueObject } from '@/api/types'
 import { useSetEnterprisePayer } from '@/api/hooks/useVehicles'
 import { AlertBanner } from '@/components/feedback'
-import { ConfirmDialog } from '@/components/ui'
+import { ConfirmDialog, Text } from '@/components/ui'
 import { Icons } from '@/lib/icons'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { ManagementEndpointCard } from './ManagementEndpointCard'
 import { OpaqueJsonDialog } from './OpaqueJsonDialog'
 
@@ -16,6 +17,7 @@ const PAYER_CONFIRMATION = 'PAYER'
 
 export function EnterprisePayerCard({ vehicleId }: EnterprisePayerCardProps) {
   const { t } = useTranslation()
+  const { canWrite, writeBlockReason } = useOperationalMode()
   const selectedId = vehicleId ? String(vehicleId) : undefined
   const payer = useSetEnterprisePayer(selectedId)
   const [jsonDialogOpen, setJSONDialogOpen] = useState(false)
@@ -41,9 +43,11 @@ export function EnterprisePayerCard({ vehicleId }: EnterprisePayerCardProps) {
         prerequisite="enterprise"
         kind="payer"
         data={payer.data?.data}
+        loading={payer.isPending}
         error={payer.error}
         refreshPending={payer.isPending}
         operationSucceeded={payer.isSuccess}
+        refreshDisabled={!canWrite}
         unavailable={!selectedId}
         actionLabel={t('vehicleManagement.payer.action', 'Configure payer change')}
         emptyTitle={t('vehicleManagement.payer.empty', 'No payer change submitted')}
@@ -66,20 +70,27 @@ export function EnterprisePayerCard({ vehicleId }: EnterprisePayerCardProps) {
             )}
           </AlertBanner>
         }
-        onRefresh={() => setJSONDialogOpen(true)}
+        onRefresh={() => {
+          if (!selectedId || !canWrite || payer.isPending) return
+          setJSONDialogOpen(true)
+        }}
       />
 
       <OpaqueJsonDialog
         open={jsonDialogOpen}
         title={t('vehicleManagement.payer.dialogTitle', 'Prepare payer change')}
-        description={t(
-          'vehicleManagement.payer.schema',
-          'Tesla controls this undocumented schema. TeslaSync validates only that the payload is a non-empty JSON object.',
-        )}
+        description={[
+          t(
+            'vehicleManagement.payer.schema',
+            'Tesla controls this undocumented schema. TeslaSync validates only that the payload is a non-empty JSON object.',
+          ),
+          writeBlockReason,
+        ].filter(Boolean).join(' ')}
         submitLabel={t('vehicleManagement.payer.continue', 'Continue to confirmation')}
         destructive
         onClose={() => setJSONDialogOpen(false)}
         onSubmit={(payload) => {
+          if (!selectedId || !canWrite || payer.isPending) return
           setStagedPayload(payload)
           setJSONDialogOpen(false)
           setConfirmOpen(true)
@@ -104,10 +115,12 @@ export function EnterprisePayerCard({ vehicleId }: EnterprisePayerCardProps) {
           'Type PAYER to confirm the billing change',
         )}
         variant="danger"
+        confirmDisabled={!selectedId || !canWrite}
+        details={!canWrite && <Text variant="helper" as="p" role="status">{writeBlockReason}</Text>}
         loading={payer.isPending}
         onCancel={clearConfirmation}
         onConfirm={() => {
-          if (!stagedPayload) return
+          if (!stagedPayload || !selectedId || !canWrite || payer.isPending) return
           const payload = stagedPayload
           clearConfirmation()
           payer.mutate({ payload, confirmed: true })

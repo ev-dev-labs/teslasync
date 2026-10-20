@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type RefObject } from 'react'
 import { loadCommandPalette } from '@/components/ui/CommandPaletteTrigger'
 
 const LazyCommandPalette = lazy(async () => {
@@ -8,6 +8,7 @@ const LazyCommandPalette = lazy(async () => {
 
 export interface CommandPaletteHostProps {
   onOpen?: () => void
+  returnFocusFallbackRef?: RefObject<HTMLElement>
 }
 
 /**
@@ -15,7 +16,7 @@ export interface CommandPaletteHostProps {
  * first invocation. The first event becomes `initialOpen`; subsequent events
  * are handled by the mounted palette itself.
  */
-export function CommandPaletteHost({ onOpen }: CommandPaletteHostProps) {
+export function CommandPaletteHost({ onOpen, returnFocusFallbackRef }: CommandPaletteHostProps) {
   const [activated, setActivated] = useState(false)
 
   useEffect(() => {
@@ -29,7 +30,7 @@ export function CommandPaletteHost({ onOpen }: CommandPaletteHostProps) {
 
   return (
     <Suspense fallback={null}>
-      <LazyCommandPalette initialOpen onOpen={onOpen} />
+      <LazyCommandPalette initialOpen onOpen={onOpen} returnFocusFallbackRef={returnFocusFallbackRef} />
     </Suspense>
   )
 }

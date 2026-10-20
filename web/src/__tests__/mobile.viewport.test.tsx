@@ -12,6 +12,17 @@ import { BottomTabBar } from '@/components/layout/BottomTabBar';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FilterBar, FilterSheet, ComboboxMulti } from '@/components/forms';
 import { useMediaQuery, useIsCoarsePointer, useIsMobile } from '@/hooks/useMediaQuery';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Stylesheet contract for the merged sidenav shell: vitest stubs `?raw`
+// CSS imports to an empty string, so read the source file directly (the
+// same fs approach WorkspaceHeader.test.tsx uses for tailwind.config.js).
+const sidenavCss = readFileSync(
+  resolve(dirname(fileURLToPath(import.meta.url)), '../components/layout/sidebar/sidenav.css'),
+  'utf8',
+);
 
 /**
  * Mobile responsive smoke test.
@@ -20,7 +31,8 @@ import { useMediaQuery, useIsCoarsePointer, useIsMobile } from '@/hooks/useMedia
  * (375 px) viewports:
  *   - `<Modal>` collapses to a bottom sheet (no `sm:rounded-lg` clipping)
  *   - `<BottomTabBar>` carries the `safe-bottom` class for notched devices
- *   - `<PageHeader>` stacks vertically below `sm` (`flex-col sm:flex-row`)
+ *   - `<PageHeader>` keeps title + one action group in a wrapping row
+ *     (`flex-row flex-wrap`); the commands group never splits (`flex-nowrap`)
  *   - `<DataTable mobileColumns>` hides non-essential columns at `<md`
  *   - `useMediaQuery()` reactively tracks `(pointer: coarse)` /
  *     `(max-width: 640px)` so chart consumers can opt into tap-tooltips
@@ -105,8 +117,8 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     // Mobile-first: no rounding + capped to dynamic viewport height.
     // Desktop-overrides are all sm:* so they only kick in ≥ 640px.
     expect(dialog!.className).toMatch(/rounded-none/);
-    expect(dialog!.className).toMatch(/max-h-\[100dvh\]/);
-    expect(dialog!.className).toMatch(/sm:rounded-lg/);
+    expect(dialog).toHaveClass('max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]');
+    expect(dialog).toHaveClass('sm:rounded-panel');
   });
 
   it('Modal close button has a ≥ 44 × 44 touch target', () => {
@@ -123,7 +135,7 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     expect(close!.className).toMatch(/\bw-11\b/);
   });
 
-  it('BottomTabBar carries safe-bottom + per-tab 44 px touch targets', () => {
+  it('BottomTabBar carries safe-bottom + per-tab 60 px touch targets', () => {
     patchMatchMedia(() => false);
     render(
       <MemoryRouter initialEntries={['/']}>
@@ -135,32 +147,50 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     const nav = document.querySelector('nav[aria-label]') as HTMLElement | null;
     expect(nav).not.toBeNull();
     expect(nav!.className).toMatch(/safe-bottom/);
-    // Hidden once the full desktop workspace shell takes over.
-    expect(nav!.className).toMatch(/xl:hidden/);
-    // Every tab link must satisfy WCAG 2.5.5 minimum touch-target size.
-    const tabs = nav!.querySelectorAll('a[aria-label]');
+    // The merged sidenav shell hides the phone tab bar with a stylesheet
+    // rule rather than a Tailwind class: sidenav.css drops
+    // `.sidenav-phone-tabs` at the 768px `md` gate where the icon rail
+    // takes over navigation.
+    expect(nav!.className).toMatch(/(?:^|\s)sidenav-phone-tabs(?:\s|$)/);
+    expect(sidenavCss).toMatch(
+      /@media\s*\(min-width:\s*768px\)\s*\{\s*\.sidenav-phone-tabs\s*\{\s*display:\s*none;?\s*\}\s*\}/,
+    );
+    // Every tab button must satisfy WCAG 2.5.5 minimum touch-target size:
+    // `sidenav-phone-tab` floors height at 60px (sidenav polish preserves
+    // the full icon plus touch size) and `flex: 1` spreads the five tabs
+    // across the full viewport width.
+    const tabs = nav!.querySelectorAll('button[aria-label]');
     expect(tabs.length).toBeGreaterThanOrEqual(5);
+    expect(sidenavCss).toMatch(/\.sidenav-phone-tab\s*\{[^}]*min-height:\s*60px/);
+    expect(sidenavCss).toMatch(/\.sidenav-phone-tab\s*\{[^}]*flex:\s*1;/);
     tabs.forEach((tab) => {
-      expect((tab as HTMLElement).className).toMatch(/min-h-\[44px\]/);
-      expect((tab as HTMLElement).className).toMatch(/min-w-\[(?:44|48)px\]/);
+      expect(tab).toHaveClass('sidenav-phone-tab');
     });
   });
 
-  it('PageHeader stacks vertically until the large-screen action layout', () => {
+  it('PageHeader keeps title + one action group in a wrapping row on small screens', () => {
     patchMatchMedia(() => false);
     const { container } = render(
       <I18nextProvider i18n={i18n}>
         <PageHeader title="Charging" subtitle="14 sessions" actions={<button>Export</button>} />
       </I18nextProvider>,
     );
-    // The flex container is the first descendant of the FadeIn wrapper.
-    const flex = container.querySelector('.flex.flex-col.xl\\:flex-row') as HTMLElement | null;
-    expect(flex).not.toBeNull();
-    // Subtitle uses a readable text-sm size regardless of viewport (no
-    // shrunken text-xs on mobile — PageHeader subtitles stay legible).
-    const subtitle = container.querySelector('p');
-    expect(subtitle?.className).toMatch(/text-sm/);
-    expect(subtitle?.className).not.toMatch(/text-xs/);
+    // Compact header: title + one action group share a row that wraps below
+    // when narrow; the commands group itself never splits (open req 3).
+    const header = container.querySelector('[data-role="page-header"]') as HTMLElement | null;
+    expect(header).not.toBeNull();
+    expect(header).toHaveClass('flex-row', 'flex-wrap');
+    const commands = header!.querySelector('[data-action-zone="commands"]');
+    expect(commands).not.toBeNull();
+    expect(commands).toHaveClass('flex-nowrap', 'shrink-0');
+    expect(commands).toContainElement(screen.getByRole('button', { name: 'Export' }));
+    const info = screen.getByRole('button', { name: 'More info: Charging' });
+    const description = screen.getByRole('tooltip');
+    expect(info).toHaveAttribute('aria-describedby', description.id);
+    expect(info).toHaveClass('h-11', 'w-11');
+    expect(description).toHaveTextContent('14 sessions');
+    expect(description).toHaveClass('text-sm', 'whitespace-normal', 'max-w-tooltip-viewport');
+    expect(container.querySelector('p')).toBeNull();
   });
 
   it('DataTable with mobileColumns hides non-essential columns at < md', () => {
@@ -429,4 +459,3 @@ describe('mobile.viewport :: focus + touch targets (Drawer / FilterSheet)', () =
     expect(trigger.className).toMatch(/py-3/);
   });
 });
-

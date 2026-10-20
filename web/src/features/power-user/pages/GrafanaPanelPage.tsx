@@ -7,36 +7,40 @@
 // Grafana directly.
 //
 // The JSON textarea persists to localStorage under
-// 'ai.grafanaPanel.draft' so accidental navigation does not discard a
-// long draft. The curated catalogs are static because they are the same
-// for every install; a future API-backed catalog can replace them without
+// 'ai.grafanaPanel.draft' on a best-effort basis. The curated catalogs are
+// static references; a future API-backed catalog can replace them without
 // changing this page's render tree.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Braces, Columns3, Copy, Database, LayoutDashboard, ListChecks, Table2, Trash2,
+  Braces, Database, LayoutDashboard, ListChecks, Table2, Trash2,
 } from 'lucide-react';
 
 import {
   AINLGrafanaPanel,
   type GrafanaPanelDraft,
-} from '@/components/ai/AINLGrafanaPanel';
-import { PageContainer } from '@/components/layout';
-import { Button, Code, GlassPanel, PanelTitle, Text, Textarea } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+} from '@/components/ai';
+import { Grid, PageLayout } from '@/components/layout';
+import { Code, CopyButton, GlassPanel, Icon, PanelTitle, Text, Textarea, IconButton } from '@/components/ui';
+import { OperationalBrief, OrderedStepList, type StatMetric } from '@/components/data-display';
 import { EmptyState, InlineCallout, type CalloutVariant } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 
 // GRAFANA_PANEL_DRAFT_KEY is the canonical localStorage key for the
 // editor draft. Persisted across navigation so a user editing a long
 // JSON envelope doesn't lose progress on accidental reload.
 const GRAFANA_PANEL_DRAFT_KEY = 'ai.grafanaPanel.draft';
+const EDITOR_COLUMNS = { default: 1, xl: 3 } as const;
+const CATALOG_ENTRY_CLASS = 'min-w-0 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)]';
 
 // CuratedPanelType / CuratedDatasourceType / CuratedTable mirror
 // the Go-side AINLGrafanaPanel*Entry shapes declared in
-// internal/api/ai_nl_grafana_panel_handler.go's
+// internal/api/ainlgrafana/handler.go's
 // nlGrafanaPanelCuratedPanelTypes / DatasourceTypes / Tables. We
 // duplicate the catalogs here (instead of fetching them via a new
 // API hook) for two reasons:
@@ -183,7 +187,8 @@ function persistJson(value: string): void {
 
 export default function GrafanaPanelPage() {
   const { t } = useTranslation();
-  usePageTitle(t('powerGrafana.title', 'Grafana Panel Builder'));
+  usePageTitle(t('powerGrafana.title', 'Grafana panel builder'));
+  const editorGuidanceId = useId();
 
   const [panelJson, setPanelJson] = useState<string>(() => loadPersistedJson());
   const [status, setStatus] = useState<{ variant: CalloutVariant; message: string } | null>(
@@ -200,19 +205,36 @@ export default function GrafanaPanelPage() {
     () => CURATED_TABLES.reduce((sum, tbl) => sum + tbl.columns.length, 0),
     [],
   );
+  const catalogMetrics = useOperationalMetrics([
+    {
+      metricId: 'count', occurrenceId: 'panel-types', rawValue: panelTypeCount,
+      label: t('powerGrafana.summary.panelTypes', 'Panel types'),
+      description: t('powerGrafana.brief.panelTypes', 'Supported types in the bundled panel-builder catalog.'),
+    },
+    {
+      metricId: 'count', occurrenceId: 'datasources', rawValue: datasourceCount,
+      label: t('powerGrafana.summary.datasources', 'Datasources'),
+      description: t('powerGrafana.brief.datasources', 'Bundled datasource types with canonical UIDs; not a live connectivity check.'),
+    },
+    {
+      metricId: 'count', occurrenceId: 'tables', rawValue: tableCount,
+      label: t('powerGrafana.summary.tables', 'Tables'),
+      description: t('powerGrafana.brief.tables', 'Curated tables allowed in postgres-target SQL.'),
+    },
+    {
+      metricId: 'count', occurrenceId: 'columns', rawValue: totalColumns,
+      label: t('powerGrafana.summary.columns', 'Columns'),
+      description: t('powerGrafana.brief.columns', 'Documented columns across all bundled curated tables.'),
+    },
+  ] satisfies readonly StatMetric[]);
 
-  // Persist the JSON textarea contents so a long edit survives a
-  // navigation away + back. Synchronous setItem in the effect is
-  // fine — modern browsers handle 4KB writes in <1ms.
+  // Storage can be denied; keep the in-memory editor and manual copy usable.
   useEffect(() => {
     persistJson(panelJson);
   }, [panelJson]);
 
   const handleApplyAiDraft = useCallback((draft: GrafanaPanelDraft) => {
-    // Render the full panel envelope as pretty-printed JSON so the
-    // user pastes a Grafana-ready document rather than a
-    // wire-format blob. The user can still edit it before clicking
-    // Copy to clipboard.
+    // Applying is explicit; serialization does not verify Grafana import compatibility.
     setPanelJson(JSON.stringify(draft.panel, null, 2));
     setStatus(null);
   }, []);
@@ -222,47 +244,35 @@ export default function GrafanaPanelPage() {
     setStatus(null);
   }, []);
 
-  const handleCopy = useCallback(async () => {
-    const trimmed = panelJson.trim();
-    if (!trimmed) {
-      setStatus({
-        variant: 'warning',
-        message: t(
-          'powerGrafana.editor.copyEmpty',
-          'Type or paste a Grafana panel JSON envelope above before copying.',
-        ),
-      });
-      return;
-    }
+  const handleCopyError = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) {
       setStatus({
         variant: 'warning',
         message: t(
           'powerGrafana.editor.copyUnavailable',
-          'Clipboard access is not available in this browser. Select the text manually and copy with Ctrl+C / Cmd+C.',
+          'Clipboard access is not available in this browser. Select the text manually and copy with ctrl+C / cmd+C.',
         ),
       });
       return;
     }
-    try {
-      await navigator.clipboard.writeText(trimmed);
-      setStatus({
-        variant: 'success',
-        message: t(
-          'powerGrafana.editor.copySuccess',
-          'Copied. Paste the JSON into your Grafana dashboard editor (Add panel → Edit JSON).',
-        ),
-      });
-    } catch {
-      setStatus({
-        variant: 'danger',
-        message: t(
-          'powerGrafana.editor.copyFailed',
-          'Clipboard write failed. Select the text manually and copy with Ctrl+C / Cmd+C.',
-        ),
-      });
-    }
-  }, [panelJson, t]);
+    setStatus({
+      variant: 'danger',
+      message: t(
+        'powerGrafana.editor.copyFailed',
+        'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
+      ),
+    });
+  }, [t]);
+
+  const handleCopied = useCallback(() => {
+    setStatus({
+      variant: 'success',
+      message: t(
+        'powerGrafana.editor.copySuccess',
+        'Copied. Paste the JSON into your Grafana dashboard editor (add panel → edit JSON).',
+      ),
+    });
+  }, [t]);
 
   const sortedPanelTypes = useMemo(
     () => [...CURATED_PANEL_TYPES].sort((a, b) => a.name.localeCompare(b.name)),
@@ -280,8 +290,8 @@ export default function GrafanaPanelPage() {
   const canCopy = panelJson.trim().length > 0;
 
   return (
-    <PageContainer
-      title={t('powerGrafana.title', 'Grafana Panel Builder')}
+    <PageLayout
+      title={t('powerGrafana.title', 'Grafana panel builder')}
       subtitle={t(
         'powerGrafana.subtitle',
         'Build a Grafana panel JSON envelope against the curated catalog, then copy it into your own dashboard.',
@@ -289,36 +299,20 @@ export default function GrafanaPanelPage() {
     >
       <div className="space-y-6" data-testid="power-grafana-panel-builder-root">
         {/* 1 — Catalog summary KPI band (derived from the static catalogs) */}
-        <FadeIn>
-          <section
-            aria-label={t('powerGrafana.summary.aria', 'Curated catalog summary')}
-            className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-          >
-            <MetricCard
-              label={t('powerGrafana.summary.panelTypes', 'Panel types')}
-              value={panelTypeCount}
-              icon={<LayoutDashboard className="h-5 w-5" aria-hidden="true" />}
-              color="cyan"
-            />
-            <MetricCard
-              label={t('powerGrafana.summary.datasources', 'Datasources')}
-              value={datasourceCount}
-              icon={<Database className="h-5 w-5" aria-hidden="true" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t('powerGrafana.summary.tables', 'Tables')}
-              value={tableCount}
-              icon={<Table2 className="h-5 w-5" aria-hidden="true" />}
-              color="green"
-            />
-            <MetricCard
-              label={t('powerGrafana.summary.columns', 'Columns')}
-              value={totalColumns}
-              icon={<Columns3 className="h-5 w-5" aria-hidden="true" />}
-              color="amber"
-            />
-          </section>
+        <FadeIn className="min-w-0 max-w-full">
+          <OperationalBrief
+            compact
+            eyebrow={t('powerGrafana.brief.eyebrow', 'Panel-builder reference')}
+            title={t('powerGrafana.summary.aria', 'Curated catalog summary')}
+            description={t('powerGrafana.brief.description', 'Counts describe the bundled builder catalog, not live Grafana panels, connected datasources or database rows.')}
+            statusLabel={t('powerGrafana.brief.status', 'Static reference')}
+            statusTone="neutral"
+            scope={t('powerGrafana.brief.scope', 'Bundled builder catalog · all entries')}
+            freshness={t('powerGrafana.brief.freshness', 'Reference data · no live measurement')}
+            provenance={t('powerGrafana.brief.provenance', 'Counts come from the bundled panel types, datasource types and curated tables. The browser never pushes panels to Grafana; copy JSON into your own dashboard.')}
+            metrics={catalogMetrics}
+            testId="power-grafana-catalog-brief"
+          />
         </FadeIn>
 
         {/* 2 — Optional Helix natural-language drafter (hidden when AI is off) */}
@@ -327,17 +321,19 @@ export default function GrafanaPanelPage() {
         </FadeIn>
 
         {/* 3 — Editor (hero) + workflow guidance bento */}
-        <FadeIn delay={0.1}>
-          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <Braces className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <FadeIn delay={0.1} className="min-w-0 max-w-full">
+          <Grid cols={EDITOR_COLUMNS} gap={4} className="min-w-0">
+            <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5 xl:col-span-2">
+              <PanelTitle className="mb-3 flex min-w-0 items-center gap-2 break-words">
+                <Icon icon={Braces} className={typography.color.secondary} />
                 {t('powerGrafana.editor.title', 'Manual panel JSON editor')}
               </PanelTitle>
               <div className="space-y-4">
                 <Textarea
+                  label={t('powerGrafana.editor.label', 'Grafana panel JSON editor')}
+                  aria-describedby={editorGuidanceId}
                   value={panelJson}
-                  onChange={(e) => setPanelJson(e.target.value)}
+                  onChange={(e) => { setPanelJson(e.target.value); setStatus(null); }}
                   placeholder={t(
                     'powerGrafana.editor.placeholder',
                     '{\n  "title": "Drives per day",\n  "type": "timeseries",\n  "datasource": { "type": "postgres", "uid": "tesla-postgres" },\n  "targets": [],\n  "grid_pos": { "x": 0, "y": 0, "w": 12, "h": 8 }\n}',
@@ -348,23 +344,17 @@ export default function GrafanaPanelPage() {
                   className="font-mono"
                 />
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
+                  <CopyButton
+                    text={panelJson.trim()}
                     variant="primary"
-                    onClick={handleCopy}
+                    size="md"
+                    className="h-auto min-h-11 max-w-full whitespace-normal py-2 md:min-h-10"
+                    onCopy={handleCopied}
+                    onCopyError={handleCopyError}
                     disabled={!canCopy}
-                    aria-disabled={!canCopy ? 'true' : 'false'}
-                    icon={<Copy className="h-4 w-4" aria-hidden="true" />}
-                  >
-                    {t('powerGrafana.editor.copy', 'Copy to clipboard')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={handleClear}
-                    disabled={!canCopy}
-                    icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-                  >
-                    {t('powerGrafana.editor.clear', 'Clear')}
-                  </Button>
+                    label={t('powerGrafana.editor.copy', 'Copy to clipboard')}
+                  />
+                  <IconButton icon={<Icon icon={Trash2} />} label={t('powerGrafana.editor.clear', 'Clear')} onClick={handleClear} disabled={!canCopy} className="min-h-11 md:min-h-10" confirm={{ title: t('confirm.clearEditor.title', 'Clear the editor?'), message: t('confirm.clearEditor.message', 'This removes the current text from the editor. It can’t be undone.') }} />
                 </div>
                 {status && (
                   <InlineCallout variant={status.variant}>{status.message}</InlineCallout>
@@ -373,40 +363,31 @@ export default function GrafanaPanelPage() {
             </GlassPanel>
 
             {/* Workflow guidance — reading column beside the editor */}
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex min-w-0 items-center gap-2 break-words">
+                <Icon icon={ListChecks} className={typography.color.secondary} />
                 {t('powerGrafana.workflow.title', 'How it works')}
               </PanelTitle>
-              <Text as="p" size="sm" color="secondary" className="mb-3 max-w-prose">
+              <Text as="p" variant="bodySm" id={editorGuidanceId} className="mb-3 max-w-prose">
                 {t(
                   'powerGrafana.intro',
                   'Build a Grafana panel JSON envelope against the curated panel-builder catalog below. The browser does not push the panel to Grafana; copy your JSON into your existing Grafana dashboard editor.',
                 )}
               </Text>
-              <ol className="list-decimal space-y-2 pl-5 marker:font-semibold marker:text-cyan-300">
-                <li>
-                  <Text as="span" size="sm" color="secondary">
-                    {t(
+              <OrderedStepList
+                aria-label={t('powerGrafana.workflow.title', 'How it works')}
+                steps={[
+                  { id: 'draft', title: t(
                       'powerGrafana.workflow.step1',
                       'Draft with Helix or write / paste a Grafana panel JSON envelope in the editor.',
-                    )}
-                  </Text>
-                </li>
-                <li>
-                  <Text as="span" size="sm" color="secondary">
-                    {t('powerGrafana.workflow.step2', 'Click Copy to clipboard to grab the JSON.')}
-                  </Text>
-                </li>
-                <li>
-                  <Text as="span" size="sm" color="secondary">
-                    {t(
+                    ) },
+                  { id: 'copy', title: t('powerGrafana.workflow.step2', 'Click copy to clipboard to grab the JSON.') },
+                  { id: 'paste', title: t(
                       'powerGrafana.workflow.step3',
-                      'In Grafana, choose Add panel → Edit JSON and paste it in.',
-                    )}
-                  </Text>
-                </li>
-              </ol>
+                      'In Grafana, choose add panel → edit JSON and paste it in.',
+                    ) },
+                ]}
+              />
               <InlineCallout variant="info" className="mt-4">
                 {t(
                   'powerGrafana.workflow.note',
@@ -414,18 +395,18 @@ export default function GrafanaPanelPage() {
                 )}
               </InlineCallout>
             </GlassPanel>
-          </section>
+          </Grid>
         </FadeIn>
 
         {/* 4 — Curated panel types + datasource types bento */}
-        <FadeIn delay={0.15}>
-          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-              <PanelTitle className="mb-2 flex items-center gap-2">
-                <LayoutDashboard className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <FadeIn delay={0.15} className="min-w-0 max-w-full">
+          <Grid cols={EDITOR_COLUMNS} gap={4} className="min-w-0">
+            <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5 xl:col-span-2">
+              <PanelTitle className="mb-2 flex min-w-0 items-center gap-2 break-words">
+                <Icon icon={LayoutDashboard} className={typography.color.secondary} />
                 {t('powerGrafana.panelTypes.title', 'Curated panel types')}
               </PanelTitle>
-              <Text as="p" size="sm" color="secondary" className="mb-4 max-w-prose">
+              <Text as="p" variant="bodySm" className="mb-4 max-w-prose">
                 {t(
                   'powerGrafana.panelTypes.intro',
                   'These are the panel types the curated catalog exposes. The Helix natural-language drafter refuses any panel type outside this list.',
@@ -442,10 +423,10 @@ export default function GrafanaPanelPage() {
                   {sortedPanelTypes.map((entry) => (
                     <li
                       key={entry.name}
-                      className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-3"
+                      className={cn(CATALOG_ENTRY_CLASS, 'p-3')}
                     >
                       <div className="flex flex-col gap-1">
-                        <Code className="text-cyan-300">{entry.name}</Code>
+                        <Code className="break-words [overflow-wrap:anywhere]">{entry.name}</Code>
                         <Text as="span" variant="caption">
                           {entry.description}
                         </Text>
@@ -456,12 +437,12 @@ export default function GrafanaPanelPage() {
               )}
             </GlassPanel>
 
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-2 flex items-center gap-2">
-                <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5">
+              <PanelTitle className="mb-2 flex min-w-0 items-center gap-2 break-words">
+                <Icon icon={Database} className={typography.color.secondary} />
                 {t('powerGrafana.datasourceTypes.title', 'Curated datasource types')}
               </PanelTitle>
-              <Text as="p" size="sm" color="secondary" className="mb-4 max-w-prose">
+              <Text as="p" variant="bodySm" className="mb-4 max-w-prose">
                 {t(
                   'powerGrafana.datasourceTypes.intro',
                   'These are the datasource types the curated catalog exposes, with their canonical UIDs. The Helix natural-language drafter refuses any datasource type outside this list.',
@@ -478,15 +459,15 @@ export default function GrafanaPanelPage() {
                   {sortedDatasourceTypes.map((entry) => (
                     <li
                       key={entry.name}
-                      className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-3"
+                      className={cn(CATALOG_ENTRY_CLASS, 'p-3')}
                     >
                       <div className="flex flex-col gap-1">
                         <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                          <Code className="text-cyan-300">{entry.name}</Code>
+                          <Code className="break-words [overflow-wrap:anywhere]">{entry.name}</Code>
                           <Text as="span" variant="caption" aria-hidden="true">
                             ·
                           </Text>
-                          <Code className="text-emerald-300">uid={entry.uid}</Code>
+                          <Code className={cn('break-words [overflow-wrap:anywhere]', typography.color.secondary)}>uid={entry.uid}</Code>
                         </span>
                         <Text as="span" variant="caption">
                           {entry.description}
@@ -497,17 +478,17 @@ export default function GrafanaPanelPage() {
                 </ul>
               )}
             </GlassPanel>
-          </section>
+          </Grid>
         </FadeIn>
 
         {/* 5 — Curated table catalog band — auto-fit bento fills the full width */}
-        <FadeIn delay={0.2}>
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-2 flex items-center gap-2">
-              <Table2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <FadeIn delay={0.2} className="min-w-0 max-w-full">
+          <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5">
+            <PanelTitle className="mb-2 flex min-w-0 items-center gap-2 break-words">
+              <Icon icon={Table2} className={typography.color.secondary} />
               {t('powerGrafana.tables.title', 'Curated table catalog (postgres targets)')}
             </PanelTitle>
-            <Text as="p" size="sm" color="secondary" className="mb-4 max-w-prose">
+            <Text as="p" variant="bodySm" className="mb-4 max-w-prose">
               {t(
                 'powerGrafana.tables.intro',
                 'These tables are the only tables the curated catalog exposes for postgres-target rawSql. The Helix natural-language drafter refuses any postgres query referencing tables outside this list.',
@@ -520,22 +501,22 @@ export default function GrafanaPanelPage() {
                 message={t('powerGrafana.tables.empty', 'No tables available.')}
               />
             ) : (
-              <ul className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]">
+              <ul className="grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
                 {sortedTables.map((table) => (
                   <li
                     key={table.name}
-                    className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4"
+                    className={cn(CATALOG_ENTRY_CLASS, 'p-4')}
                   >
                     <div className="flex flex-col gap-1">
-                      <Code className="text-base text-cyan-300">{table.name}</Code>
-                      <Text as="span" size="sm" color="secondary">
+                      <Code className="break-words [overflow-wrap:anywhere]">{table.name}</Code>
+                      <Text as="span" variant="bodySm">
                         {table.description}
                       </Text>
                     </div>
                     <ul className="mt-3 space-y-1.5">
                       {(table.columns ?? []).map((col) => (
                         <li key={col.name} className="flex flex-wrap items-baseline gap-x-1.5">
-                          <Code className="text-emerald-300">{col.name}</Code>
+                          <Code className={cn('break-words [overflow-wrap:anywhere]', typography.color.secondary)}>{col.name}</Code>
                           <Text as="span" variant="caption">
                             {col.type}
                           </Text>
@@ -555,6 +536,6 @@ export default function GrafanaPanelPage() {
           </GlassPanel>
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

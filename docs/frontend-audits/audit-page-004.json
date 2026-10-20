@@ -1,0 +1,302 @@
+{
+  "item": "audit-page-004",
+  "page": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx",
+  "routes": ["/api-playground"],
+  "purpose": "Interactive, specification-driven TeslaSync API explorer with live request composition, response inspection and browser-session request history.",
+  "primaryGoal": "Find an endpoint, inspect its documentation, supply parameters/body/optional API key, deliberately send it and inspect the actual HTTP response without mistaking local history for server-wide traffic.",
+  "dataSources": [
+    {
+      "name": "OpenAPI specification",
+      "hook": "Inline useQuery<ParsedEndpoint[]>; queryKey ['openapi-spec']; staleTime Infinity",
+      "endpoint": "GET /api/v1/system/openapi",
+      "owner": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx",
+      "evidence": [
+        {"file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx", "line": 34, "detail": "request('/system/openapi') requests YAML text with same-origin credentials, then js-yaml and parseSpec derive endpoints."},
+        {"file": "internal\\api\\router.go", "line": 4352, "detail": "System route group."},
+        {"file": "internal\\api\\router.go", "line": 4397, "detail": "GET /openapi registered inside /system."}
+      ],
+      "behavior": "Explicit reload and initial retry; retained endpoint data survives refresh failure through deriveDataState. Counts are specification-derived, not measured traffic. No backend response was fetched during this audit."
+    },
+    {
+      "name": "Operator-triggered raw HTTP inspection",
+      "hook": "handleSend -> executeRequest (not a read-query hook)",
+      "endpoint": "Selected OpenAPI path with GET, POST, PUT, PATCH or DELETE; apiUrl supplies the configured API/demo base and /api/v1 prefix",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts",
+      "evidence": [
+        {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts", "line": 9, "detail": "Same-origin credentials, existing authHeaders, raw fetch, elapsed time to response headers, full response text, Blob byte size, JSON parse with malformed-text retention and exposed response headers."},
+        {"file": "web\\src\\api\\client.ts", "line": 90, "detail": "apiUrl owns normal/demo API base selection and path normalization."},
+        {"file": "web\\src\\lib\\serverConnection.ts", "line": 169, "detail": "Existing authHeaders composition is reused; no credential value was inspected or changed."}
+      ],
+      "behavior": "Non-2xx responses remain inspectable rather than throwing solely for HTTP status. Optional X-API-Key stays component-local and is not saved in history or passed into snippet generation. Runtime permissions, actual spec paths and endpoint effects are unknown; no live requests were sent."
+    },
+    {
+      "name": "Session-local request metadata",
+      "hook": "useState(loadHistory), saveHistory, findReplayEndpoint",
+      "endpoint": null,
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundHistory.ts",
+      "evidence": [
+        {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundHistory.ts", "line": 4, "detail": "sessionStorage key teslasync-api-playground-history; MAX_HISTORY 20; read/write failures are tolerated."},
+        {"file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx", "line": 57, "detail": "Resolved HTTP requests save method, query-stripped concrete path, status, duration and ISO timestamp; no body, response payload or API key."},
+        {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundHistory.ts", "line": 40, "detail": "Replay prefers exact same-method path, then nonempty template-segment match; it only selects an endpoint, never sends."}
+      ],
+      "behavior": "Recent count and average latency are independent of spec availability. Network exceptions are not appended. Replay does not restore prior path values, query or body."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "contract": "Existing page-width adapter delegates header/actions/freshness/error boundary to PageContainer, retaining min-w-0 and container context."},
+    {"name": "PageContainer source trust", "owner": "web\\src\\components\\layout\\PageContainer.tsx", "line": 253, "contract": "PageErrorBoundary and DataSourceNotice wrap children; query feeds header freshness. Page passes spec query/dataSources, not global loading/error, so independent summaries remain."},
+    {"name": "AdminSummary -> OperationalBrief", "owner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx", "line": 18, "contract": "Existing domain adapter uses useOperationalMetrics and compact OperationalBrief; translated source status, scope, provenance and optional freshness. Two independently scoped briefs on this page."},
+    {"name": "Card, GlassPanel, LayoutCard, Text", "owner": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx", "line": 7, "contract": "Category-barrel primitives/layout composition rather than a new page surface engine."},
+    {"name": "Button", "owner": "web\\src\\components\\ui\\Button.tsx", "line": 62, "contract": "Existing variants, focus, disabled, loading/aria-busy and wrapLabel; local overrides bypass parts of sizing/theming."},
+    {"name": "Textarea", "owner": "web\\src\\components\\ui\\Textarea.tsx", "line": 55, "contract": "Existing generated identity and label/feedback composition; caller must supply label or accessible name."},
+    {"name": "EndpointSidebar / MethodBadge", "owner": "web\\src\\features\\admin\\components\\EndpointSidebar.tsx", "line": 52, "contract": "Page-specific method identity, endpoint search, counts, grouping/disclosure and selection."},
+    {"name": "RequestBuilder", "owner": "web\\src\\features\\admin\\components\\RequestBuilder.tsx", "line": 13, "contract": "Network-free request tuple composition; parameter defaults, live URL preview, examples, optional auth and non-GET confirmation."},
+    {"name": "ResponseViewer / SnippetPanel", "owner": "web\\src\\features\\admin\\components\\ResponseViewer.tsx", "line": 292, "contract": "Actual response state, status/timing/size/body/headers, local replay chips; four-format snippets and CopyButton."},
+    {"name": "Skeleton / EmptyState / QueryError / FadeIn", "owner": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx", "line": 11, "contract": "Existing feedback/motion categories; no replacement global async or animation system needed."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx",
+      "line": 41,
+      "rule": "MDC-002 / MDC-033: reuse existing formatters",
+      "detail": "Local formatBytes duplicates web\\src\\lib\\numberFormat.ts:163, including binary KB/MB presentation but different missing/invalid behavior and no GB branch.",
+      "fix": "Reuse the existing formatter with explicit compatible options; preserve real zero and distinguish invalid/missing input. Keep existing precision/locale and raw response metadata.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx",
+      "line": 268,
+      "rule": "MDC-025: one domain method presentation",
+      "detail": "History chips duplicate EndpointSidebar.tsx:44-62 method colors but collapse PUT/PATCH into amber, unlike the shared local MethodBadge.",
+      "fix": "Reuse/extend the existing page-domain MethodBadge with a compact presentation, retaining textual method and all five identities. Do not add a global status registry.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verification": "unverified; source-only",
+    "strategy": [
+      {"file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx", "line": 135, "detail": "Single column below xl; xl uses 20rem explorer plus minmax workspace. Explorer is 26rem tall below xl and sticky viewport-height at xl."},
+      {"file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx", "line": 160, "detail": "Request/response stack until 2xl, then two columns; min-w-0 is preserved on workspace sections."},
+      {"file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx", "line": 257, "detail": "History uses deliberate horizontal scrolling; response and snippets use local overflow, with response max height 500px."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\RequestBuilder.tsx",
+        "line": 106,
+        "rule": "MDC-043 / MDC-040: narrow-width reachability",
+        "detail": "Nonwrapping confirmation row combines icon, explanation and two controls. Parameter/auth rows use fixed w-28 labels plus inputs (lines 140, 163, 204). Long translations/names at 320px can squeeze controls; actual overflow is unverified.",
+        "fix": "Reflow confirmation and label/input pairs at narrow allocated widths; allow long labels and preserve both confirmation actions, preview, all parameters and authentication help.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx",
+        "line": 170,
+        "rule": "MDC-043: retain all snippet controls on mobile",
+        "detail": "Four format buttons plus Copy share one nonwrapping toolbar; 320px, text zoom and long translations were not exercised.",
+        "fix": "Use wrapping/stacking within the current panel while keeping all four formats and copy reachable; test local scroll owners and 200% text.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "verification": "runtime, keyboard, focus, screen-reader, effective contrast, forced colors and reduced-motion behavior unverified",
+    "existing": [
+      "Localized labelled overview/explorer/workspace/request/response sections and reload accessible name (ApiPlaygroundPage.tsx:110-180).",
+      "Search accessible name, disclosure aria-expanded and decorative icon hiding (EndpointSidebar.tsx:96,179).",
+      "Explicit path/query/API-key label associations (RequestBuilder.tsx:141,164,205); password input and auth helper.",
+      "Confirmation role=alert; response body labelled region; headers/snippets aria-expanded; format aria-pressed; shared CopyButton (RequestBuilder.tsx:106; ResponseViewer.tsx:162,177,225,334).",
+      "Existing Button focus styling and PageContainer route-focus heading remain in composition."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\RequestBuilder.tsx",
+        "line": 189,
+        "rule": "MDC-021 / MDC-040: accessible field name",
+        "detail": "Request-body UiTextarea has no label, aria-label or aria-labelledby. Preceding h4 is not associated with its generated ID; Textarea primitive does not derive a name from nearby headings.",
+        "fix": "Pass the localized request-body label through the existing Textarea API or associate an explicit stable ID with the visible heading; retain body content/example and content-type context.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\EndpointSidebar.tsx",
+        "line": 119,
+        "rule": "MDC-040: selected state beyond color",
+        "detail": "Selected endpoint is communicated by background/border classes only; endpoint button has no aria-pressed/current state. Long paths are truncated and title contains summary, not full path.",
+        "fix": "Expose explicit selected state and make the full path available on focus/touch without removing method or summary.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx",
+        "line": 162,
+        "rule": "MDC-040: reachable controls / touch targets",
+        "detail": "Snippet/header/history and explorer controls override height with !h-auto and very small vertical padding (ResponseViewer.tsx:163,179,226,264; EndpointSidebar.tsx:123). Actual target bounds/spacing exceptions are not measured.",
+        "fix": "Use existing Button sizing or responsive minimum target sizes with verified spacing; preserve compact desktop density and all controls.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx",
+        "line": 111,
+        "rule": "MDC-026 / MDC-040: announce actual async work",
+        "detail": "Spec loading disables reload, but PageContainer receives neither loading nor busy; request Send receives disabled rather than Button.loading (RequestBuilder.tsx:93), and custom request/response region has no explicit busy/result announcement.",
+        "fix": "Wire nonblocking busy/status semantics through existing APIs without replacing independent local history or retained endpoint content; announce completion/failure once.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "specification": "Initial: 12 skeleton rows plus unknown specification metrics; fatal error: QueryError with retry; successful empty: no-endpoints EmptyState with reload; populated: searchable explorer; retained refresh error/offline: deriveDataState retains data, summary marks stale and PageContainer receives query/dataSources for existing notices. Empty array is not passed as unavailable to deriveDataState, so zero-count loaded snapshot and empty explorer coexist.",
+    "workspace": "No selected endpoint: explicit selection prompt with available endpoint count. Selection clears response; no automatic selection or execution.",
+    "request": "GET sends directly; every non-GET first shows inline alert confirmation and can be canceled; Send disabled while loading. Parameter defaults and body reset on endpoint changes; API-key state does not reset on selection changes.",
+    "response": "Pending skeleton replaces previous response presentation without deleting its state. No response shows send prompt. HTTP status/body including errors remain viewable. Network exception synthesizes status 0, Network error text and error body, duration/size 0; no corresponding history record.",
+    "history": "Metadata limited to latest 20 resolved requests; history strip absent if empty and only mounted once an endpoint is selected; local summary visible independently. Replay selects matching endpoint without sending or restoring previous request parameters.",
+    "snippets": "Only mounted after response exists, initially collapsed; cURL, JavaScript, Python, Go and copy. No actual API key included.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx",
+        "line": 52,
+        "rule": "MDC-025 / MDC-026: failure must not look successful",
+        "detail": "statusColor/statusBg treat all status values below 300 as green, including synthesized network-error status 0 from ApiPlaygroundPage.tsx:68-72.",
+        "fix": "Handle status 0/non-HTTP failures as explicit network-error presentation before HTTP ranges; retain error body/text and distinguish unavailable duration/size from measured zero.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\EndpointSidebar.tsx",
+      "line": 97,
+      "rule": "MDC-010 / MDC-012 / MDC-020: semantic neutral chrome",
+      "detail": "Fixed-white hover/selection/border backgrounds override token-aware ghost Button; cyan selection border and fixed green/blue/amber/red/purple method ramp form a separate local palette. ResponseViewer repeats white chrome at lines 169,170,232,264,335. No neon/glow classes or static inline styles found in inspected page/control files.",
+      "fix": "Use existing surface/control/border and semantic tokens with restrained selected-state cues; preserve method and HTTP-status meaning and verify actual contrast in themes/forced colors.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\RequestBuilder.tsx",
+      "line": 141,
+      "rule": "MDC-013 / MDC-014: typography and density contracts",
+      "detail": "Raw labels/code/pre and numerous !text-xs/2xs, !py and tracking-wider overrides create an extra compact scale. Shared Text is already used widely; no new typography engine is justified.",
+      "fix": "Use existing Label/Code/Text role APIs and density-aware controls where compatible, retaining monospace technical identity and readable full metadata.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx",
+      "line": 36,
+      "rule": "MDC-002: read query cancellation",
+      "detail": "Inline spec queryFn ignores TanStack Query signal although request accepts it. Manual request transport is intentionally separate to retain raw error/non-JSON responses; blindly replacing it with request would change inspector behavior.",
+      "fix": "Forward queryFn signal into the existing specification request, optionally moving the same key/policy/parser to a typed domain hook without changing cache/retry semantics. Preserve deliberate live-request transport and raw responses.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundHistory.ts",
+      "line": 10,
+      "rule": "MDC-026 / MDC-046: persisted data must remain usable",
+      "detail": "JSON.parse result is cast to HistoryEntry[] without shape validation. Valid JSON such as an object/null or malformed entries can break history.length/reduce/render assumptions. Storage parse/write exceptions are already tolerated.",
+      "fix": "Validate array and entry metadata at this existing persistence boundary while keeping the storage key, 20-entry order/cap and credential exclusion unchanged.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx",
+      "line": 106,
+      "rule": "MDC-045 / preservation: generated snippets must reflect request behavior",
+      "detail": "Snippet generators interpolate URL/body into source strings without language-specific escaping; Python inserts JSON literals directly, JavaScript assumes JSON response. Transport always sets application/json for non-GET body (playgroundRequest.ts:14), even when parsed request-body contentType advertises another media type. Specific affected production endpoints are unknown.",
+      "fix": "Preserve all four snippets and raw inspector; make generation language-safe and clearly describe supported body/response formats. Verify actual spec media types before any transport behavior change; do not invent upload/form controls.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "The working explorer/inspector is already composed with current shared layout and summaries. Focus modernization on network-error truth, accessible body/selection state and narrow-width controls before cosmetic changes; preserve deliberate write confirmation and raw-response behavior.",
+    "order": ["Network-error semantics and accessible body field", "Endpoint selection/busy semantics and mobile reachability", "Token/density cleanup and formatter/method reuse", "Persisted-history validation and snippet correctness with focused tests"]
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx", "line": 41, "detail": "Local byte formatter competes with existing web\\src\\lib\\numberFormat.ts:163; reuse existing owner, no new shared component."},
+    {"file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx", "line": 268, "detail": "History method styling competes with existing local MethodBadge, not evidence for a new application-wide registry."},
+    {"file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx", "line": 7, "detail": "Uses existing PageLayout and AdminSummary/OperationalBrief; no alternative theme, page layout, query-state store or workspace selector found in assigned page dependencies."}
+  ],
+  "preservation": {
+    "sourceHash": "B58614B7EC1860E47A5171818F849C5B6B60CE29EC6EDFEF484BE943C6E09E36",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact bytes of web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx; not a dependency-tree hash",
+    "currentLineCount": 190,
+    "presentationLineCounts": {"page": 190, "EndpointSidebar.tsx": 211, "RequestBuilder.tsx": 221, "ResponseViewer.tsx": 352, "totalPageAndThreePresentationDependencies": 974},
+    "sectionNames": ["API specification summary", "Recent local requests summary", "Endpoint explorer", "Request workspace / selection prompt", "Request builder", "Code snippet", "Response inspector", "Recent requests history"],
+    "sectionCount": 8,
+    "sectionCountingMethod": "Eight named capabilities, including conditionally mounted snippets/history and selection-dependent workspace; not eight simultaneously visible panels.",
+    "sourceElementCounts": {"rootSectionOpenings": 4, "rootAdminSummaryInstances": 2, "rootCardInstances": 1, "rootLayoutCardInstances": 1, "rootGlassPanelOpenings": 0, "rootChartContainerOpenings": 0, "presentationDependencyGlassPanelOpenings": 6},
+    "requestBuilderSubsections": ["URL preview and Send", "Non-GET confirmation with Yes/Cancel", "Endpoint summary and distinct description", "Path parameters", "Query parameters", "Request body and content type", "Optional X-API-Key and session-auth help"],
+    "metrics": ["Total endpoints", "Read (GET)", "Write ops", "API groups", "Recent requests", "Avg latency"],
+    "actions": ["Reload API specification", "Retry failed initial specification", "Search path/summary/operation ID", "Expand/collapse tag groups", "Select endpoint", "Edit path/query parameters", "Edit request body", "Enter optional local API key", "Send GET", "Confirm/cancel non-GET request", "Expand/collapse generated snippets", "Select cURL/JavaScript/Python/Go", "Copy snippet", "Expand/collapse response headers", "Replay history by endpoint selection only"],
+    "dataBehavior": [
+      "Keep /api-playground route and lazy SafeRoute mount (web\\src\\App.tsx:266,728).",
+      "Keep spec YAML parsing, local references, operation tag/summary/description/defaults/examples, method ordering and exact endpoint paths; parser supports five methods and takes first tag (playgroundSpec.ts:59-90). Responses metadata is parsed but not currently displayed.",
+      "Keep query key ['openapi-spec'], infinite staleTime, inherited retries, manual refresh and retained-data failure behavior.",
+      "Keep unknown spec metrics distinct from zero; local history metrics remain independent. Latency raw milliseconds are divided by 1000 for StatMetric latency display only (ApiPlaygroundPage.tsx:103-104).",
+      "Keep current query encoding and literal dollar-token path substitution; do not silently execute an endpoint on selection or replay.",
+      "Keep every non-GET confirmation, explicit API-key choice, browser session/default auth composition and demo/base routing boundaries.",
+      "Keep response status/text/body/raw bodyText/content type/exposed headers, malformed JSON fallback, response byte size and elapsed-to-headers measurement; do not relabel this as full body-download latency.",
+      "Keep sessionStorage history key/cap/order/metadata-only privacy, exact-before-template matching and no-request replay. Do not change replay to auto-send.",
+      "Keep all four snippet formats and copy, full response/body/header details and local scroll access on mobile.",
+      "Keep existing localized labels, summary source/scope statements, stable explicit request-field IDs and current raw payloads/preferences."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified at all ten contract widths",
+    "tests": "not run; three related test-file prefixes inspected only. Existing test descriptions/assertions are context, not acceptance.",
+    "typescript": "not run; prohibited full-project validation during this Phase 0 read-only audit",
+    "violations": "Scoped case-sensitive source searches: lowercase raw button/input/textarea/select/table 0 in each of four presentation files; static inline style openings 0; fixed-white class lines EndpointSidebar 7, ResponseViewer 5, page/RequestBuilder 0. Direct banned-library/old-API import search returned no matches. Skill audit.sh was read but not executed because it unconditionally invokes project TypeScript.",
+    "safety": "No Git, browser navigation, real requests, credential changes, production mutations, source edits, lint/build, nested agents or speculative backend behavior. Only assigned JSON report and heartbeat written.",
+    "backend": "Only /system/openapi route registration inspected. Dynamic spec contents, write authorization, sudo/confirmation behavior on server, inherited path-level OpenAPI parameters and actual non-JSON endpoint needs remain unknown.",
+    "sourceSnapshot": "Root hash read twice unchanged during inspection; concurrent shared-file edits elsewhere are not audited. Dependency citations reflect inspected source, not frozen full-app coverage.",
+    "checks": [
+      {"command": "Get-FileHash web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx -Algorithm SHA256", "exitCode": 0, "output": "B58614B7EC1860E47A5171818F849C5B6B60CE29EC6EDFEF484BE943C6E09E36"},
+      {"command": "Scoped Get-Content line counts and Select-String -CaseSensitive '<(button|input|textarea|select|table)\\b'; Select-String 'white/'; Select-String 'style=\\{\\{'", "exitCode": 0, "output": "page:190 lines/raw 0/white 0/style 0; EndpointSidebar:211/raw 0/white 7/style 0; RequestBuilder:221/raw 0/white 0/style 0; ResponseViewer:352/raw 0/white 5/style 0. Initial case-insensitive raw count matched shared Button; corrected case-sensitive scan is authoritative."}
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx",
+    "web\\src\\features\\admin\\components\\EndpointSidebar.tsx",
+    "web\\src\\features\\admin\\components\\RequestBuilder.tsx",
+    "web\\src\\features\\admin\\components\\ResponseViewer.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundSpec.ts",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundHistory.ts",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\Textarea.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\lib\\serverConnection.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.test.tsx",
+    "web\\src\\features\\admin\\components\\RequestBuilder.test.tsx",
+    "web\\src\\features\\admin\\components\\ResponseViewer.test.tsx"
+  ]
+}

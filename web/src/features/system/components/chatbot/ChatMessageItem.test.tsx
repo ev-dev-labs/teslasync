@@ -1,18 +1,39 @@
 import type { ReactNode } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { formatTime } from '@/lib/dateFormat';
 import type { UIChatMessage } from './ChatMessageItem';
 import { ChatMessageItem } from './ChatMessageItem';
+const dates = vi.hoisted(() => ({ formatTime: vi.fn() }));
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({ formatTime: dates.formatTime }),
+}));
 
 // Deterministic i18n: return the inline English fallback so accessible
 // names / labels are stable regardless of the (uninitialised) i18n store.
 // This mock is shared by every descendant (CopyButton, Avatar, Textarea…).
+// String-form calls echo the fallback; object-form calls (the evidence
+// trail's counted summaries) resolve defaultValue/defaultValue_one the way
+// i18next does and interpolate {{var}} options.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: unknown) =>
-      typeof fallback === 'string' ? fallback : key,
+    t: (key: string, fallback?: unknown) => {
+      if (typeof fallback === 'string') return fallback;
+      if (fallback && typeof fallback === 'object') {
+        const o = fallback as Record<string, unknown>;
+        const template =
+          o.count === 1 && typeof o.defaultValue_one === 'string'
+            ? o.defaultValue_one
+            : typeof o.defaultValue === 'string'
+              ? o.defaultValue
+              : key;
+        return template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
+          o[name] != null ? String(o[name]) : `{{${name}}}`,
+        );
+      }
+      return key;
+    },
     i18n: { language: 'en', changeLanguage: () => Promise.resolve() },
   }),
   Trans: ({ children }: { children?: ReactNode }) => children,
@@ -31,6 +52,7 @@ vi.mock('./MarkdownRenderer', () => ({
 const writeText = vi.fn(() => Promise.resolve());
 
 beforeEach(() => {
+  dates.formatTime.mockImplementation((value: string) => formatTime(value));
   writeText.mockClear();
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
@@ -101,9 +123,16 @@ describe('ChatMessageItem', () => {
     );
 
     const trail = screen.getByTestId('helix-evidence-trail');
-    expect(trail).toHaveTextContent('Vehicle count');
-    expect(trail).toHaveTextContent('Alerts recent');
-    expect(trail).toHaveTextContent('52 tokens');
+    // Tool rows render the raw tool name plus its outcome word; only the
+    // battery/location allowlist is localized, so these two stay verbatim.
+    expect(within(trail).getByText('query_vehicle_count')).toBeInTheDocument();
+    expect(within(trail).getByText('successful')).toBeInTheDocument();
+    expect(within(trail).getByText('query_alerts_recent')).toBeInTheDocument();
+    expect(within(trail).getByText('Unavailable')).toBeInTheDocument();
+    // Done-state footer: counted success/unavailable/token summaries.
+    expect(trail).toHaveTextContent('1 tool completed successfully.');
+    expect(trail).toHaveTextContent('1 tool was unavailable.');
+    expect(trail).toHaveTextContent('52 tokens used.');
   });
 
   it('shows the timestamp only on the last message in a group', () => {
@@ -236,7 +265,7 @@ describe('ChatMessageItem', () => {
     expect(screen.queryByRole('button', { name: 'Edit and resend' })).toBeNull();
   });
 
-  it('saves an edited message via the Save button and closes the editor', () => {
+  it('saves an edited message via the Save button and closes the editor', async () => {
     const onEditAndResend = vi.fn();
     const message = makeMessage({ role: 'user', content: 'old' });
     renderItem(message, { onEditAndResend });
@@ -248,7 +277,7 @@ describe('ChatMessageItem', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save & resend' }));
 
     expect(onEditAndResend).toHaveBeenCalledWith(message, 'a brand new question');
-    expect(screen.queryByRole('textbox', { name: 'Edit message' })).toBeNull();
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Edit message' })).toBeNull());
   });
 
   it('disables Save and no-ops resend for empty or unchanged edits', () => {
@@ -270,7 +299,7 @@ describe('ChatMessageItem', () => {
     expect(screen.queryByRole('textbox', { name: 'Edit message' })).toBeNull();
   });
 
-  it('submits on Enter, inserts a newline on Shift+Enter, and cancels on Escape', () => {
+  it('submits on Enter, inserts a newline on Shift+Enter, and cancels on Escape', async () => {
     const onEditAndResend = vi.fn();
     const message = makeMessage({ role: 'user', content: 'seed' });
     const { rerender } = renderItem(message, { onEditAndResend });
@@ -285,6 +314,7 @@ describe('ChatMessageItem', () => {
     });
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'Edit message' }), { key: 'Enter' });
     expect(onEditAndResend).toHaveBeenCalledWith(message, 'via enter');
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Edit message' })).toBeNull());
 
     // Shift+Enter must NOT submit (newline in the textarea instead).
     onEditAndResend.mockClear();
@@ -386,5 +416,53 @@ describe('ChatMessageItem', () => {
     expect(screen.getByText(/runbooks: runbooks\/alerts.md/)).toHaveTextContent('Retrieved, not cited');
     expect(screen.getByText('Review charge settings.')).toBeInTheDocument();
     expect(screen.getByText(/publication dates are unavailable/)).toBeInTheDocument();
+  });
+
+  it('retains the exact revision while acceptance is pending and after rejection', async () => {
+    let settle!: (accepted: boolean) => void;
+    const onEditAndResend = vi.fn(() => new Promise<boolean>((resolve) => { settle = resolve; }));
+    renderItem(makeMessage({ role: 'user', content: 'original' }), { onEditAndResend });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit and resend' }));
+    const editor = screen.getByRole('textbox', { name: 'Edit message' });
+    fireEvent.change(editor, { target: { value: '  revised raw draft  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save & resend' }));
+    expect(screen.getByRole('button', { name: 'Save & resend' })).toBeDisabled();
+    expect(editor).toHaveValue('  revised raw draft  ');
+    settle(false);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save & resend' })).not.toBeDisabled());
+    expect(editor).toHaveValue('  revised raw draft  ');
+    expect(screen.getByRole('button', { name: 'Save & resend' })).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-8');
+  });
+
+  it('does not submit or discard an editor while page actions are disabled', () => {
+    const callback = vi.fn();
+    const message = makeMessage({ role: 'user', content: 'original' });
+    const { rerender } = renderItem(message, { onEditAndResend: callback });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit and resend' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Edit message' }), { target: { value: 'revision' } });
+    rerender(<ChatMessageItem message={message} isLastAssistant={false} isLastUser
+      isFirstInGroup isLastInGroup actionsDisabled onEditAndResend={callback} />);
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Edit message' }), { key: 'Enter' });
+    expect(callback).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox', { name: 'Edit message' })).toHaveValue('revision');
+  });
+
+  it('uses the saved formatter and preserves the raw message timestamp', () => {
+    dates.formatTime.mockReturnValue('saved timezone time');
+    const message = makeMessage();
+    renderItem(message, { onRegenerate: vi.fn() });
+    expect(screen.getByText('saved timezone time')).toBeInTheDocument();
+    expect(dates.formatTime).toHaveBeenCalledWith(CREATED_AT);
+    expect(message.created_at).toBe(CREATED_AT);
+    expect(screen.getByRole('button', { name: 'Regenerate response' })).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-8');
+  });
+
+  it('discloses an empty or canceled response without fabricating answer text', () => {
+    const { rerender } = renderItem(makeMessage({ content: '', outcome: 'empty', aiState: 'done' }));
+    expect(screen.getByText(/No response text was returned/)).toBeInTheDocument();
+    expect(screen.getByTestId('markdown')).toBeEmptyDOMElement();
+    rerender(<ChatMessageItem message={makeMessage({ content: 'partial', outcome: 'canceled', aiState: 'idle' })}
+      isLastAssistant isLastUser={false} isFirstInGroup isLastInGroup />);
+    expect(screen.getByText(/partial text is incomplete/)).toBeInTheDocument();
   });
 });

@@ -95,7 +95,7 @@ FROM fsm_transitions
 WHERE vehicle_id = $1
   AND fsm_name = 'vehicle'
   AND ts >= $2
-  AND ts <= $3
+  AND ts < $3
 ORDER BY ts ASC
 `
 
@@ -117,8 +117,9 @@ func (r *VehicleStatesRepo) VehicleExists(ctx context.Context, vehicleID int64) 
 }
 
 // Timeline returns vehicle-FSM transitions for vehicleID inside
-// [windowStart, windowEnd] in chronological (ASC) order. Both bounds are
-// inclusive. Caller must validate windowStart <= windowEnd.
+// [windowStart, windowEnd) in chronological (ASC) order. The upper bound
+// is exclusive so adjacent workspace windows never duplicate transitions.
+// Caller must validate windowStart <= windowEnd.
 func (r *VehicleStatesRepo) Timeline(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]VehicleStateTransition, error) {
 	rows, err := r.pool.Query(ctx, timelineSelectSQL, vehicleID, windowStart, windowEnd)
 	if err != nil {
@@ -141,7 +142,7 @@ func (r *VehicleStatesRepo) Timeline(ctx context.Context, vehicleID int64, windo
 }
 
 // Summary returns the time-in-state breakdown for vehicleID over
-// [windowStart, windowEnd]. Implementation: fetch the timeline rows,
+// [windowStart, windowEnd). Implementation: fetch the timeline rows,
 // then walk them in Go via computeStateSummary. Splitting the dwell
 // algorithm out keeps it pure-Go and unit-testable without a database.
 func (r *VehicleStatesRepo) Summary(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]VehicleStateSummaryRow, float64, error) {
@@ -154,7 +155,7 @@ func (r *VehicleStatesRepo) Summary(ctx context.Context, vehicleID int64, window
 }
 
 // computeStateSummary walks an ASC-ordered slice of vehicle-FSM
-// transitions inside [windowStart, windowEnd] and returns the dwell-time
+// transitions inside [windowStart, windowEnd) and returns the dwell-time
 // breakdown per to_state, plus total_seconds.
 //
 // Algorithm with safety clamps:

@@ -8,10 +8,6 @@ interface LiveStateIndicatorsProps {
   state: VehicleState
 }
 
-// Hoisted so the formatter options object is a stable reference rather than a
-// fresh literal allocated on every render.
-const SPEED_FORMAT = { precision: 0 } as const
-
 export function LiveStateIndicators({ state }: LiveStateIndicatorsProps) {
   const { t } = useTranslation()
   const { formatSpeed } = useUnits()
@@ -25,10 +21,10 @@ export function LiveStateIndicators({ state }: LiveStateIndicatorsProps) {
     <div
       className="flex flex-wrap gap-2"
       role="group"
-      aria-label={t('vehicles.detail.liveState', 'Live State')}
+      aria-label={t('vehicles.detail.liveState', 'Live state')}
     >
       <Badge variant={isMoving ? 'success' : 'neutral'} dot size="lg">
-        {t('common.speed', 'Speed')}: {formatSpeed(state.speed, SPEED_FORMAT)}
+        {t('common.speed', 'Speed')}: {formatSpeed(state.speed)}
       </Badge>
       <Badge variant={state.is_locked ? 'success' : 'danger'} dot size="lg">
         {state.is_locked ? t('common.locked', 'Locked') : t('common.unlocked', 'Unlocked')}
@@ -40,7 +36,7 @@ export function LiveStateIndicators({ state }: LiveStateIndicatorsProps) {
         {t('common.climate', 'Climate')}: {state.is_climate_on ? t('common.on', 'On') : t('common.off', 'Off')}
       </Badge>
       <Badge variant={state.is_charging ? 'warning' : 'neutral'} dot size="lg">
-        {state.is_charging ? t('common.charging', 'Charging') : t('common.notCharging', 'Not Charging')}
+        {state.is_charging ? t('common.charging', 'Charging') : t('common.notCharging', 'Not charging')}
       </Badge>
     </div>
   )

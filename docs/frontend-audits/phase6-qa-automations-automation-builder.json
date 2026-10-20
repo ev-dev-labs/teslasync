@@ -1,0 +1,290 @@
+{
+  "item": "phase6-qa-automations-automation-builder",
+  "status": "DONE_SOURCE_ONLY_QA_REPORT",
+  "acceptance": "Report delivery only; not page, runtime, visual, accessibility, mutation, or Phase 6 acceptance.",
+  "scope": {
+    "root": "D:\\repos\\teslasync",
+    "page": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+    "routes": ["/automations/new", "/automations/:id/edit"],
+    "onlyVersionedWrite": "docs\\frontend-audits\\phase6-qa-automations-automation-builder.json",
+    "onlyIgnoredWrite": "logs\\phase6-qa-automations-automation-builder.log",
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "queueWrites": 0,
+    "catalogWrites": 0,
+    "backendWrites": 0,
+    "apiRequestsExecuted": 0,
+    "automationsExecuted": 0,
+    "gitCommands": 0,
+    "subagentsLaunched": 0,
+    "customHelpersOrExtensionsCreated": 0,
+    "sourceReadLimit": "Accepted page and directly consumed editors, action fields, AI components, draft/trust/operational/unit support; bounded route registrations and consumed hook declarations. No whole-feature or whole-repository rework."
+  },
+  "authority": {
+    "exactRow": "migration-queue.md:283",
+    "exactRowObservedStatus": "[ ]",
+    "exactRowObservedAttempts": 0,
+    "existingExactReport": false,
+    "existingExactLog": false,
+    "alreadyDoneCheckedBeforePageInspection": "Exact queue row and report-name discovery preceded page reads. No completed exact QA item was found. PowerShell subsequently confirmed both permitted output paths absent.",
+    "acceptedSource": "migration-queue.md:1673, phase5-page-automations-automation-builder [x], ec95713cba6fe1200e5ad8bea6f5f78cafdf2d57",
+    "inheritedEvidence": "Accepted row records 34 scoped cases, ESLint/style 0, 1135 page lines, ten retained groups and literal compiler cadence 1481 exit 0. These are historical receipts, not tests or TypeScript executed by this QA worker.",
+    "acceptedSourceRedo": "NOT PERFORMED",
+    "readDocuments": [
+      "docs\\orchestrator-loop.md:1-279",
+      "docs\\frontend-mission.md:1416-1488, sections 43 and 44",
+      "docs\\frontend-design-contract.md:1-260,260-618; MDC-002/020/021/024/026/032/040-046/060/070",
+      "docs\\frontend-inventory.md:111",
+      "docs\\session-handoff.md:1-78",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\skills\\audit-violations\\audit.sh"
+    ],
+    "instructionPrecedence": "Current design contract and SI cutover supersede historical neon/glass styling and legacy source-unit conversion examples in older React/unit instructions. No old converter, source-unit adapter, palette, RUM bootstrap, catalog, or configuration is introduced.",
+    "orchestration": "Parent alone owns queue decisions, follow-up claims, runtime gates, acceptance, Git, and integration. This worker does not reconcile or launch other workers."
+  },
+  "timebox": {
+    "requestTimestamp": "2026-10-13T20:03:47.359Z",
+    "firstCommandTimestamp": "2026-10-13T20:05:17.1106819Z",
+    "targetMinutes": 10,
+    "maximumMinutes": 20,
+    "hardMinutes": 25,
+    "conservativeReturnBoundary": "2026-10-13T20:23:47.359Z",
+    "conservativeHardBoundary": "2026-10-13T20:28:47.359Z",
+    "boundaryRule": "Request timestamp plus 20/25 minutes is earlier than 20:25Z/20:30Z; use the earlier boundary. Actual actor creation was not supplied.",
+    "perCommandLimitMinutes": 8,
+    "commandExecutionMode": "Synchronous, initial_wait 30 seconds; no surviving command or service."
+  },
+  "sourceIdentity": {
+    "pageSha256At20_06_24Z": "E5E93FA6A2EA6AA8461B4FB9C972E69D393DBD4F1DE9D95E7767C880E01A98C7",
+    "pageSha256AtSecondProbe": "E5E93FA6A2EA6AA8461B4FB9C972E69D393DBD4F1DE9D95E7767C880E01A98C7",
+    "pageLines": 1135,
+    "inheritedAcceptedPageLines": 1135,
+    "sameAcceptedLineCount": true,
+    "reviewedFeatureSourceLines": 2780,
+    "featureCountLimit": "2780 is page plus the eleven directly reviewed feature support files, not a census of every automations file. Two shared AI components add 439 reviewed lines. No source was extracted, shortened, or edited.",
+    "historicalOriginalRecapture": "NOTRUN: no Git/history commands authorized. The accepted 1135-line receipt is the inherited comparison, not a newly captured pre-migration baseline.",
+    "sectionOpeningTagCounts": {
+      "GlassPanel": 6,
+      "ChartContainer": 0,
+      "FormSection": 4,
+      "OperationalBrief": 1,
+      "SourceContent": 3
+    },
+    "countLimits": "Lexical page opening tags, not mounted counts; two mutually exclusive trigger panels both count. Zero ChartContainer is expected for this form page, not a deleted chart. Ten business groups below remain source-present.",
+    "snapshotLimit": "Page hashes agree at the two actual probes. Direct support was read, not locked against other owners; no multi-file atomic runtime snapshot or accepted-commit byte comparison is claimed."
+  },
+  "sourceConfirmedFindings": [
+    {
+      "id": "AB-QA-001",
+      "severity": "high",
+      "title": "Successful save with conflicts resets the retained editor to initial defaults",
+      "owner": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+      "evidence": [
+        "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:626-644",
+        "web\\src\\hooks\\useFormDraft.ts:352-378",
+        "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:100-110"
+      ],
+      "mechanism": "After mutateAsync resolves, the page clears dirty, stores result.id and conflicts, then calls discardDraft(). That hook removes storage AND resets value to initialRef.current. When conflicts are nonempty the page deliberately does not navigate, so the visible retained form becomes the blank initial form with default climate_on rather than the graph just saved. The discard operation is not storage-only.",
+      "conditionalImpact": "Requires an actual successful response containing conflicts. The source-defined branch is confirmed; backend conflict production and mounted reset were not exercised.",
+      "suggestedBoundedFollowup": "Parent may reserve the page and its existing test for storage cleanup that retains the successful canonical form when staying in the editor; preserve conflict visibility and success-only transitions. Do not change the shared draft API without ownership.",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "AB-QA-002",
+      "severity": "high",
+      "title": "Editing the rendered first trigger replaces a multi-trigger graph with a single trigger",
+      "owner": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+      "evidence": [
+        "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:223-253",
+        "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:515",
+        "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:568-575",
+        "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:890-909"
+      ],
+      "mechanism": "Hydration, presets and AI apply preserve all triggers and formToPayload serializes them all, but only form.triggers[0] is exposed. Both trigger-kind changes and TriggerConfigurator onChange replace the complete triggers array with one element. Untouched additional triggers survive save; changing the first removes them without review.",
+      "conditionalImpact": "Requires a valid existing/preset/proposed graph with multiple triggers. Such arrays are source-supported, but no actual preset, response or provider was read and backend multiplicity policy was not inferred.",
+      "suggestedBoundedFollowup": "Parent resolves supported multiplicity with the integration owner, then reserves a precise preservation fix or explicit unsupported-shape review. Do not silently discard additional source triggers.",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "AB-QA-003",
+      "severity": "medium",
+      "title": "Readiness and imperative validation do not validate most condition contracts",
+      "owner": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+      "evidence": [
+        "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:264-266,534-542,577-599",
+        "web\\src\\features\\automations\\pages\\ConditionBuilder.tsx:101-125",
+        "web\\src\\features\\automations\\pages\\ConditionBuilder.tsx:371-408,535-568"
+      ],
+      "mechanism": "conditionsReady and validate() check only missing geofence IDs. The default condition_other_automation has other_automation_id=0; its empty numeric input is min=1 but not required. Between fields can have missing/reversed bounds and are not required. These shapes can still produce Ready to save and proceed through the page's imperative validation. Native fields or the server may reject some inputs, but that is not equivalent to condition readiness validation.",
+      "conditionalImpact": "An otherwise-ready draft with those conditions exposes the local guard gap. No server acceptance/rejection, invalid automation persistence or runtime command execution is claimed.",
+      "suggestedBoundedFollowup": "Parent may assign explicit per-kind condition readiness and accessible validation under the existing wire contract, with covering cases. Preserve optional zero-condition behavior and valid signed SI thresholds.",
+      "runtimeReproduced": false
+    }
+  ],
+  "conditionalRuntimeCandidates": [
+    {
+      "id": "AB-CAND-001",
+      "owner": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+      "evidence": "AutomationBuilderPage.tsx:322,483-512,852-862,1022-1047; web\\src\\lib\\workspaceScope.ts:95-105; AINLAutomationBuilder.tsx:66-72",
+      "sourceObservation": "The editable business target form.vehicle_id and AI scope aiVehicleId from useSelectedVehicle are independent. /automations is a vehicle-disabled header prefix. The NL hint says Pick a vehicle above, while changing the page's target select does not update either AI vehicle prop.",
+      "candidate": "Users may misinterpret an AI proposal's vehicle scope or have no visible way to satisfy the hint. Requires mounted shell/preference verification and a product/integration decision; independence itself is not automatically a bug.",
+      "promotion": "NOT PROMOTED"
+    },
+    {
+      "id": "AB-CAND-002",
+      "owner": "web\\src\\features\\automations\\pages\\TriggerConfigurator.tsx",
+      "evidence": "TriggerConfigurator.tsx:187-195,342-381; ConditionBuilder.tsx:159-169,196-234,505-509; Select.tsx:97-131",
+      "sourceObservation": "Trigger geofences use raw isLoading/isError rather than DataState, and options contain only returned IDs plus an empty placeholder. Conditions now preserve an absent selected place_id with an Unknown option and retained-source warning.",
+      "candidate": "Paused initial loads may look authoritatively empty, refresh errors may lack retained-data context, and an unavailable selected trigger place can be visually ambiguous. Confirm mounted paused/retained/deleted-place behavior before proposing a correction.",
+      "promotion": "NOT PROMOTED"
+    },
+    {
+      "id": "AB-CAND-003",
+      "owner": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+      "evidence": "AutomationBuilderPage.tsx:678-684,1096-1112; useAutomations.ts:298-314",
+      "sourceObservation": "Test run sends the savedId or route automationId only. It does not send the current draft, call validate(), await save, inspect dirty, or open a page confirmation. Its disabled predicate checks its own pending state and operational canWrite, not concurrent save.",
+      "candidate": "Confirm the intended persisted-rule versus draft review semantics and required confirmation policy before correction. Treat this as a live-only POST mutation, not a harmless preview or proven dry run. Handler effects were not inspected or executed.",
+      "promotion": "NOT PROMOTED"
+    },
+    {
+      "id": "AB-CAND-004",
+      "owner": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+      "evidence": "AutomationBuilderPage.tsx:306-307; useAutomations.ts:317-326; AutomationBuilderPage.tsx:460-483,678-684",
+      "sourceObservation": "Route IDs are parsed with parseInt, not strict finite safe-positive-integer parsing. Detail hook checks greater than zero/not NaN, not finite safe integer. Source switches reset hydration only; savedId/conflicts/dirty are not comprehensively reset.",
+      "candidate": "Malformed IDs and edit-to-edit transitions might have stale target/feedback behavior depending on real route remount and query timing. No invalid real identifier, navigation, request or automation was used.",
+      "promotion": "NOT PROMOTED"
+    },
+    {
+      "id": "AB-CAND-005",
+      "owner": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx and existing shared form/AI owners",
+      "evidence": "AutomationBuilderPage.tsx:415-454,628-641; ActionCommandFields.tsx:17-26,101-131; UnitInput.tsx:140-183",
+      "sourceObservation": "Draft restore has no caller validateDraft; edit/preset hydration deliberately discards restored drafts. Advanced parameter text is row-local, while row keys are kind/index. Native submit validity is distinct from the page's imperative validation. Existing review/discard policies and focused preference parsing are source-present.",
+      "candidate": "Malformed stored envelopes, mid-edit unit changes, reorder with advanced JSON buffers, repeated submit and long localized errors need bounded synthetic runtime/test work under separately assigned owners. Source does not prove these combined scenarios fail.",
+      "promotion": "NOT PROMOTED"
+    }
+  ],
+  "guardAndActionContracts": {
+    "draft": "Version 1, 1500ms debounce; new/edit/preset keys are distinct. Persistence is gated on dirty, hydrated and no create/update pending. New drafts can be restored; edit/preset source hydration intentionally replaces restored data. useFormDraft key-switch and expiry handling inspected, not exercised.",
+    "navigation": "useDirtyForm and useNavigationGuard preserve browser/in-app unsaved-work handling; explicit back/cancel awaits confirmDiscard when dirty. ConfirmDialog is rendered from discardDialogProps. This is a discard confirmation, not a publish/test-run confirmation.",
+    "lease": "Page calls useEditLease and renders EditConflictBanner. The hook documents same-origin advisory election, not a server ETag/If-Match lock. Page does not use returned isOwner in save enablement. Cross-tab/server race prevention is not accepted here.",
+    "validation": "Name, any trigger, geofence selections, any action, wait 1..3600 integer seconds, command-specific percent/current/15..30 Celsius inputs, notification channel/template, one typed setting value and positive called automation ID have explicit source checks. AB-QA-003 records the condition gap. Required/native custom JSON validity remains a separate browser mechanism.",
+    "review": "The four OperationalBrief metrics and readiness are explicitly editor-only, not execution history. Geofence AI tool results are structurally narrowed, status ok enables Apply; Apply copies normalizers into the form and sets dirty only. The NL card streams text with onEvent no-op; no structured NL apply callback or direct persistence is implemented in that component.",
+    "nonSubmitAI": "AIFeatureCard CTA and geofence Apply explicitly use type=button. The historical accidental enclosing-form-submit candidate is not repeated as a current defect.",
+    "save": "Only explicit form submit invokes handleSave. Pending/presetUnavailable/non-live disable the visible Save/Create control. Imperative callback validates and awaits create/update; errors set saveError without marking success. Client live guard is authoritative even if an alternate submit reaches the callback. AB-QA-001 records conflict-branch form retention loss.",
+    "liveOnly": "Create, Update and Test run specify requiresLiveMode:true and networkMode:always. request() calls assertOperationalWriteAllowed before any network attempt; environment-derived cached/offline and valid as_of reject non-read methods synchronously. networkMode:always is not offline queue permission. Page OperationalWriteNotice and disabled controls complement, not replace, the client guard.",
+    "testRun": "Persisted-ID POST; success badge says Test run started, not completed. No dry-run, command safety, capability, authorization, or actual execution outcome is inferred from route registration.",
+    "AIRequests": "Both AI draft paths use the existing specialized POST SSE hook, not request(). They propose locally and do not use create/update hooks. This stream transport does not carry requiresLiveMode; do not falsely extend the publishing live-only guarantee to every AI POST. Backend propose-only enforcement and confirmation continuation are unverified.",
+    "scope": "null is an intentional all-vehicles business target, not missing numeric data. Header owns workspace selection; this fleet route disables its vehicle control, so retaining the form target selector is appropriate. AI workspace scope remains a separate source identity.",
+    "success": "Dirty=false, savedId, returned conflict warnings and navigation are success-only. Save failure preserves form/draft. Test run toast/error is owned by the mutation hook; no success is fabricated locally."
+  },
+  "trustUnitsAndPreferences": {
+    "identity": "Route automation ID, preset query key, lease key and draft key are source-specific. Form normalizers strip persisted step envelope metadata and retain canonical known typed fields, including numeric zero and false using !=null checks.",
+    "retainedErrors": "Automation, vehicles, channels and preset consume useDataState. fatalError alone replaces the edit source. StaleRefreshWarning is nonblocking beside retained payload; retry is per source. Vehicles/channels diagnostics do not hide their business editors, and fallback vehicle ID remains selectable.",
+    "pausedUnknown": "DataState distinguishes retained paused refresh from actual error; StaleRefreshWarning exposes data-refresh-blocked without asserting offline. Condition geofence initial non-fetching shows Unknown and preserves a missing selected ID. Trigger candidate remains separate. Missing numeric thresholds use null/blank, not measured zero.",
+    "editInitialBranches": "Edit initial loading/fatal/not-found can replace the unhydrated editor source. This is not a claim that ten form sections mount before edit identity is available. Preset status shell stays visible and blocks publication while unavailable.",
+    "SI": "Signal UnitInput and UnitListInput parse user display preferences into canonical values, then normalizers serialize those raw numeric fields. Known signal mapping uses m, m/s, Celsius, kPa, Wh and percent. Guided command temperatures store Celsius, charge limit percent, charging current A; wait duration_s stays integer seconds.",
+    "legacyContractLimit": "Existing geofence dwell_minutes is preserved verbatim by the normalizer/editor. It is a source-confirmed minute-named wire field, not evidence that every automation time field is SI. No backend unit contract migration, reinterpretation, rename, or whole-application SI certification is performed.",
+    "signs": "No abs/sign clamp or display conversion is introduced in graph normalizers. Numeric SI comparisons can retain valid zero/negative values; count/wait/current/temperature bounds remain domain-specific. Between-order validation is incomplete, not silently reordered.",
+    "preferences": "UnitInput uses current settings for display, snapshots settings while focused, parses canonical input, and does not rewrite values merely on preference display changes. UnitListInput follows the same focus policy. useSettings here provides preference data, not deprecated unit converters. Locale/precision/current unit roundtrip requires later runtime evidence.",
+    "localization": "Static headings, labels, readiness, controls and help keys use t(). User names/templates/preset and server/provider messages are not recased. Generated parser/API errors may remain raw text. Catalog presence, projections, non-English rendering, plural behavior and RTL are NOTRUN, not certified by seeing t().",
+    "observability": "No page RUM, sensitive console logging or new telemetry bootstrap was introduced. Existing request and stream owners remain unchanged. Actual traces, spans, SLO coverage and production privacy evidence are NOTRUN."
+  },
+  "sectionCoverage": [
+    {"group": 1, "name": "Editor draft summary", "evidence": "AutomationBuilderPage.tsx:798-819", "source": "OperationalBrief: four metrics, editor scope/provenance, dirty freshness; no execution KPI fabrication.", "mounted": "NOTRUN"},
+    {"group": 2, "name": "General metadata and business target", "evidence": "AutomationBuilderPage.tsx:826-872", "source": "Name, description, retained/unknown vehicle options, enabled toggle.", "mounted": "NOTRUN"},
+    {"group": 3, "name": "When: typed trigger", "evidence": "AutomationBuilderPage.tsx:876-922; TriggerConfigurator.tsx:226-502", "source": "Schedule/event/geofence/signal, simple/advanced cron, timezone/days, empty configuration shell; multiple-trigger limitation recorded.", "mounted": "NOTRUN"},
+    {"group": 4, "name": "Only if: conditions", "evidence": "AutomationBuilderPage.tsx:925-940; ConditionBuilder.tsx:159-573", "source": "Optional add/remove; signal/range/list, time window/days, geofence, other automation; retained place diagnostics.", "mounted": "NOTRUN"},
+    {"group": 5, "name": "Then: ordered actions", "evidence": "AutomationBuilderPage.tsx:944-974; ActionBuilder.tsx:19-95; ActionFields.tsx:14-26", "source": "Command/notification/setting/call/wait; add/remove/reorder and five exact field renderers; channel diagnostics remain separate.", "mounted": "NOTRUN"},
+    {"group": 6, "name": "Readiness assistant", "evidence": "AutomationBuilderPage.tsx:980-1020", "source": "Four checklist items with hidden complete/incomplete text and neutral draft readiness; not operational success.", "mounted": "NOTRUN"},
+    {"group": 7, "name": "Natural-language drafting", "evidence": "AutomationBuilderPage.tsx:1022-1024; AINLAutomationBuilder.tsx:30-111", "source": "Feature-gated prompt, finite positive vehicle and 4096-character trimmed limit, streaming output; no direct save.", "mounted": "NOTRUN"},
+    {"group": 8, "name": "Geofence-aware suggestion and explicit Apply", "evidence": "AutomationBuilderPage.tsx:1026-1047; AIGeofenceAwareAutomationSuggestions.tsx:93-328", "source": "Typed validator status/proposal details, explicit local apply, vehicle-scope cancellation; invalid status cannot apply.", "mounted": "NOTRUN"},
+    {"group": 9, "name": "Preset guidance and installation context", "evidence": "AutomationBuilderPage.tsx:767-785,1049-1062", "source": "New-only hint and actual preset loading/error/empty/retained shell. Intentional edit/feature capability conditions, not accidental null hiding.", "mounted": "NOTRUN"},
+    {"group": 10, "name": "Save feedback, action bar and discard confirmation", "evidence": "AutomationBuilderPage.tsx:1066-1135; ConflictWarnings.tsx:11-43", "source": "Returned conflicts, localized save error identity, Create/Save/Test run/Cancel, started-only success badge, shared discard dialog; mutation boundaries and reset finding recorded.", "mounted": "NOTRUN"}
+  ],
+  "sourceAccessibilityAndMobile": {
+    "sourceMechanisms": [
+      "Shared semantic fields, localized labels and useId-based error identity; invalid name/trigger ARIA references the actual saveErrorId.",
+      "Validation focuses the real name/type control or first enabled native descendant of the relevant data-tour section.",
+      "Readiness includes non-color complete/incomplete text; aside has localized name; conflict alerts are role=alert.",
+      "Action reorder/delete have localized names, decorative glyphs hidden, and min-h-11/min-w-11.",
+      "Page and AI rail use min-w-0, wrapping, base stacked grid and xl two-to-one split; footer wraps and exposes 44px minimum-height controls.",
+      "Conditions now use container-query grids, every row type label, full-width controls and missing place-ID preservation; older inventory fixed-width/unlabeled condition issues are not promoted again.",
+      "AI proposal/header/actions now wrap and CTA types are non-submit. Existing FadeIn owns motion preference rather than a new animation system."
+    ],
+    "sourceDoesNotProve": "Computed contrast, actual focus order/trap/restoration, screen-reader announcements, Select option fallback, native validity, overlay occlusion, safe areas, scroll reachability, 44px geometry at all density settings or supported host behavior.",
+    "requiredFutureWidthsPx": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "requiredFutureMatrix": ["dark", "light", "saved custom themes", "RTL", "200% text", "long localized labels", "narrow allocated assistant", "forced colors", "reduced motion", "low bandwidth", "initial/empty/fatal", "retained/refresh failure/paused", "unknown/missing IDs", "zero/valid signed/extreme SI", "dirty/restored/conflicted draft", "open discard dialog", "invalid JSON", "AI off/stream/error/rejected/ok"],
+    "allNativeBrowserAcceptance": "NOTRUN"
+  },
+  "apiContracts": [
+    {"method": "GET", "hookPath": "/automations/{id}", "source": "useAutomations.ts:317-326", "router": "internal\\api\\router.go:3881-3882", "agreement": "SOURCE_MATCH_ONLY"},
+    {"method": "GET", "hookPath": "/automations/presets/{presetId}", "source": "useAutomations.ts:388-395", "router": "internal\\api\\router.go:3870-3872", "agreement": "SOURCE_MATCH_ONLY"},
+    {"method": "GET", "hookPath": "/vehicles", "source": "useVehicles.ts:73-79", "router": "internal\\api\\router.go:3362-3363", "agreement": "SOURCE_MATCH_ONLY"},
+    {"method": "GET", "hookPath": "/notifications", "source": "useNotifications.ts:738-743", "router": "internal\\api\\router.go:4069-4070", "agreement": "SOURCE_MATCH_ONLY"},
+    {"method": "GET", "hookPath": "/geofences", "source": "useLocations.ts:85-90", "router": "internal\\api\\router.go:3657-3658", "agreement": "SOURCE_MATCH_ONLY"},
+    {"method": "POST", "hookPath": "/automations", "source": "useAutomations.ts:329-347", "router": "internal\\api\\router.go:3847-3849", "agreement": "SOURCE_MATCH_ONLY"},
+    {"method": "PUT", "hookPath": "/automations/{id}", "source": "useAutomations.ts:349-366", "router": "internal\\api\\router.go:3885", "agreement": "SOURCE_MATCH_ONLY"},
+    {"method": "POST", "hookPath": "/automations/{id}/test-run", "source": "useAutomations.ts:298-314", "router": "internal\\api\\router.go:3889", "agreement": "SOURCE_MATCH_ONLY"},
+    {"method": "POST", "hookPath": "/ai/automations/draft", "source": "AINLAutomationBuilder.tsx:51-59; useAiStream.ts:342-358", "router": "internal\\api\\router.go:5050; internal\\api\\ai_routes.go:134,217", "agreement": "SOURCE_MATCH_ONLY"},
+    {"method": "POST", "hookPath": "/ai/geofences/automations/draft", "source": "AIGeofenceAwareAutomationSuggestions.tsx:169-178; useAiStream.ts:342-358", "router": "internal\\api\\router.go:5050; internal\\api\\ai_routes.go:134,1088", "agreement": "SOURCE_MATCH_ONLY"}
+  ],
+  "apiAgreementLimits": {
+    "matchedDeclarations": 10,
+    "mount": "router.go:3210 /api/v1; nested groups and methods resolved manually. The shared request client owns prefix normalization; AI stream owns its existing /api/v1 prefix.",
+    "queryParameters": "These consumed calls have no camelCase query parameters; AI vehicle_id is snake_case JSON body, not a path or invented query. Preset identifier is encoded.",
+    "printedCountCorrection": "Command C5 printed SOURCE_ONLY_ROUTE_MATCHES=9 by manual tally. The ten explicitly enumerated contracts above are the corrected count; no route mismatch was established by that tally.",
+    "notInferred": ["actual HTTP success", "permissions/capabilities", "safe integer source identifiers", "response schemas at runtime", "backend graph validation", "conflict generation", "test-run effects", "AI tool persistence/continuation policy", "trace coverage"]
+  },
+  "verification": {
+    "commandLog": "logs\\phase6-qa-automations-automation-builder.log",
+    "commandsExecuted": [
+      {"id": "C1", "intent": "Exact output existence, queue row and page hash using shell rg", "exit": 1, "result": "Failed because rg is unavailable in PowerShell. Existence checks ran; subsequent hash and intended exit 0 did not execute. No source/data mutation."},
+      {"id": "C2", "intent": "Recover exact-row/existence/hash using Select-String", "exit": 0, "result": "Exact outputs absent; row pending; accepted page SHA256 captured."},
+      {"id": "C3", "intent": "Bounded production pattern and section scan", "exit": 0, "result": "Initial case-insensitive raw-element pattern matched 19 shared uppercase controls, not raw HTML. any matched one English word, not a type. Raw output retained; correction C4 supersedes those classifications."},
+      {"id": "C4", "intent": "Case-sensitive bounded patterns and direct-support line accounting", "exit": 0, "result": "14 production files: 0 static var inline styles, 0 raw forbidden elements, 0 direct vendor imports, 0 old API imports, 0 scanned any-type forms; 1135 page/2780 reviewed feature lines; page hash unchanged."},
+      {"id": "C5", "intent": "Consumed requests/live-only flags and bounded URL patterns", "exit": 0, "result": "Three requiresLiveMode flags and three networkMode:always declarations; 0 matching double-prefix request strings and camelCase URL params in its three-file scope. Printed route tally 9 corrected to explicit table count 10. No HTTP or automation execution."},
+      {"id": "C6", "intent": "Local report JSON parse and internal count/scope consistency", "exit": 0, "result": "JSON_PARSE=OK; 3 findings, 5 unpromoted candidates, 10 source contract rows, 10 source section groups; ignored log exists. 2026-10-13T20:14:12.9851108Z. Document validation only, not application validation."}
+    ],
+    "patternScopeLimit": "Select-String line-oriented heuristics over 14 named production TSX files; not a parser, ESLint, catalog check, full import graph, all-source audit or application acceptance. URL heuristic additionally scanned the automations hook and two AI components only; other consumed URL literals were individually inspected.",
+    "documentValidation": "C6 actually exited 0. Final serialized JSON/read-only source identity verification after this receipt update is recorded as C7 in the ignored command log and final delivery; no source/test/application command is authorized.",
+    "commandRecordingBoundary": "This JSON records actual commands through C6. The ignored log records the final C7 command, numeric exit and raw output after it executes; no predicted C7 exit is claimed here.",
+    "forbiddenOrDeferredAcceptance": {
+      "native": "NOTRUN",
+      "browser": "NOTRUN",
+      "screenshots": "NOTRUN",
+      "keyboardScreenReaderContrast": "NOTRUN",
+      "mobileDesktopVisual": "NOTRUN",
+      "tests": "NOTRUN",
+      "typescript": "NOTRUN",
+      "build": "NOTRUN",
+      "eslint": "NOTRUN",
+      "fullSuite": "NOTRUN",
+      "preservationCli": "NOTRUN",
+      "catalogAudit": "NOTRUN",
+      "actualApi": "NOTRUN",
+      "automationExecution": "NOTRUN",
+      "auditScript": "NOTRUN: includes forbidden npx tsc --noEmit; direct bounded pattern scan substituted without claiming script acceptance.",
+      "verifyHookScript": "NOTRUN: direct bounded source method/path/mount review only; no helper execution or broad hook audit."
+    },
+    "testCounts": {"discovered": 0, "executed": 0, "passed": 0, "failed": 0, "skipped": 0, "reason": "No test command run; zeros are not a passing suite."}
+  },
+  "needs": [
+    "Parent intake of three source-confirmed mechanisms; reserve any correction separately and preserve accepted source receipt.",
+    "Five conditional runtime candidates stay unpromoted; no speculative backend/shared/catalog repairs authorized by this report.",
+    "Parent-owned future mission 43/44 supported-runtime, TS/build/scoped tests/lint, synthetic mounted native/browser/a11y/mobile/preference/guard evidence; no actual automation execution without explicit safe authority.",
+    "Report receipt DONE does not close Phase 6, accept the page, or certify live actions."
+  ],
+  "release": {
+    "source": "READ-ONLY / RELEASED",
+    "report": "RELEASED",
+    "log": "RELEASED",
+    "json": "RELEASED",
+    "commands": "RELEASED; synchronous only; no surviving helper/server/agent",
+    "effective": "Final delivery after the final local read/receipt is recorded. No claims or future work are retained.",
+    "postReturnWrites": "NONE",
+    "wholePageAccepted": false
+  }
+}

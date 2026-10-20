@@ -1,20 +1,24 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sun } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
-  ChartTooltip, EmbeddedChart, type ChartDataRow,
-} from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useTeslaEnergyHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { averageKnown, knownNumber, sumKnown } from '@/api/dataState';
+import { DataProvenanceBadge } from '@/components/data-display';
+import { Skeleton } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
+import { useUnits } from '@/hooks/useUnits';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
+
+import { chartTokens } from '@/lib/tokens';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartDatum extends ChartDataRow {
   date: string;
-  solar_kwh: number;
+  solar_kwh: number | null;
 }
 
 function shortDate(iso: string): string {
@@ -34,7 +38,11 @@ function todayKey(): string {
 }
 
 export default function SolarProductionWidget({ size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { unitPrefs } = useUnits();
+  const gradientId = useId();
 
   const {
     data: sites,
@@ -71,7 +79,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
   const isFetching = sitesFetching || historyFetching;
   const isStale = sitesStale || historyStale;
   const isError = sitesIsError || historyIsError;
-  const updatedAt = Math.max(sitesUpdatedAt ?? 0, historyUpdatedAt ?? 0);
+  const updatedAt = siteId ? historyUpdatedAt : sitesUpdatedAt;
 
   const hasSites = (sites ?? []).length > 0;
 
@@ -79,11 +87,14 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
     // The backend contract promises an array, but a malformed payload must
     // degrade cleanly instead of throwing at `.map` and blanking the widget.
     const items = Array.isArray(history) ? history : [];
-    return items.map((entry) => ({
-      date: shortDate(entry?.timestamp ?? ''),
-      solar_kwh: (entry?.solar_energy_wh ?? 0) / 1000,
-    }));
-  }, [history]);
+    return items.filter((entry) => entry?.timestamp).map((entry) => {
+      const energy = knownNumber(entry.solar_energy_wh);
+      return {
+        date: shortDate(entry.timestamp),
+        solar_kwh: energy == null ? null : convertEnergyFromSI(energy, unitPrefs.energy),
+      };
+    });
+  }, [history, unitPrefs.energy]);
 
   const todayKwh = useMemo(() => {
     const key = todayKey();
@@ -91,24 +102,47 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
     const todayEntry = items.find(
       (e) => (e?.timestamp ?? '').slice(0, 10) === key,
     );
-    return (todayEntry?.solar_energy_wh ?? 0) / 1000;
-  }, [history]);
+    const energy = knownNumber(todayEntry?.solar_energy_wh);
+    return energy == null ? null : convertEnergyFromSI(energy, unitPrefs.energy);
+  }, [history, unitPrefs.energy]);
 
   const totalKwh = useMemo(
-    () => chartData.reduce((sum, d) => sum + d.solar_kwh, 0),
+    () => chartData.some((d) => d.solar_kwh == null) ? null : sumKnown(chartData.map((d) => d.solar_kwh)),
     [chartData],
   );
 
-  const avgKwh = chartData.length > 0 ? totalKwh / chartData.length : 0;
+  const avgKwh = averageKnown(chartData.map((d) => d.solar_kwh));
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
-  const hasData = chartData.length > 0 && chartData.some((d) => d.solar_kwh > 0);
+  const hasData = chartData.length > 0;
+  const axisLabels = useMemo(
+    () => [0, ...chartData.map((entry) => entry.solar_kwh)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => fmt(value)),
+    [chartData, fmt],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
 
   const handleRefresh = useCallback(() => {
     refetchSites();
     if (siteId) refetchHistory();
   }, [refetchSites, refetchHistory, siteId]);
+  const dataState = useDataState({
+    data: siteId ? history ?? (isLoading || isError || error ? undefined : null)
+      : isLoading || isError || error ? undefined : sites ?? null,
+    error,
+    isError,
+    isFetching,
+    dataUpdatedAt: siteId ? historyUpdatedAt : sitesUpdatedAt,
+    refetch: handleRefresh,
+  }, { provenance: 'historical', partial: chartData.some((d) => d.solar_kwh == null) });
+  const shellProps = {
+    title: t('widget.solarProduction.title', 'Solar production'),
+    icon: <Sun className="h-3.5 w-3.5 text-yellow-400" />,
+  };
 
   // ── No energy sites linked ──
   // Guard on `!sitesError` so a *failed* sites fetch surfaces the shared error
@@ -117,8 +151,9 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
   if (!hasSites && !isLoading && !sitesError) {
     return (
       <WidgetShell
+        {...shellProps}
         loading={false}
-        error={null}
+        dataState={dataState}
         updatedAt={sitesUpdatedAt}
         isFetching={sitesFetching}
         isStale={sitesStale}
@@ -128,7 +163,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
         <WidgetChartSummary
           compact={isCompact}
           isEmpty
-          emptyMessage={t('widget.solarProduction.noSite', 'No Tesla Energy site linked')}
+          emptyMessage={t('widget.solarProduction.noSite', 'No Tesla energy site linked')}
           emptyIcon={<Sun className="h-5 w-5" />}
           stats={[]}
           chart={null}
@@ -141,8 +176,10 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
+        {...shellProps}
         loading={isLoading}
-        error={error ? String(error) : null}
+        dataState={dataState}
+        loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
         updatedAt={updatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -157,13 +194,13 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
           stats={hasData ? [
             {
               label: t('widget.solarProduction.today', 'Today'),
-              value: fmtNumber(todayKwh, 1),
-              unit: 'kWh',
+              value: todayKwh == null ? null : fmtNumber(todayKwh),
+              unit: unitPrefs.energy,
             },
             {
-              label: t('widget.solarProduction.avg', 'Daily Avg'),
-              value: fmtNumber(avgKwh, 1),
-              unit: 'kWh',
+              label: t('widget.solarProduction.avg', 'Daily avg'),
+              value: avgKwh == null ? null : fmtNumber(avgKwh),
+              unit: unitPrefs.energy,
             },
           ] : []}
           chart={null}
@@ -177,18 +214,18 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
     ? [
         {
           label: t('widget.solarProduction.today', 'Today'),
-          value: fmtNumber(todayKwh, 1),
-          unit: 'kWh',
+          value: todayKwh == null ? null : fmtNumber(todayKwh),
+          unit: unitPrefs.energy,
         },
         {
-          label: t('widget.solarProduction.total30d', '30-Day Total'),
-          value: fmtInt(totalKwh),
-          unit: 'kWh',
+          label: t('widget.solarProduction.total30dSentence', '30-day total'),
+          value: totalKwh == null ? null : fmtNumber(totalKwh),
+          unit: unitPrefs.energy,
         },
         {
-          label: t('widget.solarProduction.avg', 'Daily Avg'),
-          value: fmtNumber(avgKwh, 1),
-          unit: 'kWh',
+          label: t('widget.solarProduction.avg', 'Daily avg'),
+          value: avgKwh == null ? null : fmtNumber(avgKwh),
+          unit: unitPrefs.energy,
         },
       ]
     : [];
@@ -197,10 +234,11 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.solarProduction.title', 'Solar Production')}
-      icon={<Sun className="h-3.5 w-3.5 text-yellow-400" />}
+      {...shellProps}
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={dataState}
+      loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
+      status={<DataProvenanceBadge provenance={dataState.provenance} status={dataState.status} />}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -214,7 +252,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
         stats={stats}
         chart={
           <EmbeddedChart
-            title={t('widget.solarProduction.title', 'Solar Production')}
+            title={t('widget.solarProduction.title', 'Solar production')}
             ariaLabel={t(
               'widget.solarProduction.chartLabel',
               'Daily solar production over the last 30 days',
@@ -222,11 +260,11 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
             data={chartData}
             dataColumns={[
               { key: 'date', label: t('widget.solarProduction.date', 'Date') },
-              { key: 'solar_kwh', label: t('widget.solarProduction.solarKwh', 'Solar (kWh)') },
+              { key: 'solar_kwh', label: `${t('widget.solarProduction.solar', 'Solar')} (${unitPrefs.energy})` },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
+              <AreaChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                 {chartGrid}
                 <XAxis
                   dataKey="date"
@@ -238,29 +276,29 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
                   tick={tick}
                   tickLine={false}
                   axisLine={false}
-                  width={40}
-                  tickFormatter={(v: number) => fmt(v, 0)}
+                  width={axisWidth}
+                  tickFormatter={(v: number) => fmt(v)}
                 />
                 <Tooltip
                   content={<ChartTooltip />}
                   formatter={(value: number) => [
-                    `${fmtNumber(value, 1)} kWh`,
+                    `${fmtNumber(value)} ${unitPrefs.energy}`,
                     t('widget.solarProduction.solar', 'Solar'),
                   ]}
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                  cursor={{ fill: chartTokens.gridStroke }}
                 />
                 <defs>
-                  <linearGradient id="solarGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#facc15" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#facc15" stopOpacity={0} />
+                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={chartTokens.series[2]} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={chartTokens.series[2]} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <Area
                   type="monotone"
                   dataKey="solar_kwh"
-                  stroke="#facc15"
+                  stroke={chartTokens.series[2]}
                   strokeWidth={2}
-                  fill="url(#solarGrad)"
+                  fill={`url(#${gradientId})`}
                   name={t('widget.solarProduction.solar', 'Solar')}
                 />
               </AreaChart>

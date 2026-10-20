@@ -14,6 +14,16 @@ describe('analysis scope', () => {
     expect(result.current.window.start).toBe('2026-01-01T00:00:00.000Z');
     expect(result.current.window.end).toBe('2026-01-08T00:00:00.000Z');
   });
+  it('preserves legacy absolute bounds longer than the quick presets', () => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <MemoryRouter initialEntries={['/?days=24&start=2025-01-01T00:00:00Z&end=2025-03-02T00:00:00Z']}>
+        {children}
+      </MemoryRouter>
+    );
+    const { result } = renderHook(() => useAnalysisWindow('hours', [6, 24], 24), { wrapper });
+    expect(result.current.window.start).toBe('2025-01-01T00:00:00.000Z');
+    expect(result.current.window.end).toBe('2025-03-02T00:00:00.000Z');
+  });
   it('persists the preset and bounds without dropping vehicle scope', () => {
     const wrapper = ({ children }: { children: ReactNode }) => <MemoryRouter initialEntries={['/?vehicle_id=3']}>{children}</MemoryRouter>;
     const { result } = renderHook(() => ({ scope: useAnalysisWindow('days', presets, 7), location: useLocation() }), { wrapper });

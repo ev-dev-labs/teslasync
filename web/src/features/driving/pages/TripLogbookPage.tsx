@@ -1,17 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  NotebookPen, Briefcase, Building2, Heart, HelpCircle, Sparkles, Receipt,
+  NotebookPen, Briefcase, Building2, Heart, Sparkles, Receipt,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout, LayoutCard } from '@/components/layout';
 import {
-  GlassPanel, PanelTitle, Text, Button, Select, Input, HelpTooltip,
-  DataTable, type Column,
+  Text, Button, Select, Input, HelpTooltip,
+  DataTable, Icon, type Column,
 } from '@/components/ui';
 
-import { MetricCard, MetricBar } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { MetricBar } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
@@ -19,8 +21,10 @@ import { useDrives } from '@/api/hooks/useDriving';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { formatDateShort } from '@/lib/dateFormat';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 import { chartTokens } from '@/lib/tokens';
@@ -77,13 +81,15 @@ export default function TripLogbookPage() {
 
   const { formatDistance, unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
+  const { fmtInt } = useNumberFormatting();
 
-  const { start, end } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'trip-logbook.range',
     defaultPresetId: 'all',
   });
 
   const drivesQuery = useDrives(vehicleIdStr);
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const allDrives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
 
   const { categories, ratesPerKm, setCategory, setCategories, setRatePerKm } = useTripLogbook();
@@ -92,14 +98,14 @@ export default function TripLogbookPage() {
   // Narrow to the picked window so the KPI band, shares, and table agree.
   const drives = useMemo<Drive[]>(() => {
     if (!allDrives.length) return [];
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    const startMs = Date.parse(startInstant);
+    const endMs = Date.parse(endInstantExclusive);
     return allDrives.filter((d) => {
       if (!d.startTs) return false;
       const ts = new Date(d.startTs).getTime();
-      return ts >= startMs && ts <= endMs;
+      return ts >= startMs && ts < endMs;
     });
-  }, [allDrives, start, end]);
+  }, [allDrives, startInstant, endInstantExclusive]);
 
   const summary = useMemo(
     () => summarizeLogbook(drives, categories, ratesPerKm),
@@ -155,7 +161,7 @@ export default function TripLogbookPage() {
       key: 'route',
       header: t('logbook.route', 'Route'),
       render: (r) => (
-        <Text variant="bodySm" className="block max-w-[16rem] truncate" title={r.route}>
+        <Text variant="bodySm" className="block max-w-64 whitespace-normal break-words" title={r.route}>
           {r.route}
         </Text>
       ),
@@ -167,7 +173,7 @@ export default function TripLogbookPage() {
       sortable: true,
       render: (r) => (
         <Text variant="body" className="font-mono tabular-nums">
-          {formatDistance(r.distanceM, { precision: 1 })}
+          {formatDistance(r.distanceM)}
         </Text>
       ),
     },
@@ -190,7 +196,7 @@ export default function TripLogbookPage() {
       sortable: true,
       render: (r) =>
         r.category != null && r.amount > 0 ? (
-          <Text variant="body" className="font-mono tabular-nums text-emerald-300">
+          <Text variant="body" className="font-mono tabular-nums text-[var(--text-primary)]">
             {formatCurrency(r.amount)}
           </Text>
         ) : (
@@ -217,84 +223,96 @@ export default function TripLogbookPage() {
     setRatePerKm(cat, perMile ? n / KM_PER_MILE : n);
   }
 
-  const isLoading = drivesQuery.isLoading;
-  const isError = drivesQuery.isError;
+  const isLoading = drivesState.status === 'initial';
+  const isError = drivesState.fatalError != null;
+  const sourceAvailable = drivesState.hasData;
+  const summaryMetrics: readonly StatMetric[] = [
+    ...TRIP_CATEGORIES.flatMap((cat): StatMetric[] => {
+      const meta = CATEGORY_META[cat];
+      const totals = summary.perCategory[cat];
+      const label = t(meta.i18nKey, meta.fallback);
+      const context = sourceAvailable ? <>
+        {formatCurrency(totals.amount)} · {t('logbook.driveCount', '{{count}} drives', { count: totals.count, replace: { count: fmtInt(totals.count) } })}
+      </> : undefined;
+      return [
+        {
+          metricId: 'distance', occurrenceId: `${cat}-distance`,
+          rawValue: sourceAvailable ? totals.distanceM : null, label,
+          description: t('logbook.brief.categoryDistance', 'Distance in this category within the selected period.'),
+          context,
+          display: { formatter: (raw) => ({ value: formatDistance(raw), unit: '' }) },
+        },
+        {
+          metricId: 'currency', occurrenceId: `${cat}-amount`,
+          rawValue: sourceAvailable ? totals.amount : null,
+          label: t('logbook.brief.categoryAmount', '{{category}} amount', { category: label }),
+          description: t('logbook.brief.rateBasis', 'Existing reimbursement rate × drive distance; rates remain stored per kilometre.'),
+          display: { formatter: (raw) => ({ value: formatCurrency(raw), unit: '' }) },
+        },
+        {
+          metricId: 'count', occurrenceId: `${cat}-count`,
+          rawValue: sourceAvailable ? totals.count : null,
+          label: t('logbook.brief.categoryCount', '{{category}} drives', { category: label }),
+          description: t('logbook.brief.countBasis', 'Classified drives in the selected period, before the table category filter.'),
+        },
+      ];
+    }),
+    {
+      metricId: 'count', occurrenceId: 'unclassified',
+      rawValue: sourceAvailable ? summary.unclassified.count : null,
+      label: t('logbook.unclassified', 'Unclassified'),
+      description: sourceAvailable ? t('logbook.ofTotal', 'of {{total}} drives', { total: summary.totalCount })
+        : t('logbook.brief.countBasis', 'Classified drives in the selected period, before the table category filter.'),
+      display: { countTotal: summary.totalCount },
+    },
+  ];
 
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('logbook.title', 'Trip Logbook')} />;
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('logbook.title', 'Trip Logbook')}
       subtitle={t('logbook.subtitle', 'Classify drives for tax deduction and expense reimbursement')}
       query={drivesQuery}
     >
+      <StaleRefreshWarning state={drivesState} label={t('logbook.title', 'Trip Logbook')} />
       {/* 1 — KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('logbook.kpis', 'Logbook summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={96} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              {TRIP_CATEGORIES.map((cat) => {
-                const meta = CATEGORY_META[cat];
-                const totals = summary.perCategory[cat];
-                const Icon = meta.icon;
-                return (
-                  <MetricCard
-                    key={cat}
-                    label={t(meta.i18nKey, meta.fallback)}
-                    value={formatDistance(totals.distanceM, { precision: 1 })}
-                    subtitle={
-                      totals.amount > 0
-                        ? formatCurrency(totals.amount)
-                        : t('logbook.driveCount', '{{count}} drives', { count: totals.count })
-                    }
-                    icon={<Icon className="h-5 w-5" />}
-                    color={meta.cardColor}
-                  />
-                );
-              })}
-              <MetricCard
-                label={t('logbook.unclassified', 'Unclassified')}
-                value={summary.unclassified.count}
-                subtitle={t('logbook.ofTotal', 'of {{total}} drives', { total: summary.totalCount })}
-                icon={<HelpCircle className="h-5 w-5" />}
-                color="amber"
-              />
-            </>
-          )}
-        </section>
+        <SectionErrorBoundary name="TripLogbookSummary">
+        <DrivingSummaryBrief
+          id="trip-logbook-brief"
+          title={t('logbook.kpis', 'Logbook summary metrics')}
+          description={t('logbook.brief.description', 'Category distances, reimbursement amounts, and drive counts share the selected period; table filters do not change these totals.')}
+          metrics={summaryMetrics}
+          scope={`${start} — ${end}`}
+          provenance={t('logbook.brief.provenance', 'Returned vehicle drives, local classifications, and saved reimbursement rates; complete server-range coverage is not supplied.')}
+          loading={isLoading}
+          unavailable={!sourceAvailable}
+          retained={drivesState.isRefreshBlocked || drivesState.refreshError != null}
+          actions={isError ? <QueryError error={drivesState.fatalError} onRetry={() => drivesQuery.refetch()} /> : undefined}
+        />
+        </SectionErrorBoundary>
       </FadeIn>
 
       {/* 2 — Reimbursement (1/3) + drives table (2/3) */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
-            <PanelTitle className="mb-1 flex items-center gap-2">
-              <Receipt className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('logbook.reimbursement', 'Reimbursement')}
+          <SectionErrorBoundary name="TripLogbookReimbursement">
+          <LayoutCard title={t('logbook.reimbursement', 'Reimbursement')} actions={<>
+              <Icon icon={Receipt} size="md" />
               <HelpTooltip
                 size="sm"
                 i18nKey="help.tripLogbook.body"
                 defaultValue="Set the rate your employer or tax authority reimburses per distance driven in each category. Rates are stored per kilometre and converted to your display unit; amounts are rate × drive distance."
                 ariaLabel={t('help.tripLogbook.iconLabel', 'More info about reimbursement rates')}
               />
-            </PanelTitle>
+            </>}>
 
             <div className="mb-4 flex items-baseline gap-2">
-              <Text className="font-mono text-2xl tabular-nums text-emerald-300">
-                {formatCurrency(summary.totalAmount)}
+              <Text variant="metricValue" className="font-mono tabular-nums text-[var(--text-primary)]">
+                {!sourceAvailable ? '—' : formatCurrency(summary.totalAmount)}
               </Text>
               <Text variant="caption">{t('logbook.inPeriod', 'reimbursable in this period')}</Text>
             </div>
@@ -307,10 +325,10 @@ export default function TripLogbookPage() {
                   <div key={cat} className="flex flex-col gap-2">
                     <MetricBar
                       label={t(meta.i18nKey, meta.fallback)}
-                      value={totals.distanceM}
+                      value={!sourceAvailable ? null : totals.distanceM}
                       max={Math.max(summary.totalDistanceM, 1)}
                       color={meta.barColor}
-                      sublabel={formatDistance(totals.distanceM, { precision: 1 })}
+                      sublabel={!sourceAvailable ? '—' : formatDistance(totals.distanceM)}
                     />
                     <Input
                       type="number"
@@ -328,24 +346,26 @@ export default function TripLogbookPage() {
                       defaultValue={displayRate(cat)}
                       onChange={(e) => handleRateChange(cat, e.target.value)}
                       suffix={<span className="whitespace-nowrap">{rateUnitLabel}</span>}
-                      className="max-w-[10rem]"
+                      className="max-w-40"
                     />
                   </div>
                 );
               })}
             </div>
-          </GlassPanel>
+          </LayoutCard>
+          </SectionErrorBoundary>
 
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <PanelTitle className="flex items-center gap-2">
-                <NotebookPen className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('logbook.drives', 'Drives')}
-              </PanelTitle>
+          <div className="min-w-0 xl:col-span-2">
+          <SectionErrorBoundary name="TripLogbookDrives">
+          <LayoutCard title={t('logbook.drives', 'Drives')} actions={<>
+                <Icon icon={NotebookPen} size="md" />
               <Select
                 aria-label={t('logbook.filter', 'Filter by category')}
                 value={filter}
-                onChange={(e) => setFilter(e.target.value as CategoryFilter)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === 'all' || value === 'unclassified' || isTripCategory(value)) setFilter(value);
+                }}
                 options={[
                   { value: 'all', label: t('logbook.filterAll', 'All categories') },
                   { value: 'unclassified', label: t('logbook.unclassified', 'Unclassified') },
@@ -355,12 +375,12 @@ export default function TripLogbookPage() {
                   })),
                 ]}
               />
-            </div>
+            </>}>
 
             {suggestions.length > 0 && (
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+                  <Icon icon={Sparkles} size="md" />
                   <Text variant="bodySm">
                     {t(
                       'logbook.suggestionBanner',
@@ -369,16 +389,19 @@ export default function TripLogbookPage() {
                     )}
                   </Text>
                 </div>
-                <Button variant="secondary" onClick={() => setCategories(suggestions)}>
+                <Button variant="secondary" wrapLabel onClick={() => setCategories(suggestions)}>
                   {t('logbook.applySuggestions', 'Apply suggestions')}
                 </Button>
               </div>
             )}
 
             {isError ? (
-              <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
+              <QueryError error={drivesState.fatalError} onRetry={() => drivesQuery.refetch()} />
             ) : isLoading ? (
               <Skeleton height={320} />
+            ) : !sourceAvailable ? (
+              <EmptyState message={t('driving.brief.unavailable', 'Source unavailable')}
+                action={{ label: t('common.retry', 'Retry'), onClick: () => { void drivesQuery.refetch(); } }} />
             ) : drives.length === 0 ? (
               <EmptyState
                 icon={<NotebookPen className="h-8 w-8" />}
@@ -389,7 +412,8 @@ export default function TripLogbookPage() {
               <DataTable
                 tableId="driving:trip-logbook"
                 columns={columns}
-                mobileColumns={['date', 'route', 'category']}
+                variant="embedded"
+                mobileColumns={['date', 'route', 'distanceM', 'category', 'amount']}
                 data={rows}
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('logbook.noneInFilter', 'No drives in this category yet.')}
@@ -401,15 +425,17 @@ export default function TripLogbookPage() {
                   // exportRow(row)[column.key] under each visible column header.
                   date: r.date.slice(0, 10),
                   route: r.route,
-                  distanceM: formatDistance(r.distanceM, { precision: 1 }),
+                  distanceM: formatDistance(r.distanceM),
                   category: r.category ?? '',
                   amount: r.amount > 0 ? Math.round(r.amount * 100) / 100 : 0,
                 })}
               />
             )}
-          </GlassPanel>
+          </LayoutCard>
+          </SectionErrorBoundary>
+          </div>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -1,4 +1,4 @@
-import { fmtNumber } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EnergyProps {
   /** Canonical input in kWh. */
@@ -16,6 +16,7 @@ interface EnergyProps {
  * the canonical kWh value via `title`.
  */
 export function Energy({ kwh, wh, precision, className, unit }: EnergyProps) {
+  const { fmtNumber } = useNumberFormatting();
   let sourceKwh: number | null = null;
   if (kwh != null && Number.isFinite(kwh)) {
     sourceKwh = kwh;
@@ -31,7 +32,7 @@ export function Energy({ kwh, wh, precision, className, unit }: EnergyProps) {
   const value = useWh ? sourceKwh * 1000 : sourceKwh;
   const display = fmtNumber(value, precision);
   return (
-    <span className={className} title={`${sourceKwh.toFixed(3)} kWh`}>
+    <span className={className} title={`${fmtNumber(sourceKwh, precision)} kWh`}>
       {display} {useWh ? 'Wh' : 'kWh'}
     </span>
   );

@@ -5,11 +5,12 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDayKey } from '@/lib/dateFormat';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { FsdInsights } from '@/types/fsd';
 
 import { FsdSectionBody } from './FsdSectionBody';
 import type { FsdSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 1, sm: 2, xl: 4 } as const;
 
@@ -26,6 +27,7 @@ interface FsdKpiBandProps {
  * A missing denominator renders an em dash plus the reason, never a zero.
  */
 export function FsdKpiBand({ insights, state }: FsdKpiBandProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatDistance } = useUnits();
   const totals = insights?.totals;
@@ -45,7 +47,7 @@ export function FsdKpiBand({ insights, state }: FsdKpiBandProps) {
             color="cyan"
             wrapLabel
             label={t('fsd.kpi.distance', 'Supervised self-driving distance')}
-            value={fsdMeasured ? formatDistance(totals?.fsd_distance_m, { precision: 1 }) : '—'}
+            value={fsdMeasured ? formatDistance(totals?.fsd_distance_m) : '—'}
             subtitle={
               fsdMeasured
                 ? t('fsd.kpi.distanceHint', 'Reported counter change')
@@ -62,13 +64,13 @@ export function FsdKpiBand({ insights, state }: FsdKpiBandProps) {
             label={t('fsd.kpi.share', 'Share of observed driving')}
             value={
               totals?.fsd_share_pct != null
-                ? t('fsd.kpi.sharePct', '{{value}}%', { value: fmtNumber(totals.fsd_share_pct, 1) })
+                ? t('fsd.kpi.sharePct', '{{value}}%', { value: fmtNumber(totals.fsd_share_pct) })
                 : '—'
             }
             subtitle={
               totals?.fsd_share_pct != null
                 ? t('fsd.kpi.shareHint', 'of {{distance}} observed driving', {
-                    distance: formatDistance(totals.driving_distance_m ?? null, { precision: 1 }),
+                    distance: formatDistance(totals.driving_distance_m ?? null),
                   })
                 : !fsdMeasured
                   ? t(
@@ -105,7 +107,7 @@ export function FsdKpiBand({ insights, state }: FsdKpiBandProps) {
             color="amber"
             wrapLabel
             label={t('fsd.kpi.bestDay', 'Best day')}
-            value={best ? formatDistance(best.fsd_distance_m, { precision: 1 }) : '—'}
+            value={best ? formatDistance(best.fsd_distance_m) : '—'}
             subtitle={
               best
                 ? formatDayKey(best.date, { locale: unitPrefs.locale, style: 'long' })

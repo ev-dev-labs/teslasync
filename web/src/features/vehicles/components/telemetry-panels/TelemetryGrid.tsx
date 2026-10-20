@@ -4,17 +4,26 @@ import {
 } from 'lucide-react'
 import { StaggerContainer, StaggerItem } from '@/components/motion'
 import { useUnits } from '@/hooks/useUnits'
-import { fmtInt, fmtNumber } from '@/lib/numberFormat'
+
 import { InfoTile } from './InfoTile'
 import type { VehicleState } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 interface TelemetryGridProps {
   state: VehicleState
 }
 
 export function TelemetryGrid({ state }: TelemetryGridProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatDistance, formatSpeed, formatTemperature } = useUnits()
+  // Missing readings are unknown — never a fabricated zero ("0.00%") and
+  // never a threshold colour that implies a measured critical level.
+  const batteryLevel = state.battery_level
+  const batteryKnown = isFiniteNumber(batteryLevel)
+  const chargerPower = state.charger_power
+  const chargerPowerKnown = isFiniteNumber(chargerPower)
 
   return (
     <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -22,13 +31,15 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={Battery}
           label={t('common.battery', 'Battery')}
-          value={`${fmtInt(state.battery_level)}%`}
+          value={batteryKnown ? `${fmtNumber(batteryLevel)}%` : null}
           color={
-            state.battery_level > 50
-              ? 'text-emerald-300'
-              : state.battery_level > 20
-                ? 'text-amber-300'
-                : 'text-rose-300'
+            !batteryKnown
+              ? 'text-[var(--text-muted)]'
+              : batteryLevel > 50
+                ? 'text-emerald-300'
+                : batteryLevel > 20
+                  ? 'text-amber-300'
+                  : 'text-rose-300'
           }
           sub={`${formatDistance(state.rated_range)} ${t('common.range', 'range')}`}
         />
@@ -53,7 +64,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={Navigation}
           label={t('common.odometer', 'Odometer')}
-          value={formatDistance(state.odometer, { precision: 0 })}
+          value={formatDistance(state.odometer)}
         />
       </StaggerItem>
       <StaggerItem>
@@ -62,14 +73,14 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           label={t('common.charger', 'Charger')}
           value={
             state.is_charging
-              ? `${fmtInt(state.charger_power)} kW`
-              : t('common.notCharging', 'Not Charging')
+              ? (chargerPowerKnown ? `${fmtNumber(chargerPower)} kW` : null)
+              : t('common.notCharging', 'Not charging')
           }
           color={state.is_charging ? 'text-emerald-300' : 'text-[var(--text-muted)]'}
           sub={
             state.is_charging && state.time_to_full_charge != null && state.time_to_full_charge > 0
               ? t('telemetry.fullInHours', 'Full in {{hours}}h', {
-                  hours: fmtNumber(state.time_to_full_charge, 1),
+                  hours: fmtNumber(state.time_to_full_charge),
                 })
               : undefined
           }

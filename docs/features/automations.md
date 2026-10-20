@@ -36,10 +36,29 @@ An action chain is an ordered sequence of typed actions that runs on each fire. 
 
 - **Command** — any of the [sixty-five remote commands](/guide/remote-commands) (lock, start charging, set climate, flash lights, sentry on/off, etc.)
 - **Notification** — fan out to any configured notification channel (push, email, webhook, Discord, etc.)
-- **Wait** — pause for a duration before running the next action
+- **Wait** — `action_wait` with `duration_s`, an integer from 1 through 3600 SI seconds. The builder defaults to 30 seconds. Waits run in the saved action order, respect cancellation, and are simulated without sleeping in **Test run**. Save, readback, export, and import preserve the typed duration.
 - **HTTP webhook** — POST to an external URL with a templated payload (for home-automation bridges, IFTTT, n8n, Home Assistant, etc.)
 
 Actions run sequentially. If one fails, the chain stops and the failure is recorded. The retry policy is per-automation and capped — no infinite loops, no thundering herds.
+
+A `condition_time_window` combines its clock window with `days_of_week`
+(0 = Sunday through 6 = Saturday). Empty days allow every day. Equal clocks
+(`00:00` to `00:00`) represent an all-day weekday filter; an omitted timezone
+defaults to UTC. Same-day windows include the start and exclude the end.
+Overnight windows use the **current local weekday**, including after midnight
+and across daylight-saving changes. Live execution and Test run use the same
+typed evaluator; the older JSON clock parser still rejects equal clocks.
+
+Geofence drafts retain the descriptive command names
+`cabin_overheat_protection_on` and `hvac_on` in storage, readback and history.
+The typed executor delegates these to the existing Tesla adapter's `cop_on`
+and `climate_on` commands respectively; no new Tesla endpoint is introduced.
+
+Migration `000255_automation_action_wait` must be applied before upgrading the
+API and workers. Enable wait-containing rules only after every reader/worker
+has upgraded. On binary rollback, disable those rules and leave the additive
+schema applied. Explicit schema rollback deletes wait steps and durations:
+export the rules first. PostgreSQL retains the unused enum label.
 
 ## Quick-start templates
 

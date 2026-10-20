@@ -2,11 +2,13 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceToSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Unit-aware render-boundary helpers for SI-canonical cold-start evidence. */
 export function useColdStartDisplay() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const units = useUnits();
   const distanceUnit = units.unitPrefs.distance;
@@ -15,7 +17,7 @@ export function useColdStartDisplay() {
       ? t('coldStart.whPerMi', 'Wh/mi')
       : t('coldStart.whPerKm', 'Wh/km');
 
-  const convertEfficiency = useCallback(
+  const toEfficiencyDisplay = useCallback(
     (whPerKm: number) =>
       whPerKm * (convertDistanceToSI(1, distanceUnit) / 1_000),
     [distanceUnit],
@@ -24,9 +26,9 @@ export function useColdStartDisplay() {
   const formatEfficiency = useCallback(
     (whPerKm: number | null | undefined) =>
       whPerKm != null && Number.isFinite(whPerKm)
-        ? `${fmtNumber(convertEfficiency(whPerKm), 0)} ${efficiencyUnit}`
+        ? `${fmtNumber(toEfficiencyDisplay(whPerKm))} ${efficiencyUnit}`
         : '—',
-    [convertEfficiency, efficiencyUnit],
+    [toEfficiencyDisplay, efficiencyUnit, fmtNumber],
   );
 
   const formatMonth = useCallback(
@@ -52,7 +54,7 @@ export function useColdStartDisplay() {
   return {
     ...units,
     efficiencyUnit,
-    convertEfficiency,
+    toEfficiencyDisplay,
     formatEfficiency,
     formatMonth,
   };

@@ -1,11 +1,15 @@
 /**
- * NotificationFilterBar — controls for the notifications inbox.
+ * NotificationFilterBar — shared controlled notification filters.
+ * Grouped lists use the full bar; flat tables reuse each control section in
+ * column headers, with the full set in the visible mobile Notification header.
  *
  * Wired controls:
  *   - Severity chips (info/warn/critical) — multi-select
- *   - Vehicle <Select> (single, "All vehicles" option)
- *   - Rule <Select>    (single, "All rules" option)
+ *   - Vehicle <Select> (single-choice edits, all URL members disclosed)
+ *   - Rule <Select>    (single-choice edits, all URL members disclosed)
+ *   - Source <Select>  (all sources / rule triggers)
  *   - SearchInput      (debounced, message text search)
+ *   - Optional read state for the combined mobile header
  *
  * The parent owns the `NotificationFilters` state; this component is fully
  * controlled and emits `onChange` patches that the parent merges in.
@@ -32,11 +36,18 @@ const SEVERITY_OPTIONS = [
 
 type Severity = (typeof SEVERITY_OPTIONS)[number]['value'];
 
+export function presentationSeverity(value: string): string {
+  return value === 'warning' ? 'warn' : value;
+}
+
 export interface NotificationFilterBarProps {
   filters: NotificationFilters;
   onChange: (next: NotificationFilters) => void;
   vehicles: Vehicle[];
   rules: AlertRule[];
+  /** Reuse the controlled controls inside column-header popovers. */
+  section?: 'all' | 'severity' | 'source' | 'search';
+  includeReadState?: boolean;
 }
 
 export function NotificationFilterBar({
@@ -44,14 +55,16 @@ export function NotificationFilterBar({
   onChange,
   vehicles,
   rules,
+  section = 'all',
+  includeReadState = false,
 }: NotificationFilterBarProps) {
   const { t } = useTranslation();
 
   const toggleSeverity = useCallback(
     (sev: Severity) => {
       const current = filters.severity ?? [];
-      const next = current.includes(sev)
-        ? current.filter(s => s !== sev)
+      const next = current.some(s => presentationSeverity(s) === sev)
+        ? current.filter(s => presentationSeverity(s) !== sev)
         : [...current, sev];
       onChange({ ...filters, severity: next.length ? next : undefined });
     },
@@ -86,35 +99,52 @@ export function NotificationFilterBar({
   );
 
   const selectedSeverities = useMemo(
-    () => new Set<Severity>(filters.severity ?? []),
+    () => new Set((filters.severity ?? []).map(presentationSeverity)),
     [filters.severity],
   );
+
+  const vehicleSummary = (filters.vehicle_id ?? [])
+    .map(id => (vehicles ?? []).find(v => v.id === id)?.display_name || `#${id}`)
+    .join(', ');
+  const ruleSummary = (filters.rule_id ?? [])
+    .map(id => (rules ?? []).find(r => r.id === id)?.name || `#${id}`)
+    .join(', ');
 
   const vehicleOptions = useMemo(
     () => [
       { value: '', label: t('notifications.inbox.filter.allVehicles', 'All vehicles') },
+      // URL filters can contain several IDs even though edits choose one.
+      ...(filters.vehicle_id && filters.vehicle_id.length > 1
+        ? [{ value: filters.vehicle_id.join(','), label: vehicleSummary, disabled: true }]
+        : []),
       ...(vehicles ?? []).map(v => ({ value: String(v.id), label: v.display_name || `#${v.id}` })),
     ],
-    [vehicles, t],
+    [filters.vehicle_id, vehicleSummary, vehicles, t],
   );
 
   const ruleOptions = useMemo(
     () => [
       { value: '', label: t('notifications.inbox.filter.allRules', 'All rules') },
+      ...(filters.rule_id && filters.rule_id.length > 1
+        ? [{ value: filters.rule_id.join(','), label: ruleSummary, disabled: true }]
+        : []),
       ...(rules ?? []).map(r => ({ value: String(r.id), label: r.name })),
     ],
-    [rules, t],
+    [filters.rule_id, ruleSummary, rules, t],
   );
 
   const activeFilterChips = useMemo<FilterChipDescriptor[]>(() => {
     const chips: FilterChipDescriptor[] = [];
-    const severityLabels: Record<Severity, string> = {
+    const severityLabels: Record<string, string> = {
       info: t('notifications.inbox.filter.severity.info', 'Info'),
       warn: t('notifications.inbox.filter.severity.warn', 'Warn'),
       critical: t('notifications.inbox.filter.severity.critical', 'Critical'),
     };
     if (filters.severity?.length) {
-      const summary = filters.severity.map(s => severityLabels[s]).join(', ');
+      const summary = filters.severity.map(s => {
+        const severity = presentationSeverity(s);
+        return Object.prototype.hasOwnProperty.call(severityLabels, severity) ? severityLabels[severity] : s;
+      }).join(', ');
       chips.push({
         key: 'severity',
         label: t('notifications.inbox.filter.severity', 'Severity'),
@@ -123,22 +153,18 @@ export function NotificationFilterBar({
       });
     }
     if (filters.vehicle_id?.length) {
-      const id = filters.vehicle_id[0];
-      const match = (vehicles ?? []).find(v => v.id === id);
       chips.push({
         key: 'vehicle_id',
         label: t('notifications.inbox.filter.vehicle', 'Vehicle'),
-        value: match?.display_name || `#${id}`,
+        value: vehicleSummary,
         onRemove: () => onChange({ ...filters, vehicle_id: undefined }),
       });
     }
     if (filters.rule_id?.length) {
-      const id = filters.rule_id[0];
-      const match = (rules ?? []).find(r => r.id === id);
       chips.push({
         key: 'rule_id',
         label: t('notifications.inbox.filter.rule', 'Rule'),
-        value: match?.name || `#${id}`,
+        value: ruleSummary,
         onRemove: () => onChange({ ...filters, rule_id: undefined }),
       });
     }
@@ -158,8 +184,16 @@ export function NotificationFilterBar({
         onRemove: () => onChange({ ...filters, q: undefined }),
       });
     }
+    if (includeReadState && filters.read !== undefined) {
+      chips.push({
+        key: 'read',
+        label: t('notifications.inbox.columns.readState', 'Read state'),
+        value: filters.read ? t('notifications.inbox.columns.read', 'Read') : t('notifications.inbox.columns.unread', 'Unread'),
+        onRemove: () => onChange({ ...filters, read: undefined }),
+      });
+    }
     return chips;
-  }, [filters, vehicles, rules, onChange, t]);
+  }, [filters, vehicleSummary, ruleSummary, onChange, t, includeReadState]);
 
   const handleClearAll = useCallback(() => {
     onChange({
@@ -169,16 +203,16 @@ export function NotificationFilterBar({
       rule_id: undefined,
       source: undefined,
       q: undefined,
+      ...(includeReadState ? { read: undefined } : {}),
     });
-  }, [filters, onChange]);
+  }, [filters, onChange, includeReadState]);
 
-  return (
-    <div className="space-y-3">
-      <FilterBar>
-        <div
+  const controls = (
+    <>
+        {(section === 'all' || section === 'severity') && <div
           role="group"
           aria-label={t('notifications.inbox.filter.severity', 'Severity')}
-          className="flex flex-wrap items-center gap-1"
+          className="flex min-w-0 max-w-full flex-wrap items-center gap-1"
         >
           {SEVERITY_OPTIONS.map(opt => {
             const active = selectedSeverities.has(opt.value);
@@ -198,23 +232,31 @@ export function NotificationFilterBar({
               </Button>
             );
           })}
-        </div>
+        </div>}
 
+        {(section === 'all' || section === 'source') && <>
+        <div className="min-w-0 w-full max-w-full sm:w-40">
         <Select
           options={vehicleOptions}
-          value={filters.vehicle_id?.[0] ? String(filters.vehicle_id[0]) : ''}
+          value={(filters.vehicle_id ?? []).join(',')}
+          title={vehicleSummary || undefined}
           onChange={e => setVehicle(e.target.value)}
           aria-label={t('notifications.inbox.filter.vehicle', 'Vehicle')}
-          className="min-w-[10rem]"
+          className="min-w-0 max-w-full"
         />
+        </div>
 
+        <div className="min-w-0 w-full max-w-full sm:w-40">
         <Select
           options={ruleOptions}
-          value={filters.rule_id?.[0] ? String(filters.rule_id[0]) : ''}
+          value={(filters.rule_id ?? []).join(',')}
+          title={ruleSummary || undefined}
           onChange={e => setRule(e.target.value)}
           aria-label={t('notifications.inbox.filter.rule', 'Rule')}
-          className="min-w-[10rem]"
+          className="min-w-0 max-w-full"
         />
+        </div>
+        <div className="min-w-0 w-full max-w-full sm:w-40">
         <Select
           options={[
             { value: '', label: t('notifications.inbox.filter.allSources', 'All sources') },
@@ -223,19 +265,38 @@ export function NotificationFilterBar({
           value={filters.source ?? ''}
           onChange={e => setSource(e.target.value)}
           aria-label={t('notifications.inbox.filter.source', 'Source')}
-          className="min-w-[10rem]"
+          className="min-w-0 max-w-full"
         />
+        </div>
+        </>}
 
-        <SearchInput
+        {(section === 'all' || section === 'search') && <SearchInput
           value={filters.q ?? ''}
           onChange={setQuery}
           placeholder={t('notifications.inbox.filter.searchPlaceholder', 'Search messages…')}
-          className="w-full sm:w-72"
+          className="min-w-0 w-full max-w-full sm:w-72"
           historyScope="notifications"
-        />
-      </FilterBar>
+        />}
+        {includeReadState && <div className="min-w-0 w-full max-w-full sm:w-40"><Select
+          size="sm"
+          value={filters.read === undefined ? 'all' : filters.read ? 'read' : 'unread'}
+          onChange={event => onChange({ ...filters, read: event.target.value === 'all' ? undefined : event.target.value === 'read' })}
+          aria-label={t('notifications.inbox.filter.readState', 'Filter by read state')}
+          options={[
+            { value: 'all', label: t('notifications.inbox.filter.allReadStates', 'All read states') },
+            { value: 'read', label: t('notifications.inbox.columns.read', 'Read') },
+            { value: 'unread', label: t('notifications.inbox.columns.unread', 'Unread') },
+          ]}
+          className="min-w-0 max-w-full"
+        /></div>}
+    </>
+  );
 
-      <ActiveFilterChips filters={activeFilterChips} onClearAll={handleClearAll} />
+  return (
+    <div className="min-w-0 w-full max-w-full space-y-3">
+      {section === 'all' ? <FilterBar className="min-w-0 w-full max-w-full">{controls}</FilterBar> : <div className="flex min-w-0 w-full max-w-full flex-wrap gap-2">{controls}</div>}
+
+      {section === 'all' && <ActiveFilterChips className="min-w-0 max-w-full" filters={activeFilterChips} onClearAll={handleClearAll} />}
     </div>
   );
 }

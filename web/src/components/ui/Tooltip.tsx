@@ -2,13 +2,19 @@ import {
   Children,
   cloneElement,
   isValidElement,
+  useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
+  useState,
   type ReactElement,
   type ReactNode,
+  type RefObject,
 } from 'react';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 export interface TooltipProps {
   /**
@@ -41,6 +47,8 @@ export interface TooltipProps {
    * forcing `whitespace-nowrap`. Used by `HelpTooltip` for long help bodies.
    */
   multiline?: boolean;
+  /** Optional allocated surface that contains the bubble, such as a scrubber track. */
+  boundaryRef?: RefObject<HTMLElement | null>;
   children: ReactNode;
 }
 
@@ -92,18 +100,34 @@ function warnIfHardcodedTextColor(content: ReactNode, callerHint: string): void 
 }
 
 const sideClasses = {
-  top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-  bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-  left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-  right: 'left-full top-1/2 -translate-y-1/2 ml-2',
+  top: 'bottom-full mb-2',
+  bottom: 'top-full mt-2',
+  left: 'top-1/2 -translate-y-1/2',
+  right: 'top-1/2 -translate-y-1/2',
 } as const;
+
+/** Ancestors whose horizontal overflow is clipped — the bubble must stay inside them. */
+function findClippingAncestors(trigger: HTMLElement): HTMLElement[] {
+  const clippers: HTMLElement[] = [];
+  let ancestor: HTMLElement | null = trigger.parentElement;
+  while (ancestor) {
+    const ancestorStyle = getComputedStyle(ancestor);
+    if ((ancestorStyle.overflowX === 'hidden' || ancestorStyle.overflowX === 'clip'
+      || ancestorStyle.overflowX === 'scroll' || ancestorStyle.overflowX === 'auto')
+      && ancestor.clientWidth > 0) {
+      clippers.push(ancestor);
+    }
+    ancestor = ancestor.parentElement;
+  }
+  return clippers;
+}
 
 /**
  * Hover/focus tooltip.
  *
  * Visual contract — inverted surface:
- *   - dark mode  → light card (`bg-gray-100`) with dark `--text-inverse` text
- *   - light mode → dark  card (`bg-gray-900`) with light `--text-inverse` text
+ *   - `--text-primary` supplies the mode-aware inverted surface.
+ *   - `--text-inverse` supplies its contrasting foreground.
  *
  * The inversion gives high contrast against the page background in both
  * themes (matches Linear / GitHub / modern tooltip UX).
@@ -132,11 +156,87 @@ const sideClasses = {
  *   tap. Tapping outside blurs the trigger and dismisses the tooltip.
  *
  * Reduced motion:
- * - The reveal transition is disabled globally via the `motion-reduce`
- *   variant when the user has `prefers-reduced-motion: reduce`.
+ * - The reveal respects reduced motion and low bandwidth without moving
+ *   the content or animating viewport corrections.
  */
-export function Tooltip({ content, side = 'top', multiline, children }: TooltipProps) {
+export function Tooltip({ content, side = 'top', multiline, boundaryRef, children }: TooltipProps) {
+  const { reduce } = useMotionPreference();
   const tooltipId = useId();
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const tooltipRef = useRef<HTMLSpanElement>(null);
+  const [horizontalOffset, setHorizontalOffset] = useState(0);
+  const [maxWidth, setMaxWidth] = useState<number>();
+  const [dismissed, setDismissed] = useState(false);
+  const hoveredRef = useRef(false);
+
+  useEffect(() => {
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && (
+        hoveredRef.current || triggerRef.current?.contains(document.activeElement)
+      )) setDismissed(true);
+    };
+    document.addEventListener('keydown', dismiss);
+    return () => document.removeEventListener('keydown', dismiss);
+  }, []);
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const tooltip = tooltipRef.current;
+    if (!trigger || !tooltip) return;
+    const viewportWidth = document.documentElement.clientWidth;
+    if (!tooltip.offsetWidth || !viewportWidth) return;
+    const boundary = boundaryRef?.current?.getBoundingClientRect();
+    let leftBound = Math.max(12, boundary && boundary.width > 0 ? boundary.left : 12);
+    let rightBound = Math.min(viewportWidth - 12,
+      boundary && boundary.width > 0 ? boundary.right : viewportWidth - 12);
+    // Keep the bubble inside clipping ancestors (e.g. widget bodies with
+    // horizontal overflow clipped). The bubble is opacity-0 — not
+    // display:none — at rest, so any part sticking past a clipping ancestor
+    // inflates that ancestor's scrollWidth (phantom horizontal scrollbars)
+    // and gets cut off on hover. Only horizontal: vertical placement stays
+    // glued to the trigger side.
+    for (const clipper of findClippingAncestors(trigger)) {
+      const rect = clipper.getBoundingClientRect();
+      const borderLeft = Number.parseFloat(getComputedStyle(clipper).borderLeftWidth) || 0;
+      leftBound = Math.max(leftBound, rect.left + borderLeft);
+      rightBound = Math.min(rightBound, rect.left + borderLeft + clipper.clientWidth);
+    }
+    const availableWidth = rightBound - leftBound;
+    if (availableWidth <= 0) return;
+    if (multiline || boundaryRef) setMaxWidth(availableWidth);
+    const width = multiline || boundaryRef
+      ? Math.min(tooltip.offsetWidth, availableWidth) : tooltip.offsetWidth;
+    const bounds = trigger.getBoundingClientRect();
+    const desiredLeft = side === 'left'
+      ? bounds.left - width - 8
+      : side === 'right'
+        ? bounds.right + 8
+        : bounds.left + bounds.width / 2 - width / 2;
+    const left = Math.max(leftBound, Math.min(desiredLeft, rightBound - width));
+    // Position the layout box itself. A negative translation only moves the
+    // painted bubble: its original box can still enlarge scrollable overflow.
+    setHorizontalOffset(left - bounds.left);
+  }, [side, multiline, boundaryRef]);
+
+  // Opacity-hidden bubbles still expand scrollable bounds before interaction.
+  useLayoutEffect(() => {
+    updatePosition();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(updatePosition) : null;
+    if (triggerRef.current) observer?.observe(triggerRef.current);
+    if (tooltipRef.current) observer?.observe(tooltipRef.current);
+    if (boundaryRef?.current) observer?.observe(boundaryRef.current);
+    // A clipping ancestor can shrink after mount (e.g. a vertical scrollbar
+    // appears once content loads), stranding a previously-correct bubble
+    // outside its bounds. Re-clamp when any clipper resizes.
+    if (triggerRef.current) {
+      for (const clipper of findClippingAncestors(triggerRef.current)) observer?.observe(clipper);
+    }
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [content, updatePosition, boundaryRef]);
 
   // Stable per-mount fingerprint for the dev-time warn so we don't
   // de-duplicate across distinct callsites that happen to share the same
@@ -177,15 +277,37 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
       : children;
 
   return (
-    <span className="relative inline-flex group/tip">
+    <span
+      ref={triggerRef}
+      className="relative inline-flex group/tip"
+      onMouseEnter={() => {
+        hoveredRef.current = true;
+        setDismissed(false);
+        updatePosition();
+      }}
+      onMouseLeave={() => { hoveredRef.current = false; }}
+      onFocus={() => {
+        setDismissed(false);
+        updatePosition();
+      }}
+    >
       {enrichedChild}
       <span
         id={tooltipId}
+        ref={tooltipRef}
         role="tooltip"
+        style={{
+          left: horizontalOffset,
+          ...(maxWidth !== undefined ? { maxWidth } : {}),
+        }}
         className={cn(
-          'pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 text-xs font-medium',
-          multiline ? 'whitespace-normal max-w-[260px]' : 'whitespace-nowrap',
-          'bg-gray-900 text-[var(--text-inverse)] shadow-lg dark:bg-gray-100',
+          'pointer-events-none absolute z-50 rounded-shape-sm px-2.5 py-1.5',
+          typography.size.xs, typography.weight.medium,
+          multiline || boundaryRef
+            ? 'w-80 max-w-tooltip-viewport whitespace-normal break-words px-4 py-3 text-sm font-normal leading-relaxed'
+            : 'whitespace-nowrap',
+          'bg-[var(--text-primary)] shadow-e2',
+          typography.color.inverse,
           // Forced-colors mode suppresses
           // box-shadow and remaps the bg-gray to Canvas, so the tooltip
           // body would otherwise blend into surrounding panels. Pin a
@@ -193,9 +315,11 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
           // surface still reads as a separate floating layer in
           // Windows High Contrast.
           'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
-          'opacity-0 scale-95 transition-all duration-fast motion-reduce:transition-none',
-          'group-hover/tip:opacity-100 group-hover/tip:scale-100',
-          'group-focus-within/tip:opacity-100 group-focus-within/tip:scale-100',
+          // Viewport corrections must not animate with the hover/focus reveal.
+          'opacity-0 transition-opacity duration-fast ease-standard motion-reduce:transition-none',
+          'group-hover/tip:opacity-100 group-focus-within/tip:opacity-100',
+          reduce && 'transition-none',
+          dismissed && '!opacity-0',
           sideClasses[side],
         )}
       >

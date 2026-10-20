@@ -1,45 +1,23 @@
-/**
- * CommandDeck
- * ───────────
- * The default TeslaSync sidebar, re-invented as master-detail instead of
- * a scrolling list.
- *
- * - Desktop: the section rail and secondary panel dock side by side.
- *   Either rail can shrink to icons. Pressing the active primary item
- *   again closes the secondary panel; following a link keeps it open.
- *   The aside width transitions with both rail preferences.
- * - Mobile: the drawer shows the rail full-width; tapping drills into
- *   the secondary panel with a Back button, and following a link closes
- *   the drawer.
- *
- * Selection and both icon-width preferences persist; the secondary
- * panel starts closed. The primary rail still highlights the section
- * holding the current page for orientation.
- */
-
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion } from '@/components/motion/runtime'
-import { useMotionPreference } from '@/hooks/useMotionPreference'
-import { cn } from '@/lib/cn'
-import { SectionRail, selectionKey } from './SectionRail'
-import { AtlasPanel } from './AtlasPanel'
-import type { SidebarSectionInput } from '../sectionGroups'
-import type { SectionGroup } from '../sectionGroups'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/runtime'
+import { SectionRail } from './SectionRail'
+import { AtlasPanel, type AtlasPanelProps } from './AtlasPanel'
+import { BottomTabBar } from '../BottomTabBar'
+import { resolveSectionIcon, PHONE_TAB_SECTIONS } from './sidebarIcons'
+import type { SidebarSectionInput, SectionGroup } from '../sectionGroups'
 import type { SidebarSuggestion } from './sidebarSuggest'
-
-export type DeckSelection =
-  | { kind: 'suggested' }
-  | { kind: 'favorites' }
-  | { kind: 'section'; title: string }
-
+import './sidenav.css'
+export type DeckSelection = { kind: 'suggested' } | { kind: 'favorites' } | { kind: 'section'; title: string }
 export interface CommandDeckProps {
   sections: SidebarSectionInput[]
   pinnedItems: SidebarSectionInput['items']
   recentItems?: SidebarSectionInput['items']
   suggestions?: SidebarSuggestion[]
   pathname: string
-  navLabel: (item: { label: string; labelKey: string }) => string
-  navSectionTitle: (section: { title: string; titleKey?: string }) => string
+  navLabel: AtlasPanelProps['navLabel']
+  navSectionTitle: AtlasPanelProps['navSectionTitle']
   onPin: (to: string) => void
   onUnpin: (to: string) => void
   pinSyncUnavailable?: boolean
@@ -49,240 +27,115 @@ export interface CommandDeckProps {
   staleCount?: number
   vehicleId?: string
   collections?: readonly SectionGroup[]
-  /** Rail collapse is host-owned: Layout derives the aside width from it. */
-  railCollapsed: boolean
-  onToggleRailCollapsed: () => void
-  /** Secondary-panel open state, host-owned for the same reason. */
   panelOpen: boolean
   onPanelOpenChange: (open: boolean) => void
-  panelCollapsed: boolean
-  onTogglePanelCollapsed: () => void
-  /** Section holding the current page — highlighted while collapsed. */
   activeSectionTitle?: string
+  appearanceControl?: ReactNode
+  mobileBrowseOpen?: boolean
+  // Public callers still using the previous deck controls remain type-compatible.
+  railCollapsed?: boolean
+  onToggleRailCollapsed?: () => void
+  panelCollapsed?: boolean
+  onTogglePanelCollapsed?: () => void
 }
-
-const DECK_VIEW_STORAGE_KEY = 'teslasync-deck-view'
-
-function readStoredView(sections: readonly { title: string }[], activeSectionTitle?: string): DeckSelection {
-  try {
-    const stored = window.localStorage.getItem(DECK_VIEW_STORAGE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored) as DeckSelection | null
-      if (parsed?.kind === 'suggested' || parsed?.kind === 'favorites') {
-        return parsed
-      }
-      if (parsed?.kind === 'section' && sections.some(section => section.title === parsed.title)) {
-        return parsed
-      }
-    }
-  } catch {
-    // Storage may be disabled or hold a stale section; default below.
-  }
-  return activeSectionTitle && sections.some(section => section.title === activeSectionTitle)
-    ? { kind: 'section', title: activeSectionTitle }
-    : { kind: 'suggested' }
+const VIEW_KEY = 'teslasync-deck-view'
+function readView(): DeckSelection | null {
+  try { return JSON.parse(localStorage.getItem(VIEW_KEY) ?? 'null') as DeckSelection | null } catch { return null }
 }
-
-export function CommandDeck({
-  sections,
-  pinnedItems,
-  recentItems,
-  suggestions,
-  pathname,
-  navLabel,
-  navSectionTitle,
-  onPin,
-  onUnpin,
-  pinSyncUnavailable = false,
-  onItemSelect,
-  alertCount = 0,
-  vehicleCount = 0,
-  staleCount = 0,
-  vehicleId,
-  collections = [],
-  railCollapsed,
-  onToggleRailCollapsed,
-  panelOpen,
-  onPanelOpenChange,
-  panelCollapsed,
-  onTogglePanelCollapsed,
-  activeSectionTitle,
-}: CommandDeckProps) {
-  const safeSections = sections ?? []
-  const safePinnedItems = pinnedItems ?? []
-  const safeSuggestions = suggestions ?? []
-  const safeCollections = collections ?? []
-  const { reduce, durationMs } = useMotionPreference(260)
-
-  const [view, setView] = useState<DeckSelection>(() => readStoredView(sections ?? [], activeSectionTitle))
-  const [mobileLevel, setMobileLevel] = useState<'rail' | 'panel'>('rail')
-  const railRefs = useRef(new Map<string, HTMLButtonElement | null>())
+export function resolveDeckSection(stored: DeckSelection | null, sections: readonly SidebarSectionInput[] = [], routeTitle?: string): string {
+  if (stored?.kind === 'section' && sections.some(section => section.title === stored.title)) return stored.title
+  return sections.find(section => section.title === routeTitle)?.title ?? sections[0]?.title ?? 'Home'
+}
+export function CommandDeck(props: CommandDeckProps) {
+  const { t } = useTranslation()
+  const { sections = [], pathname, activeSectionTitle, panelOpen, onPanelOpenChange, onItemSelect, mobileBrowseOpen } = props
+  const sectionLabel = props.navSectionTitle ?? ((section: { title: string }) => section.title)
+  const railItems = useRef(new Map<string, HTMLButtonElement>())
+  const [stored, setStored] = useState(readView)
+  const title = resolveDeckSection(stored, sections, activeSectionTitle)
+  const [homeView, setHomeView] = useState<DeckSelection | null>(null)
+  const [phoneSheet, setPhoneSheet] = useState<'more' | 'section' | null>(null)
+  const [viewport, setViewport] = useState(() => window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')
   const previousPath = useRef(pathname)
-
+  const previousBrowse = useRef(mobileBrowseOpen)
+  useEffect(() => {
+    const resize = () => setViewport(window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')
+    window.addEventListener('resize', resize)
+    return () => window.removeEventListener('resize', resize)
+  }, [])
+  useEffect(() => {
+    if (mobileBrowseOpen && !previousBrowse.current) {
+      if (viewport === 'phone') setPhoneSheet('more')
+      else onPanelOpenChange(true)
+    }
+    previousBrowse.current = mobileBrowseOpen
+  }, [mobileBrowseOpen, viewport, onPanelOpenChange])
   useEffect(() => {
     if (pathname === previousPath.current) return
     previousPath.current = pathname
-    if (activeSectionTitle && safeSections.some(section => section.title === activeSectionTitle)) {
-      setView({ kind: 'section', title: activeSectionTitle })
-    }
-  }, [pathname, activeSectionTitle, safeSections])
-
+    setStored({ kind: 'section', title: activeSectionTitle ?? sections[0]?.title ?? 'Home' })
+    setHomeView(null)
+    setPhoneSheet(null)
+    if (viewport !== 'desktop') onPanelOpenChange(false)
+  }, [pathname, activeSectionTitle, sections, viewport, onPanelOpenChange])
   useEffect(() => {
-    try {
-      window.localStorage.setItem(DECK_VIEW_STORAGE_KEY, JSON.stringify(view))
-    } catch {
-      // Storage may be disabled; the view still works for the session.
+    // Late-loading sections must not clobber the saved view: while the
+    // stored section is absent from the current list, leave storage alone
+    // so its arrival restores it instead of the fallback.
+    if (stored?.kind === 'section' && !sections.some(section => section.title === stored.title)) return
+    try { localStorage.setItem(VIEW_KEY, JSON.stringify({ kind: 'section', title })) } catch { /* Private storage is optional. */ }
+  }, [title, stored, sections])
+  useEffect(() => {
+    if (viewport !== 'tablet' || !panelOpen) return
+    // The rail stays interactive beside the drawer, so Escape must also work
+    // when focus is on its selected section rather than inside the modal.
+    const escape = (event: KeyboardEvent) => {
+      const dialogs = document.querySelectorAll('[role="dialog"], [role="alertdialog"]')
+      if (event.key !== 'Escape' || event.defaultPrevented || !dialogs[dialogs.length - 1]?.classList.contains('sidenav-tablet-panel')) return
+      onPanelOpenChange(false)
+      onItemSelect?.()
     }
-  }, [view])
-
-  const railItemRef = useCallback((key: string, el: HTMLButtonElement | null) => {
-    if (el) railRefs.current.set(key, el)
-    else railRefs.current.delete(key)
-  }, [])
-
-  const closePanel = useCallback(() => {
-    onPanelOpenChange(false)
-    railRefs.current.get(selectionKey(view))?.focus()
-  }, [onPanelOpenChange, view])
-
-  // Desktop: the active rail item toggles its docked panel.
-  const selectDesktop = (selection: DeckSelection) => {
-    if (panelOpen && selectionKey(selection) === selectionKey(view)) {
-      closePanel()
-      return
-    }
-    setView(selection)
-    onPanelOpenChange(true)
+    document.addEventListener('keydown', escape)
+    return () => document.removeEventListener('keydown', escape)
+  }, [viewport, panelOpen, onPanelOpenChange, onItemSelect])
+  const close = () => {
+    onPanelOpenChange(false); setPhoneSheet(null); onItemSelect?.()
+    if (viewport === 'desktop') requestAnimationFrame(() => railItems.current.get(title)?.focus())
   }
-
-  // Mobile: rail drills into the panel level.
-  const selectMobile = (selection: DeckSelection) => {
-    setView(selection)
-    setMobileLevel('panel')
+  const select = (selection: DeckSelection) => {
+    if (selection.kind !== 'section') return
+    setHomeView(null)
+    setStored(selection)
+    if (viewport === 'phone') setPhoneSheet('section')
+    else onPanelOpenChange(!(panelOpen && title === selection.title))
   }
-
-  // Following a link never collapses the desktop panel. Mobile still
-  // resets to the rail level while the host closes
-  // the drawer.
-  const handleItemSelect = useCallback(() => {
-    setMobileLevel('rail')
-    onItemSelect?.()
-  }, [onItemSelect])
-
-  const favoritesCount = safePinnedItems.length
-
-  // Rail highlight: the open view while expanded, else the section
-  // holding the current page so orientation survives collapse.
-  const routeSelection: DeckSelection | null = activeSectionTitle && safeSections.some(section => section.title === activeSectionTitle)
-    ? { kind: 'section', title: activeSectionTitle }
-    : null
-  const railSelection: DeckSelection | null = panelOpen ? view : routeSelection
-
-  const railProps = {
-    sections: safeSections,
-    collections: safeCollections,
-    navSectionTitle,
-    suggestedCount: safeSuggestions.length,
-    favoritesCount,
-    alertCount,
-    onToggleCollapsed: onToggleRailCollapsed,
-    onItemSelect: handleItemSelect,
-  }
-  const panelProps = {
-    sections,
-    pinnedItems,
-    recentItems,
-    suggestions,
-    pathname,
-    navLabel,
-    navSectionTitle,
-    onPin,
-    onUnpin,
-    pinSyncUnavailable,
-    onItemSelect: handleItemSelect,
-    alertCount,
-    vehicleCount,
-    staleCount,
-    vehicleId,
-    collections,
-  }
-
-  return (
-    <div data-role="command-deck" className="flex h-full min-h-0 min-w-0 flex-col">
-      {/* Desktop: rail + docked secondary panel in one row. */}
-      <div className="hidden min-h-0 min-w-0 flex-1 flex-row xl:flex">
-        <div data-testid="command-deck-rail" className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <SectionRail
-            collapsed={railCollapsed}
-            onSelect={selectDesktop}
-            selection={railSelection}
-            panelOpen={panelOpen}
-            itemRef={railItemRef}
-            {...railProps}
-          />
-        </div>
-        {panelOpen && (
-          <motion.div
-            data-testid="command-deck-secondary"
-            initial={reduce ? false : {
-              opacity: 0,
-              x: typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? 22 : -22,
-              scale: 0.98,
-              filter: 'blur(4px)',
-            }}
-            animate={{ opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' }}
-            transition={{ duration: durationMs / 1000, ease: [0.22, 1, 0.36, 1] }}
-            className={cn('flex min-h-0 shrink-0 origin-top-left flex-col overflow-visible transition-[width] duration-normal ease-out rtl:origin-top-right motion-reduce:transition-none', panelCollapsed ? 'w-[76px]' : 'w-[320px]')}
-          >
-            <AtlasPanel
-              variant="secondary"
-              view={view}
-              onClose={closePanel}
-              collapsed={panelCollapsed}
-              onToggleCollapsed={onTogglePanelCollapsed}
-              {...panelProps}
-            />
-          </motion.div>
-        )}
-      </div>
-
-      {/* Mobile drill: rail root… */}
-      {mobileLevel === 'rail' && (
-        <div data-testid="command-deck-mobile-rail" className="flex min-h-0 flex-1 xl:hidden">
-          <SectionRail
-            collapsed={false}
-            showCollapseControl={false}
-            onSelect={selectMobile}
-            selection={routeSelection}
-            {...railProps}
-          />
-        </div>
-      )}
-
-      {/* …and secondary level with Back. Enter-only fade: no exit lag. */}
-      {mobileLevel === 'panel' && (
-        <motion.div
-          data-testid="command-deck-mobile-panel"
-          initial={reduce ? false : {
-            opacity: 0,
-            x: typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? -22 : 22,
-            filter: 'blur(4px)',
-          }}
-          animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-          transition={{ duration: durationMs / 1000, ease: [0.22, 1, 0.36, 1] }}
-          className="flex min-h-0 flex-1 xl:hidden"
-        >
-          <AtlasPanel
-            variant="inline"
-            view={view}
-            onBack={() => setMobileLevel('rail')}
-            onClose={onItemSelect}
-            {...panelProps}
-          />
-        </motion.div>
-      )}
-    </div>
-  )
+  const view: DeckSelection = title === 'Home' && homeView ? homeView : { kind: 'section', title }
+  const panel = <AtlasPanel {...props} sections={sections} navSectionTitle={sectionLabel} key={title} view={view}
+    onClose={close} onHomeViewChange={setHomeView}
+    onItemSelect={() => { setPhoneSheet(null); if (viewport !== 'desktop') onPanelOpenChange(false); onItemSelect?.() }} />
+  return <div data-role="command-deck" className="sidenav-deck">
+    {viewport !== 'phone' && <>
+      <div data-testid="command-deck-rail" className="sidenav-rail-column"><SectionRail {...props} sections={sections} navSectionTitle={sectionLabel} alertCount={props.alertCount ?? 0}
+        onUtilityActivate={() => { if (viewport === 'tablet') { onPanelOpenChange(false); onItemSelect?.() } }}
+        itemRef={(key, element) => { const name = key.replace(/^section:/, ''); if (element) railItems.current.set(name, element); else railItems.current.delete(name) }}
+        selection={{ kind: 'section', title }} onSelect={select} panelOpen={panelOpen} /></div>
+      {viewport === 'desktop' && panelOpen && <div data-testid="command-deck-secondary" className="sidenav-context-column">{panel}</div>}
+      <Modal open={viewport === 'tablet' && panelOpen} onClose={close} ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })}
+        className="sidenav-tablet-panel">{panel}</Modal>
+    </>}
+    {viewport === 'phone' && <>
+      <BottomTabBar activeSection={activeSectionTitle} onChoose={section => { if (section) select({ kind: 'section', title: section }); else setPhoneSheet('more') }} />
+      <Modal open={phoneSheet !== null} onClose={() => { setPhoneSheet(null); onItemSelect?.() }}
+        title={phoneSheet === 'more' ? t('nav.mobileMore', 'More') : undefined}
+        ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })} className="sidenav-sheet">
+        {phoneSheet === 'more' ? <div className="sidenav-section-grid">{sections.filter(section => !PHONE_TAB_SECTIONS.some(title => title === section.title)).map(section => {
+          const Icon = resolveSectionIcon(section.title)
+          return <Button key={section.title} type="button" variant="ghost" aria-current={section.title === activeSectionTitle ? 'true' : undefined} className={section.title === activeSectionTitle ? 'is-selected' : undefined} onClick={() => select({ kind: 'section', title: section.title })}>
+            <Icon className="h-5 w-5" aria-hidden /><span>{sectionLabel(section)}</span>
+          </Button>
+        })}</div> : panel}
+      </Modal>
+    </>}
+  </div>
 }
-
 export default CommandDeck

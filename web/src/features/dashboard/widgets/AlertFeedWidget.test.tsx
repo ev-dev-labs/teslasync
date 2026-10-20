@@ -63,7 +63,7 @@ vi.mock('@/api/hooks/useNotifications', async (importActual) => {
   return { ...actual, useAlerts: vi.fn() };
 });
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshness>) reads it.
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,
@@ -84,7 +84,7 @@ import type { WidgetSize } from './types';
 
 const mockAlerts = vi.mocked(useAlerts);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,
@@ -159,9 +159,16 @@ describe('AlertFeedWidget — shell states', () => {
     mockAlerts.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(NARROW);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-hidden="true"].min-h-24');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('h-full', 'w-full', 'min-h-24', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByText('Battery critically low')).not.toBeInTheDocument();
+    expect(screen.queryByText('No alerts yet')).not.toBeInTheDocument();
     // Title + rows are suppressed until the shell resolves.
-    expect(screen.queryByText('Alert Feed')).toBeNull();
+    expect(screen.queryByText('Alert feed')).toBeInTheDocument();
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
@@ -173,7 +180,7 @@ describe('AlertFeedWidget — shell states', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Alert Feed')).toBeNull();
+    expect(screen.queryByText('Alert feed')).toBeInTheDocument();
     // The shared error card now carries "where to look next" destinations
     // (HELP-05), so scope the "no alert rows" assertion to the widget body
     // instead of asserting the absence of every link on screen.
@@ -184,7 +191,7 @@ describe('AlertFeedWidget — shell states', () => {
     mockAlerts.mockReturnValue(qr({ data: [] }));
     renderWidget(NARROW);
 
-    expect(screen.getByText('Alert Feed')).toBeInTheDocument();
+    expect(screen.getByText('Alert feed')).toBeInTheDocument();
     expect(screen.getByText('No alerts yet')).toBeInTheDocument();
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
@@ -193,7 +200,7 @@ describe('AlertFeedWidget — shell states', () => {
     mockAlerts.mockReturnValue(qr({ data: undefined }));
     renderWidget(NARROW);
 
-    expect(screen.getByText('Alert Feed')).toBeInTheDocument();
+    expect(screen.getByText('Alert feed')).toBeInTheDocument();
     expect(screen.getByText('No alerts yet')).toBeInTheDocument();
   });
 });
@@ -303,6 +310,18 @@ describe('AlertFeedWidget — null-safety & sizing', () => {
 });
 
 describe('AlertFeedWidget — refresh wiring', () => {
+  it('keeps cached drill-through rows visible and provides real refresh recovery', () => {
+    const refetch = vi.fn();
+    mockAlerts.mockReturnValue(qr({ data: ALERTS, error: new Error('refresh failed'), isError: true, refetch }));
+    renderWidget(WIDE);
+    expect(screen.getByRole('link', { name: /Battery critically low/ })).toHaveAttribute('href', expect.stringContaining('signal=BatteryLevel'));
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+  });
+
   it('invokes the query refetch when the freshness control is activated', () => {
     const refetch = vi.fn();
     mockAlerts.mockReturnValue(qr({ data: ALERTS, refetch }));

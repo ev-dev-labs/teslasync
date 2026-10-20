@@ -9,7 +9,7 @@
  * the underlying data timestamp changes.
  *
  * The leaf children (`Skeleton`, `QueryError`, `HelpTooltip`, `PinButton`,
- * `DataFreshness`, `DataFreshnessAuto`) are mocked with lightweight stand-ins so
+ * `FreshnessDot`, `FreshnessDotAuto`) are mocked with lightweight stand-ins so
  * this suite asserts WidgetShell's own contract — which child renders and with
  * which props — without dragging in their QueryClient / Router / i18n trees or
  * ever touching the network.
@@ -22,18 +22,18 @@
  *   - title-less layout: freshness moves to an absolute overlay (compact), the
  *     actions row still renders, and help/pin are suppressed.
  *   - freshness resolution: `updatedAt` wins over `query`; `updatedAt === 0`
- *     collapses to a null timestamp; a bare `query` uses DataFreshnessAuto; and
+ *     collapses to a null timestamp; a bare `query` uses FreshnessDotAuto; and
  *     neither prop renders no chip. Omitted flags default to false; `onRefresh`
  *     is forwarded and fires.
  *   - pin: rendered only when title + widgetId + dashboardId are all present.
  *   - padding: `noPadding` swaps the scroll container classes.
- *   - pulse effect: no glow on mount, glow on timestamp change, auto-clear after
- *     1500ms, and the regression where a timestamp regressing to 0 mid-pulse
- *     used to leave the glow stuck on.
+ *   - freshness/content state: timestamps reach the shared indicator, stale
+ *     retained values are dimmed, and headings expose their full title.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { deriveDataState } from '@/api/dataState';
 
 // ── i18n stub: resolve `t(key, defaultString, opts)` and interpolate {{vars}} ──
 vi.mock('react-i18next', () => ({
@@ -60,11 +60,14 @@ vi.mock('@/components/feedback', () => ({
   Skeleton: ({ className }: { className?: string }) => (
     <div data-testid="skeleton" className={className} />
   ),
-  QueryError: ({ error }: { error: unknown }) => (
+  QueryError: ({ error, onRetry }: { error: unknown; onRetry?: () => void }) => (
     <div data-testid="query-error">
       {error instanceof Error ? error.message : String(error)}
+      {onRetry && <button onClick={onRetry}>Retry query</button>}
     </div>
   ),
+  StaleRefreshWarning: ({ state, hideRetry }: { state: { status: string }; hideRetry?: boolean }) =>
+    state.status === 'ok' ? null : <div data-testid="trust-warning" data-hide-retry={String(hideRetry)}>{state.status}</div>,
 }));
 
 vi.mock('@/components/ui', () => ({
@@ -93,7 +96,7 @@ vi.mock('@/components/ui', () => ({
 }));
 
 vi.mock('@/components/data-display', () => ({
-  DataFreshness: (props: {
+  FreshnessDot: (props: {
     updatedAt: number | null;
     isFetching?: boolean;
     isStale?: boolean;
@@ -116,7 +119,7 @@ vi.mock('@/components/data-display', () => ({
       ) : null}
     </div>
   ),
-  DataFreshnessAuto: (props: {
+  FreshnessDotAuto: (props: {
     query?: { dataUpdatedAt?: number };
     compact?: boolean;
   }) => (
@@ -153,6 +156,60 @@ afterEach(() => {
 });
 
 describe('WidgetShell — state machine', () => {
+  it('retains content during a failed refresh even when the legacy error prop is supplied', () => {
+    const dataState = deriveDataState({ data: [0], isError: true, error: new Error('offline') });
+    render(
+      <WidgetShell title="Battery" error="offline" dataState={dataState}>
+        <Child />
+      </WidgetShell>,
+    );
+    expect(screen.getByTestId('child')).toBeInTheDocument();
+    expect(screen.getByTestId('trust-warning')).toHaveTextContent('stale');
+    expect(screen.queryByTestId('query-error')).not.toBeInTheDocument();
+  });
+
+  it('uses the widget freshness dot as the retained-data retry and hides the duplicate warning action', () => {
+    const refetch = vi.fn();
+    const state = deriveDataState({ data: [0], isError: true, error: new Error('offline'), refetch });
+    render(<WidgetShell title="Battery" dataState={state} updatedAt={1_700_000_000_000}>
+      <Child />
+    </WidgetShell>);
+
+    expect(screen.getByTestId('trust-warning')).toHaveAttribute('data-hide-retry', 'true');
+    fireEvent.click(screen.getByTestId('freshness-refresh'));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers retry and preserves the header on initial failure', () => {
+    const refetch = vi.fn();
+    const state = deriveDataState({ isError: true, error: new Error('Network unavailable'), refetch });
+    render(<WidgetShell title="Battery" dataState={state}><Child /></WidgetShell>);
+    expect(screen.getByRole('heading')).toHaveTextContent('Battery');
+    expect(screen.getByTestId('query-error')).toHaveTextContent('Network unavailable');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry query' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('child')).not.toBeInTheDocument();
+  });
+
+  it('keeps contextual slots in every state and accepts a content-shaped skeleton', () => {
+    const { container } = render(
+      <WidgetShell
+        title="Battery"
+        description="Current vehicle"
+        status={<span>Unknown</span>}
+        footer={<span>View details</span>}
+        loading
+        loadingContent={<div>Reading battery</div>}
+      ><Child /></WidgetShell>,
+    );
+    expect(screen.getByText('Current vehicle')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('View details')).toBeInTheDocument();
+    expect(screen.getByText('Reading battery')).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('heading')).not.toHaveClass('uppercase');
+  });
+
   it('renders only the skeleton (with its sizing classes) while loading', () => {
     render(
       <WidgetShell title="Battery" loading>
@@ -164,9 +221,9 @@ describe('WidgetShell — state machine', () => {
     expect(skeleton).toBeInTheDocument();
     expect(skeleton.className).toContain('h-full');
     expect(skeleton.className).toContain('rounded-xl');
-    // Content, header, and freshness are all withheld during load.
+    // Keep the widget identity visible while withholding unresolved content.
     expect(screen.queryByTestId('child')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading')).toHaveTextContent('Battery');
   });
 
   it('renders QueryError wrapping a real Error when error is set, hiding content', () => {
@@ -272,6 +329,7 @@ describe('WidgetShell — title-less layout', () => {
     const overlay = chip.parentElement as HTMLElement;
     expect(overlay.className).toContain('absolute');
     expect(overlay.className).toContain('top-1.5');
+    expect(overlay.className).toContain('right-4');
     // Content still renders under the overlay.
     expect(root(container)).toContainElement(screen.getByTestId('child'));
   });
@@ -306,7 +364,7 @@ describe('WidgetShell — title-less layout', () => {
 });
 
 describe('WidgetShell — freshness resolution', () => {
-  it('uses granular DataFreshness and forwards flags when updatedAt is set', () => {
+  it('uses granular FreshnessDot and forwards flags when updatedAt is set', () => {
     render(
       <WidgetShell title="Battery" updatedAt={1234} isFetching isStale isError onRefresh={vi.fn()}>
         <Child />
@@ -345,7 +403,7 @@ describe('WidgetShell — freshness resolution', () => {
     expect(screen.getByTestId('data-freshness').getAttribute('data-updated-at')).toBe('null');
   });
 
-  it('uses DataFreshnessAuto when only a query is supplied', () => {
+  it('uses FreshnessDotAuto when only a query is supplied', () => {
     render(
       <WidgetShell title="Battery" query={makeQuery({ dataUpdatedAt: 999 })}>
         <Child />
@@ -419,7 +477,7 @@ describe('WidgetShell — pin button', () => {
 });
 
 describe('WidgetShell — content padding', () => {
-  it('uses the scrollable padded container by default', () => {
+  it('uses the padded content container with vertical-only scrolling', () => {
     render(
       <WidgetShell title="Battery">
         <Child />
@@ -427,11 +485,11 @@ describe('WidgetShell — content padding', () => {
     );
 
     const wrapper = screen.getByTestId('child').parentElement as HTMLElement;
-    expect(wrapper.className).toContain('overflow-auto');
+    expect(wrapper).toHaveClass('overflow-x-clip', 'overflow-y-auto');
     expect(wrapper.className).toContain('px-4');
   });
 
-  it('drops padding and clips overflow when noPadding is set', () => {
+  it('drops padding and stretches unpadded content while clipping horizontal overflow', () => {
     render(
       <WidgetShell title="Battery" noPadding>
         <Child />
@@ -439,13 +497,13 @@ describe('WidgetShell — content padding', () => {
     );
 
     const wrapper = screen.getByTestId('child').parentElement as HTMLElement;
-    expect(wrapper.className).toContain('overflow-hidden');
-    expect(wrapper.className).not.toContain('overflow-auto');
+    expect(wrapper).toHaveClass('overflow-x-clip', 'overflow-y-auto');
+    expect(wrapper).toHaveClass('flex', 'flex-col');
   });
 });
 
-describe('WidgetShell — pulse-on-change effect', () => {
-  it('does not glow on the initial mount', () => {
+describe('WidgetShell - freshness and content state', () => {
+  it('keeps the widget surface still on the initial mount', () => {
     const { container } = render(
       <WidgetShell title="Battery" updatedAt={100}>
         <Child />
@@ -455,7 +513,7 @@ describe('WidgetShell — pulse-on-change effect', () => {
     expect(root(container).className).not.toContain('shadow-[0_0_12px');
   });
 
-  it('glows when the effective timestamp advances to a new value', () => {
+  it('forwards an advanced timestamp to the freshness indicator without pulsing the whole shell', () => {
     const { container, rerender } = render(
       <WidgetShell title="Battery" updatedAt={100}>
         <Child />
@@ -468,34 +526,33 @@ describe('WidgetShell — pulse-on-change effect', () => {
         <Child />
       </WidgetShell>,
     );
-    expect(root(container).className).toContain('shadow-[0_0_12px');
+    expect(screen.getByTestId('data-freshness')).toHaveAttribute('data-updated-at', '200');
+    expect(root(container).className).not.toContain('shadow-[0_0_12px');
   });
 
-  it('clears the glow after the 1500ms window elapses', () => {
-    vi.useFakeTimers();
-    try {
-      const { container, rerender } = render(
-        <WidgetShell title="Battery" updatedAt={100}>
-          <Child />
-        </WidgetShell>,
-      );
-      rerender(
-        <WidgetShell title="Battery" updatedAt={200}>
-          <Child />
-        </WidgetShell>,
-      );
-      expect(root(container).className).toContain('shadow-[0_0_12px');
-
-      act(() => {
-        vi.advanceTimersByTime(1500);
-      });
-      expect(root(container).className).not.toContain('shadow-[0_0_12px');
-    } finally {
-      vi.useRealTimers();
-    }
+  it('reduces retained widget content to 45 percent opacity when data is stale', () => {
+    render(
+      <WidgetShell title="Battery" updatedAt={100} isStale>
+        <Child />
+      </WidgetShell>,
+    );
+    const content = screen.getByTestId('child').parentElement;
+    expect(content).toHaveClass('opacity-[0.45]');
+    expect(content).toHaveAttribute('data-content-degraded', 'true');
   });
 
-  it('clears a mid-pulse glow when the timestamp regresses to 0 (stuck-glow regression)', () => {
+  it('adds a full-title tooltip and truncation to long widget headings', () => {
+    render(
+      <WidgetShell title="A long dashboard widget title">
+        <Child />
+      </WidgetShell>,
+    );
+    const heading = screen.getByRole('heading', { name: 'A long dashboard widget title' });
+    expect(heading).toHaveClass('truncate');
+    expect(heading).toHaveAttribute('title', 'A long dashboard widget title');
+  });
+
+  it('does not degrade content when the timestamp resets to zero', () => {
     const { container, rerender } = render(
       <WidgetShell title="Battery" updatedAt={100}>
         <Child />
@@ -506,15 +563,15 @@ describe('WidgetShell — pulse-on-change effect', () => {
         <Child />
       </WidgetShell>,
     );
-    expect(root(container).className).toContain('shadow-[0_0_12px');
+    expect(root(container).className).not.toContain('shadow-[0_0_12px');
 
-    // A refetch resetting dataUpdatedAt back to 0 cancels the pending timer via
-    // cleanup; without the explicit reset in the effect the glow stayed stuck.
+    // Resetting the query timestamp never makes retained values appear degraded.
     rerender(
       <WidgetShell title="Battery" updatedAt={0}>
         <Child />
       </WidgetShell>,
     );
-    expect(root(container).className).not.toContain('shadow-[0_0_12px');
+    expect(screen.getByTestId('data-freshness')).toHaveAttribute('data-updated-at', 'null');
+    expect(root(container).querySelector('[data-content-degraded="true"]')).not.toBeInTheDocument();
   });
 });

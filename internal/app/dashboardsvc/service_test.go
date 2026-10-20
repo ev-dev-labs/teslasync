@@ -2,6 +2,7 @@ package dashboardsvc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 // mockVehicleRepo implements repository.VehicleRepository for testing.
 type mockVehicleRepo struct {
 	vehicles map[string]*vehicle.Vehicle
+	err      error
 }
 
 func newMockVehicleRepo() *mockVehicleRepo {
@@ -39,12 +41,16 @@ func (m *mockVehicleRepo) GetByVIN(_ context.Context, vin string) (*vehicle.Vehi
 	return nil, fmt.Errorf("vehicle vin %s: not found", vin)
 }
 
-func (m *mockVehicleRepo) GetByUserID(_ context.Context, userID string) ([]vehicle.Vehicle, error) {
+func (m *mockVehicleRepo) GetAll(ctx context.Context) ([]vehicle.Vehicle, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if m.err != nil {
+		return nil, m.err
+	}
 	var result []vehicle.Vehicle
 	for _, v := range m.vehicles {
-		if v.UserID == userID {
-			result = append(result, *v)
-		}
+		result = append(result, *v)
 	}
 	return result, nil
 }
@@ -67,6 +73,7 @@ func (m *mockVehicleRepo) Delete(_ context.Context, id string) error {
 // mockChargingRepo implements repository.ChargingSessionRepository for testing.
 type mockChargingRepo struct {
 	sessions map[string]*charging.ChargingSession
+	err      error
 }
 
 func newMockChargingRepo() *mockChargingRepo {
@@ -93,6 +100,9 @@ func (m *mockChargingRepo) GetByVehicleID(_ context.Context, vehicleID string) (
 }
 
 func (m *mockChargingRepo) ListByDateRange(_ context.Context, vehicleID string, _, _ time.Time) ([]charging.ChargingSession, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
 	var result []charging.ChargingSession
 	for _, s := range m.sessions {
 		if s.VehicleID == vehicleID {
@@ -115,6 +125,7 @@ func (m *mockChargingRepo) GetByIDForUpdate(ctx context.Context, id string) (*ch
 // mockTripRepo implements repository.TripRepository for testing.
 type mockTripRepo struct {
 	trips map[string]*trip.Trip
+	err   error
 }
 
 func newMockTripRepo() *mockTripRepo {
@@ -141,6 +152,9 @@ func (m *mockTripRepo) GetByVehicleID(_ context.Context, vehicleID string) ([]tr
 }
 
 func (m *mockTripRepo) ListByDateRange(_ context.Context, vehicleID string, _, _ time.Time) ([]trip.Trip, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
 	var result []trip.Trip
 	for _, t := range m.trips {
 		if t.VehicleID == vehicleID {
@@ -168,7 +182,7 @@ func TestService_GetStats(t *testing.T) {
 
 	// Add a vehicle
 	_ = vehicleRepo.Save(context.Background(), &vehicle.Vehicle{
-		ID: "v1", UserID: "u1", VIN: "5YJ3E1EA7KF123456",
+		ID: "v1", TeslaID: 1, VIN: "5YJ3E1EA7KF123456",
 	})
 
 	// Add trips
@@ -187,7 +201,7 @@ func TestService_GetStats(t *testing.T) {
 		StartedAt: time.Now(),
 	})
 
-	stats, err := svc.GetStats(context.Background(), "u1")
+	stats, err := svc.GetStats(context.Background())
 	if err != nil {
 		t.Fatalf("GetStats() error: %v", err)
 	}
@@ -211,15 +225,15 @@ func TestService_GetStats(t *testing.T) {
 		t.Errorf("expected 1500 cost cents, got %d", stats.TotalCostCents)
 	}
 	// AvgEfficiency = 24000 Wh / 80000 m = 0.3 Wh/m
-	if stats.AvgEfficiency != 0.3 {
-		t.Errorf("expected avg efficiency 0.3, got %f", stats.AvgEfficiency)
+	if stats.AvgEfficiency == nil || *stats.AvgEfficiency != 0.3 {
+		t.Errorf("expected avg efficiency 0.3, got %v", stats.AvgEfficiency)
 	}
 }
 
 func TestService_GetStats_NoVehicles(t *testing.T) {
 	svc := New(newMockVehicleRepo(), newMockChargingRepo(), newMockTripRepo())
 
-	stats, err := svc.GetStats(context.Background(), "u1")
+	stats, err := svc.GetStats(context.Background())
 	if err != nil {
 		t.Fatalf("GetStats() error: %v", err)
 	}
@@ -229,8 +243,42 @@ func TestService_GetStats_NoVehicles(t *testing.T) {
 	if stats.TotalTrips != 0 {
 		t.Errorf("expected 0 trips, got %d", stats.TotalTrips)
 	}
-	if stats.AvgEfficiency != 0 {
-		t.Errorf("expected 0 avg efficiency, got %f", stats.AvgEfficiency)
+	if stats.AvgEfficiency != nil {
+		t.Errorf("expected unknown efficiency without distance, got %v", stats.AvgEfficiency)
+	}
+}
+
+func TestService_GetStats_DependencyFailures(t *testing.T) {
+	for _, name := range []string{"vehicles", "trips", "charging"} {
+		t.Run(name, func(t *testing.T) {
+			vehicles := newMockVehicleRepo()
+			vehicles.vehicles["3"] = &vehicle.Vehicle{ID: "3", TeslaID: 103}
+			vehicles.vehicles["4"] = &vehicle.Vehicle{ID: "4", TeslaID: 104}
+			trips := newMockTripRepo()
+			charging := newMockChargingRepo()
+			failure := errors.New("database unavailable")
+			switch name {
+			case "vehicles":
+				vehicles.err = failure
+			case "trips":
+				trips.err = failure
+			case "charging":
+				charging.err = failure
+			}
+			stats, err := New(vehicles, charging, trips).GetStats(context.Background())
+			if !errors.Is(err, failure) || stats != nil {
+				t.Fatalf("stats=%+v error=%v; must not return fabricated partial totals", stats, err)
+			}
+		})
+	}
+}
+
+func TestService_GetStats_CanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	stats, err := New(newMockVehicleRepo(), newMockChargingRepo(), newMockTripRepo()).GetStats(ctx)
+	if !errors.Is(err, context.Canceled) || stats != nil {
+		t.Fatalf("stats=%+v error=%v, want cancellation and no totals", stats, err)
 	}
 }
 
@@ -241,10 +289,10 @@ func TestService_GetStats_MultipleVehicles(t *testing.T) {
 	svc := New(vehicleRepo, chargingRepo, tripRepo)
 
 	_ = vehicleRepo.Save(context.Background(), &vehicle.Vehicle{
-		ID: "v1", UserID: "u1", VIN: "5YJ3E1EA7KF000001",
+		ID: "v1", TeslaID: 1, VIN: "5YJ3E1EA7KF000001",
 	})
 	_ = vehicleRepo.Save(context.Background(), &vehicle.Vehicle{
-		ID: "v2", UserID: "u1", VIN: "5YJ3E1EA7KF000002",
+		ID: "v2", TeslaID: 2, VIN: "5YJ3E1EA7KF000002",
 	})
 
 	_ = tripRepo.Save(context.Background(), &trip.Trip{
@@ -263,7 +311,7 @@ func TestService_GetStats_MultipleVehicles(t *testing.T) {
 		ID: "cs2", VehicleID: "v2", CostCents: 1000, StartedAt: time.Now(),
 	})
 
-	stats, err := svc.GetStats(context.Background(), "u1")
+	stats, err := svc.GetStats(context.Background())
 	if err != nil {
 		t.Fatalf("GetStats() error: %v", err)
 	}

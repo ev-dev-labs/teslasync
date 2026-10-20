@@ -6,19 +6,18 @@
  * loopback addresses and rejects public egress targets.
  */
 
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Input,
   Select,
   HelperText,
-  SectionTitle,
   Caption,
   Button,
-  GlassPanel,
   Text,
 } from '@/components/ui'
 import { Stack } from '@/components/layout'
+import { FormSection } from '@/components/forms'
 import {
   useValidateAiProvider,
   type ValidateAiProviderRequest,
@@ -62,13 +61,33 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
   const [validateBanner, setValidateBanner] = useState<
     { kind: 'ok' | 'fail'; message: string } | null
   >(null)
+  const validationIdentity = useRef(0)
+
+  useLayoutEffect(() => {
+    validationIdentity.current += 1
+    setValidateBanner(null)
+    return () => {
+      validationIdentity.current += 1
+    }
+  }, [
+    isCloud,
+    value.provider,
+    value.base_url,
+    value.model,
+    value.api_key,
+    value.cost_cap_cents,
+    value.api_protocol,
+    value.embedding_model,
+  ])
 
   function patch(next: Partial<AIProviderDraft>) {
+    validationIdentity.current += 1
     onChange({ ...value, ...next })
     setValidateBanner(null)
   }
 
   async function runValidate() {
+    const identity = ++validationIdentity.current
     setValidateBanner(null)
     // Build the request payload. For local mode only mode + base_url
     // matter (the validator is provider-agnostic). For cloud mode we
@@ -98,6 +117,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
         }
     try {
       const result = await validate.mutateAsync(req)
+      if (identity !== validationIdentity.current) return
       if (result.ok) {
         const okMessage = result.pinned_ip
           ? t(
@@ -117,6 +137,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
       }
       setValidateBanner({ kind: 'fail', message: result.message })
     } catch {
+      if (identity !== validationIdentity.current) return
       // The hook re-shapes only the backend's 422 rejection into the
       // failure variant. A malformed request (400), a 5xx from the
       // probe, or the network being unreachable rejects out of
@@ -136,15 +157,15 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
   }
 
   return (
-    <GlassPanel
-      className="space-y-4 p-4 sm:p-5"
+    <div
+      className="min-w-0"
       aria-label={t('ai.settings.provider.label', 'Provider configuration')}
       data-testid="ai-provider-section"
     >
-      <SectionTitle>
-        {t('ai.settings.provider.label', 'Provider configuration')}
-      </SectionTitle>
-
+      <FormSection
+        title={t('ai.settings.provider.label', 'Provider configuration')}
+        className="p-4 sm:p-5"
+      >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
           label={t('ai.settings.provider.providerLabel', 'Provider')}
@@ -156,12 +177,12 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
               ? [
                   { value: 'openai', label: 'OpenAI' },
                   { value: 'anthropic', label: 'Anthropic' },
-                  { value: 'azure', label: 'Microsoft Foundry' },
+                  { value: 'azure', label: 'Microsoft foundry' },
                   { value: 'google', label: 'Google' },
                 ]
               : [
                   { value: 'ollama', label: 'Ollama' },
-                  { value: 'lmstudio', label: 'LM Studio' },
+                  { value: 'lmstudio', label: 'LM studio' },
                   { value: 'llama-cpp', label: 'llama.cpp' },
                 ]
           }
@@ -207,11 +228,11 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             options={[
               {
                 value: 'auto',
-                label: t('ai.settings.provider.azureProtocolAuto', 'Auto (Chat Completions first)'),
+                label: t('ai.settings.provider.azureProtocolAuto', 'Auto (chat completions first)'),
               },
               {
                 value: 'chat_completions',
-                label: t('ai.settings.provider.azureProtocolChat', 'Chat Completions'),
+                label: t('ai.settings.provider.azureProtocolChat', 'Chat completions'),
               },
               {
                 value: 'responses',
@@ -248,6 +269,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             <Button
               type="button"
               variant="ghost"
+              wrapLabel
               onClick={runValidate}
               disabled={
                 validate.isPending || value.base_url.trim().length === 0
@@ -343,6 +365,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             <Button
               type="button"
               variant="ghost"
+              wrapLabel
               onClick={runValidate}
               disabled={validate.isPending}
               data-testid="ai-provider-validate-cloud"
@@ -374,7 +397,8 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
           'Validation is optional but recommended — it catches mis-typed URLs and confirms the model is reachable.',
         )}
       </HelperText>
-    </GlassPanel>
+      </FormSection>
+    </div>
   )
 }
 

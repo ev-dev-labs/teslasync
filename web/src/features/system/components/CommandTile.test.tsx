@@ -1,5 +1,6 @@
 import { type ComponentProps } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CommandTile } from './CommandTile';
@@ -49,7 +50,7 @@ function renderTile(overrides: Partial<Props> = {}) {
   };
   const utils = render(<CommandTile {...props} />);
   const tile = () => screen.getByRole('button', { name: props.def.labelFallback });
-  const favorite = () => screen.getByRole('button', { name: /toggle favorite/i });
+  const favorite = () => screen.getByRole('button', { name: /Toggle favorite/i });
   return { ...utils, props, tile, favorite };
 }
 
@@ -61,11 +62,14 @@ afterEach(() => {
 });
 
 describe('CommandTile', () => {
-  it('renders an accessible button tile with the translated label, the command icon (not a spinner), and no busy state when idle', () => {
+  it('renders a native command button with the translated label, the command icon (not a spinner), and no busy state when idle', () => {
     const { container, tile } = renderTile();
 
     const el = tile();
     expect(el).toBeInTheDocument();
+    expect(el.tagName).toBe('BUTTON');
+    expect(el).toHaveAttribute('type', 'button');
+    expect(el).toBeEnabled();
     expect(el).toHaveAttribute('tabindex', '0');
     // Idle → aria-busy/aria-disabled are omitted rather than rendered "false".
     expect(el).not.toHaveAttribute('aria-busy');
@@ -103,7 +107,7 @@ describe('CommandTile', () => {
     expect(props.onExecute).not.toHaveBeenCalled();
   });
 
-  it('shows a spinner, marks itself busy/disabled/unfocusable, and ignores clicks while loading', () => {
+  it('shows a spinner, marks the command busy/disabled/unfocusable, and ignores clicks while loading', () => {
     const { container, props, tile } = renderTile({ loading: true });
 
     expect(screen.queryByTestId('cmd-icon')).toBeNull();
@@ -113,45 +117,56 @@ describe('CommandTile', () => {
     expect(el).toHaveAttribute('aria-busy', 'true');
     expect(el).toHaveAttribute('aria-disabled', 'true');
     expect(el).toHaveAttribute('tabindex', '-1');
+    expect(el).toBeDisabled();
 
     fireEvent.click(el);
     expect(props.onExecute).not.toHaveBeenCalled();
     expect(props.onRequestDialog).not.toHaveBeenCalled();
   });
 
-  it('activates on Enter and Space when the tile itself is focused, but ignores other keys', () => {
+  it('activates natively on Enter and Space when the command is focused, but ignores other keys', async () => {
+    const user = userEvent.setup();
     const { props, tile } = renderTile();
     const el = tile();
 
-    fireEvent.keyDown(el, { key: 'Enter' });
+    await user.tab();
+    expect(el).toHaveFocus();
+    await user.keyboard('{Enter}');
     expect(props.onExecute).toHaveBeenCalledTimes(1);
 
-    fireEvent.keyDown(el, { key: ' ' });
+    await user.keyboard(' ');
     expect(props.onExecute).toHaveBeenCalledTimes(2);
 
-    fireEvent.keyDown(el, { key: 'a' });
+    await user.keyboard('a');
     expect(props.onExecute).toHaveBeenCalledTimes(2);
     expect(props.onExecute).toHaveBeenLastCalledWith('wake_up', undefined);
   });
 
-  it('routes keyboard activation to the dialog (not execute) for a dangerous command', () => {
+  it('routes native Enter and Space activation to the dialog (not execute) for a dangerous command', async () => {
+    const user = userEvent.setup();
     const def = makeDef({ dangerous: true });
     const { props, tile } = renderTile({ def });
 
-    fireEvent.keyDown(tile(), { key: 'Enter' });
+    await user.tab();
+    expect(tile()).toHaveFocus();
+    await user.keyboard('{Enter} ');
 
+    expect(props.onRequestDialog).toHaveBeenCalledTimes(2);
     expect(props.onRequestDialog).toHaveBeenCalledWith(def);
     expect(props.onExecute).not.toHaveBeenCalled();
   });
 
-  it('does NOT execute the command when a key press bubbles up from the nested favorite button', () => {
-    const { props, favorite } = renderTile();
+  it('toggles only the sibling favorite on native Enter and Space activation, including dangerous commands', async () => {
+    const user = userEvent.setup();
+    const { props, favorite } = renderTile({ def: makeDef({ dangerous: true }) });
     const fav = favorite();
 
-    fireEvent.keyDown(fav, { key: 'Enter' });
-    fireEvent.keyDown(fav, { key: ' ' });
+    await user.tab();
+    await user.tab();
+    expect(fav).toHaveFocus();
+    await user.keyboard('{Enter} ');
 
-    // The guard (e.target !== e.currentTarget) prevents the tile from firing.
+    expect(props.onToggleFavorite).toHaveBeenCalledTimes(2);
     expect(props.onExecute).not.toHaveBeenCalled();
     expect(props.onRequestDialog).not.toHaveBeenCalled();
   });
@@ -165,7 +180,7 @@ describe('CommandTile', () => {
 
     fireEvent.click(fav);
     expect(props.onToggleFavorite).toHaveBeenCalledTimes(1);
-    // stopPropagation keeps the tile's own onClick from firing.
+    // The favorite and execution buttons are independent siblings.
     expect(props.onExecute).not.toHaveBeenCalled();
     expect(props.onRequestDialog).not.toHaveBeenCalled();
 
@@ -200,11 +215,11 @@ describe('CommandTile', () => {
 
   it('applies the per-variant hover border and falls back to the default for an unknown variant', () => {
     const danger = renderTile({ def: makeDef({ variant: 'danger' }) });
-    expect(danger.tile().className).toContain('hover:border-neon-red/30');
+    expect(danger.tile().className).toContain('hover:border-[var(--semantic-danger-border)]');
     danger.unmount();
 
     const success = renderTile({ def: makeDef({ variant: 'success' }) });
-    expect(success.tile().className).toContain('hover:border-neon-green/30');
+    expect(success.tile().className).toContain('hover:border-[var(--semantic-success-border)]');
     success.unmount();
 
     // An unexpected runtime variant (e.g. from an API-driven command list)
@@ -212,6 +227,104 @@ describe('CommandTile', () => {
     const unknown = renderTile({
       def: makeDef({ variant: 'plaid' as unknown as CommandDef['variant'] }),
     });
-    expect(unknown.tile().className).toContain('hover:border-neon-cyan/30');
+    expect(unknown.tile().className).toContain('hover:border-[var(--semantic-info-border)]');
+  });
+
+  it('uses a noninteractive frame with two named sibling buttons and no nested interactive descendants', () => {
+    const { tile, favorite, props } = renderTile();
+    const command = tile();
+    const frame = command.parentElement!;
+
+    expect(favorite().parentElement).toBe(frame);
+    expect(screen.getAllByRole('button')).toHaveLength(2);
+    expect(frame).not.toHaveAttribute('role');
+    expect(frame).not.toHaveAttribute('tabindex');
+    expect(frame).not.toHaveAttribute('aria-disabled');
+    for (const target of [command, favorite()]) {
+      expect(target.querySelector('button, a, input, select, textarea, [role="button"], [tabindex]')).toBeNull();
+      expect(target).toHaveAttribute('type', 'button');
+      expect(target).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2');
+    }
+    expect(command).toHaveClass('mt-11', 'min-h-11');
+    expect(favorite()).toHaveClass('min-h-11', 'min-w-11');
+    fireEvent.click(frame);
+    expect(props.onExecute).not.toHaveBeenCalled();
+    expect(props.onRequestDialog).not.toHaveBeenCalled();
+    expect(props.onToggleFavorite).not.toHaveBeenCalled();
+  });
+
+  it('preserves command-first Tab order, reverse navigation, and focus through favorite/status rerenders', async () => {
+    const user = userEvent.setup();
+    const { tile, favorite, rerender, props } = renderTile();
+    const command = tile();
+    const fav = favorite();
+
+    await user.tab();
+    expect(command).toHaveFocus();
+    await user.tab();
+    expect(fav).toHaveFocus();
+    rerender(<CommandTile {...props} isFavorite lastStatus="✓ Sent" />);
+    expect(favorite()).toBe(fav);
+    expect(fav).toHaveFocus();
+    expect(fav).toHaveAttribute('aria-pressed', 'true');
+    await user.tab({ shift: true });
+    expect(tile()).toBe(command);
+    expect(command).toHaveFocus();
+    expect(props.onExecute).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { loading: true, disabled: false, dangerous: false },
+    { loading: true, disabled: false, dangerous: true },
+    { loading: false, disabled: true, dangerous: false },
+    { loading: false, disabled: true, dangerous: true },
+    { loading: true, disabled: true, dangerous: true },
+  ])('blocks execution/confirmation but keeps favorite keyboard-ready when loading=$loading disabled=$disabled dangerous=$dangerous', async ({ loading, disabled, dangerous }) => {
+    const user = userEvent.setup();
+    const { tile, favorite, props } = renderTile({
+      loading,
+      disabled,
+      disabledReason: 'Live vehicle state required',
+      def: makeDef({ dangerous }),
+    });
+
+    expect(tile()).toBeDisabled();
+    expect(tile()).toHaveAttribute('aria-disabled', 'true');
+    expect(tile()).toHaveAttribute('tabindex', '-1');
+    if (disabled) {
+      expect(tile()).toHaveAttribute('title', 'Live vehicle state required');
+      expect(tile().parentElement).toHaveAttribute('title', 'Live vehicle state required');
+    }
+    if (loading) expect(tile()).toHaveAttribute('aria-busy', 'true');
+    else expect(tile()).not.toHaveAttribute('aria-busy');
+    fireEvent.click(tile());
+    fireEvent.keyDown(tile(), { key: 'Enter' });
+    fireEvent.keyDown(tile(), { key: ' ' });
+    expect(favorite()).toBeEnabled();
+    await user.tab();
+    expect(favorite()).toHaveFocus();
+    await user.keyboard('{Enter} ');
+    expect(props.onToggleFavorite).toHaveBeenCalledTimes(2);
+    expect(props.onExecute).not.toHaveBeenCalled();
+    expect(props.onRequestDialog).not.toHaveBeenCalled();
+  });
+
+  it('re-enables the same command target when readiness recovers, without firing until activated', async () => {
+    const user = userEvent.setup();
+    const { tile, favorite, rerender, props } = renderTile({ disabled: true });
+    const command = tile();
+    await user.tab();
+    expect(favorite()).toHaveFocus();
+
+    rerender(<CommandTile {...props} disabled={false} />);
+    expect(tile()).toBe(command);
+    expect(command).toBeEnabled();
+    expect(command).not.toHaveAttribute('aria-disabled');
+    expect(favorite()).toHaveFocus();
+    expect(props.onExecute).not.toHaveBeenCalled();
+    await user.tab({ shift: true });
+    expect(command).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(props.onExecute).toHaveBeenCalledTimes(1);
   });
 });

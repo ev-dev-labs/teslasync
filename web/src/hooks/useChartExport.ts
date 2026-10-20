@@ -16,8 +16,9 @@ import { useCallback, useRef, useState } from 'react';
  *
  * SVG export
  * ----------
- * Serializes the FIRST `<svg>` element discovered inside the capture
- * target. Recharts produces a single SVG per chart so this matches the
+ * Serializes the first capture-eligible `<svg>`, preferring a Recharts
+ * plot over title icons and excluding ignored controls. Recharts produces
+ * a single SVG per chart so this matches the
  * visible visualisation 1:1, but it intentionally drops any HTML overlays
  * (custom legends, footers) — those are still preserved in the PNG /
  * clipboard paths. Callers that render meaningful HTML around the SVG
@@ -117,7 +118,10 @@ function downloadBlob(blob: Blob, filename: string): void {
 }
 
 function serializeFirstChildSVG(root: HTMLElement): string | null {
-  const svg = root.querySelector('svg');
+  const candidates = Array.from(root.querySelectorAll<SVGSVGElement>('svg'))
+    .filter(candidate => !candidate.closest('[data-html2canvas-ignore="true"]'));
+  const svg = candidates.find(candidate => candidate.classList.contains('recharts-surface'))
+    ?? candidates[0];
   if (!svg) return null;
   const clone = svg.cloneNode(true) as SVGSVGElement;
   if (!clone.getAttribute('xmlns')) {

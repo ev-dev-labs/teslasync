@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -13,14 +15,10 @@ import { useTimezone } from '@/lib/timezone';
 import type { Drive } from '@/types/driving';
 
 import {
-  RangeBufferAccounting,
   RangeBufferDestinationDirectory,
   RangeBufferDistanceProfile,
   RangeBufferDistribution,
-  RangeBufferDriveContext,
-  RangeBufferEvidenceSupport,
   RangeBufferHourProfile,
-  RangeBufferKpiBand,
   RangeBufferLowArrivals,
   RangeBufferMethodology,
   RangeBufferMonthTrend,
@@ -28,6 +26,7 @@ import {
   RangeBufferWeekdayProfile,
   type RangeBufferQueryState,
 } from '../components/range-buffer';
+import { RangeBufferSummaryBrief } from '../components/operationalbrief-n-z/RangeBufferSummaryBrief';
 import {
   analyzeRangeBuffer,
   DEFAULT_RANGE_BUFFER_THRESHOLD_PCT,
@@ -55,12 +54,13 @@ export default function RangeBufferPage() {
     end: endInstantExclusive,
     limit: DRIVE_WINDOW_LIMIT,
   });
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const [nowMs] = useState(() => Date.now());
   const [thresholdPct, setThresholdPct] = useState(
     DEFAULT_RANGE_BUFFER_THRESHOLD_PCT,
   );
   const hasCachedData =
-    vehicleId != null && drivesQuery.data !== undefined;
+    vehicleId != null && drivesState.hasData;
   const isResolved =
     vehicleId != null && (hasCachedData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
@@ -78,126 +78,141 @@ export default function RangeBufferPage() {
   const state: RangeBufferQueryState = {
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && !hasCachedData && drivesQuery.isLoading,
+      vehicleId != null && drivesState.status === 'initial' && drivesQuery.isLoading,
     isResolved,
     error:
-      drivesQuery.isError && !hasCachedData
-        ? drivesQuery.error
-        : null,
+      drivesState.fatalError,
     refreshError:
-      drivesQuery.isError && hasCachedData
-        ? drivesQuery.error
-        : null,
+      drivesState.refreshError,
     onRetry: () => void drivesQuery.refetch(),
   };
   const locale = i18n.language;
+  const summaryProps = {
+    result, state, locale, thresholdPct, onThresholdChange: setThresholdPct,
+    formatDistance, scope: `${start} — ${end} (${result.timeZone})`,
+  };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('rangeBuffer.title', 'Range Buffer')}
+      query={drivesQuery}
       subtitle={t(
         'rangeBuffer.subtitle',
         'Observed arrival SoC distribution, context, and evidence coverage in the vehicle timezone',
       )}
     >
+      {drivesState.isRefreshBlocked && (
+        <StaleRefreshWarning state={drivesState} label={t('rangeBuffer.title', 'Range Buffer')} />
+      )}
       <FadeIn>
-        <RangeBufferKpiBand
-          result={result}
-          state={state}
-          locale={locale}
-          thresholdPct={thresholdPct}
-          onThresholdChange={setThresholdPct}
-        />
+        <SectionErrorBoundary name="RangeBufferSummaryBrief-arrivals">
+          <RangeBufferSummaryBrief kind="arrivals" {...summaryProps} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.05}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <RangeBufferDistribution result={result} state={state} />
-          <RangeBufferMonthTrend
-            result={result}
-            state={state}
-            locale={locale}
-          />
+          <SectionErrorBoundary name="RangeBufferDistribution">
+            <RangeBufferDistribution result={result} state={state} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="RangeBufferMonthTrend">
+            <RangeBufferMonthTrend
+              result={result}
+              state={state}
+              locale={locale}
+            />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
 
       <FadeIn delay={0.1}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <RangeBufferThresholdSensitivity
-            result={result}
-            state={state}
-          />
-          <RangeBufferWeekdayProfile
-            result={result}
-            state={state}
-            timeZone={result.timeZone}
-          />
+          <SectionErrorBoundary name="RangeBufferThresholdSensitivity">
+            <RangeBufferThresholdSensitivity
+              result={result}
+              state={state}
+            />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="RangeBufferWeekdayProfile">
+            <RangeBufferWeekdayProfile
+              result={result}
+              state={state}
+              timeZone={result.timeZone}
+            />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
 
       <FadeIn delay={0.15}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <RangeBufferHourProfile
-            result={result}
-            state={state}
-            timeZone={result.timeZone}
-          />
-          <RangeBufferDistanceProfile
-            result={result}
-            state={state}
-            formatDistance={formatDistance}
-          />
+          <SectionErrorBoundary name="RangeBufferHourProfile">
+            <RangeBufferHourProfile
+              result={result}
+              state={state}
+              timeZone={result.timeZone}
+            />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="RangeBufferDistanceProfile">
+            <RangeBufferDistanceProfile
+              result={result}
+              state={state}
+              formatDistance={formatDistance}
+            />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <RangeBufferDriveContext
-          result={result}
-          state={state}
-          locale={locale}
-          formatDistance={formatDistance}
-        />
+        <SectionErrorBoundary name="RangeBufferSummaryBrief-context">
+          <RangeBufferSummaryBrief kind="context" {...summaryProps} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.25}>
-        <RangeBufferDestinationDirectory
-          result={result}
-          state={state}
-          locale={locale}
-          timeZone={result.timeZone}
-          formatDistance={formatDistance}
-        />
+        <SectionErrorBoundary name="RangeBufferDestinationDirectory">
+          <RangeBufferDestinationDirectory
+            result={result}
+            state={state}
+            locale={locale}
+            timeZone={result.timeZone}
+            formatDistance={formatDistance}
+          />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.3}>
-        <RangeBufferLowArrivals
-          result={result}
-          state={state}
-          locale={locale}
-          timeZone={result.timeZone}
-          formatDistance={formatDistance}
-        />
+        <SectionErrorBoundary name="RangeBufferLowArrivals">
+          <RangeBufferLowArrivals
+            result={result}
+            state={state}
+            locale={locale}
+            timeZone={result.timeZone}
+            formatDistance={formatDistance}
+          />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.35}>
-        <RangeBufferEvidenceSupport
-          result={result}
-          state={state}
-          locale={locale}
-        />
+        <SectionErrorBoundary name="RangeBufferSummaryBrief-support">
+          <RangeBufferSummaryBrief kind="support" {...summaryProps} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.4}>
-        <RangeBufferAccounting result={result} state={state} />
+        <SectionErrorBoundary name="RangeBufferSummaryBrief-accounting">
+          <RangeBufferSummaryBrief kind="accounting" {...summaryProps} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.45}>
-        <RangeBufferMethodology
-          result={result}
-          startDate={start}
-          endDate={end}
-        />
+        <SectionErrorBoundary name="RangeBufferMethodology">
+          <RangeBufferMethodology
+            result={result}
+            startDate={start}
+            endDate={end}
+          />
+        </SectionErrorBoundary>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -56,7 +56,7 @@ export function PowerOutputChart({ data, loading = false }: PowerOutputChartProp
       <ChartContainer
         title={t('drivetrain.powerOutput', 'Power Output History')}
         subtitle={t('drivetrain.powerOutputSub', 'Peak and regen power per drive over time')}
-        ariaLabel={t('drivetrain.powerOutput.aria', 'Per-drive peak and regen motor power output history area chart')}
+        ariaLabel={t('drivetrain.powerOutputAria', 'Per-drive peak and regen motor power output history area chart')}
         chartKey="drivetrain-power-output"
         loading={loading}
         empty={empty}

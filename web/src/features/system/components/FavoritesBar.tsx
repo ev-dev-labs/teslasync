@@ -28,19 +28,19 @@ export function FavoritesBar({ favorites, commands, renderTile }: FavoritesBarPr
 
   if (favCmds.length === 0) return null;
 
-  const heading = t('commands.cat.quickActions', 'Quick Actions');
+  const heading = t('commands.cat.quickActions', 'Quick actions');
 
   return (
     <FadeIn>
       <section aria-label={heading}>
         <div className="flex items-center gap-2 mb-2">
           <Star className="h-4 w-4 text-neon-amber fill-neon-amber" aria-hidden="true" />
-          <Text size="xs" weight="medium" className="uppercase tracking-wider text-[var(--text-secondary)]">
+          <Text size="xs" weight="medium" className="tracking-wider text-[var(--text-secondary)]">
             {heading}
           </Text>
           <Text size="2xs" color="muted">({favCmds.length})</Text>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
           {favCmds.map(cmd => renderTile(cmd))}
         </div>
       </section>

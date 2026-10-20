@@ -1,13 +1,19 @@
 import { Bar, BarChart, ChartContainer, ChartLegend, ChartTooltip, ResponsiveContainer, Tooltip, XAxis, YAxis, axisTick, chartGrid, CHART_COLORS } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useTranslation } from 'react-i18next';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 import { JourneyFragmentationSectionProps } from './_types';
+import { PendingEvidence } from './PendingEvidence';
 
-export function ThresholdSensitivityChart({ result, loading = false }: JourneyFragmentationSectionProps) {
+export function ThresholdSensitivityChart({ result, state, loading = false }: JourneyFragmentationSectionProps) {
   const { t } = useTranslation();
+  const { fmtInt } = useNumberFormatting();
   const data = result.sensitivity.map((point) => ({
-    threshold: `${point.thresholdMin} min`,
+    threshold: t('journeyFragmentation.gapMinutes', '{{count}} min', {
+      count: point.thresholdMin,
+      replace: { count: fmtInt(point.thresholdMin) },
+    }),
     journeys: point.journeyCount,
     linkedPairs: point.linkedPairs,
   }));
@@ -18,8 +24,8 @@ export function ThresholdSensitivityChart({ result, loading = false }: JourneyFr
       ariaLabel={t('journeyFragmentation.sensitivity.aria', 'Bar chart comparing observed journeys and linked pairs across fixed parking thresholds')}
       ariaDescription={t('journeyFragmentation.sensitivity.description', 'This comparison changes only the maximum parking gap; it does not expand the returned history window.')}
       loading={loading}
-      empty={!loading && result.includedDrives === 0}
-      data={data}
+      empty={(!state || state.hasData) && !loading && result.includedDrives === 0}
+      data={state && !state.hasData ? undefined : data}
       dataColumns={[
         { key: 'threshold', label: t('journeyFragmentation.sensitivity.threshold', 'Threshold') },
         { key: 'journeys', label: t('journeyFragmentation.sensitivity.journeys', 'Journeys') },
@@ -29,7 +35,7 @@ export function ThresholdSensitivityChart({ result, loading = false }: JourneyFr
       height={280}
     >
       {({ hiddenSeries }) => (
-        result.includedDrives === 0 ? (
+        state && !state.hasData ? <PendingEvidence state={state} loading={loading} /> : result.includedDrives === 0 ? (
           <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('journeyFragmentation.chart.noData', 'No included journey data is available yet.')} />
         ) : (
           <ResponsiveContainer width="100%" height="100%">

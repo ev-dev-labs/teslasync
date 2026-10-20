@@ -135,13 +135,13 @@ describe('ErrorState', () => {
     const region = screen.getByRole('alert')
     expect(region).toHaveClass('mt-8', 'max-w-md')
     // Base chrome is preserved alongside the override.
-    expect(region).toHaveClass('rounded-xl')
+    expect(region).toHaveClass('rounded-panel')
   })
 
   it.each([
-    ['danger', 'border-rose-500/20', 'bg-rose-500/5'],
-    ['warning', 'border-amber-500/25', 'bg-amber-500/5'],
-    ['info', 'border-cyan-500/20', 'bg-cyan-500/5'],
+    ['danger', 'border-[var(--semantic-danger-border)]', 'bg-[var(--semantic-danger-bg)]'],
+    ['warning', 'border-[var(--semantic-warning-border)]', 'bg-[var(--semantic-warning-bg)]'],
+    ['info', 'border-[var(--semantic-info-border)]', 'bg-[var(--semantic-info-bg)]'],
     ['neutral', 'border-[var(--border-default)]', 'bg-[var(--surface-2)]'],
   ] as const)('applies the %s semantic tone', (tone, borderClass, backgroundClass) => {
     render(
@@ -154,5 +154,75 @@ describe('ErrorState', () => {
     )
 
     expect(screen.getByRole('alert')).toHaveClass(borderClass, backgroundClass)
+  })
+
+  it('keeps long copy readable and lets the action wrap below it on mobile', () => {
+    const title = 'A long localized title '.repeat(8)
+    const message = 'UnbrokenIdentifier'.repeat(20)
+    render(
+      <ErrorState
+        Icon={Server}
+        title={title}
+        message={message}
+        action={<button type="button">Retry this unusually long localized request</button>}
+      />,
+    )
+
+    expect(screen.getByText(title.trim())).toHaveClass('text-sm', 'text-[var(--text-primary)]')
+    expect(screen.getByText(message)).toHaveClass('text-sm', 'text-[var(--text-secondary)]')
+    expect(screen.getByText(message).parentElement).toHaveClass('min-w-0', 'break-words')
+    expect(screen.getByRole('button').parentElement).toHaveClass(
+      'w-full',
+      'md:w-auto',
+      '[&_button]:min-h-11',
+      '[&_button]:min-w-11',
+      '[&_button]:whitespace-normal',
+    )
+    expect(screen.getByRole('alert')).not.toHaveClass('backdrop-blur-sm', 'overflow-hidden')
+  })
+
+  it('preserves caller footer disclosure and focusable help without adding live regions', () => {
+    render(
+      <ErrorState
+        Icon={Server}
+        title="Server error"
+        message="Try again."
+        footer={
+          <details>
+            <summary>Technical details</summary>
+            <a href="/help">Help with this error</a>
+          </details>
+        }
+      />,
+    )
+
+    const summary = screen.getByText('Technical details')
+    fireEvent.click(summary)
+    expect(summary.closest('details')).toBeInTheDocument()
+    const help = screen.getByRole('link', { name: 'Help with this error' })
+    expect(help).toHaveAttribute('href', '/help')
+    help.focus()
+    expect(help).toHaveFocus()
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+  })
+
+  it('retains disabled retry semantics and never invokes its callback', () => {
+    const onRetry = vi.fn()
+    render(
+      <ErrorState
+        Icon={WifiOff}
+        role="status"
+        tone="warning"
+        title="Offline"
+        message="Retry when online."
+        action={<button type="button" disabled onClick={onRetry}>Retry when online</button>}
+      />,
+    )
+
+    const retry = screen.getByRole('button', { name: 'Retry when online' })
+    expect(retry).toBeDisabled()
+    fireEvent.click(retry)
+    expect(onRetry).not.toHaveBeenCalled()
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
   })
 })

@@ -12,17 +12,24 @@ export interface EventFeedItem {
   timestamp: string;
   color: string;
   severity?: 'info' | 'warning' | 'critical';
-  /** Optional navigation target. When set, the entire row becomes a `<Link>`
-   *  to this href for drill-through navigation. */
+  /** Navigation target; rich slots stay outside the title link. */
   href?: string;
+  badges?: ReactNode;
+  metadata?: ReactNode;
+  actions?: ReactNode;
+  wrap?: boolean;
+  /** Already formatted by the source's existing formatter; sorting still uses timestamp. */
+  timeLabel?: string;
 }
 
 interface WidgetEventFeedProps {
-  items: EventFeedItem[];
+  items: readonly EventFeedItem[];
   maxItems?: number;
   compact?: boolean;
   emptyMessage?: string;
   emptyIcon?: ReactNode;
+  /** Source order is opt-in; the default remains most-recent-first. */
+  order?: 'newest-first' | 'source';
 }
 
 /** Universal placeholder rendered for an unparseable timestamp. */
@@ -44,6 +51,7 @@ export function WidgetEventFeed({
   compact = false,
   emptyMessage,
   emptyIcon,
+  order = 'newest-first',
 }: WidgetEventFeedProps) {
   const { t } = useTranslation('dashboard');
   const { formatDateTime } = useDateFormat();
@@ -53,6 +61,7 @@ export function WidgetEventFeed({
       const ms = new Date(isoStr).getTime();
       if (Number.isNaN(ms)) return TIME_FALLBACK;
       const diffMin = Math.floor((Date.now() - ms) / 60_000);
+      // relative-time: when the feed event happened
       if (diffMin < 1) return t('widget.eventFeed.justNow', 'Just now');
       if (diffMin < 60)
         return t('widget.eventFeed.minutesAgo', '{{minutes}}m ago', { minutes: diffMin });
@@ -67,16 +76,19 @@ export function WidgetEventFeed({
   const limit = maxItems ?? (compact ? 3 : 10);
 
   const sorted = useMemo(
-    () =>
-      [...(items ?? [])]
-        .sort((a, b) => {
+    () => {
+      const rows = [...(items ?? [])];
+      if (order === 'newest-first') {
+        rows.sort((a, b) => {
           const ea = toEpoch(a.timestamp);
           const eb = toEpoch(b.timestamp);
           if (ea === eb) return 0;
           return ea > eb ? -1 : 1;
-        })
-        .slice(0, limit),
-    [items, limit],
+        });
+      }
+      return rows.slice(0, limit);
+    },
+    [items, limit, order],
   );
 
   if (sorted.length === 0) {
@@ -89,11 +101,13 @@ export function WidgetEventFeed({
     );
   }
 
+  // Rows intentionally bleed ±4px (-mx-1) for their hover background;
+  // overflow-x-clip keeps the feed from scrolling horizontally.
   return (
     <div
       role="list"
       aria-label={t('widget.eventFeed.label', 'Event feed')}
-      className="space-y-0 overflow-y-auto h-full"
+      className="space-y-0 overflow-x-clip overflow-y-auto h-full"
     >
       {sorted.map((item, i) => (
         <div role="listitem" key={item.id}>
@@ -101,10 +115,14 @@ export function WidgetEventFeed({
             icon={item.icon}
             title={item.title}
             subtitle={item.subtitle}
-            time={formatRelativeTime(item.timestamp)}
+            time={item.timeLabel ?? formatRelativeTime(item.timestamp)}
             color={item.color}
             isLast={i === sorted.length - 1}
             href={item.href}
+            badges={item.badges}
+            metadata={item.metadata}
+            actions={item.actions}
+            wrap={item.wrap}
           />
         </div>
       ))}

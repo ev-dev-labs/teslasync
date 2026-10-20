@@ -21,7 +21,11 @@ import { useState, useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, MailOpen, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui';
+import { Button, Text, Caption } from '@/components/ui';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { typography } from '@/lib/tokens';
 import { useGroupMembers, useBulkMarkRead, type NotificationFilters } from '@/api/hooks/useNotifications';
 import { useToast } from '@/components/feedback/Toast';
 import type { NotificationLog, NotificationLogGroup, AlertRule, Vehicle } from '@/api/types';
@@ -72,6 +76,7 @@ export function NotificationGroupRow({
   archived,
 }: NotificationGroupRowProps) {
   const { t } = useTranslation();
+  const { fmtInt } = useNumberFormatting();
   const toast = useToast();
   const bulkMarkRead = useBulkMarkRead();
   const [expanded, setExpanded] = useState(false);
@@ -83,11 +88,10 @@ export function NotificationGroupRow({
   // Fetch members lazily on expand. Reuse parent filters so the expanded
   // list mirrors the same window — anything the group's `count` did NOT
   // include won't surface here either.
-  const {
-    data: members = [],
-    isLoading: membersLoading,
-    error: membersError,
-  } = useGroupMembers(group.group_key ?? null, filters, { enabled: expanded && !isSingleton });
+  const membersQuery = useGroupMembers(group.group_key ?? null, filters, { enabled: expanded && !isSingleton });
+  const membersState = useDataState(membersQuery, { provenance: 'historical' });
+  const members = membersQuery.data ?? [];
+  const membersLabel = t('notifications.group.membersLabel', 'Thread members');
 
   // Latest member is what the parent renders by default; the expanded list
   // omits it to avoid duplicating the same row above and below the chevron.
@@ -105,8 +109,8 @@ export function NotificationGroupRow({
       const res = await bulkMarkRead.mutateAsync({ group_key: gk });
       toast.toast({
         type: 'success',
-        title: t('notifications.group.markReadSuccess', 'Marked {{count}} thread members as read', {
-          count: res.updated,
+        title: t('notifications.group.markReadSuccessFormatted', 'Marked {{formattedCount}} thread members as read', {
+          count: res.updated, formattedCount: fmtInt(res.updated),
         }),
         duration: 4000,
       });
@@ -116,7 +120,7 @@ export function NotificationGroupRow({
         e instanceof Error ? e.message : undefined,
       );
     }
-  }, [bulkMarkRead, group.group_key, toast, t]);
+  }, [bulkMarkRead, group.group_key, toast, t, fmtInt]);
 
   // Selection is per-member (a group has many ids; the visible row IS one
   // member). When the parent doesn't wire a handler we fall back to a
@@ -136,7 +140,7 @@ export function NotificationGroupRow({
 
   const expandLabel = expanded
     ? t('notifications.group.collapse', 'Hide similar')
-    : t('notifications.group.expand', 'Show {{count}} similar', { count: extraCount });
+    : t('notifications.group.expandFormatted', 'Show {{formattedCount}} similar', { count: extraCount, formattedCount: fmtInt(extraCount) });
 
   return (
     <div className="rounded-lg" data-testid="notification-group-row">
@@ -166,47 +170,50 @@ export function NotificationGroupRow({
                   aria-controls={regionId}
                   aria-label={expandLabel}
                   className={cn(
-                    'h-auto gap-1 rounded-full border px-2 py-0.5 text-xs',
-                    'border-cyan-400/30 bg-cyan-400/10 text-cyan-200',
-                    'hover:bg-cyan-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+                    'h-auto min-h-11 md:min-h-9 gap-1 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-0.5',
+                    typography.role.caption,
                   )}
                   data-testid="group-expand-toggle"
                 >
                   {expanded ? (
-                    <ChevronDown className="h-3 w-3" />
+                    <ChevronDown className="h-3 w-3" aria-hidden="true" />
                   ) : (
-                    <ChevronRight className="h-3 w-3" />
+                    <ChevronRight className="h-3 w-3" aria-hidden="true" />
                   )}
                   <span>
-                    {t('notifications.group.similar', '+{{count}} similar', {
+                    {t('notifications.group.similarFormatted', '+{{formattedCount}} similar', {
                       count: extraCount,
+                      formattedCount: fmtInt(extraCount),
                     })}
                   </span>
                 </Button>
               )}
               {group.unread_count > 0 && (
-                <span
-                  className="inline-flex items-center rounded-full bg-amber-400/10 px-2 py-0.5 text-xs text-amber-300"
+                <Caption as="span"
+                  className="inline-flex items-center rounded-full bg-[var(--surface-2)] px-2 py-0.5 tabular-nums"
                   data-testid="group-unread-count"
                 >
-                  {group.unread_count}
-                </span>
+                  {t('notifications.group.unreadCount', '{{formattedCount}} unread thread members', {
+                    count: group.unread_count, formattedCount: fmtInt(group.unread_count),
+                  })}
+                </Caption>
               )}
               {group.vehicle_ids.length > 0 && (
-                <span className="text-xs text-[var(--text-muted)]" data-testid="group-vehicle-count">
-                  {t('notifications.group.vehicleAffected', '{{count}} vehicles affected', {
+                <Caption as="span" data-testid="group-vehicle-count">
+                  {t('notifications.group.vehicleAffectedFormatted', '{{formattedCount}} vehicles affected', {
                     count: group.vehicle_ids.length,
+                    formattedCount: fmtInt(group.vehicle_ids.length),
                   })}
-                </span>
+                </Caption>
               )}
               {group.unread_count > 0 && !archived && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  icon={<MailOpen className="h-3.5 w-3.5" />}
+                  icon={<MailOpen className="h-3.5 w-3.5" aria-hidden="true" />}
                   onClick={handleMarkGroupRead}
                   disabled={bulkMarkRead.isPending}
-                  className="ml-auto text-xs"
+                  className="ms-auto min-h-11 md:min-h-9"
                   aria-label={t('notifications.group.markRead', 'Mark group read')}
                   data-testid="group-mark-read"
                 >
@@ -223,34 +230,47 @@ export function NotificationGroupRow({
           id={regionId}
           role="region"
           aria-label={t('notifications.group.collapse', 'Hide similar')}
-          className="ml-4 mt-1 space-y-1 border-l-2 border-white/[0.06] pl-3"
+          className="ms-4 mt-1 space-y-1 border-s-2 border-[var(--border-subtle)] ps-3"
           data-testid="group-members-region"
         >
-          {membersLoading && (
+          <StaleRefreshWarning state={membersState} label={membersLabel} />
+          {membersState.status === 'initial' && (
             <div
-              className="flex items-center gap-2 px-2 py-2 text-xs text-[var(--text-muted)]"
+              className="flex items-center gap-2 px-2 py-2"
               role="status"
               aria-live="polite"
             >
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>{t('notifications.group.loadingMembers', 'Loading thread members…')}</span>
+              {membersQuery.isFetching && <Loader2 className="h-3 w-3" aria-hidden="true" />}
+              <Text variant="bodySm">
+                {membersState.isRefreshBlocked
+                  ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+                  : membersQuery.isFetching
+                    ? t('notifications.group.loadingMembers', 'Loading thread members…')
+                    : t('common.unknown', 'Unknown')}
+              </Text>
             </div>
           )}
-          {!membersLoading && membersError && (
+          {membersState.fatalError && (
             <div
-              className="px-2 py-2 text-xs text-rose-300"
+              className="space-y-2 px-2 py-2"
               role="alert"
               data-testid="group-members-error"
             >
-              {t('notifications.group.membersError', 'Could not load thread members')}
+              <Text variant="bodySm">{t('notifications.group.membersError', 'Could not load thread members')}</Text>
+              <Button type="button" variant="secondary" size="sm" className="min-h-11 md:min-h-9"
+                onClick={() => { void membersQuery.refetch(); }}>
+                {t('error.retry', 'Retry')}
+              </Button>
             </div>
           )}
-          {!membersLoading && !membersError && otherMembers.length === 0 && (
-            <div className="px-2 py-2 text-xs text-[var(--text-muted)]">
-              {t('notifications.group.noMembers', 'No thread members found')}
+          {membersState.hasData && !membersState.refreshError && otherMembers.length === 0 && (
+            <div className="px-2 py-2">
+              <Text variant="bodySm">
+                {t('notifications.group.noMembers', 'No thread members found')}
+              </Text>
             </div>
           )}
-          {!membersLoading && !membersError && otherMembers.map((m) => {
+          {otherMembers.map((m) => {
             const rule = m.alert_id != null ? ruleMap[m.alert_id] : undefined;
             const vehicle = rule?.vehicle_id != null ? vehicleMap[rule.vehicle_id] : undefined;
             return (

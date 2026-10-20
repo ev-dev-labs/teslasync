@@ -10,9 +10,9 @@
  * `navSearchKeywords` — that drive navigation and command-palette search.
  *
  * Because the shell wires in ~50 side-effecting children and hooks, we mock
- * every leaf/child module and every ambient hook so the tests exercise
- * *Layout's own* orchestration logic rather than its dependencies. Network
- * is mocked at the `@/api/client` boundary; nothing hits a real endpoint.
+ * most leaf/child modules and ambient hooks so the tests exercise Layout's
+ * orchestration. Logo and NotificationBellPopover retain their actual DOM.
+ * Network is mocked at the `@/api/client` boundary; nothing hits a real endpoint.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -25,7 +25,7 @@ import {
   cleanup,
   act,
 } from '@testing-library/react'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // ── Shared, hoisted mutable state + spies ─────────────────────────────
@@ -40,7 +40,7 @@ const H = vi.hoisted(() => {
   const STALE = { stale_charging: [{ id: 1 }], stale_drives: [{ id: 1 }, { id: 2 }] }
   const REPAIR_STATS = { open: 1, in_review: 2 }
 
-  const defaultReq = (url: unknown) => {
+  const defaultReq = (url: unknown, _options?: import('@/api/client').ApiRequestOptions) => {
     if (typeof url === 'string') {
       if (url.startsWith('/alerts')) return Promise.resolve(ALERTS)
       if (url === '/vehicles') return Promise.resolve(VEHICLES)
@@ -68,6 +68,7 @@ const H = vi.hoisted(() => {
       warning: vi.fn(),
     },
     realtime: vi.fn(),
+    notificationListener: vi.fn(),
   }
 })
 
@@ -218,7 +219,9 @@ vi.mock('@/hooks/usePresentationMode', () => ({
 vi.mock('../../hooks/useRealtimeEvents', () => ({
   useRealtimeEvents: (opts: unknown) => H.realtime(opts),
 }))
-vi.mock('../../hooks/useNotificationListener', () => ({ useNotificationListener: vi.fn() }))
+vi.mock('../../hooks/useNotificationListener', () => ({
+  useNotificationListener: () => H.notificationListener(),
+}))
 vi.mock('../../hooks/useTitleBadge', () => ({ useTitleBadge: vi.fn() }))
 vi.mock('../../hooks/useFaviconBadge', () => ({ useFaviconBadge: vi.fn() }))
 vi.mock('../../hooks/useDynamicAppIcon', () => ({ useDynamicAppIcon: vi.fn() }))
@@ -227,7 +230,7 @@ vi.mock('../feedback/Toast', () => ({ useToast: () => H.toast }))
 
 // ── API boundary ──────────────────────────────────────────────────────
 vi.mock('@/api/client', () => ({
-  request: (...args: unknown[]) => H.request(...args),
+  request: (...args: Parameters<typeof H.defaultReq>) => H.request(...args),
   ApiError: class ApiError extends Error {},
 }))
 vi.mock('@/api/hooks/useAuthMode', () => ({
@@ -273,7 +276,7 @@ vi.mock('../feedback/InstallPrompt', () => ({ default: () => <div data-testid="i
 vi.mock('../feedback/OfflineBanner', () => ({ OfflineBanner: () => null }))
 vi.mock('../feedback/NewVersionBanner', () => ({ NewVersionBanner: () => null }))
 vi.mock('../feedback/TeslaReauthBanner', () => ({ TeslaReauthBanner: () => null }))
-vi.mock('../feedback/RateLimitBanner', () => ({ RateLimitBanner: () => null }))
+vi.mock('../feedback/RateLimitBanner', () => ({ RateLimitBanner: () => <div data-testid="rate-limit-banner-stub" /> }))
 vi.mock('../feedback/MaintenanceBanner', () => ({ MaintenanceBanner: () => null }))
 vi.mock('../feedback/ImpersonationBanner', () => ({ ImpersonationBanner: () => null }))
 vi.mock('../feedback/TopProgress', () => ({ TopProgress: () => null }))
@@ -362,7 +365,14 @@ vi.mock('./WorkspaceContextControl', () => ({
   WorkspaceContextControl: ({ hidden = false }: { hidden?: boolean }) =>
     hidden ? null : <div data-testid="workspace-context-control" />,
 }))
-vi.mock('./NotificationBellPopover', () => ({ NotificationBellPopover: () => null }))
+vi.mock('@/hooks/useMediaQuery', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useMediaQuery')>('@/hooks/useMediaQuery')
+  return {
+    ...actual,
+    // Keep the real bell DOM without adding a listener to the shell's aliased media fixture.
+    useIsMobile: () => window.matchMedia('(max-width: 640px)').matches,
+  }
+})
 vi.mock('./sidebar/NavSectionHeader', () => ({
   NavSectionHeader: ({ label, action, id }: { label: string; action?: React.ReactNode; id?: string }) => (
     <div>
@@ -382,6 +392,7 @@ vi.mock('@/api/hooks/useNavigationPins', () => ({
 // ── @/components/ui: faithful Button + trivial ThemePicker ────────────
 vi.mock('@/components/ui/runtime', async () => {
   const { forwardRef } = await import('react')
+  const { default: Logo } = await import('@/components/ui/Logo')
   const Button = forwardRef<HTMLButtonElement, Record<string, unknown>>((props, ref) => {
     const { children, variant, size, loading, icon, ...rest } = props
     void variant
@@ -402,10 +413,13 @@ vi.mock('@/components/ui/runtime', async () => {
     ),
     CommandPalette: () => null,
     CommandPaletteTrigger: () => <div data-testid="cmd-trigger" />,
-    Logo: () => <div data-testid="logo" />,
+    Logo,
     ThemePicker: () => <div data-testid="theme-picker" />,
   }
 })
+vi.mock('../ui/CommandPaletteTrigger', () => ({
+  CommandPaletteTrigger: () => <div data-testid="cmd-trigger" />,
+}))
 vi.mock('@/components/ui/ThemePicker', () => ({
   ThemePicker: () => <div data-testid="theme-picker" />,
 }))
@@ -432,7 +446,7 @@ function LocationProbe() {
   return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>
 }
 
-function renderLayout(route = '/', opts: { defaultPins?: boolean } = {}) {
+function renderLayout(route = '/', opts: { defaultPins?: boolean; probe?: React.ReactNode } = {}) {
   // The default pinned rail duplicates section links (e.g. "My Vehicles"),
   // which breaks unique-name queries. Seed an empty pinned list so section
   // links stay unique; tests that need the shipped defaults opt back in.
@@ -445,8 +459,31 @@ function renderLayout(route = '/', opts: { defaultPins?: boolean } = {}) {
       <MemoryRouter initialEntries={[route]}>
         <Layout />
         <LocationProbe />
+        {opts.probe}
       </MemoryRouter>
     </QueryClientProvider>,
+  )
+}
+
+// The mobile drawer is deck-owned since the sidenav redesign: Layout owns the
+// trigger + appbar visibility and hands the open state to the deck through
+// `mobileBrowseOpen`, while every close path (item select, backdrop, sheet
+// dismiss, Escape) funnels back through the deck's `onItemSelect`. These
+// helpers read that seam contract from the mocked CommandDeck.
+const deckProps = () =>
+  H.sidebarProps.unified as unknown as {
+    mobileBrowseOpen?: boolean
+    panelOpen: boolean
+    onItemSelect: () => void
+    onPanelOpenChange: (open: boolean) => void
+  }
+
+function GoToDrives() {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => navigate('/drives')}>
+      go to drives
+    </button>
   )
 }
 
@@ -463,6 +500,7 @@ beforeEach(() => {
   H.request.mockReset()
   H.request.mockImplementation(H.defaultReq)
   H.realtime.mockReset()
+  H.notificationListener.mockReset()
   Object.values(H.toast).forEach((fn) => fn.mockReset())
 
   // jsdom gaps used by Layout's active-link scroll effect.
@@ -507,7 +545,7 @@ describe('navSections (data export)', () => {
 
   it('exposes the Action Center decision inbox from Home', () => {
     const actionCenter = navSections[0].items.find((i) => i.to === '/action-center')
-    expect(actionCenter?.label).toBe('Action Center')
+    expect(actionCenter?.label).toBe('Action center')
     expect(navSearchKeywords['/action-center']).toContain('decision inbox')
   })
 
@@ -516,7 +554,7 @@ describe('navSections (data export)', () => {
     const management = vehiclesSection?.items.find(
       (item) => item.to === '/vehicle-management',
     )
-    expect(management?.label).toBe('Vehicle Management')
+    expect(management?.label).toBe('Vehicle management')
     expect(navSearchKeywords['/vehicle-management']).toContain('enterprise roles')
   })
 
@@ -583,6 +621,7 @@ describe('Layout — unified sidebar wiring', () => {
       pinnedItems: Array<{ to: string }>
       recentItems: Array<{ to: string }>
       panelCollapsed: boolean
+      panelOpen: boolean
       onTogglePanelCollapsed: () => void
       onPanelOpenChange: (open: boolean) => void
     }
@@ -597,41 +636,97 @@ describe('Layout — unified sidebar wiring', () => {
     expect(screen.getAllByTestId('reauth-root')).toHaveLength(1)
   })
 
-  it('sizes the Command Deck rail to 240px expanded, 76px collapsed, with no resize handle', async () => {
+  it('sizes the Command Deck rail to 348px expanded, 76px collapsed, with no resize handle', async () => {
+    // Fresh default is open on desktop (the docked case this test sizes).
+    const previousWidth = window.innerWidth
+    window.innerWidth = 1440
     const first = renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    // The panel is open by default (no stored preference): 76px rail + 272px panel.
     expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
-      '--shell-sidebar-width': '240px',
+      '--shell-sidebar-width': '348px',
+    })
+    expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).toBeNull()
+    act(() => unifiedProps().onPanelOpenChange(false))
+    expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
+      '--shell-sidebar-width': '76px',
     })
     expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).toBeNull()
     first.unmount()
 
-    localStorage.setItem('teslasync-deck-rail-collapsed', '1')
+    localStorage.setItem('teslasync-deck-panel-open', '0')
     renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
     expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
       '--shell-sidebar-width': '76px',
     })
+    expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).toBeNull()
+    window.innerWidth = previousWidth
   })
 
-  it('shrinks the docked secondary rail to icons and persists that width preference', async () => {
+  it('restores the secondary panel open state after a reload', async () => {
+    // Fresh default is open on desktop (docked, harmless); covered for
+    // smaller viewports by 'keeps the panel closed on fresh tablet loads'.
+    const previousWidth = window.innerWidth
+    window.innerWidth = 1440
     const first = renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    // Open is the default: first paint shows the panel until the user closes it.
+    expect(unifiedProps().panelOpen).toBe(true)
+    act(() => unifiedProps().onPanelOpenChange(false))
+    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('0')
+    first.unmount()
+
+    const second = renderLayout('/')
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    expect(unifiedProps().panelOpen).toBe(false)
     act(() => unifiedProps().onPanelOpenChange(true))
+    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('1')
+    second.unmount()
+
+    renderLayout('/')
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    expect(unifiedProps().panelOpen).toBe(true)
+    window.innerWidth = previousWidth
+  })
+
+  it('keeps the panel closed on fresh tablet loads so the modal never covers first paint', async () => {
+    const previousWidth = window.innerWidth
+    window.innerWidth = 768
+    try {
+      renderLayout('/')
+      expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+      expect(unifiedProps().panelOpen).toBe(false)
+      // An explicit stored choice still wins on small viewports.
+      act(() => unifiedProps().onPanelOpenChange(true))
+      expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('1')
+    } finally {
+      window.innerWidth = previousWidth
+    }
+  })
+
+  it('maps the docked secondary panel width to its open state and persists that preference', async () => {
+    const previousWidth = window.innerWidth
+    window.innerWidth = 1440
+    const first = renderLayout('/')
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
     const shell = screen.getByTestId('command-deck').closest('[data-presentation-mode]')
-    expect(shell).toHaveStyle({ '--shell-sidebar-width': '560px' })
-    act(() => unifiedProps().onTogglePanelCollapsed())
-    expect(shell).toHaveStyle({ '--shell-sidebar-width': '152px' })
-    expect(localStorage.getItem('teslasync-deck-panel-collapsed')).toBe('1')
-    expect(localStorage.getItem('teslasync-deck-rail-collapsed')).toBe('1')
-    act(() => unifiedProps().onTogglePanelCollapsed())
-    expect(shell).toHaveStyle({ '--shell-sidebar-width': '396px' })
-    act(() => unifiedProps().onTogglePanelCollapsed())
+    expect(shell).toHaveStyle({ '--shell-sidebar-width': '348px' })
+    act(() => unifiedProps().onPanelOpenChange(false))
+    expect(shell).toHaveStyle({ '--shell-sidebar-width': '76px' })
+    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('0')
+    act(() => unifiedProps().onPanelOpenChange(true))
+    expect(shell).toHaveStyle({ '--shell-sidebar-width': '348px' })
+    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('1')
     first.unmount()
 
     renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
-    expect(unifiedProps().panelCollapsed).toBe(true)
+    expect(unifiedProps().panelOpen).toBe(true)
+    expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
+      '--shell-sidebar-width': '348px',
+    })
+    window.innerWidth = previousWidth
   })
 
   it('feeds the unified sidebar the complete catalog as its search corpus', () => {
@@ -704,7 +799,7 @@ describe('Layout — grouped sidebar sections', () => {
       '/share-card', '/analytics/carbon', '/benchmarks/privacy',
     ])
     expect(reports?.items.slice(0, 3).map(item => item.label)).toEqual([
-      'Fleet Insights', 'Driving Efficiency', 'Costs',
+      'Fleet insights', 'Driving efficiency', 'Costs',
     ])
     // Flat rows key off the real location, not the group primary.
     expect(props.pathname).toBe('/analytics')
@@ -720,7 +815,7 @@ describe('Layout — grouped sidebar sections', () => {
       '/system-status', '/db-health', '/anomaly-detection',
       '/signals', '/admin/flags', '/admin/vehicle-cost', '/signal-correlation',
     ])
-    expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry Troubleshooting')
+    expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry troubleshooting')
     expect(props.pathname).toBe('/admin/ingest-xray')
     expect(navSections.find(section => section.title === 'Diagnostics')?.items).toHaveLength(33)
     expect(DIAGNOSTIC_GROUPS.every(group => group.pages.every(page =>
@@ -745,9 +840,9 @@ describe('Layout — grouped sidebar sections', () => {
       'Automation',
       'Notifications',
       'Security',
-      'Advanced Intelligence',
-      'Ownership Intelligence',
-      'Tesla Physics',
+      'Advanced intelligence',
+      'Ownership intelligence',
+      'Tesla physics',
       'Data',
       'Diagnostics',
       'Account',
@@ -768,6 +863,29 @@ describe('Layout — grouped sidebar sections', () => {
 })
 
 describe('Layout — global page chrome', () => {
+  it('installs the browser-notification delivery hook on the settings route', () => {
+    renderLayout('/notifications/browser')
+    expect(H.notificationListener).toHaveBeenCalled()
+  })
+
+  it('keeps rate-limit notices inside the report column instead of consuming horizontal page space', () => {
+    const { container } = renderLayout('/')
+    const main = container.querySelector('[data-role="main-content"]')
+    expect(main?.parentElement).toContainElement(screen.getByTestId('rate-limit-banner-stub'))
+  })
+
+  it('keeps the outer shell out of native anchor scrolling', () => {
+    const { container } = renderLayout('/')
+    const main = container.querySelector('[data-role="main-content"]')
+
+    expect(main?.parentElement).toHaveClass(
+      'min-h-0',
+      'min-w-0',
+      'overflow-hidden',
+      'supports-[overflow:clip]:overflow-clip',
+    )
+  })
+
   it('places the install affordance in the scrollable page flow, not over page content', () => {
     const { container } = renderLayout('/')
     const main = container.querySelector('[data-role="main-content"]')
@@ -817,32 +935,36 @@ describe('Layout — global page chrome', () => {
     ).toHaveAttribute('data-variant', 'page')
   })
 
-  it('keeps desktop scope in the command header and mobile scope in the drawer', () => {
+  it('keeps vehicle scope as a single desktop instance in the command header', () => {
     renderLayout('/')
-    const pickers = screen.getAllByTestId('vehicle-picker')
-    expect(pickers).toHaveLength(2)
-    expect(pickers.filter(picker => picker.classList.contains('xl:hidden'))).toHaveLength(1)
+    const pickers = screen.getAllByTestId('vehicle-picker').filter(node =>
+      node.closest('[data-role="workspace-header"]'))
+    const mobile = document.querySelector('[data-role="mobile-workspace-controls"]')!
+    expect(within(mobile as HTMLElement).getAllByTestId('vehicle-picker')).toHaveLength(1)
+    // Exactly one desktop picker and one mobile picker; neither lives in navigation.
+    expect(pickers).toHaveLength(1)
     const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
+    expect(workspaceHeader).toContainElement(pickers[0])
     expect(within(workspaceHeader as HTMLElement).getByTestId('vehicle-picker')).not.toHaveClass(
       'xl:hidden',
     )
+    expect(workspaceHeader).toHaveClass('hidden', 'xl:grid')
   })
 
-  it('renders exactly one analysis-window control per breakpoint on a range-owning route', () => {
+  it('renders a single analysis-window control in the command header on a range-owning route', () => {
     renderLayout('/drives')
-    const controls = screen.getAllByTestId('workspace-context-control')
-    // One desktop instance in the workspace header, one mobile instance in
-    // the drawer — never two competing controls at the same breakpoint.
-    expect(controls).toHaveLength(2)
+    const controls = screen.getAllByTestId('workspace-context-control').filter(node =>
+      node.closest('[data-role="workspace-header"]'))
+    const mobile = document.querySelector('[data-role="mobile-workspace-controls"]')!
+    expect(within(mobile as HTMLElement).getAllByTestId('workspace-context-control')).toHaveLength(1)
+    // Desktop and mobile chrome each own one scope control; navigation owns none.
+    expect(controls).toHaveLength(1)
 
     const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
     expect(
       within(workspaceHeader as HTMLElement).getAllByTestId('workspace-context-control'),
     ).toHaveLength(1)
-    const drawerControls = controls.filter((control) =>
-      control.closest('.xl\\:hidden'),
-    )
-    expect(drawerControls).toHaveLength(1)
+    expect(controls[0].closest('.xl\\:hidden')).toBeNull()
   })
 
   it('hides the analysis-window control entirely on routes that do not consume it', () => {
@@ -890,7 +1012,9 @@ describe('Layout — global page chrome', () => {
     )
     expect(document.querySelector('[data-role="workspace-header"]')).toBeNull()
     expect(screen.queryByTestId('status-bar')).toBeNull()
-    expect(container.querySelector('aside')).toHaveClass('hidden')
+    // The sidebar is unmounted (not merely hidden) outside standard mode.
+    expect(container.querySelector('nav[data-role="sidebar"]')).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'Primary' })).toBeNull()
     expect(container.querySelector('[data-role="page-viewport"]')).toHaveClass(
       'max-w-[1600px]',
     )
@@ -1018,66 +1142,356 @@ describe('Layout — nav item visibility', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — mobile drawer', () => {
+  it.each([320, 375, 390, 430])('scopes the notification target minimum to the mobile appbar at %spx', async width => {
+    const previousWidth = window.innerWidth
+    const media = window.matchMedia('')
+    window.innerWidth = width
+    vi.mocked(window.matchMedia).mockImplementation(query => ({
+      ...media,
+      media: query,
+      matches: query === '(max-width: 640px)',
+    }))
+    H.request.mockImplementation((url: unknown) =>
+      url === '/notifications/unread-count'
+        ? Promise.resolve({ count: 7 })
+        : H.defaultReq(url),
+    )
+    try {
+      renderLayout('/')
+      const header = screen.getByRole('banner', { name: 'Site header' })
+      const bell = await within(header).findByRole('button', { name: '7 unread notifications' })
+      const wrapper = bell.parentElement!
+      // Verify actual descendant targeting; jsdom does not measure native hit areas.
+      expect(wrapper).toHaveAttribute('data-role', 'notification-bell-popover')
+      expect(wrapper).toHaveClass('max-md:[&>button]:min-h-11', 'max-md:[&>button]:min-w-11')
+      expect(wrapper.querySelector(':scope > button')).toBe(bell)
+      expect(bell).toHaveClass('h-9', 'w-9', 'p-0')
+      expect(bell).toHaveAttribute('aria-expanded', 'false')
+      expect(bell).toHaveTextContent('7')
+      expect(bell.querySelector('span')).toHaveAttribute('aria-hidden', 'true')
+      expect(bell.querySelector('svg')).toHaveClass('h-5', 'w-5')
+      expect(header.querySelector('[data-role="mobile-header-actions"]')).toHaveClass('shrink-0', 'ms-auto')
+      fireEvent.click(bell)
+      await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/notifications/inbox'))
+      expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
+    } finally {
+      window.innerWidth = previousWidth
+    }
+  })
+
+  it('keeps the workspace notification bell compact and outside the mobile target override', async () => {
+    const { container } = renderLayout('/')
+    await waitFor(() => expect(
+      container.querySelector('[data-role="workspace-header"] [data-role="notification-bell-popover"] > button'),
+    ).not.toBeNull())
+    const workspaceHeader = container.querySelector<HTMLElement>('[data-role="workspace-header"]')!
+    const bell = within(workspaceHeader).getByRole('button', { name: 'Notifications' })
+    expect(bell.parentElement).toHaveClass('relative', 'inline-block')
+    expect(bell.parentElement).not.toHaveClass('max-md:[&>button]:min-h-11', 'max-md:[&>button]:min-w-11')
+    expect(bell).toHaveClass('h-9', 'w-9', 'p-0')
+    expect(bell).not.toHaveClass('h-11', 'w-11', 'min-h-11', 'min-w-11')
+    expect(bell).toHaveAttribute('aria-expanded', 'false')
+    expect(bell.querySelector('span')).not.toBeInTheDocument()
+    expect(workspaceHeader).toHaveClass('hidden', 'xl:grid', 'gap-4')
+  })
+
+  it.each([
+    ['ltr', 1], ['rtl', 1], ['ltr', 2], ['rtl', 2],
+  ])('contains the mobile wordmark without shrinking controls (%s, scale %s)', (direction, scale) => {
+    document.documentElement.setAttribute('dir', String(direction))
+    const previousFontSize = document.documentElement.style.fontSize
+    document.documentElement.style.fontSize = `${Number(scale) * 16}px`
+    try {
+      renderLayout('/')
+      const header = screen.getByRole('banner', { name: 'Site header' })
+      const menu = within(header).getByRole('button', { name: 'Open sidebar' })
+      const headerWordmark = within(header).getByText('TeslaSync')
+      const headerLogo = headerWordmark.parentElement!
+      expect(headerLogo).toHaveClass('min-w-0', 'max-w-full', '[&>span]:min-w-0', '[&>span]:truncate')
+      expect(headerWordmark).toBeVisible()
+      expect(headerWordmark).toHaveTextContent(/^TeslaSync$/)
+      expect(headerLogo.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+      expect(headerLogo.parentElement).toHaveClass('min-w-0', 'flex-1', 'basis-16')
+      expect(headerLogo.parentElement).not.toHaveClass('-ml-10')
+      expect(header).toHaveClass('flex-wrap', 'gap-2')
+      expect(menu).toHaveClass('h-11', 'w-11', 'shrink-0', '-ms-1')
+      expect(header.querySelector('[data-role="mobile-header-actions"]')).toHaveClass('shrink-0', 'ms-auto')
+      expect(header).not.toHaveClass('overflow-hidden')
+      expect(headerLogo).not.toHaveClass('overflow-hidden')
+
+      fireEvent.click(menu)
+
+      // The drawer chrome is deck-owned now: Layout hands the open state to
+      // the deck and unmounts the appbar (drawer brand/close/wordmark are
+      // covered by the deck scope).
+      expect(deckProps().mobileBrowseOpen).toBe(true)
+      expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+      expect(screen.getByRole('navigation', { name: 'Primary' })).toHaveClass('sidenav-host')
+
+      act(() => {
+        deckProps().onItemSelect()
+      })
+      expect(deckProps().mobileBrowseOpen).toBe(false)
+      expect(screen.getByRole('banner', { name: 'Site header' })).toBeInTheDocument()
+      expect(within(screen.getByRole('banner', { name: 'Site header' })).getByText('TeslaSync')).toBeVisible()
+    } finally {
+      document.documentElement.removeAttribute('dir')
+      document.documentElement.style.fontSize = previousFontSize
+    }
+  })
+
+  it('reserves the actual wrapped appbar height and disconnects on drawer entry', () => {
+    const callbacks: ResizeObserverCallback[] = []
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: ResizeObserverCallback) { callbacks.push(callback) }
+      observe = observe
+      disconnect = disconnect
+    })
+    try {
+      const { container } = renderLayout('/')
+      const header = screen.getByRole('banner', { name: 'Site header' })
+      const spacer = container.querySelector<HTMLElement>('[data-role="appbar-spacer"]')!
+      expect(observe).toHaveBeenCalledWith(header)
+      vi.spyOn(header, 'getBoundingClientRect').mockReturnValue({
+        height: 196, width: 375, x: 0, y: 0, top: 0, left: 0, right: 375, bottom: 196, toJSON: () => ({}),
+      })
+      act(() => callbacks[0]([], {} as ResizeObserver))
+      expect(spacer.style.height).toBe('196px')
+      expect(spacer).toHaveClass('shrink-0', 'xl:hidden')
+      fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+      expect(deckProps().mobileBrowseOpen).toBe(true)
+      expect(disconnect).toHaveBeenCalledTimes(1)
+      expect(spacer.style.height).toBe('')
+      expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+      act(() => {
+        deckProps().onItemSelect()
+      })
+      expect(deckProps().mobileBrowseOpen).toBe(false)
+      expect(observe).toHaveBeenCalledTimes(2)
+      expect(observe).toHaveBeenLastCalledWith(screen.getByRole('banner', { name: 'Site header' }))
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it.each([false, true])('leaves drawer motion to the deck host CSS in either state (reduced motion: %s)', reduced => {
+    window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+      matches: reduced && q === '(prefers-reduced-motion: reduce)',
+      media: q,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    const trigger = screen.getByRole('button', { name: 'Open sidebar' })
+
+    // The sidebar host carries no motion classes of its own: slide/fade
+    // motion (reduced-motion included) lives in sidenav.css + the deck
+    // Modal, so the preference never changes Layout's output.
+    expect(aside).toHaveClass('sidenav-host')
+    expect(aside).not.toHaveAttribute('data-sidebar-open')
+    expect(aside.className).not.toContain('transition')
+    expect(aside.className).not.toContain('translate-')
+    expect(aside.className).not.toContain('visible')
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+
+    fireEvent.click(trigger)
+
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    // Opening changes deck props, never host classes.
+    expect(aside).toHaveClass('sidenav-host')
+    expect(aside.className).not.toContain('transition')
+    expect(aside.className).not.toContain('translate-')
+    expect(aside.className).not.toContain('visible')
+    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    expect(aside).toHaveClass('sidenav-host')
+    expect(aside.className).not.toContain('transition')
+  })
+
+  it('moves no focus and schedules no frame on drawer open or close (focus is deck-owned)', () => {
+    renderLayout('/')
+    const frames = vi.fn((_callback: FrameRequestCallback) => 73)
+    window.requestAnimationFrame = frames as unknown as typeof window.requestAnimationFrame
+    const callsBefore = frames.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    // The appbar (and trigger) unmounts; Layout moves focus nowhere itself —
+    // the deck Modal owns entry focus.
+    expect(document.body).toHaveFocus()
+    expect(frames.mock.calls.length).toBe(callsBefore)
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    expect(document.body).toHaveFocus()
+    expect(frames.mock.calls.length).toBe(callsBefore)
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+  })
+
+  it('schedules no repair frame when the drawer closes immediately after opening', () => {
+    renderLayout('/')
+    const frames = vi.fn((_callback: FrameRequestCallback) => 74)
+    const cancels = vi.fn()
+    window.requestAnimationFrame = frames as unknown as typeof window.requestAnimationFrame
+    window.cancelAnimationFrame = cancels as unknown as typeof window.cancelAnimationFrame
+    const callsBefore = frames.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    // No focus-repair machinery remains in Layout: no frames, no cancels.
+    expect(frames.mock.calls.length).toBe(callsBefore)
+    expect(cancels).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+  })
+
+  it('delegates the overlay guard to the deck: Layout inerts nothing and renders no backdrop', async () => {
+    renderLayout('/')
+    const main = screen.getByRole('main')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    // Layout neither traps focus nor hides the background — the deck Modal
+    // owns the guard (focus trap, inert background, backdrop → onItemSelect).
+    expect(main.closest('[inert]')).toBeNull()
+    expect(screen.getByRole('main')).toBe(main)
+    expect(document.querySelector('[data-sidebar-backdrop]')).toBeNull()
+    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+    expect(screen.getByRole('banner', { name: 'Site header' })).toBeInTheDocument()
+    expect(main.closest('[inert]')).toBeNull()
+  })
+
+  it('closes the drawer when the route changes', async () => {
+    renderLayout('/trips', { probe: <GoToDrives /> })
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+
+    // Navigation supersedes the overlay even without deck cooperation.
+    fireEvent.click(screen.getByRole('button', { name: 'go to drives' }))
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+    expect(screen.getByTestId('loc')).toHaveTextContent('/drives')
+    expect(screen.getByRole('banner', { name: 'Site header' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+  })
+
+  it('provides a 44px mobile drawer trigger target', () => {
+    renderLayout('/')
+    const trigger = screen.getByRole('button', { name: 'Open sidebar' })
+    expect(trigger).toHaveClass('h-11', 'w-11')
+    fireEvent.click(trigger)
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    // The drawer's own close control (44px "Close" + "Hide panel") is
+    // Modal/deck-owned; Layout hands off and unmounts the appbar.
+    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+  })
+
+  it('does not move focus when the drawer closes over a newly focused portaled modal', async () => {
+    renderLayout('/')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.setAttribute('aria-modal', 'true')
+    const action = document.createElement('button')
+    action.textContent = 'Dialog action'
+    dialog.append(action)
+    document.body.append(dialog)
+    try {
+      action.focus()
+      act(() => {
+        deckProps().onItemSelect()
+      })
+      await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+      await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
+      expect(action).toHaveFocus()
+    } finally {
+      dialog.remove()
+    }
+  })
+
   it('opens and closes the sidebar drawer from the mobile header controls', async () => {
     renderLayout('/')
     const aside = screen.getByRole('navigation', { name: 'Primary' })
-    expect(aside).toHaveAttribute('data-sidebar-open', 'false')
-    expect(aside.firstElementChild?.className).toContain('safe-area-inset-top')
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    expect(aside).not.toHaveAttribute('data-sidebar-open')
     expect(screen.getByRole('banner', { name: 'Site header' }).className).toContain('safe-area-inset-top')
+    expect(document.querySelector('[data-role="appbar-spacer"]')?.className).toContain('safe-area-inset-top')
 
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'true'))
-    expect(aside.className).toContain('visible')
-    expect(screen.getByRole('button', { name: 'Close sidebar' })).toHaveFocus()
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(true))
+    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
 
+    // Escape is deck-Modal-owned: Layout neither closes nor re-opens on it.
     fireEvent.keyDown(document, { key: 'Escape' })
-    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
-    expect(aside.className).toContain('invisible xl:visible')
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Open sidebar' })).toHaveFocus())
-  })
+    expect(deckProps().mobileBrowseOpen).toBe(true)
 
-  it('restores the mobile trigger after close, logo navigation, a deck shortcut, and backdrop click', async () => {
-    renderLayout('/')
-    const trigger = () => screen.getByRole('button', { name: 'Open sidebar' })
-    const aside = screen.getByRole('navigation', { name: 'Primary' })
-    fireEvent.click(trigger())
-    fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
-    await waitFor(() => expect(trigger()).toHaveFocus())
-
-    fireEvent.click(trigger())
-    const mobileLogo = aside.querySelector('a[href="/"]')
-    expect(mobileLogo).not.toBeNull()
-    fireEvent.click(mobileLogo!)
-    await waitFor(() => expect(trigger()).toHaveFocus())
-
-    fireEvent.click(trigger())
     act(() => {
-      (H.sidebarProps.unified as { onItemSelect: () => void }).onItemSelect()
+      deckProps().onItemSelect()
     })
-    await waitFor(() => expect(trigger()).toHaveFocus())
-
-    fireEvent.click(trigger())
-    const backdrop = aside.previousElementSibling
-    expect(backdrop).not.toBeNull()
-    fireEvent.click(backdrop!)
-    await waitFor(() => expect(trigger()).toHaveFocus())
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
   })
 
-  it('keeps the drawer open when a nested control consumes Escape', async () => {
+  it('returns the mobile trigger after deck close and after navigation', async () => {
+    renderLayout('/trips', { probe: <GoToDrives /> })
+    const trigger = () => screen.getByRole('button', { name: 'Open sidebar' })
+    // Deck-initiated close (item select, backdrop, sheet dismiss) funnels
+    // through onItemSelect and restores the appbar trigger…
+    fireEvent.click(trigger())
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+    expect(trigger()).toBeInTheDocument()
+
+    // …and a route change closes the drawer even without deck cooperation.
+    fireEvent.click(trigger())
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'go to drives' }))
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+    expect(screen.getByTestId('loc')).toHaveTextContent('/drives')
+    expect(trigger()).toBeInTheDocument()
+  })
+
+  it('ignores Escape for drawer state in every consumption state (deck-owned)', async () => {
     renderLayout('/')
-    const aside = screen.getByRole('navigation', { name: 'Primary' })
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'true'))
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(true))
 
-    const closeButton = screen.getByRole('button', { name: 'Close sidebar' })
+    // A nested control consuming Escape…
+    const main = screen.getByRole('main')
     const consumeEscape = (event: KeyboardEvent) => event.preventDefault()
-    closeButton.addEventListener('keydown', consumeEscape)
-    fireEvent.keyDown(closeButton, { key: 'Escape' })
-    expect(aside).toHaveAttribute('data-sidebar-open', 'true')
+    main.addEventListener('keydown', consumeEscape)
+    fireEvent.keyDown(main, { key: 'Escape' })
+    expect(deckProps().mobileBrowseOpen).toBe(true)
 
-    closeButton.removeEventListener('keydown', consumeEscape)
+    // …and an unconsumed document-level Escape both leave Layout state alone.
+    main.removeEventListener('keydown', consumeEscape)
     fireEvent.keyDown(document, { key: 'Escape' })
-    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
   })
 })
 
@@ -1111,6 +1525,100 @@ describe('Layout — ThemeQuickSwitcher', () => {
       expect(screen.getByTestId('loc').textContent).toBe('/settings#appearance'),
     )
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('uses a native named navigation landmark without changing sidebar state', () => {
+    renderLayout('/')
+    const navigation = screen.getByRole('navigation', { name: 'Primary' })
+    expect(navigation.tagName).toBe('NAV')
+    expect(navigation).toHaveAttribute('data-role', 'sidebar')
+    expect(navigation).not.toHaveAttribute('data-sidebar-open')
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    const panelOpen = deckProps().panelOpen
+    // Opening the theme picker changes no sidebar state.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open theme picker' })[0])
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    expect(deckProps().panelOpen).toBe(panelOpen)
+  })
+
+  it('moves keyboard focus into the mounted picker and restores its visible trigger on Escape', async () => {
+    renderLayout('/')
+    const trigger = screen.getAllByRole('button', { name: 'Open theme picker' })[0]
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('dialog', { name: 'Open theme picker' })
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true))
+
+    fireEvent.keyDown(document.activeElement ?? dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('leaves the parent picker open when another dialog owns Escape or prevents it', async () => {
+    renderLayout('/')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open theme picker' })[0])
+    const dialog = await screen.findByRole('dialog', { name: 'Open theme picker' })
+    const child = document.createElement('div')
+    child.setAttribute('role', 'dialog')
+    child.setAttribute('aria-modal', 'true')
+    child.tabIndex = -1
+    document.body.append(child)
+    try {
+      child.focus()
+      fireEvent.keyDown(child, { key: 'Escape' })
+      expect(dialog).toBeInTheDocument()
+      fireEvent.mouseDown(child)
+      expect(dialog).toBeInTheDocument()
+    } finally {
+      child.remove()
+    }
+    dialog.focus()
+    const preventedEscape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    preventedEscape.preventDefault()
+    fireEvent(dialog, preventedEscape)
+    expect(dialog).toBeInTheDocument()
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('closes on outside mousedown and keeps programmatic opening and resize/scroll placement', async () => {
+    renderLayout('/')
+    const trigger = screen.getAllByRole('button', { name: 'Open theme picker' })[0]
+    const bounds = vi.spyOn(trigger, 'getBoundingClientRect')
+    bounds.mockReturnValue({ top: 20, bottom: 56, left: 320, right: 356, width: 36, height: 36, x: 320, y: 20, toJSON: () => ({}) })
+    trigger.focus()
+    act(() => window.dispatchEvent(new Event('open-theme-popover')))
+    const dialogs = await screen.findAllByRole('dialog', { name: 'Open theme picker' })
+    expect(dialogs).toHaveLength(screen.getAllByRole('button', { name: 'Open theme picker' }).length)
+    const dialog = dialogs.find(candidate => candidate.style.top === '64px')
+    if (!dialog) throw new Error('Anchored trigger did not open its picker')
+    expect(dialog.style.top).toBe('64px')
+    bounds.mockReturnValue({ top: 36, bottom: 72, left: 300, right: 336, width: 36, height: 36, x: 300, y: 36, toJSON: () => ({}) })
+    fireEvent.resize(window)
+    expect(dialog.style.top).toBe('80px')
+    bounds.mockReturnValue({ top: 40, bottom: 76, left: 300, right: 336, width: 36, height: 36, x: 300, y: 40, toJSON: () => ({}) })
+    fireEvent.scroll(document)
+    expect(dialog.style.top).toBe('84px')
+    fireEvent.mouseDown(document.body)
+    await waitFor(() => expect(screen.queryAllByRole('dialog')).toHaveLength(0))
+    expect(screen.getAllByRole('button', { name: 'Open theme picker' })).toContain(document.activeElement)
+    bounds.mockRestore()
+  })
+
+  it('does not restore the theme trigger after intentional Customize navigation', async () => {
+    renderLayout('/')
+    const trigger = screen.getAllByRole('button', { name: 'Open theme picker' })[0]
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('dialog', { name: 'Open theme picker' })
+    const customize = within(dialog).getByRole('button', { name: 'Customize…' })
+    customize.focus()
+    const focus = vi.spyOn(trigger, 'focus')
+    fireEvent.click(customize)
+    await waitFor(() => expect(screen.getByTestId('loc').textContent).toBe('/settings#appearance'))
+    expect(focus).not.toHaveBeenCalled()
+    focus.mockRestore()
   })
 })
 
@@ -1454,5 +1962,51 @@ describe('Layout — nav pins under a rejected write', () => {
     } finally {
       setItem.mockRestore()
     }
+  })
+})
+
+describe('Layout — restrained host chrome and shared offsets', () => {
+  it('uses a neutral opaque mobile header and preserves safe-area clearance', () => {
+    const { container } = renderLayout('/')
+    const header = container.querySelector('[data-role="appbar"]')
+    expect(header).toHaveClass('bg-[var(--surface-1)]', 'xl:hidden')
+    expect(header).not.toHaveClass('backdrop-blur-md', 'bg-[var(--surface-1)]/95')
+    expect(header?.parentElement?.querySelector('[data-role="main-content"]')?.parentElement?.firstElementChild).toHaveClass('h-[calc(4.25rem+env(safe-area-inset-top,0px))]')
+    expect(within(header as HTMLElement).getByRole('button', { name: 'Open theme picker' })).toHaveClass(
+      'h-11', 'w-11', 'md:h-9', 'md:w-9',
+    )
+    expect(container.querySelector('[data-role="main-content"]')).toHaveClass(
+      'overflow-y-auto', 'pb-[var(--shell-chrome-bottom)]',
+    )
+  })
+
+  it('renders no Layout-owned drawer scrim: the overlay backdrop is deck-Modal-owned', () => {
+    const { container } = renderLayout('/')
+    expect(container.querySelector('[data-sidebar-backdrop]')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    // Still no Layout scrim while open — the deck Modal renders the
+    // theme-neutral `bg-[var(--surface-overlay)]` backdrop (see Modal.tsx).
+    expect(container.querySelector('[data-sidebar-backdrop]')).not.toBeInTheDocument()
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    expect(container.querySelector('[data-sidebar-backdrop]')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+  })
+
+  it.each(['report', 'kiosk'] as const)('reserves no absent mobile header or bottom chrome in %s mode', mode => {
+    H.presentation.mode = mode
+    const { container } = renderLayout('/')
+    expect(container.querySelector('[data-role="appbar"]')).not.toBeInTheDocument()
+    expect(container.querySelector('[data-role="main-content"]')?.parentElement?.firstElementChild).toBe(
+      container.querySelector('[data-role="main-content"]'),
+    )
+    expect(container.querySelector('[data-role="main-content"]')).not.toHaveClass(
+      'pb-[var(--shell-chrome-bottom)]',
+    )
+    expect(document.documentElement.dataset.statusBar).toBe('off')
+    expect(document.documentElement.dataset.tabBar).toBe('off')
   })
 })

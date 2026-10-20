@@ -6,7 +6,6 @@ import {
   ChartContainer,
   ChartLegend,
   ChartTooltip,
-  CHART_COLORS,
   ComposedChart,
   Line,
   ResponsiveContainer,
@@ -18,12 +17,14 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { useChartPalette } from '@/hooks/useChartPalette';
+
 import { convertDurationFromSI } from '@/lib/unitConversion';
 
 import type { ParkingDurationBandKey, ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DurationDistributionChartProps {
   summary: ParkingSummary;
@@ -37,8 +38,10 @@ export function DurationDistributionChart({
   state,
   className,
 }: DurationDistributionChartProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
+  const palette = useChartPalette();
   const durationUnit = unitPrefs.duration;
   const labels: Record<ParkingDurationBandKey, string> = {
     under1h: t('parking.durationBands.under1h', 'Under 1 h'),
@@ -78,7 +81,7 @@ export function DurationDistributionChart({
         className="h-full"
         title={t(
           'parking.durationDistribution.title',
-          'Parking Duration Distribution',
+          'Parking duration distribution',
         )}
         subtitle={t(
           'parking.durationDistribution.subtitle',
@@ -108,7 +111,7 @@ export function DurationDistributionChart({
           {
             key: 'dwell',
             label: dwellName,
-            format: (value) => fmtNumber(value, 1),
+            format: (value) => fmtNumber(value),
           },
         ]}
       >
@@ -151,7 +154,7 @@ export function DurationDistributionChart({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => fmtNumber(value, 0)}
+                    tickFormatter={(value) => fmtNumber(value)}
                     width={42}
                   />
                   <Tooltip
@@ -160,7 +163,7 @@ export function DurationDistributionChart({
                         valueFormatter={(value, name) =>
                           name === countName
                             ? fmtInt(value)
-                            : `${fmtNumber(value, 1)} ${durationUnit}`
+                            : `${fmtNumber(value)} ${durationUnit}`
                         }
                       />
                     }
@@ -170,7 +173,7 @@ export function DurationDistributionChart({
                     yAxisId="count"
                     dataKey="stints"
                     name={countName}
-                    fill={CHART_COLORS[0]}
+                    fill={palette[0]}
                     radius={[5, 5, 0, 0]}
                     maxBarSize={40}
                     hide={hiddenSeries?.isHidden('stints') ?? false}
@@ -180,7 +183,7 @@ export function DurationDistributionChart({
                     type="monotone"
                     dataKey="dwell"
                     name={dwellName}
-                    stroke={CHART_COLORS[3]}
+                    stroke={palette[3]}
                     strokeWidth={2.5}
                     dot={{ r: 3 }}
                     hide={hiddenSeries?.isHidden('dwell') ?? false}

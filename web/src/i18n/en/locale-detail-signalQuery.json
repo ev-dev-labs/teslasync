@@ -1,0 +1,37 @@
+{
+  "signalQuery": {
+    "from": "From",
+    "to": "To",
+    "quickRange": "Quick range",
+    "query": "Query",
+    "rows": "Rows",
+    "preset": {
+      "aria": "{{label}} time range"
+    },
+    "signals": "Signals",
+    "searchSignalsPlaceholder": "Search signals…",
+    "noMatchingSignals": "No matching signals",
+    "noSignals": "No signals available",
+    "moreRefine": "{{count}} more — refine search",
+    "col": {
+      "timestamp": "Timestamp",
+      "signal": "Signal",
+      "value": "Value",
+      "type": "Type"
+    },
+    "noResults": "No results",
+    "firstPage": "First page",
+    "prevPage": "Previous page",
+    "pageOf": "Page {{page}} of {{total}}",
+    "nextPage": "Next page",
+    "lastPage": "Last page",
+    "signalsMax": "Signals (max {{count}})",
+    "removeSignal": "Remove {{signal}}",
+    "searchSignals": "Search signals",
+    "addMoreSignals": "Add more signals…",
+    "loadingSignals": "Loading signals…",
+    "signalsError": "Failed to load signals",
+    "maxReached": "Maximum of {{count}} signals selected",
+    "records": "{{n}} records"
+  }
+}

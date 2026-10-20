@@ -1,0 +1,9 @@
+{
+  "speedSweetSpot": {
+    "colBand": "Speed band",
+    "consumptionAria": "Qualified and unqualified energy consumption across speed bands",
+    "consumptionTitle": "Consumption vs speed",
+    "evidenceAria": "Individual drive evidence scatter plot across speed and energy consumption",
+    "evidenceTitle": "Drive evidence"
+  }
+}

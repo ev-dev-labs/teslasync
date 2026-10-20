@@ -1,0 +1,432 @@
+{
+  "item": "audit-page-077",
+  "page": "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+  "routes": [
+    {
+      "path": "/charge-departure-alignment",
+      "file": "web\\src\\App.tsx",
+      "line": 874,
+      "detail": "SafeRoute-mounted lazy ChargeDepartureAlignment component; lazy import at line 104. Source route registration verified, actual navigation/mount unverified."
+    }
+  ],
+  "purpose": "Retrospective selected-vehicle analysis of completed charges and their following drives, showing dwell, realized readiness margin and circumstantial pairing flags.",
+  "primaryGoal": "Inspect how each loaded charge-to-drive handoff looked without mistaking temporal adjacency for charging intent or a confirmed fault.",
+  "dataSources": [
+    {
+      "hook": "useChargingHistory",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 72,
+      "endpoint": "/charging?vehicle_id=<encoded selected vehicle>&limit=1000",
+      "knownApiPath": "/api/v1/charging",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3502,
+        "detail": "GET / under /charging delegates to chargingHandler.ListByVehicle at line 3503."
+      },
+      "ownership": "Charging API hook and existing charging handler, not this page.",
+      "behavior": "Isolated chargingKeys.history(vehicleId, boundedLimit), enabled only with a vehicle ID, MODERATE stale time, forwarded AbortSignal and safeArray selector. One loaded history request, not lifetime/full-result coverage. No date bounds supplied.",
+      "evidenceLimit": "Handler/database filtering, actual row cap, sort order, response shape and production network behavior were not executed or independently traced."
+    },
+    {
+      "hook": "useDriveHistory",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "/drives?vehicle_id=<encoded selected vehicle>&limit=1000",
+      "knownApiPath": "/api/v1/drives",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3463,
+        "detail": "GET / under /drives delegates to driveHandler.ListByVehicle at line 3464."
+      },
+      "ownership": "Driving API hook and existing drive handler, not this page.",
+      "behavior": "Isolated drivingKeys.history(vehicleId, boundedLimit), enabled only with a vehicle ID, MODERATE stale time, forwarded AbortSignal and safeArray selector. No date bounds supplied.",
+      "evidenceLimit": "The hook documents a backend cap but this audit proves only the bounded request and registered route, not actual server coverage."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 47,
+      "ownership": "Existing workspace vehicle owner.",
+      "behavior": "Reads useVehicles and the persisted selected-vehicle store; URL/path selection precedes store then fleet fallback, with stale-ID reconciliation. This page consumes vehicleId without a second picker.",
+      "evidenceLimit": "Nested fleet request endpoint and store internals not inspected; no selection/runtime acceptance claimed."
+    },
+    {
+      "hook": "analyzeChargeDepartureAlignment",
+      "file": "web\\src\\features\\charging\\lib\\chargeDepartureAlignment.ts",
+      "line": 239,
+      "ownership": "Existing pure feature model, not a backend aggregate.",
+      "behavior": "Uses session ended_at/start_soc_pct/end_soc_pct and drive startTs/startBatteryPct/endBatteryPct; derives SI-second dwell and percent-point comparisons. Default temporal pairing gap is 24 hours. Invalid timestamps are excluded and non-finite/missing SoC becomes null.",
+      "evidenceLimit": "No new predictor, schedule advisor, continuous parked measurement or proof of intent is implied."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "contract": "Existing PageContainer adapter; @container, full allocated width, min-w-0 and gap-6. Page passes two query sources, busy state, localized title/subtitle and dataSources.",
+      "dependsOn": ["Existing PageContainer and application shell, not inspected in full"]
+    },
+    {
+      "name": "AlignmentStats / ChargingSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\AlignmentStats.tsx",
+      "line": 17,
+      "contract": "Four typed metrics with missing reasons and source context; ChargingSummaryBrief at operationalbrief-all\\ChargingSummaryBrief.tsx:13 uses useOperationalMetrics and shared OperationalBrief. OperationalBrief.tsx:152-161 provides Review details, with drawer state initialized at line 99.",
+      "dependsOn": [
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "useOperationalMetrics and existing StatMetric display contract; formatter internals not inspected"
+      ]
+    },
+    {
+      "name": "ChartContainer / ComposedChart / ChartLegend / ChartTooltip",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "line": 287,
+      "contract": "One dual-axis chart with scalar accessible rows and exportData; default image export plus CSV when populated, state-specific shells and interactive group semantics. No fullscreen or annotations requested by this page.",
+      "dependsOn": [
+        "web\\src\\components\\charts\\ChartLegend.tsx",
+        "web\\src\\hooks\\useHiddenSeries.ts",
+        "web\\src\\lib\\tokens.ts",
+        "ChartTooltip implementation and image-export internals uninspected"
+      ]
+    },
+    {
+      "name": "AlignmentPairs / DataTable",
+      "owner": "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\AlignmentPairs.tsx",
+      "line": 26,
+      "contract": "Persistent GlassPanel shell, PanelTitle/help/caveats, loading Skeleton or EmptyState, otherwise embedded DataTable with 13 complete columns, newest-first rows, localized export accessors and 12/24/48/96 pagination. Existing mobile cards use the same rows and display accessors.",
+      "dependsOn": [
+        "web\\src\\components\\ui\\DataTable.tsx",
+        "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\presentation.ts",
+        "Mobile card/detail renderer internals not inspected"
+      ]
+    },
+    {
+      "name": "deriveDataState / per-source recovery",
+      "owner": "web\\src\\api\\dataState.ts",
+      "line": 179,
+      "contract": "No retained payload is discarded after refresh error or paused fetch. Page uses QueryError, StaleRefreshWarning, DataStateNotice and Button separately for each source.",
+      "dependsOn": ["Feedback primitives; their implementation details not inspected"]
+    },
+    {
+      "name": "FadeIn / NoVehicleSelected",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "line": 24,
+      "contract": "Three entrance wrappers; shared FadeIn delegates reduced motion to useMotionPreference. NoVehicleSelected supplies existing onboarding guidance and /onboarding fallback CTA when vehicleId is null.",
+      "dependsOn": ["web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+      "line": 46,
+      "rule": "MDC-002",
+      "detail": "The two source identities/labels/queries appear in both dataSources and sourceEntries (line 110). This is a bounded two-source orchestration duplication, not evidence for another shared library.",
+      "fix": "If simplifying later, derive the PageLayout source projection from one typed local source descriptor while retaining both bounds, counts, recovery and query objects.",
+      "owner": "page",
+      "confidence": "high",
+      "severity": "low"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\AlignmentPairs.tsx",
+      "line": 34,
+      "rule": "MDC-023",
+      "detail": "Existing pairDisplayValues already unifies desktop, mobile and exported values; reuse this migration rather than recreating pair cards or a second table pipeline.",
+      "fix": "Preserve the existing adapter; no shared extraction justified by this single-page audit.",
+      "owner": "page",
+      "confidence": "high",
+      "severity": "preservation"
+    }
+  ],
+  "responsive": {
+    "sourceFindings": [
+      "PageLayout supplies an allocated @container; page and all three sections retain w-full/min-w-0.",
+      "History bounds reflow to two columns at @xl; text wraps with break-words.",
+      "Pair section padding adapts at @sm and its 13-column table opts into shared mobile cards.",
+      "Compact OperationalBrief uses one/two/three/six metric columns by shared breakpoints; four metrics can leave incomplete rows, which is not by itself proven visual failure."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+        "line": 211,
+        "rule": "MDC-043; mission section 15",
+        "detail": "A fixed 340px chart plots every loaded pair with dual Y axes and fixed 10/11px ticks (lines 223-225), without a page-specific narrow-container strategy. At up to 1,000 source records, density and label readability are risks, not observed clipping.",
+        "fix": "Exercise the existing responsive chart at all required widths and 200% text. If necessary adapt axis tick density/geometry within current chart owners; retain every pair in the existing accessible/export data and do not silently change model coverage.",
+        "owner": "page",
+        "confidence": "medium",
+        "severity": "medium"
+      }
+    ],
+    "unverified": "All 320/375/390/430/768/1024/1280/1440/1920/2560 viewports, mobile full-detail reachability, long labels, RTL, zoom and page overflow."
+  },
+  "accessibility": {
+    "sourceFindings": [
+      "Localized chart ariaLabel and structured fallback table supplied; ChartContainer.tsx:684-692 uses a named group for chartKey so interactive legend controls do not live in role=img.",
+      "Pair table caption and textual flag badges are supplied; decorative pair-heading Link2 is aria-hidden.",
+      "Shared FadeIn.tsx:29-34 suppresses entrance transforms under reduced motion; preference-hook behavior itself was not executed."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+        "line": 238,
+        "rule": "MDC-025; MDC-040; mission section 30",
+        "detail": "Flagged bars are distinguished only by red fill/opacity. The page deliberately removes misaligned from chart accessible/export rows (lines 86-90) and supplies only date/dwell/margin columns (214-217). Textual flags exist in the separate pair table, but chart-local red-bar meaning and row mapping are absent.",
+        "fix": "Add localized chart description explaining heuristic highlighting and a scalar textual flag/status column or equivalent non-color chart alternative. Preserve the three existing CSV columns and all existing data; a boolean-to-string display projection does not require new backend capability.",
+        "owner": "page",
+        "confidence": "high",
+        "severity": "medium"
+      },
+      {
+        "file": "web\\src\\components\\charts\\ChartLegend.tsx",
+        "line": 118,
+        "rule": "MDC-040",
+        "detail": "Interactive legend Button overrides target geometry with h-auto min-h-0 p-0; hidden labels additionally use opacity 0.4 (line 104). This page consumes the shared legend at line 227. Actual target dimensions, spacing exceptions and composed contrast are unmeasured.",
+        "fix": "Shared chart owner should validate and, where needed, provide adequate padded hit area and readable hidden-state styling while keeping ghost appearance, aria-pressed, line-through, series IDs and URL-backed toggling.",
+        "owner": "shared",
+        "confidence": "high for source override; medium for rendered compliance risk",
+        "severity": "medium"
+      }
+    ],
+    "unverified": "Keyboard traversal, focus visibility/restoration, legend recovery, export menu and brief drawer interactions, screen-reader output, effective contrast, forced colors and actual target sizes."
+  },
+  "states": {
+    "initialLoading": "Page lines 97-100 derive loading only from sources without retained arrays. AlignmentStats, ChartContainer and AlignmentPairs receive loading; shell sections remain present for selected vehicles.",
+    "empty": "Resolved empty arrays remain loaded data. Statistics guard undefined denominator/dwell with missing reasons, while paired count can correctly show zero. Chart and pairs explain no temporal pairs. No loaded history is presented as lifetime coverage.",
+    "fatalError": "Each failed initial source has independent QueryError/refetch (143-146); chart receives first fatal error and retries whichever sources are fatal (199-203). Statistics and pairs retain shells with missing reason.",
+    "partial": "Analysis statistics are withheld until both arrays have loaded; independent successful-source counts/bounds remain visible. This is the established two-source prerequisite, not a deleted section.",
+    "staleRefresh": "Refresh failures/paused reads with retained arrays are nonfatal; summaries and pairs remain usable with per-source warnings and retained brief status (106-109, 142).",
+    "offlinePaused": "Missing paused sources render DataStateNotice with localized explanation and source-specific retry (147-156). Browser offline detection itself was not tested.",
+    "unknown": "Missing timestamps yield no observed bounds; null/non-finite SoC stays unknown. Existing missing metric display uses undefined/null, not model zero.",
+    "noVehicle": "Page lines 93-95 use existing NoVehicleSelected onboarding CTA instead of issuing enabled history requests or rendering misleading analytics.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\AlignmentStats.tsx",
+        "line": 81,
+        "rule": "MDC-026; MDC-033",
+        "detail": "The page-specific caller does not override ChargingSummaryBrief description/status wording. That owner defaults to 'Recorded measurements from the stated charging source and scope' (ChargingSummaryBrief.tsx:45-46) and 'Source measurements available' (line 29), although dwell/flag rates/pair counts are derived from two histories. The secondary inference caveat (AlignmentStats.tsx:101-104) helps but is not the primary summary description.",
+        "fix": "Use the existing description/sourceStatus props to clearly identify retrospective derived alignment metrics and both input histories. Retain loading/retained/partial/unknown distinctions, caveats and the Review details narrative; do not globally relabel other charging briefs.",
+        "owner": "page",
+        "confidence": "high",
+        "severity": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+      "line": 238,
+      "rule": "MDC-010; MDC-034; mission sections 7 and 27",
+      "detail": "Chart uses shared fixed blue/red/amber series, with heuristic bars at full opacity and a dotted amber line (248-250). tokens.ts:401 confirms saturated #3b82f6/#ef4444/#f59e0b entries. This is shared palette usage rather than hardcoded page neon; full-opacity red flags can dominate a dense analytical plot. Rendered intensity remains unverified.",
+      "fix": "Review populated chart in supported themes, retaining semantic flag distinction and saved preferences. Prefer existing restrained chart treatments and non-color labels over glow/gradients or a new page palette. Shared palette changes require a designated owner, not this page worker.",
+      "owner": "page",
+      "confidence": "medium",
+      "severity": "medium"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+      "line": 223,
+      "rule": "MDC-013; MDC-034",
+      "detail": "Chart tick font sizes are page-authored 10/11px literals rather than a reviewed shared chart typography role. Tokens are used for text colors; no fixed-white text is present in the scoped page/feature presentation files.",
+      "fix": "Reuse the chart owner's established typography/preferences contract where supported, without modifying source model, data series or axis units. Verify legibility before claiming visual quality.",
+      "owner": "page",
+      "confidence": "high",
+      "severity": "low"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\AlignmentStats.tsx",
+      "line": 3,
+      "rule": "MDC-002; component category-barrel imports",
+      "detail": "StatMetric type is imported directly from @/components/data-display/stat-reference while adjacent charging bridge uses the category barrel. This is a type-only internal dependency, not a proven runtime cycle.",
+      "fix": "Use the existing category-level public StatMetric type export if available; otherwise report the exact missing export to its shared owner rather than editing the barrel in a page item.",
+      "owner": "page",
+      "confidence": "high",
+      "severity": "low"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+      "line": 30,
+      "rule": "MDC-044; mission section 26",
+      "detail": "Local date-only chart labels omit year/time, while bounds and pair rows call native toLocaleString separately (page 176-177; AlignmentPairs.tsx:30). Same-month/day records across years can share chart labels. Pair caption explicitly discloses browser timezone; changing that behavior would be a migration, not cosmetic cleanup.",
+      "fix": "Reuse existing date-format ownership where it preserves the established browser-timezone behavior, and retain complete timestamp context in chart alternatives/tooltips. Do not silently reinterpret timestamps or change date filtering.",
+      "owner": "page",
+      "confidence": "high",
+      "severity": "low"
+    }
+  ],
+  "priority": {
+    "level": "P2",
+    "rationale": "Already-migrated composed page with retained-data trust, complete pair table/mobile adapter and SI-second display boundaries. Prioritize chart non-color meaning and shared legend target review, not another wholesale redesign.",
+    "blockingUnknowns": "No mounted responsive/visual/accessibility proof. Backend behavior and shared mobile detail reachability remain outside this source-only audit."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Review existing ChartLegend interactive hit area and hidden-state readability",
+      "existingOwnerFile": "web\\src\\components\\charts\\ChartLegend.tsx",
+      "file": "web\\src\\components\\charts\\ChartLegend.tsx",
+      "line": 118,
+      "rule": "MDC-040",
+      "detail": "Reuse/extend the existing shared legend rather than creating a feature legend. Source overrides erase default minimum control height.",
+      "fix": "Validate effective touch target/spacing and hidden-label contrast; if inadequate, adjust existing shared ghost legend-button geometry and state styling.",
+      "owner": "shared",
+      "confidence": "high for source; runtime outcome unverified",
+      "propsVariantsStates": [
+        "Keep state?: ChartLegendToggleSource and contextual fallback",
+        "Keep interactive ghost Button and passive span variants",
+        "Preserve visible/hidden labels, aria-pressed and line-through",
+        "Support keyboard/touch/focus and reduced-motion/forced-colors behavior without a second preference store"
+      ],
+      "usedBy": [
+        "ChargeDepartureAlignmentPage.tsx:227"
+      ],
+      "dependsOn": [
+        "Existing Button target/density/focus contract",
+        "useHiddenSeries URL state",
+        "Real legend payload and mounted browser geometry",
+        "Shared owner must inspect other consumers before a global change; this audit does not claim a multi-page needs inventory"
+      ]
+    }
+  ],
+  "competingImplementations": {
+    "finding": "No replacement surface/table/chart/query/state implementation found in inspected page dependencies. Existing charge-departure-alignment-modernization components and operationalbrief-all adapter must remain the migration baseline.",
+    "scopeException": "Type-only stat-reference internal import and local date formatting are architecture issues above, not evidence authorizing a new shared implementation.",
+    "workspace": {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 23,
+      "detail": "Assigned route is absent from RANGE_ENABLED_PATHS and not vehicle-disabled; getWorkspaceRouteScope at 156-167 yields source-defined vehicle ownership and no range ownership. Existing brief explicitly states workspace range does not filter this loaded-history model. No competing page selector exists.",
+      "preserve": "Do not add a date picker or silently claim range-filtered data. Any future dated-model migration needs explicit shared route/hook/server ownership and preservation decisions outside this audit."
+    }
+  },
+  "preservation": {
+    "sourceSha256": "6D17C6AF0EC2519D986AB6B4034CF474109001657E63F25DE75E0AC3F9729DED",
+    "hashAlgorithm": "SHA-256 of actual page file bytes",
+    "currentLineCount": 264,
+    "featurePresentationLineCounts": {
+      "AlignmentStats.tsx": 113,
+      "AlignmentPairs.tsx": 117,
+      "presentation.ts": 42,
+      "index.ts": 3,
+      "pagePlusFeaturePresentationTotal": 539,
+      "modelSeparate": 276
+    },
+    "sectionCount": 3,
+    "sections": [
+      {
+        "name": "KPI band and observed history context",
+        "file": "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+        "line": 160,
+        "metrics": ["Avg. Dwell Time", "Avg. Readiness Margin", "Misaligned Rate", "Paired Sessions"],
+        "metricCount": 4,
+        "context": "Separate charge/drive record counts and valid observed timestamp bounds; inference, loaded-window and temporal-not-intent caveats; both metric help explanations."
+      },
+      {
+        "name": "Dwell Time vs. Readiness Margin",
+        "file": "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+        "line": 188,
+        "chartCount": 1,
+        "seriesCount": 2,
+        "series": ["dwellMin bars on dwell axis", "nullable margin line on 0-100% right axis"],
+        "context": "Flagged bar coloring, localized labels, theme-aware ticks/grid, persistent hidden series and scalar table/export rows."
+      },
+      {
+        "name": "Recent Pairs",
+        "file": "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+        "line": 258,
+        "tableCount": 1,
+        "columnCount": 13,
+        "columns": ["Charge ended", "Drive started", "Dwell (min)", "Readiness margin", "SoC that drive used", "Charge-end SoC", "Drive-start SoC", "Drive-end SoC", "SoC drift", "Already-full dwell (min)", "Pairing signals", "Charge ID", "Drive ID"],
+        "context": "All loaded pairs newest first, complete columns/mobile accessors, heuristic caveat, small negative SoC drift caveat, inferred full-dwell caveat and browser-timezone disclosure."
+      }
+    ],
+    "sourceElementCounts": {
+      "pageChartContainer": 1,
+      "pageGlassPanel": 0,
+      "featurePairGlassPanel": 1,
+      "featureStatsChargingSummaryBrief": 1,
+      "pageFadeIn": 3,
+      "note": "These are source JSX counts, not rendered panel totals. Summary's OperationalBrief supplies its own panel, not counted as page-local GlassPanel."
+    },
+    "actions": [
+      "Per-source fatal retry and paused-source Retry; independent charge/drive recovery.",
+      "Chart fatal retry of failed sources only.",
+      "Legend hide/show of dwellMin and margin; preserve chart key charge-departure-alignment and URL hidden_charge-departure-alignment.",
+      "Chart PNG/SVG/clipboard image actions and CSV with date/dwellMin/margin when loaded; no opt-in fullscreen or annotation actions presently.",
+      "Summary Review details drawer and metric/context help.",
+      "Pair table pagination and page-size selection 12/24/48/96; complete newest-first loaded rows rather than former twelve-card truncation.",
+      "Pair DataTable existing loaded-row exports via Column.exportValue; preserve tableId/name charge-departure-alignment-pairs, composite row identity and shared persistence semantics.",
+      "Mobile pair-card detail access delegated to shared DataTable; actual mounted behavior unverified.",
+      "No-vehicle setup CTA to governed guidance destination with /onboarding fallback."
+    ],
+    "dataBehavior": [
+      "Selected vehicle only; disabled history hooks without a vehicle; separate cache keys and cancellation signals remain unchanged.",
+      "Bounded loaded history requests; no workspace date range and no complete lifetime claim.",
+      "First drive strictly after charge end and within default 24h; latest eligible charge wins when multiple sessions map to one drive. Ended invalid/missing sessions are not evaluated.",
+      "Dwell is rounded SI seconds in model; convert to rounded minutes only at chart/table/stat display boundary. Keep percent-point arithmetic and nullable SoC; do not introduce legacy distance/energy helpers.",
+      "Defaults remain 15% tight margin, 40-point excess buffer, 95% full SoC, 1h early-full dwell, 4h long dwell and 3-point positive SoC mismatch. Negative drift alone is not flagged.",
+      "Preserve avg margin's existing one-decimal model rounding and configured display precision/locale, and pair percentages' existing formatter behavior.",
+      "Model zero aggregates with no pairs remain guarded by metric missing reasons; known paired count zero is not unknown.",
+      "Retained arrays survive errors/offline pauses; loaded neighbor source count/bounds remain independent.",
+      "Chart rows remain oldest-first from sorted model pairs; detail table reverses a copy newest-first without mutating model/cache.",
+      "CSV currently excludes boolean misaligned. Any accessible textual flag addition must be additive and preserve all original columns/actions."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only source inspection, apart from the two explicitly owned report/heartbeat artifacts.",
+    "notRun": [
+      "No Git commands, agents, source/UI changes, full-repository lint/build, project TypeScript or runtime tests.",
+      "No browser session, screenshots, network requests, backend queries, production mutations or authentication workarounds.",
+      "No current viewport, contrast, keyboard, screen-reader, motion, forced-colors, export download or native acceptance.",
+      "Audit skill script was read but not executed because its unconditional npx tsc --noEmit step is outside this scoped Phase 0 assignment. Scoped source checks were used instead."
+    ],
+    "scopedPatternChecks": {
+      "files": ["ChargeDepartureAlignmentPage.tsx", "AlignmentStats.tsx", "AlignmentPairs.tsx"],
+      "command": "PowerShell Select-String on the three explicit presentation files, patterns style=; <(button|input|textarea|select|table)\\b; direct recharts/react-leaflet/framer-motion imports; text-white|bg-neon|text-neon|shadow-\\[|glow. Raw-HTML correction uses -CaseSensitive.",
+      "exitCode": 0,
+      "actualOutput": [
+        "SCOPED style= : 0",
+        "SCOPED <(button|input|textarea|select|table)\\b : 1",
+        "SCOPED from ['\\\"](recharts|react-leaflet|framer-motion)['\\\"] : 0",
+        "SCOPED text-white|bg-neon|text-neon|shadow-\\[|glow : 0",
+        "The case-insensitive raw pattern matched shared <Button at page line 153.",
+        "Case-sensitive raw HTML count: 0"
+      ],
+      "interpretation": "No direct neon/glow/pure-white classes found in scoped presentation files. Not a global clean-audit result; saturated shared chart tokens and shared control geometry still require review."
+    },
+    "historicalTestContext": "ChargeDepartureAlignmentPage.runtime.test.tsx:1 explicitly says AUTHORED_NOTRUN and lines 58-68 mock chart geometry/legend. Read lines 1-260 only; authored assertions are not executed proof or full browser coverage.",
+    "backendLimit": "Only assigned endpoint registration was inspected in router.go, not handler/repo bodies. Hook comments are not independently verified server behavior.",
+    "sourceSnapshot": "Page SHA-256 and line count were measured from disk. Concurrent shared-owner changes are possible; recheck affected source before implementation.",
+    "ownership": ["docs\\frontend-audits\\audit-page-077.json", ".agent-status\\audit-page-077.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx",
+    "web\\src\\features\\charging\\lib\\chargeDepartureAlignment.ts",
+    "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\AlignmentStats.tsx",
+    "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\AlignmentPairs.tsx",
+    "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\presentation.ts",
+    "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\index.ts",
+    "web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\ChargeDepartureAlignmentPage.runtime.test.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useHiddenSeries.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\ChartLegend.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

@@ -1,0 +1,1113 @@
+{
+  "schemaVersion": 2,
+  "item": "phase6-proof-command-tile-interactive-targets",
+  "status": "BLOCKED_EXTERNAL_CATALOG_STARTUP",
+  "continuationReview": {
+    "reviewUtc": "2026-10-14T15:08:22.1481435Z",
+    "status": "BLOCKED_REQUIRED_CATALOG_CLOSURE_UNVERIFIED",
+    "authority": "Current prompt requires the same 17-case selector only after real new catalog closure. migration-queue.md:2745 records generator0/namespaceStrict0, but finalsplitcheck deadlinecancelled -1 and keyStrict1/45 out-of-scope needs; projection freshness explicitly NOTverified. docs/session-handoff.md records drain complete without subsequent parent checks.",
+    "sourceSha256": "9c718d3d1545d5dc83e4be3bd31405760451ec95643b7c3ef30f4bbeb8eeec17",
+    "fixtureSha256": "8a910bf2f610a6b1e226f26ce391bab2e11efbea0de6e1c99849859a92448174",
+    "sourceFixtureMatchRetainedPins": true,
+    "canonicalSha256": "6e1e8ff4ddb120705d08ecf840ac959f8dad8e8eda35bd088f01c3437bbb9867",
+    "usageManifestSha256": "b27b839785b20c9c26eae281b98315d2c9121659f68a7051249bd296cbc12923",
+    "changedProjectionIsNotVerifiedClosure": true,
+    "nodeVersionObserved": "v26.8.1",
+    "newTestCommands": 0,
+    "newDiscovered": 0,
+    "newExecuted": 0,
+    "newPassed": 0,
+    "zeroExecutionIsPass": false,
+    "selectedStillNotRun": 17,
+    "historicalPassingEvidenceRepeated": false,
+    "attemptsUnchanged": true,
+    "budgetsRenewed": false,
+    "applicationOrFixtureEdits": 0,
+    "nativeOrGlobalGateClaim": false,
+    "requiredNextAuthority": "Verified current normal catalog closure from its assigned owner before the existing exact covering proof can run. No catalog repair, new checks, new agent, guard bypass or budget renewal by this continuation."
+  },
+  "sameExistingItem": true,
+  "attemptsUnchanged": true,
+  "sourceCommit": "79aaeea10f4cce8a46198f0be5dcc4f0525d4e0f",
+  "previousExternalReceiptIdentity": "6b0c77018d8d3408fbb8b1f45f363fa0b7157955",
+  "newPrerequisiteIdentity": "9c7b4f10c8b92284c14f59a0b14e0a13e55fddab",
+  "prerequisiteEvidence": "Current dispatch and migration-queue.md:2717 identify materially new canonical closure. The user-reported genuine 49-leaf check exit0 is prerequisite context, not this worker's current verification. No Git lookup or duplicate prerequisite/genuine-pass run.",
+  "requestUtc": "2026-10-14T12:28:07.256Z",
+  "firstObservedWorkerUtc": "2026-10-14T12:28:15.6563522Z",
+  "absoluteReturnDeadlineUtc": "2026-10-14T12:48:07.256Z",
+  "writeScope": [
+    "docs\\frontend-audits\\phase6-proof-command-tile-interactive-targets.json",
+    "web\\logs\\phase6-proof-command-tile-interactive-targets.log"
+  ],
+  "applicationFilesReadOnly": true,
+  "fixtureEdits": 0,
+  "normalVitestPool": "forks",
+  "maxWorkers": 2,
+  "nodeVersion": "v26.8.1",
+  "nodeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+  "nodeEngineRequirement": ">=26.0.0",
+  "historicalNodeDirectory": "The old handoff's Node26.11.1 directory is unavailable on this machine; existing Node26.8.1 meets package engines. No installation or configuration changes.",
+  "accounting": {
+    "originalAuthored": 11,
+    "addedExpandedAuthored": 8,
+    "totalAuthored": 19,
+    "selected": 17,
+    "originalSelected": 9,
+    "addedExpandedSelected": 8,
+    "deliberatelyUnselected": 2,
+    "unchangedHistoricalGenuinePassesRepeated": 0,
+    "authoredNamesMatchPreviousReceipt": true,
+    "selectedNamesMatchPreviousReceipt": true,
+    "fixtureByteHashMatchesPreviousReceipt": true
+  },
+  "originalAccountingAuthority": "previousReceipt.originalCaseInventory, originalPreservation, authoredCases and selectedCases remain intact below; fresh TypeScript AST name expansion and source/fixture byte pins are recorded in RETRY_PREFLIGHT_JSON.",
+  "selector": "^(?!.*(?:renders the optional sublabel and colours a success status green|colours a non-success status red and omits the optional rows when sublabel/status are absent)).*$",
+  "selectedNames": [
+    "renders a native command button with the translated label, the command icon (not a spinner), and no busy state when idle",
+    "executes the command with its params on click for a non-dangerous action, without opening a dialog",
+    "opens the confirmation dialog instead of executing when the command is dangerous, and shows the extra warning glyph",
+    "shows a spinner, marks the command busy/disabled/unfocusable, and ignores clicks while loading",
+    "activates natively on Enter and Space when the command is focused, but ignores other keys",
+    "routes native Enter and Space activation to the dialog (not execute) for a dangerous command",
+    "toggles only the sibling favorite on native Enter and Space activation, including dangerous commands",
+    "toggles the favorite without activating the tile, and exposes the pressed state via aria-pressed",
+    "applies the per-variant hover border and falls back to the default for an unknown variant",
+    "uses a noninteractive frame with two named sibling buttons and no nested interactive descendants",
+    "preserves command-first Tab order, reverse navigation, and focus through favorite/status rerenders",
+    "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=false dangerous=false",
+    "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=false dangerous=true",
+    "blocks execution/confirmation but keeps favorite keyboard-ready when loading=false disabled=true dangerous=false",
+    "blocks execution/confirmation but keeps favorite keyboard-ready when loading=false disabled=true dangerous=true",
+    "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=true dangerous=true",
+    "re-enables the same command target when readiness recovers, without firing until activated"
+  ],
+  "deliberatelyUnselectedNames": [
+    "renders the optional sublabel and colours a success status green",
+    "colours a non-success status red and omits the optional rows when sublabel/status are absent"
+  ],
+  "runtimeDiscovery": {
+    "status": "BLOCKED_BEFORE_COLLECTION",
+    "discovered": 0,
+    "names": [],
+    "selectorMiss": false,
+    "zeroExecutionIsPass": false
+  },
+  "execution": {
+    "status": "NOTRUN_STARTUP_BLOCKED",
+    "executed": 0,
+    "passed": 0,
+    "failedAssertions": 0,
+    "skipped": 0,
+    "selectedButNotRun": 17,
+    "authoredButNotRun": 19,
+    "runnerJsonEmitted": false,
+    "runnerJson": null
+  },
+  "commands": [
+    {
+      "ordinal": 1,
+      "cwd": "D:\\repos\\teslasync\\web",
+      "rawCommand": "$env:VITE_GIT_SHA='79aaeea10f4cce8a46198f0be5dcc4f0525d4e0f'; node .\\node_modules\\vitest\\vitest.mjs run .\\src\\features\\system\\components\\CommandTile.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json -t '^(?!.*(?:renders the optional sublabel and colours a success status green|colours a non-success status red and omits the optional rows when sublabel/status are absent)).*$'",
+      "startUtc": "2026-10-14T12:32:12.2458997Z",
+      "endUtc": "2026-10-14T12:35:45.9820052Z",
+      "exitCode": 1,
+      "durationSeconds": 213.7361055,
+      "pool": "forks",
+      "maxWorkers": 2,
+      "reporters": ["verbose", "json"],
+      "rawOutput": "[i18n-split] generated locale files are invalid (usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.\r\n\r\n⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯\r\nError: Command failed: C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check\r\n    at genericNodeError (node:internal/errors:999:15)\r\n    at wrappedFn (node:internal/errors:544:14)\r\n    at checkExecSyncError (node:child_process:942:11)\r\n    at execFileSync (node:child_process:978:15)\r\n    at PluginContext.buildStart (file:///D:/repos/teslasync/web/node_modules/.vite-temp/vite.config.ts.timestamp-1791981132814-8fde431b9927e.mjs:55:5)\r\n    at EnvironmentPluginContainer.hookParallel (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42315:39)\r\n    at EnvironmentPluginContainer.buildStart (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42330:12)\r\n    at file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38867:49\r\n    at initServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38875:6)\r\n    at _createServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38890:11) {\r\n  status: 1,\r\n  signal: null,\r\n  output: [ null, null, null ],\r\n  pid: 40288,\r\n  stdout: null,\r\n  stderr: null\r\n}\r\n\r\n\r\n\r\n",
+      "rawOutputSha256": "1da4efe654061837f9a27ce724acd07386148406ceee9ce39451f2a69a451b80",
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "startupFailures": 1,
+      "freshReporterJson": false
+    }
+  ],
+  "failureOwnership": {
+    "classification": "EXTERNAL_CATALOG_ONLY_STARTUP",
+    "externalUncharged": true,
+    "chargeOwnAttempt": false,
+    "ownAssertionFailureCount": 0,
+    "ownQueuedFixNeed": null,
+    "invalidGeneratedFileCount": 1,
+    "invalidGeneratedFiles": ["web\\src\\i18n\\en\\usage-manifest.json"],
+    "externalRoot": "Normal English split --check rejected usage-manifest.json before Vitest collection. Concurrent canonical en.json drift was observed; this worker did not write canonical or generated projections.",
+    "queuedExternalOwner": "phase6-fix-next12-and-location-canonical-copy",
+    "queueCitation": "migration-queue.md:2745 (active when inspected)",
+    "requiredExternalWork": "Already assigned sole canonical/projection owner must release current normal projections, split --check and strict namespace evidence. No repair, case edit, configuration change or guard bypass by this proof worker.",
+    "followUp": "Only after materially new current catalog closure: retain SAME item/attempt and original 17 affected selectors. Exact own assertion failure, if one executes later, requires a separately assigned surgical correction rather than bypass.",
+    "secondRunPerformed": false
+  },
+  "preflightUtc": "2026-10-14T12:31:56.905Z",
+  "hashCurrentnessUtc": "2026-10-14T12:36:06.218Z",
+  "sourcePairHashesUnchanged": true,
+  "sourceHashes": [
+    {
+      "path": "web\\src\\features\\system\\components\\CommandTile.tsx",
+      "sha256Before": "9c718d3d1545d5dc83e4be3bd31405760451ec95643b7c3ef30f4bbeb8eeec17",
+      "sha256After": "9c718d3d1545d5dc83e4be3bd31405760451ec95643b7c3ef30f4bbeb8eeec17",
+      "bytesBefore": 4055,
+      "bytesAfter": 4055,
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\features\\system\\components\\CommandTile.test.tsx",
+      "sha256Before": "8a910bf2f610a6b1e226f26ce391bab2e11efbea0de6e1c99849859a92448174",
+      "sha256After": "8a910bf2f610a6b1e226f26ce391bab2e11efbea0de6e1c99849859a92448174",
+      "bytesBefore": 13352,
+      "bytesAfter": 13352,
+      "unchanged": true
+    },
+    {
+      "path": "web\\vite.config.ts",
+      "sha256Before": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+      "sha256After": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+      "unchanged": true
+    },
+    {
+      "path": "web\\scripts\\split-i18n-catalog.mjs",
+      "sha256Before": "cda6ccfcdc442bd7524343921c18efd43ff74dc3ffd6cc61bc34a37631850598",
+      "sha256After": "cda6ccfcdc442bd7524343921c18efd43ff74dc3ffd6cc61bc34a37631850598",
+      "unchanged": true
+    },
+    {
+      "path": "web\\scripts\\audit-i18n-namespaces.mjs",
+      "sha256Before": "2869fe9085c8629a0f042634f990088c2b64fb9a4b40e53bbf75bf5ff200bc96",
+      "sha256After": "2869fe9085c8629a0f042634f990088c2b64fb9a4b40e53bbf75bf5ff200bc96",
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\i18n\\en\\usage-manifest.json",
+      "sha256Before": "983aaa0397e8e99c900b9de162c783fff1a3d8db6a5afb51cac4c1a1bff82597",
+      "sha256After": "983aaa0397e8e99c900b9de162c783fff1a3d8db6a5afb51cac4c1a1bff82597",
+      "unchanged": true,
+      "currentness": "Byte-stable during command, but rejected by normal catalog guard; byte stability is not semantic freshness."
+    }
+  ],
+  "pinInventory": {
+    "totalPins": 199,
+    "catalogPins": 187,
+    "catalogDigestBefore": "a2077488077c28cabf7955c8eede9cc11dd597d80b57a16337c35198b6d61ca5",
+    "catalogDigestAfter": "6b658879f2f1dc8361670c79df8f924850f175be0c71348dd97264018645e8b1",
+    "digestMethod": "SHA256 of sorted path=sha256 entries joined by LF, including canonical en.json and all generated en/*.json.",
+    "fullRawEvidence": "web\\logs\\phase6-proof-command-tile-interactive-targets.log: RETRY_PREFLIGHT_JSON and RETRY_POSTFLIGHT_JSON record all 199 before/after pins, byte counts and last-write UTCs.",
+    "globalCurrentnessClaim": false
+  },
+  "externalObservedDrift": [
+    {
+      "path": "web\\src\\i18n\\en.json",
+      "sha256Before": "20b99693ea4207275a05d693ddfb1d4e7e6ea21f0dfa8891fe2d9749b5a9eb61",
+      "sha256After": "6e1e8ff4ddb120705d08ecf840ac959f8dad8e8eda35bd088f01c3437bbb9867",
+      "bytesBefore": 1852774,
+      "bytesAfter": 1854647,
+      "lastWriteUtcBefore": "2026-10-14T07:48:35.473Z",
+      "lastWriteUtcAfter": "2026-10-14T12:33:26.921Z",
+      "note": "Observed concurrent shared-checkout drift; no write or causal actor attribution by this proof worker."
+    }
+  ],
+  "preservation": {
+    "sourceBaselineLines": 114,
+    "currentSourcePhysicalLines": 104,
+    "sourceLineRatio": 0.9122807017543859,
+    "fixtureBaselineLines": 217,
+    "currentFixturePhysicalLines": 330,
+    "baselinePanels": 1,
+    "currentSourcePanels": 1,
+    "baselineCharts": 0,
+    "currentSourceCharts": 0,
+    "originalCasesAccountedFor": 11,
+    "exactOriginalBodiesUnchangedBySourceOwner": 4,
+    "proofWorkerChangedOriginalBodies": false,
+    "publicExport": "CommandTile",
+    "sourceOwnerPublicApiAndBehaviorBytePreserved": true,
+    "evidence": "Current byte pins match owner source and prior fixture; AST preserves all 19 names and the exact 17-case selection. Sibling buttons, command/favorite isolation, keyboard, readiness, dangerous confirmation and params coverage remain authored but NOTRUN. Counts are lexical source evidence, not rendered/native acceptance."
+  },
+  "nativeHitboxVerification": "NOTRUN",
+  "nativeBrowserVerification": "NOTRUN",
+  "fullTypecheck": "NOTRUN: not assigned; no full npx tsc --noEmit.",
+  "violationsAudit": "NOTRUN: no new source changes and this item authorizes only affected runtime proof.",
+  "hookVerification": "NOTRUN: no hook/API changes or endpoint claims.",
+  "fullGateAcceptance": false,
+  "evidenceLimits": [
+    "17 selected is source-inventory coverage only; discovery0/execution0/pass0 is NOTPASS.",
+    "Two deliberately unselected cases are not runtime skips because collection never occurred.",
+    "Original fixture bodies and prior raw evidence remain intact; no duplicate historical genuine-pass run.",
+    "Source/fixture currentness is pinned at the stated UTC, not an evergreen global projection gate.",
+    "No Git, queue/catalog/config/source/fixture changes, install, subagents, external server, browser, Docker, API mutations or guard bypass.",
+    "No runtime assertion failures executed; own correction need is none, not a claim that all assertions pass."
+  ],
+  "receiptValidationHistory": "Initial persistence check exited1 only because the report raw-output copy had one extra trailing CRLF. Corrected the assigned report to exactly match original raw log bytes/hash; retained the failed validation output. No test rerun, source/fixture repair or guard bypass.",
+  "sourceReleaseUtc": "2026-10-14T12:40:20.3211597Z",
+  "commandReleaseUtc": "2026-10-14T12:35:45.9820052Z",
+  "sourceCommandReleaseUtc": "2026-10-14T12:40:20.3211597Z",
+  "releaseUtc": "2026-10-14T12:40:20.3211597Z",
+  "allClaimsReleased": true,
+  "noOwnedCommandsRemainRunning": true,
+  "deadlineMet": true,
+  "previousReceipt": {
+  "schemaVersion": 1,
+  "item": "phase6-proof-command-tile-interactive-targets",
+  "status": "BLOCKED_EXTERNAL_CATALOG_STARTUP",
+  "sourceCommit": "79aaeea10f4cce8a46198f0be5dcc4f0525d4e0f",
+  "commitVerification": "Queue identity only; Git commands prohibited. Current file hashes will be compared with the source-owner handoff.",
+  "requestUtc": "2026-10-14T07:40:55.266Z",
+  "actualQueueStartUtc": "2026-10-14T07:40:54.090Z",
+  "absoluteReturnDeadlineUtc": "2026-10-14T08:00:54.090Z",
+  "writeScope": [
+    "docs\\frontend-audits\\phase6-proof-command-tile-interactive-targets.json",
+    "web\\logs\\phase6-proof-command-tile-interactive-targets.log"
+  ],
+  "applicationFilesReadOnly": true,
+  "normalVitestPool": "forks",
+  "maxWorkers": 2,
+  "priorAccounting": {
+    "authored": 19,
+    "original": 11,
+    "addedExpanded": 8,
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "startupBlocked": true,
+    "zeroExecutionIsPass": false
+  },
+  "nativeHitboxVerification": "NOTRUN",
+  "nativeBrowserVerification": "NOTRUN",
+  "fullGateAcceptance": false,
+  "releaseUtc": "2026-10-14T07:50:53.106Z",
+  "baselineUtc": "2026-10-14T07:45:23.282Z",
+  "sourceHandoff": {
+    "sourceSha256": "9c718d3d1545d5dc83e4be3bd31405760451ec95643b7c3ef30f4bbeb8eeec17",
+    "sourceHashMatches": true,
+    "currentAuthoredNamesMatchOwner": true,
+    "fixtureExactHandoffHashAvailable": false,
+    "fixtureCurrentnessMethod": "Current before/after byte hashes and exact 19-name owner inventory; original baseline retained in owner log; no Git lookup."
+  },
+  "originalCaseInventory": [
+    {
+      "name": "renders an accessible button tile with the translated label, the command icon (not a spinner), and no busy state when idle",
+      "line": 64,
+      "bodySha256": "9c2f835b259862dcb6299f81fd03889ed1766888db5e41b3cbc8f04a3af8f27f",
+      "parameterized": false
+    },
+    {
+      "name": "executes the command with its params on click for a non-dangerous action, without opening a dialog",
+      "line": 80,
+      "bodySha256": "c9573a86264ff3a1a56efcdf12d6b09ccf102372c2b6885b4f9a555782879a51",
+      "parameterized": false
+    },
+    {
+      "name": "opens the confirmation dialog instead of executing when the command is dangerous, and shows the extra warning glyph",
+      "line": 92,
+      "bodySha256": "b197e9a3a2eb542c619a22f09c7513905c85fef30c42a629b28b68618e24e0f8",
+      "parameterized": false
+    },
+    {
+      "name": "shows a spinner, marks itself busy/disabled/unfocusable, and ignores clicks while loading",
+      "line": 106,
+      "bodySha256": "ec66c323e08c7d386f39dfdc522addcda8278b06d116baa2691ff61348968e56",
+      "parameterized": false
+    },
+    {
+      "name": "activates on Enter and Space when the tile itself is focused, but ignores other keys",
+      "line": 122,
+      "bodySha256": "174e0941b6b35cf0dde6634045056ac5c1b981600eb0eef919bd1cc5421d0e65",
+      "parameterized": false
+    },
+    {
+      "name": "routes keyboard activation to the dialog (not execute) for a dangerous command",
+      "line": 137,
+      "bodySha256": "0b6cf9ea164ca0e1d94835eca94a645b0f32a0c548f4f6c27378c1e72340b101",
+      "parameterized": false
+    },
+    {
+      "name": "does NOT execute the command when a key press bubbles up from the nested favorite button",
+      "line": 147,
+      "bodySha256": "5588dbbd5cd0dbb78afe8e9dd6d2c1221181bf9109df29f3a89382c9fc5d65ff",
+      "parameterized": false
+    },
+    {
+      "name": "toggles the favorite without activating the tile, and exposes the pressed state via aria-pressed",
+      "line": 159,
+      "bodySha256": "0e64fae98bbcca9062bfee2c256d133c5c02d0b6228a0f304597852214f2f0ad",
+      "parameterized": false
+    },
+    {
+      "name": "renders the optional sublabel and colours a success status green",
+      "line": 178,
+      "bodySha256": "a1d748de8adb0021cb9452a0eeab89ead06836b457838d6e340975694709de86",
+      "parameterized": false
+    },
+    {
+      "name": "colours a non-success status red and omits the optional rows when sublabel/status are absent",
+      "line": 190,
+      "bodySha256": "621ca0906f700df28f4b3f2e98e6fd59b239522851ca2b845e4d3366b9b8472c",
+      "parameterized": false
+    },
+    {
+      "name": "applies the per-variant hover border and falls back to the default for an unknown variant",
+      "line": 201,
+      "bodySha256": "91c0bfe9365672943fa8d42737c4da055f8e3033cc42a67377e60da6629d06f2",
+      "parameterized": false
+    }
+  ],
+  "authoredCases": [
+    {
+      "name": "renders a native command button with the translated label, the command icon (not a spinner), and no busy state when idle",
+      "line": 65,
+      "bodySha256": "5a39de412d6efc05e6899661c5bf8d1bda5d1fb2cb7196d4b790b97974d4e23b",
+      "parameterized": false
+    },
+    {
+      "name": "executes the command with its params on click for a non-dangerous action, without opening a dialog",
+      "line": 84,
+      "bodySha256": "c9573a86264ff3a1a56efcdf12d6b09ccf102372c2b6885b4f9a555782879a51",
+      "parameterized": false
+    },
+    {
+      "name": "opens the confirmation dialog instead of executing when the command is dangerous, and shows the extra warning glyph",
+      "line": 96,
+      "bodySha256": "b197e9a3a2eb542c619a22f09c7513905c85fef30c42a629b28b68618e24e0f8",
+      "parameterized": false
+    },
+    {
+      "name": "shows a spinner, marks the command busy/disabled/unfocusable, and ignores clicks while loading",
+      "line": 110,
+      "bodySha256": "2416890bc3b857630670ae92b5ce02ffbbbf666adc3d6afe2cc2e8bf9887bfd0",
+      "parameterized": false
+    },
+    {
+      "name": "activates natively on Enter and Space when the command is focused, but ignores other keys",
+      "line": 127,
+      "bodySha256": "1fb6a6e5be4a66062c25fb77b58a74ec590a3c920f952e5fb1a5d5531e08c982",
+      "parameterized": false
+    },
+    {
+      "name": "routes native Enter and Space activation to the dialog (not execute) for a dangerous command",
+      "line": 145,
+      "bodySha256": "641fd10e404b799069cea370841da48c61f42a4958edc22e3874ca249111a303",
+      "parameterized": false
+    },
+    {
+      "name": "toggles only the sibling favorite on native Enter and Space activation, including dangerous commands",
+      "line": 159,
+      "bodySha256": "530d2a3517e5dff778d1d9972237176077503125acdcabc0a8dd50483709b52a",
+      "parameterized": false
+    },
+    {
+      "name": "toggles the favorite without activating the tile, and exposes the pressed state via aria-pressed",
+      "line": 174,
+      "bodySha256": "b4dca27b88a41ac69f6ba1fdeef5f746589689e3e260d6d931933cbee202432c",
+      "parameterized": false
+    },
+    {
+      "name": "renders the optional sublabel and colours a success status green",
+      "line": 193,
+      "bodySha256": "a1d748de8adb0021cb9452a0eeab89ead06836b457838d6e340975694709de86",
+      "parameterized": false
+    },
+    {
+      "name": "colours a non-success status red and omits the optional rows when sublabel/status are absent",
+      "line": 205,
+      "bodySha256": "621ca0906f700df28f4b3f2e98e6fd59b239522851ca2b845e4d3366b9b8472c",
+      "parameterized": false
+    },
+    {
+      "name": "applies the per-variant hover border and falls back to the default for an unknown variant",
+      "line": 216,
+      "bodySha256": "7af49d8f94cc9b15549481f48d6b96caf4bc4aa2390102581e4d4208e2581586",
+      "parameterized": false
+    },
+    {
+      "name": "uses a noninteractive frame with two named sibling buttons and no nested interactive descendants",
+      "line": 233,
+      "bodySha256": "e250078484b5e196f7424b20f5a0fdc32ca50963766a35eb7340383f51a0bd9d",
+      "parameterized": false
+    },
+    {
+      "name": "preserves command-first Tab order, reverse navigation, and focus through favorite/status rerenders",
+      "line": 256,
+      "bodySha256": "9e9a0fd46c6a4888a5831912bcaf9714c8977ca40dcf0e5c90abc5bc8b46ea41",
+      "parameterized": false
+    },
+    {
+      "name": "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=false dangerous=false",
+      "line": 276,
+      "bodySha256": "4dbf22b9a50018c59da6b556ba35d569afc4dea7e52aec639ecfdd5da86045b3",
+      "parameterized": true
+    },
+    {
+      "name": "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=false dangerous=true",
+      "line": 276,
+      "bodySha256": "4dbf22b9a50018c59da6b556ba35d569afc4dea7e52aec639ecfdd5da86045b3",
+      "parameterized": true
+    },
+    {
+      "name": "blocks execution/confirmation but keeps favorite keyboard-ready when loading=false disabled=true dangerous=false",
+      "line": 276,
+      "bodySha256": "4dbf22b9a50018c59da6b556ba35d569afc4dea7e52aec639ecfdd5da86045b3",
+      "parameterized": true
+    },
+    {
+      "name": "blocks execution/confirmation but keeps favorite keyboard-ready when loading=false disabled=true dangerous=true",
+      "line": 276,
+      "bodySha256": "4dbf22b9a50018c59da6b556ba35d569afc4dea7e52aec639ecfdd5da86045b3",
+      "parameterized": true
+    },
+    {
+      "name": "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=true dangerous=true",
+      "line": 276,
+      "bodySha256": "4dbf22b9a50018c59da6b556ba35d569afc4dea7e52aec639ecfdd5da86045b3",
+      "parameterized": true
+    },
+    {
+      "name": "re-enables the same command target when readiness recovers, without firing until activated",
+      "line": 312,
+      "bodySha256": "091623035b48f861b8e6406706afd8355119dfa3519c1682a66274d91d35e0fb",
+      "parameterized": false
+    }
+  ],
+  "selectedCases": [
+    {
+      "name": "renders a native command button with the translated label, the command icon (not a spinner), and no busy state when idle",
+      "line": 65,
+      "bodySha256": "5a39de412d6efc05e6899661c5bf8d1bda5d1fb2cb7196d4b790b97974d4e23b",
+      "parameterized": false
+    },
+    {
+      "name": "executes the command with its params on click for a non-dangerous action, without opening a dialog",
+      "line": 84,
+      "bodySha256": "c9573a86264ff3a1a56efcdf12d6b09ccf102372c2b6885b4f9a555782879a51",
+      "parameterized": false
+    },
+    {
+      "name": "opens the confirmation dialog instead of executing when the command is dangerous, and shows the extra warning glyph",
+      "line": 96,
+      "bodySha256": "b197e9a3a2eb542c619a22f09c7513905c85fef30c42a629b28b68618e24e0f8",
+      "parameterized": false
+    },
+    {
+      "name": "shows a spinner, marks the command busy/disabled/unfocusable, and ignores clicks while loading",
+      "line": 110,
+      "bodySha256": "2416890bc3b857630670ae92b5ce02ffbbbf666adc3d6afe2cc2e8bf9887bfd0",
+      "parameterized": false
+    },
+    {
+      "name": "activates natively on Enter and Space when the command is focused, but ignores other keys",
+      "line": 127,
+      "bodySha256": "1fb6a6e5be4a66062c25fb77b58a74ec590a3c920f952e5fb1a5d5531e08c982",
+      "parameterized": false
+    },
+    {
+      "name": "routes native Enter and Space activation to the dialog (not execute) for a dangerous command",
+      "line": 145,
+      "bodySha256": "641fd10e404b799069cea370841da48c61f42a4958edc22e3874ca249111a303",
+      "parameterized": false
+    },
+    {
+      "name": "toggles only the sibling favorite on native Enter and Space activation, including dangerous commands",
+      "line": 159,
+      "bodySha256": "530d2a3517e5dff778d1d9972237176077503125acdcabc0a8dd50483709b52a",
+      "parameterized": false
+    },
+    {
+      "name": "toggles the favorite without activating the tile, and exposes the pressed state via aria-pressed",
+      "line": 174,
+      "bodySha256": "b4dca27b88a41ac69f6ba1fdeef5f746589689e3e260d6d931933cbee202432c",
+      "parameterized": false
+    },
+    {
+      "name": "applies the per-variant hover border and falls back to the default for an unknown variant",
+      "line": 216,
+      "bodySha256": "7af49d8f94cc9b15549481f48d6b96caf4bc4aa2390102581e4d4208e2581586",
+      "parameterized": false
+    },
+    {
+      "name": "uses a noninteractive frame with two named sibling buttons and no nested interactive descendants",
+      "line": 233,
+      "bodySha256": "e250078484b5e196f7424b20f5a0fdc32ca50963766a35eb7340383f51a0bd9d",
+      "parameterized": false
+    },
+    {
+      "name": "preserves command-first Tab order, reverse navigation, and focus through favorite/status rerenders",
+      "line": 256,
+      "bodySha256": "9e9a0fd46c6a4888a5831912bcaf9714c8977ca40dcf0e5c90abc5bc8b46ea41",
+      "parameterized": false
+    },
+    {
+      "name": "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=false dangerous=false",
+      "line": 276,
+      "bodySha256": "4dbf22b9a50018c59da6b556ba35d569afc4dea7e52aec639ecfdd5da86045b3",
+      "parameterized": true
+    },
+    {
+      "name": "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=false dangerous=true",
+      "line": 276,
+      "bodySha256": "4dbf22b9a50018c59da6b556ba35d569afc4dea7e52aec639ecfdd5da86045b3",
+      "parameterized": true
+    },
+    {
+      "name": "blocks execution/confirmation but keeps favorite keyboard-ready when loading=false disabled=true dangerous=false",
+      "line": 276,
+      "bodySha256": "4dbf22b9a50018c59da6b556ba35d569afc4dea7e52aec639ecfdd5da86045b3",
+      "parameterized": true
+    },
+    {
+      "name": "blocks execution/confirmation but keeps favorite keyboard-ready when loading=false disabled=true dangerous=true",
+      "line": 276,
+      "bodySha256": "4dbf22b9a50018c59da6b556ba35d569afc4dea7e52aec639ecfdd5da86045b3",
+      "parameterized": true
+    },
+    {
+      "name": "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=true dangerous=true",
+      "line": 276,
+      "bodySha256": "4dbf22b9a50018c59da6b556ba35d569afc4dea7e52aec639ecfdd5da86045b3",
+      "parameterized": true
+    },
+    {
+      "name": "re-enables the same command target when readiness recovers, without firing until activated",
+      "line": 312,
+      "bodySha256": "091623035b48f861b8e6406706afd8355119dfa3519c1682a66274d91d35e0fb",
+      "parameterized": false
+    }
+  ],
+  "deliberatelyUnselectedCases": [
+    {
+      "name": "renders the optional sublabel and colours a success status green",
+      "line": 193,
+      "bodySha256": "a1d748de8adb0021cb9452a0eeab89ead06836b457838d6e340975694709de86",
+      "parameterized": false
+    },
+    {
+      "name": "colours a non-success status red and omits the optional rows when sublabel/status are absent",
+      "line": 205,
+      "bodySha256": "621ca0906f700df28f4b3f2e98e6fd59b239522851ca2b845e4d3366b9b8472c",
+      "parameterized": false
+    }
+  ],
+  "accounting": {
+    "originalAuthored": 11,
+    "addedExpandedAuthored": 8,
+    "totalAuthored": 19,
+    "selected": 17,
+    "originalSelected": 9,
+    "addedExpandedSelected": 8,
+    "deliberatelyUnselected": 2,
+    "unchangedHistoricalGenuinePassesRepeated": 0
+  },
+  "sourceHashes": [
+    {
+      "path": "web\\src\\features\\system\\components\\CommandTile.tsx",
+      "sha256Before": "9c718d3d1545d5dc83e4be3bd31405760451ec95643b7c3ef30f4bbeb8eeec17",
+      "bytesBefore": 4055,
+      "linesBefore": 105,
+      "lastWriteUtcBefore": "2026-10-14T06:11:54.309Z",
+      "sha256After": "9c718d3d1545d5dc83e4be3bd31405760451ec95643b7c3ef30f4bbeb8eeec17",
+      "bytesAfter": 4055,
+      "physicalLinesBefore": 104,
+      "physicalLinesAfter": 104,
+      "lastWriteUtcAfter": "2026-10-14T06:11:54.309Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\features\\system\\components\\CommandTile.test.tsx",
+      "sha256Before": "8a910bf2f610a6b1e226f26ce391bab2e11efbea0de6e1c99849859a92448174",
+      "bytesBefore": 13352,
+      "linesBefore": 331,
+      "lastWriteUtcBefore": "2026-10-14T06:12:46.855Z",
+      "sha256After": "8a910bf2f610a6b1e226f26ce391bab2e11efbea0de6e1c99849859a92448174",
+      "bytesAfter": 13352,
+      "physicalLinesBefore": 330,
+      "physicalLinesAfter": 330,
+      "lastWriteUtcAfter": "2026-10-14T06:12:46.855Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\features\\system\\commands.ts",
+      "sha256Before": "d71fca1c8d68aacca8910689c7206e7ab9c135c420f8706a1777aa8e388c2580",
+      "bytesBefore": 39641,
+      "linesBefore": 796,
+      "lastWriteUtcBefore": "2026-10-14T07:44:21.377Z",
+      "sha256After": "d71fca1c8d68aacca8910689c7206e7ab9c135c420f8706a1777aa8e388c2580",
+      "bytesAfter": 39641,
+      "physicalLinesBefore": 795,
+      "physicalLinesAfter": 795,
+      "lastWriteUtcAfter": "2026-10-14T07:44:21.377Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\components\\ui\\Button.tsx",
+      "sha256Before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytesBefore": 5174,
+      "linesBefore": 94,
+      "lastWriteUtcBefore": "2026-10-14T00:29:40.993Z",
+      "sha256After": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytesAfter": 5174,
+      "physicalLinesBefore": 93,
+      "physicalLinesAfter": 93,
+      "lastWriteUtcAfter": "2026-10-14T00:29:40.993Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\components\\ui\\GlassPanel.tsx",
+      "sha256Before": "e60a182c5579269b2a3d9869b0fc8fe14b3b1dc191db09a3a3c19bb13a88f3af",
+      "bytesBefore": 3129,
+      "linesBefore": 77,
+      "lastWriteUtcBefore": "2026-10-14T00:29:41.002Z",
+      "sha256After": "e60a182c5579269b2a3d9869b0fc8fe14b3b1dc191db09a3a3c19bb13a88f3af",
+      "bytesAfter": 3129,
+      "physicalLinesBefore": 76,
+      "physicalLinesAfter": 76,
+      "lastWriteUtcAfter": "2026-10-14T00:29:41.002Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\test-setup.ts",
+      "sha256Before": "fb61779479e36b97298928c7bcc0620e8ff2a509a0ea50350f9935d9f260517a",
+      "bytesBefore": 7885,
+      "linesBefore": 234,
+      "lastWriteUtcBefore": "2026-10-13T06:09:18.665Z",
+      "sha256After": "fb61779479e36b97298928c7bcc0620e8ff2a509a0ea50350f9935d9f260517a",
+      "bytesAfter": 7885,
+      "physicalLinesBefore": 233,
+      "physicalLinesAfter": 233,
+      "lastWriteUtcAfter": "2026-10-13T06:09:18.665Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\vite.config.ts",
+      "sha256Before": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+      "bytesBefore": 19987,
+      "linesBefore": 435,
+      "lastWriteUtcBefore": "2026-10-14T00:29:41.997Z",
+      "sha256After": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+      "bytesAfter": 19987,
+      "physicalLinesBefore": 434,
+      "physicalLinesAfter": 434,
+      "lastWriteUtcAfter": "2026-10-14T00:29:41.997Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\package.json",
+      "sha256Before": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a",
+      "bytesBefore": 10780,
+      "linesBefore": 190,
+      "lastWriteUtcBefore": "2026-10-14T00:34:47.454Z",
+      "sha256After": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a",
+      "bytesAfter": 10780,
+      "physicalLinesBefore": 189,
+      "physicalLinesAfter": 189,
+      "lastWriteUtcAfter": "2026-10-14T00:34:47.454Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\package-lock.json",
+      "sha256Before": "626f096dfdd962204bc6d88931f60469a57dd07f2a8f6b045744bd90f29910df",
+      "bytesBefore": 497249,
+      "linesBefore": 13706,
+      "lastWriteUtcBefore": "2026-10-14T00:34:41.929Z",
+      "sha256After": "626f096dfdd962204bc6d88931f60469a57dd07f2a8f6b045744bd90f29910df",
+      "bytesAfter": 497249,
+      "physicalLinesBefore": 13705,
+      "physicalLinesAfter": 13705,
+      "lastWriteUtcAfter": "2026-10-14T00:34:41.929Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\scripts\\split-i18n-catalog.mjs",
+      "sha256Before": "cda6ccfcdc442bd7524343921c18efd43ff74dc3ffd6cc61bc34a37631850598",
+      "bytesBefore": 30541,
+      "linesBefore": 670,
+      "lastWriteUtcBefore": "2026-10-14T00:29:40.844Z",
+      "sha256After": "cda6ccfcdc442bd7524343921c18efd43ff74dc3ffd6cc61bc34a37631850598",
+      "bytesAfter": 30541,
+      "physicalLinesBefore": 669,
+      "physicalLinesAfter": 669,
+      "lastWriteUtcAfter": "2026-10-14T00:29:40.844Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\scripts\\audit-i18n-namespaces.mjs",
+      "sha256Before": "2869fe9085c8629a0f042634f990088c2b64fb9a4b40e53bbf75bf5ff200bc96",
+      "bytesBefore": 4776,
+      "linesBefore": 111,
+      "lastWriteUtcBefore": "2026-10-13T06:09:17.744Z",
+      "sha256After": "2869fe9085c8629a0f042634f990088c2b64fb9a4b40e53bbf75bf5ff200bc96",
+      "bytesAfter": 4776,
+      "physicalLinesBefore": 110,
+      "physicalLinesAfter": 110,
+      "lastWriteUtcAfter": "2026-10-13T06:09:17.744Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\scripts\\buildIdentity.mjs",
+      "sha256Before": "797e9c369cd5c16d98a73be666d805f9472f7760a4a31276d3b12b92dd2446c4",
+      "bytesBefore": 8228,
+      "linesBefore": 178,
+      "lastWriteUtcBefore": "2026-10-13T06:09:17.755Z",
+      "sha256After": "797e9c369cd5c16d98a73be666d805f9472f7760a4a31276d3b12b92dd2446c4",
+      "bytesAfter": 8228,
+      "physicalLinesBefore": 177,
+      "physicalLinesAfter": 177,
+      "lastWriteUtcAfter": "2026-10-13T06:09:17.755Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\i18n\\en.json",
+      "sha256Before": "4f3772fdb879f420e513ca411442d48d85b7ca2501f16f6113736e6dd89b8202",
+      "bytesBefore": 1849361,
+      "linesBefore": 39073,
+      "lastWriteUtcBefore": "2026-10-14T07:03:17.125Z",
+      "sha256After": "20b99693ea4207275a05d693ddfb1d4e7e6ea21f0dfa8891fe2d9749b5a9eb61",
+      "bytesAfter": 1852774,
+      "physicalLinesBefore": 39072,
+      "physicalLinesAfter": 39129,
+      "lastWriteUtcAfter": "2026-10-14T07:48:35.473Z",
+      "unchanged": false
+    },
+    {
+      "path": "web\\src\\i18n\\en\\locale-system.json",
+      "sha256Before": "a46ac7a78bd89a0311831628b566d434c7a6ad77e0c7c90de7c94090222f8636",
+      "bytesBefore": 190721,
+      "linesBefore": 4520,
+      "lastWriteUtcBefore": "2026-10-14T07:07:46.659Z",
+      "sha256After": "a46ac7a78bd89a0311831628b566d434c7a6ad77e0c7c90de7c94090222f8636",
+      "bytesAfter": 190721,
+      "physicalLinesBefore": 4519,
+      "physicalLinesAfter": 4519,
+      "lastWriteUtcAfter": "2026-10-14T07:07:46.659Z",
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\i18n\\en\\usage-manifest.json",
+      "sha256Before": "f675dfef6ee4f812a664fc41a6f27277d93f2ef3f805a91147cb96ec76a0b820",
+      "bytesBefore": 4489634,
+      "linesBefore": 127225,
+      "lastWriteUtcBefore": "2026-10-14T07:07:46.705Z",
+      "sha256After": "f675dfef6ee4f812a664fc41a6f27277d93f2ef3f805a91147cb96ec76a0b820",
+      "bytesAfter": 4489634,
+      "physicalLinesBefore": 127224,
+      "physicalLinesAfter": 127224,
+      "lastWriteUtcAfter": "2026-10-14T07:07:46.705Z",
+      "unchanged": true
+    }
+  ],
+  "baselineAuthority": {
+    "ownerLog": "logs\\phase6-fix-command-tile-interactive-targets.log",
+    "ownerLogSha256": "d891ec580edc1b82186c3c92e907acddffc3ba334f60a387e5d378eb90f84aea",
+    "sourceBaselineSha256": "4d1cefbc6941742dd42590fde967c3ffa59fe767a2f3040e1ae117fb42330dad",
+    "fixtureBaselineSha256": "469f1d58b7d7a52cf23c572ee668272d9dc33959e052aa83eafe79c23341ccdf"
+  },
+  "originalPreservation": [
+    {
+      "originalName": "renders an accessible button tile with the translated label, the command icon (not a spinner), and no busy state when idle",
+      "currentName": "renders a native command button with the translated label, the command icon (not a spinner), and no busy state when idle",
+      "exactBodyPreserved": false,
+      "originalBodySha256": "9c2f835b259862dcb6299f81fd03889ed1766888db5e41b3cbc8f04a3af8f27f",
+      "currentBodySha256": "5a39de412d6efc05e6899661c5bf8d1bda5d1fb2cb7196d4b790b97974d4e23b",
+      "review": "Existing original entry retained; native-button assertions/userEvent activation or semantic hover-token expectations adapted by source owner; proof worker made no fixture changes."
+    },
+    {
+      "originalName": "executes the command with its params on click for a non-dangerous action, without opening a dialog",
+      "currentName": "executes the command with its params on click for a non-dangerous action, without opening a dialog",
+      "exactBodyPreserved": true,
+      "originalBodySha256": "c9573a86264ff3a1a56efcdf12d6b09ccf102372c2b6885b4f9a555782879a51",
+      "currentBodySha256": "c9573a86264ff3a1a56efcdf12d6b09ccf102372c2b6885b4f9a555782879a51",
+      "review": "Body unchanged."
+    },
+    {
+      "originalName": "opens the confirmation dialog instead of executing when the command is dangerous, and shows the extra warning glyph",
+      "currentName": "opens the confirmation dialog instead of executing when the command is dangerous, and shows the extra warning glyph",
+      "exactBodyPreserved": true,
+      "originalBodySha256": "b197e9a3a2eb542c619a22f09c7513905c85fef30c42a629b28b68618e24e0f8",
+      "currentBodySha256": "b197e9a3a2eb542c619a22f09c7513905c85fef30c42a629b28b68618e24e0f8",
+      "review": "Body unchanged."
+    },
+    {
+      "originalName": "shows a spinner, marks itself busy/disabled/unfocusable, and ignores clicks while loading",
+      "currentName": "shows a spinner, marks the command busy/disabled/unfocusable, and ignores clicks while loading",
+      "exactBodyPreserved": false,
+      "originalBodySha256": "ec66c323e08c7d386f39dfdc522addcda8278b06d116baa2691ff61348968e56",
+      "currentBodySha256": "2416890bc3b857630670ae92b5ce02ffbbbf666adc3d6afe2cc2e8bf9887bfd0",
+      "review": "Existing original entry retained; native-button assertions/userEvent activation or semantic hover-token expectations adapted by source owner; proof worker made no fixture changes."
+    },
+    {
+      "originalName": "activates on Enter and Space when the tile itself is focused, but ignores other keys",
+      "currentName": "activates natively on Enter and Space when the command is focused, but ignores other keys",
+      "exactBodyPreserved": false,
+      "originalBodySha256": "174e0941b6b35cf0dde6634045056ac5c1b981600eb0eef919bd1cc5421d0e65",
+      "currentBodySha256": "1fb6a6e5be4a66062c25fb77b58a74ec590a3c920f952e5fb1a5d5531e08c982",
+      "review": "Existing original entry retained; native-button assertions/userEvent activation or semantic hover-token expectations adapted by source owner; proof worker made no fixture changes."
+    },
+    {
+      "originalName": "routes keyboard activation to the dialog (not execute) for a dangerous command",
+      "currentName": "routes native Enter and Space activation to the dialog (not execute) for a dangerous command",
+      "exactBodyPreserved": false,
+      "originalBodySha256": "0b6cf9ea164ca0e1d94835eca94a645b0f32a0c548f4f6c27378c1e72340b101",
+      "currentBodySha256": "641fd10e404b799069cea370841da48c61f42a4958edc22e3874ca249111a303",
+      "review": "Existing original entry retained; native-button assertions/userEvent activation or semantic hover-token expectations adapted by source owner; proof worker made no fixture changes."
+    },
+    {
+      "originalName": "does NOT execute the command when a key press bubbles up from the nested favorite button",
+      "currentName": "toggles only the sibling favorite on native Enter and Space activation, including dangerous commands",
+      "exactBodyPreserved": false,
+      "originalBodySha256": "5588dbbd5cd0dbb78afe8e9dd6d2c1221181bf9109df29f3a89382c9fc5d65ff",
+      "currentBodySha256": "530d2a3517e5dff778d1d9972237176077503125acdcabc0a8dd50483709b52a",
+      "review": "Existing original entry retained; native-button assertions/userEvent activation or semantic hover-token expectations adapted by source owner; proof worker made no fixture changes."
+    },
+    {
+      "originalName": "toggles the favorite without activating the tile, and exposes the pressed state via aria-pressed",
+      "currentName": "toggles the favorite without activating the tile, and exposes the pressed state via aria-pressed",
+      "exactBodyPreserved": false,
+      "originalBodySha256": "0e64fae98bbcca9062bfee2c256d133c5c02d0b6228a0f304597852214f2f0ad",
+      "currentBodySha256": "b4dca27b88a41ac69f6ba1fdeef5f746589689e3e260d6d931933cbee202432c",
+      "review": "Existing original entry retained; native-button assertions/userEvent activation or semantic hover-token expectations adapted by source owner; proof worker made no fixture changes."
+    },
+    {
+      "originalName": "renders the optional sublabel and colours a success status green",
+      "currentName": "renders the optional sublabel and colours a success status green",
+      "exactBodyPreserved": true,
+      "originalBodySha256": "a1d748de8adb0021cb9452a0eeab89ead06836b457838d6e340975694709de86",
+      "currentBodySha256": "a1d748de8adb0021cb9452a0eeab89ead06836b457838d6e340975694709de86",
+      "review": "Body unchanged."
+    },
+    {
+      "originalName": "colours a non-success status red and omits the optional rows when sublabel/status are absent",
+      "currentName": "colours a non-success status red and omits the optional rows when sublabel/status are absent",
+      "exactBodyPreserved": true,
+      "originalBodySha256": "621ca0906f700df28f4b3f2e98e6fd59b239522851ca2b845e4d3366b9b8472c",
+      "currentBodySha256": "621ca0906f700df28f4b3f2e98e6fd59b239522851ca2b845e4d3366b9b8472c",
+      "review": "Body unchanged."
+    },
+    {
+      "originalName": "applies the per-variant hover border and falls back to the default for an unknown variant",
+      "currentName": "applies the per-variant hover border and falls back to the default for an unknown variant",
+      "exactBodyPreserved": false,
+      "originalBodySha256": "91c0bfe9365672943fa8d42737c4da055f8e3033cc42a67377e60da6629d06f2",
+      "currentBodySha256": "7af49d8f94cc9b15549481f48d6b96caf4bc4aa2390102581e4d4208e2581586",
+      "review": "Existing original entry retained; native-button assertions/userEvent activation or semantic hover-token expectations adapted by source owner; proof worker made no fixture changes."
+    }
+  ],
+  "selector": "^(?!.*(?:renders the optional sublabel and colours a success status green|colours a non-success status red and omits the optional rows when sublabel/status are absent)).*$",
+  "fullTypecheck": "NOTRUN: proof-only outputs and source read-only; not a full gate",
+  "violationsAudit": "NOTRUN: no application edits; full skill script includes prohibited global compiler",
+  "hookVerification": "NOTAPPLICABLE: CommandTile is callback-only; no API hook URL introduced or changed",
+  "runtimeDiscovery": {
+    "status": "BLOCKED_BEFORE_COLLECTION",
+    "discovered": 0,
+    "names": [],
+    "selectorMiss": false,
+    "zeroExecutionIsPass": false,
+    "evidence": "Normal Vitest terminated in vite.config.ts buildStart split-i18n-catalog --check before test collection; no runner JSON emitted."
+  },
+  "execution": {
+    "status": "NOTRUN_STARTUP_BLOCKED",
+    "executed": 0,
+    "passed": 0,
+    "failedAssertions": 0,
+    "skipped": 0,
+    "selectedButNotRun": 17,
+    "authoredButNotRun": 19,
+    "runnerJsonEmitted": false,
+    "runnerJson": null
+  },
+  "commands": [
+    {
+      "ordinal": 1,
+      "cwd": "D:\\repos\\teslasync\\web",
+      "rawCommand": "$env:VITE_GIT_SHA='79aaeea10f4cce8a46198f0be5dcc4f0525d4e0f'; node .\\node_modules\\vitest\\vitest.mjs run .\\src\\features\\system\\components\\CommandTile.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json -t '^(?!.*(?:renders the optional sublabel and colours a success status green|colours a non-success status red and omits the optional rows when sublabel/status are absent)).*$'",
+      "startUtc": "2026-10-14T07:45:35.3009721Z",
+      "endUtc": "2026-10-14T07:49:09.1844613Z",
+      "exitCode": 1,
+      "durationSeconds": 213.884,
+      "pool": "forks",
+      "maxWorkers": 2,
+      "reporters": [
+        "verbose",
+        "json"
+      ],
+      "rawOutput": "[i18n-split] generated locale files are invalid (locale-detail-errorBoundary.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-unreferenced.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-power-user.json, locale-driving-route-efficiency.json, locale-driving-trip-planner.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.\r\n\r\n⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯\r\nError: Command failed: C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check\r\n    at genericNodeError (node:internal/errors:999:15)\r\n    at wrappedFn (node:internal/errors:544:14)\r\n    at checkExecSyncError (node:child_process:942:11)\r\n    at execFileSync (node:child_process:978:15)\r\n    at PluginContext.buildStart (file:///D:/repos/teslasync/web/node_modules/.vite-temp/vite.config.ts.timestamp-1791963936156-1fdbc7e9fa9808.mjs:55:5)\r\n    at EnvironmentPluginContainer.hookParallel (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42315:39)\r\n    at EnvironmentPluginContainer.buildStart (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42330:12)\r\n    at file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38867:49\r\n    at initServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38875:6)\r\n    at _createServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38890:11) {\r\n  status: 1,\r\n  signal: null,\r\n  output: [ null, null, null ],\r\n  pid: 49704,\r\n  stdout: null,\r\n  stderr: null\r\n}",
+      "rawOutputSha256": "bc172ff02223aeb0e85b0b51202672044eaaf9881e463c2e575235ff18dd026f",
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "startupFailures": 1,
+      "freshReporterJson": null
+    }
+  ],
+  "failureOwnership": {
+    "classification": "EXTERNAL_CATALOG_ONLY_STARTUP",
+    "chargeOwnAttempt": false,
+    "ownAssertionFailureCount": 0,
+    "ownQueuedFixNeed": null,
+    "externalRoot": "Generated English projections are stale against active sources/canonical input. English startup guard rejected normal runner startup.",
+    "invalidGeneratedFiles": [
+      "web\\src\\i18n\\en\\locale-detail-errorBoundary.json",
+      "web\\src\\i18n\\en\\locale-system.json",
+      "web\\src\\i18n\\en\\locale-notifications.json",
+      "web\\src\\i18n\\en\\locale-telemetry.json",
+      "web\\src\\i18n\\en\\locale-unreferenced.json",
+      "web\\src\\i18n\\en\\locale-battery.json",
+      "web\\src\\i18n\\en\\locale-driving.json",
+      "web\\src\\i18n\\en\\locale-analytics.json",
+      "web\\src\\i18n\\en\\locale-sharing.json",
+      "web\\src\\i18n\\en\\locale-vehicles.json",
+      "web\\src\\i18n\\en\\locale-automations.json",
+      "web\\src\\i18n\\en\\locale-charging.json",
+      "web\\src\\i18n\\en\\locale-dashboard.json",
+      "web\\src\\i18n\\en\\locale-settings.json",
+      "web\\src\\i18n\\en\\locale-admin.json",
+      "web\\src\\i18n\\en\\locale-vehicle-systems.json",
+      "web\\src\\i18n\\en\\locale-diagnostics.json",
+      "web\\src\\i18n\\en\\locale-maps.json",
+      "web\\src\\i18n\\en\\locale-trips.json",
+      "web\\src\\i18n\\en\\locale-exports.json",
+      "web\\src\\i18n\\en\\locale-power-user.json",
+      "web\\src\\i18n\\en\\locale-driving-route-efficiency.json",
+      "web\\src\\i18n\\en\\locale-driving-trip-planner.json",
+      "web\\src\\i18n\\en\\runtime-manifest.json",
+      "web\\src\\i18n\\en\\usage-manifest.json"
+    ],
+    "invalidGeneratedFileCount": 25,
+    "queuedExternalOwner": "phase6-fix-cohort2-canonical-copy-and-projections",
+    "queueCitation": "migration-queue.md:2717",
+    "requiredExternalWork": "The already queued sole catalog owner must finish current canonical-copy integration and normal English projection generation, check and strict namespace validation. This proof worker must not modify source, tests, catalogs, guards or config.",
+    "normalOwnerCommands": [
+      "cd web; node scripts\\split-i18n-catalog.mjs",
+      "cd web; node scripts\\split-i18n-catalog.mjs --check",
+      "cd web; node scripts\\audit-i18n-namespaces.mjs --strict"
+    ],
+    "normalOwnerCommandsExecutedByThisWorker": false,
+    "followUp": "Re-run only the same 17 selected affected cases after the catalog owner releases verified current projections; do not rerun unrelated genuine passes, bypass the guard, or promote zero discovery to pass."
+  },
+  "hashCurrentnessUtc": "2026-10-14T07:50:53.054Z",
+  "sourcePairHashesUnchanged": true,
+  "externalObservedDrift": [
+    {
+      "path": "web\\src\\i18n\\en.json",
+      "before": "4f3772fdb879f420e513ca411442d48d85b7ca2501f16f6113736e6dd89b8202",
+      "after": "20b99693ea4207275a05d693ddfb1d4e7e6ea21f0dfa8891fe2d9749b5a9eb61",
+      "note": "Observed shared-checkout drift; proof worker did not write this path."
+    }
+  ],
+  "readOnlyGuarantee": {
+    "ownedApplicationPaths": [
+      "web\\src\\features\\system\\components\\CommandTile.tsx",
+      "web\\src\\features\\system\\components\\CommandTile.test.tsx"
+    ],
+    "unchangedExactPair": true,
+    "commandsMadeNoIntentionalApplicationWrites": true,
+    "onlyIntentionalWrites": [
+      "docs\\frontend-audits\\phase6-proof-command-tile-interactive-targets.json",
+      "web\\logs\\phase6-proof-command-tile-interactive-targets.log"
+    ],
+    "noGitQueueSourceFixtureCatalogConfigInstallNestedAgentBrowserServerDockerGuardBypass": true
+  },
+  "sourceBehaviorReview": [
+    {
+      "file": "web\\src\\features\\system\\components\\CommandTile.tsx",
+      "lines": [
+        34,
+        43
+      ],
+      "detail": "Activation still blocks loading/disabled; dangerous commands route exact def to confirmation; ordinary commands forward def.command and def.params unchanged.",
+      "evidence": "SOURCE_ONLY"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandTile.tsx",
+      "lines": [
+        45,
+        53
+      ],
+      "detail": "GlassPanel has no button role, tabIndex or activation callback; command uses the shared Button with explicit type=button.",
+      "evidence": "SOURCE_ONLY"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandTile.tsx",
+      "lines": [
+        49,
+        64
+      ],
+      "detail": "Command retains translated label, native disabled state, busy/disabled attributes and command-first DOM order. Reserved favorite-row classes are source evidence, not measured hitboxes.",
+      "evidence": "SOURCE_ONLY"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandTile.tsx",
+      "lines": [
+        82,
+        98
+      ],
+      "detail": "Favorite is a separately named sibling shared Button, forwards only onToggleFavorite and retains aria-pressed independently of command loading/disabled.",
+      "evidence": "SOURCE_ONLY"
+    },
+    {
+      "file": "web\\src\\components\\ui\\Button.tsx",
+      "lines": [
+        61,
+        89
+      ],
+      "detail": "Shared Button renders a native button, forwards type/event props and keeps focus-visible base classes. No shared file changed.",
+      "evidence": "SOURCE_ONLY"
+    },
+    {
+      "file": "web\\src\\components\\ui\\GlassPanel.tsx",
+      "lines": [
+        45,
+        74
+      ],
+      "detail": "Shared GlassPanel renders a div and passes through its explicit caller props; current CommandTile caller supplies no interactive frame behavior.",
+      "evidence": "SOURCE_ONLY"
+    }
+  ],
+  "preservation": {
+    "sourceBaselineLines": 114,
+    "currentSourcePhysicalLines": 104,
+    "sourceLineRatio": 0.9122807017543859,
+    "fixtureBaselineLines": 217,
+    "currentFixturePhysicalLines": 330,
+    "baselinePanels": 1,
+    "currentSourcePanels": 1,
+    "baselineCharts": 0,
+    "currentSourceCharts": 0,
+    "originalCasesAccountedFor": 11,
+    "exactOriginalBodiesUnchanged": 4,
+    "changedOriginalBodiesArePreexistingSourceOwnerAdaptations": true,
+    "proofWorkerChangedOriginalBodies": false,
+    "evidence": "Owner immutable baseline and current AST inventory; source-only counts. Native/DOM assertion execution remains NOTRUN."
+  },
+  "evidenceLimits": [
+    "No tests discovered or executed; 0 passed is NOT a passing proof.",
+    "The 17-case selector is source-inventory planned coverage, not runtime collection evidence.",
+    "The two intentionally unselected status-color-only cases were not reported as runtime skips because collection never occurred.",
+    "Native browser keyboard behavior, hitbox size/separation, layout, accessibility, visual acceptance and whole CommandsPage remain NOTRUN.",
+    "No full TypeScript, lint, audit/build/suite gate; no API or backend behavior verification.",
+    "Commit identity was supplied by the queue; current source owner hash matches, fixture matches owner 19-name inventory and before/after bytes; no Git verification.",
+    "Catalog-only failure is external and uncharged; no own assertion failure or own fixture correction is known."
+  ],
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\frontend-worker-conventions.md",
+    "logs\\phase6-fix-command-tile-interactive-targets.log",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    "web\\package.json",
+    "web\\vite.config.ts",
+    "web\\src\\features\\system\\components\\CommandTile.tsx",
+    "web\\src\\features\\system\\components\\CommandTile.test.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\test-setup.ts",
+    "web\\scripts\\buildIdentity.mjs"
+  ],
+  "sourceReleaseUtc": "2026-10-14T07:50:53.106Z",
+  "commandReleaseUtc": "2026-10-14T07:49:09.1844613Z",
+  "allClaimsReleased": true,
+  "noOwnedCommandsRemainRunning": true,
+  "deadlineMet": true
+  }
+}

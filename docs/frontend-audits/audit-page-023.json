@@ -1,0 +1,350 @@
+{
+  "item": "audit-page-023",
+  "page": "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx",
+  "routes": ["/admin/slow-queries"],
+  "purpose": "Admin observability of the fetched top-N pg_stat_statements query fingerprints, execution costs and shared-buffer efficiency.",
+  "primaryGoal": "Identify individually slow, aggregate-costly or I/O-bound SQL queries, compare their metrics, and inspect/export the fetched evidence without implying a complete historical analysis.",
+  "dataSources": [
+    {
+      "name": "slow-queries",
+      "hook": "useSlowQueriesPage -> useSlowQueries",
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 124,
+      "endpoint": "GET /api/v1/admin/observability/slow-queries?order_by={mean_time|total_time|calls|max_time}&limit={10|25|50|100}",
+      "sourceOwner": "internal\\handler\\v1\\admin_observability_handler.go:54-73; service/repository wired by internal\\api\\router.go:4552-4556",
+      "routeEvidence": "internal\\api\\router.go:4584 delegates registration to v1AdminObs.Register; internal\\handler\\v1\\admin_observability_handler.go:35 registers the exact suffix.",
+      "contract": "SlowQueriesResponse.order_by and slow_queries; rows contain query_id, fingerprint, calls, total_time_ms, mean_time_ms, max_time_ms, rows_returned and optional/null shared_blks_hit/shared_blks_read (web\\src\\types\\admin-operator-confidence.ts:53-74). Milliseconds are the current explicitly named source contract; this audit does not authorize wire renaming.",
+      "policy": "Key ['admin','observability','slow-queries',orderBy,limit] (hook:78-79); AbortSignal forwarded to request (127-132); STALE_TIMES.MODERATE, INTERVALS.STANDARD, background polling disabled, retry=1 (134-137). Comment describes STANDARD as 30 seconds; constants themselves were not inspected.",
+      "scope": "Page-owned non-date order/limit only, defaults mean_time and 25 (useSlowQueriesPage.ts:16-19). No vehicle/date selector is rendered; no invented server date bounds.",
+      "derivations": "Single response drives all sections: fetched-row aggregates, selected-metric top 12 ranking and lowest known cache-hit top 8 (useSlowQueriesPage.ts:38-82). Cache percentages are hit/(hit+read)*100, null when denominator is nonpositive (helpers.ts:37-48).",
+      "unknowns": "Live endpoint not invoked. Repository filtering, counter reset epoch, completeness, backend cap implementation, null payload behavior and authentication outcomes not verified. No deeper backend trace was performed."
+    },
+    {
+      "name": "display preferences",
+      "hook": "useNumberFormatting; useOperationalMetrics",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx",
+      "line": 15,
+      "endpoint": null,
+      "sourceOwner": "Existing app-level formatting/settings and operational-metric owners; no additional page fetch introduced.",
+      "contract": "Summary passes precision and locale, compact count notation, and adaptive latency after ms/1000 display adaptation (18-43). Table uses fmtInt/fmtNumber and includes precision/locale in memo dependencies (SlowQueriesDetails.tsx:15-76). Chart/cache helpers use current lib\\numberFormat.ts global preference-backed fmtNumber (helpers.ts:1,24-27,46-48).",
+      "unknowns": "Formatting hook internals, settings backend and live preference updates were not traced; no claim of new endpoints or runtime preference acceptance."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout -> PageContainer",
+      "kind": "shared layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "props": ["title", "subtitle", "contextActions", "query", "dataSources", "children"],
+      "evidence": "SlowQueriesPage.tsx:62-73; PageLayout.tsx:9-16 forwards existing PageContainer props, w-full/min-w-0/container; PageContainer.tsx:222,253 forwards query freshness and independent-source notice.",
+      "preserve": "Single application shell/header ownership, page title and explanatory subtitle, localized controls, shared freshness and announcements; do not add another workspace/date/vehicle owner."
+    },
+    {
+      "name": "Select and Caption",
+      "kind": "shared UI primitives",
+      "owner": "web\\src\\components\\ui\\Select.tsx",
+      "props": ["size=sm", "aria-label", "value", "onChange", "options"],
+      "evidence": "SlowQueriesPage.tsx:35-59; Select.tsx:32-36,57-65,88-95 implements size, generated identity, feedback association and focus tokens.",
+      "preserve": "Native keyboard selection, localized labels, all four order choices and four limit choices, flex wrapping; size sm is 36px minimum rather than the preferred 44px touch target."
+    },
+    {
+      "name": "SlowQuerySummary -> OperationalBrief",
+      "kind": "feature summary using shared operational composite",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "props": ["metrics", "compact", "testId=slow-queries-summary", "statusLabel", "statusTone", "scope", "loading", "freshness", "provenance"],
+      "evidence": "SlowQuerySummary.tsx:19-61; OperationalBrief.tsx:157-174,233-265 includes Review details drawer, responsive metrics and loading suppression.",
+      "preserve": "Six metrics, explicit source-limited top-N scope, missing/retained status, unknown observation-period explanation, detail drawer and raw numeric evidence; reuse operational owner rather than creating another KPI grid."
+    },
+    {
+      "name": "SlowQueryAnalysis -> ChartCard -> EmbeddedChart -> ChartContainer",
+      "kind": "feature ranking using shared chart owner",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "props": ["title", "size=compact", "fluid", "ariaLabel", "loading", "error", "onRetry", "empty", "emptyMessage", "data", "dataColumns"],
+      "evidence": "SlowQueryAnalysis.tsx:35-55; ChartCard.tsx:13-46; EmbeddedChart.tsx:24-25 defaults exportable/fullscreen false; ChartContainer.tsx:172-186,449-452 supplies accessible data-table contract.",
+      "preserve": "Top 12 descending selected-metric bars, full SQL and values in accessible dataColumns, adaptive metric format, axes/grid/tooltip. Do not claim chart export, fullscreen, zoom or legend are existing enabled capabilities."
+    },
+    {
+      "name": "LayoutCard, MetricBar, Text, Code",
+      "kind": "shared surfaces and cache-efficiency presentation",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "props": ["LayoutCard.title/actions", "MetricBar.label/ariaLabel/value/max/color/sublabel", "MetricBar.fill=solid available but not supplied"],
+      "evidence": "SlowQueryAnalysis.tsx:58-76; MetricBar.tsx:8-27,59-65,90-93; LayoutCard.tsx:22-58.",
+      "preserve": "Worst hit ratios first, indexing explanation, full SQL above clipped label, exact percentage text and accessible progressbar values. Existing solid fill accepts CSS semantic variables; no new bar renderer is needed."
+    },
+    {
+      "name": "SlowQueriesDetails -> DataTable",
+      "kind": "shared production table pipeline",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "props": ["tableId=admin:slow-queries", "columns", "mobileColumns", "data", "enableValueFilters", "keyExtractor=query_id", "emptyMessage", "pagination"],
+      "evidence": "SlowQueriesDetails.tsx:17-76,99-110; DataTable.tsx:470,482,498-499,524-548,640-650,715-725,872-913.",
+      "preserve": "Seven columns, loaded-row search/value filters, density, persistent column/layout/page-size behavior, loaded filtered CSV/JSON export and local pagination. Selection defaults none; column sortable flags and renderExpanded/mobilePresentation are not supplied. Do not invent row selection or row drill-down as existing behavior."
+    },
+    {
+      "name": "FadeIn, DataStateNotice, Skeleton, QueryError, EmptyState, SectionErrorBoundary",
+      "kind": "shared motion and feedback owners",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "props": ["FadeIn.delay=0/0.1/0.2", "DataStateNotice.state=unsupported", "QueryError.error/onRetry", "Skeleton.height=260/280"],
+      "evidence": "SlowQueriesPage.tsx:74-99; SlowQueryAnalysis.tsx:60-64; SlowQueriesDetails.tsx:80-111; FadeIn.tsx:23-35.",
+      "preserve": "Independent section states, unsupported extension guidance, retry routes to same query, current source-error boundaries and shared OS/low-bandwidth motion preference. Uninspected feedback internals remain delegated to existing owners."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx",
+      "line": 60,
+      "rule": "MDC-002 / shared source states",
+      "detail": "The feature branches loading/error/empty for the cache panel, while ChartCard owns the corresponding ranking states and table owns its states. This is intentionally independent presentation, not evidence for a new universal state wrapper.",
+      "fix": "Keep shared feedback primitives and source-specific copy; do not collapse the whole page behind a single data gate.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx",
+      "line": 30,
+      "rule": "MDC-033 / existing numeric formatting",
+      "detail": "Repeated tabular numeric cells use the existing fmtInt/fmtNumber owner. Only one inspected page needs this pattern; no cross-page component proposal is justified.",
+      "fix": "Reuse current table/formatting contracts; extract only if actual independent consumers require identical behavior.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "SlowQueriesPage.tsx:35 header actions flex-wrap; each label group remains a horizontal pair.",
+      "SlowQueryAnalysis.tsx:33-34 single column until xl, then chart spans two of three columns; min-w-0 and wrap-anywhere SQL (69).",
+      "SlowQueryAnalysis.tsx:47-48 uses a fixed 150px Y-axis and 10px ticks, requiring a narrow-chart check.",
+      "OperationalBrief.tsx:171-174 compact metrics reflow one -> two at sm -> three at md -> six at 1920px.",
+      "SlowQueriesDetails.tsx:23 long SQL wraps, but mobileColumns:103 restricts the visible table to fingerprint/mean/calls; DataTable.tsx:724-725 applies hidden md:table-cell to others."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx",
+        "line": 103,
+        "rule": "MDC-023 / MDC-043 / no mobile information loss",
+        "detail": "Max time, total time, rows returned and cache ratio are CSS-hidden below md. This caller supplies neither mobilePresentation nor renderExpanded. Column visibility alone does not override the mobile allow-list in the inspected table helper.",
+        "fix": "Adapt this caller to the existing opt-in DataTable mobile presentation/full-detail contract, or retain all columns through the existing internal horizontal-scroll pipeline. Preserve every value, filter, export and stable tableId; never simply delete the allow-listed secondary data.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "acceptance": "UNVERIFIED at 320, 375, 390, 430, 768, 1024, 1280, 1440, 1920 and 2560px; also unverified allocated container widths, RTL, long translations, 200% text, clipping and touch layout."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "SlowQueriesPage.tsx:36-57 wraps each native Select with a localized visible label and aria-label; Select.tsx:90-95 includes tokenized focus styles.",
+      "SlowQueryAnalysis.tsx:32,36,40-42 names the analysis/chart and supplies full-fingerprint accessible data columns; ChartContainer.tsx:172-186 documents the nonvisual data table.",
+      "SlowQueryAnalysis.tsx:59,62 hides decorative HardDrive icons; MetricBar.tsx:59-65 supplies named progressbar min/max/current values.",
+      "SlowQueriesDetails.tsx:81 named Top queries section and Code title/full visible SQL; query_id is used for identity rather than as the primary visible label.",
+      "OperationalBrief.tsx:157-165,233-240 supplies a localized Review details button and existing Drawer owner. Drawer internals and actual focus behavior were not inspected.",
+      "FadeIn.tsx:24-33 consumes useMotionPreference and disables initial entrance under reduction; MetricBar.tsx:49,90-92 also reduces animation."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx",
+        "line": 39,
+        "rule": "MDC-040 / stronger mobile touch target",
+        "detail": "Both header selectors request sm (39 and 52); Select.tsx:33 maps it to min-h-9, nominally 36px. This is below the preferred 44px target, not a proven WCAG failure without rendered size/spacing evidence.",
+        "fix": "Use the existing size/className contract to ensure 44px reachable mobile controls without altering native values/labels or globally changing Select defaults.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "acceptance": "UNVERIFIED keyboard order, focus visibility/restoration, screen-reader announcements, accessible table operation, actual contrast, forced colors, OS reduced motion and target spacing. Source ARIA does not establish runtime acceptance."
+  },
+  "states": {
+    "initialLoading": "useSlowQueriesPage.ts:21,27 uses deriveDataState initial status; Summary loading suppresses numbers, ChartCard owns loading, cache Skeleton=260, details Skeleton=280. Paused initial fetching remains initial; shared notices/freshness receive the query.",
+    "success": "All sections always mounted (SlowQueriesPage.tsx:84-100); six metrics plus ranking/cache/table display from the same payload.",
+    "empty": "Resolved empty rows produce a known count/call/time zero summary, an empty ranking, no-cache notice and pg_stat_statements empty explanation in details (SlowQueriesDetails.tsx:88-97). Empty payload and unknown field values must remain distinct.",
+    "fatalError": "Only fatalError without retained data drives showError (useSlowQueriesPage.ts:20-27; dataState.ts:140-147,206-222); Summary, ranking, cache and table retain independent retry affordances.",
+    "unsupported": "Any fatal API 503 is classified as subsystemMissing (useSlowQueriesPage.ts:21). Page renders localized extension/shared_preload_libraries guidance and removes dataSources notice (SlowQueriesPage.tsx:70-81). query freshness remains passed. Summary is unmeasured; analysis shows ordinary empty states; details renders an empty DataTable.",
+    "refreshing": "Retained query payload remains; summary is marked retained during refresh or stale status (SlowQueriesPage.tsx:88). Shared header receives full query; no page-wide loading gate is supplied.",
+    "staleOffline": "dataState.ts:163-177 retains data on refresh error or paused fetch; fatalError stays null. Header query/dataSources remain connected. Summary retained label is used for stale state. Actual stale/offline display and retry behavior are not browser-tested.",
+    "partialUnknown": "No explicit deriveDataState partial/unavailable options or source age threshold supplied (useSlowQueriesPage.ts:20). Optional buffer counters are coalesced to zero before ratio calculation; null total denominator returns no ratio. Known envelope does not itself prove every measurement known.",
+    "disabled": "Selectors remain available while loading/error; options have no disabled flag. Chart controls are not opted in. Shared table export disablement depends on filtered row count (DataTable.tsx:908-913). No mutations exist.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts",
+        "line": 38,
+        "rule": "MDC-026 / unknown is not zero",
+        "detail": "Optional nullable shared_blks_hit/read are independently replaced by zero. A row with one absent counter and one positive counter can be displayed as a measured 0% or 100%, although the ratio is not fully known. The aggregate repeats this coalescing at useSlowQueriesPage.ts:52-53 and may imply complete known efficiency.",
+        "fix": "Preserve source counters and explicitly distinguish complete ratios from unavailable/partial evidence; use null/missing metadata rather than fabricating a missing counter. Keep existing totals and source scope visible and resolve payload meaning before changing business arithmetic.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx",
+        "line": 70,
+        "rule": "MDC-026 / source resilience",
+        "detail": "Cache row label accesses row.fingerprint.length unconditionally, despite the adjacent display and ariaLabel using a missing-string fallback. Types require string, so actual null/absent server fingerprints are not proven; a malformed payload could crash this component.",
+        "fix": "Derive a safe fingerprint once and reuse it for clipping, Code and accessible naming; retain query identity and full known SQL. Verify backend nullability rather than adding a broad untyped adapter.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx",
+      "line": 52,
+      "rule": "MDC-010 / mission 43 restrained palette",
+      "detail": "Bar cells cycle CHART_COLORS by row index even though each bar is the same selected metric. Multiple hues encode arbitrary order rather than domain meaning, creating a source-level rainbow risk; actual persisted chart palette/rendering was not inspected.",
+      "fix": "Use one existing subdued chart accent for ranking and reserve semantic hues for meaningful cache thresholds; preserve user-selected chart palette preferences where required by the shared owner.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx",
+      "line": 71,
+      "rule": "MDC-010 / MDC-015 / existing semantic tokens",
+      "detail": "Feature supplies three hardcoded hex threshold colors; MetricBar defaults to an animated gradient (MetricBar.tsx:46,93). Cache icon also uses fixed text-cyan-300 (59), rather than a theme-aware neutral or semantic token.",
+      "fix": "Keep >=90 and >=50 threshold meanings, but supply existing success/warning/danger theme variables with MetricBar fill=solid and a restrained semantic/neutral icon token. Do not pass CSS variables into the gradient suffix path or create a new palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx",
+      "line": 47,
+      "rule": "MDC-013 / MDC-043 / mission 43 readable hierarchy",
+      "detail": "Both chart axes hardcode fontSize 10, and the Y-axis takes 150px (48). This bypasses the shared typography scale and may leave narrow charts cramped; clipping and contrast are unverified.",
+      "fix": "Use existing chart/typography tokens and a source-preserving responsive axis layout, retaining full fingerprints in the accessible table and detail table. Validate 320px/long SQL rather than hiding data.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx",
+      "line": 4,
+      "rule": "MDC-002 / category-barrel feature imports",
+      "detail": "Feature imports StatMetric through a deep stat-reference path and MetricDisplayOptions through metric-reference (5); the production components themselves use category barrels. This is a type-only import concern, not proof of runtime cycles or a missing barrel export.",
+      "fix": "Use the existing canonical public type export if available; if unavailable, integration owner should confirm the intended type path before any shared export change. No speculative new barrel API is required by this audit.",
+      "owner": "integration",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts",
+      "line": 21,
+      "rule": "MDC-026 / unsupported versus service failure",
+      "detail": "Every fatal 503 is described as pg_stat_statements not installed; handler's precise error-to-503 discrimination was not traced. A transient 503 could be misrepresented if it uses the same transport status.",
+      "fix": "Confirm the existing handler error code/unsupported contract and distinguish unsupported from transient failure using that contract, preserving retry and extension guidance. Do not invent a backend status or new endpoint.",
+      "owner": "integration",
+      "confidence": "low"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "first": ["Restore full mobile detail reachability using the existing DataTable contract.", "Keep nullable counter evidence unknown rather than publishing invented cache percentages."],
+    "next": ["Adopt restrained shared palette and solid MetricBar fill.", "Review chart readability and mobile touch targets.", "Confirm source unsupported/nullability and public type-export contracts."],
+    "rationale": "The page already separates typed data hooks and shared presentation, keeps all sections mounted and retains refresh evidence. Remaining concerns are source-backed mobile/palette/unknown-value issues, not a mandate to rebuild the page."
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx",
+      "line": 71,
+      "rule": "MDC-002 / MDC-010",
+      "detail": "Local hex threshold presentation competes with existing semantic theme tokens, but the existing MetricBar already supports caller CSS colors plus solid fill.",
+      "fix": "Page adoption only; reuse MetricBar.color/fill and the existing semantic palette. No second MetricBar, chart engine, status registry or theme provider.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "7e46feb9ee84d959e65050b47de94e3d0ba439940e488e6da8ec53d7e6c197b0",
+    "hashAlgorithm": "SHA256 of current raw page bytes",
+    "currentLineCount": 102,
+    "relatedLineCounts": {
+      "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts": 90,
+      "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx": 81,
+      "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx": 64,
+      "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx": 115,
+      "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts": 49
+    },
+    "pagePlusPresentationLineCount": 362,
+    "pagePlusAllImmediateFeatureDependencyLineCount": 501,
+    "sectionCount": 4,
+    "sections": [
+      {"name": "Query performance summary", "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx", "line": 19, "count": 1, "metrics": ["Queries analyzed", "Total calls", "Aggregate time", "Slowest mean", "Peak max", "Cache hit ratio"], "metricCount": 6},
+      {"name": "Top queries ranking", "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx", "line": 35, "count": 1, "maximumRows": 12},
+      {"name": "Cache efficiency", "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx", "line": 58, "count": 1, "maximumRows": 8},
+      {"name": "Top queries detail table", "file": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx", "line": 81, "count": 1, "columns": ["fingerprint", "calls", "mean_time_ms", "max_time_ms", "total_time_ms", "rows_returned", "cache"], "columnCount": 7}
+    ],
+    "conditionalNoticeCount": 1,
+    "conditionalNotices": ["Unsupported pg_stat_statements guidance at SlowQueriesPage.tsx:74-81"],
+    "sectionGrouping": "Page has three unconditional presentation children: summary, analysis grouping two panels, and details. Header controls and unsupported notice are separate, not counted as data sections.",
+    "surfaceCounts": {"directPageGlassPanel": 0, "directPageChartContainer": 0, "featureChartCard": 1, "featureLayoutCard": 2, "featureOperationalBrief": 1},
+    "actions": [
+      {"name": "Change order", "file": "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx", "line": 42, "behavior": "mean_time/total_time/calls/max_time; changes keyed server fetch and selected chart metric; default mean_time."},
+      {"name": "Change fetched limit", "file": "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx", "line": 55, "behavior": "10/25/50/100; default 25; numeric state and keyed request. Distinct from table page size."},
+      {"name": "Retry failed source", "file": "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts", "line": 29, "behavior": "query.refetch reused by summary/chart/cache/table feedback; no mutation."},
+      {"name": "Review details / close drawer", "file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 164, "behavior": "Existing shared drawer opens with source summary/narrative/metrics and closes through onClose:235; loading values remain suppressed."},
+      {"name": "Table search and value filters", "file": "web\\src\\components\\ui\\DataTable.tsx", "line": 524, "behavior": "Search loaded rows; value filters on fingerprint/calls/mean/max/total/rows; no cache filterValue supplied. Does not refetch server or change chart/KPIs."},
+      {"name": "Table column visibility/order/resize and density", "file": "web\\src\\components\\ui\\DataTable.tsx", "line": 482, "behavior": "Existing tableId-backed controls/persistence remain; no new table identity or preference reset."},
+      {"name": "Table local pagination / page size", "file": "web\\src\\components\\ui\\DataTable.tsx", "line": 640, "behavior": "Loaded results only; default page size 25 and options 25/50/100 with persisted page-size state. Server limit remains separate."},
+      {"name": "Table CSV/JSON export", "file": "web\\src\\components\\ui\\DataTable.tsx", "line": 872, "behavior": "Default local-table exports project visible columns over filtered loaded rows, not the full database. CSV prefers rendered text; JSON preserves matching raw keys and falls back to rendered computed cache text. No exportAll callback or selectable rows supplied."}
+    ],
+    "dataBehavior": [
+      "Preserve raw response/query keys/AbortSignal/retry/stale policy and background polling settings; presentation-only modernization must not change server contract.",
+      "Preserve fetched-row calls, total time and returned-row sum, maximum mean/peak and weighted hit/read ratio derivation, while explicitly resolving nullable evidence before semantic changes.",
+      "Preserve active-field descending chart sort/top-12, 28-character fingerprint clipping, full SQL data fallback, time promotion at 1000ms and integer/compact count formatting.",
+      "Preserve positive-denominator cache rows, ascending hit percentage/top-8, full SQL plus clipped 30-character labels and >=90/>=50 threshold meanings.",
+      "Preserve number precision/locale and adaptive latency display; convert milliseconds to seconds only for the existing latency metric boundary, never in wire/cache.",
+      "Keep every section and explanatory state visible, including source-limited summary scope and the explicit absence of observation time/complete analysis bounds.",
+      "Preserve fatal-versus-refresh error distinction and retained data for background failures/offline; do not turn unknown data into successful zero.",
+      "Retain /admin/slow-queries lazy SafeRoute mapping, admin source ownership and shared header workspace scope; no new selector/date picker is needed."
+    ],
+    "reconciliation": "No partial JSON existed at start. An earlier heartbeat was present and reconciled by replacing only the owned heartbeat with this second attempt's start/progress/release. First actor's HTTP400 is treated as failed, not an active writer.",
+    "sourceEdits": "None. All preservation counts describe the current source baseline, not a historical modernization parity claim."
+  },
+  "evidenceLimits": {
+    "mode": "SOURCE-ONLY Phase 0 atomic second attempt",
+    "missionSectionsRead": [0, 1, 15, 33, 43, 44],
+    "scope": "Only assigned mounted page, its immediate feature dependencies and bounded directly relevant shared/API/route source excerpts. No broad frontend audit, new agent, source edit, Git operation, production mutation or question.",
+    "runtimeAcceptance": "UNVERIFIED",
+    "visualAcceptance": "UNVERIFIED",
+    "keyboardAcceptance": "UNVERIFIED",
+    "contrastAcceptance": "UNVERIFIED",
+    "viewportAcceptance": "UNVERIFIED",
+    "testsTypecheckLintBuild": "NOT RUN. Audit ownership is report/heartbeat only. Design contract MDC-070 reserves project TypeScript/build/full validation for the parent; user forbids full lint/build. Skill audit.sh was inspected but not executed because its final stage unconditionally runs project npx tsc --noEmit. Scoped source scans were performed instead, and do not imply a clean full audit.",
+    "checks": [
+      {"command": "Get-FileHash web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx).Count", "exitCode": 0, "output": "7E46FEB9EE84D959E65050B47DE94E3D0BA439940E488E6DA8EC53D7E6C197B0; 102"},
+      {"command": "Scoped PowerShell Select-String over the page and five immediate feature dependencies for static inline styles, raw controls, direct presentation libraries, old API imports, neon/fixed-white text, hex colors and chart fontSize:10.", "exitCode": 0, "output": "staticInlineStyle=0; rawControl=2 (case-insensitive false positives: shared <Select at page lines 38,51; corrected case-sensitive check recorded separately); directPresentationLibrary=0; oldApiImport=0; neonText=0; fixedWhiteText=0; localHexColor=1 at SlowQueryAnalysis.tsx:71; chartArbitraryFont=2 at SlowQueryAnalysis.tsx:47,48.", "scope": "Exactly the six paths in preservation.relatedLineCounts plus page (five related paths). Patterns: style=\\{\\{.*var\\(--; <(button|input|textarea|select|table)\\b; direct imports from recharts/react-leaflet/framer-motion; old ../api imports; text-neon-; text-white/; #[0-9a-fA-F]{6}; fontSize: 10."},
+      {"command": "$raw=@(Select-String -Path $files -Pattern '<(button|input|textarea|select|table)\\b' -CaseSensitive); \"correctedCaseSensitiveRawControls=$($raw.Count)\"", "exitCode": 0, "output": "correctedCaseSensitiveRawControls=0", "scope": "$files was explicitly assigned the page and its five immediate feature dependencies; no directory recursion."},
+      {"command": "Get-Content docs\\frontend-audits\\audit-page-023.json -Raw | ConvertFrom-Json; validate the 20 conventions fields, exact item/page/routes, SHA256, line count and existence of filesRead", "exitCode": 0, "output": "JSON parse/schema/identity/routes/sourceHash/line-count/filesRead validation: PASS\nsourceHash=7e46feb9ee84d959e65050b47de94e3d0ba439940e488e6da8ec53d7e6c197b0\nRuntime/visual/keyboard/contrast/viewport acceptance: UNVERIFIED", "limit": "This is report/source validation only, not frontend compilation or rendering."}
+    ],
+    "backendLimits": "Only registration/wiring and this endpoint's immediate handler were inspected. No repository/service execution, availability/error mapping trace or live authorization check; source contract and endpoint mounting are not runtime success.",
+    "sharedLimits": "Shared contracts read in bounded excerpts are not whole-library audits. Category-barrel exports, drawer/menu focus internals, global CSS, colors, query constants and all formatting-hook internals remain outside scope.",
+    "requiredAcceptance": "Parent must perform live supported/unsupported, loading/empty/fatal/retained/offline, long SQL, precision/locale/RTL, themes/forced colors, drawer/keyboard and ten-width checks before implementation acceptance."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx",
+    "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\admin_observability_handler.go",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\numberFormat.ts",
+    ".agent-status\\audit-page-023.txt"
+  ]
+}

@@ -5,12 +5,12 @@
  * mutation instances so loading state and toasts are scoped to this channel.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pencil, TestTube, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Badge, Button, GlassPanel, Heading, Text, Toggle } from '@/components/ui';
-import { useToast } from '@/components/feedback/Toast';
+import { Badge, Button, GlassPanel, Heading, Text, Toggle, IconButton } from '@/components/ui';
+import { useToast } from '@/components/feedback';
 import {
   useDeleteChannel, useTestChannel, useToggleChannel,
 } from '@/api/hooks/useNotifications';
@@ -31,6 +31,8 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
   const testMut = useTestChannel();
   const webhookTestMut = useTestWebhookChannel();
   const [webhookResult, setWebhookResult] = useState<WebhookTestResult | null>(null);
+  const toggleInFlight = useRef(false);
+  const [toggleLatched, setToggleLatched] = useState(false);
 
   const meta = getChannelMeta(channel.kind);
   const Icon = meta.icon;
@@ -38,11 +40,18 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
   const previewEntries = Object.entries(configPreview ?? {}).slice(0, 3);
 
   const handleToggle = () => {
+    if (toggleInFlight.current || toggleMut.isPending) return;
+    toggleInFlight.current = true;
+    setToggleLatched(true);
     toggleMut.mutate(channel.id, {
       onSuccess: () => toast.success(channel.enabled
         ? t('notifications.channels.toggledOff', 'Channel disabled')
         : t('notifications.channels.toggledOn', 'Channel enabled')),
-      onError: () => toast.error(t('notifications.channels.toggleFailed', 'Failed to toggle channel')),
+      onError: err => toast.error(t('notifications.channels.toggleFailed', 'Failed to toggle channel'), err?.message),
+      onSettled: () => {
+        toggleInFlight.current = false;
+        setToggleLatched(false);
+      },
     });
   };
 
@@ -59,18 +68,15 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
       return;
     }
     testMut.mutate(channel.id, {
-      onSuccess: (data) => {
-        if (data?.success) toast.success(`${channel.name}: ${t('notifications.channels.testSuccessShort', 'Test sent!')}`);
-        else toast.error(`${channel.name}: ${t('notifications.channels.testFailed', 'Test failed')}`, data?.error);
-      },
-      onError: () => toast.error(`${channel.name}: ${t('notifications.channels.testFailed', 'Test failed')}`),
+      onSuccess: () => toast.success(`${channel.name}: ${t('notifications.channels.testSuccessShort', 'Test sent!')}`),
+      onError: err => toast.error(`${channel.name}: ${t('notifications.channels.testFailed', 'Test failed')}`, err.message),
     });
   };
 
   const handleDelete = () => {
     deleteMut.mutate(channel.id, {
       onSuccess: () => toast.success(t('notifications.channels.deleted', 'Channel deleted')),
-      onError: () => toast.error(t('notifications.channels.deleteFailed', 'Failed to delete channel')),
+      onError: err => toast.error(t('notifications.channels.deleteFailed', 'Failed to delete channel'), err?.message),
     });
   };
 
@@ -79,21 +85,20 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
       hover
       className={cn(
         'flex h-full flex-col gap-4 p-4 sm:p-5 transition-all duration-normal',
-        channel.enabled ? 'ring-1 ring-white/[0.08]' : 'opacity-60',
+        channel.enabled ? 'ring-1 ring-[var(--border-subtle)]' : 'opacity-60',
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div
-            className="shrink-0 rounded-xl p-2.5 ring-1"
-            style={{ background: `${meta.color}15`, borderColor: `${meta.color}30` }}
+            className="shrink-0 rounded-xl bg-[var(--surface-2)] p-2.5 text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)]"
           >
-            <Icon className="h-5 w-5" style={{ color: meta.color }} aria-hidden="true" />
+            <Icon className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
             <Heading level="panel" as="h3" className="truncate">{channel.name}</Heading>
             <div className="mt-0.5 flex flex-wrap items-center gap-2">
-              <Text as="span" size="xs" weight="medium" className="capitalize" style={{ color: meta.color }}>
+              <Text as="span" size="xs" weight="medium" color="secondary">
                 {channel.kind}
               </Text>
               <Badge variant={channel.enabled ? 'success' : 'neutral'} size="sm">
@@ -104,19 +109,20 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
         </div>
         <Toggle
           checked={channel.enabled}
+          disabled={toggleLatched || toggleMut.isPending}
           onChange={handleToggle}
           aria-label={t('notifications.channels.toggleAria', 'Toggle {{name}}', { name: channel.name })}
         />
       </div>
 
-      <div className="space-y-1 rounded-lg bg-white/[0.02] p-2.5">
+      <div className="space-y-1 rounded-lg bg-[var(--surface-2)] p-2.5">
         {previewEntries.length === 0 ? (
           <Text as="span" variant="caption">—</Text>
         ) : (
           previewEntries.map(([k, v]) => (
             <Text key={k} as="p" variant="caption" className="block truncate">
               <Text as="span" size="xs" weight="medium" color="secondary">{k}:</Text>{' '}
-              {isSecretField(k) ? '••••••••' : (v || '—')}
+              {v ? (isSecretField(k) ? '••••••••' : v) : '—'}
             </Text>
           ))
         )}
@@ -128,7 +134,7 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
             {webhookResult.success ? t('webhookChannels.test.success', 'Success') : t('webhookChannels.test.failure', 'Failed')}
           </Badge>
           <Text variant="caption">{t('webhookChannels.test.status', 'Status {{status}}', { status: webhookResult.status_code })} · {t('webhookChannels.test.latency', '{{ms}} ms', { ms: webhookResult.latency_ms })}</Text>
-          {webhookResult.error && <Text variant="bodySm" className="text-rose-300">{webhookResult.error}</Text>}
+          {webhookResult.error && <Text variant="bodySm" color="subtle">{webhookResult.error}</Text>}
           {webhookResult.signature && <Text variant="caption">{t('webhookChannels.test.signature', 'Signature:')} <code className="break-all">{webhookResult.signature}</code></Text>}
           {webhookResult.body_preview && <Text variant="caption" className="break-all">{webhookResult.body_preview}</Text>}
         </div>
@@ -144,14 +150,7 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
         >
           {testMut.isPending || webhookTestMut.isPending ? t('notifications.channels.testing', 'Testing…') : t('notifications.channels.testShort', 'Test')}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
-          onClick={() => onEdit(channel)}
-        >
-          {t('common.edit', 'Edit')}
-        </Button>
+        <IconButton icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />} label={t('common.edit', 'Edit')} onClick={() => onEdit(channel)} />
         <Button
           variant="danger"
           size="sm"

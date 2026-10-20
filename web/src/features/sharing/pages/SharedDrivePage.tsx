@@ -1,30 +1,25 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { MapPin } from 'lucide-react';
+import { BUTTON_BASE, BUTTON_VARIANTS, Icon, Logo, Text } from '@/components/ui';
+import { ChartCard, LayoutCard, PageHeader } from '@/components/layout';
+import { DataSourceNotice, EmptyState, Skeleton } from '@/components/feedback';
 import {
-  MapPin, Clock, Zap, Battery, Mountain, Gauge, TrendingUp,
-} from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
-import { Grid } from '@/components/layout';
-import { StatCard } from '@/components/data-display';
-import { EmptyState, Skeleton } from '@/components/feedback';
-import {
-  ChartContainer, ChartGradient, chartGrid, axisTick,
+  ChartTooltip, chartGrid, axisTick,
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import {
-  MapContainer, Polyline, CircleMarker,
+  MapContainer, Polyline, CircleMarker, Popup,
   MapTileLayer,
   type LatLngExpression,
 } from '@/components/maps';
-import Logo from '@/components/ui/Logo';
 import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
-import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+import { PublicDriveBrief } from '../components/operationalbrief-public';
+
 import {
   convertDistanceFromSI,
   convertSpeedFromSI,
@@ -32,6 +27,11 @@ import {
 } from '@/lib/unitConversion';
 import { normalizeSharedDriveData, isSharedSession } from '@/types/sharing';
 import { SharedSessionReport } from './SharedSessionReport';
+import { usePublicDisplayFormatting } from '@/hooks/useSettings';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { cn } from '@/lib/cn';
+import { chartTokens } from '@/lib/tokens';
+import { isApiError } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
 /*  Boundary constants                                                */
@@ -78,29 +78,23 @@ function toEfficiencyDisplay(whPerKm: number, distancePref: DistanceUnitPref): n
 function ExpiredShareView() {
   const { t } = useTranslation();
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+    <main className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
       <div className="text-center space-y-4 max-w-md px-4">
-        <div className="w-16 h-16 mx-auto rounded-full bg-white/[0.03] flex items-center justify-center">
-          <MapPin className="h-8 w-8 text-[var(--text-muted)]" />
+        <div className="w-16 h-16 mx-auto rounded-full bg-[var(--surface-2)] flex items-center justify-center">
+          <Icon icon={MapPin} size="xl" className="text-[var(--text-muted)]" />
         </div>
-        <h1
-          className="text-xl font-bold text-[var(--text-primary)] outline-none"
-          tabIndex={-1}
-          data-route-focus-target="true"
-        >
-          {t('share.expired.title', 'Share Link Unavailable')}
-        </h1>
-        <p className="text-[var(--text-secondary)] text-sm">
-          {t('share.expired.description', 'This shared drive link has expired or been revoked.')}
-        </p>
+        <PageHeader title={t('share.unavailable.title', 'Share link unavailable')} />
+        <Text as="p" variant="bodySm" color="secondary">
+          {t('share.unavailable.description', 'This shared drive link has expired or been revoked.')}
+        </Text>
         <a
           href="/"
-          className="inline-block text-sm text-[var(--theme-primary)] hover:underline"
+          className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'min-h-11 min-w-11 px-4 py-2')}
         >
-          {t('share.expired.home', 'Go to TeslaSync')}
+          {t('share.unavailable.home', 'Go to TeslaSync')}
         </a>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -108,37 +102,29 @@ function SharedDriveLoading() {
   const { t } = useTranslation();
 
   return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-label={t('share.loading', 'Loading shared drive report…')}
-      className="min-h-screen bg-[var(--bg-primary)]"
-    >
-      <header className="border-b border-[var(--border-subtle)] p-4">
-        <div className="flex items-center gap-2">
-          <Logo />
-          <span className="text-sm text-[var(--text-muted)]">
-            {t('share.header', 'Shared Drive Report')}
-          </span>
+    <main className="min-h-screen bg-[var(--bg-primary)]">
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={t('share.loading', 'Loading shared drive report…')}
+      >
+        <div className="w-full min-w-0 px-4 py-4">
+          <PageHeader title={t('share.header', 'Shared drive report')} icon={<Logo />} />
         </div>
-      </header>
-      <Skeleton className="h-[50vh] rounded-none" />
-      <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-72 max-w-full" />
-          <Skeleton className="h-4 w-48" />
-        </div>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-24 rounded-xl" />
-          ))}
-        </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <Skeleton className="h-72 rounded-xl" />
-          <Skeleton className="h-72 rounded-xl" />
+        <Skeleton className="h-[50vh] rounded-none" />
+        <div className="w-full min-w-0 space-y-6 px-4 py-8">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} className="h-24 rounded-xl" />
+            ))}
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Skeleton className="h-72 rounded-xl" />
+            <Skeleton className="h-72 rounded-xl" />
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -148,18 +134,62 @@ function SharedDriveLoading() {
 
 // EXCEPTION: public share route is chrome-less so unauthenticated recipients see only the branded report.
 export default function SharedDrivePage() {
+  const { fmtNumber, unitPrefs, formatDistance, formatSpeed } = usePublicDisplayFormatting();
   const { token } = useParams<{ token: string }>();
   const { t } = useTranslation();
-  const { data: rawData, isLoading, error } = useSharedDrive(token ?? '');
+  const query = useSharedDrive(token ?? '');
+  const { data: rawData, isLoading, error, dataUpdatedAt } = query;
+  const [deniedVersions, setDeniedVersions] = useState(() => new Map<string, number>());
+  // Public authorization failures invalidate disclosure, not just freshness.
+  // Clearing an error or pausing a retry must never resurrect the denied cache.
+  const tokenDenied = isApiError(error) && [401, 403, 404, 410].includes(error.status);
+  const deniedVersion = deniedVersions.get(token ?? '');
+  if (tokenDenied && (deniedVersion === undefined || dataUpdatedAt > deniedVersion)) {
+    setDeniedVersions(previous => new Map(previous).set(token ?? '', dataUpdatedAt));
+  }
+  const revalidated = !error && query.isSuccess && dataUpdatedAt > (deniedVersion ?? Infinity);
+  if (revalidated) {
+    setDeniedVersions(previous => {
+      const next = new Map(previous);
+      next.delete(token ?? '');
+      return next;
+    });
+  }
+  const cacheDenied = deniedVersion !== undefined
+    && !revalidated;
+  const unavailable = !token || tokenDenied || cacheDenied;
+  const hasReport = rawData != null;
+  const initialLoading = !hasReport && isLoading && query.fetchStatus !== 'paused';
+  // Never expose backend error text, token values, or authenticated diagnostics
+  // on the public report. Shared feedback supplies localized recovery copy.
+  const sourceNotice = (
+    <DataSourceNotice sources={[{
+      id: 'shared-report',
+      label: t('share.header', 'Shared drive report'),
+      query: { ...query, data: rawData ?? undefined, error: undefined, isError: Boolean(error) },
+    }]} />
+  );
   // One /s/:token route serves both link kinds: session payloads branch to
   // their own report before drive normalization (which would see no drive).
   const driveRaw = isSharedSession(rawData) ? undefined : rawData;
   const data = useMemo(() => normalizeSharedDriveData(driveRaw), [driveRaw]);
-  const { unitPrefs, formatDistance, formatSpeed } = useUnits();
   const distancePref = unitPrefs.distance;
   const speedPref = unitPrefs.speed;
   const elevPref = elevationLabel(distancePref);
   const effPref = efficiencyUnit(distancePref);
+  usePageTitle(
+    unavailable
+      ? t('share.unavailable.title', 'Share link unavailable')
+      : initialLoading
+      ? t('share.header', 'Shared drive report')
+      : !data && !isSharedSession(rawData) && !error && query.fetchStatus !== 'paused'
+        ? t('share.unavailable.title', 'Share link unavailable')
+        : isSharedSession(rawData)
+          ? t('share.sessionHeader', 'Shared charging report')
+          : t('share.header', 'Shared drive report'),
+  );
+  const displayValue = (value: unknown, unit: string) =>
+    typeof value === 'number' && Number.isFinite(value) ? `${fmtNumber(value)} ${unit}` : '—';
 
   /* ---- Map data ---- */
   const mapPoints: LatLngExpression[] = useMemo(() => {
@@ -207,38 +237,70 @@ export default function SharedDrivePage() {
     })),
     [data?.speed_profile, distancePref, speedPref],
   );
+  const elevationExportData = useMemo(
+    () => (data?.elevation_profile ?? []).map(p => ({ distance_m: p.distance_m, elevation_m: p.elevation_m })),
+    [data?.elevation_profile],
+  );
+  const speedExportData = useMemo(
+    () => (data?.speed_profile ?? []).map(p => ({ distance_m: p.distance_m, speed_mps: p.speed_mps })),
+    [data?.speed_profile],
+  );
 
   /* ---- Loading state ---- */
-  if (isLoading) {
+  if (unavailable) {
+    return <ExpiredShareView />;
+  }
+  if (initialLoading) {
     return <SharedDriveLoading />;
+  }
+
+  if (!hasReport && (error || query.fetchStatus === 'paused')) {
+    return (
+      <main className="min-h-screen bg-[var(--bg-primary)]">
+        <div className="w-full min-w-0 space-y-4 px-4 py-4">
+          <PageHeader title={t('share.header', 'Shared drive report')} icon={<Logo />} />
+          {sourceNotice}
+        </div>
+      </main>
+    );
   }
 
   /* ---- Session share branch ---- */
   if (isSharedSession(rawData)) {
-    return <SharedSessionReport data={rawData} />;
+    return <main>{sourceNotice}<SharedSessionReport data={rawData} /></main>;
   }
 
   /* ---- Error / expired ---- */
-  if (error || !data) {
+  if (!data) {
     return <ExpiredShareView />;
   }
 
   const drive = data.drive;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Header */}
-      <header className="p-4 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center gap-2">
-          <Logo />
-          <span className="text-[var(--text-muted)] text-sm">
-            {t('share.header', 'Shared Drive Report')}
-          </span>
-        </div>
-      </header>
+    <main className="min-h-screen bg-[var(--bg-primary)]">
+      <div className="w-full min-w-0 px-4 py-4">
+        {sourceNotice}
+        <PageHeader
+          title={data.title}
+          icon={<Logo />}
+          metadataActions={<Text variant="caption">{t('share.header', 'Shared drive report')}</Text>}
+          contextActions={
+            <>
+              <Text variant="caption">{drive.date}</Text>
+              {drive.start_address && drive.end_address && (
+                <Text variant="caption">{drive.start_address} → {drive.end_address}</Text>
+              )}
+            </>
+          }
+        />
+        {data.description && (
+          <Text as="p" variant="bodySm" color="secondary">{data.description}</Text>
+        )}
+      </div>
 
       {/* Hero map */}
-      {mapPoints.length > 1 && (
+      {mapPoints.length > 1 ? (
         <FadeIn>
           <div className="h-[50vh] relative">
             <MapContainer
@@ -250,167 +312,139 @@ export default function SharedDrivePage() {
               <MapTileLayer style="dark" />
               <Polyline
                 positions={mapPoints}
-                pathOptions={{ color: 'var(--theme-primary)', weight: 3, opacity: 0.8 }}
+                pathOptions={{ color: chartTokens.series[0], weight: 2, opacity: 0.8 }}
               />
               {startPos && (
                 <CircleMarker
                   center={startPos}
                   radius={6}
-                  pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1 }}
-                />
+                  pathOptions={{ color: chartTokens.series[0], weight: 2, fill: false }}
+                >
+                  <Popup>
+                    <Text variant="bodySm">{t('share.traceStart', 'Start of disclosed trace')}</Text>
+                  </Popup>
+                </CircleMarker>
               )}
               {endPos && (
                 <CircleMarker
                   center={endPos}
                   radius={6}
-                  pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1 }}
-                />
+                  pathOptions={{ color: chartTokens.series[0], weight: 2, fillColor: chartTokens.series[0], fillOpacity: 1 }}
+                >
+                  <Popup>
+                    <Text variant="bodySm">{t('share.traceEnd', 'End of disclosed trace')}</Text>
+                  </Popup>
+                </CircleMarker>
               )}
             </MapContainer>
           </div>
+          <div className="flex flex-wrap justify-between gap-2 bg-[var(--surface-1)] px-4 py-2">
+            <Text variant="caption">{t('share.traceStart', 'Start of disclosed trace')} ○</Text>
+            <Text variant="caption">{t('share.traceEnd', 'End of disclosed trace')} ●</Text>
+          </div>
         </FadeIn>
+      ) : (
+        <div className="w-full min-w-0 px-4">
+          <LayoutCard title={t('share.route', 'Route')}>
+            <EmptyState /* no-action: public recipients cannot request private geometry */
+              message={t('share.routeNotIncluded', 'The route was not included in this share.')}
+            />
+          </LayoutCard>
+        </div>
       )}
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        {/* Title */}
-        <FadeIn>
-          <div className="space-y-1">
-            {/* a11y-landmark-ok: the "share link unavailable" heading above
-                lives in a mutually-exclusive early-return branch, so only
-                one of the two <h1> elements can ever be rendered. */}
-            <h1
-              className="text-2xl font-bold text-[var(--text-primary)] outline-none"
-              tabIndex={-1}
-              data-route-focus-target="true"
-            >
-              {data.title}
-            </h1>
-            {data.description && (
-              <p className="text-[var(--text-secondary)]">{data.description}</p>
-            )}
-            <div className="flex items-center gap-3 text-sm text-[var(--text-muted)] mt-2">
-              <span>{drive.date}</span>
-              {drive.start_address && drive.end_address && (
-                <span>{drive.start_address} → {drive.end_address}</span>
-              )}
-            </div>
-          </div>
-        </FadeIn>
-
-        {/* Stats grid */}
+      <div className="w-full min-w-0 px-4 py-8 space-y-6">
+        {/* Owner-shared measurements */}
         <FadeIn delay={0.05}>
-          <Grid cols={{ default: 2, md: 4 }} gap={4}>
-            <StatCard
-              label={t('share.distance', 'Distance')}
-              value={formatDistance(drive.distance_m, { precision: 1 })}
-              icon={<MapPin className="h-4 w-4" />}
-            />
-            <StatCard
-              label={t('share.duration', 'Duration')}
-              value={formatDurationSecondsAsMinutes(drive.duration_s)}
-              icon={<Clock className="h-4 w-4" />}
-            />
-            {drive.efficiency_wh_per_m != null && (
-              <StatCard
-                label={t('share.efficiency', 'Efficiency')}
-                value={`${Math.round(toEfficiencyDisplay(drive.efficiency_wh_per_m * METERS_PER_KM, distancePref))} ${effPref}`}
-                icon={<Zap className="h-4 w-4" />}
-              />
-            )}
-            {drive.start_battery != null && drive.end_battery != null && (
-              <StatCard
-                label={t('share.battery', 'Battery')}
-                value={`${drive.start_battery}% → ${drive.end_battery}%`}
-                icon={<Battery className="h-4 w-4" />}
-              />
-            )}
-            {drive.max_speed_mps != null && (
-              <StatCard
-                label={t('share.maxSpeed', 'Max Speed')}
-                value={formatSpeed(drive.max_speed_mps, { precision: 0 })}
-                icon={<Gauge className="h-4 w-4" />}
-              />
-            )}
-            {drive.avg_speed_mps != null && (
-              <StatCard
-                label={t('share.avgSpeed', 'Avg Speed')}
-                value={formatSpeed(drive.avg_speed_mps, { precision: 0 })}
-                icon={<TrendingUp className="h-4 w-4" />}
-              />
-            )}
-            {drive.elevation_gain != null && (
-              <StatCard
-                label={t('share.elevGain', 'Elevation Gain')}
-                value={`${Math.round(convertElevation(drive.elevation_gain, distancePref))} ${elevPref}`}
-                icon={<Mountain className="h-4 w-4" />}
-              />
-            )}
-          </Grid>
+          <PublicDriveBrief
+            drive={drive}
+            preferences={{ units: unitPrefs, currency: { kind: 'symbol', value: '' } }}
+            formatDistance={formatDistance}
+            formatSpeed={formatSpeed}
+            fmtNumber={fmtNumber}
+            formatEfficiency={raw => `${fmtNumber(toEfficiencyDisplay(raw * METERS_PER_KM, distancePref))} ${effPref}`}
+            formatElevation={raw => `${fmtNumber(convertElevation(raw, distancePref))} ${elevPref}`}
+          />
         </FadeIn>
 
         {/* Vehicle badge */}
         {data.vehicle && (
           <FadeIn delay={0.1}>
-            <GlassPanel className="p-4 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/[0.05] flex items-center justify-center">
-                <Zap className="h-4 w-4 text-[var(--theme-primary)]" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-[var(--text-primary)]">
-                  Tesla {data.vehicle.model}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">{data.vehicle.color}</p>
-              </div>
-            </GlassPanel>
+            <LayoutCard title={`Tesla ${data.vehicle.model}`}>
+              <Text as="p" variant="caption">{data.vehicle.color}</Text>
+            </LayoutCard>
           </FadeIn>
         )}
 
         {/* Elevation profile */}
-        {elevationData.length > 0 && (
+        {elevationData.length > 0 ? (
           <FadeIn delay={0.15}>
-            {/* chart-a11y:no-table dense per-sample shared-drive trace */}
-            <ChartContainer
-              title={t('share.elevation', 'Elevation Profile')}
-              ariaLabel={t('share.elevation.aria', 'Shared drive elevation profile area chart by distance')}
+            <ChartCard
+              size="standard"
+              toolbar
+              exportable
+              title={t('share.elevation', 'Elevation profile')}
+              ariaLabel={t('share.elevationAria', 'Shared drive elevation profile area chart by distance')}
+              data={elevationData}
+              dataColumns={[
+                { key: 'distance', label: t('share.distance', 'Distance'), format: value => displayValue(value, distancePref) },
+                { key: 'elevation', label: t('share.elevTooltipLabel', 'Elevation'), format: value => displayValue(value, elevPref) },
+              ]}
+              exportData={elevationExportData}
               height={200}
             >
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={elevationData}>
-                  <defs>
-                    <ChartGradient id="elevGrad" color="var(--theme-primary)" />
-                  </defs>
                   <CartesianGrid {...chartGrid} />
                   <XAxis
                     dataKey="distance"
                     {...axisTick}
-                    tickFormatter={(v: number) => `${Math.round(v)} ${distancePref}`}
+                    tickFormatter={(v: number) => `${fmtNumber(v)} ${distancePref}`}
                   />
-                  <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)} ${elevPref}`} />
+                  <YAxis {...axisTick} tickFormatter={(v: number) => `${fmtNumber(Math.round(v) + 0, 0)} ${elevPref}`} />
                   <Tooltip
-                    contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
-                    labelFormatter={(v: number) => `${fmtNumber(v, 1)} ${distancePref}`}
-                    formatter={(v: number) => [`${Math.round(v)} ${elevPref}`, t('share.elevTooltipLabel', 'Elevation')]}
+                    content={<ChartTooltip
+                      labelFormatter={value => displayValue(value, distancePref)}
+                      valueFormatter={value => displayValue(value, elevPref)}
+                    />}
                   />
                   <Area
                     {...AREA_DEFAULTS}
                     dataKey="elevation"
-                    stroke="var(--theme-primary)"
-                    fill="url(#elevGrad)"
+                    name={t('share.elevTooltipLabel', 'Elevation')}
+                    stroke={chartTokens.series[0]}
+                    strokeWidth={2}
+                    fill={chartTokens.series[0]}
+                    fillOpacity={0.08}
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </ChartContainer>
+            </ChartCard>
           </FadeIn>
+        ) : (
+          <LayoutCard title={t('share.elevation', 'Elevation profile')}>
+            <EmptyState /* no-action: only owner-disclosed profile data may be shown */
+              message={t('share.elevationNotIncluded', 'The elevation profile was not included in this share.')}
+            />
+          </LayoutCard>
         )}
 
         {/* Speed profile */}
-        {speedData.length > 0 && (
+        {speedData.length > 0 ? (
           <FadeIn delay={0.2}>
-            {/* chart-a11y:no-table dense per-sample shared-drive trace */}
-            <ChartContainer
-              title={t('share.speed', 'Speed Profile')}
-              ariaLabel={t('share.speed.aria', 'Shared drive speed profile line chart by distance')}
+            <ChartCard
+              size="standard"
+              toolbar
+              exportable
+              title={t('share.speed', 'Speed profile')}
+              ariaLabel={t('share.speedAria', 'Shared drive speed profile line chart by distance')}
+              data={speedData}
+              dataColumns={[
+                { key: 'distance', label: t('share.distance', 'Distance'), format: value => displayValue(value, distancePref) },
+                { key: 'speed', label: t('share.speedTooltipLabel', 'Speed'), format: value => displayValue(value, speedPref) },
+              ]}
+              exportData={speedExportData}
               height={200}
             >
               <ResponsiveContainer width="100%" height={200}>
@@ -419,50 +453,49 @@ export default function SharedDrivePage() {
                   <XAxis
                     dataKey="distance"
                     {...axisTick}
-                    tickFormatter={(v: number) => `${Math.round(v)} ${distancePref}`}
+                    tickFormatter={(v: number) => `${fmtNumber(v)} ${distancePref}`}
                   />
-                  <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)}`} />
+                  <YAxis {...axisTick} tickFormatter={(v: number) => fmtNumber(Math.round(v) + 0, 0)} />
                   <Tooltip
-                    contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
-                    labelFormatter={(v: number) => `${fmtNumber(v, 1)} ${distancePref}`}
-                    formatter={(v: number) => [`${Math.round(v)} ${speedPref}`, t('share.speedTooltipLabel', 'Speed')]}
+                    content={<ChartTooltip
+                      labelFormatter={value => displayValue(value, distancePref)}
+                      valueFormatter={value => displayValue(value, speedPref)}
+                    />}
                   />
                   <Line
                     {...AREA_DEFAULTS}
                     dataKey="speed"
-                    stroke="#00f0ff"
+                    name={t('share.speedTooltipLabel', 'Speed')}
+                    stroke={chartTokens.series[0]}
+                    strokeWidth={2}
                   />
                 </LineChart>
               </ResponsiveContainer>
-            </ChartContainer>
+            </ChartCard>
           </FadeIn>
-        )}
-
-        {/* No map data fallback */}
-        {mapPoints.length <= 1 && elevationData.length === 0 && speedData.length === 0 && (
-          <GlassPanel className="p-8">
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<MapPin className="h-8 w-8" />}
-              message={t('share.noMapData', 'Route data is not available for this shared drive.')}
+        ) : (
+          <LayoutCard title={t('share.speed', 'Speed profile')}>
+            <EmptyState /* no-action: only owner-disclosed profile data may be shown */
+              message={t('share.speedNotIncluded', 'The speed profile was not included in this share.')}
             />
-          </GlassPanel>
+          </LayoutCard>
         )}
 
         {/* Footer */}
         <FadeIn delay={0.25}>
-          <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] text-center text-[var(--text-muted)] text-xs space-y-1">
-            <p>{t('share.footer', 'Shared via TeslaSync — Self-hosted Tesla Fleet Intelligence')}</p>
+          <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] text-center space-y-1">
+            <Text as="p" variant="caption">{t('share.footer', 'Shared via TeslaSync — self-hosted Tesla fleet intelligence')}</Text>
             <a
               href="https://github.com/ev-dev-labs/teslasync"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--theme-primary)]/60 hover:text-[var(--theme-primary)] transition-colors"
+              className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, 'min-h-11 min-w-11 px-4 py-2')}
             >
-              {t('share.learnMore', 'Learn more →')}
+              <Text variant="bodySm" color="secondary">{t('share.learnMore', 'Learn more →')}</Text>
             </a>
           </div>
         </FadeIn>
       </div>
-    </div>
+    </main>
   );
 }

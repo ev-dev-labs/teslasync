@@ -355,8 +355,11 @@ export function Combobox<T>(props: ComboboxProps<T>) {
 
   const commitOption = useCallback(
     (opt: T) => {
-      onChange(opt);
+      // Text sync first: parents that clear stale selections on text change
+      // (e.g. trip-planner address fields) must see the commit text before
+      // the selection callback, or the trailing text sync wipes the pick.
       updateInputText(getOptionLabel(opt));
+      onChange(opt);
       setOpen(false);
       setActiveIndex(-1);
     },
@@ -663,7 +666,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
                   ? t('combobox.closeListAria', 'Hide options')
                   : t('combobox.openListAria', 'Show options')
               }
-              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronDown
                 className={cn(

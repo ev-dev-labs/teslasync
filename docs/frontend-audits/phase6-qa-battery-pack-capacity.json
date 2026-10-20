@@ -1,0 +1,771 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-battery-pack-capacity",
+  "status": "DONE",
+  "identity": {
+    "page": "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx",
+    "routes": ["/pack-capacity"],
+    "routeEvidence": "web\\src\\App.tsx:85,858: lazy PackCapacityPage mounted inside SafeRoute",
+    "dependency": "phase5-page-battery-pack-capacity",
+    "queueEvidence": "migration-queue.md:327: this QA item was [ ]; :1750: actual prerequisite was [x]",
+    "existingReportAtIntake": false,
+    "startedAtUtc": "2026-10-13T21:58:58.433Z",
+    "sourceInspectionFinishedAtUtc": "2026-10-13T22:06:54.6679299Z",
+    "reviewKind": "fresh bounded read-only source QA",
+    "purpose": "Inspect charging-derived implied pack energy, model uncertainty, observational support and exact charging-row accounting.",
+    "primaryGoal": "Distinguish returned charging measurements from modeled capacity without claiming laboratory capacity, battery health or lifetime completeness."
+  },
+  "completionMeaning": {
+    "reportDelivery": "DONE means the assigned source review and its owned artifacts are complete.",
+    "sourceAcceptance": "FINDINGS; not a clean source acceptance or remigration.",
+    "wholePageAcceptance": "NOTRUN",
+    "nativeAcceptance": "NOTRUN",
+    "runtimeAcceptance": "NOTRUN",
+    "noSourcePresenceNativePass": true
+  },
+  "writeContract": {
+    "ownedFiles": [
+      "docs\\frontend-audits\\phase6-qa-battery-pack-capacity.json",
+      "logs\\phase6-qa-battery-pack-capacity.log"
+    ],
+    "sourceWrites": false,
+    "testWrites": false,
+    "queueGitIntegrationOwner": "parent only",
+    "logDisposition": "root logs path designated ignored by the assignment; Git was not invoked to recheck ignore policy",
+    "noHeartbeatFile": "Assignment restricts writes to the two owned artifacts; progress is recorded in the owned log instead.",
+    "prohibitedWorkNotPerformed": [
+      "product edits", "remigration", "test execution", "test grading",
+      "runtime/HTTP/browser/native/capture work", "TypeScript/compiler/build/lint",
+      "audit.sh or global TypeScript wrapper", "verification scripts/helper execution",
+      "extensions", "installation", "servers", "subagents", "Docker", "Discord",
+      "queue or Git operations", "other queued items", "scheduled health or orchestration"
+    ]
+  },
+  "immutableHistoricalReceipts": {
+    "phase5": "The accepted source-only no-change receipt describes 14 sections and 292 page lines. This is historical context, not fresh QA.",
+    "historicalResultsNotRerunOrAdopted": [
+      "Phase5 ESLint/style/scoped-violation results",
+      "historical no-change preservation claim",
+      "historical test/type/native/application claims"
+    ],
+    "schemaReuse": "Only property names from the existing phase6-qa-battery-charge-advisor.json schema were read. No other report findings were copied."
+  },
+  "preservation": {
+    "currentPageLines": 292,
+    "historicalPageLines": 292,
+    "currentPageToHistoricalRatio": 1,
+    "lineCountEvidence": "C08: PAGE_LINES=292; SCOPED_FEATURE_LINES=4915 over 24 explicitly selected mounted feature/source files",
+    "scopeOf4915": "Page, 14 region implementations, direct feature wrappers/status/body/labels/types, BatteryEvidenceBrief and the domain analyzer; not an extracted-page-only baseline.",
+    "noInventedHistoricalComponentTotal": true,
+    "literalRegionShellCount": 14,
+    "historicalRegionCount": 14,
+    "frameCounts": {
+      "ChartContainer": 7,
+      "EmbeddedChart": 1,
+      "GlassPanel": 6,
+      "DataTable": 2,
+      "section": 14
+    },
+    "frameCountInterpretation": "Fit diagnostics has both GlassPanel and EmbeddedChart; summary uses LayoutCard. Counting frames alone would double-count diagnostics and miss summary. Region identity is the 14 actual feature section shells.",
+    "regions": [
+      {
+        "id": "pack-capacity-kpis",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacitySummary.tsx",
+        "line": 136,
+        "pageMount": "PackCapacityPage.tsx:109",
+        "contents": "Current posterior, one-sigma uncertainty, current/filtered-maximum descriptive ratio, qualified raw median, gated annualized change, breadth-support index; two assumption controls.",
+        "source": "One charging-history source; derived result plus local filter assumptions.",
+        "state": "Unresolved/fatal/no-vehicle raw metrics become null; initial loading forwarded; retained refresh-error content preserved.",
+        "units": "Raw Wh remains numeric; formatEnergy supplies display kWh and settings locale/precision; ratios use locale percent; support is /100.",
+        "actions": ["minimum SoC-window assumption", "process-noise assumption", "evidence details via BatteryEvidenceBrief", "source retry via QueryStatus"]
+      },
+      {
+        "id": "pack-capacity-estimate-timeline",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityEstimateTimeline.tsx",
+        "line": 64,
+        "pageMount": "PackCapacityPage.tsx:126",
+        "contents": "Qualified raw implied capacity, posterior and plus/minus one-sigma bounds; latest 200 states.",
+        "state": "Always-mounted frame; observation-gated body; export requires resolved, nonfatal and nonempty rows.",
+        "units": "Every energy series converted from Wh to energyUnit; dates use locale and result.timeZone; table headings include energyUnit.",
+        "actions": ["PNG/SVG/image-copy/CSV export when enabled", "raw/filtered legend toggles"],
+        "limits": "Envelope lines have legendType=none and are not explicitly bound to hiddenSeries; no page-supplied fullscreen."
+      },
+      {
+        "id": "pack-capacity-month-trend",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityMonthTrend.tsx",
+        "line": 61,
+        "pageMount": "PackCapacityPage.tsx:143",
+        "contents": "Month sample counts, raw median and latest posterior; internal missing months retain count zero with capacity null; only latest 24 months plotted.",
+        "state": "Observation-gated body; export requires resolved, nonfatal, nonempty rows.",
+        "units": "Local-month grouping occurs in domain result timezone; monthKey labels formatted as UTC calendar anchors to prevent relabeling; converted energy axes and table headings.",
+        "actions": ["PNG/SVG/image-copy/CSV export", "sample/median/posterior legend toggles"],
+        "findingIds": ["PC-06"]
+      },
+      {
+        "id": "pack-capacity-soc-window-profile",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacitySocWindowProfile.tsx",
+        "line": 57,
+        "pageMount": "PackCapacityPage.tsx:157",
+        "contents": "Five SoC-gain bins: sample count, median implied capacity and mean relative sigma.",
+        "state": "Plot body observation-gated; fixed bins still reach ChartContainer fallback while unresolved.",
+        "units": "Capacity converted from Wh; sigma share multiplied by 100; bin values are percentage-point gain intervals.",
+        "actions": ["PNG/SVG/image-copy/CSV export when source resolved", "sample/median/sigma legend toggles"],
+        "findingIds": ["PC-01"]
+      },
+      {
+        "id": "pack-capacity-window-sensitivity",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityWindowSensitivity.tsx",
+        "line": 57,
+        "pageMount": "PackCapacityPage.tsx:178",
+        "contents": "Re-runs eligibility at 5/10/20/30/40 percentage-point thresholds; included count, posterior and sigma.",
+        "state": "Observation-gated plot body; fixed threshold rows reach fallback while unresolved.",
+        "units": "Threshold is gain percentage points; energy converted from Wh at presentation.",
+        "actions": ["PNG/SVG/image-copy/CSV export when source resolved", "included/current/sigma legend toggles"],
+        "findingIds": ["PC-01"]
+      },
+      {
+        "id": "pack-capacity-process-sensitivity",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityProcessSensitivity.tsx",
+        "line": 55,
+        "pageMount": "PackCapacityPage.tsx:191",
+        "contents": "Re-runs the same observations at process-noise assumptions 10/30/60/120 Wh per square-root day.",
+        "state": "Observation-gated body; fixed assumption rows may reach fallback before evidence resolves, but the posterior remains null.",
+        "units": "Y values converted from Wh; X values remain Wh/sqrt(day), whereas X-axis suffix incorrectly says Wh.",
+        "actions": ["PNG/SVG/image-copy/CSV export when source resolved", "current/sigma legend toggles"],
+        "findingIds": ["PC-02"]
+      },
+      {
+        "id": "pack-capacity-innovation-profile",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityInnovationProfile.tsx",
+        "line": 64,
+        "pageMount": "PackCapacityPage.tsx:212",
+        "contents": "Five standardized pre-update innovation bins; seed state excluded; counts and shares in fallback/export.",
+        "state": "Observation-gated body; fixed-bin count-zero fallback exists even with no established source.",
+        "units": "Dimensionless standardized sigma bands; shares represented as percent.",
+        "actions": ["PNG/SVG/image-copy/CSV export when source resolved"],
+        "findingIds": ["PC-01"]
+      },
+      {
+        "id": "pack-capacity-influence-timeline",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityInfluenceTimeline.tsx",
+        "line": 57,
+        "pageMount": "PackCapacityPage.tsx:221",
+        "contents": "Measurement gain, standardized innovation and posterior uncertainty; latest 200 states.",
+        "state": "Observation-gated body; export requires nonempty resolved rows.",
+        "units": "Gain fraction becomes percent; innovation dimensionless; posterior sigma converted from Wh; dates use result.timeZone.",
+        "actions": ["PNG/SVG/image-copy/CSV export", "gain/innovation/sigma legend toggles"]
+      },
+      {
+        "id": "pack-capacity-fit-diagnostics",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityFitDiagnostics.tsx",
+        "line": 97,
+        "pageMount": "PackCapacityPage.tsx:235",
+        "contents": "Fit status, annualized signed change, R-squared, span and active months; filtered observations plus linear-fit overlay.",
+        "state": "Metrics distinguish unresolved from unavailable; plot requires 12 observations, 180 days and 6 active months.",
+        "units": "Signed annual change kept as Wh until display; energy plot axis correct; accessible table energy headings omit display units.",
+        "actions": ["filtered/linear-fit legend toggles"],
+        "limits": "EmbeddedChart defaults exportable=false/fullscreen=false; no page-provided export or fullscreen action.",
+        "findingIds": ["PC-07"]
+      },
+      {
+        "id": "pack-capacity-directory",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacityMeasurementDirectory.tsx",
+        "line": 138,
+        "pageMount": "PackCapacityPage.tsx:245",
+        "contents": "Latest 25 qualified observations: completion, SoC gain, added energy, raw capacity, posterior, sigma, gain, innovation and location.",
+        "state": "Observation-gated body; real raw SI filter values kept distinct from formatted labels.",
+        "units": "Wh formatted at display; completion uses locale and result.timeZone; pp is a technical gain-unit abbreviation, not a charging command.",
+        "actions": ["loaded-row search", "value filters", "density/column layout/resize controls", "mobile quick view and close"],
+        "mobile": "All nine columns listed in mobileColumns; five compact roles and hidden metadata remain reachable through shared quick-view allColumns rendering."
+      },
+      {
+        "id": "pack-capacity-coverage",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityCoverage.tsx",
+        "line": 42,
+        "pageMount": "PackCapacityPage.tsx:262",
+        "contents": "Returned count, qualification share, evidence span, local weeks/days, median cadence and recency; timeline/directory omission disclosure.",
+        "state": "requirement=none means known empty rows still expose accounting; unknown cadence/span/recency displayed as em dash.",
+        "units": "Days are display/context values; dates grouped by selected effective vehicle timezone; recency explicitly tied to frozen analysis clock.",
+        "actions": [],
+        "mobile": "Half-size CardGrid placement, but six internal columns activate at viewport xl; allocated-width behavior remains a candidate.",
+        "findingIds": ["PC-06"]
+      },
+      {
+        "id": "pack-capacity-evidence-support",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityEvidenceSupport.tsx",
+        "line": 73,
+        "pageMount": "PackCapacityPage.tsx:271",
+        "contents": "Weighted breadth index and observation/high-information/span/month/recency ingredients; explicitly not confidence or condition.",
+        "state": "requirement=none retains known-empty evidence; no observation recency incorrectly becomes displayed zero.",
+        "units": "Support score /100; ingredient scores percent; descriptive recency value in days.",
+        "actions": [],
+        "mobile": "Half-size placement with viewport-lg fractional inner grid; long translated ingredient labels require allocated-width QA.",
+        "findingIds": ["PC-03"]
+      },
+      {
+        "id": "pack-capacity-accounting",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacityRowAccounting.tsx",
+        "line": 133,
+        "pageMount": "PackCapacityPage.tsx:280",
+        "contents": "Returned/included/excluded totals, excluded share and all 14 mutually exclusive row categories.",
+        "state": "requirement=none shows authoritative zero counts on empty history; undefined zero-denominator shares are displayed as 0%.",
+        "units": "Counts dimensionless; category and excluded shares locale percent.",
+        "actions": ["loaded-row search", "density/column layout/resize controls", "mobile quick view and close"],
+        "mobile": "category/count/share all retained in table fallback and key-value adapter.",
+        "findingIds": ["PC-04"]
+      },
+      {
+        "id": "pack-capacity-methodology",
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityMethodology.tsx",
+        "line": 172,
+        "pageMount": "PackCapacityPage.tsx:288",
+        "contents": "Ten method articles: completion, SoC, energy, uncertainty, Kalman filter, fit gates, duplicate/overlap rejection, calendar, history cap and unmodeled factors.",
+        "state": "Always-mounted explanation/configuration, independent of query resolution.",
+        "units": "SI algorithm assumptions intentionally disclosed as Wh, percentage points and Wh/sqrt(day), not user-display pack measurements.",
+        "actions": [],
+        "nonClaims": "Not battery health, damage, degradation, safety, warranty condition, remaining life or charging-behavior prescription."
+      }
+    ],
+    "sourceBehavior": [
+      "Sessions remain raw SI; capacityWh = total_energy_added_wh / ((end_soc_pct - start_soc_pct) / 100).",
+      "Completion is required explicitly; no duration-to-completion synthesis.",
+      "Unknown/missing SoC and energy get separate exclusion categories; zero energy and nonpositive gain are invalid, not missing.",
+      "SoC=0 is allowed when a valid positive completed gain exists; negative annual change and negative innovations remain signed.",
+      "Finite/order/future/SoC/energy/window/plausibility/deduplication/overlap/cap gates precede filtering.",
+      "10,000–200,000 Wh plausible bounds, 1 pp SoC sigma, 0.015 relative meter sigma and 30 Wh/sqrt(day) process default are model assumptions.",
+      "Fit gates are 12 observations, 180 elapsed days, 6 local active months; annualization uses 365.25 days, not a causal forecast.",
+      "History cap=1000, timeline cap=200, directory cap=25, monthly display cap=24. Summary uses every included row within the analysis cap.",
+      "No separate measured full-pack capacity source, nominal specification endpoint or laboratory measurement is consumed.",
+      "SoC window and process-noise changes are local model assumptions, not charging-dose commands or persistent settings."
+    ]
+  },
+  "sourceIdentity": {
+    "algorithm": "SHA-256",
+    "fullSourcePinLedger": "logs\\phase6-qa-battery-pack-capacity.log: C08 PIN|relative-path|SHA256 records",
+    "pinnedFileCount": 50,
+    "initialPagePin": "6B9DE2D78C9C19F1F76988939ABDDD6A64B4378FCC926A0C67F1A38C05613C8E",
+    "keyPins": {
+      "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx": "6B9DE2D78C9C19F1F76988939ABDDD6A64B4378FCC926A0C67F1A38C05613C8E",
+      "web\\src\\features\\battery\\lib\\packCapacity.ts": "CB1C07AC8C3AC0594916FB8F9E17317DA1559376A367A411F3BF6CA4C9BDAAD5",
+      "web\\src\\api\\hooks\\useCharging.ts": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330",
+      "web\\src\\features\\battery\\components\\pack-capacity-modernization\\packCapacitySourceState.ts": "4A16C1A6559E03F96CFE5FEC8C6388DAB46ACC1A35C28E2C7AF3548AC846768B",
+      "web\\src\\components\\charts\\ChartContainer.tsx": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "internal\\api\\router.go": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C"
+    },
+    "pinTiming": "Page pinned at intake; 50 consumed source/route/helper/catalog files pinned together in C08 after bounded reads. Final stability compares those exact pins, not Git or a historical baseline.",
+    "stability": {
+      "command": "C10",
+      "exitCode": 0,
+      "checkedAtUtc": "2026-10-13T22:12:01.9872679Z",
+      "pinned": 50,
+      "stable": 50,
+      "changed": 0,
+      "pageUnchangedFromIntake": true,
+      "limit": "Snapshot comparison only, not a lock on future concurrent parent changes."
+    }
+  },
+  "inspectedFiles": {
+    "sourceLedger": "The 50 explicit C08 PIN paths identify mounted feature files and bounded consumed hook/type/helper/route/catalog traces; a hash of a whole file does not mean its whole content was reviewed.",
+    "fullMountedFeatureReads": [
+      "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx",
+      "14 region implementations listed in preservation.regions",
+      "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacitySectionBody.tsx",
+      "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityQueryStatus.tsx",
+      "web\\src\\features\\battery\\components\\pack-capacity\\labels.ts",
+      "web\\src\\features\\battery\\components\\pack-capacity\\types.ts",
+      "web\\src\\features\\battery\\components\\pack-capacity\\index.ts",
+      "web\\src\\features\\battery\\components\\pack-capacity-modernization\\index.ts",
+      "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacityPlacement.tsx",
+      "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacitySourceNotice.tsx",
+      "web\\src\\features\\battery\\components\\pack-capacity-modernization\\packCapacitySourceState.ts",
+      "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "web\\src\\features\\battery\\lib\\packCapacity.ts"
+    ],
+    "boundedReads": [
+      "web\\src\\api\\hooks\\useCharging.ts:1-98; contract/count analysis only useChargingHistory:72-86",
+      "web\\src\\types\\charging.ts:1-170 read; consumed ChargingSession scope is 1-66",
+      "web\\src\\hooks\\useDataState.ts",
+      "web\\src\\api\\dataState.ts:1-275",
+      "web\\src\\hooks\\useUnits.ts:1-240",
+      "web\\src\\lib\\unitConversion.ts:229-252,334-370,452-480 plus matching function anchors",
+      "web\\src\\lib\\timezone.ts:1-140",
+      "web\\src\\lib\\dateFormat.ts:1-72 plus matching date helper anchors",
+      "web\\src\\hooks\\useSelectedVehicle.ts",
+      "web\\src\\hooks\\useSettings.ts:1-150 plus bounded field anchors",
+      "web\\src\\api\\settings.ts:1-75; consumed getSettings is line 24",
+      "web\\src\\api\\hooks\\useVehicles.ts:67-86 plus matching useVehicles anchors",
+      "web\\src\\api\\hooks\\useSettings.ts:matching request anchors only; not an additional consumed page query",
+      "web\\src\\api\\client.ts:71-98 plus request/prefix anchors",
+      "web\\src\\api\\queryClient.ts:43-74 plus retry anchors",
+      "web\\src\\api\\queryPolicy.ts:1-145; imported by hook module, not applied to useChargingHistory",
+      "web\\src\\lib\\constants.ts:MODERATE anchor",
+      "web\\src\\lib\\workspaceScope.ts:1-200",
+      "web\\src\\App.tsx:85,858 matching route anchors only",
+      "internal\\api\\router.go:3210,3362-3363,3538-3568,3688-3712; method/path registration comparison only",
+      "web\\src\\components\\ui\\DataTable.tsx:475-555,1390-1470,1550-1620 and mobile/action anchors",
+      "web\\src\\components\\ui\\MobileDataTableAdapter.tsx:1-220",
+      "web\\src\\components\\charts\\ChartContainer.tsx:450-520,689-731,730-930 and fallback/action anchors",
+      "web\\src\\components\\charts\\EmbeddedChart.tsx:1-170",
+      "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx:1-170",
+      "web\\src\\i18n\\en.json:929-980 direct read; bounded packCapacity subtree 929-1178 only for key validation"
+    ],
+    "authorities": [
+      "docs\\frontend-design-contract.md:1-260,330-590",
+      "docs\\frontend-mission.md:1-230,507-847,921-1065 plus section headings",
+      "docs\\frontend-worker-conventions.md:1-240",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\react-frontend.instructions.md:1-490",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      "audit-violations and verify-api-hooks loaded guidance"
+    ],
+    "metadataOnly": [
+      "migration-queue.md exact item/dependency matches at intake",
+      "docs\\frontend-audits\\phase6-qa-battery-charge-advisor.json property names only"
+    ],
+    "unrenderedFeatureImplementationsNotInspected": [
+      "PackCapacityKpiBand", "PackCapacityAccounting", "PackCapacityDirectory",
+      "preservation.check.cjs", "tests"
+    ],
+    "readLimitations": "Initial discovery used docs filename enumeration and returned irrelevant node_modules names; no dependency file contents were reviewed. One wildcard anchor probe filtered out test and unrendered implementation hits; all quantitative C08 scans use the explicit 24-file production list. No fixture/test analysis was performed."
+  },
+  "routeScopeAndWire": {
+    "scope": {
+      "route": "/pack-capacity",
+      "range": false,
+      "vehicle": true,
+      "evidence": "workspaceScope.ts:23-78 contains no exact /pack-capacity range entry; :95-135 disabled vehicle sets/prefixes do not include it; :156-166 returns range membership and inverse vehicle-disabled membership.",
+      "pageRangeHook": "none",
+      "rangeOperands": "none: no startInstant, endInstantExclusive, from, to, start or end is passed",
+      "rangeInterpretation": "Current page analyzes the returned capped charging-history window, not a date-filtered workspace range. No duplicate range picker is rendered. This records current behavior, not approval of a future range-policy decision.",
+      "vehicleOperands": "PackCapacityPage.tsx:47-55 uses useSelectedVehicle vehicleId converted to string; useChargingHistory query key and vehicle_id match that selection.",
+      "vehicleSelection": "URL/path > persisted header selection > first known vehicle; positive integer IDs; no local duplicate selector. Vehicle-list query is an independent metadata source."
+    },
+    "sources": [
+      {
+        "identity": "charging-history",
+        "hook": "useChargingHistory",
+        "hookFile": "web\\src\\api\\hooks\\useCharging.ts:72-86",
+        "queryKey": "['charging-sessions', 'history', vehicleId ?? '', boundedLimit]",
+        "rawPath": "/charging?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}",
+        "method": "GET",
+        "normalizedRequestPath": "/api/v1/charging",
+        "registeredMethodPath": "router.go:3210 /api/v1; :3545 Route('/charging'); :3546 Get('/', chargingHandler.ListByVehicle)",
+        "sourcePathComparison": "MATCH",
+        "operands": "vehicle_id and limit only; boundedLimit=floor(limit) clamped to [1,1000]; page passes 1000.",
+        "enabled": "!!vehicleId",
+        "cancellation": "queryFn receives signal and passes { signal } to request",
+        "select": "safeArray; no unit conversion in hook",
+        "staleTimeMs": 15000,
+        "retry": "No hook override: ambient QueryClient retry=1, exponential delay capped at 30000 ms; refetchOnWindowFocus=false; networkMode=offlineFirst.",
+        "provenance": "historical",
+        "trust": "useDataState -> packCapacitySourceState. Initial failure without retained data is fatal; refresh failure retains rows; paused is not fabricated server error.",
+        "retryUI": "QueryStatus initial QueryError/onRetry and refresh-warning retry; SourceNotice retry for initially paused source.",
+        "serverSemanticsLimit": "Only method/path registration compared. Handler filtering, cap enforcement, sorting, paging completeness and authorization were not exercised or implementation-audited."
+      },
+      {
+        "identity": "vehicle-list-selection-and-timezone",
+        "hook": "useVehicles via useSelectedVehicle",
+        "hookFile": "web\\src\\api\\hooks\\useVehicles.ts:73-80",
+        "method": "GET",
+        "rawPath": "/vehicles",
+        "normalizedRequestPath": "/api/v1/vehicles",
+        "registeredMethodPath": "router.go:3210; :3362 Route('/vehicles'); :3363 Get('/', vehicleHandler.List)",
+        "sourcePathComparison": "MATCH",
+        "trust": "useSelectedVehicle retains query data but does not expose vehicle-list fatal/refresh/paused/retry state to this page.",
+        "independence": "Not fourteen separate sources: all analytical regions derive from charging history. This independent metadata query supplies selection validation and vehicle timezone."
+      },
+      {
+        "identity": "display-settings",
+        "hook": "useSettings indirectly through useUnits and useTimezone",
+        "hookFile": "web\\src\\hooks\\useSettings.ts:81-145; web\\src\\api\\settings.ts:24",
+        "method": "GET",
+        "rawPath": "/settings",
+        "normalizedRequestPath": "/api/v1/settings",
+        "registeredMethodPath": "router.go:3210; :3702 Get('/settings', settingsHandler.Get)",
+        "sourcePathComparison": "MATCH",
+        "queryKey": "['settings']",
+        "staleTimeMs": 300000,
+        "retry": "1; refetchOnMount=always",
+        "trust": "settingsState/settingsUnavailable/refetch exist, but useUnits/useTimezone consume normalized/default settings without forwarding that independent trust state to PackCapacityPage.",
+        "limits": "No settings mutation called. Settings-source trust surfacing remains a candidate/integration need, not a claim that a request failed during this audit."
+      }
+    ],
+    "clientBoundary": "client.ts:73-79 normalizePath defensively strips a stray prefix; :93 adds /api/v1 once. Current consumed read paths omit the prefix.",
+    "producerDrift": [
+      "ChargingSession declares id/vehicle_id as strings and start_soc_pct/total_energy_added_wh as nonnullable numbers, while PackCapacitySession widens nullable observations and numeric IDs. Actual charging producer serialization was not inspected; no mismatch promoted to a defect.",
+      "The algorithm intentionally reads canonical started_at/ended_at and total_energy_added_wh. Type aliases start_ts/startedAt are not alternative completion evidence; no alias adapter was proposed.",
+      "Server ordering, exactly-1000 cap completeness, null-array normalization and historical row units remain producer/integration evidence limits, not fabricated failures."
+    ]
+  },
+  "sourceReview": {
+    "measurementVsModel": {
+      "measuredInputs": "Charging-session delivered energy in Wh plus start/end SoC and explicit timestamps.",
+      "derivedOutputs": "Implied full-pack energy, scalar Kalman posterior/sigma, descriptive fit, support breadth and sensitivity reruns.",
+      "disclosures": "Summary explicitly excludes battery-health/degradation/remaining-life interpretation; support excludes confidence/accuracy/condition; methodology lists thermal/loss/buffer/firmware/chemistry/calibration/laboratory gaps.",
+      "dose": "Observed charge-energy dose and SoC gain inform implied capacity. Local controls change model eligibility/uncertainty only; there is no charge-plan, schedule or vehicle command action.",
+      "calibrationLimit": "Source equations and stated assumptions inspected; uncertainty calibration and scientific validity were not tested or certified."
+    },
+    "unknownZeroAndSigns": {
+      "correct": "Summary missing estimates remain null; qualifiedShare with zero returned denominator is null; zero-measurement monthly capacities remain null; missing energy and invalid/nonpositive energy are different accounting categories; signed innovation and annual change preserved.",
+      "defects": ["PC-01", "PC-03", "PC-04"],
+      "technicalCoalescingExemptions": [
+        "packCapacity.ts:781 year fallback is calendar-key parsing of generated local dates, not an unknown measured value.",
+        "packCapacity.ts:1446 absent span contributes zero to a deliberately defined breadth-support score, while the separately displayed coverage span remains null.",
+        "support recency score zero for no observation is legitimate no-support weighting; its displayed daysSinceLast value zero is not legitimate (PC-03)."
+      ]
+    },
+    "unitsPreferencesTime": {
+      "wireAndCache": "Raw total_energy_added_wh and all analyzer capacity/uncertainty energies stay Wh. No source/hook conversion or deprecated converter call introduced.",
+      "energyDisplay": "useUnits selects the existing centralized DEFAULT_ENERGY_PREF='kWh'; currently not a user-configurable energy setting. formatEnergy honors settings.locale and settings.decimal_precision.",
+      "chartDisplay": "Chart row transforms use convertEnergyFromSI and energyUnit at render; models and filter operands stay SI.",
+      "assumptionUnits": "Process-noise raw assumption remains Wh/sqrt(day), not a pack-energy reading to convert indiscriminately.",
+      "dateLocale": "Charts/labels/directory use i18n.language; energy formatter uses settings.locale. Separate language/format-locale choices can produce differing numeric/date conventions; candidate PC-C03.",
+      "timezone": "useTimezone('vehicle') uses vehicle timezone unless absent or UTC, then timezone_user/browser; analyzer validates timezone and falls back UTC. Completion months/days/weeks use effective result.timeZone; method calendar text names it.",
+      "clock": "nowMs is frozen at mount; future rejection/recency are relative to that clock, explicitly disclosed. Freshly refetched later completions are a scope-coherence candidate, not silently changed here.",
+      "timePreferenceLimit": "Directory uses formatDateTime with locale/tz; helper has no hour12/hourCycle or time_format_default option. Actual 12/24-hour preference contract was not resolved; no invented preference failure.",
+      "defects": ["PC-02", "PC-07"]
+    },
+    "trustAndRetry": {
+      "sharedAnalyticalSource": "All fourteen regions stay mounted and share one charging source; no invented independent queries or per-region network retries.",
+      "initial": "Skeleton geometry or passive unresolved messages inside frames; summary numeric suppression.",
+      "fatal": "Central source QueryError offers retry; region shells persist with passive error bodies.",
+      "retainedRefreshFailure": "Raw history remains; nonblocking warning and retry render; last-success timestamp is lost from displayed source trust (PC-05).",
+      "pausedInitial": "Pending rather than spinner; SourceNotice explicitly says offline/paused and offers source.retry.",
+      "pausedRetained": "SourceNotice forwards actual DataState to StaleRefreshWarning; shared warning implementation not independently audited.",
+      "authoritativeEmpty": "Known counts/categories zero; no capacity estimated; body explains no sessions vs sessions with no qualified observations.",
+      "independentMetadata": "Vehicle and settings trust have separate query identities but are not surfaced independently here; PC-C02 is not a fabricated runtime outage.",
+      "defects": ["PC-01", "PC-05"]
+    },
+    "localization": {
+      "canonicalPackCapacityKeysChecked": 206,
+      "missingCanonicalPackCapacityKeys": 0,
+      "boundedCatalogLines": "web\\src\\i18n\\en.json:929-1178",
+      "method": "Case-sensitive source key extraction across 24 explicit files; stream only packCapacity subtree; resolve dotted canonical keys.",
+      "scopeLimits": "No full catalog read/parse, non-English catalog validation, runtime namespace/loading check or global shared-label catalog check.",
+      "technicalIdentifierExemptions": [
+        "data-testid, chartKey, occurrenceId, row category keys, query keys, tableId and route/module names are technical identities and must not be translated.",
+        "Wh/kWh, sigma, R-squared, %, pp, /100 and SI scientific notation are units/symbols rather than missing English prose.",
+        "Schema-enum category identifiers are mapped to translated human labels before display."
+      ]
+    },
+    "sourceAccessibility": {
+      "supportedSourceMechanisms": [
+        "Section shells/title primitives and named CardGrid groups remain; decorative feature icons use aria-hidden.",
+        "Select has explicit stable id and localized label; local assumption options are translated.",
+        "ChartContainer declares named figure/fallback and supplies table headers; chartKey changes viewport semantics to group for focusable legend controls.",
+        "DataTable retains native table semantics, localized control labels, filtering and full mobile quick-view details.",
+        "Loading status is role=status/aria-live=polite; refresh failure warning is role=alert; retries are shared Buttons."
+      ],
+      "defects": ["PC-01", "PC-07"],
+      "notVerified": [
+        "actual DOM heading order", "screen-reader announcement/reachability",
+        "keyboard/focus retention and overlay trapping", "reduced-motion behavior",
+        "composed contrast", "OS forced colors", "touch-target geometry",
+        "native host semantics"
+      ]
+    },
+    "mobileAllocations": {
+      "outer": "PageLayout; w-full/min-w-0 FadeIn wrappers; CardGrid measures container width and passes size/span; PackCapacityPlacement applies placement className to half regions.",
+      "directory": "Shared DataTable ResizeObserver switches to allocated-width mobile presentation; all nine fields are available in quick-view Modal through allColumns. roles='hidden' does not delete fields.",
+      "accounting": "Category/count/share are all in mobileColumns; keyValue compact presentation retains share and all category rows.",
+      "charts": "Canonical frame uses bounded overflow-hidden viewport and forced-colors fallback; no page fullscreen flag supplied; export actions depend on source resolution.",
+      "candidates": ["PC-C01"],
+      "requiredFutureWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+      "requiredAllocatedWidthChecks": "Full-page and half-card allocations; 640/767/768 transitions; 200% text; long localized labels/RTL; non-overlapping hit targets; independent table scroll/detail access.",
+      "acceptance": "NOTRUN; source layout mechanisms do not establish viewport or native PASS."
+    },
+    "architecture": {
+      "existingOwners": "Page orchestrates typed hooks and domain analyzer; existing LayoutCard/CardGrid, chart frames, DataTable, OperationalBrief and feedback owners remain.",
+      "noCompetingImplementationObservedWithinScope": true,
+      "categoryRegexReview": "C08 componentRootImports regex matched 33 lines, all approved category barrels (layout/motion/ui/charts/data-display/feedback), so they are false-positive candidates, not 33 violations.",
+      "specialistImportLimit": "Nested stat-reference/layout-reference imports are existing specialist API dependencies. Public barrel exposure/ownership was not expanded or repaired.",
+      "observability": "No feature fetch/EventSource/console logging or page RUM initialization appeared in the explicit source scan; no network/span/backend/SLO audit was performed."
+    }
+  },
+  "findings": [
+    {
+      "id": "PC-01",
+      "severity": "P2",
+      "confidence": "high-source-deterministic",
+      "rule": "MDC-026/MDC-040 unknown is not measured zero; accessible chart alternative must use the same trust gate as the plot",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacitySocWindowProfile.tsx",
+      "line": 76,
+      "related": [
+        "PackCapacityWindowSensitivity.tsx:43,74-76",
+        "PackCapacityInnovationProfile.tsx:57,81-83",
+        "PackCapacitySectionBody.tsx:58-127",
+        "web\\src\\features\\battery\\lib\\packCapacity.ts:1067-1129,1142-1164,1235-1277",
+        "web\\src\\components\\charts\\ChartContainer.tsx:503-508,865-890,923-930"
+      ],
+      "mechanism": "Empty sessions produce fixed SoC bins, sensitivity thresholds and innovation bins with zero counts. These rows are passed unconditionally as ChartContainer data. PackCapacitySectionBody gates only the plot. The separately rendered figcaption table depends on data.length/dataColumns, not source resolution/loading/fatal/no-vehicle state.",
+      "reasonedRepro": "Load without a selected vehicle, while initial history is pending, or after initial failure with no retained history. The visual body explains unavailable evidence, but the accessible/forced-colors table still enumerates zero Samples/Included sessions for an unestablished source. This uses normal supported source states, not a malformed payload.",
+      "fix": "Gate chart fallback data/count-bearing arrays on resolved usable history or extend existing ChartContainer source-state handling without removing the frame or known-empty resolved bins. Keep retained refresh data available and explain unresolved state in the accessible alternative.",
+      "owner": "page/feature chart adapters; shared chart owner only if a shared trust API change is required",
+      "runtimeEvidence": "NOTRUN; deterministic JSX/dataflow finding, not an observed screen-reader/native result"
+    },
+    {
+      "id": "PC-02",
+      "severity": "P2",
+      "confidence": "high-source-deterministic",
+      "rule": "MDC-045 dimensional labeling; process variance is a rate assumption, not energy",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityProcessSensitivity.tsx",
+      "line": 109,
+      "related": [
+        "PackCapacityProcessSensitivity.tsx:41,76-79",
+        "PackCapacitySummary.tsx:166-175",
+        "web\\src\\features\\battery\\lib\\packCapacity.ts:687"
+      ],
+      "mechanism": "X data is processNoiseWhPerSqrtDay. CSV/fallback heading and control correctly describe Wh / square-root day, but XAxis unit=' Wh' labels the same values as plain energy.",
+      "reasonedRepro": "Any qualified result displays assumption 30 as 30 Wh on the process-sensitivity axis although the analyzer squares a 30 Wh/sqrt(day) noise rate and multiplies by elapsed days.",
+      "fix": "Use a consistent localized Wh/sqrt(day) assumption label for the X axis and tooltip/accessible output. Do not convert the model noise operand as if it were a measured pack-energy display.",
+      "owner": "page/feature PackCapacityProcessSensitivity",
+      "runtimeEvidence": "NOTRUN"
+    },
+    {
+      "id": "PC-03",
+      "severity": "P2",
+      "confidence": "high-source-deterministic",
+      "rule": "MDC-026 unknown numeric fact is not zero",
+      "file": "web\\src\\features\\battery\\lib\\packCapacity.ts",
+      "line": 1201,
+      "related": [
+        "packCapacity.ts:1368-1372,1447-1448",
+        "PackCapacityEvidenceSupport.tsx:94,119-123",
+        "PackCapacityCoverage.tsx:193-211"
+      ],
+      "mechanism": "No qualified observation leaves daysSinceLastObservation=null. buildSupport changes its displayed ingredient value to 0, while score remains no-support zero. EvidenceSupport requirement=none renders the recency sublabel as 0/30, unlike Coverage which correctly withholds recency.",
+      "reasonedRepro": "A successful empty charging-history response, or valid returned sessions all excluded, has no latest observation. Support panel nevertheless exposes a zero-day recency ingredient.",
+      "fix": "Keep the ingredient's unknown recency value nullable and render an explicit unknown marker/reason while retaining score=0 for the no-support weighting.",
+      "owner": "battery domain helper plus EvidenceSupport presentation",
+      "runtimeEvidence": "NOTRUN"
+    },
+    {
+      "id": "PC-04",
+      "severity": "P2",
+      "confidence": "high-source-deterministic",
+      "rule": "MDC-033 unknown denominator/share differs from known count zero",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacityRowAccounting.tsx",
+      "line": 83,
+      "related": [
+        "PackCapacityRowAccounting.tsx:106,110-111,127-128,167",
+        "web\\src\\features\\battery\\lib\\packCapacity.ts:1399-1402",
+        "pack-capacity\\labels.ts:19-28"
+      ],
+      "mechanism": "When returnedRows=0, category-share formatting and the excluded-share metric substitute zero for 0/0. Coverage correctly returns qualifiedShare=null for the same denominator.",
+      "reasonedRepro": "Successful GET charging returns []. Accounting shows legitimate zero returned/included/excluded counts, but all category Returned share cells and Excluded share present 0% despite no defined population share.",
+      "fix": "Use nullable shares for returnedRows=0 and the existing em-dash/missing-reason formatting; preserve true zero counts and zero shares when the denominator is positive.",
+      "owner": "page/feature PackCapacityRowAccounting",
+      "runtimeEvidence": "NOTRUN"
+    },
+    {
+      "id": "PC-05",
+      "severity": "P2",
+      "confidence": "high-source-deterministic",
+      "rule": "MDC-026 retained refresh failures need last-success context and individual retry",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity-modernization\\packCapacitySourceState.ts",
+      "line": 28,
+      "related": [
+        "web\\src\\api\\dataState.ts:141-145,197-201",
+        "pack-capacity-modernization\\PackCapacitySourceNotice.tsx:17",
+        "pack-capacity\\PackCapacityQueryStatus.tsx:76-100",
+        "operationalbrief-all\\BatteryEvidenceBrief.tsx:48-50"
+      ],
+      "mechanism": "Charging DataState carries updatedAt/ageMs. The page adapter forwards refreshError and retry but no last-success identity. SourceNotice exits when refreshError exists. QueryStatus warns and retries but gives no loaded-at time; BatteryEvidenceBrief alltime period has no snapshot freshness.",
+      "reasonedRepro": "Retained valid history followed by a failed refresh preserves its analytics and shows a warning, but the user cannot determine when that displayed history last loaded. The frozen observation-recency clock is not a substitute for source last-success time.",
+      "fix": "Forward actual source updatedAt/ageMs through the existing source-warning/summary metadata path and localize the last-success context while preserving content and the individual retry.",
+      "owner": "page/feature trust adapter/status; existing feedback owner only if an API extension is necessary",
+      "runtimeEvidence": "NOTRUN"
+    },
+    {
+      "id": "PC-06",
+      "severity": "P2",
+      "confidence": "high-source-deterministic",
+      "rule": "MDC-026/MDC-060 capped historical views must disclose the actual omitted scope",
+      "file": "web\\src\\features\\battery\\lib\\packCapacity.ts",
+      "line": 1063,
+      "related": [
+        "packCapacity.ts:299,1427-1430",
+        "pack-capacity\\PackCapacityMonthTrend.tsx:41,67-71",
+        "pack-capacity\\PackCapacityCoverage.tsx:219-231"
+      ],
+      "mechanism": "The monthly view keeps only latest maxTrendMonths=24 and records omittedTrendMonths. The mounted coverage disclosure names omitted timeline/directory rows only. Neither monthly view nor another mounted part consumes omittedTrendMonths.",
+      "reasonedRepro": "Normal valid completed history spanning more than 24 calendar months yields a truncated monthly view, including omitted earlier zero/measurement months, without stating its 24-month display cap. Summaries still use older included observations.",
+      "fix": "Expose returned/displayed/omitted month counts beside the monthly chart using existing chart sampling/source metadata or localized disclosure; do not change the history/summary calculation.",
+      "owner": "page/feature MonthTrend/Coverage presentation",
+      "runtimeEvidence": "NOTRUN"
+    },
+    {
+      "id": "PC-07",
+      "severity": "P2",
+      "confidence": "high-source-deterministic",
+      "rule": "MDC-040/MDC-045 accessible alternatives must retain displayed measurement units",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityFitDiagnostics.tsx",
+      "line": 232,
+      "related": [
+        "PackCapacityFitDiagnostics.tsx:76-80,228-237,260",
+        "web\\src\\components\\charts\\EmbeddedChart.tsx:30-40",
+        "web\\src\\components\\charts\\ChartContainer.tsx:890-930"
+      ],
+      "mechanism": "Fit plot rows contain converted display energy. The Y axis has energyUnit, but its accessible table columns say only Filtered estimate and Descriptive linear fit; no unit metadata is passed to EmbeddedChart.",
+      "reasonedRepro": "With a valid fit, the screen-reader/forced-colors alternative reports a numeric value such as 75 without identifying kWh, while the model's canonical Wh quantity would be 75000. This is missing dimensional context, not evidence that conversion itself is incorrect.",
+      "fix": "Include energyUnit in the accessible column labels or existing chart unit metadata, consistently with the other capacity charts.",
+      "owner": "page/feature PackCapacityFitDiagnostics",
+      "runtimeEvidence": "NOTRUN"
+    }
+  ],
+  "runtimeNativeCandidates": [
+    {
+      "id": "PC-C01",
+      "kind": "responsive-allocation-candidate",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityCoverage.tsx",
+      "line": 65,
+      "related": ["PackCapacityEvidenceSupport.tsx:96", "PackCapacityMethodology.tsx:190", "PackCapacityPage.tsx half CardGrid placements"],
+      "detail": "Outer half cards use container-aware placement, but inner coverage/support grids activate by viewport xl/lg. Six coverage columns inside an allocated half-card and long translated ingredient labels may compress or overflow.",
+      "requiredEvidence": "Real allocated-width/native layout and 200% text checks across the ten mission widths, including half cards on wide viewports and RTL/long labels.",
+      "fixOwnerIfConfirmed": "page/feature layout, reusing existing container/placement APIs",
+      "notPromoted": "No overflow, clipped focus, contrast or mobile failure was observed."
+    },
+    {
+      "id": "PC-C02",
+      "kind": "independent-metadata-source-trust-candidate",
+      "file": "web\\src\\hooks\\useSettings.ts",
+      "line": 90,
+      "related": ["useUnits.ts:123-137", "timezone.ts:47-50", "useSelectedVehicle.ts:49-50", "PackCapacityPage.tsx:47-49"],
+      "detail": "Settings exposes settingsState/settingsUnavailable/refetch but display helpers discard that trust. Vehicle selection similarly returns no vehicle-list error/retry state. A charging success can coexist with unconfirmed default preferences or fallback timezone.",
+      "requiredEvidence": "Existing shell/source-warning ownership and real independent failure/paused/retained metadata scenarios; no such runtime outage was manufactured here.",
+      "fixOwnerIfConfirmed": "shared display/selection hooks and page integration; do not add duplicate metadata queries",
+      "notPromoted": "A default/fallback is source-visible, but user impact and shell-level trust coverage were outside this bounded trace."
+    },
+    {
+      "id": "PC-C03",
+      "kind": "locale-time-preference-candidate",
+      "file": "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx",
+      "line": 98,
+      "related": ["useUnits.ts:129-130", "pack-capacity\\labels.ts:8-27", "dateFormat.ts:30-62", "PackCapacityMeasurementDirectory.tsx:40-42"],
+      "detail": "Dates/dimensionless numbers use i18n.language while energy uses settings.locale; helper precision defaults differ by specialist display. Directory helper accepts locale/tz but no explicit 12/24-hour or time_format_default operand.",
+      "requiredEvidence": "Independent language/format-locale and supported time-preference contract plus real rendering. No malformed locale/precision hypothesis is promoted.",
+      "fixOwnerIfConfirmed": "existing formatting/preferences integration owners",
+      "notPromoted": "Current source demonstrates split preference paths, not proof of a runtime formatting exception or lost supported setting."
+    },
+    {
+      "id": "PC-C04",
+      "kind": "frozen-clock-scope-coherence-candidate",
+      "file": "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx",
+      "line": 58,
+      "related": ["packCapacity.ts:477-478,1372", "PackCapacityMethodology.tsx:143-146", "useCharging.ts:72-86"],
+      "detail": "nowMs stays at page mount while source history can refetch later or switch vehicles. Later genuine completions are rejected as future relative to that frozen clock. The page explicitly documents the freeze, so this is an as-of-product-scope decision rather than an undisclosed code defect.",
+      "requiredEvidence": "Decide whether the query must be pinned to an as-of snapshot or clock should advance at successful snapshot boundaries; then validate a real later completion/vehicle-switch workflow.",
+      "fixOwnerIfConfirmed": "page/domain and hook integration owners; preserve deterministic analysis semantics",
+      "notPromoted": "No clock policy change, source mutation or live completion test was performed."
+    }
+  ],
+  "verification": {
+    "allowedValidationOnly": true,
+    "sourceScan": {
+      "command": "C08 exact PowerShell scriptblock and raw output are in the owned log",
+      "exitCode": 0,
+      "engine": "built-in Select-String -CaseSensitive; one hit per matching line; 24 explicit production feature files; no external scanner",
+      "counts": {
+        "staticCssVarInline": 0,
+        "rawControls": 0,
+        "directVendorImports": 0,
+        "oldApiImports": 0,
+        "componentRootImports": 33,
+        "untypedAny": 0,
+        "directFetch": 0,
+        "neonBodyCandidate": 0,
+        "positiveTabIndex": 0,
+        "sourceZeroCoalescingCandidate": 3,
+        "staticDataGateCandidate": 0,
+        "chartContainer": 7,
+        "embeddedChart": 1,
+        "glassPanel": 6,
+        "dataTable": 2,
+        "regionShell": 14,
+        "hookDoublePrefix": 0,
+        "hookCamelQuery": 0
+      },
+      "regexLimit": "static inline regex is same-line only; zero matches are scoped lexical observations, not AST/full guideline/native acceptance. Positive findings are separate from lexical counts.",
+      "falsePositiveClassification": "All 33 componentRootImports hits are approved category barrels. Three ??0 hits include one substantive recency finding and two parsing/support-score operands, not three raw-value defects.",
+      "hookScope": "useChargingHistory lines 72-86 only; settings/vehicle GET paths compared manually against scoped registrations."
+    },
+    "localizationCommand": {
+      "command": "C08 stream canonical packCapacity subtree and extract static packCapacity dotted keys",
+      "exitCode": 0,
+      "keyCount": 206,
+      "missingCount": 0,
+      "catalogLines": "929-1178"
+    },
+    "commands": [
+      {"id": "C00", "exitCode": 0, "detail": "Initial queue/dependency/report-existence/schema discovery tools 5969/5974; raw stdout in tool transcript, condensed intake receipt in log."},
+      {"id": "C01", "exitCode": 0, "detail": "Direct feature filenames, existing schema property names and mission/contract/hook anchors."},
+      {"id": "C02", "exitCode": 0, "detail": "Mounted route, scoped router, analyzer/timezone/catalog anchors."},
+      {"id": "C03", "exitCode": 0, "detail": "Scoped rendered shared actions, date/unit/client/vehicle anchors."},
+      {"id": "C04", "exitCode": 1, "detail": "Failed path probe: useSettings.tsx did not exist. Failure is recorded, not called PASS."},
+      {"id": "C05", "exitCode": 0, "detail": "Corrected actual useSettings.ts source; mobile/fallback/retry/constants/method-path anchors."},
+      {"id": "C06", "exitCode": 0, "detail": "Mobile detail and region identity anchors; no test execution."},
+      {"id": "C07", "exitCode": 0, "detail": "Exact logged scriptblock: actual getSettings, CardGrid/EmbeddedChart source anchors."},
+      {"id": "C08", "exitCode": 0, "detail": "Exact logged scriptblock: regex counts, source lines/regions, bounded canonical localization, 50 SHA256 pins."},
+      {"id": "C09", "exitCode": 0, "detail": "Exact logged scriptblock: finding-line citations, range membership and source inspection cutoff."},
+      {"id": "C10", "exitCode": 0, "detail": "Exact logged scriptblock: owned JSON parse/count validation; all 50 source pins stable; current page 292 lines; every actual region invocation occurs once with measured mount line."}
+    ],
+    "loggingLimits": "C00 initial output is preserved in tool receipts rather than fully duplicated in the owned log. C01-C06 record command purposes and raw successful output; C04's failed output is explicitly appended. C07-C09 contain exact raw scriptblocks as well as output. No claim that view-tool reads have numeric process exit codes.",
+    "ownJsonCountsHashValidation": {
+      "command": "C10",
+      "exitCode": 0,
+      "rawOutput": [
+        "JSON_PARSE=OK; regions=14 findings=7 candidates=4",
+        "SOURCE_HASH_CHECK pins=50 stable=50 changed=0",
+        "PAGE_COUNT=292",
+        "MOUNT_COUNT|PackCapacitySummary|1|line=109",
+        "MOUNT_COUNT|PackCapacityEstimateTimeline|1|line=126",
+        "MOUNT_COUNT|PackCapacityMonthTrend|1|line=143",
+        "MOUNT_COUNT|PackCapacitySocWindowProfile|1|line=157",
+        "MOUNT_COUNT|PackCapacityWindowSensitivity|1|line=178",
+        "MOUNT_COUNT|PackCapacityProcessSensitivity|1|line=191",
+        "MOUNT_COUNT|PackCapacityInnovationProfile|1|line=212",
+        "MOUNT_COUNT|PackCapacityInfluenceTimeline|1|line=221",
+        "MOUNT_COUNT|PackCapacityFitDiagnostics|1|line=235",
+        "MOUNT_COUNT|PackCapacityMeasurementDirectory|1|line=245",
+        "MOUNT_COUNT|PackCapacityCoverage|1|line=262",
+        "MOUNT_COUNT|PackCapacityEvidenceSupport|1|line=271",
+        "MOUNT_COUNT|PackCapacityRowAccounting|1|line=280",
+        "MOUNT_COUNT|PackCapacityMethodology|1|line=288",
+        "C10_EXIT=0"
+      ],
+      "reportCorrectionsAfterValidation": "Corrected pageMount citations using measured C10 mount-count lines; replaced pending validation/release metadata. Final JSON reparse and hash/count recheck are recorded in the release command in the owned log."
+    },
+    "notRun": {
+      "TypeScript": "NOTRUN: global compiler/wrapper belongs to parent gate and was expressly prohibited.",
+      "auditSh": "NOTRUN: loaded guidance, replaced with bounded built-in case-sensitive source scans.",
+      "verifySh": "NOTRUN: loaded guidance, used source method/path comparison only.",
+      "testsTestGrading": "NOTRUN",
+      "buildLintFullSuites": "NOTRUN",
+      "nativeBrowserScreenshotsCaptures": "NOTRUN",
+      "HTTPBackendRuntime": "NOTRUN",
+      "wholePageAcceptance": "NOTRUN"
+    },
+    "findingCount": 7,
+    "candidateCount": 4,
+    "noNewInspectionAfterBudget": true
+  },
+  "handoff": {
+    "status": "REPORT_COMPLETE_SOURCE_FINDINGS_ONLY",
+    "parentAction": "Parent owns queue disposition, Git and any followup integrations. Findings need separately owned bounded repair items; no source change was authorized here.",
+    "fixOwners": [
+      "page/feature chart trust/units/cap metadata",
+      "battery domain support unknown value",
+      "page accounting percentage formatting",
+      "page source-trust freshness metadata",
+      "shared metadata/formatting/layout owners only if candidates are confirmed"
+    ],
+    "evidenceLimits": "No fresh runtime/native/full-page acceptance, no empirical scientific calibration, no endpoint execution/producer implementation audit, no full TypeScript/lint/tests, no composed contrast/keyboard/mobile verification. Historical 14-section/292-line/no-change receipts were not reused as fresh PASS.",
+    "release": {
+      "report": "RELEASED",
+      "log": "RELEASED",
+      "jsonAndCommands": "RELEASED",
+      "noPostReturnWrites": true
+    }
+  }
+}

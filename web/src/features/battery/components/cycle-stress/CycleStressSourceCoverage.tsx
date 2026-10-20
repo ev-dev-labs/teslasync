@@ -19,6 +19,7 @@ import type {
 import { cycleStressNumber } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressSourceCoverageProps {
   result: CycleStressResult;
@@ -52,6 +53,7 @@ export function CycleStressSourceCoverage({
   state,
   locale,
 }: CycleStressSourceCoverageProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const drive = result.coverage.drive;
   const charging = result.coverage.charging;
@@ -73,7 +75,7 @@ export function CycleStressSourceCoverage({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <Database
-            className="h-4 w-4 text-cyan-300"
+            className="h-4 w-4 text-[var(--text-secondary)]"
             aria-hidden="true"
           />
           {t(
@@ -92,8 +94,9 @@ export function CycleStressSourceCoverage({
           state={state}
           requirement="none"
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.driveReturned',
                 'Drive rows returned',
@@ -101,7 +104,7 @@ export function CycleStressSourceCoverage({
               value={
                 driveUnavailable
                   ? '—'
-                  : cycleStressNumber(drive.returnedRows, locale, 0)
+                  : cycleStressNumber(drive.returnedRows, locale)
               }
               subtitle={
                 driveUnavailable
@@ -113,9 +116,10 @@ export function CycleStressSourceCoverage({
                     )
               }
               icon={<Car className="h-5 w-5" />}
-              color="cyan"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.driveSpan',
                 'Drive evidence span',
@@ -130,7 +134,6 @@ export function CycleStressSourceCoverage({
                         value: cycleStressNumber(
                           drive.observedSpanDays,
                           locale,
-                          1,
                         ),
                       },
                     )
@@ -145,9 +148,10 @@ export function CycleStressSourceCoverage({
                     )
               }
               icon={<CalendarRange className="h-5 w-5" />}
-              color="blue"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.chargeReturned',
                 'Charging rows returned',
@@ -158,7 +162,6 @@ export function CycleStressSourceCoverage({
                   : cycleStressNumber(
                       charging.returnedRows,
                       locale,
-                      0,
                     )
               }
               subtitle={
@@ -171,9 +174,10 @@ export function CycleStressSourceCoverage({
                     )
               }
               icon={<BatteryCharging className="h-5 w-5" />}
-              color="green"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.chargeSpan',
                 'Charging evidence span',
@@ -189,7 +193,6 @@ export function CycleStressSourceCoverage({
                         value: cycleStressNumber(
                           charging.observedSpanDays,
                           locale,
-                          1,
                         ),
                       },
                     )
@@ -204,9 +207,10 @@ export function CycleStressSourceCoverage({
                     )
               }
               icon={<CalendarRange className="h-5 w-5" />}
-              color="purple"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.commonOverlap',
                 'Common source overlap',
@@ -221,7 +225,6 @@ export function CycleStressSourceCoverage({
                         value: cycleStressNumber(
                           result.coverage.commonSourceOverlapDays,
                           locale,
-                          1,
                         ),
                       },
                     )
@@ -231,9 +234,10 @@ export function CycleStressSourceCoverage({
                 'calendar time covered by both sources',
               )}
               icon={<GitMerge className="h-5 w-5" />}
-              color="amber"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.combinedSpan',
                 'Combined observed span',
@@ -248,7 +252,6 @@ export function CycleStressSourceCoverage({
                         value: cycleStressNumber(
                           result.coverage.observedSpanDays,
                           locale,
-                          0,
                         ),
                       },
                     )
@@ -259,9 +262,10 @@ export function CycleStressSourceCoverage({
                 { zone: result.timeZone },
               )}
               icon={<CalendarRange className="h-5 w-5" />}
-              color="blue"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.activeDays',
                 'Active local days',
@@ -269,16 +273,16 @@ export function CycleStressSourceCoverage({
               value={cycleStressNumber(
                 result.coverage.activeLocalDays,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.coverage.retainedEndpoints',
                 'days with retained endpoints',
               )}
               icon={<Rows3 className="h-5 w-5" />}
-              color="cyan"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.requestCaps',
                 'Per-source request cap',
@@ -286,7 +290,6 @@ export function CycleStressSourceCoverage({
               value={cycleStressNumber(
                 result.config.historyLimit,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.coverage.capStatus',
@@ -311,7 +314,7 @@ export function CycleStressSourceCoverage({
                 },
               )}
               icon={<Database className="h-5 w-5" />}
-              color="red"
+              color="neutral"
             />
           </div>
           <AlertBanner className="mt-4" variant="info">

@@ -43,6 +43,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
 import type { AppSettings } from '@/api/types'
+import en from '@/i18n/en.json'
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -261,7 +262,7 @@ describe('AISafetySettingExplainer — AI-off visibility gate (ADR-015)', () => 
     expect(screen.getByText('Helix')).toBeInTheDocument()
     expect(
       screen.getByText(
-        /Ask Helix to explain the safety-related TeslaSync settings/i,
+        /Ask Helix to explain your safety-related TeslaSync settings/i,
       ),
     ).toBeInTheDocument()
 
@@ -422,6 +423,30 @@ describe('AISafetySettingExplainer — SSE wiring + streaming lifecycle', () => 
 })
 
 describe('AISafetySettingExplainer — narrative render contract', () => {
+  it('directs users to main Settings while remaining a read-only, no-PII narrator', () => {
+    enableFeature()
+
+    render(<AISafetySettingExplainer />)
+
+    const description = screen.getByText(
+      /Go to main Settings to update a value yourself; Helix only narrates\./,
+    )
+    expect(description).toHaveTextContent(en.safetySettings.aiExplainer.description)
+    expect(description).toHaveTextContent(
+      'Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times)',
+    )
+    expect(description).toHaveTextContent(
+      'it never reads notification titles, vehicle names, or any other PII',
+    )
+    expect(description).toHaveTextContent('it never proposes or changes a setting')
+    expect(description).not.toHaveTextContent(/on this page|controls below/i)
+    expect(screen.getAllByRole('button')).toEqual([explainButton()])
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
   it('never renders a proposal preview or an "Apply" affordance, even when a tool_result frame arrives', async () => {
     enableFeature()
     // A stray typed tool_result must be ignored by the no-op onEvent

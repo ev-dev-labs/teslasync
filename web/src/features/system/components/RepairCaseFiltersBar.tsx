@@ -8,7 +8,7 @@ import type {
   RepairSessionKind,
 } from '@/api/hooks/useDataRepair';
 import { SearchInput } from '@/components/forms';
-import { Button, Select } from '@/components/ui';
+import { Select, IconButton } from '@/components/ui';
 
 interface RepairCaseFiltersBarProps {
   filters: RepairCaseFilters;
@@ -82,14 +82,8 @@ export function RepairCaseFiltersBar({ filters, onChange }: RepairCaseFiltersBar
       </div>
       {hasFilters ? (
         <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<FilterX className="h-4 w-4" aria-hidden="true" />}
-            onClick={() => onChange({ vehicle_id: filters.vehicle_id, limit: filters.limit })}
-          >
-            {t('dataRepair.cases.filters.clear', 'Clear filters')}
-          </Button>
+          {/* not-destructive: clears the case filters only; nothing is lost */}
+          <IconButton icon={<FilterX className="h-4 w-4" aria-hidden="true" />} label={t('dataRepair.cases.filters.clear', 'Clear filters')} onClick={() => onChange({ vehicle_id: filters.vehicle_id, limit: filters.limit })} />
         </div>
       ) : null}
     </div>

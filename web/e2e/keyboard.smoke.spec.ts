@@ -22,7 +22,7 @@ test('shell command navigation restores route focus and announces the destinatio
   await page.keyboard.press('Enter');
   const palette = page.locator('[data-command-palette-panel]');
   await expect(palette).toBeVisible();
-  const search = palette.getByRole('combobox', { name: /search pages, commands/i });
+  const search = palette.getByRole('combobox', { name: 'Search query', exact: true });
   await expect(search).toBeFocused();
   await search.fill('Data Repair');
   await page.keyboard.press('ArrowDown');

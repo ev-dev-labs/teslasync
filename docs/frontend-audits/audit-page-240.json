@@ -1,0 +1,229 @@
+{
+  "item": "audit-page-240",
+  "page": "web\\src\\features\\vehicles\\pages\\VehicleManagementPage.tsx",
+  "routes": ["/vehicle-management"],
+  "purpose": "Review eight official Tesla management capabilities, keeping account metadata, paid specifications, partner pricing and enterprise billing separate from physical vehicle commands.",
+  "primaryGoal": "Inspect available cached account data for the workspace vehicle and explicitly request permitted refreshes or confirmed operations without implying account access or undocumented payload semantics.",
+  "dataSources": [
+    {
+      "hooks": ["useVehicles", "useSelectedVehicle"],
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 74,
+      "endpoints": ["GET /vehicles"],
+      "routeEvidence": "internal\\api\\router.go:3319-3327",
+      "behavior": "vehicleKeys.all, abort signal, FAST stale time and safeArray normalization. useSelectedVehicle also subscribes to the same query, rather than establishing an independent fetch/cache. URL/store/first-known-vehicle precedence is owned by web\\src\\hooks\\useSelectedVehicle.ts:50-79. Page passes the resolved vehicle ID and keys the workspace by it."
+    },
+    {
+      "hooks": ["useVehicleOptions", "useRefreshVehicleOptions", "useVehicleSpecs", "useRefreshVehicleSpecs", "useVehicleSubscriptions", "useRefreshVehicleSubscriptions", "useVehicleUpgrades", "useRefreshVehicleUpgrades", "useWarrantyDetails", "useRefreshWarrantyDetails"],
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 1685,
+      "endpoints": ["GET /vehicles/{vehicleID}/options", "POST /vehicles/{vehicleID}/options/refresh", "GET /vehicles/{vehicleID}/specs", "POST /vehicles/{vehicleID}/specs/refresh", "GET /vehicles/{vehicleID}/subscriptions", "POST /vehicles/{vehicleID}/subscriptions/refresh", "GET /vehicles/{vehicleID}/upgrades", "POST /vehicles/{vehicleID}/upgrades/refresh", "GET /vehicles/{vehicleID}/warranty", "POST /vehicles/{vehicleID}/warranty/refresh"],
+      "routeEvidence": "internal\\api\\router.go:440-450,3319-3327,3410-3413",
+      "behavior": "Vehicle-scoped reads are enabled only with an ID and forward cancellation signals. Refresh POSTs invalidate their own query and use mutation toasts. Specs refresh sends confirmed:true. STATIC/RARE/DAILY policies remain as authored. Envelope data and fetched_at are passed through; cards display upstream Tesla endpoint descriptions, not the internal URLs. UI claims paid cost and a 24-hour guard; backend enforcement was not inspected."
+    },
+    {
+      "hooks": ["useEnterpriseRoles", "useRefreshEnterpriseRoles", "useVehiclePricing", "useSetEnterprisePayer"],
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 1806,
+      "endpoints": ["GET /vehicles/{vehicleID}/enterprise-roles", "POST /vehicles/{vehicleID}/enterprise-roles/refresh", "POST /tesla/vehicle-pricing", "POST /vehicles/{vehicleID}/enterprise-payer"],
+      "routeEvidence": "internal\\api\\router.go:451-457,3413,3611",
+      "behavior": "Roles use the vehicle-enterprise-roles key, RARE stale time, enablement and cancellation. Pricing sends {payload}; payer sends {payload,confirmed}, requiresLiveMode:true and invalidates roles. Pricing and payer results are mutation/session state, not persisted queries. Payload meaning and upstream authorization are explicitly unknown to the UI."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "Existing PageContainer adapter; title/subtitle/children, min-w-0 and full-width inner container", "evidence": "web\\src\\features\\vehicles\\pages\\VehicleManagementPage.tsx:33-39; web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-15"},
+    {"name": "VehicleManagementWorkspace", "owner": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleManagementWorkspace.tsx", "role": "Domain composition; optional vehicleId, named section, permanent introduction and eight endpoint cards", "evidence": "web\\src\\features\\vehicles\\pages\\VehicleManagementPage.tsx:101-104; web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleManagementWorkspace.tsx:21-80"},
+    {"name": "ManagementEndpointCard / ManagementEndpointBody", "owner": "web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementEndpointCard.tsx", "role": "One domain owner for endpoint identity, prerequisite badge, warning, result, timestamp, disabled/pending action and trust state; renders existing LayoutCard", "evidence": "web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementEndpointCard.tsx:18-39,88-157"},
+    {"name": "LayoutCard", "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "role": "Existing surface/heading/action/content/footer composite; preserves accessible title identity", "evidence": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:8-16,22-60"},
+    {"name": "Masonry", "owner": "web\\src\\components\\layout\\Masonry.tsx", "role": "Existing CSS multicolumn owner; className/as/children/native attributes, direct-child break avoidance", "evidence": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleManagementWorkspace.tsx:71-79; web\\src\\components\\layout\\Masonry.tsx:24-34"},
+    {"name": "OpaqueJsonDialog", "owner": "web\\src\\features\\vehicles\\components\\vehicle-management\\OpaqueJsonDialog.tsx", "role": "Shared within this domain for pricing/payer JSON input; existing Modal/Textarea/Button and non-empty-object validation, not a new overlay engine", "evidence": "web\\src\\features\\vehicles\\components\\vehicle-management\\OpaqueJsonDialog.tsx:9-18,40-110"},
+    {"name": "Modal / ConfirmDialog / Button / Table / typography / Badge / Accordion", "owner": "web\\src\\components\\ui", "role": "Canonical controls, overlays, semantic specifications matrix, text roles, prerequisites/status and expandable technical details. Modal/Button/Table implementations inspected; other primitive internals not audited.", "evidence": "web\\src\\features\\vehicles\\components\\vehicle-management\\PaidVehicleSpecsCard.tsx:57-76; web\\src\\features\\vehicles\\components\\vehicle-management\\EnterprisePayerCard.tsx:90-115; web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementRawDetails.tsx:13-22"},
+    {"name": "Feedback / data trust / motion", "owner": "web\\src\\hooks\\useDataState.ts", "role": "useDataState/deriveDataState, StaleRefreshWarning, AlertBanner, DataStateNotice, EmptyState, ErrorDisplay, ListSkeleton and FadeIn are existing owners; reuse rather than duplicating", "evidence": "web\\src\\features\\vehicles\\pages\\VehicleManagementPage.tsx:18,41-98; web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementEndpointBody.tsx:46-158; web\\src\\components\\motion\\FadeIn.tsx:24-39"},
+    {"name": "Warranty OperationalBrief", "owner": "web\\src\\features\\vehicles\\components\\vehicle-management\\WarrantyDataView.tsx", "role": "Existing OperationalBrief/useOperationalMetrics for three returned-record counts; no invented complete history, measurement time or unit", "evidence": "web\\src\\features\\vehicles\\components\\vehicle-management\\WarrantyDataView.tsx:138-146,170-179"}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleMetadataCards.tsx", "line": 33, "rule": "MDC-002 reuse", "detail": "Four metadata cards intentionally reuse one ManagementEndpointCard, also used by specs, roles, pricing and payer. Five specialist views reuse ManagementRawDetails/StructuredDataView. These are already consolidated owners, not eight new shared-component requests.", "fix": "Keep these domain owners and prop contracts; do not extract another generic endpoint framework.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\SubscriptionDataView.tsx", "line": 18, "rule": "DRY", "detail": "formatReportedPrice and formatReportedTotal repeat the same currency/locale/precision pipeline with different nullable values.", "fix": "Use one small domain-local formatter accepting reported amount and currency; retain zero, unknown currency, locale and precision behavior.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "VehicleManagementWorkspace.tsx:71-79 uses one column below xl and two above xl, preserving all eight cards.",
+      "ManagementEndpointCard.tsx:94-105,134-151 uses min-w-0, wrapping footer controls, break-all endpoint code and wrapLabel.",
+      "StructuredDataView.tsx:89-106 reflows key/value records at sm and technical details are bounded to max-h-80 in ManagementRawDetails.tsx:19.",
+      "OpaqueJsonDialog.tsx:68-109 uses lg Modal and stacked/reversed mobile form actions; Modal.tsx:133-137 provides small-screen full-width viewport bounds.",
+      "VehicleSpecsDataView.tsx:46-74 uses semantic Table with local overflow-x-auto supplied by Table.tsx:20-23.",
+      "Options, subscriptions and warranty internals reflow at sm without hiding fields."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleManagementWorkspace.tsx", "line": 72, "rule": "MDC-043 / mission 15", "detail": "Columns depend on viewport xl, not allocated workspace width. CSS column-major order and tall independently loading cards may change perceived reading/navigation order. No actual overflow or ordering failure was exercised.", "fix": "Validate ten prescribed widths and allocated-container constraints with all cards/long data; retain source ordering and all actions when selecting existing container-aware layout options.", "owner": "integration", "confidence": "medium"}
+    ],
+    "verifiedViewports": [],
+    "status": "Source only; 320/375/390/430/768/1024/1280/1440/1920/2560, text zoom, RTL and long open-dialog behavior unverified."
+  },
+  "accessibility": {
+    "sourceBehavior": [
+      "Workspace section is named by vehicle-management-title; endpoint LayoutCard creates unique title IDs.",
+      "Actions use named shared Button controls; JSON Textarea has explicit id, label, required and error feedback.",
+      "Modal uses shared useDialogFocus and closed dialogs return null, so two closed JSON dialogs do not alone prove duplicate live IDs.",
+      "Payer requires PAYER typed confirmation; paid specifications require a separate warning confirmation.",
+      "Specification rows have scope=row and the Table is named; structured technical records use dl/dt/dd.",
+      "FadeIn uses useMotionPreference and initial=false under reduced motion; no ambient feature animation appears."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementEndpointCard.tsx", "line": 145, "rule": "MDC-040 mobile target", "detail": "Endpoint actions use size=sm; Button.tsx:38,47 defines 36px minimum height. The page retry at VehicleManagementPage.tsx:75 also uses sm. This is below the 44px stronger mobile default; spacing exception and actual composed target size are unverified.", "fix": "Apply existing Button sizing/class options for mobile min-height 44px without globally changing density or deleting wrapping labels.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleOptionsDataView.tsx", "line": 95, "rule": "MDC-040 heading hierarchy", "detail": "Specialist views use h4 under LayoutCard's panel Heading; verify the actual h1/h2/h3 outline rather than assuming it from level names.", "fix": "Retain descriptive headings and use existing typography as overrides if the mounted heading outline skips levels.", "owner": "integration", "confidence": "medium"}
+    ],
+    "status": "Keyboard, focus containment/restoration, assistive technology, target reachability, actual contrast, forced colors and motion acceptance unverified."
+  },
+  "states": {
+    "loading": "Roster AlertBanner remains separate from permanently mounted workspace. Each metadata source owns loading ListSkeleton; action loading is independent.",
+    "empty": "Empty roster notice and no-vehicle notice retain all cards. Successful empty results differ from never-cached/session results. Specialist parse-empty views retain technical details.",
+    "error": "Roster fatal error has explicit retry. Endpoint errors use ErrorDisplay or prerequisite unsupported notice for API statuses 402/412; refresh actions remain available subject to vehicle prerequisites.",
+    "stale": "Roster uses complete query-derived useDataState and StaleRefreshWarning. Endpoint retained renderable data survives refresh failure with DataStateNotice.",
+    "offline": "Roster forwards query fetchStatus through useDataState. Endpoint cards do not forward paused/offline metadata.",
+    "success": "operationSucceeded renders request-completed notice; fetchedAt or operation success distinguishes a completed empty response.",
+    "disabled": "Vehicle-scoped actions are disabled without ID. Mutation pending disables action via Button loading; JSON input/cancel are disabled for pending pricing submission.",
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementEndpointBody.tsx", "line": 46, "rule": "MDC-026 asynchronous trust", "detail": "deriveDataState receives only inner payload, error and loading. Query fetchStatus/isFetching/dataUpdatedAt/refetch and envelope freshness are not propagated. Paused endpoint reads cannot show offline/blocked-refresh trust, and initial loading has no dedicated paused distinction.", "fix": "Pass the existing source DataState from each read query through the domain card/body, preserving envelope payload and mutation feedback independently. Reuse DataStateNotice rather than another state framework.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementEndpointBody.tsx", "line": 119, "rule": "MDC-026 completed empty semantics", "detail": "A null inner payload counts as retained data because deriveDataState tests only undefined (dataState.ts:191); a later error plus fetchedAt may render a stale notice and 'Tesla completed the request' empty wording. Empty prior success and failed current refresh need distinct explanation.", "fix": "Preserve the cached empty result and refresh failure, but distinguish last completed result from latest failed operation using the full envelope query state.", "owner": "page", "confidence": "medium"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementEndpointCard.tsx", "line": 95, "rule": "MDC-010 / mission 43 restrained accent", "detail": "All endpoint icons use fixed cyan decoration despite different meanings; workspace/warranty use violet and subscription uses blue. These fixed hue accents add nonsemantic multicolor noise and bypass neutral theme tokens. Saturation/contrast has not been visually measured.", "fix": "Use existing neutral surface/text tokens for decorative icons. Keep semantically meaningful warning/danger/success badges and the options active-state emerald cue.", "owner": "page", "confidence": "high", "additionalEvidence": ["web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleManagementWorkspace.tsx:30", "web\\src\\features\\vehicles\\components\\vehicle-management\\SubscriptionDataView.tsx:138", "web\\src\\features\\vehicles\\components\\vehicle-management\\WarrantyDataView.tsx:57"]},
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\StructuredDataView.tsx", "line": 89, "rule": "MDC-015 information hierarchy", "detail": "Every nested field is framed with border/surface/padding; this stacks with technical accordion, endpoint card and specialty subcards. Dense payloads may become box-heavy; no visual defect is claimed.", "fix": "Prefer existing embedded/flat surface composition for technical nesting while keeping every key/value, redaction and expandability. VehicleSpecsDataView may use Table variant=embedded at line 46.", "owner": "page", "confidence": "medium"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "line": 3, "rule": "MDC-002 shared concrete imports", "detail": "Shared LayoutCard imports Button/Card/Heading/Text/Tooltip through the UI category barrel, contrary to the shared-implementation concrete-import convention. No cycle or runtime failure is proved by this source observation.", "fix": "Have the exclusive shared owner switch internal dependencies to their concrete existing modules without altering LayoutCard props or feature imports.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\StructuredDataView.tsx", "line": 47, "rule": "MDC-001 preservation / no data loss", "detail": "MAX_RENDER_DEPTH=8 replaces deeper source data with 'Additional nested data'; no expand/download action exists in this renderer. Technical payload accessibility is bounded rather than complete. This is an existing preservation limitation, not authorization to drop more fields.", "fix": "Keep the safe initial depth but add domain-local progressive expansion through existing Accordion/Button, preserving redaction and every deeper non-sensitive value. Do not invent backend fields or raw secret export.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\managementData.ts", "line": 280, "rule": "MDC-025 unknown status", "detail": "A flat named warranty record with no grouped status is assigned state='active' by fallback, potentially presenting unknown coverage as active. Actual upstream payload semantics were not inspected.", "fix": "Confirm the source contract; represent unclassified coverage separately if status is not authoritative, retaining all fields and avoiding guessed current coverage.", "owner": "integration", "confidence": "medium"}
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Preserve financially consequential confirmation/session boundaries first; repair endpoint trust metadata and bounded technical-data reachability, then neutralize decorative hues and validate mobile controls. Page itself is already a thin shared-layout orchestrator."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "LayoutCard concrete internal imports",
+      "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "line": 3,
+      "rule": "MDC-002",
+      "detail": "Reuse the existing layout owner; no new component or public API is required.",
+      "fix": "Replace internal UI barrel imports with concrete modules under exclusive shared ownership.",
+      "confidence": "high",
+      "props": ["title", "description", "actions", "children", "footer", "size"],
+      "variants": ["existing CardSize and placement context; unchanged"],
+      "states": ["all child loading/empty/error/retained data and actions remain unchanged"],
+      "usedBy": ["web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementEndpointCard.tsx"],
+      "dependsOn": ["existing UI Button, Card, Typography and Tooltip concrete modules; existing CardPlacementContext"],
+      "acceptance": "Preserve title association, action slot, footer, content, placement sizing and tooltip behavior; shared owner performs focused validation, centralized integration remains separate."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleManagementPage.tsx", "line": 24, "rule": "MDC-032 workspace owner", "detail": "Page recomputes selected-record/ID/first-fleet fallback after useSelectedVehicle already resolves the workspace. It uses the same roster cache and adds no picker; this is a small redundant derivation, not a proven conflicting selector.", "fix": "Keep existing selection precedence and keyed reset; simplify only with confirmed equivalence to the shared selector, never introduce a local vehicle/date control.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleManagementWorkspace.tsx", "line": 74, "rule": "MDC-002 single architecture", "detail": "No competing overlay, fetch engine, stat engine, table pipeline or management framework found in inspected production dependencies. Table is legitimately a read-only semantic matrix, not an attempted DataTable replacement.", "fix": "Reuse current domain/shared owners; no speculative shared components.", "owner": "page", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceHash": "6700298EEA2A4868D2700CFDA75091EC9978B024EE70739907D8521CA1F6FC87",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 110,
+    "pagePlusInspectedProductionDependencyLineCount": 2430,
+    "lineCountScope": "Exact page plus 20 non-test files in components\\vehicle-management, including index and two domain utility files; not a page-only reduction target.",
+    "sections": [
+      {"name": "Page title/subtitle and fleet context", "count": 1, "file": "web\\src\\features\\vehicles\\pages\\VehicleManagementPage.tsx", "line": 33},
+      {"name": "Roster loading/stale/fatal-retry/empty surfaces", "count": 4, "file": "web\\src\\features\\vehicles\\pages\\VehicleManagementPage.tsx", "line": 41},
+      {"name": "Workspace introduction, eight-endpoint badge and no-vehicle notice", "count": 1, "file": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleManagementWorkspace.tsx", "line": 27},
+      {"name": "Vehicle options", "count": 1, "file": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleMetadataCards.tsx", "line": 33},
+      {"name": "Warranty details", "count": 1, "file": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleMetadataCards.tsx", "line": 54},
+      {"name": "Subscription eligibility", "count": 1, "file": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleMetadataCards.tsx", "line": 75},
+      {"name": "Upgrade eligibility", "count": 1, "file": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleMetadataCards.tsx", "line": 99},
+      {"name": "Paid specifications with cost warning", "count": 1, "file": "web\\src\\features\\vehicles\\components\\vehicle-management\\PaidVehicleSpecsCard.tsx", "line": 25},
+      {"name": "Partner pricing session query", "count": 1, "file": "web\\src\\features\\vehicles\\components\\vehicle-management\\VehiclePricingCard.tsx", "line": 14},
+      {"name": "Enterprise roles", "count": 1, "file": "web\\src\\features\\vehicles\\components\\vehicle-management\\EnterpriseRolesCard.tsx", "line": 19},
+      {"name": "Enterprise payer with billing warning", "count": 1, "file": "web\\src\\features\\vehicles\\components\\vehicle-management\\EnterprisePayerCard.tsx", "line": 33}
+    ],
+    "sectionCounts": {"endpointCards": 8, "workspaceIntroductionGlassPanels": 1, "endpointLayoutCardInstances": 8, "chartContainers": 0, "jsonDialogInstances": 2, "confirmationDialogInstances": 2, "specialistTechnicalDetailConsumers": 5, "warrantySummaryMetrics": 3},
+    "actions": [
+      "Retry roster GET without replacing usable retained data.",
+      "Refresh options, warranty, subscriptions, upgrades and enterprise roles independently.",
+      "Request paid specifications only after the $0.10 confirmation; retain displayed 24-hour guard information and confirmed:true request.",
+      "Open pricing JSON form, validate non-empty JSON object, cancel or submit; preserve session-only response and unknown Tesla schema warning.",
+      "Open payer JSON form, validate and stage payload, continue to typed PAYER confirmation, cancel/clear or send confirmed:true live-only operation; retain billing risk warning.",
+      "Expand technical details for options/specs/warranty/subscriptions/roles; retain generic structured upgrades/pricing/payer results.",
+      "Workspace vehicle changes remount the domain workspace and reset local mutation/dialog/staged-result state."
+    ],
+    "dataBehavior": [
+      "All eight cards remain mounted when vehicle context is unavailable; only vehicle-scoped reads/actions disable, while partner pricing stays independent.",
+      "Retain shared workspace selection, URL/store fallback, query keys, enablement, cancellation, policies, source envelopes, fetched_at, mutation errors/toasts and targeted invalidation.",
+      "Do not reinterpret displayed upstream /api/1 descriptions as internal request URLs; every inspected internal hook path matches router declarations.",
+      "Retain prerequisite labels and 402/412 unsupported state without claiming actual user/partner/enterprise access.",
+      "Preserve options code/name/active-unknown distinction/paint, scalar specs, warranty active/upcoming/expired counts and terms/dates/reported odometer, subscription market/offers/currency/period/price/total, roles and generic payload keys.",
+      "Warranty odometer has explicitly unknown units; preserve as reported with its explanatory note, do not invent SI conversion.",
+      "Currency rendering retains reported currency and locale, missing remains missing and zero remains zero. No SI wire/cache transformation was introduced.",
+      "Sensitive technical keys remain redacted; original payloads and unknown field semantics must not be removed or recased during modernization."
+    ],
+    "sourceScan": {
+      "scope": "Page and non-test vehicle-management dependencies only",
+      "staticOrDynamicInlineStyleMatches": 0,
+      "caseSensitiveRawControlOrTableMatches": 0,
+      "directRechartsLeafletFramerImports": 0,
+      "oldRelativeApiImports": 0,
+      "neonGlowPureWhiteClassMatches": 0,
+      "fixedHueAccentLines": 5,
+      "notes": "PowerShell Select-String case-insensitive initial raw-control scan returned 6 shared-component false positives; corrected -CaseSensitive scan returned 0. No absence claim for shared CSS/theme implementation."
+    }
+  },
+  "evidenceLimits": [
+    "Phase0 source inspection only. Assigned route is recorded verbatim; route mounting/reachability was not browser exercised.",
+    "No source edits, Git operations, repository lint/build, TypeScript, tests, browser, runtime mutations or visual captures performed.",
+    "The loaded audit skill script was inspected but not executed: it unconditionally invokes full frontend TypeScript, outside this assignment. Equivalent bounded source pattern checks were executed instead.",
+    "Runtime, API payload correctness, server cache/24-hour billing guard/authorization, cancellation execution, offline recovery, complete-data equivalence, visual saturation, contrast, keyboard, viewport and reduced-motion behavior are unverified.",
+    "One bounded scan command failed with PowerShell quoting ParserError (exit 1); corrected scoped scan completed (exit 0). Hash/line counts and route declarations were read directly.",
+    "No global theme/catalog/router/query graph audit or second-page consumer search. Shared requirements name only this inspected consumer and do not invent multi-page demand.",
+    "Primitive internals not listed in filesRead were not read; source imports are ownership evidence, not implementation acceptance.",
+    "Design contract/conventions read fully; mission sections 0,1,15,33,43,44 read with adjacent text. Audit output schema is the complete top-level convention list."
+  ],
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicles\\pages\\VehicleManagementPage.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\index.ts",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleManagementWorkspace.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleMetadataCards.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\PaidVehicleSpecsCard.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\VehiclePricingCard.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\EnterpriseRolesCard.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\EnterprisePayerCard.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementEndpointCard.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementEndpointBody.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementDataView.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\ManagementRawDetails.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\OpaqueJsonDialog.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\StructuredDataView.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\managementJson.ts",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\managementData.ts",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\EnterpriseRolesDataView.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleOptionsDataView.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\VehicleSpecsDataView.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\WarrantyDataView.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-management\\SubscriptionDataView.tsx",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "internal\\api\\router.go",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\Masonry.tsx",
+    "web\\src\\components\\ui\\Modal.tsx",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx"
+  ]
+}

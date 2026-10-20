@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { HardDriveDownload } from 'lucide-react';
 
-import { GlassPanel } from '@/components/ui';
-import { PanelTitle, Caption, Text } from '@/components/ui/Typography';
+import { BUTTON_BASE, BUTTON_VARIANTS, GlassPanel, Icon, PanelTitle, Caption, Text } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import type { GDPRExportArtifact } from '@/types/admin-operator-confidence';
 
 interface GDPRDownloadPanelProps {
@@ -12,16 +12,39 @@ interface GDPRDownloadPanelProps {
   downloadUrl: string | null;
   loading?: boolean;
   className?: string;
+  /** Optional page-owned clock; the supplied href remains the eligibility authority. */
+  now?: number;
 }
 
-/** Download action panel — streams the bundle or explains why it can't yet. */
-export function GDPRDownloadPanel({ artifact, downloadUrl, loading, className }: GDPRDownloadPanelProps) {
+/** Manifest explanation and one browser-owned link, not export-job progress or file proof. */
+export function GDPRDownloadPanel({
+  artifact, downloadUrl, loading, className, now = Date.now(),
+}: GDPRDownloadPanelProps) {
   const { t } = useTranslation();
   const showLoading = Boolean(loading) && !artifact;
-  const status = artifact?.status;
+  const expiry = artifact?.expires_at;
+  const parts = typeof expiry === 'string'
+    ? /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.exec(expiry)
+    : null;
+  const parsed = typeof expiry === 'string' ? Date.parse(expiry) : NaN;
+  const expiryMs = parts
+    && Number(parts[2]) >= 1 && Number(parts[2]) <= 12
+    && Number(parts[3]) >= 1
+    && Number(parts[3]) <= new Date(Date.UTC(Number(parts[1]), Number(parts[2]), 0)).getUTCDate()
+    && Number.isFinite(parsed)
+    ? parsed : null;
+  const unavailable = !artifact
+    ? t('admin.gdprExport.downloadMissing', 'No artifact result is available. Look up an artifact or retry the lookup to inspect download eligibility.')
+    : expiryMs != null && now >= expiryMs
+      ? t('admin.gdprExport.downloadExpired', 'This artifact has expired and is no longer downloadable.')
+      : !artifact.storage_kind?.trim() || expiryMs == null
+        ? t('admin.gdprExport.downloadUnknown', 'Download eligibility is unknown because storage or a valid expiry is missing. Refresh the artifact manifest to check its metadata.')
+        : artifact.storage_kind !== 'local_fs'
+          ? t('admin.gdprExport.downloadUnsupported', 'Downloads are not supported for this artifact’s storage kind.')
+          : t('admin.gdprExport.downloadUnavailable', 'No eligible download link was supplied. Refresh the artifact manifest; metadata does not confirm that the stored file is available.');
 
   return (
-    <GlassPanel className={cn('flex flex-col p-4 sm:p-5', className)}>
+    <GlassPanel className={cn('flex min-w-0 flex-col p-4 sm:p-5', className)} aria-busy={showLoading}>
       <PanelTitle className="mb-4">{t('admin.gdprExport.downloadTitle', 'Download')}</PanelTitle>
 
       {showLoading ? (
@@ -33,37 +56,28 @@ export function GDPRDownloadPanel({ artifact, downloadUrl, loading, className }:
         <div className="flex flex-col items-start gap-3">
           <Text variant="bodySm">
             {t(
-              'admin.gdprExport.downloadHint',
-              'The bundle streams from the backend through this browser. The download counter is logged to the audit ledger.',
+              'admin.gdprExport.downloadManifestHint',
+              'The bundle streams from the backend through this browser. An eligible request can still fail if the file is missing. Download timestamp and counter updates are best effort, not a durable audit record.',
             )}
           </Text>
           <a
             href={downloadUrl}
             download
             className={cn(
-              // A download is navigation, so the anchor itself is the single
-              // interactive control — wrapping a <Button> here would nest
-              // interactive content (axe `nested-interactive`, two tab stops).
-              // Styled to match the shared primary Button via the theme vars.
-              'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4',
-              'text-sm font-medium transition sm:w-auto',
-              'bg-[var(--theme-primary)] text-[var(--theme-on-primary)] hover:brightness-110',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)] focus-visible:ring-offset-2',
-              'forced-colors:border forced-colors:border-[ButtonBorder]',
+              BUTTON_BASE,
+              BUTTON_VARIANTS.primary,
+              typography.size.sm,
+              'min-h-11 min-w-11 w-full max-w-full whitespace-normal px-4 py-2 sm:w-auto',
             )}
           >
-            <HardDriveDownload className="h-4 w-4" aria-hidden="true" />
-            {t('admin.gdprExport.downloadButton', 'Download bundle')}
+            <Icon icon={HardDriveDownload} />
+            <span className="min-w-0 break-words">
+              {t('admin.gdprExport.downloadButton', 'Download bundle')}
+            </span>
           </a>
         </div>
       ) : (
-        <Caption>
-          {status === 'queued' || status === 'running'
-            ? t('admin.gdprExport.downloadWait', 'Download becomes available once the export completes.')
-            : status === 'expired'
-              ? t('admin.gdprExport.downloadExpired', 'This artifact has expired and is no longer downloadable.')
-              : t('admin.gdprExport.downloadFailed', 'No bundle available — see the error above.')}
-        </Caption>
+        <Caption>{unavailable}</Caption>
       )}
     </GlassPanel>
   );

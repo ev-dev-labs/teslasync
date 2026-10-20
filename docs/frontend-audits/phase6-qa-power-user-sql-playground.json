@@ -1,0 +1,1847 @@
+{
+  "item": "phase6-qa-power-user-sql-playground",
+  "attempt": 1,
+  "phase": 6,
+  "status": "SOURCE_ONLY_REVIEW_COMPLETED_WITH_CONFIRMED_FINDINGS",
+  "fullQA": "NOT ACCEPTED / NOTRUN",
+  "page": "web/src/features/power-user/pages/SqlPlaygroundPage.tsx",
+  "route": "/power/sql",
+  "createdAt": "2026-10-14T02:33:49.116262+00:00",
+  "authority": {
+    "solePlaybook": "docs/orchestrator-loop.md fully read; supersedes earlier playbooks",
+    "designContract": "docs/frontend-design-contract.md fully read in bounded ranges",
+    "mission": "Relevant §§0-3,9-26,30-37,40-46",
+    "inventory": "frontend-inventory route165/G159-162 and prior audit-page-165",
+    "handoff": "Current Phase6/new-machine/source-first conventions; Phases0-5 not reopened",
+    "instructions": [
+      "copilot-instructions relevant frontend/integrity/SI",
+      "react-frontend full",
+      "unit-conversion full (legacy examples superseded by rawSI)",
+      "frontend-si-cutover full (unknown-never-zero contract wins)"
+    ],
+    "writableFiles": [
+      "docs/frontend-audits/phase6-qa-power-user-sql-playground.json",
+      "web/logs/phase6-qa-power-user-sql-playground.log"
+    ],
+    "queue": "Exact item row122; accepted predecessor item/commitc59fbbcea46896d504e8ec8e923746a10f5aa39b; final item-column snapshot follows",
+    "ownershipLimit": "READONLY source/tests; no page remigration, queue/catalog/Git writes",
+    "queueSnapshot": [
+      {
+        "line": 122,
+        "item": "phase6-qa-power-user-sql-playground",
+        "status": "[~]",
+        "files": "docs\\frontend-audits\\phase6-qa-power-user-sql-playground.json; web\\logs\\phase6-qa-power-user-sql-playground.log",
+        "commit": "-",
+        "raw": "| [~] | 6 | phase6-qa-power-user-sql-playground | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-power-user-sql-playground.json; web\\logs\\phase6-qa-power-user-sql-playground.log | phase5-page-power-user-sql-playground | 1 | reserved02:16:58.925Z; actor pending | - | SqlPlaygroundPage/direct supports/tests read-only; no SQL/API/browser/mutations/fresh tests/lint/build/global compiler/helper/Git/code/catalog writes; exact report/log only. |"
+      },
+      {
+        "line": 1127,
+        "item": "phase3-ai-stream-generation-isolation",
+        "status": "[x]",
+        "files": "web\\src\\hooks\\useAiStream.ts",
+        "commit": "8f13724849",
+        "raw": "| [x] | 3 | phase3-ai-stream-generation-isolation | shared | web\\src\\hooks\\useAiStream.ts | phase3-ai-stream-overlap-diagnosis | 1 | 2026-10-08T18:06:29.747Z | 8f13724849 | phase3-ai-stream-overlap-diagnosis / 1 / 2026-10-08T18:06:29.747Z / Confirmed standalone shared-hook root correction ONLY web\\src\\hooks\\useAiStream.ts + hooks\\__tests__\\useAiStream.test.ts from exact accepted current bytes. Diagnosis actual original27 pass, seven real-hook isolation probes FAIL: obsolete AbortError resets newer state, old finally loses newer controller/coalescing, delayed old events reach latest callback. Add generation and local controller ownership-safe guards/cleanup, preserve public APIs/SSE/parser/cancel/scope/privacy/no-auto-POST-retry and all original tests; carry exact diagnosis regressions. No SQL/caller/catalog/config workaround; guarded original+7 regressions/lint/scan/ALL reached fixture types required.; actor=2718dc31-3359-4a9e-957c-ce337e60bb11; actor context idle verified 2026-10-08T18:25:44.254Z: Actual delivered idle full report read; exact scope released, original/current bytes preserved; source acceptance or actual remaining root/fixture blockers handled separately; Verified scoped delivery acceptance commit=8f13724849; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=41/41 final normal, original27 assertions retained plus14 regressions including all seven actual isolation failures; exact inverse original-test proof after typed mock/equivalent call-count corrections. Generation/local controller ownership guards preserve parser/public API/SSE/privacy/scope/explicit cancel/no-auto-POST retry. Final strict lint/source scan/ALL reached fixture0, no caller compensating hacks or integration/browser claim, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "line": 1140,
+        "item": "phase3-ainlsql-playground",
+        "status": "[x]",
+        "files": "web\\src\\components\\ai\\AINLSqlPlayground.tsx; web\\src\\components\\ai\\AINLSqlPlayground.test.tsx",
+        "commit": "8d32df2144",
+        "raw": "| [x] | 3 | phase3-ainlsql-playground | shared | web\\src\\components\\ai\\AINLSqlPlayground.tsx; web\\src\\components\\ai\\AINLSqlPlayground.test.tsx | phase3-aifeature-card,primitive-button,primitive-textarea,phase3-ai-stream-generation-isolation,phase3-current-source-catalog-refresh | 1 | 2026-10-08T17:25:43.508Z | 8d32df2144 | phase3-aifeature-card,primitive-button,primitive-textarea,phase3-ai-stream-generation-isolation,phase3-current-source-catalog-refresh / 1 / 2026-10-08T17:25:43.508Z / Verified real-owner plan=phase3-ainlsql-playground in session frontend-phase3-owner-plan.json; category=domain-ai; sources=web\\src\\components\\ai\\AINLSqlPlayground.tsx; tests=web\\src\\components\\ai\\AINLSqlPlayground.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; actor context idle verified 2026-10-08T15:48:26.420Z: Actual current lifecycle idle and full exact report read; delivery preserved, source writes released; acceptance remains separate; failure=Preserved delivery; actual runtime tests blocked by catalog guard, scoped lint/scan/fixture types0; Read-only post-root review of preserved delivery; no source writes or implementation attempt increment; current frozen scope and original dispatch provenance required; reboot reconciliation 2026-10-08T17:18:31.366Z: actual zero live actors; frozen delivery retained, awaiting read-only intake, not stuck or new implementation attempt; READ-ONLY reboot review reserved, attempts unchanged; isolated new receipt, no original source/test edits; actor=b29091af-586d-4942-91c4-3a8558b4feb3; actor context idle verified 2026-10-08T17:43:32.244Z: Actual lifecycle idle and complete isolated recovery result read; source frozen/released; acceptance and composed limitations remain separate; Verified scoped delivery acceptance commit=8d32df2144; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=owned exact25-case suite plus actual shared hook41 passed together in normal19-file post-catalog run (1193PASS/2FAIL elsewhere retained); current ALL3507 reached fixture0. Original draft/manual apply/no-run/route/SSE/assertions preserved; immediate prompt-edit invalidation guard covers synchronous pre-effect window, actual shared generation overlap root fixed separately. No auto-run/fake retry/caller workaround for overlapping streams, browser/fullphase unclaimed, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "line": 1280,
+        "item": "phase3-copy-button",
+        "status": "[x]",
+        "files": "web\\src\\components\\ui\\CopyButton.tsx; web\\src\\components\\ui\\__tests__\\CopyButton.test.tsx",
+        "commit": "e1472048b7",
+        "raw": "| [x] | 3 | phase3-copy-button | shared | web\\src\\components\\ui\\CopyButton.tsx; web\\src\\components\\ui\\__tests__\\CopyButton.test.tsx | primitive-button | 2 | 2026-10-08T13:58:19.147Z | e1472048b7 | primitive-button / 2 / 2026-10-08T13:58:19.147Z / Verified real-owner plan=phase3-copy-button in session frontend-phase3-owner-plan.json; category=composite-interaction; sources=web\\src\\components\\ui\\CopyButton.tsx; tests=web\\src\\components\\ui\\__tests__\\CopyButton.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; failure=First delivered attempt has required post-change normal tests blocked by generated-catalog startup; current generator repair accepted; scoped deltas and receipt preserved, NOT an inherited pre-modernization defect; retry only after prior context releases and refreshed same-item baseline verified; actor context idle verified 2026-10-08T05:45:45.568Z: RELEASED acknowledgement; preserved attempt-one deltas; frozen preserved-delta retry baseline=phase3-copy-button-retry-dispatch-baseline.json; distinct attempt2 heartbeat/receipt required; original manifest/proofs/tests remain authoritative; crash recovery 2026-10-08T13:10:44.944Z: actual no-live-context observation, delivery receipts/source preserved; acceptance reconciliation required before any new worker or attempt increment; Crash acceptance review READ-ONLY, no implementation retry/attempt increment; validate preserved original/delivered scopes; tests deferred while catalog root unaccepted; parent owns final acceptance and commits.; actor=2325ee2f-dbfa-4e48-9200-9d4b4704c0ca; actor context idle verified 2026-10-08T14:22:54.616Z: REVIEWED ready;33/33,lint/scan/types0; original/current/final attempt2 and tests preserved; actual idle and full result read; no further writes; source/runtime/browser acceptance remains separate; Verified scoped delivery acceptance commit=e1472048b7; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=33/33, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "line": 1563,
+        "item": "phase3-helix-evidence-trail",
+        "status": "[-]",
+        "files": "-",
+        "commit": "674792c5bc",
+        "raw": "| [-] | 3 | phase3-helix-evidence-trail | shared | - | - | - | - | 674792c5bc | Excluded historical provenance/revalidation/repair-loop bookkeeping; not an active original-plan assignment. Evidence preserved in archive (original line 2197); no retry or acceptance waiver. |"
+      },
+      {
+        "line": 1675,
+        "item": "phase3-retained-ai-output-error",
+        "status": "[x]",
+        "files": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+        "commit": "d2a305ab49",
+        "raw": "| [x] | 3 | phase3-retained-ai-output-error | shared | web\\src\\components\\ai\\AiOutputPanel.tsx | phase3-ai-output-panel | 1 | 2026-10-08T15:08:02.528Z | d2a305ab49 | phase3-ai-output-panel / 1 / 2026-10-08T15:08:02.528Z / Confirmed shared limitation in AIFeatureCard review: AiOutputPanel error branch replaces supplied nonempty narrative. Own ONLY web\\src\\components\\ai\\AiOutputPanel.tsx and AiOutputPanel.test.tsx, fresh accepted baseline. Preserve supplied text alongside explicit failed/interrupted/incomplete state without implying success or inventing last-success timestamps; distinguish partial streaming output from verified results. Preserve public phases/error/retry/copy/evidence and all original tests; only declared localized keys, no catalog/provider/API edits. If additional trust metadata is necessary report it rather than fake a successful/stale classification.; actor=f417fe02-b3c1-498b-9a89-248eeb88dc73; actor context idle verified 2026-10-08T15:48:22.342Z: Actual current lifecycle idle and full exact report read; delivery preserved, source writes released; acceptance remains separate; Historical expected worker receipt absent; parent read-only revalidation original/current hashes verified, strict lint0/scanner0/actual all reached fixture diagnostics0. Normal tests actual EXIT1 before collection during new sole catalog-owner copy edits; raw failure preserved in session parent-revalidation receipt. No49-test parent pass claimed; tests wait for new catalog release/closure; Fresh parent normal guarded runtime executed after catalog closure: actual22/22, EXIT0; strict lint0, source scan0, all reached fixture diagnostics0. Append-only receipt preserves prior startup EXIT1 and missing historical worker receipt; no49-test claim.; Scoped retained-error delivery accepted using NEW independent parent proof: actual normal22/22, lint0, source scan0, all reached fixture diagnostics0; exact original/current hashes and partial/error/retry/source trust assertions reviewed. Missing historical worker receipt remains explicitly missing; prior normal startup failure preserved append-only. Not49 tests, no fabricated historical final hash receipt, no browser/full phase acceptance. |"
+      },
+      {
+        "line": 1887,
+        "item": "phase3-table",
+        "status": "[x]",
+        "files": "web\\src\\components\\ui\\Table.tsx; web\\src\\components\\ui\\Table.test.tsx",
+        "commit": "8ccad66caf",
+        "raw": "| [x] | 3 | phase3-table | shared | web\\src\\components\\ui\\Table.tsx; web\\src\\components\\ui\\Table.test.tsx | chart-palette-policy | 1 | 2026-10-08T13:51:30.351Z | 8ccad66caf | chart-palette-policy / 1 / 2026-10-08T13:51:30.351Z / Verified real-owner plan=phase3-table in session frontend-phase3-owner-plan.json; category=composite-interaction; sources=web\\src\\components\\ui\\Table.tsx; tests=web\\src\\components\\ui\\Table.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; actor=364d4f55-0c93-4af9-9f98-20ab1c3296d5; actor context idle verified 2026-10-08T14:01:39.132Z: Exact DONE source/test owner; idle release verified; receipt scope/hash/test intake pending; Verified scoped delivery acceptance commit=8ccad66caf; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=6/6, scoped lint/scan0 as recorded (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "line": 2176,
+        "item": "phase5-page-power-user-sql-playground",
+        "status": "[x]",
+        "files": "web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx; web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.test.tsx",
+        "commit": "c59fbbcea46896d504e8ec8e923746a10f5aa39b",
+        "raw": "| [x] | 5 | phase5-page-power-user-sql-playground | original-page-migration | web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx; web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.test.tsx | - | 1 | 2026-10-12T14:32:17.5547327Z | c59fbbcea46896d504e8ec8e923746a10f5aa39b | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/power/sql; audit=docs\\frontend-audits\\audit-page-165.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Genuinely unstarted third-wave page/test source claim after exact caller fixture correction and normal i18n check0. Prior completed/zero-turn objectives not redispatched. Actual agent launch ID follows; held delivery claims excluded. Actual third-wave source agent=454614e5-5ff1-4119-9bda-6498b3d20a25; no source/QA result inferred from launch. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Own receipt confirms Vitest15/15 exit0, ESLint0/style0,608-vs602 composed lines/4sections/33columns preserved;29diagnosticPNG but resourceFAILED/mobile incomplete, no native QA acceptance; no SQL mutations; parent-owned query-reference/catalog/tab/storage findings remain outside scope; commit=c59fbbcea46896d504e8ec8e923746a10f5aa39b; pushed. |"
+      }
+    ],
+    "queueDriftHandling": "Numeric row reads during parent queue edits were unrelated, preserved but not ownership evidence. Final snapshots require actual item-column equality, not matching dependencies."
+  },
+  "timebox": {
+    "dispatchTimestampFromUser": "2026-10-14T02:19:18.380Z",
+    "returnBy": "2026-10-14T02:36:58.925Z",
+    "hardBy": "2026-10-14T02:41:58.925Z",
+    "rule": "Earlier supplied absolute or actual+20/25 wins; no renewed clocks",
+    "releasedAt": "2026-10-14T02:36:11.801033+00:00"
+  },
+  "summary": {
+    "confirmedIssueCount": 10,
+    "conditionalAndNativeCandidateCount": 8,
+    "confirmedByRule": {
+      "hardcoded-string": 1,
+      "missing-canonical-i18n": 1,
+      "semantic-token-adoption": 2,
+      "missing-visible-label": 1,
+      "mobile-target-declaration": 1,
+      "motion-preference": 1,
+      "unused-workspace-scope": 1,
+      "typed-result-preview": 1,
+      "i18n-fragment-assembly": 1
+    },
+    "counting": "10distinct source mechanisms. SQL01 includes exactly38English field sites; SQL02includes4missing leaves. Utility/loop instances explicitly inventoried, not additional root issues; candidates excluded.",
+    "filesWithMostConfirmedIssues": {
+      "web/src/features/power-user/components/QueryReferencePanel.tsx": 3,
+      "web/src/components/ai/AINLSqlPlayground.tsx": 2
+    },
+    "priority": [
+      "SQL09typed preview before Apply",
+      "SQL08truthful scope/SQL05visible label",
+      "SQL01/02/10canonical localization",
+      "SQL06/07mobile/preference gaps;SQL03/04restrained roles"
+    ],
+    "confirmedByFile": {
+      "web/src/features/power-user/components/sqlCatalog.ts": 1,
+      "web/src/features/power-user/components/QueryReferencePanel.tsx": 3,
+      "web/src/features/power-user/components/SchemaCatalogCard.tsx": 1,
+      "web/src/components/ai/AINLSqlPlayground.tsx": 2,
+      "web/src/components/ai/AIThinkingIndicator.tsx": 1,
+      "web/src/lib/workspaceScope.ts": 1,
+      "web/src/components/ai/HelixEvidenceTrail.tsx": 1
+    }
+  },
+  "confirmedIssues": [
+    {
+      "id": "SQL01",
+      "rule": "hardcoded-string",
+      "status": "CONFIRMED_SOURCE_DEFECT",
+      "severity": "medium",
+      "file": "web/src/features/power-user/components/sqlCatalog.ts",
+      "lines": [
+        41,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        57,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        71,
+        73,
+        74,
+        75,
+        76,
+        77,
+        82,
+        84,
+        85,
+        86,
+        87,
+        88,
+        93,
+        95,
+        96,
+        97,
+        98,
+        99
+      ],
+      "title": "38 bundled descriptions bypass localization",
+      "mechanism": "Five table and 33 column descriptions are static English. SchemaCatalogCard:53 and 99-100 render them directly. Technical names/types and SQL code are excluded.",
+      "reproduction": {
+        "kind": "Source-derived, NOT executed",
+        "steps": [
+          "In a future non-English fixture read every table/column description.",
+          "All 38 nonempty descriptions remain literal English while surrounding headings can translate."
+        ]
+      },
+      "fix": "Localize display descriptions at existing catalog/card owners; preserve raw identifiers/types/SI/PII meanings and the raw primary-key marker.",
+      "ownership": "G162/P306/audit-page-165 already records this parent-owned catalog residual; accepted Phase5 page must not be redispatched.",
+      "nativeAcceptance": "NOTRUN",
+      "sourceSiteCount": 38,
+      "sites": [
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 41,
+          "literal": "Per-trip aggregates for completed drives"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 43,
+          "literal": "primary key"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 44,
+          "literal": "vehicle this drive belongs to"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 45,
+          "literal": "drive start UTC"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 46,
+          "literal": "drive end UTC"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 47,
+          "literal": "distance meters (SI)"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 48,
+          "literal": "duration seconds (SI)"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 49,
+          "literal": "energy watt-hours (SI)"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 50,
+          "literal": "regen watt-hours"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 51,
+          "literal": "avg speed m/s (SI)"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 52,
+          "literal": "max speed m/s"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 57,
+          "literal": "Per-charge aggregates for completed charging sessions"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 59,
+          "literal": "primary key"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 60,
+          "literal": "vehicle being charged"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 61,
+          "literal": "session start UTC"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 62,
+          "literal": "session end UTC"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 63,
+          "literal": "energy added watt-hours (SI)"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 64,
+          "literal": "session cost in user-currency cents"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 65,
+          "literal": "home, supercharger, third_party"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 66,
+          "literal": "peak power watts"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 71,
+          "literal": "Vehicle metadata"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 73,
+          "literal": "primary key"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 74,
+          "literal": "Tesla VIN (PII)"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 75,
+          "literal": "user-chosen display name (PII)"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 76,
+          "literal": "model code"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 77,
+          "literal": "exterior color slug"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 82,
+          "literal": "User-defined alerts that have fired"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 84,
+          "literal": "primary key"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 85,
+          "literal": "vehicle the alert fired for"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 86,
+          "literal": "alert rule that fired"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 87,
+          "literal": "fire timestamp UTC"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 88,
+          "literal": "info, warn, critical"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 93,
+          "literal": "Telemetry signal history exposed as a stable view"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 95,
+          "literal": "vehicle the signal belongs to"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 96,
+          "literal": "canonical signal name"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 97,
+          "literal": "sample timestamp UTC"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 98,
+          "literal": "numeric value (SI), null if non-numeric"
+        },
+        {
+          "file": "web/src/features/power-user/components/sqlCatalog.ts",
+          "line": 99,
+          "literal": "string value, null if numeric"
+        }
+      ],
+      "testEvidence": [
+        "SchemaCatalogCard.test.tsx:295 tests surrounding copy, not translated descriptions; sqlCatalog.test.tsx:173-192 locks raw identifiers and primary-key marker"
+      ]
+    },
+    {
+      "id": "SQL02",
+      "rule": "missing-canonical-i18n",
+      "status": "CONFIRMED_SOURCE_DEFECT",
+      "severity": "medium",
+      "file": "web/src/features/power-user/components/QueryReferencePanel.tsx",
+      "lines": [
+        26,
+        32,
+        38,
+        44,
+        54,
+        55
+      ],
+      "title": "Four guidance-tip leaves absent from canonical English",
+      "mechanism": "TIP_DEFS supplies powerSql.info.tip1..tip4 and t(key,fallback). Canonical powerSql.info contains only title/readonly/exampleLabel. Executed lookup:59 static occurrences, exactly4 missing.",
+      "reproduction": {
+        "kind": "Source-derived, NOT executed",
+        "steps": [
+          "Read canonical powerSql.info.",
+          "Resolve the four existing TIP_DEFS keys: all absent, so required English leaves are missing and fallback-only copy is used."
+        ]
+      },
+      "fix": "Parent integrates the four exact existing fallback messages through normal generated outputs; no guard waiver.",
+      "ownership": "One parent-exclusive four-key catalog integration before the same narrow reference residual as SQL03/06; unrelated catalog queue items are not owners.",
+      "nativeAcceptance": "NOTRUN",
+      "sourceSiteCount": 4,
+      "keys": [
+        "powerSql.info.tip1",
+        "powerSql.info.tip2",
+        "powerSql.info.tip3",
+        "powerSql.info.tip4"
+      ],
+      "testEvidence": [
+        "QueryReferencePanel.test.tsx:21-27 mocks fallback t(); :126 overrides title/readonly, not canonical tips"
+      ]
+    },
+    {
+      "id": "SQL03",
+      "rule": "semantic-token-adoption",
+      "status": "CONFIRMED_SOURCE_DEFECT",
+      "severity": "medium",
+      "file": "web/src/features/power-user/components/QueryReferencePanel.tsx",
+      "lines": [
+        62,
+        75
+      ],
+      "title": "Decorative help icon and bullets use fixed cyan",
+      "mechanism": "text-cyan-300 and bg-cyan-400/60 are generic help decoration, not status or series identity, contrary to MDC-010/012 neutral theme-derived roles.",
+      "reproduction": {
+        "kind": "Source-derived, NOT executed",
+        "steps": [
+          "Inspect the reference panel in a future light/custom theme.",
+          "The fixed cyan declarations remain independent of saved theme; no composed contrast result is claimed."
+        ]
+      },
+      "fix": "Use existing secondary/muted text/surface roles, preserving heading, all4tips, code and copy recovery.",
+      "ownership": "Historical audit-page-165 visual/reference residual; accepted page explicitly leaves query-reference work parent-owned. Combine with SQL06, not another page migration.",
+      "nativeAcceptance": "NOTRUN",
+      "sourceSiteCount": 2,
+      "renderedDecorativeInstances": 5
+    },
+    {
+      "id": "SQL04",
+      "rule": "semantic-token-adoption",
+      "status": "CONFIRMED_SOURCE_DEFECT",
+      "severity": "medium",
+      "file": "web/src/features/power-user/components/SchemaCatalogCard.tsx",
+      "lines": [
+        43,
+        46,
+        93,
+        111
+      ],
+      "title": "Schema decoration and column identities bypass neutral roles",
+      "mechanism": "Five fixed utilities: bg-cyan-500/10, ring-cyan-400/20, text-cyan-300, text-emerald-300 on every column without success meaning, bg-white/[0.02] for empty body. Primary-key amber is not counted here; its actual contrast remains native-only.",
+      "reproduction": {
+        "kind": "Source-derived, NOT executed",
+        "steps": [
+          "Inspect all five cards in a future light/custom theme.",
+          "All33 column identities retain fixed emerald; the malformed-empty fixture uses fixed white overlay."
+        ]
+      },
+      "fix": "Adopt existing surface/border/secondary/primary roles while retaining every field, row/col header and labeled primary-key glyph.",
+      "ownership": "Historical audit-page-165 schema visual residual; separate SchemaCatalogCard/matching-test lease, no source writes in this audit.",
+      "nativeAcceptance": "NOTRUN",
+      "sourceUtilityCount": 5
+    },
+    {
+      "id": "SQL05",
+      "rule": "missing-visible-label",
+      "status": "CONFIRMED_SOURCE_DEFECT",
+      "severity": "medium",
+      "file": "web/src/components/ai/AINLSqlPlayground.tsx",
+      "lines": [
+        194,
+        203
+      ],
+      "title": "AI prompt has aria-name but no visible persistent label",
+      "mechanism": "Textarea receives placeholder and aria-label only. Textarea.tsx:58-77 renders visible Label only when label is supplied. The AI heading is not its associated field label.",
+      "reproduction": {
+        "kind": "Source-derived, NOT executed",
+        "steps": [
+          "Enable the optional drafter in a future safe fixture.",
+          "Type text: placeholder disappears and no visible SQL request label remains. Accessible name is present, not alleged missing."
+        ]
+      },
+      "fix": "Pass the existing localized SQL request key as Textarea label, preserving stable useId and prompt/SSE identity.",
+      "ownership": "phase3-ainlsql-playground [x] source-only acceptance; new narrow residual with SQL09, not reopening completed migration.",
+      "nativeAcceptance": "NOTRUN",
+      "testEvidence": [
+        "AINLSqlPlayground.test.tsx:280-313 checks aria-name/placeholder but no rendered visible label"
+      ]
+    },
+    {
+      "id": "SQL06",
+      "rule": "mobile-target-declaration",
+      "status": "CONFIRMED_SOURCE_DEFECT",
+      "severity": "medium",
+      "file": "web/src/features/power-user/components/QueryReferencePanel.tsx",
+      "lines": [
+        93,
+        94,
+        95,
+        96
+      ],
+      "title": "Example Copy lacks below-md44 declaration",
+      "mechanism": "No size/className override. CopyButton:59-60 defaults sm; wrapped Button:36,45 declares min-h-9/auto, a2.25rem minimum instead of required2.75rem below-md. Manual/AI/Review controls already declare min-h-11. Actual native rectangles unmeasured.",
+      "reproduction": {
+        "kind": "Source-derived, NOT executed",
+        "steps": [
+          "At a future375px/normal-root fixture inspect example Copy.",
+          "Measure real rectangle and any documented24px/spacing exception; source presently lacks the required mobile declaration."
+        ]
+      },
+      "fix": "Use existing min-h-11/min-w-11 with explicit md restoration at the caller; preserve exact multiline clipboard payload and recovery.",
+      "ownership": "Narrow remaining audit-page-165 target residual at QueryReferencePanel; combine with SQL03.",
+      "nativeAcceptance": "NOTRUN",
+      "classificationLimit": "Confirmed missing source declaration, NOT a measured native target failure",
+      "sourceSiteCount": 1
+    },
+    {
+      "id": "SQL07",
+      "rule": "motion-preference",
+      "status": "CONFIRMED_SOURCE_DEFECT",
+      "severity": "medium",
+      "file": "web/src/components/ai/AIThinkingIndicator.tsx",
+      "lines": [
+        60,
+        65,
+        66,
+        67,
+        72,
+        75,
+        78,
+        98,
+        99,
+        100
+      ],
+      "title": "AI thinking loops ignore low-bandwidth preference",
+      "mechanism": "Both indicator variants have ten motion-safe pulse/bounce/shimmer classes but never consume useMotionPreference. CSS motion-safe gates only OS; useMotionPreference.ts:44-48 also gates low bandwidth.",
+      "reproduction": {
+        "kind": "Source-derived, NOT executed",
+        "steps": [
+          "Consider low bandwidth=true and OS reduced motion=no-preference.",
+          "During draft streaming all ten CSS loop declarations remain eligible; no low-bandwidth value reaches either renderer."
+        ]
+      },
+      "fix": "Reuse existing preference hook in both renderers and retain static busy text/skeleton; remove decorative loops/bloom, no new engine.",
+      "ownership": "No active exact AIThinkingIndicator source owner found; parent reserves existing source/covering test scope. Shared scaffold acceptance is not indicator preference acceptance.",
+      "nativeAcceptance": "NOTRUN",
+      "sourceLoopClassCount": 10
+    },
+    {
+      "id": "SQL08",
+      "rule": "unused-workspace-scope",
+      "status": "CONFIRMED_SOURCE_DEFECT",
+      "severity": "medium",
+      "file": "web/src/lib/workspaceScope.ts",
+      "lines": [
+        97,
+        112,
+        156,
+        158,
+        165,
+        166
+      ],
+      "title": "/power/sql advertises unused selected-vehicle scope",
+      "mechanism": "SQL route absent from vehicle-disabled paths/prefixes: registry yields vehicle=true/range=false. Catalog/manual page install-wide static; AI body is prompt only; neither selected vehicle nor VIN is consumed.",
+      "reproduction": {
+        "kind": "Source-derived, NOT executed",
+        "steps": [
+          "Inspect registry sets and return logic for /power/sql.",
+          "Changing selected vehicle has no source dependency in counts, manual editor or request body; no mounted picker was exercised."
+        ]
+      },
+      "fix": "Existing scope owner disables misleading vehicle control; do not invent a local filter or change endpoint semantics.",
+      "ownership": "G162/P306 and audit-page-165 already record parent-owned scope residual; no exact active SQL scope repair found.",
+      "nativeAcceptance": "NOTRUN",
+      "sourceSiteCount": 1
+    },
+    {
+      "id": "SQL09",
+      "rule": "typed-result-preview",
+      "status": "CONFIRMED_SOURCE_DEFECT",
+      "severity": "medium",
+      "file": "web/src/components/ai/AINLSqlPlayground.tsx",
+      "lines": [
+        140,
+        141,
+        154,
+        164,
+        165,
+        207,
+        208,
+        222
+      ],
+      "title": "Applicable typed SQL is not previewed; tool-only success says no output",
+      "mechanism": "Children render only Apply, never draft.sql/rationale/referenced_tables. AIFeatureCard passes only stream.text to AiOutputPanel:110-122, whose done-empty branch says No output was generated. Existing test:483-505 supports valid tool_result+done with no delta.",
+      "reproduction": {
+        "kind": "Source-derived, NOT executed",
+        "steps": [
+          "Trace the existing authored validDraft/tool_result+done sequence without running it.",
+          "Apply becomes enabled, no exact typed-SQL preview appears, and narration says No output.",
+          "Explicit Apply replaces manual SQL with unseen draft.sql; SQL never executes."
+        ]
+      },
+      "fix": "Render exact typed proposed SQL and its rationale/table references before Apply; distinguish absent narration from absent typed output; keep explicit apply and baseline.",
+      "ownership": "One narrow AINLSqlPlayground residual with SQL05 after accepted [x] owner; no transport rewrite.",
+      "nativeAcceptance": "NOTRUN",
+      "sourceSiteCount": 1,
+      "testEvidence": [
+        "AINLSqlPlayground.test.tsx:483-505 checks forwarding, not visible typed preview",
+        "SqlPlaygroundPage.tsx:110-117 applies only sql after explicit callback"
+      ]
+    },
+    {
+      "id": "SQL10",
+      "rule": "i18n-fragment-assembly",
+      "status": "CONFIRMED_SOURCE_DEFECT",
+      "severity": "medium",
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "lines": [
+        24,
+        35,
+        57,
+        114,
+        129,
+        130,
+        134
+      ],
+      "title": "Evidence copy assembles fragments and recases tool names",
+      "mechanism": "Summary concatenates translated Grounded in + count + source(s); done caption concatenates successful/unavailable/tokens; toolLabel recases draft_readonly_sql into Readonly sql without localization. Whole-message interpolation/plural order is absent.",
+      "reproduction": {
+        "kind": "Source-derived, NOT executed",
+        "steps": [
+          "Supply a future locale with different count/subject order/plural forms.",
+          "Render1and multiple activities: translator cannot reorder full summary/caption; tool label remains generated English."
+        ]
+      },
+      "fix": "Use existing canonical integration for whole plural/interpolated messages and known-tool labels; preserve raw ids and unknown identities.",
+      "ownership": "phase3-helix-evidence-trail [-] is historical bookkeeping, not an active fix or waiver; separate existing evidence source/test and parent catalog scope.",
+      "nativeAcceptance": "NOTRUN",
+      "sourceMechanismCount": 3
+    }
+  ],
+  "conditionalAndNativeCandidates": [
+    {
+      "id": "C01",
+      "classification": "NATIVE_CANDIDATE",
+      "file": "web/src/components/ui/Table.tsx",
+      "lines": [
+        16,
+        20,
+        22,
+        25
+      ],
+      "title": "Overflow table keyboard reachability",
+      "mechanism": "Wrapper overflow-x-auto lacks explicit tabindex/labeled scroll-region; table children noninteractive.",
+      "condition": "Actual overflow in a supported browser; native scroll-container focus behavior varies.",
+      "requiredEvidence": "G161/P305/Table owner measures320/375/long identifiers; extend only if actual native failure.",
+      "reproduction": "Source-derived hypothetical; NOT executed",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "C02",
+      "classification": "CONDITIONAL_PROTOCOL_CANDIDATE",
+      "file": "web/src/components/ai/AINLSqlPlayground.tsx",
+      "lines": [
+        133,
+        138,
+        154,
+        192
+      ],
+      "title": "paused-confirm has no SQL continuation UI",
+      "mechanism": "onEvent handles only tool_result; no ConfirmDialog or continuation; canonical hook enters paused-confirm and scaffold permits new action.",
+      "condition": "Read-only SQL endpoint would have to emit confirm_request; no endpoint/provider request or backend reachability proved.",
+      "requiredEvidence": "Existing integration owner establishes supported protocol and sanctioned confirmation path; never auto-confirm.",
+      "reproduction": "Source-derived hypothetical; NOT executed",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "C03",
+      "classification": "CONDITIONAL_STORAGE_CANDIDATE",
+      "file": "web/src/features/power-user/pages/SqlPlaygroundPage.tsx",
+      "lines": [
+        77,
+        78,
+        90,
+        91,
+        106,
+        107
+      ],
+      "title": "Persistence failure is silent",
+      "mechanism": "Read catches to empty, writes catch without feedback; current in-memory text remains.",
+      "condition": "Storage access/quota must throw.",
+      "requiredEvidence": "Synthetic denied-read/write fixture and localized persistence recovery without SQL logging.",
+      "reproduction": "Source-derived hypothetical; NOT executed",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "C04",
+      "classification": "CONDITIONAL_IDENTITY_PRIVACY_CANDIDATE",
+      "file": "web/src/features/power-user/pages/SqlPlaygroundPage.tsx",
+      "lines": [
+        70,
+        76,
+        86,
+        88
+      ],
+      "title": "Persisted draft key is origin-wide, not user/server scoped",
+      "mechanism": "ai.sqlPlayground.draft stores exact user SQL, potentially sensitive literals.",
+      "condition": "Same-profile auth/server switch without external cleanup; auth cleanup was not traced in this direct slice.",
+      "requiredEvidence": "Auth/server owner confirms actual identity retention/cleanup policy; no real literals, deletion or identity access here.",
+      "reproduction": "Source-derived hypothetical; NOT executed",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "C05",
+      "classification": "CONDITIONAL_RESULT_SHAPE_CANDIDATE",
+      "file": "web/src/components/ai/AINLSqlPlayground.tsx",
+      "lines": [
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        154
+      ],
+      "title": "Shape parser does not validate SQL semantics",
+      "mechanism": "Empty sql/mismatched prompt pass string checks; absent/nonstring tables normalize/filter.",
+      "condition": "Out-of-contract producer frame. Backend validation/executor absence is not inferred; manual SQL parser is not required here.",
+      "requiredEvidence": "Existing DTO/protocol owner verifies empty/table/malformed semantics without SQL execution.",
+      "reproduction": "Source-derived hypothetical; NOT executed",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "C06",
+      "classification": "CONDITIONAL_TRUST_CANDIDATE",
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "lines": [
+        46,
+        51,
+        52,
+        55,
+        57,
+        75
+      ],
+      "title": "Successful tool count is labeled source count",
+      "mechanism": "Any succeeded activity receives Grounded in N TeslaSync sources; counts activities, not distinct verified identities, even if typed parsing rejects payload.",
+      "condition": "Whether catalog-only draft activity is a legitimate source and whether invalid outer-ok frames can occur requires agreement.",
+      "requiredEvidence": "Evidence owner distinguishes tool success from verified source identity; no live/fresh/complete/result proof inferred.",
+      "reproduction": "Source-derived hypothetical; NOT executed",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "C07",
+      "classification": "CONDITIONAL_METADATA_CANDIDATE",
+      "file": "web/src/features/power-user/components/SchemaCatalogCard.tsx",
+      "lines": [
+        37,
+        63,
+        64,
+        69,
+        113
+      ],
+      "title": "Missing columns metadata is shown as known zero",
+      "mechanism": "columns??[] yields0cols/no-columns message.",
+      "condition": "Malformed object lacking required columns; current deep-frozen entries all have arrays.",
+      "requiredEvidence": "Preserve valid[]zero, distinguish unknown malformed metadata if supported; no live schema fetch.",
+      "reproduction": "Source-derived hypothetical; NOT executed",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "C08",
+      "classification": "NATIVE_ACCEPTANCE_CANDIDATE",
+      "file": "web/src/features/power-user/pages/SqlPlaygroundPage.tsx",
+      "lines": [
+        173,
+        192,
+        277,
+        289
+      ],
+      "title": "Mounted responsive/a11y/theme matrix not accepted",
+      "mechanism": "Source reflow/wrapping/focus/live declarations are not native measurements.",
+      "condition": "Requires explicit safe synthetic browser/native authorization; none granted.",
+      "requiredEvidence": "Mission widths320/375/390/430/768/1024/1280/1440/1920/2560, narrowxl,RTL/longtext/200%,dark/light/custom/forced-colors,keyboard/focus/clipboard/targets. No SQL/API actions.",
+      "reproduction": "Source-derived hypothetical; NOT executed",
+      "native": "NOTRUN"
+    }
+  ],
+  "coverage": [
+    {
+      "dimension": "all sections/header",
+      "status": "SOURCE_PRESENT",
+      "evidence": "SqlPlaygroundPage.tsx:173-299; PageLayout.tsx:9-15",
+      "detail": "PageLayout forwards to PageContainer. Four complete sections: static overview/Review details, optional drafter, workspace(editor+reference), catalog. No global loading/error/data gate."
+    },
+    {
+      "dimension": "catalog overview/review/source scope",
+      "status": "SOURCE_PRESENT",
+      "evidence": "CatalogKpiBand.tsx:26-75; OperationalBrief.tsx:158-169,245-326",
+      "detail": "5tables/33columns are bundled metadata, not rows; static scope/freshness/provenance; review drawer retains all4raw metrics and SI/read-only captions, no query executed."
+    },
+    {
+      "dimension": "manual editor/actions/readiness/validation",
+      "status": "SOURCE_PRESENT",
+      "evidence": "SqlPlaygroundPage.tsx:70-170,201-249",
+      "detail": "Exact SQL controlled/persisted; trimmed Run/Copy gate; raw nonempty Clear permits whitespace; Run only displays unavailable-execution guidance. No SQL parser/executor/result table invented; manual external execution unvalidated."
+    },
+    {
+      "dimension": "explicit application/confirmation",
+      "status": "SOURCE_PRESENT_WITH_CONDITIONAL_LIMIT",
+      "evidence": "AINLSqlPlayground.tsx:156-179,207-227; page:110-117",
+      "detail": "Only explicit Apply changes manual editor, never auto-run. Browser Run is guidance, no DB mutation to confirm. paused-confirm protocol remains C02, not accepted."
+    },
+    {
+      "dimension": "copy/success/denial/stale feedback",
+      "status": "SOURCE_PRESENT",
+      "evidence": "CopyButton.tsx:85-151; page:236-267; QueryReferencePanel.tsx:88-109",
+      "detail": "Exact clipboard bytes retained; both failures show manual selection recovery; custom label announces Copied in polite hidden status; attempt ids/text changes invalidate old settlements."
+    },
+    {
+      "dimension": "reference/example/schema/results",
+      "status": "SOURCE_DEFECTS",
+      "evidence": "QueryReferencePanel.tsx:17-111; sqlCatalog.ts:38-102; SchemaCatalogCard.tsx:35-117",
+      "detail": "All4tips, exact multiline example,5tables/33ordered columns,SQLtypes,SI/PII descriptions,keyglyph/row/colheaders remain. SQL01/02/03/04/06; technical literals not translated."
+    },
+    {
+      "dimension": "AI gate/initial/loading/fatal/retained",
+      "status": "SOURCE_PRESENT",
+      "evidence": "withAiFeature.tsx:45-57; useAiEnabled.ts:32-40; AiOutputPanel.tsx:74-124",
+      "detail": "Fail-closed absent/off feature hides optional panel only. Initial static reference needs no network skeleton. Thinking for streaming-empty, error alert, retained partial text, explicit done-empty; neighbors never erased."
+    },
+    {
+      "dimension": "AI scope/identity/currentness/typed trust",
+      "status": "SOURCE_DEFECT_WITH_CANDIDATES",
+      "evidence": "AINLSqlPlayground.tsx:127-179; useAiStream.ts:263-322,338-350,430-447",
+      "detail": "Prompt edit synchronously invalidates draft/current callback then scopeKey aborts/resets; generation/controller ownership rejects obsolete events. Typed preview SQL09; parser/source trust uncertainties C05/06."
+    },
+    {
+      "dimension": "initial-paused/offline versus confirm pause",
+      "status": "SOURCE_LIMIT",
+      "evidence": "useAiStream.ts:87-90,380-419,437-440; AIFeatureCard.tsx:260-261",
+      "detail": "No independent offline/initial-paused query state is supplied to explicit AI drafting. Baseline static content remains and actual errors surface. paused-confirm is a separate protocol pause; unsupported flow C02."
+    },
+    {
+      "dimension": "unknown/zero/rawSI/preferences",
+      "status": "SOURCE_PRESENT_WITH_CONDITIONAL_LIMIT",
+      "evidence": "CatalogKpiBand.tsx:18-57; tests:104-126,158-173; useOperationalMetrics.tsx:14-24",
+      "detail": "Rendered Brief bypasses unused safeCount coercion: valid0count preserved, invalid values stayinvalid/—. Metadata counts not observed rows; display uses existing locale/unit/currency bridge; rawwire/cacheSQL/SI identity untouched. Malformed missing columns C07; missing token usage not certified measured0."
+    },
+    {
+      "dimension": "i18n/localized declaration",
+      "status": "SOURCE_DEFECTS",
+      "evidence": "sqlCatalog.ts:41-99; QueryReferencePanel.tsx:26-55; HelixEvidenceTrail.tsx:24-57,129-134",
+      "detail": "59static key occurrences checked against canonical en;4missing. 38descriptions untranslated. Trail fragment assembly SQL10. Cold namespace/alllocale/RTL runtime NOTRUN."
+    },
+    {
+      "dimension": "mobile/a11y declarations",
+      "status": "SOURCE_DEFECTS_NATIVE_NOTRUN",
+      "evidence": "page:185-249,277-294; card:70-106; AIFeatureCard.tsx:284-310; OperationalBrief.tsx:158-169",
+      "detail": "Stack/wrap/min-w-0/grid/containedscroll retain allfields. Manual/AI/Review below-md44. AI visible label SQL05,example target SQL06; table nativekeyboard C01. Theme/contrast/focus/a11y C08."
+    },
+    {
+      "dimension": "reduced motion/low bandwidth",
+      "status": "SOURCE_DEFECT",
+      "evidence": "FadeIn.tsx:24-37; useMotionPreference.ts:44-48; AIThinkingIndicator.tsx:60-100",
+      "detail": "Shared FadeIn/Button honor both preferences; AI thinking loops do not honor low-bandwidth SQL07. Actual OS/bandwidth UI not exercised."
+    },
+    {
+      "dimension": "workspace source/identity scope",
+      "status": "SOURCE_DEFECT",
+      "evidence": "workspaceScope.ts:97-138,156-167; page:156-167; AINLSqlPlayground.tsx:130-149",
+      "detail": "Install-wide catalog/manual/AI body have no selectedvehicle/range data dependency. Range off; vehicle=true misleading SQL08. Persisted draft auth/server identity depends on untraced cleanup C04."
+    }
+  ],
+  "needs": [
+    {
+      "scope": "Existing catalog/card localization and workspace-scope integration owners",
+      "issues": [
+        "SQL01",
+        "SQL08"
+      ],
+      "dedup": "Already G162/P306/parent-owned historical residual; separate exact source files, no remigration"
+    },
+    {
+      "scope": "QueryReferencePanel/matching test plus parent4key integration",
+      "issues": [
+        "SQL02",
+        "SQL03",
+        "SQL06"
+      ],
+      "dedup": "One reference residual, no duplicate page owners; catalog parent-only"
+    },
+    {
+      "scope": "SchemaCatalogCard/matching test",
+      "issues": [
+        "SQL04"
+      ],
+      "dedup": "One existing visual catalog residual"
+    },
+    {
+      "scope": "AINLSqlPlayground/matching test",
+      "issues": [
+        "SQL05",
+        "SQL09"
+      ],
+      "dedup": "One narrow field/preview residual after completed source acceptance"
+    },
+    {
+      "scope": "Existing AIThinkingIndicator/covering tests reserved separately",
+      "issues": [
+        "SQL07"
+      ],
+      "dedup": "Shared motion owner, no page workaround"
+    },
+    {
+      "scope": "Existing HelixEvidenceTrail/covering tests and parentmessages",
+      "issues": [
+        "SQL10"
+      ],
+      "dedup": "Excluded historical queue row not activefix/waiver"
+    },
+    {
+      "scope": "Authorized synthetic native/protocol/privacy acceptance",
+      "candidates": [
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C05",
+        "C06",
+        "C07",
+        "C08"
+      ],
+      "dedup": "Candidates are not confirmed repair tasks; verify preconditions"
+    }
+  ],
+  "NOTRUN": [
+    "SQL execution/schema/DB actions",
+    "Real rows/data/provider/network/API/browser requests",
+    "Fresh tests/runner discovery/passing reruns",
+    "Lint/build/global npx tsc --noEmit/scoped compiler/helpers/audit runners",
+    "Servers/installs/subagents/Git writes",
+    "Native/mobile/visual/keyboard/screenreader/contrast/forced-colors/RTL/200%text",
+    "Backend parity/auth/capability/actual continuation/response provenance"
+  ],
+  "finalValidation": {
+    "jsonParse": "PASS: independent final artifact parse, counts/IDs/rule totals/line ranges validated",
+    "sourceTestPins": "PASS:38exact original before/after pins rechecked; no drift",
+    "artifactWriteBoundary": "Only assigned JSON and log written. Production/test/catalog/queue/Git untouched by this worker.",
+    "nativeAcceptance": "NOTRUN; no compiler/test/build/SQL/browser pass inferred",
+    "validatedAt": "2026-10-14T02:36:11.801033+00:00"
+  },
+  "release": {
+    "artifactOwnership": "RELEASE: exact assigned JSON and log after final check",
+    "commandOwnership": "RELEASE: bounded commands completed; no service/background/helper launched",
+    "sourceOwnership": "READONLY throughout; no source write claim taken",
+    "noPostReleaseWrites": true
+  },
+  "testEvidence": {
+    "coreFileCount": 7,
+    "coreItDeclarationCount": 97,
+    "coreFiles": [
+      {
+        "file": "web/src/features/power-user/components/CatalogKpiBand.test.tsx",
+        "count": 12,
+        "declarations": [
+          {
+            "line": 39,
+            "declaration": "it('clamps nullish, non-finite, and negative inputs to 0', () => {"
+          },
+          {
+            "line": 49,
+            "declaration": "it('floors fractional counts and passes valid non-negative integers through unchanged', () => {"
+          },
+          {
+            "line": 60,
+            "declaration": "it('renders a labelled \"Catalog overview\" region as a landmark', () => {"
+          },
+          {
+            "line": 68,
+            "declaration": "it('always renders all four KPI cards with their labels and subtitles', () => {"
+          },
+          {
+            "line": 87,
+            "declaration": "it('uses the compact shared Brief grid without losing read-only or SI provenance', () => {"
+          },
+          {
+            "line": 97,
+            "declaration": "it('renders the numeric counts passed via props', () => {"
+          },
+          {
+            "line": 104,
+            "declaration": "it('renders the invariant read-only + SI-units cards regardless of the counts', () => {"
+          },
+          {
+            "line": 113,
+            "declaration": "it('marks degenerate counts (NaN / negative) invalid instead of inventing zero', () => {"
+          },
+          {
+            "line": 130,
+            "declaration": "it('marks the decorative KPI icons aria-hidden so screen readers skip them', () => {"
+          },
+          {
+            "line": 139,
+            "declaration": "it('retains source captions, raw count states and static coverage in the real Review details drawer', () => {"
+          },
+          {
+            "line": 158,
+            "declaration": "it('keeps fractional counts invalid while a measured zero remains a valid source value', () => {"
+          },
+          {
+            "line": 165,
+            "declaration": "it('formats raw integer totals using saved locale without adding fractional or storage units', () => {"
+          }
+        ],
+        "read": "full source",
+        "executed": false
+      },
+      {
+        "file": "web/src/features/power-user/components/QueryReferencePanel.test.tsx",
+        "count": 5,
+        "declarations": [
+          {
+            "line": 46,
+            "declaration": "it('renders the titled read-only surface with every guidance tip', () => {"
+          },
+          {
+            "line": 72,
+            "declaration": "it('presents the copy-ready SQL example inside a captioned figure', () => {"
+          },
+          {
+            "line": 92,
+            "declaration": "it('offers only the example copy action, never query execution, with decorative glyphs hidden from AT', () => {"
+          },
+          {
+            "line": 112,
+            "declaration": "it('keeps the complete SQL example selectable after denial and retries the exact payload', async () => {"
+          },
+          {
+            "line": 126,
+            "declaration": "it('routes visible copy through i18n so locale overrides win over the English fallback', () => {"
+          }
+        ],
+        "read": "full source",
+        "executed": false
+      },
+      {
+        "file": "web/src/features/power-user/components/SchemaCatalogCard.test.tsx",
+        "count": 19,
+        "declarations": [
+          {
+            "line": 101,
+            "declaration": "it('renders the table name as a level-3 heading with its description', () => {"
+          },
+          {
+            "line": 111,
+            "declaration": "it('renders a column-count chip reflecting the number of columns', () => {"
+          },
+          {
+            "line": 118,
+            "declaration": "it('keeps long table and column identities visible without hover-only disclosure', () => {"
+          },
+          {
+            "line": 138,
+            "declaration": "it('renders every column name, type, and description', () => {"
+          },
+          {
+            "line": 154,
+            "declaration": "it('renders every column in a shared semantic table with accessible headers', () => {"
+          },
+          {
+            "line": 166,
+            "declaration": "it('flags the primary-key column with a labelled key icon', () => {"
+          },
+          {
+            "line": 174,
+            "declaration": "it('renders no key icon when no column is a primary key', () => {"
+          },
+          {
+            "line": 184,
+            "declaration": "it('detects the primary key case-insensitively and ignoring surrounding whitespace', () => {"
+          },
+          {
+            "line": 204,
+            "declaration": "it('shows an explicit empty state and \"0 cols\" when the table has no columns', () => {"
+          },
+          {
+            "line": 217,
+            "declaration": "it('treats a missing columns array as empty without throwing (null-safety)', () => {"
+          },
+          {
+            "line": 231,
+            "declaration": "it('falls back to an em dash for a blank table name', () => {"
+          },
+          {
+            "line": 238,
+            "declaration": "it('falls back to a \"No description\" placeholder for a blank table description', () => {"
+          },
+          {
+            "line": 244,
+            "declaration": "it('falls back to an em dash for a blank column type', () => {"
+          },
+          {
+            "line": 254,
+            "declaration": "it('falls back to an em dash for a blank column name', () => {"
+          },
+          {
+            "line": 267,
+            "declaration": "it('renders a description paragraph under a documented column', () => {"
+          },
+          {
+            "line": 280,
+            "declaration": "it('omits the description paragraph when a column has no description', () => {"
+          },
+          {
+            "line": 295,
+            "declaration": "it('drives visible copy from i18n fallbacks and interpolates the count', () => {"
+          },
+          {
+            "line": 310,
+            "declaration": "it('hides the decorative table glyph and exposes only the informative key icon', () => {"
+          },
+          {
+            "line": 325,
+            "declaration": "it('is a memoized component exposing a stable displayName', () => {"
+          }
+        ],
+        "read": "full source",
+        "executed": false
+      },
+      {
+        "file": "web/src/features/power-user/components/sqlCatalog.test.tsx",
+        "count": 16,
+        "declarations": [
+          {
+            "line": 94,
+            "declaration": "it('is a non-empty array of the five curated tables', () => {"
+          },
+          {
+            "line": 106,
+            "declaration": "it('gives every table a unique name, a non-empty description, and >=1 column', () => {"
+          },
+          {
+            "line": 116,
+            "declaration": "it('gives every column a unique name within its table and no empty fields', () => {"
+          },
+          {
+            "line": 131,
+            "declaration": "it('names every column in lower-case snake_case (Postgres folding)', () => {"
+          },
+          {
+            "line": 137,
+            "declaration": "it('restricts column types to the closed Postgres set', () => {"
+          },
+          {
+            "line": 145,
+            "declaration": "it('exposes no legacy unit-suffixed columns (_mi/_min/_mph/_kwh/_kw/_psi)', () => {"
+          },
+          {
+            "line": 152,
+            "declaration": "it('carries the SI-canonical measure columns for drives and charging_sessions', () => {"
+          },
+          {
+            "line": 173,
+            "declaration": "it('matches the exact (name, type) column contract per table', () => {"
+          },
+          {
+            "line": 180,
+            "declaration": "it('marks the primary key on every id-bearing table and none on the view', () => {"
+          },
+          {
+            "line": 196,
+            "declaration": "it('totals 33 documented columns across the five tables', () => {"
+          },
+          {
+            "line": 202,
+            "declaration": "it('produces the alphabetical order SqlPlaygroundPage renders', () => {"
+          },
+          {
+            "line": 217,
+            "declaration": "it('is deeply frozen at the array, table, column-list, and column level', () => {"
+          },
+          {
+            "line": 224,
+            "declaration": "it('throws on any in-place mutation of the shared constant', () => {"
+          },
+          {
+            "line": 237,
+            "declaration": "it('types a hand-built catalog entry that structurally matches the exports', () => {"
+          },
+          {
+            "line": 256,
+            "declaration": "it('renders a table card with its columns and an accessible primary-key marker', () => {"
+          },
+          {
+            "line": 273,
+            "declaration": "it('renders every column name for the rendered table', () => {"
+          }
+        ],
+        "read": "full source",
+        "executed": false
+      },
+      {
+        "file": "web/src/features/power-user/pages/SqlPlaygroundPage.test.tsx",
+        "count": 15,
+        "declarations": [
+          {
+            "line": 174,
+            "declaration": "it('preserves exact untrimmed SQL for manual recovery after denial and retries without execution', async () => {"
+          },
+          {
+            "line": 189,
+            "declaration": "it('renders the deterministic baseline: header, editor, actions, reference panel, and every curated catalog table', async () => {"
+          },
+          {
+            "line": 225,
+            "declaration": "it('surfaces truthful KPI counts derived from the curated catalog', async () => {"
+          },
+          {
+            "line": 254,
+            "declaration": "it('reviews catalog evidence without changing, copying or executing the SQL draft', () => {"
+          },
+          {
+            "line": 272,
+            "declaration": "it('disables Run, Clear, and Copy while the editor is empty and enables them once a query is typed', async () => {"
+          },
+          {
+            "line": 293,
+            "declaration": "it('clicking Run surfaces the read-only execution guidance (no execution endpoint)', async () => {"
+          },
+          {
+            "line": 315,
+            "declaration": "it('Clear empties the editor, removes the persisted draft, and dismisses the run message', async () => {"
+          },
+          {
+            "line": 336,
+            "declaration": "it('editing the query after a Run dismisses the now-stale run guidance', async () => {"
+          },
+          {
+            "line": 354,
+            "declaration": "it('persists the draft to localStorage and restores it when the page remounts', async () => {"
+          },
+          {
+            "line": 373,
+            "declaration": "it('applies an AI-proposed draft into the editor via onApply (propose-only wiring)', async () => {"
+          },
+          {
+            "line": 396,
+            "declaration": "it('Copy query writes the current editor contents to the clipboard', async () => {"
+          },
+          {
+            "line": 412,
+            "declaration": "it('clears a restored whitespace-only draft while Run and Copy remain disabled', () => {"
+          },
+          {
+            "line": 434,
+            "declaration": "it('keeps Clear available after editing to whitespace without enabling execution or clipboard', () => {"
+          },
+          {
+            "line": 456,
+            "declaration": "it('associates a visible editor label and preserves responsive manual action targets', () => {"
+          },
+          {
+            "line": 470,
+            "declaration": "it('announces successful exact query copying with the custom action label', async () => {"
+          }
+        ],
+        "read": "full source",
+        "executed": false
+      },
+      {
+        "file": "web/src/components/ai/AINLSqlPlayground.test.tsx",
+        "count": 25,
+        "declarations": [
+          {
+            "line": 248,
+            "declaration": "it('renders nothing when ai_mode=off even with the per-feature toggle on', () => {"
+          },
+          {
+            "line": 266,
+            "declaration": "it('renders nothing when ai_mode!=off but the per-feature toggle is false', () => {"
+          },
+          {
+            "line": 280,
+            "declaration": "it('renders the gated section (positive control) with title, badge, prompt box and a disabled Draft button when both mode and toggle are on', () => {"
+          },
+          {
+            "line": 318,
+            "declaration": "it('keeps the Draft button disabled for an empty prompt', () => {"
+          },
+          {
+            "line": 327,
+            "declaration": "it('keeps the Draft button disabled for a whitespace-only prompt (trim path)', async () => {"
+          },
+          {
+            "line": 338,
+            "declaration": "it('enables the Draft button once a non-empty prompt is typed', async () => {"
+          },
+          {
+            "line": 350,
+            "declaration": "it('does not open a stream when the (disabled) Draft button is clicked without a prompt', async () => {"
+          },
+          {
+            "line": 366,
+            "declaration": "it('POSTs exactly once to the registered route with the { prompt } body and correct headers and renders the first delta', async () => {"
+          },
+          {
+            "line": 398,
+            "declaration": "it('sends the trimmed prompt in the request body', async () => {"
+          },
+          {
+            "line": 417,
+            "declaration": "it('shows the thinking indicator and disables the button while streaming', async () => {"
+          },
+          {
+            "line": 430,
+            "declaration": "it('guards against double-submit: a second click while streaming issues no new request', async () => {"
+          },
+          {
+            "line": 448,
+            "declaration": "it('surfaces an HTTP error in the output panel when the stream route returns non-2xx and captures no draft', async () => {"
+          },
+          {
+            "line": 466,
+            "declaration": "it('surfaces a terminal SSE error frame in the output panel', async () => {"
+          },
+          {
+            "line": 483,
+            "declaration": "it('captures a valid draft_readonly_sql tool_result, shows the Apply button, and forwards the exact typed payload via onApply', async () => {"
+          },
+          {
+            "line": 508,
+            "declaration": "it('filters non-string entries out of referenced_tables before handing the draft to onApply', async () => {"
+          },
+          {
+            "line": 533,
+            "declaration": "it('defaults referenced_tables to an empty array when the field is absent or not an array', async () => {"
+          },
+          {
+            "line": 557,
+            "declaration": "it('ignores a tool_result frame from a different tool name', async () => {"
+          },
+          {
+            "line": 573,
+            "declaration": "it('rejects a failed (ok=false) draft_readonly_sql tool_result even if the payload looks valid', async () => {"
+          },
+          {
+            "line": 590,
+            "declaration": "it('rejects an envelope whose status is not \"ok\"', async () => {"
+          },
+          {
+            "line": 606,
+            "declaration": "it('rejects a malformed draft (a non-string sql field)', async () => {"
+          },
+          {
+            "line": 627,
+            "declaration": "it('rejects an envelope with a missing draft object', async () => {"
+          },
+          {
+            "line": 651,
+            "declaration": "it('aborts an edited request and ignores its late successful draft without touching the editor', async () => {"
+          },
+          {
+            "line": 692,
+            "declaration": "it('clears completed narration and evidence along with the proposal after editing the prompt', async () => {"
+          },
+          {
+            "line": 716,
+            "declaration": "it('clears the captured draft when the prompt is edited so a mismatched proposal can never be applied', async () => {"
+          },
+          {
+            "line": 737,
+            "declaration": "it('exposes a stable displayName for the gated component', () => {"
+          }
+        ],
+        "read": "full source",
+        "executed": false
+      },
+      {
+        "file": "web/src/components/ai/withAiFeature.test.tsx",
+        "count": 5,
+        "declarations": [
+          {
+            "line": 64,
+            "declaration": "it('renders null when settings have ai_mode=off', () => {"
+          },
+          {
+            "line": 74,
+            "declaration": "it('renders null when the per-feature flag is false even with mode=cloud', () => {"
+          },
+          {
+            "line": 83,
+            "declaration": "it('renders the inner component inside the marker wrapper when fully enabled', () => {"
+          },
+          {
+            "line": 96,
+            "declaration": "it('throws when wrapping an unknown feature ID at construction time', () => {"
+          },
+          {
+            "line": 103,
+            "declaration": "it('exposes a useful displayName for React DevTools', () => {"
+          }
+        ],
+        "read": "full source",
+        "executed": false
+      }
+    ],
+    "sharedDeclarationIndexCounts": {
+      "AIFeatureCard.test.tsx": 28,
+      "AiOutputPanel.test.tsx": 22,
+      "CopyButton.test.tsx": 32,
+      "useAiStream.test.ts": 38
+    },
+    "limits": "Shared test bodies selectively read/declaration-indexed; it.each expansions are not runner counts. No test discovery/execution.",
+    "discovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "runner": "NOTRUN",
+    "freshTestsAuthored": 0
+  },
+  "preservation": {
+    "pageLines": 300,
+    "pagePlusThreeVisualComponentsLines": 608,
+    "predecessorRecordedComposedLines": 602,
+    "originalLimit": "602 is the inherited accepted queue/audit figure, not a regenerated immutable-original baseline. Current608 matches the accepted predecessor receipt. No preservation helper.",
+    "pageGlassPanelOpenings": 1,
+    "pageSectionOpenings": 2,
+    "composedVisualGlassPanelOpenings": 3,
+    "catalogTables": 5,
+    "documentedColumns": 33,
+    "sourceOrTestWrites": 0,
+    "pins": [
+      {
+        "file": "web/src/components/ai/AIFeatureCard.test.tsx",
+        "kind": "test",
+        "beforeSHA256": "F8A8E8D368D09F034A4BEF5315FF881927A201F8C5AB45C702AF512DE48A5E43",
+        "afterSHA256": "F8A8E8D368D09F034A4BEF5315FF881927A201F8C5AB45C702AF512DE48A5E43",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AIFeatureCard.tsx",
+        "kind": "source",
+        "beforeSHA256": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+        "afterSHA256": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AINLSqlPlayground.test.tsx",
+        "kind": "test",
+        "beforeSHA256": "A820EC187C0153B72AA21A5815DF90D7D4C06A70AD10605E3F65F98D1A48684F",
+        "afterSHA256": "A820EC187C0153B72AA21A5815DF90D7D4C06A70AD10605E3F65F98D1A48684F",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AINLSqlPlayground.tsx",
+        "kind": "source",
+        "beforeSHA256": "AB52ADF86E91D3C92E7FA73FB54A8307BD35A432E9CE4A07A16B3F318E633E2D",
+        "afterSHA256": "AB52ADF86E91D3C92E7FA73FB54A8307BD35A432E9CE4A07A16B3F318E633E2D",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AIThinkingIndicator.tsx",
+        "kind": "source",
+        "beforeSHA256": "9F387482D09223469A93BB71B25D6B5800D8FEC6B51B0EF5481AE4B27FC8037D",
+        "afterSHA256": "9F387482D09223469A93BB71B25D6B5800D8FEC6B51B0EF5481AE4B27FC8037D",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AiOutputPanel.test.tsx",
+        "kind": "test",
+        "beforeSHA256": "30D56F98064C935FCEF47E56590174BE6FA304681BA8AFE672A2F7C74CC87A3B",
+        "afterSHA256": "30D56F98064C935FCEF47E56590174BE6FA304681BA8AFE672A2F7C74CC87A3B",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AiOutputPanel.tsx",
+        "kind": "source",
+        "beforeSHA256": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+        "afterSHA256": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+        "kind": "source",
+        "beforeSHA256": "953592D2D52D941B7FCDE3F30FDED6DECB432C7CD7E0BD5A16A6D495DEC61076",
+        "afterSHA256": "953592D2D52D941B7FCDE3F30FDED6DECB432C7CD7E0BD5A16A6D495DEC61076",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/withAiFeature.test.tsx",
+        "kind": "test",
+        "beforeSHA256": "653C81D8E483623D2EDCCCD61732961F762FD61CD387FDED95166CDFE770082E",
+        "afterSHA256": "653C81D8E483623D2EDCCCD61732961F762FD61CD387FDED95166CDFE770082E",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/withAiFeature.tsx",
+        "kind": "source",
+        "beforeSHA256": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+        "afterSHA256": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "kind": "source",
+        "beforeSHA256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+        "afterSHA256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/feedback/InlineCallout.tsx",
+        "kind": "source",
+        "beforeSHA256": "3E58E0B84D4B4F18D8E214F759657AF40E6E18D8314477A232CCC92AF3CF6331",
+        "afterSHA256": "3E58E0B84D4B4F18D8E214F759657AF40E6E18D8314477A232CCC92AF3CF6331",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "kind": "source",
+        "beforeSHA256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "afterSHA256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "kind": "source",
+        "beforeSHA256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "afterSHA256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "kind": "source",
+        "beforeSHA256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "afterSHA256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "kind": "source",
+        "beforeSHA256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+        "afterSHA256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/CodeBlock.tsx",
+        "kind": "source",
+        "beforeSHA256": "D512639539E748184D6AF09D1CAC226F1F203FACF5D0069391C9178538815287",
+        "afterSHA256": "D512639539E748184D6AF09D1CAC226F1F203FACF5D0069391C9178538815287",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/CopyButton.tsx",
+        "kind": "source",
+        "beforeSHA256": "5C34313CBC9A8147E6F3B0000265D5340A83D7B75A4A2C9181921697DE9A3869",
+        "afterSHA256": "5C34313CBC9A8147E6F3B0000265D5340A83D7B75A4A2C9181921697DE9A3869",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Table.tsx",
+        "kind": "source",
+        "beforeSHA256": "B61E99F1AEDD878BC422456906B3C04071C3416C53E2B9A517D67A0204310026",
+        "afterSHA256": "B61E99F1AEDD878BC422456906B3C04071C3416C53E2B9A517D67A0204310026",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Textarea.tsx",
+        "kind": "source",
+        "beforeSHA256": "6DE5EFA5B3F0077C97712BE4FC7C3B436DF47A4C803012CAE8CB0756BAD2DB75",
+        "afterSHA256": "6DE5EFA5B3F0077C97712BE4FC7C3B436DF47A4C803012CAE8CB0756BAD2DB75",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/__tests__/CopyButton.test.tsx",
+        "kind": "test",
+        "beforeSHA256": "66E52A67BF401ADFBEA1FF4B13F5EFCF515943E4D16572F9ADADBCBAC523791F",
+        "afterSHA256": "66E52A67BF401ADFBEA1FF4B13F5EFCF515943E4D16572F9ADADBCBAC523791F",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/power-user/components/CatalogKpiBand.test.tsx",
+        "kind": "test",
+        "beforeSHA256": "70DD7B9F2360C60480E31291C33170A6436148C75C6ED44967BC99999242CC35",
+        "afterSHA256": "70DD7B9F2360C60480E31291C33170A6436148C75C6ED44967BC99999242CC35",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/power-user/components/CatalogKpiBand.tsx",
+        "kind": "source",
+        "beforeSHA256": "F1669D2A2FEF4CD65813266DCC7F5A96B65D6886CF22555E4D8059E83DE7734D",
+        "afterSHA256": "F1669D2A2FEF4CD65813266DCC7F5A96B65D6886CF22555E4D8059E83DE7734D",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/power-user/components/QueryReferencePanel.test.tsx",
+        "kind": "test",
+        "beforeSHA256": "2A4CAD3DB94FB57B62B1992C371156D4EA453E6EBBA0B99201C495E40FA7B81F",
+        "afterSHA256": "2A4CAD3DB94FB57B62B1992C371156D4EA453E6EBBA0B99201C495E40FA7B81F",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/power-user/components/QueryReferencePanel.tsx",
+        "kind": "source",
+        "beforeSHA256": "BB5E6399BA8DFCEB724B27B86AE141466CC0F13866824BE478E81CC68E00B67A",
+        "afterSHA256": "BB5E6399BA8DFCEB724B27B86AE141466CC0F13866824BE478E81CC68E00B67A",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/power-user/components/SchemaCatalogCard.test.tsx",
+        "kind": "test",
+        "beforeSHA256": "72ABA3110923A97869B5CC3619CEC7DEBFA249DE4897C307D915104651155FAA",
+        "afterSHA256": "72ABA3110923A97869B5CC3619CEC7DEBFA249DE4897C307D915104651155FAA",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/power-user/components/SchemaCatalogCard.tsx",
+        "kind": "source",
+        "beforeSHA256": "EF26AE942D30666CBCAC8F94EDF7140B1953401109E70CABC3AAD3712D954090",
+        "afterSHA256": "EF26AE942D30666CBCAC8F94EDF7140B1953401109E70CABC3AAD3712D954090",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/power-user/components/sqlCatalog.test.tsx",
+        "kind": "test",
+        "beforeSHA256": "15BDEA2D504C45FE7F85C8EA2BD7042317DDB4D5EF30569601DF4E73F0D016EB",
+        "afterSHA256": "15BDEA2D504C45FE7F85C8EA2BD7042317DDB4D5EF30569601DF4E73F0D016EB",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/power-user/components/sqlCatalog.ts",
+        "kind": "source",
+        "beforeSHA256": "E463FEADEDF2485EC56EFE1EE737E7B1C44D2BD629CCC197C24B105C6BE8B9C0",
+        "afterSHA256": "E463FEADEDF2485EC56EFE1EE737E7B1C44D2BD629CCC197C24B105C6BE8B9C0",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/power-user/pages/SqlPlaygroundPage.test.tsx",
+        "kind": "test",
+        "beforeSHA256": "488124DDE6E7AF95D82F7DBB7913D8352727666F0A458B7C1051E186C5F57DE1",
+        "afterSHA256": "488124DDE6E7AF95D82F7DBB7913D8352727666F0A458B7C1051E186C5F57DE1",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/power-user/pages/SqlPlaygroundPage.tsx",
+        "kind": "source",
+        "beforeSHA256": "BF6C19AAB0964C423D8142E77761D9BDF10528B979D19D9D101073BCAFE73EA6",
+        "afterSHA256": "BF6C19AAB0964C423D8142E77761D9BDF10528B979D19D9D101073BCAFE73EA6",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/__tests__/useAiStream.test.ts",
+        "kind": "test",
+        "beforeSHA256": "4E90501EB6AFC2FCCD498A3C38524F6C30038B10AA472508F1ECD645DBA7A95A",
+        "afterSHA256": "4E90501EB6AFC2FCCD498A3C38524F6C30038B10AA472508F1ECD645DBA7A95A",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useAiEnabled.ts",
+        "kind": "source",
+        "beforeSHA256": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+        "afterSHA256": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useAiStream.ts",
+        "kind": "source",
+        "beforeSHA256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+        "afterSHA256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useMotionPreference.ts",
+        "kind": "source",
+        "beforeSHA256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+        "afterSHA256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useOperationalMetrics.tsx",
+        "kind": "source",
+        "beforeSHA256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "afterSHA256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "kind": "catalog",
+        "beforeSHA256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+        "afterSHA256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "kind": "source",
+        "beforeSHA256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "afterSHA256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "unchanged": true
+      }
+    ],
+    "unchangedCount": 38,
+    "driftCount": 0,
+    "beforeHashTiming": "Core pins before bounded detailed scan; primary page had a brief initial read before first hash. Shared dependencies pinned before detailed reads. No source writes at any point."
+  },
+  "patternChecks": {
+    "productionScanFiles": [
+      "web/src/features/power-user/pages/SqlPlaygroundPage.tsx",
+      "web/src/features/power-user/components/CatalogKpiBand.tsx",
+      "web/src/features/power-user/components/QueryReferencePanel.tsx",
+      "web/src/features/power-user/components/SchemaCatalogCard.tsx",
+      "web/src/features/power-user/components/sqlCatalog.ts",
+      "web/src/components/ai/AINLSqlPlayground.tsx",
+      "web/src/components/ai/withAiFeature.tsx",
+      "web/src/components/ai/AIFeatureCard.tsx",
+      "web/src/components/ai/AiOutputPanel.tsx"
+    ],
+    "rawLineMatches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 5,
+      "fetch-useeffect": 1,
+      "fixed-decorative-color": 6
+    },
+    "exceptions": [
+      "Five && matches are transient run/copy/key/draft affordances, not hidden independent data sections.",
+      "Page useEffect persists local text, not remote data loading.",
+      "Intentional fail-closed optional AI gate preserves manual/reference/catalog baseline.",
+      "PageLayout wraps PageContainer directly: no missing-container violation.",
+      "Shared primitive raw HTML/concrete imports expected; test-double raw button is not shipped UI.",
+      "Existing canonical useAiStream POST-SSE fetch/prefix is sanctioned, not page ad-hoc fetch/double-prefix.",
+      "Existing shared motion/preference imports are established contract boundaries, not feature-library import violations.",
+      "Literal SQL/code/identifiers/types/em dash are not unlocalized English prose; computed styles not violations."
+    ],
+    "limits": "Narrow raw regex counts; NOT a lint/AST/full-repo audit. Backend rules out of assigned UI scope; NOTRUN."
+  },
+  "localizationCheck": {
+    "canonicalFile": "web/src/i18n/en.json",
+    "staticKeyOccurrences": 59,
+    "missingOccurrences": 4,
+    "missingKeys": [
+      "powerSql.info.tip1",
+      "powerSql.info.tip2",
+      "powerSql.info.tip3",
+      "powerSql.info.tip4"
+    ],
+    "coldNamespaceAllLocalesRTL": "NOTRUN"
+  },
+  "scope": {
+    "coreFullReadFiles": [
+      "web/src/features/power-user/components/CatalogKpiBand.test.tsx",
+      "web/src/features/power-user/components/CatalogKpiBand.tsx",
+      "web/src/features/power-user/components/QueryReferencePanel.test.tsx",
+      "web/src/features/power-user/components/QueryReferencePanel.tsx",
+      "web/src/features/power-user/components/SchemaCatalogCard.test.tsx",
+      "web/src/features/power-user/components/SchemaCatalogCard.tsx",
+      "web/src/features/power-user/components/sqlCatalog.test.tsx",
+      "web/src/features/power-user/components/sqlCatalog.ts",
+      "web/src/features/power-user/pages/SqlPlaygroundPage.test.tsx",
+      "web/src/features/power-user/pages/SqlPlaygroundPage.tsx",
+      "web/src/components/ai/AINLSqlPlayground.tsx",
+      "web/src/components/ai/AINLSqlPlayground.test.tsx",
+      "web/src/components/ai/withAiFeature.tsx",
+      "web/src/components/ai/withAiFeature.test.tsx"
+    ],
+    "sharedBoundaryRead": "AI scaffold/output/evidence/thinking, canonical stream/gate, clipboard/button/textarea/code/table/callout, PageLayout/motion, preference bridge and OperationalBrief sources inspected. PageContainer hashed and forwarding boundary traced, not a complete shared-page audit. Shared tests selective.",
+    "backend": "OUT OF SCOPE; no schema/database/backend execution or parity acceptance"
+  },
+  "retiredHistoricalFindings": [
+    {
+      "finding": "Whitespace-only Clear disabled",
+      "current": "page:169-170,231; tests:412-454",
+      "owner": "phase5-page-power-user-sql-playground [x]"
+    },
+    {
+      "finding": "Custom-label Copy success lacks textual feedback",
+      "current": "CopyButton:131-151; page test:470-482; shared test:113-133",
+      "owner": "phase3-copy-button [x]"
+    },
+    {
+      "finding": "Edited AI prompt captures old request",
+      "current": "AINLSqlPlayground:127,134,149,170-178; tests:651-735; hook generation guards",
+      "owner": "phase3-ainlsql-playground and phase3-ai-stream-generation-isolation [x]"
+    },
+    {
+      "finding": "AI failure erases partial narration",
+      "current": "AiOutputPanel:90-109; tests:109-163",
+      "owner": "phase3-retained-ai-output-error [x]"
+    },
+    {
+      "finding": "Page icons/manual/AI actions missing neutral/mobile adoption",
+      "current": "Page:198,279 secondary roles; manual/AI below-md44 declarations; example residual only",
+      "owner": "accepted Phase5 page fixes; do not reopen"
+    }
+  ],
+  "commandIntegrity": {
+    "log": "web/logs/phase6-qa-power-user-sql-playground.log",
+    "failures": [
+      {
+        "shellId": "2539",
+        "exitCode": 1,
+        "failure": "PowerShell quoting ParserError before execution; corrected bounded source key lookup2542exit0, not fresh runner."
+      },
+      {
+        "shellId": "2642",
+        "exitCode": 1,
+        "failure": "Host launch OS206 oversized command; did not execute/write. Split serialization2657exit0."
+      },
+      {
+        "shellId": "2495",
+        "exitCode": 0,
+        "failure": "Two nonterminating Get-Item missing-path errors before assigned artifacts existed."
+      }
+    ],
+    "discoveryCorrections": [
+      "Guessed hooks/useAiStream.test.ts missing; actual hooks/__tests__/useAiStream.test.ts found and pinned.",
+      "Concurrent parent queue row drift corrected by actual item-column extraction.",
+      "Large tool outputs retained raw and pasted in assigned log."
+    ],
+    "readOnlyGitCommands": 2,
+    "gitWrites": 0,
+    "networkOrSQLCommands": 0,
+    "typescriptPassClaim": false,
+    "nativePassClaim": false
+  }
+}

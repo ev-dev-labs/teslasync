@@ -2,12 +2,12 @@
  * NextChargeDecisionStrip — vehicle-page 12-hour energy verdict.
  *
  * The strip is presentational orchestration around useNextChargeDecision:
- * loading skeleton, query error, waiting-for-SOC empty, no-data empty, and
+ * loading skeleton, paused initial read, query error, waiting-for-SOC empty, no-data empty, and
  * the wait verdict with cost cards. The hook is mocked; i18n echoes fallbacks.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, cleanup, fireEvent, within, act } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('react-i18next', () => ({
@@ -35,6 +35,11 @@ vi.mock('@/api/hooks/useCharging', async (importActual) => {
   return { ...actual, useNextChargeDecision: vi.fn() };
 });
 
+vi.mock('@/components/layout', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/layout')>();
+  return { ...actual, ChartCard: vi.fn(() => null) };
+});
+
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,
@@ -49,8 +54,13 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 import { NextChargeDecisionStrip } from './NextChargeDecisionStrip';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { useNextChargeDecision } from '@/api/hooks/useCharging';
 import type { NextChargeDecision } from '@/types/charging';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { ChartCard } from '@/components/layout';
+import { VehicleDriveChart } from './modernization/VehicleDriveChart';
+import type { Drive } from '@/api/types';
 
 const mockDecision = vi.mocked(useNextChargeDecision);
 
@@ -86,17 +96,72 @@ const WAIT: NextChargeDecision = {
 
 function renderStrip(soc?: number) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <NextChargeDecisionStrip vehicleId={1} currentSoc={soc} />
+        <LocationProbe />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(tree());
+  return { ...view, rerenderStrip: () => view.rerender(tree()) };
 }
 
+function LocationProbe() {
+  return <output data-testid="next-charge-location">{useLocation().pathname}</output>;
+}
 beforeEach(() => {
   mockDecision.mockReturnValue(qr());
+});
+
+describe('VehicleDriveChart numeric boundaries', () => {
+  it('keeps signed fractional chart operands and series keys while table formatting follows preferences', () => {
+    const preferences = getFormatterPreferences();
+    const source: Drive = {
+      id: 1, vehicle_id: 1, start_ts: '2026-01-16T12:00:00Z', end_ts: null,
+      distance_m: -1234567.8, duration_s: 123.456,
+      start_address: null, end_address: null, start_lat: null, start_lon: null,
+      end_lat: null, end_lon: null, start_soc_pct: 50, end_soc_pct: null,
+      energy_used_wh: null, regen_energy_wh: null, avg_speed_mps: null,
+      max_speed_mps: null, avg_power_w: null, outside_temp_avg_c: null,
+      inside_temp_avg_c: null, score: null, ended_status: null,
+      created_at: '2026-01-16T12:00:00Z', updated_at: '2026-01-16T12:00:00Z',
+    };
+    const drives: Drive[] = [
+      source,
+      { ...source, id: 2, start_ts: '2026-01-15T12:00:00Z', distance_m: 12.34, duration_s: 0.75 },
+    ];
+    const original = JSON.stringify(drives);
+    try {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(
+        <QueryClientProvider client={client}>
+          <VehicleDriveChart drives={drives} />
+        </QueryClientProvider>,
+      );
+      const initial = vi.mocked(ChartCard).mock.calls.at(-1)?.[0];
+      expect(initial?.chartKey).toBe('battery-drive-trend');
+      expect(initial?.data).toEqual([
+        { date: expect.any(String), distance: 0.01234, duration: 0.0125 },
+        { date: expect.any(String), distance: -1234.5678, duration: 2.0576 },
+      ]);
+      act(() => {
+        setGlobalLocale('de-DE');
+        setGlobalPrecision(3);
+      });
+      const localized = vi.mocked(ChartCard).mock.calls.at(-1)?.[0];
+      expect(localized?.data).toBe(initial?.data);
+      expect(localized?.dataColumns?.map((column) => column.key)).toEqual(['date', 'distance', 'duration']);
+      expect(localized?.dataColumns?.[1].format?.(-1234.5678)).toBe('-1.234,568');
+      expect(localized?.dataColumns?.[2].format?.(2.0576)).toBe('2,058');
+      expect(JSON.stringify(drives)).toBe(original);
+    } finally {
+      cleanup();
+      setGlobalLocale(preferences.locale);
+      setGlobalPrecision(preferences.precision);
+    }
+  });
 });
 
 afterEach(() => {
@@ -104,9 +169,94 @@ afterEach(() => {
 });
 
 describe('NextChargeDecisionStrip', () => {
+  it.each([undefined, 0, 50])('waits for a paused initial decision without inferring empty or exposing actions (SOC=%s)', (soc) => {
+    mockDecision.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused' }));
+    renderStrip(soc);
+    expect(screen.getAllByRole('status').some((status) => status.textContent?.includes('Refresh paused'))).toBe(true);
+    expect(screen.queryByText('No charge decision yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Waiting for live battery level')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open Autopilot' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Autopilot' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-operational-brief]')).toBeNull();
+  });
+
+  it('recovers a paused initial request to a real zero verdict, retaining it through refresh failure and recovery', () => {
+    const decision = { ...WAIT, current_soc: 0, target_soc: 0, kwh_needed: 0,
+      home_now_cost: 0, home_wait_cost: 0 };
+    mockDecision.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused' }));
+    const { rerenderStrip } = renderStrip(0);
+    const update = (query: ReturnType<typeof qr>) => {
+      mockDecision.mockReturnValue(query);
+      rerenderStrip();
+    };
+    update(qr({ data: decision, isSuccess: true, fetchStatus: 'idle' }));
+    expect(screen.getByText('0.00% → 0.00% · 0.00 kWh needed')).toBeVisible();
+    expect(screen.getByText('Home now').closest('[data-operational-metric]')).toHaveTextContent('$0.00');
+    const control = screen.getByRole('button', { name: 'Open Autopilot' });
+    control.focus();
+    update(qr({ data: decision, isError: true, error: new Error('Refresh failed') }));
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBe(control);
+    update(qr({ data: decision, fetchStatus: 'paused' }));
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    update(qr({ data: decision, isSuccess: true, fetchStatus: 'idle' }));
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBe(control);
+    expect(control).toHaveFocus();
+  });
+
+  it('shows the empty decision only after the paused request successfully resolves without a verdict', () => {
+    mockDecision.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused' }));
+    const { rerenderStrip } = renderStrip(0);
+    expect(screen.queryByText('No charge decision yet')).not.toBeInTheDocument();
+    mockDecision.mockReturnValue(qr({ isSuccess: true, fetchStatus: 'idle' }));
+    rerenderStrip();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.getByText('No charge decision yet')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Open Autopilot' })).toHaveAttribute('href', '/smart-charge');
+  });
+
   it('shows a waiting empty state when SOC is unknown', () => {
     renderStrip();
     expect(screen.getByText('Waiting for live battery level')).toBeInTheDocument();
+  });
+
+  it('shows "Not enough price data" instead of recommending when all price options are empty', () => {
+    mockDecision.mockReturnValue(qr({ data: {
+      ...WAIT,
+      verdict: 'charge_home_now',
+      reason_key: 'charge_home_now',
+      reason: 'Start charging at home now',
+      home_now_cost: null,
+      home_wait_cost: null,
+      home_savings: null,
+      supercharger_cost: null,
+    } }));
+    renderStrip(50);
+    expect(screen.getByText('Not enough price data')).toBeInTheDocument();
+    expect(screen.queryByText('Charge home now')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-operational-brief]')).toBeNull();
+  });
+
+  it('still recommends charge-home-now when price inputs are present', () => {
+    mockDecision.mockReturnValue(qr({ data: {
+      ...WAIT, verdict: 'charge_home_now', reason_key: 'charge_home_now',
+    } }));
+    renderStrip(50);
+    expect(screen.getAllByText('Charge home now').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Not enough price data')).not.toBeInTheDocument();
+  });
+
+  it('still renders the enough verdict without prices (nothing left to buy)', () => {
+    mockDecision.mockReturnValue(qr({ data: {
+      ...WAIT, verdict: 'enough', reason_key: 'enough', kwh_needed: 0,
+      home_now_cost: null, home_wait_cost: null, supercharger_cost: null,
+    } }));
+    renderStrip(80);
+    expect(screen.getAllByText('Enough energy').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Not enough price data')).not.toBeInTheDocument();
   });
 
   it('renders the wait verdict, costs, and Autopilot CTA', () => {
@@ -115,7 +265,17 @@ describe('NextChargeDecisionStrip', () => {
     expect(screen.getAllByText('Wait for off-peak').length).toBeGreaterThan(0);
     expect(screen.getByText('Home now')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeInTheDocument();
-    expect(screen.getByText(/50% → 80%/)).toBeInTheDocument();
+    expect(screen.getByText(/50.00% → 80.00%/)).toBeInTheDocument();
+    const band = document.querySelector('[data-testid="vehicle-next-charge-summary"][data-operational-brief]');
+    expect(band).not.toBeNull();
+    expect(band?.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    expect(screen.getByText('Home now').closest('[data-operational-metric]')).toHaveTextContent('$8.20');
+    expect(screen.getByText('Wait window').closest('[data-operational-metric]')).toHaveTextContent('$6.10');
+    expect(band?.querySelector('[data-operational-metric="supercharger"]')).toBeNull();
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-next-charge-summary'), 'Supercharger');
+    expect(screen.getByText(/22.50 kWh needed/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Autopilot' }));
+    expect(screen.getByTestId('next-charge-location')).toHaveTextContent('/smart-charge');
   });
 
   it('shows no-data empty with Autopilot navigation', () => {
@@ -123,5 +283,166 @@ describe('NextChargeDecisionStrip', () => {
     renderStrip(40);
     expect(screen.getByText('No charge decision yet')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Autopilot' })).toHaveAttribute('href', '/smart-charge');
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity])(
+    'keeps unavailable narrative costs and savings unknown rather than free (%s)',
+    (value) => {
+      const decision: NextChargeDecision = {
+        ...WAIT,
+        reason: 'Savings {{save}}; home {{home}}; Supercharger {{sc}}; site {{site}}; time {{time}}',
+        home_savings: value,
+        home_now_cost: value,
+        supercharger_cost: value,
+        home_wait_start: 'invalid-time',
+        supercharger_site: '   ',
+      };
+      mockDecision.mockReturnValue(qr({ data: decision }));
+      renderStrip(50);
+      const summary = screen.getByTestId('vehicle-next-charge-summary');
+      fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+      const narrativeDrawer = screen.getByRole('dialog');
+      expect(within(narrativeDrawer).getAllByText(
+        'Savings Unknown; home Unknown; Supercharger Unknown; site Unknown; time Unknown',
+      ).length).toBeGreaterThan(0);
+      fireEvent.keyDown(narrativeDrawer, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(summary).not.toHaveTextContent('$0.00');
+      expect(summary.querySelector('[data-operational-metric="home-now"]')).toBeNull();
+      assertOperationalMetricUnavailable(summary, 'Home now');
+      assertOperationalMetricUnavailable(summary, 'Supercharger');
+      expect(screen.getByText('Wait window').closest('[data-operational-metric]')).toHaveTextContent('$6.10');
+      expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+      expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeVisible();
+    },
+  );
+
+  it.each([0, -2.1, 2.1])('preserves genuine signed savings and unchanged cost metrics (%s)', (savings) => {
+    const decision: NextChargeDecision = {
+      ...WAIT,
+      reason: 'Save {{save}}; home {{home}}; Supercharger {{sc}}',
+      home_savings: savings,
+      home_now_cost: 0,
+      supercharger_cost: 12.34,
+    };
+    mockDecision.mockReturnValue(qr({ data: decision }));
+    renderStrip(50);
+    const savingsSummary = screen.getByTestId('vehicle-next-charge-summary');
+    fireEvent.click(within(savingsSummary).getByRole('button', { name: 'Review details' }));
+    const savingsDrawer = screen.getByRole('dialog');
+    expect(within(savingsDrawer).getAllByText(
+      `Save $${savings.toFixed(2)}; home $0.00; Supercharger $12.34`,
+    ).length).toBeGreaterThan(0);
+    fireEvent.keyDown(savingsDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Home now').closest('[data-operational-metric]')).toHaveTextContent('$0.00');
+    expect(screen.getByText('Wait window').closest('[data-operational-metric]')).toHaveTextContent('$6.10');
+    expect(screen.getByText('Supercharger').closest('[data-operational-metric]')).toHaveTextContent('$12.34');
+    expect(decision.home_savings).toBe(savings);
+  });
+
+  it('marks invalid SOC and energy operands unknown without dropping the source verdict', () => {
+    mockDecision.mockReturnValue(qr({ data: {
+      ...WAIT, current_soc: NaN, target_soc: Infinity, kwh_needed: -Infinity,
+      reason: 'Observed {{soc}}% toward {{target}}%',
+    } }));
+    renderStrip(50);
+    expect(screen.getByText('Unknown% → Unknown% · Unknown kWh needed')).toBeVisible();
+    const socSummary = screen.getByTestId('vehicle-next-charge-summary');
+    fireEvent.click(within(socSummary).getByRole('button', { name: 'Review details' }));
+    const socDrawer = screen.getByRole('dialog');
+    expect(within(socDrawer).getAllByText('Observed Unknown% toward Unknown%').length).toBeGreaterThan(0);
+    fireEvent.keyDown(socDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Wait for off-peak').length).toBeGreaterThan(0);
+  });
+
+  it.each(['', '   '])('uses the returned verdict when an unrecognized reason has no source text (%j)', (reason) => {
+    mockDecision.mockReturnValue(qr({ data: { ...WAIT, reason_key: 'unrecognized', reason } }));
+    renderStrip(50);
+    const summary = screen.getByTestId('vehicle-next-charge-summary');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const verdictDrawer = screen.getByRole('dialog');
+    expect(within(verdictDrawer).getAllByText('Wait for off-peak').length).toBeGreaterThan(0);
+    fireEvent.keyDown(verdictDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(summary).not.toHaveTextContent('nextCharge.reason.unrecognized');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+  });
+
+  it('updates SOC and energy narratives with numeric preferences without changing source operands', () => {
+    const preferences = getFormatterPreferences();
+    const decision: NextChargeDecision = {
+      ...WAIT,
+      current_soc: 50.125,
+      target_soc: 80.375,
+      kwh_needed: -1234.5678,
+      reason: 'Observed {{soc}}% toward {{target}}%',
+    };
+    const original = JSON.stringify(decision);
+    try {
+      mockDecision.mockReturnValue(qr({ data: decision }));
+      renderStrip(50.125);
+      act(() => {
+        setGlobalLocale('de-DE');
+        setGlobalPrecision(3);
+      });
+      expect(screen.getByText('50,125% → 80,375% · -1.234,568 kWh needed')).toBeInTheDocument();
+      const localeSummary = screen.getByTestId('vehicle-next-charge-summary');
+      fireEvent.click(within(localeSummary).getByRole('button', { name: 'Review details' }));
+      const localeDrawer = screen.getByRole('dialog');
+      expect(within(localeDrawer).getAllByText('Observed 50,125% toward 80,375%').length).toBeGreaterThan(0);
+      fireEvent.keyDown(localeDrawer, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      act(() => {
+        setGlobalLocale('en-US');
+        setGlobalPrecision(1);
+      });
+      expect(screen.getByText('50.1% → 80.4% · -1,234.6 kWh needed')).toBeInTheDocument();
+      expect(JSON.stringify(decision)).toBe(original);
+      expect(mockDecision).toHaveBeenLastCalledWith(1, 50.125);
+    } finally {
+      cleanup();
+      setGlobalLocale(preferences.locale);
+      setGlobalPrecision(preferences.precision);
+    }
+  });
+
+  it('keeps a valid cached verdict, all costs and source context during a refresh failure or missing current SOC', () => {
+    const retry = vi.fn();
+    const decision = { ...WAIT, supercharger_cost: 12.34, supercharger_site: 'Recorded site' };
+    const original = JSON.stringify(decision);
+    mockDecision.mockReturnValue(qr({ data: decision, isError: true,
+      error: new Error('Refresh failed'), refetch: retry }));
+    renderStrip();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByText('Waiting for live battery level')).not.toBeInTheDocument();
+    const retainedSummary = screen.getByTestId('vehicle-next-charge-summary');
+    fireEvent.click(within(retainedSummary).getByRole('button', { name: 'Review details' }));
+    const retainedDrawer = screen.getByRole('dialog');
+    expect(within(retainedDrawer).getByRole('group', { name: 'Supercharger' })).toHaveTextContent('Recorded site');
+    fireEvent.keyDown(retainedDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Supercharger').closest('[data-operational-metric]')).toHaveTextContent('$12.34');
+    assertOperationalBriefDisclosure(retainedSummary, 'Retained source snapshot');
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(JSON.stringify(decision)).toBe(original);
+  });
+
+  it('keeps fatal retry distinct from retained data and keeps initial loading source-standard', () => {
+    const retry = vi.fn();
+    mockDecision.mockReturnValue(qr({ isError: true, error: new Error('Decision unavailable'), refetch: retry }));
+    renderStrip(50);
+    expect(document.querySelector('[data-operational-brief]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+    cleanup();
+    mockDecision.mockReturnValue(qr({ isLoading: true, isPending: true }));
+    renderStrip(50);
+    expect(document.querySelector('[data-operational-brief]')).toBeNull();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
   });
 });

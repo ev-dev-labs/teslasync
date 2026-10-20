@@ -1,0 +1,294 @@
+{
+  "item": "audit-page-109",
+  "page": "web\\src\\features\\driving\\pages\\DriveDNAPage.tsx",
+  "routes": ["/drive-dna"],
+  "purpose": "Present deterministic selected-drive telemetry artwork alongside sampled evidence, channel coverage and interpretation limits.",
+  "primaryGoal": "Select a historical drive, understand its observed emission fingerprint without mistaking it for a score or time-weighted analysis, and export the artwork or plotted evidence.",
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr, 1000)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<encoded vehicle ID>&limit=1000",
+      "owner": "Driving API hook / driveHandler.ListByVehicle",
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "behavior": "Vehicle-gated, bounded isolated history query, MODERATE staleTime, safeArray selection and AbortSignal forwarding. No page-local date picker or additional vehicle picker.",
+      "limits": "Backend response ordering, completeness, authorization and actual data were not exercised."
+    },
+    {
+      "hook": "useDriveTelemetry(activeId)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 321,
+      "endpoint": "GET /api/v1/drives/{driveID}/telemetry",
+      "owner": "Driving API hook / driveHandler.TelemetryReadings",
+      "routeEvidence": "internal\\api\\router.go:3471-3475",
+      "behavior": "Enabled only with a drive ID; query key ['drive-telemetry', driveId]; safeArray selection; AbortSignal forwarded. Separate source trust from list metadata.",
+      "limits": "No backend implementation or network response inspected. Full-feed claims and the legacy power unit remain unverified."
+    },
+    {
+      "hook": "useSelectedVehicle / useUnits / useTimezone('vehicle') / useDataState",
+      "file": "web\\src\\features\\driving\\pages\\DriveDNAPage.tsx",
+      "line": 43,
+      "endpoint": null,
+      "owner": "Existing workspace, unit, timezone and data-trust mechanisms",
+      "behavior": "Header owns vehicle scope; local selector chooses a drive, not a second workspace vehicle. /drive-dna is not in RANGE_ENABLED_PATHS (web\\src\\lib\\workspaceScope.ts:23-77); current scope is one selected drive from the capped history, not a global date window. Initial/fatal/refresh states are adapted independently."
+    },
+    {
+      "hook": "buildDriveDnaModel(telemetryData)",
+      "file": "web\\src\\features\\driving\\lib\\driveDNA.ts",
+      "line": 759,
+      "endpoint": null,
+      "owner": "Driving-domain pure analytical model",
+      "behavior": "Inspected ranges show stable timestamp sorting, invalid/duplicate accounting, missing channels, elapsed seconds, speed m/s, elevation metres and one power multiplication by 1000 at lines 809-817. Artwork cap 720 and chart cap 600; metrics describe emissions, not elapsed-time weighting.",
+      "limits": "Model read in selected ranges and symbol matches, not fully reviewed or mathematically tested. Multiplication assumes power is kW; the unannotated power field in web\\src\\types\\driving.ts:63-69 does not independently establish that wire contract."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / Grid / FadeIn", "owner": "@/components/layout / @/components/motion", "contract": "Existing page chrome, query list and seven entrance groups; page grids stack below xl. Shared implementations not comprehensively inspected."},
+    {"name": "Select", "owner": "@/components/ui", "contract": "Localized accessible name, native change event, current active drive value, disabled empty list and explicit history cap hint."},
+    {"name": "DrivingSummaryBrief / OperationalBrief", "owner": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx", "contract": "Existing operational metrics adaptation, selected-drive source context, retained-state label and independent six-metric evidence summary."},
+    {"name": "DriveDnaSectionBody / DriveDnaKpiNotices", "owner": "web\\src\\features\\driving\\components\\drive-dna", "contract": "Feature-owned passive panel gates plus actionable query status; preserves shells for no vehicle, initial load, fatal failure, empty data, invalid timestamps and insufficient rows."},
+    {"name": "ChartContainer / EmbeddedChart", "owner": "web\\src\\components\\charts\\ChartContainer.tsx / web\\src\\components\\charts\\EmbeddedChart.tsx", "contract": "Canonical charts, accessible dataColumns, CSV/image controls, persisted series visibility and fluid embedded sizing. EmbeddedChart delegates to ChartContainer, not a plot-only primitive."},
+    {"name": "GlassPanel / PanelTitle / Text / Badge / Button / KVList", "owner": "@/components/ui / @/components/data-display", "contract": "Existing surfaces, role typography, semantic state badges, named retry/download controls and genome measurements."},
+    {"name": "DriveDnaCadenceMetrics / DriveDnaSignalCoverageGrid", "owner": "web\\src\\features\\driving\\components\\drive-dna", "contract": "Existing NestedDrivingBrief adapters: six cadence metrics and five channel counts with valid-row denominators; missing durations and percentages remain unknown."},
+    {"name": "downloadDriveDnaSvg", "owner": "web\\src\\features\\driving\\components\\drive-dna\\driveDnaSvg.ts", "contract": "Escaped standalone SVG, sanitized signature filename, local Blob download, synchronous anchor cleanup and deferred URL revocation."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaMethodology.tsx",
+      "line": 133,
+      "rule": "MDC-002 / mission section 4: avoid repeated presentation",
+      "detail": "Two consecutive DriveDnaMethodologyCards mounts at lines 133-134 render the same two cards and all eight explanation bullets twice.",
+      "fix": "Render one instance while preserving every unique explanation, source limit and methodology status.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaSpeedPowerPlot.tsx",
+      "line": 75,
+      "rule": "MDC-002 / MDC-034: one chart controller",
+      "detail": "A ChartContainer host at DriveDnaSpeedPowerChart.tsx:88 wraps an EmbeddedChart that delegates to another ChartContainer (EmbeddedChart.tsx:30). The same nesting occurs for SoC/elevation at DriveDnaSocElevationPlot.tsx:62 and both distributions at DriveDnaDistributionBarPlot.tsx:63. Timeline hosts and children share chart keys while independently receiving hiddenSeries; distribution children add a second fallback with fewer columns.",
+      "fix": "Use plot-only feature renderers inside the existing host; pass host series visibility through. Retain host tables, share percentages, export filenames, fluid geometry and series persistence.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceObserved": [
+      "DriveDNAPage.tsx:37-38,184-200 uses one column until xl, then a three-column hero and two-column chart rows.",
+      "DriveDNAPage.tsx:151 uses wrapping header actions; DriveDnaFingerprintPanel.tsx:59 scales SVG to available width with a 430px maximum.",
+      "DriveDnaGenomePanel.tsx:135,162 wraps traits and uses a full-width download control.",
+      "DriveDnaMethodologyCards.tsx:11 stacks cards below md."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaSpeedPowerPlot.tsx",
+        "line": 85,
+        "rule": "MDC-043 / MDC-034: preserve narrow-container readability",
+        "detail": "Fixed dual axis widths 64+68 and horizontal margins 18+28 consume 178px before the plot; both channels at 320px allocated page width risk a very narrow plotting area. Distribution axes similarly reserve 116/136px plus margins. This is a source risk, not observed overflow.",
+        "fix": "Validate small allocated widths and long translations using the existing responsive chart contract; adapt axis spacing/labels without hiding channels, tooltips, tables or exports.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verifiedWidths": [],
+    "status": "All ten mission widths, RTL, 200% text and container overflow unverified."
+  },
+  "accessibility": {
+    "sourceObserved": [
+      "DriveDNAPage.tsx:153-162 labels the shared Select and disables an empty option list.",
+      "DriveDnaFingerprintPanel.tsx:60-65 supplies an image role and signature-bearing localized alternative; genome statistics and encoding legend expose textual evidence.",
+      "Four host ChartContainers provide localized accessible names and dataColumns; timeline plots explicitly omit their own table while hosts retain data alternatives.",
+      "DriveDnaKpiNotices.tsx:35-80 uses polite loading status; fatal QueryError and named retry buttons are present; repeated passive gates intentionally avoid extra live regions."
+    ],
+    "issues": [],
+    "status": "Keyboard, focus, screen-reader announcements, actual contrast, forced colors, touch target dimensions and reduced motion are unverified. Nested chart semantics are recorded once under duplicatedPatterns."
+  },
+  "states": {
+    "sourceObserved": [
+      "DriveDNAPage.tsx:48-70 distinguishes independent resolved data sources and retains cached payloads through the existing data-state adapters.",
+      "DriveDnaSectionBody.tsx:62-191 preserves all evidence shells and distinguishes no vehicle, list loading/failure/pending/empty, telemetry loading/failure/pending/empty, invalid timestamps and one-emission insufficiency.",
+      "DriveDNAPage.tsx:178-183 mounts refresh-blocked warnings; DriveDnaKpiNotices.tsx:96-145 also provides source-specific retained-data refresh notices and retry controls.",
+      "DriveDnaCoverageCadence.tsx:60-126 permits zero-row accounting, reports invalid/duplicate timestamps, partial channels and large irregular gaps.",
+      "Model nulls distinguish unavailable channels from measured zero; distribution labels explicitly state emission counts, not time shares."
+    ],
+    "issues": [],
+    "status": "No loading/error/offline/retained-data scenario exercised. Potential duplicate refresh messages depend on shared dataState semantics not traced here. Offline/staleness presentation and global query chrome remain unverified."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaMethodologyCards.tsx",
+      "line": 12,
+      "rule": "MDC-010 / MDC-012 / MDC-015: theme-aware restrained surfaces",
+      "detail": "Methodology cards use fixed-white translucent border/background at lines 12 and 46. Encoding cards repeat the same pattern in DriveDnaEncodingLegend.tsx:174, bypassing neutral theme-aware surfaces.",
+      "fix": "Use existing neutral surface and border tokens or existing card composition. Preserve the explanatory hierarchy and all encoding evidence, without introducing a new wrapper or palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\driveDNA.ts",
+      "line": 705,
+      "rule": "MDC-010 / MDC-034 / mission sections 5 and 27: restrained palette with preservation",
+      "detail": "Artwork saturation reaches 95%, with magnitude-dependent HSL color and an independently computed dark halo. This is a data-encoding palette, not mere chrome: the legend says pack power drives hue/stroke width. No measured contrast or rendered neon claim is made.",
+      "fix": "Keep the existing deterministic encoding and safe export parity unless the integration owner establishes equivalent restrained colors. Reduce surrounding decoration first; never silently change signatures, traits, data dimensions or exported artwork.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DriveDnaEvidenceBrief.tsx",
+      "line": 47,
+      "rule": "MDC-044 / MDC-045: localized display boundary",
+      "detail": "Brief scope inserts raw drive.startTs and drive.endTs strings, while the selector and drive label use formatDateTime with the selected vehicle timezone at DriveDNAPage.tsx:85,94. The summary therefore bypasses the established display formatting policy.",
+      "fix": "Format both scope endpoints with existing dateFormat/timezone preferences while retaining ongoing-drive text and exact underlying timestamps. Do not alter query bounds or raw cache data.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\driveDNA.ts",
+      "line": 809,
+      "rule": "MDC-045: establish wire-unit evidence before SI changes",
+      "detail": "The model and methodology explicitly assume a legacy kW power wire value and multiply by 1000. This conflicts with the general SI-wire target but is not proven to be incorrect for this endpoint; the frontend telemetry type has no power unit annotation.",
+      "fix": "Integration owner must pin actual handler/StateReader power semantics and SI cutover before any unit change; retain existing arithmetic until evidence resolves it. Do not introduce a dual-shape adapter or cosmetic conversion change.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Well-decomposed page already preserves independent evidence shells and modern summary adapters. Prioritize duplicated methodology and nested chart controllers; resolve unit-contract uncertainty before analytical changes. No runtime critical defect established."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse canonical single-owner chart composition; no shared API change currently established",
+      "ownerFile": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "propsVariantsStates": "Existing data/dataColumns, exportable/exportFilename, chartKey, hiddenSeries render prop and fluid/embedded presentation cover the observed needs. Plot-only feature children should consume the host controller.",
+      "usedBy": ["DriveDnaSpeedPowerChart", "DriveDnaSocElevationChart", "DriveDnaPowerDistribution", "DriveDnaSpeedDistribution"],
+      "dependsOn": ["Preserve existing chart keys, host data alternatives, share columns and export capabilities", "Centralized mounted keyboard/legend/export validation"],
+      "changeNeeded": false
+    },
+    {
+      "name": "Telemetry wire power contract evidence",
+      "ownerFile": "internal\\api\\router.go",
+      "propsVariantsStates": "GET /drives/{driveID}/telemetry routes to driveHandler.TelemetryReadings; implementation ownership beyond that route was not inspected. Confirm raw power units, nullable values and completeness before SI integration changes.",
+      "usedBy": ["DriveDNAPage", "buildDriveDnaModel", "DriveDnaMethodologyCards"],
+      "dependsOn": ["Handler and StateReader source-unit proof", "Phase-48 integration ownership"],
+      "changeNeeded": "unknown"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaKpiBand.tsx",
+      "line": 63,
+      "detail": "Legacy KPI-band renderer exists beside mounted DriveDnaEvidenceBrief; the page uses the operational brief at DriveDNAPage.tsx:185, and the brief retains only a type dependency on DriveDnaKpiBand. Existence alone is not proof of another mounted implementation.",
+      "disposition": "Do not remount the old summary or remove it without caller evidence. No new stats system needed."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "59E30B91C40E47BC3BAF6559B78335DC4CE458723F9D2A29D44C7664B873E72A",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashTarget": "web\\src\\features\\driving\\pages\\DriveDNAPage.tsx",
+    "lineCount": 208,
+    "pageSpecificDriveDnaTsxLines": 2599,
+    "lineCountScope": "Page and all 18 drive-dna TSX files, including unmounted legacy KPI band; excludes operationalbrief adapters and analytical model. No historical baseline comparison.",
+    "sections": [
+      "Selected-drive evidence summary",
+      "Emission fingerprint artwork",
+      "Genome identity and safe SVG export",
+      "Encoding legend and evidence",
+      "Speed and power emission profile",
+      "SoC and elevation context",
+      "Power-state emission-count distribution",
+      "Speed-band emission-count distribution",
+      "Signal coverage and cadence",
+      "Coverage and methodology"
+    ],
+    "sectionCount": 10,
+    "sourceCounts": {
+      "pageGlassPanel": 0,
+      "pageChartContainer": 0,
+      "pagePlusDriveDnaTsxGlassPanelOpenings": 6,
+      "pagePlusDriveDnaTsxChartContainerOpenings": 4,
+      "mountedDirectEvidenceGlassPanels": 5,
+      "mountedChartHosts": 4,
+      "methodologyCardInstances": 2
+    },
+    "actions": [
+      "Select any returned drive from capped 1000-row history; fallback to first returned drive when selected ID is absent",
+      "Independent list and telemetry retry, including retained-data refresh failure",
+      "Local safe SVG artwork download with deterministic signature filename",
+      "Existing host chart exports and accessible data alternatives",
+      "Existing persisted speed/power and SoC/elevation series visibility"
+    ],
+    "dataBehavior": [
+      "Workspace vehicle ownership, capped history semantics and selected-drive-only telemetry",
+      "Metadata distance/duration independent from sampled telemetry statistics",
+      "SI model values, current single legacy power lift pending backend proof, display-only preferences",
+      "Missing channels are unknown rather than zero; valid timestamp accounting and duplicate retention",
+      "Irregular emissions are never elapsed-time or duration weighting",
+      "Deterministic artwork, signature, traits, neutral-channel encodings and safe SVG content",
+      "Chart and art sampling limits, complete explanatory guardrails and all coverage/cadence metrics",
+      "Retained data survives refresh failures; all section shells remain reachable"
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only scoped source inspection and static PowerShell regex counts; no Git, source edits, queue changes, browser, network calls, tests, lint, TypeScript or builds.",
+    "routeEvidence": "web\\src\\App.tsx:129,833 lazy-loads DriveDNAPage and mounts path drive-dna; web\\src\\lib\\routeRegistry.ts:113 records /drive-dna. Matches inspected via scoped source search, not rendered routing.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "staticChecks": {
+      "scope": "DriveDNAPage.tsx plus drive-dna TSX dependencies",
+      "rawControlMatches": 0,
+      "inlineStyleObjectMatches": 0,
+      "directRechartsReactLeafletFramerMotionImportMatches": 0,
+      "exitCode": 0,
+      "output": "Scoped page + drive-dna TSX static counts\nraw controls: 0\ninline style objects: 0\ndirect chart/map/motion imports: 0\nGlassPanel openings: 6\nChartContainer openings: 4\npage lines: 208\ndrive-dna TSX dependency lines: 2599",
+      "limits": "Counts are regex matches, not full guideline clearance. Full skill script was inspected but not run because it invokes project TypeScript outside the read-only audit authorization. One initial PowerShell quoting attempt failed with ParserError/exit 1; corrected probe above succeeded."
+    },
+    "readCoverage": "Presentation files inspected through direct reads, numbered output or scoped search; large batched output was tool-truncated and is not claimed fully reviewed. Model and shared chart owner were inspected only in cited ranges. No backend query implementation reviewed. Historical reports are schema context, not acceptance evidence.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-109.json", ".agent-status\\audit-page-109.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-106.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\DriveDNAPage.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaFingerprintPanel.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaGenomePanel.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaKpiNotices.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaKpiBand.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaSpeedPowerChart.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaSpeedPowerPlot.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaSocElevationChart.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaSocElevationPlot.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaPowerDistribution.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaSpeedDistribution.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaDistributionBarPlot.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaEncodingLegend.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaCoverageCadence.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaCadenceMetrics.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaSignalCoverageGrid.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaMethodology.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\DriveDnaMethodologyCards.tsx",
+    "web\\src\\features\\driving\\components\\drive-dna\\driveDnaSvg.ts",
+    "web\\src\\features\\driving\\components\\drive-dna\\index.ts",
+    "web\\src\\features\\driving\\components\\drive-dna\\types.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DriveDnaEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\lib\\driveDNA.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts"
+  ]
+}

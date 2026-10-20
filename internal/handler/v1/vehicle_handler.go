@@ -26,13 +26,9 @@ func (h *VehicleHandler) Register(r chi.Router) {
 }
 
 func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
-	claims, ok := middleware.UserFromContext(r.Context())
-	if !ok {
-		httputil.RespondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing user context")
-		return
-	}
-
-	vehicles, err := h.svc.GetByUserID(r.Context(), claims.UserID)
+	// Like the canonical /vehicles endpoint, this handler is mounted behind
+	// the composition root's ForwardAuth gate, not the unrelated JWT context.
+	vehicles, err := h.svc.GetAll(r.Context())
 	if err != nil {
 		middleware.HandleError(w, err)
 		return

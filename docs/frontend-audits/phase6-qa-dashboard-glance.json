@@ -1,0 +1,2328 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-dashboard-glance",
+  "phase": 6,
+  "status": "DONE_SOURCE_AUDIT_ONLY",
+  "createdAt": "2026-10-14T01:03:01.507952Z",
+  "root": "D:\\repos\\teslasync",
+  "page": "web/src/features/dashboard/pages/GlancePage.tsx",
+  "routes": [
+    "/glance"
+  ],
+  "authority": {
+    "queueItem": {
+      "line": 377,
+      "status": "[~]",
+      "files": "docs\\frontend-audits\\phase6-qa-dashboard-glance.json",
+      "dependsOn": "phase5-page-dashboard-glance",
+      "commit": "-",
+      "rawRow": "| [~] | 6 | phase6-qa-dashboard-glance | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-dashboard-glance.json | phase5-page-dashboard-glance | 1 | actor=f2cff5cc-fe1f-408d-b68c-e577f0edb50a; launch-observed=2026-10-14T00:48:33.105Z; conservative return=2026-10-14T01:05:28.452Z; hard=2026-10-14T01:10:28.452Z; LastConsumed=-1 | - | CurrentacceptedGlancePage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Preserveobservedlivefreshness/scopes/unknownzero/preferences/actions/sections, exactfindings vs candidates/no remigration. New-machine exact scope reserved for built-in dispatch; recovered attempts continued (new zero-attempt QA starts at one); reservation is NOT a running worker. No browser grant. Actual built-in background launch accepted; exact files held by f2cff5cc-fe1f-408d-b68c-e577f0edb50a, no native lock. Preserve same recovered attempt and original clocks/history; current running state requires health census. |"
+    },
+    "history": {
+      "phase5-page-dashboard-glance": {
+        "line": 1841,
+        "status": "[x]",
+        "files": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx; web\\src\\features\\dashboard\\pages\\GlancePage.test.tsx",
+        "dependsOn": "-",
+        "commit": "c3629ff0e3ec65bb531e07cb4a0276bf1b307aff",
+        "rawRow": "| [x] | 5 | phase5-page-dashboard-glance | original-page-migration | web\\src\\features\\dashboard\\pages\\GlancePage.tsx; web\\src\\features\\dashboard\\pages\\GlancePage.test.tsx | - | 1 | 2026-10-12T13:32:36.2461510Z | c3629ff0e3ec65bb531e07cb4a0276bf1b307aff | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/glance; audit=docs\\frontend-audits\\audit-page-092.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fresh previously unstarted scope reserved for rolling dispatch; original Page+namedtest only. Returning fixture has actual5173 origin; E2E_STORAGE_STATE supported variable. Parent-owned generator closure, no worker catalog edits/bypass. Original source/fullQA separation and all preservation/helper budget rules remain. Actual worker=870f5aef-9661-411c-9f35-b92c93888876; lifecycle=awaitingterminalnotification; doNOTpoll/duplicate/rereadownedsource. Supported instructions in session files; separate path/private screenshot boundaries. Actual parent wave2 scoped run: 35 executed, 0 failed; file=passed. Evidence logs\\phase5-parent-wave2-blocked-tests.json. Passed source delivery awaits exact reported-file Git intake; full/native QA unaccepted. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual unchanged parent600case receipt: own file 35 cases passed,0failed/0pending. Existing worker scoped lint/style/section/line/hook evidence retained, no cases rerun for provenance. Source-only acceptance; inherited geometry/static/preservation/native resource/privacy failures remain explicitly UNACCEPTED in own receipt; no page/application QA claim.; commit=c3629ff0e3ec65bb531e07cb4a0276bf1b307aff; pushed. |"
+      },
+      "audit-page-092": {
+        "line": 581,
+        "status": "[x]",
+        "files": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx; docs\\frontend-audits\\audit-page-092.json",
+        "dependsOn": "-",
+        "commit": "400fa58bb1",
+        "rawRow": "| [x] | 0 | audit-page-092 | page | web\\src\\features\\dashboard\\pages\\GlancePage.tsx; docs\\frontend-audits\\audit-page-092.json | - | 1 | 2026-10-07T07:23:14.608Z | 400fa58bb1 | - / 1 / 2026-10-07T07:23:14.608Z / web\\src\\features\\dashboard\\pages\\GlancePage.tsx; routes=/glance; read-only audit; report docs\\frontend-audits\\audit-page-092.json; actor=8b8d53b3-6e0a-4bb1-9b74-78a306bd36ee; verified source audit; commit=400fa58bb1; runtime unverified |"
+      },
+      "phase3-data-freshness": {
+        "line": 1022,
+        "status": "[x]",
+        "files": "web\\src\\components\\data-display\\DataFreshness.tsx; web\\src\\components\\data-display\\__tests__\\DataFreshness.test.tsx",
+        "dependsOn": "phase3-use-date-format,primitive-button,phase3-resource-and-geometry-addendum,phase3-resource-geometry-tokens",
+        "commit": "b13559132d",
+        "rawRow": "| [x] | 3 | phase3-data-freshness | shared | web\\src\\components\\data-display\\DataFreshness.tsx; web\\src\\components\\data-display\\__tests__\\DataFreshness.test.tsx | phase3-use-date-format,primitive-button,phase3-resource-and-geometry-addendum,phase3-resource-geometry-tokens | 2 | 2026-10-08T19:43:29.237Z | b13559132d | phase3-use-date-format,primitive-button,phase3-resource-and-geometry-addendum,phase3-resource-geometry-tokens / 2 / 2026-10-08T19:43:29.237Z / Verified real-owner plan=phase3-data-freshness in session frontend-phase3-owner-plan.json; category=status-system; sources=web\\src\\components\\data-display\\DataFreshness.tsx; tests=web\\src\\components\\data-display\\__tests__\\DataFreshness.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; crash recovery 2026-10-08T13:10:44.944Z: actual no-live-context observation, delivery receipts/source preserved; acceptance reconciliation required before any new worker or attempt increment; Read-only post-root review of preserved delivery; no source writes or implementation attempt increment; current frozen scope and original dispatch provenance required; actor context idle verified 2026-10-08T17:50:31.621Z: Actual delivered idle full report read; owned source/test preserved and released; raw failures/shared prerequisites retained, no source acceptance inferred; failure=Read-only29/29 lint/all reached types0; min-w4.5rem231 exact named geometry role/adoption required; blocked=Final-failed prerequisite pending honest shared-root repair/read-only runtime validation, no new generic retry; Unblocked only after every recorded prerequisite actually accepted; prior failures/attempts and preserved delivery remain immutable; frozen preserved-delta retry baseline=phase3-data-freshness-retry-dispatch-baseline.json; distinct attempt2 heartbeat/receipt required; original manifest/proofs/tests remain authoritative; actor=73f0fba0-1a02-4856-8bf2-f1330d4c01be; actor context idle verified 2026-10-08T20:07:56.057Z: Actual current lifecycle idle and full result read; shipping delta/provenance frozen, source lease released; no idle timeout inferred.; Verified scoped delivery acceptance commit=b13559132d; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=29/29 actual normal, strict lint/source scan0 with9 retained token reviews/ALL407 reached0; original27 cases+2 preserved, five generated CSS pairs43 merges and full source/test inverse original SHA0, exact4.5rem named role only. Original missing dispatch artifact acknowledged, actual immutable plan/SHA originals retained; no observation/fetch/paused/status semantics change, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      "phase3-data-source-notice": {
+        "line": 1023,
+        "status": "[x]",
+        "files": "web\\src\\components\\feedback\\DataSourceNotice.tsx; web\\src\\components\\feedback\\DataSourceNotice.test.tsx; web\\src\\components\\feedback\\__tests__\\DataSourceNotice.classifier.test.tsx",
+        "dependsOn": "primitive-badge,primitive-button,primitive-typography",
+        "commit": "4db3ae241f",
+        "rawRow": "| [x] | 3 | phase3-data-source-notice | shared | web\\src\\components\\feedback\\DataSourceNotice.tsx; web\\src\\components\\feedback\\DataSourceNotice.test.tsx; web\\src\\components\\feedback\\__tests__\\DataSourceNotice.classifier.test.tsx | primitive-badge,primitive-button,primitive-typography | 1 | 2026-10-08T13:42:30.220Z | 4db3ae241f | primitive-badge,primitive-button,primitive-typography / 1 / 2026-10-08T13:42:30.220Z / Verified real-owner plan=phase3-data-source-notice in session frontend-phase3-owner-plan.json; category=composite-state; sources=web\\src\\components\\feedback\\DataSourceNotice.tsx; tests=web\\src\\components\\feedback\\DataSourceNotice.test.tsx,web\\src\\components\\feedback\\__tests__\\DataSourceNotice.classifier.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; failure=First delivered attempt has required post-change normal tests blocked by generated-catalog startup; current generator repair accepted; scoped deltas and receipt preserved, NOT an inherited pre-modernization defect; retry only after prior context releases and refreshed same-item baseline verified; actor context idle verified 2026-10-08T07:21:42.329Z: Exact RELEASED acknowledgement no further writes; Crash acceptance review READ-ONLY, no implementation retry/attempt increment; validate preserved original/delivered scopes; tests deferred while catalog root unaccepted; parent owns final acceptance and commits.; actor=54c235f2-faab-49d5-8bde-f36be06dccaf; actor context idle verified 2026-10-08T13:55:21.380Z: Ready read-only review: original cases verified,29/29 tests,lint/scan/types0; idle release confirmed; no further writes; Verified scoped delivery acceptance commit=4db3ae241f; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=29/29, scoped lint/scan0 as recorded (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      }
+    },
+    "actor": "f2cff5cc-fe1f-408d-b68c-e577f0edb50a",
+    "attempt": 1,
+    "returnDeadline": "2026-10-14T01:05:28Z",
+    "hardDeadline": "2026-10-14T01:10:28Z",
+    "latestHandoff": "docs/session-handoff.md:5-34",
+    "designContract": "Read full existing 2539-line contract; no edits."
+  },
+  "existingReportNoChangeDedup": {
+    "reportAtStart": "ABSENT",
+    "logAtStart": "ABSENT",
+    "acceptedMigration": "Phase 5 [x], c3629ff0e3ec65bb531e07cb4a0276bf1b307aff, source only; not remigrated",
+    "sourceChangeNeededForThisTask": false,
+    "reportChangeNeeded": true,
+    "noRemigration": true,
+    "dedup": "Exact queue/current owner/goal search: no matching Phase 6 corrective objectives. Completed DataFreshness and DataSourceNotice migrations stay complete. Related DLQ drawer-trust row is a feature payload/tabpanel fix, not shared footer sizing. Existing native mobile pilot report supplies no Glance acceptance. Candidates are NOT fix needs.",
+    "resolvedHistoricalIssuesNotReopened": [
+      "Original two fetch-time FreshnessIndicators no longer mounted; observedAt caption and limitation used.",
+      "Live/fresh/as_of command gate now present; previous wholly unguarded-affordance finding not copied.",
+      "Container live cards, neutral gauge, unknown boolean statuses and semantic borders/icons now present.",
+      "Latest location explicitly distinguished in historical mode and has its own loading/null/fatal/retry UI."
+    ]
+  },
+  "routeEvidence": [
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "line": 4,
+      "fact": "Actual lazy import GlancePage"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "line": 34,
+      "fact": "lazy(routeLoaders.GlancePage)"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "line": 563,
+      "fact": "Standalone SafeRoute outside Layout, which begins at 574"
+    }
+  ],
+  "purpose": "Selected-vehicle quick glance with operating summary, battery/range, charging/climate, security/location/software and three live-only remote controls.",
+  "currentPins": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "lineCount": 296,
+      "bytes": 16978,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "lineCount": 2539,
+      "bytes": 182554,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "lineCount": 2460,
+      "bytes": 163930,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "migration-queue.md",
+      "sha256": "bd1c8b7c76b2cb648f6b7bd86d9196de02a307a4e56324e6994aa2f3f37282c7",
+      "lineCount": 2041,
+      "bytes": 2542996,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "lineCount": 152,
+      "bytes": 8608,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "lineCount": 1593,
+      "bytes": 31079,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "lineCount": 1460,
+      "bytes": 1743758,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-092.json",
+      "sha256": "7e99779792a46feefd0c3d60b83040a106f14ec73e70f15b6f4e42349b2e96f9",
+      "lineCount": 323,
+      "bytes": 28823,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "lineCount": 707,
+      "bytes": 37483,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "lineCount": 629,
+      "bytes": 22645,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "lineCount": 94,
+      "bytes": 3585,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "lineCount": 221,
+      "bytes": 6501,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": ".github/instructions/observability.instructions.md",
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "lineCount": 45,
+      "bytes": 4267,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": ".gitignore",
+      "sha256": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+      "lineCount": 130,
+      "bytes": 2122,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/CONTRIBUTING.md",
+      "sha256": "6ac302d828f961845a40205abcf4b162e62c90228136345043e7faf8e86f3a8c",
+      "lineCount": 286,
+      "bytes": 13700,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/I18N_GUIDELINES.md",
+      "sha256": "9dafaa22475219a8ddb7e36905d428a6e0f7ef4a685006ee6d7f257878b8de94",
+      "lineCount": 216,
+      "bytes": 8039,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/A11Y_GUIDELINES.md",
+      "sha256": "5d8ff67ca9cecab201c214d252304eedef653230d8463067a69b8b2c94697580",
+      "lineCount": 234,
+      "bytes": 10771,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/MOBILE_GUIDELINES.md",
+      "sha256": "c2aad7d2ea44a3c2ea317a1b6f38d59c5a6cb71fd13d91816fb60a301f9f2228",
+      "lineCount": 166,
+      "bytes": 7412,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "sha256": "d3f3dcb742fe4ad8ef60508f1f235d8df0984c1f09f6eb58c48e1fa383d83e31",
+      "lineCount": 665,
+      "bytes": 30068,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx",
+      "sha256": "f346e79c1157b1ba127ef0c881e52266041b05cefa0c6be04aafb1e8e5a4e8a3",
+      "lineCount": 54,
+      "bytes": 2064,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "lineCount": 1898,
+      "bytes": 70205,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicleCommand.ts",
+      "sha256": "22de3c31c59f4c2fc5af6f3e0415123b6818a6e09d327d798d52022aba736df7",
+      "lineCount": 95,
+      "bytes": 3792,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "lineCount": 4194,
+      "bytes": 120243,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lineCount": 434,
+      "bytes": 15482,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lineCount": 174,
+      "bytes": 6593,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lineCount": 65,
+      "bytes": 2035,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lineCount": 194,
+      "bytes": 6545,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lineCount": 47,
+      "bytes": 2095,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lineCount": 24,
+      "bytes": 1161,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useRefreshPolicy.ts",
+      "sha256": "614ef7ff95de58bff2f99c524862758bae4acfa4e23124174c7627a45ca80dc1",
+      "lineCount": 191,
+      "bytes": 6721,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useAsOfDate.ts",
+      "sha256": "dce9cc82af1d73ac61f793d0df69ff124e44fa21d85afdd0d60d74ddb1ad8c1e",
+      "lineCount": 84,
+      "bytes": 3028,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "lineCount": 146,
+      "bytes": 5253,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "lineCount": 106,
+      "bytes": 4608,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lineCount": 148,
+      "bytes": 5230,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useWorkspaceScope.tsx",
+      "sha256": "54a6830f3d45fb3a55af051ab34cfa41b3006a0f06becf3d932efe163ae63ead",
+      "lineCount": 44,
+      "bytes": 1029,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useDialogFocus.ts",
+      "sha256": "c4f2e20b692e4c18a288ae5f99093d11a40b1920af70c61e22eec394ba414e73",
+      "lineCount": 272,
+      "bytes": 11105,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/hooks/useTelemetryFreshness.ts",
+      "sha256": "dddbda781b9b3d2582dfd0c57fc9265477eb5c214ab5c9c4c1d41c56dee0aeb1",
+      "lineCount": 291,
+      "bytes": 10916,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lineCount": 259,
+      "bytes": 10783,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/layout/PageActions.tsx",
+      "sha256": "d587f5d963b8adf60829c0feab4d1ee0c42e7caee4e50c93ca23546ea75c8dcd",
+      "lineCount": 172,
+      "bytes": 6109,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lineCount": 17,
+      "bytes": 658,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/Section.tsx",
+      "sha256": "eea4b10c64d008260bb9330e2142e4d0f3e3671f80af8c1d7493b13044d0de75",
+      "lineCount": 23,
+      "bytes": 731,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lineCount": 74,
+      "bytes": 3322,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "lineCount": 321,
+      "bytes": 11591,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/data-display/DataProvenanceBadge.tsx",
+      "sha256": "804547bcb6e9be1d6210dc459efee9ed7a8cb76999322f98c5cf7d80ea242057",
+      "lineCount": 131,
+      "bytes": 3987,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "lineCount": 342,
+      "bytes": 11545,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/data-display/FreshnessIndicator.tsx",
+      "sha256": "c57bd7e07bf477ad09706e27e1c583095ebd3245be2aaa626a152884846a1295",
+      "lineCount": 168,
+      "bytes": 6249,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/data-display/KVList.tsx",
+      "sha256": "e25f2cadcaea2b802167668cb8d635c36ff89f8365e77bff00c79fed783e442b",
+      "lineCount": 124,
+      "bytes": 4123,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+      "sha256": "42d86533a953d9ee7c25e933fa7200890a420ee31868fa515f01d89b4f0e6fa1",
+      "lineCount": 244,
+      "bytes": 8350,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/data-display/CalculationDetails.tsx",
+      "sha256": "e9f93eee62b180c8c25985fe75789cc1cb2a3cf0eea432ca683d21adb7ea478e",
+      "lineCount": 127,
+      "bytes": 3727,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/charts/LinearGauge.tsx",
+      "sha256": "f02c0cff30b5a3e8a4016235c73f23d482ece9ef7e15566c3e62308250fe2e7a",
+      "lineCount": 251,
+      "bytes": 12030,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lineCount": 93,
+      "bytes": 5174,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/ui/Drawer.tsx",
+      "sha256": "f4e17ba0f8c43c4c567fedf3cb17d3e7f27ff13b2219f45c9bd62cebe1f7f72d",
+      "lineCount": 211,
+      "bytes": 6711,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "sha256": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+      "lineCount": 115,
+      "bytes": 4325,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/ui/GlassPanel.tsx",
+      "sha256": "e60a182c5579269b2a3d9869b0fc8fe14b3b1dc191db09a3a3c19bb13a88f3af",
+      "lineCount": 76,
+      "bytes": 3129,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/ui/Badge.tsx",
+      "sha256": "99296caea1e9b136ff8493f1a85ae63d5a7aa6955c6983d095eb8460b1b84abf",
+      "lineCount": 65,
+      "bytes": 2981,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "sha256": "79b11817e939f044a2c1f6fbfa1617b61a435c8461dc84b99b6014f54059afc6",
+      "lineCount": 291,
+      "bytes": 9480,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lineCount": 115,
+      "bytes": 4093,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/DataStateNotice.tsx",
+      "sha256": "d96d4e5bc8c1b8ccbddce808bfc31a277dad60b82399d14431b7185e94bea4c6",
+      "lineCount": 149,
+      "bytes": 5014,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/Skeleton.tsx",
+      "sha256": "b968ec500fbb95b92595c2cfd0b7ebedcfdb7bfe9fbe9c68846304f6482dbbf7",
+      "lineCount": 56,
+      "bytes": 1945,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/QueryError.tsx",
+      "sha256": "5dc7d6a24694c2f34411d8b042864c94a630be9fc0a516586c2596172f19e48a",
+      "lineCount": 16,
+      "bytes": 460,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/EmptyState.tsx",
+      "sha256": "81246a08e354c8c05b05b3b39880e8832442c4c30ed468defe53a7478858fa37",
+      "lineCount": 97,
+      "bytes": 3617,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/_StatusAwareError.tsx",
+      "sha256": "1b02ed9b09fd8befd1f0b38fa6b4957749874856ec6eedb5963b7601a6d23bcc",
+      "lineCount": 280,
+      "bytes": 8280,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/_ErrorState.tsx",
+      "sha256": "8ba7faf273d8907db0a72a2b9b66956263d126ad64b9a7144df45d4c3d85a6f1",
+      "lineCount": 124,
+      "bytes": 4453,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/ErrorDisplay.tsx",
+      "sha256": "cadc87531e46099aac359cf929da63cf4721b8907e7382799072419d67f1cf3f",
+      "lineCount": 14,
+      "bytes": 409,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/PageErrorBoundary.tsx",
+      "sha256": "35e8cbf767299594221a3e80558875918471b2293cd3a391cd985ba0a78df336",
+      "lineCount": 19,
+      "bytes": 730,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/feedback/PageLoadSkeleton.tsx",
+      "sha256": "704c088e4c328744e5d6bcaae6cb22d41e8547b8338e9a5501aaa02022ec15a5",
+      "lineCount": 64,
+      "bytes": 2309,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lineCount": 39,
+      "bytes": 1493,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lineCount": 168,
+      "bytes": 4411,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "lineCount": 127,
+      "bytes": 11392,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lineCount": 919,
+      "bytes": 68125,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/main.tsx",
+      "sha256": "0f6618142f999757db4bbe8633bb5a422132f09fa3350274f3265ee77daf5d04",
+      "lineCount": 216,
+      "bytes": 10317,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "sha256": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+      "lineCount": 53,
+      "bytes": 2801,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "lineCount": 137,
+      "bytes": 7868,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/lib/metric-reference/glossary.ts",
+      "sha256": "3cdd7e4655b6ecd584d6fd0f799b740d762a5448f563ba12d22d54967f7d57a4",
+      "lineCount": 49,
+      "bytes": 4648,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "lineCount": 500,
+      "bytes": 16774,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/api/queryPolicy.ts",
+      "sha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "lineCount": 294,
+      "bytes": 11340,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lineCount": 458,
+      "bytes": 17825,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "web/src/lib/operationalMode.ts",
+      "sha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "lineCount": 89,
+      "bytes": 2495,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-native-mobile-targets-20261013.json",
+      "sha256": "d5658a443180ba26d6f33a90b888898dbf047b29bc8908c39aed9afcf464519f",
+      "lineCount": 201,
+      "bytes": 12291,
+      "pinnedAt": "2026-10-14T01:03:01.507952Z"
+    }
+  ],
+  "filesRead": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          296
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          2539
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          140
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "migration-queue.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          100
+        ],
+        [
+          362,
+          362
+        ],
+        [
+          566,
+          566
+        ],
+        [
+          1007,
+          1008
+        ],
+        [
+          1826,
+          1826
+        ],
+        [
+          1841,
+          1841
+        ],
+        [
+          581,
+          581
+        ],
+        [
+          1022,
+          1022
+        ],
+        [
+          1023,
+          1023
+        ],
+        [
+          377,
+          377
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          152
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          655
+        ],
+        [
+          900,
+          1165
+        ],
+        [
+          1410,
+          1515
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "inspectedLineRanges": [
+        [
+          147,
+          147
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-092.json",
+      "inspectedLineRanges": [
+        [
+          1,
+          323
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          707
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          629
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          94
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          221
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": ".github/instructions/observability.instructions.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": ".gitignore",
+      "inspectedLineRanges": [
+        [
+          77,
+          80
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/CONTRIBUTING.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          175
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/I18N_GUIDELINES.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          216
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/A11Y_GUIDELINES.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          115
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/MOBILE_GUIDELINES.md",
+      "inspectedLineRanges": [
+        [
+          1,
+          166
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          665
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          54
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          340
+        ],
+        [
+          490,
+          560
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicleCommand.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "inspectedLineRanges": [
+        [
+          610,
+          665
+        ],
+        [
+          2270,
+          2300
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          300
+        ],
+        [
+          350,
+          434
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          174
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          65
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          194
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          47
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          24
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useRefreshPolicy.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          191
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useAsOfDate.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          84
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          9
+        ],
+        [
+          26,
+          59
+        ],
+        [
+          61,
+          68
+        ],
+        [
+          90,
+          120
+        ],
+        [
+          134,
+          146
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          18
+        ],
+        [
+          39,
+          63
+        ],
+        [
+          89,
+          106
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          148
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useWorkspaceScope.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          44
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useDialogFocus.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          272
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/hooks/useTelemetryFreshness.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          100
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          259
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/layout/PageActions.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          172
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/Section.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          74
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          321
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/data-display/DataProvenanceBadge.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          131
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          342
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/data-display/FreshnessIndicator.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          168
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/data-display/KVList.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          124
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          244
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/data-display/CalculationDetails.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          127
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/charts/LinearGauge.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          251
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          93
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/ui/Drawer.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          211
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "inspectedLineRanges": [
+        [
+          70,
+          115
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/ui/GlassPanel.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/ui/Badge.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          65
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          291
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          115
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/DataStateNotice.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          149
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/Skeleton.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          56
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/QueryError.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          16
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/EmptyState.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          97
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/_StatusAwareError.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          280
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/_ErrorState.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          124
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/ErrorDisplay.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          14
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/PageErrorBoundary.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/feedback/PageLoadSkeleton.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          64
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          168
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          10
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          15
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          358,
+          379
+        ],
+        [
+          510,
+          585
+        ],
+        [
+          910,
+          919
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/main.tsx",
+      "inspectedLineRanges": [
+        [
+          120,
+          174
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "inspectedLineRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          137
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/lib/metric-reference/glossary.ts",
+      "inspectedLineRanges": [
+        [
+          11,
+          28
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "inspectedLineRanges": [
+        [
+          324,
+          362
+        ],
+        [
+          365,
+          421
+        ],
+        [
+          472,
+          500
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/api/queryPolicy.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          210
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "inspectedLineRanges": [
+        [
+          29,
+          31
+        ],
+        [
+          49,
+          78
+        ],
+        [
+          90,
+          98
+        ],
+        [
+          233,
+          252
+        ],
+        [
+          348,
+          376
+        ],
+        [
+          409,
+          418
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "web/src/lib/operationalMode.ts",
+      "inspectedLineRanges": [
+        [
+          1,
+          89
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-native-mobile-targets-20261013.json",
+      "inspectedLineRanges": [
+        [
+          1,
+          201
+        ]
+      ],
+      "scope": "selected lines/search outputs, not exhaustive repository audit"
+    }
+  ],
+  "preservation": {
+    "currentPageSha256": "d3f3dcb742fe4ad8ef60508f1f235d8df0984c1f09f6eb58c48e1fa383d83e31",
+    "currentPageLineCount": 665,
+    "historicalAuditPageLineCount": 610,
+    "historicalAuditRootSections": 4,
+    "currentRootSections": 4,
+    "sourceStructureCounts": {
+      "PageLayout": 1,
+      "Section": 2,
+      "GlassPanel": 5,
+      "DashboardSourceBrief": 1,
+      "LinearGauge": 1,
+      "QuickAction": 3,
+      "DetailRow": 8,
+      "StatusRow": 2,
+      "StaleRefreshWarning": 3,
+      "QueryError": 2,
+      "FreshnessIndicator": 0,
+      "ChartContainer": 0,
+      "Link": 1
+    },
+    "panelCountMeaning": "5 literal page GlassPanels = alternative no-vehicle CTA + 3 live cards + controls. Selected path has 4 page panels + 1 shared OperationalBrief panel. Counts are source occurrences, not runtime nodes.",
+    "notARebaseline": "Historical audit is context, not immutable original migration baseline; preservation CLI NOTRUN; tests not read/changed; no baseline generation."
+  },
+  "commands": {
+    "executed": [
+      {
+        "shellId": "179",
+        "check": "Case-sensitive root grep and structural counts",
+        "exitCode": 0
+      },
+      {
+        "shellId": "193",
+        "check": "Exact-item narrow queue dedup",
+        "exitCode": 0
+      },
+      {
+        "shellId": "213",
+        "check": "Accepted owner notes and actual router/child files",
+        "exitCode": 0
+      },
+      {
+        "shellId": "248",
+        "check": "Installed TypeScript AST + scoped grep, not compiler",
+        "exitCode": 0,
+        "rawOutput": "web/logs/phase6-qa-dashboard-glance.log"
+      },
+      {
+        "shellId": "297",
+        "check": "Phase 6 exact owner/objective dedup + prior mobile report search",
+        "exitCode": 0
+      },
+      {
+        "shellId": "315",
+        "check": "Additional actual-child AST scan",
+        "exitCode": 0,
+        "rawOutput": "web/logs/phase6-qa-dashboard-glance.log"
+      }
+    ],
+    "notRun": [
+      "npx tsc --noEmit",
+      "Vitest/tests/fixtures",
+      "ESLint/build/full suites",
+      "preservation CLI",
+      "browser/Playwright/native/device/screenshots",
+      "API calls/commands/real telemetry",
+      "Git/status/diff/commit/push",
+      "installs/server/Docker/heartbeat/subagents/catalog tooling"
+    ],
+    "native": {
+      "status": "NOTRUN",
+      "routesVisited": 0,
+      "widthsMeasured": 0,
+      "screenshots": 0,
+      "commandsSent": 0
+    },
+    "tests": {
+      "status": "NOTRUN",
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "evidenceLimits": {
+    "acceptance": "Report delivery only, not Glance/application/native/runtime acceptance. Historical 35-case receipt is not fresh proof. Closed Phases 0-5 are not reopened.",
+    "readBoundary": "Exact listed sources/ranges only. Backend handlers/route units and real payloads not read. Shared internals beyond listed files/ranges (Tooltip/theme/CSS/auth providers/error-help tree) not exhaustively inspected. Disk pins are not Git/deployed-build pins.",
+    "runtime": "All ten mission widths, narrow containers, themes/forced colors/contrast, RTL/long labels/200% text, safe areas/native hosts and actual keyboard/screen-reader outcomes NOTRUN.",
+    "catalogs": "No catalog read/write, extraction/namespace check/guard bypass. AST string scan is not localization acceptance.",
+    "failedProbes": [
+      {
+        "kind": "encoding",
+        "detail": "Early Python inventory stdout hit cp1252 UnicodeEncodeError; enclosing PowerShell later commands exited 0. Corrected probes set PYTHONIOENCODING=utf-8."
+      },
+      {
+        "kind": "wrong extension",
+        "detail": "Guessed operationalMetrics.ts and useWorkspaceScope.ts absent; actual .tsx paths resolved/read. resolveMetricValue.ts absent; actual formatMetric.ts read. These are probe failures, not source findings."
+      },
+      {
+        "kind": "overbroad output",
+        "detail": "Initial broad queue probe 2.1MB / subsequent 170KB were not treated as full reviewed queue. Narrow exact row/owner probes superseded them."
+      },
+      {
+        "kind": "write command launch failure",
+        "detail": "Tool shell 389 exit 1: The filename or extension is too long (os error 206). Oversized inline report command never launched; split artifact assembly followed. No source changes."
+      }
+    ],
+    "freshness": "No fake observation timestamp, telemetry or runtime success; local current-pin timestamps are file evidence only."
+  },
+  "release": {
+    "ownedFiles": [
+      "docs/frontend-audits/phase6-qa-dashboard-glance.json",
+      "web/logs/phase6-qa-dashboard-glance.log"
+    ],
+    "sourceWrites": false,
+    "testWrites": false,
+    "catalogWrites": false,
+    "gitCommands": false,
+    "heartbeatWrites": false,
+    "nativeAcceptance": false,
+    "claimRelease": "RELEASED report/log write ownership; no source/test/catalog ownership acquired.",
+    "logIgnoredEvidence": ".gitignore:80 logs/ unanchored directory pattern; no Git used."
+  },
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 449,
+      "rule": "unknown-zero / MDC-026,033",
+      "confidence": "high source effect; runtime NOTRUN",
+      "priority": "P2",
+      "detail": "Active charging renders finite time_to_full_charge=0 as dash, identical to missing. This confirms zero suppression, not backend duration/sentinel meaning.",
+      "fix": "Keep legitimate zero distinct from unknown after confirming existing unit/zero semantics; preserve positive scale, no guessed conversion.",
+      "owner": "page",
+      "evidence": [
+        "web/src/features/dashboard/pages/GlancePage.tsx:433-453",
+        "web/src/api/hooks/useVehicles.ts:247-248"
+      ],
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "F02",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 562,
+      "rule": "unknown-zero / MDC-026,033",
+      "confidence": "high source effect; runtime NOTRUN",
+      "priority": "P2",
+      "detail": "Finite zero ETA removes the entire ETA row, as does missing. No backend sentinel/unit assertion is made.",
+      "fix": "Preserve ETA with explicit missing versus legitimate zero outcome, subject to existing backend duration contract; no seconds/minutes guessing.",
+      "owner": "page",
+      "evidence": [
+        "web/src/features/dashboard/pages/GlancePage.tsx:555-568",
+        "web/src/api/types.ts:2286-2289"
+      ],
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "F03",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 210,
+      "rule": "refresh-policy / MDC-045,047",
+      "confidence": "high source effect; runtime NOTRUN",
+      "priority": "P2",
+      "detail": "Location fixed 30000ms cadence bypasses useRefreshInterval saved low-bandwidth 4x/API-unreachable policy. Global offline/hidden QueryClient pause may still prevent requests; offline traffic not claimed.",
+      "fix": "Separately extend existing location interval type to number | false, then adopt existing 30s refresh-policy hook in Glance. Keep latest scope under as_of.",
+      "owner": "page/hook",
+      "evidence": [
+        "web/src/features/dashboard/pages/GlancePage.tsx:172-176,210",
+        "web/src/api/hooks/useVehicles.ts:491-498",
+        "web/src/hooks/useRefreshPolicy.ts:80-99,159-190"
+      ],
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "F04",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 266,
+      "rule": "mobile-target / MDC-040,043",
+      "confidence": "high source effect; runtime NOTRUN",
+      "priority": "P2",
+      "detail": "Icon Refresh has default Button md h-10: declared 2.5rem/40px at 16px root, below below-md44 allocation. PageActions has no child sizing override. Actual rectangle NOTRUN.",
+      "fix": "Add existing below-md44 target at this consumer; preserve desktop sizing; do not globally resize Button.",
+      "owner": "page",
+      "evidence": [
+        "web/src/features/dashboard/pages/GlancePage.tsx:264-271",
+        "web/src/components/ui/Button.tsx:37-42,61-73",
+        "web/src/components/layout/PageActions.tsx:104-169"
+      ],
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "F05",
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "line": 246,
+      "rule": "mobile-target / MDC-040,043",
+      "confidence": "high source effect; runtime NOTRUN",
+      "priority": "P2",
+      "detail": "Refetchable header freshness control explicitly uses auto height/padding and has no mobile44 minimum. Glance reaches noncompact refetchable branch through PageContainer query. Measured dimensions NOTRUN.",
+      "fix": "Use explicit existing mobile minimum only at refetchable shared branch, retaining compact/desktop/fetch callbacks and semantics.",
+      "owner": "shared",
+      "evidence": [
+        "web/src/components/data-display/DataFreshness.tsx:237-261,322-343",
+        "web/src/components/layout/PageContainer.tsx:212-220",
+        "web/src/features/dashboard/pages/GlancePage.tsx:306"
+      ],
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "F06",
+      "file": "web/src/components/ui/Drawer.tsx",
+      "line": 198,
+      "rule": "mobile-target / MDC-040,043",
+      "confidence": "high source effect; runtime NOTRUN",
+      "priority": "P2",
+      "detail": "OperationalBrief omits custom footer, reaching default Drawer footer Close, unqualified Button md h-10/40px at16px root. Top Close already h-11 w-11; footer-only source gap, rectangles NOTRUN.",
+      "fix": "Add below-md44 minimum only to default footer Close; keep explicit/null footer, desktop/focus/scroll/Escape.",
+      "owner": "shared",
+      "evidence": [
+        "web/src/components/ui/Drawer.tsx:190-205",
+        "web/src/components/ui/Button.tsx:37-42,61",
+        "web/src/components/data-display/OperationalBrief.tsx:238-256"
+      ],
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "F07",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "line": 164,
+      "rule": "paused-is-not-offline / MDC-026",
+      "confidence": "high source effect; runtime NOTRUN",
+      "priority": "P2",
+      "detail": "Any fetchStatus=paused becomes visible Paused offline without connectivity qualification. Paused/deferred is not itself proof of offline; current badge ignores online evidence.",
+      "fix": "Use neutral localized paused/deferred wording unless existing connection evidence proves offline. Separate canonical-copy owner if needed; retain retry/status.",
+      "owner": "shared",
+      "evidence": [
+        "web/src/components/feedback/DataSourceNotice.tsx:79-82,170-172,254-257",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:56-68",
+        "web/src/features/dashboard/pages/GlancePage.tsx:307-310"
+      ],
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "F08",
+      "file": "web/src/components/data-display/DataProvenanceBadge.tsx",
+      "line": 113,
+      "rule": "display-preferences / MDC-044,045",
+      "confidence": "high source effect; runtime NOTRUN",
+      "priority": "P2",
+      "detail": "Provenance tooltip formats updatedAt using browser-default Date.toLocaleString, not saved TeslaSync locale/timezone/hour preferences. Glance passes fetch time via DashboardSourceBrief.",
+      "fix": "Reuse current date-format preference owner; retain raw fetch epoch, provenance/status and separate real-observation caption. Do not turn fetch time into signal time.",
+      "owner": "shared",
+      "evidence": [
+        "web/src/components/data-display/DataProvenanceBadge.tsx:107-115",
+        "web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx:45-46",
+        "web/src/hooks/useDateFormat.ts:74-102"
+      ],
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "F09",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 304,
+      "rule": "independent-source-retention / MDC-026",
+      "confidence": "high source effect; runtime NOTRUN",
+      "priority": "P1",
+      "detail": "Registry loading/fatal is passed to whole PageLayout, which replaces all children. Selection can retain URL/store positive ID with unresolved registry and usable cached state/location; those independent sources are erased. !vehicle also equates unresolved identity to no-vehicle. Static reachable combination, not observed outage.",
+      "fix": "Isolate registry-only initial/fatal failure when genuine selected ID and usable independent data exist; preserve real empty-fleet/no-selection CTA, no invented identity.",
+      "owner": "page",
+      "evidence": [
+        "web/src/features/dashboard/pages/GlancePage.tsx:163-180,303-315",
+        "web/src/hooks/useSelectedVehicle.ts:64-75,162-179",
+        "web/src/components/layout/PageContainer.tsx:238-255"
+      ],
+      "nativeStatus": "NOTRUN"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 221,
+      "rule": "command-retained-trust",
+      "confidence": "medium; not promoted",
+      "detail": "A fresh real stream observation can coexist with refresh error and enabled command; no explicit refreshError/status eligibility check.",
+      "whyNotConfirmed": "Fetch failure does not necessarily invalidate a recent observation or command service; intended command-trust policy/backend rejection not exercised. Live-mode/offline/pending guards preserved.",
+      "evidence": [
+        "web/src/features/dashboard/pages/GlancePage.tsx:220-223",
+        "web/src/api/hooks/useVehicleCommand.ts:55-62",
+        "web/src/api/client.ts:358-372"
+      ],
+      "queueAction": "NONE; candidates do not create corrective items",
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 598,
+      "rule": "command-unknown-flag",
+      "confidence": "medium; not promoted",
+      "detail": "Unknown lock/climate flags select Lock/Climate on with no per-flag verified-field requirement.",
+      "whyNotConfirmed": "These may be explicit target actions, not assertions of unlocked/off current state. Status rows show Unknown. Product toggle/capability policy required before defect/fix.",
+      "evidence": [
+        "web/src/features/dashboard/pages/GlancePage.tsx:503-534,597-635"
+      ],
+      "queueAction": "NONE; candidates do not create corrective items",
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 438,
+      "rule": "wire-SI-contract",
+      "confidence": "medium; not promoted",
+      "detail": "Charging power kW, charge rate distance/h, charging time h and ETA min rely on undocumented frontend wire units.",
+      "whyNotConfirmed": "Historical audit describes server W-to-kW exception. Current backend/payload not inspected. No factor-of-1000/3600 defect confirmed or local converter remigration authorized.",
+      "evidence": [
+        "web/src/features/dashboard/pages/GlancePage.tsx:438-450,562-566",
+        "web/src/api/types.ts:637-639,2285-2289",
+        "docs/frontend-audits/audit-page-092.json (historical only)"
+      ],
+      "queueAction": "NONE; candidates do not create corrective items",
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 306,
+      "rule": "fetch-versus-observation-copy",
+      "confidence": "medium; not promoted",
+      "detail": "Unscoped header DataFreshnessAuto can announce Up to date from fetch time; provenance tooltip receives updatedAt too.",
+      "whyNotConfirmed": "Shared component explicitly documents query/fetch health; page separately says Last real observation and per-reading limitation. Not proof of replacing observation timestamp; mounted interpretation NOTRUN.",
+      "evidence": [
+        "web/src/features/dashboard/pages/GlancePage.tsx:184-208,228-243,306,351-354",
+        "web/src/components/data-display/DataFreshness.tsx:11-23,85-89,322-343"
+      ],
+      "queueAction": "NONE; candidates do not create corrective items",
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "C05",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 191,
+      "rule": "future-observation-skew",
+      "confidence": "medium; not promoted",
+      "detail": "Finite future observedAt with raw fresh passes negative-age freshness predicate until future+window.",
+      "whyNotConfirmed": "Producer/backend future timestamp validation unknown; no payload/skew case exercised. Boundary candidate, not proof of stale real telemetry or current bad commands.",
+      "evidence": [
+        "web/src/api/hooks/useVehicles.ts:181-190",
+        "web/src/features/dashboard/pages/GlancePage.tsx:186-196"
+      ],
+      "queueAction": "NONE; candidates do not create corrective items",
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "C06",
+      "file": "web/src/App.tsx",
+      "line": 563,
+      "rule": "standalone-scope-landmark",
+      "confidence": "medium; not promoted",
+      "detail": "Glance outside Layout has no mounted shell vehicle/range picker; PageLayout/PageContainer are div wrappers, not main.",
+      "whyNotConfirmed": "Existing intentional standalone route; URL/store/default selection works; current snapshot needs no analysis range. All provider/native landmark/safe-area behavior not certified; no route move/local competing picker warranted.",
+      "evidence": [
+        "web/src/App.tsx:563,574",
+        "web/src/lib/workspaceScope.ts:23-77,156-168",
+        "web/src/hooks/useWorkspaceScope.tsx:14-21"
+      ],
+      "queueAction": "NONE; candidates do not create corrective items",
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "C07",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 313,
+      "rule": "duplicate-source-announcement",
+      "confidence": "medium; not promoted",
+      "detail": "DataSourceNotice and source StaleRefreshWarning can overlap for one refresh failure.",
+      "whyNotConfirmed": "Graph overlap is not measured screen-reader repetition/dedup behavior. Preserve individual recovery; no deleting notices from a candidate.",
+      "evidence": [
+        "web/src/features/dashboard/pages/GlancePage.tsx:307-314,541-544",
+        "web/src/components/layout/PageContainer.tsx:252-254"
+      ],
+      "queueAction": "NONE; candidates do not create corrective items",
+      "nativeStatus": "NOTRUN"
+    },
+    {
+      "id": "C08",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "line": 177,
+      "rule": "allocated-width-responsive",
+      "confidence": "medium; not promoted",
+      "detail": "Compact summary uses viewport sm/md/3xl columns while live cards/KVList are container-aware.",
+      "whyNotConfirmed": "No clipped metric/action or overflow measured; standalone allocation may be adequate. Keep all six metrics/descriptions/details and defer mounted narrow-container proof.",
+      "evidence": [
+        "web/src/components/data-display/OperationalBrief.tsx:170-179",
+        "web/src/features/dashboard/pages/GlancePage.tsx:362-365"
+      ],
+      "queueAction": "NONE; candidates do not create corrective items",
+      "nativeStatus": "NOTRUN"
+    }
+  ],
+  "fixNeeds": [
+    {
+      "proposedItem": "phase6-fix-glance-zero-outcomes",
+      "findingIds": [
+        "F01",
+        "F02"
+      ],
+      "status": "ORCHESTRATOR_PROPOSAL_ONLY_NOT_QUEUED",
+      "exclusiveSourceScopeIfAuthorized": [
+        "web/src/features/dashboard/pages/GlancePage.tsx"
+      ],
+      "objective": "Correct only legitimate zero vs missing charging duration/ETA; preserve positive semantics.",
+      "dependsOn": [
+        "Established existing backend units/zero sentinel contract"
+      ],
+      "dedup": "No matching exact Phase6 corrective objective in current owner/goal search; accepted migrations stay closed.",
+      "verificationNeeded": "Separately leased covering fixtures/preservation/scoped checks; native requires later grant. No source/tests/catalog writes here."
+    },
+    {
+      "proposedItem": "phase6-fix-location-refresh-false-contract",
+      "findingIds": [
+        "F03"
+      ],
+      "status": "ORCHESTRATOR_PROPOSAL_ONLY_NOT_QUEUED",
+      "exclusiveSourceScopeIfAuthorized": [
+        "web/src/api/hooks/useVehicles.ts"
+      ],
+      "objective": "Extend only useLocationSnapshotLatest interval to number | false; retain key/path/signal/enablement.",
+      "dependsOn": [],
+      "dedup": "No matching exact Phase6 corrective objective in current owner/goal search; accepted migrations stay closed.",
+      "verificationNeeded": "Separately leased covering fixtures/preservation/scoped checks; native requires later grant. No source/tests/catalog writes here."
+    },
+    {
+      "proposedItem": "phase6-fix-glance-location-refresh-policy",
+      "findingIds": [
+        "F03"
+      ],
+      "status": "ORCHESTRATOR_PROPOSAL_ONLY_NOT_QUEUED",
+      "exclusiveSourceScopeIfAuthorized": [
+        "web/src/features/dashboard/pages/GlancePage.tsx"
+      ],
+      "objective": "Adopt existing 30s connection/save-data policy; keep latest/as_of source distinction.",
+      "dependsOn": [
+        "phase6-fix-location-refresh-false-contract accepted/released"
+      ],
+      "dedup": "No matching exact Phase6 corrective objective in current owner/goal search; accepted migrations stay closed.",
+      "verificationNeeded": "Separately leased covering fixtures/preservation/scoped checks; native requires later grant. No source/tests/catalog writes here."
+    },
+    {
+      "proposedItem": "phase6-fix-glance-refresh-mobile-target",
+      "findingIds": [
+        "F04"
+      ],
+      "status": "ORCHESTRATOR_PROPOSAL_ONLY_NOT_QUEUED",
+      "exclusiveSourceScopeIfAuthorized": [
+        "web/src/features/dashboard/pages/GlancePage.tsx"
+      ],
+      "objective": "Below-md44 allocation at specific Refresh; desktop unchanged.",
+      "dependsOn": [],
+      "dedup": "No matching exact Phase6 corrective objective in current owner/goal search; accepted migrations stay closed.",
+      "verificationNeeded": "Separately leased covering fixtures/preservation/scoped checks; native requires later grant. No source/tests/catalog writes here."
+    },
+    {
+      "proposedItem": "phase6-fix-refetch-freshness-mobile-target",
+      "findingIds": [
+        "F05"
+      ],
+      "status": "ORCHESTRATOR_PROPOSAL_ONLY_NOT_QUEUED",
+      "exclusiveSourceScopeIfAuthorized": [
+        "web/src/components/data-display/DataFreshness.tsx"
+      ],
+      "objective": "Mobile minimum only at refetchable control; not another freshness migration.",
+      "dependsOn": [],
+      "dedup": "No matching exact Phase6 corrective objective in current owner/goal search; accepted migrations stay closed.",
+      "verificationNeeded": "Separately leased covering fixtures/preservation/scoped checks; native requires later grant. No source/tests/catalog writes here."
+    },
+    {
+      "proposedItem": "phase6-fix-drawer-footer-close-mobile-target",
+      "findingIds": [
+        "F06"
+      ],
+      "status": "ORCHESTRATOR_PROPOSAL_ONLY_NOT_QUEUED",
+      "exclusiveSourceScopeIfAuthorized": [
+        "web/src/components/ui/Drawer.tsx"
+      ],
+      "objective": "Default footer Close only; unrelated feature DLQ drawer-trust not a duplicate.",
+      "dependsOn": [],
+      "dedup": "No matching exact Phase6 corrective objective in current owner/goal search; accepted migrations stay closed.",
+      "verificationNeeded": "Separately leased covering fixtures/preservation/scoped checks; native requires later grant. No source/tests/catalog writes here."
+    },
+    {
+      "proposedItem": "phase6-fix-source-paused-connectivity-label",
+      "findingIds": [
+        "F07"
+      ],
+      "status": "ORCHESTRATOR_PROPOSAL_ONLY_NOT_QUEUED",
+      "exclusiveSourceScopeIfAuthorized": [
+        "web/src/components/feedback/DataSourceNotice.tsx"
+      ],
+      "objective": "Neutral paused unless actual offline evidence; separate copy-owner prerequisite if needed.",
+      "dependsOn": [
+        "Exact existing dataSources.status.paused canonical-copy disposition if neutral copy absent"
+      ],
+      "dedup": "No matching exact Phase6 corrective objective in current owner/goal search; accepted migrations stay closed.",
+      "verificationNeeded": "Separately leased covering fixtures/preservation/scoped checks; native requires later grant. No source/tests/catalog writes here."
+    },
+    {
+      "proposedItem": "phase6-fix-provenance-tooltip-date-preferences",
+      "findingIds": [
+        "F08"
+      ],
+      "status": "ORCHESTRATOR_PROPOSAL_ONLY_NOT_QUEUED",
+      "exclusiveSourceScopeIfAuthorized": [
+        "web/src/components/data-display/DataProvenanceBadge.tsx"
+      ],
+      "objective": "Existing date preference formatter at tooltip; raw fetch instant remains fetch evidence.",
+      "dependsOn": [],
+      "dedup": "No matching exact Phase6 corrective objective in current owner/goal search; accepted migrations stay closed.",
+      "verificationNeeded": "Separately leased covering fixtures/preservation/scoped checks; native requires later grant. No source/tests/catalog writes here."
+    },
+    {
+      "proposedItem": "phase6-fix-glance-registry-source-isolation",
+      "findingIds": [
+        "F09"
+      ],
+      "status": "ORCHESTRATOR_PROPOSAL_ONLY_NOT_QUEUED",
+      "exclusiveSourceScopeIfAuthorized": [
+        "web/src/features/dashboard/pages/GlancePage.tsx"
+      ],
+      "objective": "Keep usable sources for real selected ID during registry-only initial failure; unknown identity != fabricated/no vehicle.",
+      "dependsOn": [],
+      "dedup": "No matching exact Phase6 corrective objective in current owner/goal search; accepted migrations stay closed.",
+      "verificationNeeded": "Separately leased covering fixtures/preservation/scoped checks; native requires later grant. No source/tests/catalog writes here."
+    }
+  ],
+  "counts": {
+    "confirmedFindings": 9,
+    "candidates": 8,
+    "fixNeeds": 9,
+    "byRule": {
+      "unknown-zero / MDC-026,033": 2,
+      "refresh-policy / MDC-045,047": 1,
+      "mobile-target / MDC-040,043": 3,
+      "paused-is-not-offline / MDC-026": 1,
+      "display-preferences / MDC-044,045": 1,
+      "independent-source-retention / MDC-026": 1
+    },
+    "byFile": {
+      "web/src/features/dashboard/pages/GlancePage.tsx": 5,
+      "web/src/components/data-display/DataFreshness.tsx": 1,
+      "web/src/components/ui/Drawer.tsx": 1,
+      "web/src/components/feedback/DataSourceNotice.tsx": 1,
+      "web/src/components/data-display/DataProvenanceBadge.tsx": 1
+    },
+    "filesRead": 79,
+    "currentPins": 79,
+    "countUnit": "Finding objects, not grep matches or executed runtime failures.",
+    "rootSections": 4,
+    "distinctActionGoals": 12,
+    "remoteControlMounts": 3,
+    "overviewMetrics": 6
+  },
+  "sections": [
+    {
+      "name": "Vehicle overview / operating summary",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 339,
+      "preserve": "Six raw metrics, scope, observation/provenance, per-reading limitation, Review details; state absence does not remove summary."
+    },
+    {
+      "name": "Live status / historical reconstruction",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 361,
+      "preserve": "Identity/battery/rated range; charging power/rate/time; climate + both temperatures; lock/sentry; independent latest location/destination/ETA; software. Three card shells stay."
+    },
+    {
+      "name": "Controls",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 582,
+      "preserve": "Lock/unlock, climate on/off, horn; disabled reasons, pending state and live-only mutation guards."
+    },
+    {
+      "name": "Open full app footer",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 655,
+      "preserve": "Native Link / and focus/mobile target. All four root areas are in selected-vehicle branch; genuine no-selection has Manage vehicles recovery."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Refresh state",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 266,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Manage vehicles",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 330,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Review details",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "line": 168,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Retry state",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 277,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Retry location",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 544,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Retry registry",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 313,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Retry all/individual unavailable sources",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "line": 198,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Lock/unlock",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 598,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Climate on/off",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 618,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Horn",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 638,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Open full app",
+      "file": "web/src/features/dashboard/pages/GlancePage.tsx",
+      "line": 655,
+      "status": "Source preserved; NOT invoked/exercised"
+    },
+    {
+      "name": "Close details",
+      "file": "web/src/components/ui/Drawer.tsx",
+      "line": 174,
+      "status": "Source preserved; NOT invoked/exercised"
+    }
+  ],
+  "dataSources": [
+    {
+      "id": "registry",
+      "hook": "useVehicles/useSelectedVehicle",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 74,
+      "method": "GET",
+      "path": "/vehicles",
+      "scope": "URL > persisted selection > first known vehicle; same query key, abort signal, raw data. No duplicate request assertion."
+    },
+    {
+      "id": "state",
+      "hook": "useVehicleState",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 259,
+      "method": "GET",
+      "path": "/vehicles/{id}/state; optional encoded as_of",
+      "scope": "Selected ID/as_of query keys, queryPolicy live; 10s connection-aware polling; historical interval false. Metadata live/observedAt/freshness/verifiedFields preserved."
+    },
+    {
+      "id": "location",
+      "hook": "useLocationSnapshotLatest",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 491,
+      "method": "GET",
+      "path": "/location-snapshots/latest?vehicle_id=<id>",
+      "scope": "Independent/latest, not historical; page cached trust/null/fatal/retained/loading/retry. Fixed polling gap F03; created_at not assumed stream freshness."
+    },
+    {
+      "id": "commands",
+      "hook": "useVehicleCommand",
+      "file": "web/src/api/hooks/useVehicleCommand.ts",
+      "line": 50,
+      "method": "POST",
+      "path": "/vehicles/{id}/command",
+      "scope": "Body command/params; internal vehicleId is not camelCase URL param. requiresLiveMode/networkMode always, offline/historical request guards before network, success-flag toast/invalidation and auth recovery retained. No fake local completion; zero commands sent."
+    }
+  ],
+  "auditDimensions": {
+    "observationsVsFetch": "Glance:184-208,228-243 derives server observedAt -> valid ISO -> useIsStale growing age; shared resolver re-evaluates 2-minute freshness as local age tick rerenders. Last real observation is not query.dataUpdatedAt. Stream timestamp/completeness limitation remains explicit. Historical source never enables commands. No per-reading freshness claim. C04/C05 remain candidates.",
+    "rawSIAndSign": "Six summary raw percent/metres/Celsius/mps pass StatMetric -> useOperationalMetrics -> validated formatMetric; display-only useUnits conversions honor saved preferences. Valid negative temperatures/speed are not abs/clamped by page; missing/nonfinite summary and nullable gauge remain unknown, not zero. Signed pack power not rendered. Charging/ETA wire certainty remains C03, not guessed rescaling.",
+    "preferences": "useUnits saved distance/speed/temperature/locale/precision and useNumberFormatting subscription preserved, no settings writes/reset. Date tooltip F08 and location low-bandwidth F03 remain.",
+    "vehicleRangeOwnership": "Current snapshot /glance absent from RANGE_ENABLED_PATHS; no list/whole-range aggregate, no missing range/bounds violation. useSelectedVehicle is existing URL/store owner; state/location use same ID. No local duplicate selector or scope=local. Router is standalone outside Layout, so registry scope defaults are not proof of mounted header controls. C06 requires separate evidence, not routing remigration.",
+    "independentTrust": "State fatal/empty/loading bodies keep card shells; location remains visible through state failure and has independent loading/unknown/fatal/retained/retry. Registry-only initial/fatal gate can erase both, F09. Summary/details share loading suppression.",
+    "unknownZero": "Summary/gauge and boolean status rows retain known zero/false vs unknown. Active charging zero-duration and zero-ETA suppressed: F01/F02. Unknown command target defaults are candidate C02, not a false status claim.",
+    "i18n": "AST JSX text/visible literal props found 0 matches in scoped scans. t defaults used for UI copy; units/punctuation/user names/software/destination and technical FSM identifiers are acceptable exceptions (I18N guidelines 128-136). No canonical/split catalog-key or real-language acceptance claimed.",
+    "accessibility": "Named overview/sections, definition-list rows, translated actions, nullable meter scale/value/unknown semantics, decorative icon hiding, shared Drawer focus/Escape/restore and native links preserved. F04-F06 are declared mobile allocation gaps, not measured rectangles. _ErrorState:122 applies min-h-11/min-w-11 to retry descendants: sm error retries are NOT mobile violations. Actual keyboard/contrast/screen reader NOTRUN.",
+    "responsive": "Live grid base1 and named @2xl/@5xl allocated-container thresholds; KVList own container/wrap. QuickActions min-h-16/min-w-24/flex-wrap/wrapLabel, footer44 allocation preserved. Summary viewport columns candidate C08. All ten widths/RTL/200%/long text/safe-area/overflow NOTRUN."
+  },
+  "guidelineChecks": {
+    "pageCaseSensitiveGrep": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section-candidate": 0,
+      "fetch-useeffect": 0,
+      "hardcoded-jsx-text-candidate": 0
+    },
+    "ASTRawCounts": {
+      "firstScan": {
+        "vendorImport": 1,
+        "rawControl": 1,
+        "inlineStyleCandidate": 2,
+        "hardcodedJsxText": 0,
+        "hardcodedVisibleProp": 0,
+        "useEffectCandidate": 5,
+        "doublePrefix": 0,
+        "camelcaseParam": 0,
+        "hiddenSection": 0
+      },
+      "additional8Files": {
+        "vendorImport": 0,
+        "rawControl": 0,
+        "inlineStyleCandidate": 3,
+        "hardcodedJsxText": 0,
+        "useEffectCandidate": 2
+      }
+    },
+    "exceptions": [
+      "Button native control and FadeIn vendor import are shared boundaries.",
+      "LinearGauge/Skeleton styles computed/ternary/passed-through, not static CSS vars.",
+      "Age/selection/focus effects and existing query online-retry are not ad-hoc fetch loading.",
+      "PageLayout:11 delegates to PageContainer: missing-page-container not applicable.",
+      "Technical FSM names and symbolic units not English prose.",
+      "No-selection CTA/conditional detail rows not automatically hidden-section violations; F09 specifically erases independent retained sources."
+    ],
+    "rawOutput": "web/logs/phase6-qa-dashboard-glance.log",
+    "backendRules": "NOT_APPLICABLE; no internal Go files in this rendered frontend scope."
+  },
+  "completedAt": "2026-10-14T01:05:19.982890Z",
+  "pinVerification": {
+    "sourceFilesChecked": 60,
+    "mismatches": [],
+    "status": "MATCH",
+    "limits": "Pins captured during final report assembly, not immutable originals/deployment/observation timestamps. Queue/handoff may evolve; exact row preserved at report read."
+  }
+}

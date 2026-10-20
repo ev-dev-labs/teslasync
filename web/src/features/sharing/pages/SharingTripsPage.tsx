@@ -27,13 +27,13 @@
 //     surface drafts an image prompt; the user still uses the existing
 //     per-drive Share workflow to publish a static share card.
 
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Route as RouteIcon, Share2, Zap, Car, RefreshCw } from 'lucide-react'
+import { Route as RouteIcon, RefreshCw } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
-import { GlassPanel, Button, PanelTitle, Text } from '@/components/ui'
-import { MetricCard } from '@/components/data-display'
+import { LayoutCard, PageLayout } from '@/components/layout'
+import { GlassPanel, Button, Text } from '@/components/ui'
+import { SharingTripsBrief } from '../components/operationalbrief-all/SharingTripsBrief'
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback'
 
 import { FadeIn } from '@/components/motion'
@@ -41,15 +41,18 @@ import { useTrips } from '@/api/hooks/useTrips'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import { useUnits } from '@/hooks/useUnits'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { fmtInt } from '@/lib/numberFormat'
-import { AITripPostcardShareCardImageGeneration } from '@/components/ai/AITripPostcardShareCardImageGeneration'
+import { useDataState } from '@/hooks/useDataState'
+
+import { AITripPostcardShareCardImageGeneration } from '@/components/ai'
 import {
   TripShareRow,
   SelectedTripPreview,
   aggregateTripKpis,
 } from '../components/sharing-trips'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function SharingTripsPage() {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
   usePageTitle(t('sharing.trips.title', 'Share a trip'))
 
@@ -57,7 +60,9 @@ export default function SharingTripsPage() {
   const { formatDistance, formatEnergy } = useUnits()
 
   const tripsQuery = useTrips({ vehicle_id: vehicleId ?? undefined, limit: 20 })
-  const { data: trips, isLoading, error, refetch } = tripsQuery
+  const { data: trips, refetch } = tripsQuery
+  const sourceState = useDataState(tripsQuery)
+  const error = sourceState.fatalError
   const allTrips = useMemo(() => trips ?? [], [trips])
 
   // Selected-trip id. The recent-trips list is the only selector on this page;
@@ -68,20 +73,68 @@ export default function SharingTripsPage() {
     () => allTrips.find((trip) => trip.id === selectedTripId) ?? null,
     [allTrips, selectedTripId],
   )
+  const listRef = useRef<HTMLUListElement>(null)
+  const searchRef = useRef({ value: '', at: 0 })
 
-  const kpis = useMemo(() => aggregateTripKpis(allTrips), [allTrips])
-  const coldLoading = isLoading && allTrips.length === 0
+  // The page owns listbox navigation; rows retain their native activation.
+  useLayoutEffect(() => {
+    const options = listRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]')
+    const activeIndex = allTrips.findIndex((trip) => trip.id === selectedTripId)
+    options?.forEach((option, index) => {
+      option.tabIndex = index === Math.max(0, activeIndex) ? 0 : -1
+      option.parentElement?.setAttribute('role', 'presentation')
+    })
+  }, [allTrips, selectedTripId])
+
+  const navigateTrips = (event: KeyboardEvent<HTMLUListElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.nativeEvent.isComposing) return
+    const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="option"]'))
+    const index = options.findIndex((option) => option === event.target)
+    if (index < 0) return
+    let next = index
+    if (event.key === 'ArrowDown') next = (index + 1) % options.length
+    else if (event.key === 'ArrowUp') next = (index + options.length - 1) % options.length
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = options.length - 1
+    else if (event.key.length === 1 && event.key !== ' ') {
+      const now = Date.now()
+      const search = searchRef.current
+      search.value = now - search.at < 700 ? search.value + event.key : event.key
+      search.at = now
+      const prefix = search.value.toLocaleLowerCase(displayLocale)
+      const match = options.findIndex((_, offset) => {
+        const candidate = options[(index + offset + 1) % options.length]
+        return candidate?.getAttribute('aria-label')?.toLocaleLowerCase(displayLocale).startsWith(prefix)
+      })
+      if (match < 0) return
+      next = (index + match + 1) % options.length
+    } else return
+    event.preventDefault()
+    const trip = allTrips[next]
+    if (!trip) return
+    setSelectedTripId(trip.id)
+    options[next]?.focus()
+  }
+
+  const kpis = useMemo(() => aggregateTripKpis(allTrips), [allTrips, displayPrecision, displayLocale])
+  const coldLoading = tripsQuery.isLoading && !sourceState.hasData
   // Surface the destructive error banner only when there is nothing cached to
   // show. On a background-refetch failure TanStack Query keeps the last good
   // data, so we keep rendering it (the header freshness badge already signals
   // the staleness) instead of blowing the list + totals away with a full-panel
   // error.
-  const showError = !!error && allTrips.length === 0
+  const showError = !!sourceState.fatalError
+  const unresolvedMessage = !sourceState.hasData && !coldLoading && !showError
+    ? tripsQuery.fetchStatus === 'paused'
+      ? t('sharing.trips.source.paused', 'The recent-trip query is paused; no empty result is inferred.')
+      : t('sharing.trips.source.unresolved', 'Recent-trip availability has not resolved yet.')
+    : null
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
       <Button
         variant="ghost"
+        className="min-h-11 min-w-11"
         onClick={() => refetch()}
         aria-label={t('common.refresh', 'Refresh')}
       >
@@ -91,14 +144,15 @@ export default function SharingTripsPage() {
   )
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('sharing.trips.title', 'Share a trip')}
       subtitle={t(
         'sharing.trips.subtitle',
         'Pick a recent trip to share as a static link, postcard, or image.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={tripsQuery}
+      busy={tripsQuery.isFetching}
     >
       {/* 1 — KPI band: full-width responsive metric grid. On a hard error
           (nothing cached) the band degrades to a QueryError panel instead of
@@ -115,38 +169,19 @@ export default function SharingTripsPage() {
         ) : (
           <section
             aria-label={t('sharing.trips.kpis', 'Trip totals')}
-            className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
           >
-            {coldLoading ? (
-              [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[74px] rounded-xl" />)
-            ) : (
-              <>
-                <MetricCard
-                  label={t('sharing.trips.kpi.shareable', 'Shareable trips')}
-                  value={fmtInt(kpis.count)}
-                  icon={<Share2 className="h-5 w-5" />}
-                  color="cyan"
-                />
-                <MetricCard
-                  label={t('sharing.trips.kpi.distance', 'Total distance')}
-                  value={formatDistance(kpis.totalDistanceM)}
-                  icon={<RouteIcon className="h-5 w-5" />}
-                  color="green"
-                />
-                <MetricCard
-                  label={t('sharing.trips.kpi.energy', 'Total energy')}
-                  value={formatEnergy(kpis.totalEnergyWh)}
-                  icon={<Zap className="h-5 w-5" />}
-                  color="amber"
-                />
-                <MetricCard
-                  label={t('sharing.trips.kpi.drives', 'Total drives')}
-                  value={fmtInt(kpis.totalDrives)}
-                  icon={<Car className="h-5 w-5" />}
-                  color="purple"
-                />
-              </>
-            )}
+            <SharingTripsBrief
+              kpis={kpis}
+              hasData={sourceState.hasData}
+              loading={coldLoading}
+              retained={!!sourceState.refreshError}
+              paused={tripsQuery.fetchStatus === 'paused'}
+              refreshing={tripsQuery.isFetching}
+              unresolvedMessage={unresolvedMessage}
+              vehicleId={vehicleId}
+              formatDistance={formatDistance}
+              formatEnergy={formatEnergy}
+            />
           </section>
         )}
       </FadeIn>
@@ -154,11 +189,8 @@ export default function SharingTripsPage() {
       {/* 2 — Main bento: recent-trips list (hero) + share preview / static hint */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <RouteIcon className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('sharing.trips.recent.heading', 'Recent trips')}
-            </PanelTitle>
+          <div className="min-w-0 xl:col-span-2">
+          <LayoutCard title={t('sharing.trips.recent.heading', 'Recent trips')}>
             {coldLoading ? (
               <div className="space-y-2">
                 {[0, 1, 2, 3].map((i) => (
@@ -171,6 +203,8 @@ export default function SharingTripsPage() {
                 onRetry={() => refetch()}
                 resourceName={t('sharing.trips.resource', 'Trips')}
               />
+            ) : unresolvedMessage ? (
+              <Text as="p" variant="bodySm" role="status">{unresolvedMessage}</Text>
             ) : allTrips.length === 0 ? (
               // no-action: trips are created automatically by driving — no manual action available.
               <EmptyState
@@ -182,8 +216,18 @@ export default function SharingTripsPage() {
               />
             ) : (
               <ul
+                ref={listRef}
                 className="space-y-2"
                 role="listbox"
+                onKeyDown={navigateTrips}
+                onFocus={(event) => {
+                  // Focus bubbles from the option; currentTarget is the owning listbox.
+                  const target: EventTarget = event.target
+                  if (!(target instanceof HTMLButtonElement) || target.getAttribute('role') !== 'option') return
+                  event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="option"]').forEach((option) => {
+                    option.tabIndex = option === target ? 0 : -1
+                  })
+                }}
                 aria-label={t('sharing.trips.recent.heading', 'Recent trips')}
                 data-testid="sharing-trips-recent-list"
               >
@@ -199,7 +243,8 @@ export default function SharingTripsPage() {
                 ))}
               </ul>
             )}
-          </GlassPanel>
+          </LayoutCard>
+          </div>
 
           <div className="space-y-4 xl:col-span-1">
             <SelectedTripPreview
@@ -211,17 +256,14 @@ export default function SharingTripsPage() {
             {/* Static share-card hint — the canonical baseline publishing
                 workflow (per-drive Share button) so a user who lands here
                 without AI on still sees how to share. */}
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-2">
-                {t('sharing.trips.staticHint.heading', 'Static share cards')}
-              </PanelTitle>
+            <LayoutCard title={t('sharing.trips.staticHint.heading', 'Static share cards')}>
               <Text as="p" size="sm" color="secondary" className="max-w-prose">
                 {t(
                   'sharing.trips.staticHint.body',
-                  'Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click "Share", and copy the public link \u2014 anyone with the link can view the static card, no AI required.',
+                  'Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click "share", and copy the public link \u2014 anyone with the link can view the static card, no AI required.',
                 )}
               </Text>
-            </GlassPanel>
+            </LayoutCard>
           </div>
         </section>
       </FadeIn>
@@ -236,6 +278,6 @@ export default function SharingTripsPage() {
       <FadeIn delay={0.2}>
         <AITripPostcardShareCardImageGeneration tripId={selectedTrip?.id} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

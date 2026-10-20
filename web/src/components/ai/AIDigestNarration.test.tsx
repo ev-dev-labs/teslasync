@@ -30,8 +30,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
+import type { FormEvent } from 'react';
 
 import type { AppSettings } from '@/api/types';
+import { EXTREME_TEXT } from '../../../e2e/fixtures/frontend-modernization';
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -187,6 +189,7 @@ describe('AIDigestNarration — vehicleId validation (mirrors backend vehicle_id
     ['zero', 0],
     ['a negative id', -5],
     ['NaN', Number.NaN],
+    ['a fractional id', 1.5],
   ];
 
   it.each(disabledCases)(
@@ -232,6 +235,145 @@ describe('AIDigestNarration — empty-state hint', () => {
 });
 
 describe('AIDigestNarration — wired SSE POST', () => {
+  it.each(['streaming', 'done'])('retires %s output when the selected week changes and requests the new week', async state => {
+    enableFeature();
+    let oldSignal: AbortSignal | null | undefined;
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+    fetchMock.mockImplementationOnce(async (_input, init) => {
+      oldSignal = init?.signal;
+      return new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(sseFrame('delta', { text: 'Old week recap' })));
+          if (state === 'done') {
+            controller.enqueue(new TextEncoder().encode(sseFrame('done', {
+              finish_reason: 'stop', usage: { in: 1, out: 1 },
+            })));
+            controller.close();
+          }
+        },
+      }), { headers: { 'Content-Type': 'text/event-stream' } });
+    });
+    fetchMock.mockResolvedValueOnce(new Response(makeReadableStream([
+      sseFrame('delta', { text: 'Selected previous week recap' }),
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 1, out: 1 } }),
+    ]), { headers: { 'Content-Type': 'text/event-stream' } }));
+    const { rerender } = render(<AIDigestNarration vehicleId={7} weekOffsetWeeks={0} weekStart="2026-10-12" />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: GENERATE })); });
+    await waitFor(() => expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Old week recap'));
+    rerender(<AIDigestNarration vehicleId={7} weekOffsetWeeks={-1} weekStart="2026-10-05" weekLabel="Oct 5 – Oct 11" />);
+    await waitFor(() => expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument());
+    if (state === 'streaming') expect(oldSignal?.aborted).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/Monday-to-Monday UTC weeks/)).toHaveTextContent('Oct 5 – Oct 11');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: GENERATE })); });
+    await waitFor(() => expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Selected previous week recap'));
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+      vehicle_id: 7, week_offset_weeks: -1,
+    });
+    expect(screen.queryByText('Old week recap')).not.toBeInTheDocument();
+  });
+
+  it.each([-13, 1, -1.5, Number.NaN])('discloses unsupported offset %s without requesting a substitute week', async weekOffsetWeeks => {
+    enableFeature();
+    render(<AIDigestNarration vehicleId={7} weekOffsetWeeks={weekOffsetWeeks} />);
+    expect(screen.getByText(/current UTC week and the previous 12 weeks/)).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: GENERATE });
+    expect(button).toBeDisabled();
+    await act(async () => { fireEvent.click(button); });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('enables the oldest supported week without clamping its request', async () => {
+    enableFeature();
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(makeReadableStream([
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 1, out: 1 } }),
+    ]), { headers: { 'Content-Type': 'text/event-stream' } }));
+    render(<AIDigestNarration vehicleId={7} weekOffsetWeeks={-12} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: GENERATE })); });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
+      vehicle_id: 7, week_offset_weeks: -12,
+    });
+  });
+
+  it('keeps generation a native non-submit action inside an enclosing form', async () => {
+    enableFeature();
+    const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault());
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(makeReadableStream([sseFrame('done', {
+        finish_reason: 'stop', usage: { in: 0, out: 0 },
+      })]), { headers: { 'Content-Type': 'text/event-stream' } }),
+    );
+
+    render(
+      <form onSubmit={onSubmit}>
+        <AIDigestNarration vehicleId={42} />
+      </form>,
+    );
+    const button = screen.getByRole('button', { name: GENERATE });
+    expect(button).toHaveAttribute('type', 'button');
+    button.focus();
+    expect(button).toHaveFocus();
+    await act(async () => { fireEvent.click(button); });
+    expect(onSubmit).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('No output was generated.');
+    });
+  });
+
+  it('keeps full long narrative, failure details and redacted evidence together', async () => {
+    enableFeature();
+    const text = `${EXTREME_TEXT.identifier}\n${EXTREME_TEXT.label}`;
+    const frames = [
+      sseFrame('tool_call', { id: 'digest-evidence', name: 'weekly_digest', arguments: {} }),
+      sseFrame('tool_result', { id: 'digest-evidence', name: 'weekly_digest', ok: true }),
+      sseFrame('delta', { text }),
+      sseFrame('error', { message: 'digest_source_unavailable' }),
+    ];
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(makeReadableStream(frames), {
+        headers: { 'Content-Type': 'text/event-stream' },
+      }),
+    );
+
+    render(<AIDigestNarration vehicleId={42} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: GENERATE })); });
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('digest_source_unavailable');
+    });
+    const panel = screen.getByTestId('ai-output-panel');
+    expect(panel).toHaveTextContent(EXTREME_TEXT.identifier);
+    expect(panel).toHaveTextContent(EXTREME_TEXT.label.trim());
+    expect(panel).toHaveTextContent('Weekly digest');
+    expect(screen.getByRole('button', { name: GENERATE })).toBeEnabled();
+  });
+
+  it('aborts old vehicle narration and removes its output before generating in the new scope', async () => {
+    enableFeature();
+    let oldSignal: AbortSignal | null | undefined;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      oldSignal = init?.signal;
+      return new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(sseFrame('delta', { text: 'Vehicle 42 recap' })));
+        },
+      }), { headers: { 'Content-Type': 'text/event-stream' } });
+    });
+
+    const { rerender } = render(<AIDigestNarration vehicleId={42} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: GENERATE })); });
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Vehicle 42 recap');
+    });
+    expect(oldSignal?.aborted).toBe(false);
+    rerender(<AIDigestNarration vehicleId={7} />);
+    await waitFor(() => {
+      expect(oldSignal?.aborted).toBe(true);
+      expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: GENERATE })).toBeEnabled();
+    });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('clicking Generate POSTs exactly once to /api/v1/ai/digests/weekly/narrate and renders the first delta', async () => {
     enableFeature();
 

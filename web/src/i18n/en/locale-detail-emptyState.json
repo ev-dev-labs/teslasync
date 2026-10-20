@@ -1,0 +1,61 @@
+{
+  "emptyState": {
+    "threshold": {
+      "defaultItem": "items",
+      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
+    },
+    "generic": "No data available yet.",
+    "label": {
+      "prerequisite": "What has to happen first",
+      "likelyCause": "Most likely reason"
+    },
+    "drives": {
+      "list": {
+        "meaning": "No completed drives have been recorded for this vehicle yet.",
+        "likelyCause": "Most often the vehicle has not driven since it was linked, or the selected date range ends before the first recorded drive."
+      }
+    },
+    "charging": {
+      "list": {
+        "meaning": "No charging sessions have been recorded for this vehicle yet.",
+        "likelyCause": "Most often the vehicle has not charged since it was linked, or it charged while asleep and unreachable."
+      }
+    },
+    "battery": {
+      "degradation": {
+        "meaning": "There is not enough history yet to estimate battery degradation.",
+        "likelyCause": "Most often the vehicle was linked recently, so the observation window is still too short to be meaningful."
+      }
+    },
+    "automations": {
+      "list": {
+        "meaning": "No automations are configured, so nothing is being evaluated.",
+        "likelyCause": "This list is empty by default — automations are opt-in and are never created for you."
+      }
+    },
+    "signals": {
+      "live": {
+        "meaning": "No live signals are arriving for this vehicle right now.",
+        "likelyCause": "Most often the vehicle is asleep — Tesla stops streaming while a car sleeps, and waking it costs range."
+      }
+    },
+    "alerts": {
+      "list": {
+        "meaning": "No alerts have fired — this is the expected steady state.",
+        "likelyCause": "Either no rules are configured yet, or every rule has evaluated cleanly in the selected window."
+      }
+    },
+    "analytics": {
+      "efficiency": {
+        "meaning": "No efficiency figures can be computed for the selected period.",
+        "likelyCause": "Most often the selected range contains no completed drives — widen it before assuming data is missing."
+      }
+    },
+    "vehicles": {
+      "list": {
+        "meaning": "No vehicles are linked, so nothing is being collected anywhere in the app.",
+        "likelyCause": "Either setup has not been completed, or the stored Tesla authorisation was revoked and needs renewing."
+      }
+    }
+  }
+}

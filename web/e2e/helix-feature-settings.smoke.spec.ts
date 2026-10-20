@@ -67,6 +67,6 @@ test('Helix usage shows live audited totals instead of placeholder amounts', asy
   await waitForHarnessReady(page, mockApi)
   const card = page.getByTestId('ai-usage-card')
   await expect(card.getByText('3 calls · 1 error')).toBeVisible()
-  await expect(card.getByTestId('ai-usage-value')).toHaveText(['1,250', '420', '$0.001200'])
+  await expect(card.locator('[data-operational-value]')).toHaveText(['1,250', '420', '$0.001200'])
   expect(usageRequests).toBeGreaterThan(0)
 })

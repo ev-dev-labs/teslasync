@@ -179,7 +179,7 @@ export function DriveDnaKpiNotices({
           <Text as="p" variant="caption">
             {t(
               'driveDna.kpis.capReached',
-              'The selector reached its 1,000-drive history cap; this selected drive’s telemetry remains complete for that drive.',
+              'The selector reached its 1,000-drive history cap; it does not truncate the selected drive’s full available telemetry emission feed or establish complete drive observations.',
             )}
           </Text>
         </AlertBanner>

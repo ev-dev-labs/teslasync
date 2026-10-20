@@ -6,6 +6,93 @@ import (
 	"time"
 )
 
+func TestEvaluateTypedTimeWindow(t *testing.T) {
+	tests := []struct {
+		name, start, end, timezone, instant string
+		days                                []int16
+		want                                bool
+	}{
+		{"Monday allowed", "00:00", "00:00", "", "2026-10-05T12:00:00Z", []int16{1, 2}, true},
+		{"Tuesday allowed", "00:00", "00:00", "", "2026-10-06T12:00:00Z", []int16{1, 2}, true},
+		{"Wednesday rejected", "00:00", "00:00", "", "2026-10-07T12:00:00Z", []int16{1, 2}, false},
+		{"weekend rejected", "00:00", "00:00", "", "2026-10-10T12:00:00Z", []int16{1, 2}, false},
+		{"Sunday is zero", "00:00", "00:00", "", "2026-10-04T12:00:00Z", []int16{0}, true},
+		{"empty days unrestricted", "00:00", "00:00", "", "2026-10-04T12:00:00Z", []int16{}, true},
+		{"full day nonmidnight equality", "12:00", "12:00", "", "2026-10-05T01:00:00Z", []int16{1}, true},
+		{"before start", "09:00", "17:00", "", "2026-10-05T08:59:59Z", []int16{1}, false},
+		{"inclusive start", "09:00", "17:00", "", "2026-10-05T09:00:00Z", []int16{1}, true},
+		{"before end", "09:00", "17:00", "", "2026-10-05T16:59:59Z", []int16{1}, true},
+		{"exclusive end", "09:00", "17:00", "", "2026-10-05T17:00:00Z", []int16{1}, false},
+		{"clock rejects allowed day", "09:00", "17:00", "", "2026-10-05T20:00:00Z", []int16{1}, false},
+		{"overnight inclusive start", "22:00", "06:00", "", "2026-10-05T22:00:00Z", []int16{1}, true},
+		{"overnight current day allowed", "22:00", "06:00", "", "2026-10-06T01:00:00Z", []int16{2}, true},
+		{"overnight not previous day", "22:00", "06:00", "", "2026-10-06T01:00:00Z", []int16{1}, false},
+		{"overnight exclusive end", "22:00", "06:00", "", "2026-10-06T06:00:00Z", []int16{2}, false},
+		{"local day before UTC", "00:00", "00:00", "America/Los_Angeles", "2026-10-06T01:00:00Z", []int16{1}, true},
+		{"local day rejects UTC Tuesday", "00:00", "00:00", "America/Los_Angeles", "2026-10-06T01:00:00Z", []int16{2}, false},
+		{"UTC fallback Tuesday", "00:00", "00:00", "", "2026-10-06T01:00:00Z", []int16{2}, true},
+		{"DST spring before jump", "01:00", "04:00", "America/Los_Angeles", "2026-03-08T09:30:00Z", []int16{0}, true},
+		{"DST spring after jump", "01:00", "04:00", "America/Los_Angeles", "2026-03-08T10:30:00Z", []int16{0}, true},
+		{"DST fall first hour", "01:00", "02:00", "America/Los_Angeles", "2026-11-01T08:30:00Z", []int16{0}, true},
+		{"DST fall repeated hour", "01:00", "02:00", "America/Los_Angeles", "2026-11-01T09:30:00Z", []int16{0}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start, err := time.Parse("15:04", tt.start)
+			if err != nil {
+				t.Fatal(err)
+			}
+			end, err := time.Parse("15:04", tt.end)
+			if err != nil {
+				t.Fatal(err)
+			}
+			now, err := time.Parse(time.RFC3339, tt.instant)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, snapshot, err := EvaluateTypedTimeWindow(start, end, tt.timezone, tt.days, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.Met != tt.want {
+				t.Fatalf("met = %t, want %t: %s", result.Met, tt.want, result.Reason)
+			}
+			var recorded struct {
+				Met bool `json:"met"`
+			}
+			if err := json.Unmarshal(snapshot, &recorded); err != nil {
+				t.Fatal(err)
+			}
+			if recorded.Met != tt.want {
+				t.Fatalf("snapshot met = %t, want %t", recorded.Met, tt.want)
+			}
+		})
+	}
+}
+
+func TestEvaluateTypedTimeWindowInvalidConfig(t *testing.T) {
+	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	for _, tt := range []struct {
+		name, timezone string
+		days           []int16
+	}{
+		{"negative day", "", []int16{-1}},
+		{"day above six", "", []int16{7}},
+		{"invalid timezone", "Mars/Olympus", nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			result, _, err := EvaluateTypedTimeWindow(now, now, tt.timezone, tt.days, now)
+			if err == nil || result.Met {
+				t.Fatalf("invalid config result = %#v, err = %v", result, err)
+			}
+		})
+	}
+	_, err := DecodeTimeWindowSpec(json.RawMessage(`{"start_time":"00:00","end_time":"00:00"}`))
+	if err == nil {
+		t.Fatal("legacy parser must still reject equal clocks")
+	}
+}
+
 // ─── Config Parsing Tests ───────────────────────────────
 
 func TestDecodeTimeWindowSpec_Valid(t *testing.T) {

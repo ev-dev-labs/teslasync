@@ -10,10 +10,11 @@
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Timeline } from '@/components/data-display/Timeline';
-import { EmptyState } from '@/components/feedback/EmptyState';
+import { Timeline } from '@/components/data-display';
+import { EmptyState } from '@/components/feedback';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { Icons } from '@/lib/icons';
-import { formatDateTime } from '@/lib/dateFormat';
+import { gaugeTone } from '@/lib/tokens';
 import type { AlertEvent } from '@/api/types';
 
 export interface AlertDetailTimelineProps {
@@ -22,14 +23,15 @@ export interface AlertDetailTimelineProps {
 }
 
 const KIND_COLOR: Record<string, string> = {
-  created: '#00f0ff',
-  acknowledged: '#10b981',
-  reopened: '#f59e0b',
-  commented: '#a855f7',
+  created: gaugeTone.info,
+  acknowledged: gaugeTone.success,
+  reopened: gaugeTone.warning,
+  commented: gaugeTone.neutral,
 };
 
 export function AlertDetailTimeline({ events, className }: AlertDetailTimelineProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
 
   const items = useMemo(() => {
     if (!events?.length) return [];
@@ -55,7 +57,7 @@ export function AlertDetailTimeline({ events, className }: AlertDetailTimelinePr
         icon: kindIcon(ev.kind),
       };
     });
-  }, [events, t]);
+  }, [events, t, formatDateTime]);
 
   if (!events || events.length === 0) {
     return (

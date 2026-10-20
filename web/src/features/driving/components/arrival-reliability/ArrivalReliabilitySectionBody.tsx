@@ -95,7 +95,11 @@ export function ArrivalReliabilitySectionBody({
     return (
       <PassiveState
         className={className}
-        message={t(
+        message={state.isRefreshBlocked ? t(
+          'chargingPlaces.workspace.initialPaused',
+          '{{source}} loading is paused. No data has been loaded yet.',
+          { source: t('arrivalReliability.title', 'Arrival Reliability') },
+        ) : t(
           'arrivalReliability.states.pendingPassive',
           'Timing-history availability has not resolved.',
         )}

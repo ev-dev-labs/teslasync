@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFormatting } from '@/hooks/useFormatting';
+import { formatCurrencyValue } from '@/lib/currencyFormat';
 import { MapContainer, MarkerCluster } from '@/components/maps';
 import { MapTileLayer } from '@/components/maps';
 import type { TeslaChargingSession } from '@/api/hooks/useCharging';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatDateTime } from '@/lib/dateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface Props {
   sessions: TeslaChargingSession[];
@@ -47,8 +48,9 @@ function escapeHtml(str: string): string {
 }
 
 export default function TeslaChargingSessionsMap({ sessions }: Props) {
+  const { fmtNumber, locale, precision } = useNumberFormatting();
   const { t } = useTranslation();
-  const { formatCurrency } = useFormatting();
+  const unknownCurrency = t('tesla_sessions.unknownCurrency', 'Unknown currency');
 
   /* Only sessions with finite, real coordinates feed the map. */
   const locatedSessions = useMemo(
@@ -80,12 +82,22 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
         const siteName = escapeHtml(displayName);
         const energy =
           s.total_energy_added_wh != null
-            ? `<p>${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh, 'kWh'), 1)} kWh</p>`
+            ? `<p>${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh, 'kWh'))} kWh</p>`
             : '';
-        const cost =
-          s.total_cost != null ? `<p>${formatCurrency(s.total_cost, 2)}</p>` : '';
+        const currency = s.currency_code?.trim().toUpperCase() ?? '';
+        const supportedCurrencies = (Intl as typeof Intl & {
+          supportedValuesOf?: (key: 'currency') => string[];
+        }).supportedValuesOf?.('currency');
+        const knownCurrency = /^[A-Z]{3}$/.test(currency)
+          && currency !== 'XXX' && currency !== 'XTS'
+          && supportedCurrencies?.includes(currency);
+        const cost = s.total_cost != null
+          ? `<p>${escapeHtml(knownCurrency
+            ? formatCurrencyValue(s.total_cost, currency, locale, precision, { useGrouping: true })
+            : `${fmtNumber(s.total_cost)} · ${unknownCurrency}`)}</p>`
+          : '';
         const charger = s.charger_type
-          ? `<p style="text-transform:uppercase">${escapeHtml(String(s.charger_type))}</p>`
+          ? `<p>${escapeHtml(String(s.charger_type))}</p>`
           : '';
         return {
           id: s.session_id,
@@ -104,7 +116,7 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
           }) as string,
         };
       }),
-    [locatedSessions, t, formatCurrency],
+    [locatedSessions, t, locale, precision, fmtNumber, unknownCurrency],
   );
 
   return (
@@ -122,7 +134,7 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
         <MapTileLayer />
         <MarkerCluster
           points={clusterPoints}
-          defaultColor="#22d3ee"
+          defaultColor="var(--semantic-info)"
           maxClusterRadius={60}
         />
       </MapContainer>

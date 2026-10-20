@@ -1,6 +1,11 @@
 import { useEffect, useState, useCallback, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 
 export interface PageHeaderStickyProps {
   /**
@@ -55,7 +60,9 @@ export function PageHeaderSticky({
   testId,
   className,
 }: PageHeaderStickyProps) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
+  const { reduce } = useMotionPreference();
 
   useEffect(() => {
     const target = document.getElementById(targetId);
@@ -83,27 +90,28 @@ export function PageHeaderSticky({
     // real scroll element and scroll it; fall back to window for tests
     // and pages rendered outside the standard layout.
     const scrollEl = document.getElementById('main-content');
+    const behavior = reduce ? 'auto' : 'smooth';
     if (scrollEl) {
-      scrollEl.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollEl.scrollTo({ top: 0, behavior });
     } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior });
     }
-  }, []);
+  }, [reduce]);
 
   if (!visible) return null;
 
   const innerClass = cn(
-    'flex items-center gap-3 px-4 py-2 text-xs',
-    scrollToTop && 'cursor-pointer hover:text-cyan-200 transition-colors',
+    'flex items-center gap-3 px-4 py-2',
+    typography.size.xs,
   );
 
   const content = (
     <>
-      <div className="flex-1 min-w-0 flex items-center gap-3 text-[var(--text-secondary)] truncate">
+      <div className={cn('flex-1 min-w-0 flex flex-wrap items-center gap-3 whitespace-normal break-words text-start', typography.color.secondary)}>
         {children}
       </div>
       {scrollToTop && (
-        <ArrowUp className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" aria-hidden />
+        <Icon icon={ArrowUp} size="sm" className={typography.color.muted} />
       )}
     </>
   );
@@ -111,7 +119,7 @@ export function PageHeaderSticky({
   return (
     <div
       className={cn(
-        'sticky z-40 -mx-4 border-b border-white/[0.06] bg-[var(--bg-1)]/95 backdrop-blur',
+        'sticky z-40 -mx-4 border-b border-[var(--border-subtle)] bg-[var(--surface-1)]',
         className,
       )}
       style={{ top: topOffset }}
@@ -120,14 +128,16 @@ export function PageHeaderSticky({
       data-testid={testId}
     >
       {scrollToTop ? (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={handleScrollTop}
-          className={cn(innerClass, 'w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60')}
-          aria-label={`${ariaLabel} — scroll to top`}
+          className={cn(innerClass, 'h-auto w-full rounded-none text-start', typography.weight.regular)}
+          aria-label={t('a11y.scrollToTop', '{{region}} — scroll to top', { region: ariaLabel })}
         >
           {content}
-        </button>
+        </Button>
       ) : (
         <div className={innerClass}>{content}</div>
       )}

@@ -7,7 +7,7 @@
  * returns an `IngestXRayResponse`, laid out as a responsive bento:
  *
  *   1. Toolbar (vehicle + window + bucket + refresh) → PageContainer actions
- *   2. KPI band (aggregate summary + derived peak/avg) → XRayHeader
+ *   2. KPI band (aggregate summary + derived peak/avg) → IngestOperationalBrief
  *   3. Hero bento: bucketed sample-count time-series    → XRayBucketChart
  *      + top-fields-by-volume side panel                → XRayTopFields
  *   4. Detail band: per-field stats table               → XRayFieldsTable
@@ -20,19 +20,21 @@
  */
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Info, RefreshCw } from 'lucide-react';
+import { Info, RefreshCw } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, PanelTitle } from '@/components/ui';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { Button, GlassPanel, Icon, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import {
   AlertBanner,
   QueryError,
   SectionErrorBoundary,
+  Skeleton,
 } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useIngestXRay } from '@/api/hooks/useIngestXRay';
+import { deriveDataState } from '@/api/dataState';
 import type {
   IngestXRayBucket,
   IngestXRayWindow,
@@ -42,15 +44,15 @@ import {
   XRayBucketChart,
   XRayControls,
   XRayFieldsTable,
-  XRayHeader,
   XRayTopFields,
 } from '../components/ingest-xray';
+import { IngestOperationalBrief } from '../components/statstrip-ingest-dlq-redis/IngestOperationalBrief';
 
 export default function IngestXRayPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.xray.pageTitle', 'Ingest X-Ray'));
+  usePageTitle(t('admin.xray.pageTitle', 'Ingest x-ray'));
 
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId, vehicles, vehiclesState, setVehicleId } = useSelectedVehicle();
   const [windowSel, setWindowSel] = useState<IngestXRayWindow>('1h');
   const [bucketSel, setBucketSel] = useState<IngestXRayBucket>('1m');
 
@@ -77,10 +79,11 @@ export default function IngestXRayPage() {
   // last-good numbers on error; gating every section on "error AND no data"
   // keeps them consistent and lets the page-tier freshness chip own the
   // stale/failed signalling.
-  const showError = xray.isError && xray.data === undefined;
+  const source = deriveDataState(xray);
+  const showError = source.fatalError !== null;
 
   const actions = (
-    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
       <XRayControls
         vehicles={vehicles}
         vehicleId={vehicleId}
@@ -92,29 +95,61 @@ export default function IngestXRayPage() {
       />
       <Button
         variant="ghost"
+        className="min-h-11 min-w-11 md:min-h-10 md:min-w-10"
         onClick={refetch}
         disabled={noVehicle || xray.isFetching}
-        aria-label={t('admin.xray.actions.refresh', 'Refresh ingest X-Ray')}
+        aria-label={t('admin.xray.actions.refresh', 'Refresh ingest x-ray')}
       >
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+        <Icon icon={RefreshCw} />
       </Button>
     </div>
   );
 
   return (
-    <PageContainer
-      title={t('admin.xray.pageTitle', 'Ingest X-Ray')}
+    <PageLayout
+      title={t('admin.xray.pageTitle', 'Ingest x-ray')}
       subtitle={t(
         'admin.xray.subtitle',
         'Per-vehicle telemetry sample counts — pick a vehicle to inspect what the ingest pipeline is receiving.',
       )}
-      actions={actions}
+      contextActions={actions}
       query={xray}
+      dataSources={[{
+        id: 'vehicles',
+        label: t('dataSources.labels.vehicleRegistry', 'Vehicle registry'),
+        query: {
+          data: vehiclesState.data,
+          error: vehiclesState.fatalError ?? vehiclesState.refreshError,
+          isError: vehiclesState.fatalError !== null || vehiclesState.refreshError !== null,
+          isPending: !vehiclesState.hasData,
+          isLoading: vehiclesState.status === 'initial' && !vehiclesState.isRefreshBlocked,
+          isFetching: vehiclesState.isRefreshing,
+          fetchStatus: vehiclesState.isRefreshBlocked ? 'paused' : 'idle',
+          refetch: vehiclesState.retry ?? undefined,
+        },
+      }, {
+        id: 'ingest-xray',
+        label: t('admin.xray.pageTitle', 'Ingest x-ray'),
+        query: xray,
+        enabled: !noVehicle,
+      }]}
     >
-      {noVehicle && (
+      {!vehiclesState.hasData && !vehiclesState.fatalError && (
+        <LayoutCard title={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')}>
+          <div role="status">
+            <Text color="secondary">
+              {vehiclesState.isRefreshBlocked
+                ? t('dataSources.status.paused', 'Refresh paused')
+                : t('common.loading', 'Loading...')}
+            </Text>
+            <Skeleton lines={2} />
+          </div>
+        </LayoutCard>
+      )}
+      {noVehicle && vehiclesState.hasData && (
         <AlertBanner
           variant="info"
-          icon={<Info className="h-5 w-5" aria-hidden="true" />}
+          icon={<Icon icon={Info} size="lg" />}
           title={t('admin.xray.noVehicle.title', 'Select a vehicle')}
         >
           {t(
@@ -127,9 +162,12 @@ export default function IngestXRayPage() {
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <SectionErrorBoundary name="xray-kpis">
-          <XRayHeader
+          <IngestOperationalBrief
             data={xray.data}
-            loading={xray.isLoading}
+            loading={!noVehicle && source.status === 'initial'}
+            retained={source.hasData && source.status === 'stale'}
+            enabled={!noVehicle}
+            error={source.fatalError}
             windowSel={windowSel}
             bucketSel={bucketSel}
           />
@@ -140,9 +178,9 @@ export default function IngestXRayPage() {
       <FadeIn delay={0.1}>
         <section
           aria-label={t('admin.xray.hero', 'Sample volume')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+          className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
         >
-          <div className="xl:col-span-2">
+          <div className="min-w-0 xl:col-span-2">
             <SectionErrorBoundary name="xray-chart">
               {showError ? (
                 <GlassPanel className="p-4 sm:p-5">
@@ -154,7 +192,7 @@ export default function IngestXRayPage() {
             </SectionErrorBoundary>
           </div>
 
-          <div className="xl:col-span-1">
+          <div className="min-w-0 xl:col-span-1">
             <SectionErrorBoundary name="xray-top-fields">
               <XRayTopFields
                 rows={fields}
@@ -170,19 +208,15 @@ export default function IngestXRayPage() {
       {/* 3 — Detail band: full-width per-field statistics table */}
       <FadeIn delay={0.2}>
         <SectionErrorBoundary name="xray-fields">
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-4 flex items-center gap-2">
-              <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('admin.xray.panels.fields', 'Field statistics')}
-            </PanelTitle>
+          <LayoutCard title={t('admin.xray.panels.fields', 'Field statistics')}>
             {showError ? (
               <QueryError error={xray.error} onRetry={refetch} />
             ) : (
               <XRayFieldsTable rows={fields} loading={xray.isLoading} />
             )}
-          </GlassPanel>
+          </LayoutCard>
         </SectionErrorBoundary>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

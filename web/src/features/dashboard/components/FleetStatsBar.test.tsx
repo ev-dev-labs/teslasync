@@ -91,7 +91,7 @@ describe('FleetStatsBar', () => {
     const { container, toDistanceDisplay, toEfficiencyDisplay } = renderBar()
 
     // Every metric label is visible.
-    expect(screen.getByText('Fleet Size')).toBeInTheDocument()
+    expect(screen.getByText('Fleet size')).toBeInTheDocument()
     expect(screen.getByText('Distance (30d)')).toBeInTheDocument()
     expect(screen.getByText('Energy (30d)')).toBeInTheDocument()
     expect(screen.getByText('Efficiency')).toBeInTheDocument()
@@ -110,7 +110,7 @@ describe('FleetStatsBar', () => {
     expect(screen.getByRole('group', { name: 'Efficiency' })).toHaveTextContent('Wh/mi')
 
     // Online + static captions.
-    expect(screen.getByRole('group', { name: 'Fleet Size' })).toHaveTextContent('online')
+    expect(screen.getByRole('group', { name: 'Fleet size' })).toHaveTextContent('online')
     expect(screen.getByText('fleet average')).toBeInTheDocument()
     expect(screen.getByText('unread')).toBeInTheDocument()
 

@@ -29,7 +29,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const { successToast, errorToast } = vi.hoisted(() => ({
@@ -48,8 +48,13 @@ vi.mock('./_toastHelpers', () => ({
   useMutationToast: () => ({ success: successToast, error: errorToast }),
 }));
 
+vi.mock('@/lib/broadcast', () => ({ broadcast: vi.fn() }));
+
 import { request } from '../client';
+import { broadcast } from '@/lib/broadcast';
 import { __flushQueryBroadcastForTests } from '@/lib/queryBroadcast';
+import { fleetSetupKeys, useFleetApiInfo, type FleetApiInfo } from './useFleetSetup';
+import { queryPolicy } from '../queryPolicy';
 import type { AppSettings, GasPriceStatus, GasPriceHistory } from '@/api/types';
 import {
   settingsKeys,
@@ -209,6 +214,7 @@ beforeEach(() => {
   mockedRequest.mockReset();
   successToast.mockReset();
   errorToast.mockReset();
+  vi.mocked(broadcast).mockClear();
 });
 
 afterEach(() => {
@@ -419,6 +425,89 @@ describe('useDisconnectAuth', () => {
     );
   });
 
+  describe.each([
+    { name: 'refresh', useAuthMutation: useRefreshAuth, hasValidToken: true },
+    { name: 'disconnect', useAuthMutation: useDisconnectAuth, hasValidToken: false },
+  ])('Fleet Setup after auth $name', ({ name, useAuthMutation, hasValidToken }) => {
+    const populatedInfo: FleetApiInfo = {
+      base_url: 'https://fleet-api.example',
+      client_id: 'configured-client',
+      has_valid_token: true,
+      public_key_url: 'https://example.test/key.pem',
+      hostname: 'telemetry.example.test',
+    };
+
+    it('refetches and broadcasts the existing reference cache while retaining populated data', async () => {
+      const { Wrapper, qc } = makeWrapper();
+      qc.setQueryData(fleetSetupKeys.apiInfo, populatedInfo);
+      const updatedInfo = { ...populatedInfo, has_valid_token: hasValidToken };
+      let resolveInfo!: (info: FleetApiInfo) => void;
+      const refetch = new Promise<FleetApiInfo>((resolve) => { resolveInfo = resolve; });
+      mockedRequest.mockImplementation((url: string) => {
+        if (url === `/auth/${name}`) return Promise.resolve(undefined);
+        if (url === '/dev-tools/fleet-api-info') return refetch;
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      const { result } = renderHook(() => ({
+        info: useFleetApiInfo(),
+        mutation: useAuthMutation(),
+      }), { wrapper: Wrapper });
+      expect(result.current.info.data).toEqual(populatedInfo);
+      expect(mockedRequest).not.toHaveBeenCalled();
+      expect(qc.getQueryCache().find({ queryKey: fleetSetupKeys.apiInfo })?.options)
+        .toMatchObject(queryPolicy('reference'));
+
+      await act(async () => { await result.current.mutation.mutateAsync(); });
+      await waitFor(() => expect(result.current.info.isFetching).toBe(true));
+      expect(result.current.info.data).toEqual(populatedInfo);
+      expect(mockedRequest).toHaveBeenCalledWith(
+        '/dev-tools/fleet-api-info',
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+      __flushQueryBroadcastForTests();
+      expect(broadcast).toHaveBeenCalledWith({
+        type: 'queryInvalidate',
+        keys: [settingsKeys.authStatus, fleetSetupKeys.apiInfo],
+      });
+
+      await act(async () => { resolveInfo(updatedInfo); await refetch; });
+      await waitFor(() => expect(result.current.info.isFetching).toBe(false));
+      expect(result.current.info.data).toEqual(updatedInfo);
+      expect(qc.getQueryData(fleetSetupKeys.apiInfo)).toEqual(updatedInfo);
+      expect(mockedRequest).toHaveBeenCalledTimes(2);
+      expect(successToast).toHaveBeenCalledTimes(1);
+      expect(errorToast).not.toHaveBeenCalled();
+    });
+
+    it('preserves populated caches and emits no invalidation or broadcast on failure', async () => {
+      const { Wrapper, qc } = makeWrapper();
+      const authStatus = { authenticated: true };
+      qc.setQueryData(settingsKeys.authStatus, authStatus);
+      qc.setQueryData(fleetSetupKeys.apiInfo, populatedInfo);
+      const invalidate = vi.spyOn(qc, 'invalidateQueries');
+      const failure = new Error(`${name} failed`);
+      mockedRequest.mockRejectedValueOnce(failure);
+      const { result } = renderHook(() => useAuthMutation(), { wrapper: Wrapper });
+
+      await act(async () => {
+        await expect(result.current.mutateAsync()).rejects.toThrow(`${name} failed`);
+      });
+      __flushQueryBroadcastForTests();
+      expect(invalidate).not.toHaveBeenCalled();
+      expect(broadcast).not.toHaveBeenCalled();
+      expect(qc.getQueryData(fleetSetupKeys.apiInfo)).toEqual(populatedInfo);
+      expect(qc.getQueryData(settingsKeys.authStatus)).toEqual(authStatus);
+      expect(qc.getQueryState(fleetSetupKeys.apiInfo)?.isInvalidated).toBe(false);
+      expect(successToast).not.toHaveBeenCalled();
+      expect(errorToast).toHaveBeenCalledWith(
+        failure,
+        `toast.settings.auth.${name}.error`,
+        name === 'refresh' ? 'Failed to refresh auth' : 'Failed to disconnect',
+      );
+      expect(mockedRequest).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('toasts the error when disconnect fails', async () => {
     mockedRequest.mockRejectedValueOnce(new Error('disconnect boom'));
 
@@ -580,6 +669,36 @@ describe('useGasPriceStatus', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(mockedRequest).toHaveBeenCalledTimes(1);
   });
+
+  it('invalidates gas-price history when a refetch advances last_poll_time', async () => {
+    const { Wrapper, qc } = makeWrapper();
+    qc.setQueryData(settingsKeys.gasPriceStatus, gasStatus);
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    mockedRequest.mockResolvedValueOnce({
+      ...gasStatus,
+      last_poll_time: '2026-07-02T00:00:00Z',
+    });
+
+    const { result } = renderHook(() => useGasPriceStatus(true), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: settingsKeys.gasPriceHistory }),
+    );
+  });
+
+  it('leaves gas-price history alone when last_poll_time does not advance', async () => {
+    const { Wrapper, qc } = makeWrapper();
+    qc.setQueryData(settingsKeys.gasPriceStatus, gasStatus);
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    mockedRequest.mockResolvedValueOnce({ ...gasStatus });
+
+    const { result } = renderHook(() => useGasPriceStatus(true), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await tick();
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: settingsKeys.gasPriceHistory });
+  });
 });
 
 describe('useGasPriceHistory', () => {
@@ -615,7 +734,7 @@ describe('useGasPriceHistory', () => {
 });
 
 describe('gas-price mutations', () => {
-  it('usePollGasPrice POSTs /gas-price/poll and invalidates BOTH status + history', async () => {
+  it('usePollGasPrice POSTs /gas-price/poll, invalidates status only, and toasts that the poll was triggered', async () => {
     mockedRequest.mockResolvedValueOnce({ status: 'ok' });
 
     const { Wrapper, qc } = makeWrapper();
@@ -627,10 +746,13 @@ describe('gas-price mutations', () => {
     expect(callAt(0)[0]).toBe('/gas-price/poll');
     expect(callAt(0)[1].method).toBe('POST');
     expect(invalidate).toHaveBeenCalledWith({ queryKey: settingsKeys.gasPriceStatus });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: settingsKeys.gasPriceHistory });
+    // History is NOT invalidated eagerly: the worker runs async, and the
+    // status refetch chains history invalidation only when last_poll_time
+    // actually advances (see useGasPriceStatus below).
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: settingsKeys.gasPriceHistory });
     expect(successToast).toHaveBeenCalledWith(
-      'toast.settings.gasPrice.poll.success',
-      'Gas prices updated',
+      'gas.pollTriggered',
+      'Gas price poll triggered',
     );
   });
 

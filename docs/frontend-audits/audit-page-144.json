@@ -1,0 +1,195 @@
+{
+  "item": "audit-page-144",
+  "page": "web\\src\\features\\notifications\\pages\\AlertStudioPage.tsx",
+  "routes": ["/notifications/studio"],
+  "purpose": "Create notification rules through the shared typed editor; redirect existing-rule deep links to the Rules page.",
+  "primaryGoal": "Configure, preview, test and save a signal, computed-metric, system-health or place-event rule without losing drafts or canonical thresholds.",
+  "dataSources": [
+    {"hook":"useNotificationChannels","file":"web\\src\\api\\hooks\\useNotifications.ts","line":738,"endpoints":[{"method":"GET","path":"/notifications","router":"internal\\api\\router.go:4026"}],"ownership":"Notification channel catalog; retained data via useDataState in controller:32-36."},
+    {"hook":"useAlertMetrics / usePreviewComputedMetric","file":"web\\src\\api\\hooks\\useNotifications.ts","line":520,"endpoints":[{"method":"GET","path":"/alerts/metrics","router":"internal\\api\\router.go:3768"},{"method":"POST","path":"/alerts/test","router":"internal\\api\\router.go:3783"}],"ownership":"Backend computed-metric registry and preview. Exact metric source units are registry-defined; do not infer SI dimensions from labels."},
+    {"hook":"useSaveAlertRule / useTestAlertRule","file":"web\\src\\api\\hooks\\useNotifications.ts","line":554,"endpoints":[{"method":"POST","path":"/alerts/rules","router":"internal\\api\\router.go:3775"},{"method":"PUT","path":"/alerts/rules/{id}","router":"internal\\api\\router.go:3776"},{"method":"POST","path":"/alerts/test","router":"internal\\api\\router.go:3783"}],"ownership":"Typed save and real notification test; shared mutations supply success/error toasts and save invalidation. Studio uses create, not update."},
+    {"hook":"useVehicles","file":"web\\src\\api\\hooks\\useVehicles.ts","line":73,"endpoints":[{"method":"GET","path":"/vehicles","router":"internal\\api\\router.go:3319"}],"ownership":"Fleet vehicles for independent rule recipient scope and message-preview context; hook request line 76 forwards signal."},
+    {"hook":"useAvailableSignals","file":"web\\src\\api\\hooks\\useSignals.ts","line":237,"endpoints":[{"method":"GET","path":"/signals/{vehicleID}/available","router":"internal\\api\\router.go:4911,4929"}],"ownership":"Selected workspace vehicle supplies unit metadata. Enabled only for positive ID; normalization retains descriptor identities. Studio rule recipient selection does not set this vehicle."},
+    {"hook":"useGeofencesFull","file":"web\\src\\api\\hooks\\useLocations.ts","line":101,"endpoints":[{"method":"GET","path":"/geofences","router":"internal\\api\\router.go:3614"}],"ownership":"Place-event branch; canonical snake_case rows, safeArray, 15s stale time / 30s polling; enabled options and unavailable selected IDs retained."},
+    {"hook":"useAlertMessagePlaceholders / useAlertMessagePresets / useAlertMessagePreview","file":"web\\src\\api\\hooks\\useAlertMessageHelpers.ts","line":52,"endpoints":[{"method":"GET","path":"/alerts/message-presets","router":"internal\\api\\router.go:3791"},{"method":"GET","path":"/alerts/message-placeholders","router":"internal\\api\\router.go:3792"},{"method":"POST","path":"/alerts/message-preview","router":"internal\\api\\router.go:3793"}],"ownership":"Message editor catalogs and debounced rendered preview. Query keys retain formatting fingerprint, vehicle timezone, kind and operands; requests forward signal."},
+    {"hook":"AINLAlertBuilder / useAiStream","file":"web\\src\\components\\ai\\AINLAlertBuilder.tsx","line":38,"endpoints":[{"method":"POST","path":"/ai/alerts/rules/draft","router":"AI delegated mount not traced in this bounded audit"}],"ownership":"Feature-gated advisory stream; requires positive selected vehicle and nonblank prompt. Output text is not automatically hydrated into manual editor."},
+    {"hook":"useFormDraft / useNavigationGuard / useSelectedVehicle","file":"web\\src\\features\\notifications\\hooks\\useAlertRuleEditorController.ts","line":44,"endpoints":[],"ownership":"Existing draft key alertstudio:rule:new, version 6, 800ms debounce, unsaved guard and global vehicle context; persistence implementation itself not inspected."}
+  ],
+  "components": [
+    {"name":"AlertRuleEditor","owner":"web\\src\\features\\notifications\\components\\AlertRuleEditor.tsx","line":29,"role":"Shared domain editor also used for existing rules; root PageLayout only in create mode."},
+    {"name":"PageLayout","owner":"web\\src\\components\\layout (category barrel)","role":"Existing page title, subtitle, primary and secondary actions; preserve full allocated width."},
+    {"name":"GlassPanel / Button / Input / Select / Text / PanelTitle / HelperText / HelpIcon / ConfirmDialog","owner":"web\\src\\components\\ui (category barrel)","role":"Existing surface, form, typography and guarded destructive-action primitives."},
+    {"name":"QueryError / StaleRefreshWarning / DraftRecoveryBanner / Skeleton / EmptyState","owner":"web\\src\\components\\feedback (category barrel)","role":"Source-local recovery and trust; no page-wide data gate."},
+    {"name":"TemplateBrowser / IdentityFields / ScopeKindFields / ConditionFields / SeverityFields / TypedValueFields / DeliveryBehaviorFields / RepeatLimitFields / EscalationFields / MessageFields / RuleRoutingFields / TestTargetFields / EditorActions / EditorNotices","owner":"web\\src\\features\\notifications\\components\\alert-editor-source-closure","role":"Existing decomposition; modernize this closure, not the 18-line route adapter alone."},
+    {"name":"VehicleMultiSelect / SignalUnitInput / UnitInput / SearchInput / PillFilterBar","owner":"web\\src\\components\\forms (category barrel)","role":"Recipient business scope, reversible display conversion, searchable templates and category selection."},
+    {"name":"ComputedMetricEditor / PlaceRuleFields / SystemComponentRuleFields / AlertMessageEditor","owner":"web\\src\\features\\notifications\\components","role":"Kind-specific conditions, preview and message editing."},
+    {"name":"AINLAlertBuilder / AIFeatureCard","owner":"web\\src\\components\\ai","role":"Reuse existing gated streaming scaffold; no replacement AI card or autonomous save."}
+  ],
+  "duplicatedPatterns": [
+    {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TestTargetFields.tsx","line":53,"rule":"MDC-020/MDC-025","detail":"Channel toggles here and RuleRoutingFields:27 both compose pressed small ghost Buttons. Test target adds its own neon border/background and arbitrary size.","fix":"Reuse Button's accepted selected/pressed presentation if supported; otherwise coordinate a typed opt-in variant with shared owner. Do not merge distinct delivery and test channel semantics.","owner":"page","confidence":"high"},
+    {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\RepeatLimitFields.tsx","line":29,"rule":"MDC-021","detail":"Repeat-limit helper and EscalationFields:64 render separate helper text without linking it to their explicit input IDs.","fix":"Use existing Input hint or explicit aria-describedby associations, preserving stable IDs and all help text.","owner":"page","confidence":"high"}
+  ],
+  "responsive": {
+    "status":"unverified",
+    "sourceEvidence":[
+      "AlertRuleEditor.tsx:69: one-column delivery grid becomes two columns at sm; field branches independently stack.",
+      "TemplateBrowser.tsx:51: template grid has 1/2/3/4/6 columns; break-words and min-w-0 protect names/messages.",
+      "EditorActions.tsx:11 and RuleRoutingFields.tsx:25: action/channel groups wrap; wrapLabel is used.",
+      "AlertMessageEditor.tsx:610: autocomplete uses fixed w-72; allocated-container clipping must be exercised, not presumed."
+    ],
+    "findings":[
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TestTargetFields.tsx","line":61,"rule":"MDC-040/MDC-043","detail":"Channel button overrides shared size with h-auto, text-xs and py-1.5. Actual effective target height and spacing exception are not demonstrated.","fix":"Prefer current shared density/size API and verify 44px mobile reachability or documented spacing exception at all prescribed widths; keep every channel visible.","owner":"page","confidence":"medium"}
+    ],
+    "requiredViewports":[320,375,390,430,768,1024,1280,1440,1920,2560],
+    "additionalAcceptance":["Allocated narrow container","Long translations and channel names","RTL","200% text","Open vehicle picker, autocomplete, presets and discard confirmation"]
+  },
+  "accessibility": {
+    "status":"source inspection only; keyboard, screen reader, focus restoration and contrast unverified",
+    "sourceEvidence":["DeliveryBehaviorFields.tsx:48-56 explicitly associates blocked behavior error/help.","TemplateBrowser.tsx:72-78 provides named template actions; channel buttons expose aria-pressed.","PlaceRuleFields.tsx:43-45 and ScopeKindFields.tsx:13-18 preserve explicit labels/IDs."],
+    "findings":[
+      {"file":"web\\src\\components\\forms\\VehicleMultiSelect.tsx","line":276,"rule":"MDC-040/MDC-021","detail":"Popup declares role=listbox with aria-multiselectable, but descendants at 285 and 328 declare role=checkbox rather than option. This is a source-confirmed mixed widget role contract; actual AT behavior not exercised.","fix":"Shared owner must choose one coherent canonical multiselect pattern (listbox/options with selected state and keyboard model, or named checkbox group). Preserve sentinel exclusivity, unknown IDs, explicit trigger ID, dismissal and return focus.","owner":"shared","confidence":"high"},
+      {"file":"web\\src\\features\\notifications\\components\\ComputedMetricEditor.tsx","line":144,"rule":"MDC-021/MDC-040","detail":"Visible Text-as-label elements do not supply htmlFor for the following Select/Input (also 164,179,196). aria-label supplies a name but does not associate the visible label or enable label activation.","fix":"Pass explicit stable IDs and htmlFor, or use each field primitive's label API; retain translations, events and threshold conversion.","owner":"page","confidence":"high"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EscalationFields.tsx","line":40,"rule":"MDC-021/MDC-040","detail":"Escalation explanation at line 64 is not programmatically associated with escalation-after/severity; RepeatLimitFields:29 has the same helper association gap.","fix":"Connect help via stable aria-describedby IDs or existing hints; retain HelpIcon behavior and visible instructional content.","owner":"page","confidence":"high"}
+    ]
+  },
+  "states": {
+    "initialLoading":"Channels have skeletons in TestTargetFields:36-43; places skeleton/disabled controls in PlaceRuleFields:20,33,49; computed registry loading is a disabled select placeholder. Vehicles have no caller loading prop or skeleton.",
+    "empty":"Template no-match and unselected-signal empties exist; places provide Manage places navigation; empty external channels retain browser/history explanation.",
+    "fatalError":"Channels ErrorDisplay retry, places QueryError retry, metrics and unit metadata QueryError retry; failed sources do not remove manual rule form.",
+    "refreshError":"Controller uses useDataState for channels/vehicles/metrics/signals. Existing StaleRefreshWarning neighbors retain loaded data; message and metric previews disclose previous preview when refresh fails.",
+    "offline":"Source trust warning infrastructure is consumed; explicit actual offline behavior not exercised.",
+    "mutations":"Save/test loading states and shared success/error toasts preserved. Test sends a real notification, not a simulated UI preview. No mutation executed.",
+    "findings":[
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\ScopeKindFields.tsx","line":17,"rule":"MDC-026","detail":"Controller supplies vehicles=[] before initial resolution or on fatal no-data state. VehicleMultiSelect.tsx:132,259 presents that as an empty fleet with 'Add a vehicle' help. Fatal retry appears below, but loading/unavailable and true empty are not differentiated in picker.","fix":"Render source-local initial-loading/unavailable treatment before true empty help; preserve retained recipients, editable neighbors and fleet-wide sentinel behavior. Extend shared picker trust props only if existing interfaces cannot suffice.","owner":"integration","confidence":"high"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TemplateBrowser.tsx","line":88,"rule":"mission section 23","detail":"Search no-match empty state explicitly has no recovery action despite known templateSearch/templateCategory filters.","fix":"Offer localized clear-search/reset-category using existing Button/EmptyState action; preserve current list/filter semantics.","owner":"page","confidence":"high"}
+    ]
+  },
+  "visualIssues": [
+    {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TestTargetFields.tsx","line":62,"rule":"MDC-010/MDC-020/mission section 5","detail":"Selected channel adds border-neon-cyan/30 bg-neon-cyan/10 text-cyan-300 plus custom Button styling; explicit decorative neon remains in this editor closure.","fix":"Use restrained theme-aware selected control surface/border/text tokens through existing Button contract. Preserve aria-pressed, channel names/kinds and selection logic; do not reset saved themes.","owner":"page","confidence":"high"},
+    {"file":"web\\src\\features\\notifications\\components\\AlertRuleEditor.tsx","line":48,"rule":"MDC-010/MDC-012","detail":"Decorative editor pencil uses fixed text-cyan-300; templates action at line 85 uses fixed text-amber-300. These accents are not severity-bearing and are not theme-relative.","fix":"Use neutral muted icon tokens; reserve semantic color for actual severity/state and preserve decorative aria-hidden where applicable. Actual contrast is unverified.","owner":"page","confidence":"high"},
+    {"file":"web\\src\\features\\notifications\\components\\AlertMessageEditor.tsx","line":639,"rule":"MDC-013/MDC-020","detail":"Autocomplete Buttons override text-xs/font-normal and use fixed cyan selected background at line 641.","fix":"Keep existing Code/Text hierarchy and canonical control sizing; use subdued theme-aware selection treatment without changing cursor, insertion or keyboard semantics.","owner":"page","confidence":"high"}
+  ],
+  "architectureIssues": [
+    {"file":"web\\src\\features\\notifications\\hooks\\useAlertRuleEditorController.ts","line":44,"rule":"MDC-032/MDC-045/MDC-026","detail":"AI scope and signal unit metadata use global useSelectedVehicle, but workspaceScope.ts:104 disables vehicle selection for the entire /notifications prefix. The rule recipient picker updates editor.vehicle_selection only; it does not set aiVehicleId. Missing global vehicle disables AI and leaves preferred-unit metadata unavailable even when rule recipients are chosen.","fix":"Integration owner must define explicit metadata/AI context ownership for this fleet workflow. Keep business recipient scope separate, retain system rules fleet-wide and unknown IDs, do not re-enable misleading global scope or silently select a different vehicle. Update instruction text only after canonical selector ownership is agreed.","owner":"integration","confidence":"high"},
+    {"file":"web\\src\\components\\ai\\AINLAlertBuilder.tsx","line":58,"rule":"MDC-002/mission section 13","detail":"Description promises a typed draft that can be reviewed and saved below, but component subscribes only to stream.text with noopEvent at line 20 and exposes no hydration callback to AlertRuleEditor.tsx:42. Advisory generation survives but automatic transfer is not source-demonstrated.","fix":"Preserve advisory generation; make wording accurately describe existing text/manual workflow. Only add typed application through the existing reviewed AI contract in an explicitly owned integration task; never add automatic save or infer backend envelope.","owner":"shared","confidence":"high"}
+  ],
+  "priority": {"level":"P1","reason":"Address source-trust/vehicle-context and multiselect semantics first, then restrained palette and field associations. Root adapter itself has no source-confirmed visual violation.","order":["Agree metadata/AI vehicle context without changing recipient scope","Differentiate vehicle loading/error/empty","Repair shared multiselect ARIA contract","Field label/helper association","Restrained selected channel and icon styling","Responsive/open-state/runtime acceptance"]},
+  "requiredSharedChanges": [
+    {"name":"VehicleMultiSelect coherent accessible widget contract","existingOwnerFile":"web\\src\\components\\forms\\VehicleMultiSelect.tsx","propsVariantsStates":"Keep value discriminated union, onChange, vehicles, errorKey, disabled, id, className; coherent popup/container/child roles, keyboard navigation, focus restoration, unknown-ID and sticky-all states. Consider source-local loading/unavailable props only if caller treatment cannot preserve behavior.","usedBy":["AlertStudioPage through ScopeKindFields","AlertRulesPage through shared AlertRuleEditor"],"dependsOn":["Existing shared forms and UI primitives","MDC-021","MDC-040","Retained all_sticky/specific persistence"],"evidence":"VehicleMultiSelect.tsx:276,285,328; ScopeKindFields.tsx:17-29","owner":"shared","confidence":"high"},
+    {"name":"Notification workflow metadata/AI vehicle context ownership","existingOwnerFile":"web\\src\\lib\\workspaceScope.ts; web\\src\\features\\notifications\\hooks\\useAlertRuleEditorController.ts","propsVariantsStates":"Explicit positive context vehicle or unavailable reason for AI/unit metadata, independent from multi-recipient rule scope; preserve fleet system rules and no implicit recipient writes.","usedBy":["AlertStudioPage AI drafting","AlertStudioPage signal threshold unit hints","Shared AlertRuleEditor existing-rule editing"],"dependsOn":["useSelectedVehicle existing owner","VEHICLE_DISABLED_PREFIXES","MDC-032","SignalUnitInput canonical conversion"],"evidence":"workspaceScope.ts:104,159-170; controller:44; useSignalConditionModel.ts:21,50-58","owner":"integration","confidence":"high"},
+    {"name":"Accurate advisory draft wording/typed handoff boundary","existingOwnerFile":"web\\src\\components\\ai\\AINLAlertBuilder.tsx","propsVariantsStates":"Preserve vehicleId, prompt maxLength 4096, gated disabled/loading/error/stream states, scope cancellation, no automatic save. Wording-only correction unless typed result application is separately authorized.","usedBy":["AlertStudioPage via AlertRuleEditor"],"dependsOn":["Existing AIFeatureCard/useAiStream","Backend result envelope verification before any handoff extension"],"evidence":"AINLAlertBuilder.tsx:20,38-46,58-63; AlertRuleEditor.tsx:42","owner":"shared","confidence":"high"}
+  ],
+  "competingImplementations": {
+    "found":["Test-channel pressed styling competes with shared Button visual contract; recipient picker builds custom native trigger/popup inside shared forms."],
+    "reuse":["Existing AlertRuleEditor decomposition, PageLayout, category barrels, form units, trust adapters, AI scaffold and message helper hooks are canonical; no new engine or parallel editor is needed."],
+    "notEstablished":"No application-wide duplicate inventory performed; only assigned route and relevant dependencies inspected."
+  },
+  "preservation": {
+    "sourceHash":"97E8F97C1B60DE82EFECB2E878CD9633C129DFBBCC620EDEAFC0EF77645602F8",
+    "sourceHashAlgorithm":"SHA256",
+    "sourceHashScope":"Exact bytes of web\\src\\features\\notifications\\pages\\AlertStudioPage.tsx",
+    "currentLineCount":18,
+    "rootSectionCount":0,
+    "rootGlassPanelCount":0,
+    "rootChartContainerCount":0,
+    "editorGlassPanelCount":1,
+    "editorChartContainerCount":0,
+    "sectionNames":["Gated natural-language draft","Optional searchable categorized templates","Draft/validation notices","Rule identity/enabled","Recipient business scope and rule kind","Kind-specific condition","Severity/operators","Typed signal operand","Delivery behavior/cooldown","Repeat cap","Escalation","Message editor/preview/presets","Rule delivery routing","Test delivery target","Create/test/reset actions","Discard confirmation"],
+    "sectionCount":16,
+    "sectionCountMeaning":"Source-defined named capability groups, including conditional branches, not mounted simultaneous panels.",
+    "actions":["Redirect positive safe rule IDs to /notifications/rules?rule=id; invalid truthy IDs to /notifications/rules using replace","Toggle/search/filter/use templates","New/reset with dirty confirmation","Recover/discard versioned draft","Switch signal/computed/system/place branches","Choose sticky-all or specific recipients; retain unavailable selected IDs","Select typed operators and preferred-unit numeric/range thresholds","Choose severity, behavior, cooldown, repeat cap, escalation","Edit message/title inclusion/placeholders/presets and preview","Choose inherited/none/custom rule channels","Choose independent test channels, preserving last selected test target","Save typed validated rule; real test notification","Retry failed individual sources","Generate advisory AI text without autonomous save"],
+    "dataBehavior":["Studio remains create-only; existing-rule query redirects before editor mount.","Save retains typed payload builder, schema validation, broadcast invalidation and mutation toasts.","Query keys, cancellation forwarding, polling and enablement unchanged.","Source-retained data remains visible through refresh failure; no whole-page null gate.","SignalUnitInput converts display input reversibly; pressure uses Pa/kPa scale in shared owner. Null and blank remain null, not zero.","Computed metric unit/factor mapping remains registry-defined and existing; no backend dimensional guesses.","Keep existing cooldown_min and escalation_after_min wire contract in this audit; no rename/unit migration authorized.","Workspace date filtering is not applicable to this rule-creation workflow; do not add a date picker.","Local rule recipient picker is intentional business scope on header-vehicle-disabled route; do not delete it.","Message formatting fingerprint and vehicle timezone survive; default settings and draft persistence keys do not change."],
+    "sourceInventory": [
+      {"file":"web\\src\\features\\notifications\\pages\\AlertStudioPage.tsx","lineCount":18,"sha256":"97E8F97C1B60DE82EFECB2E878CD9633C129DFBBCC620EDEAFC0EF77645602F8","role":"route adapter"},
+      {"file":"web\\src\\features\\notifications\\components\\AlertRuleEditor.tsx","lineCount":97,"sha256":"EBE7C345C96A660833A14322CE67E0AF3674B9616C7B0F09875965040E4B1BFA","role":"shared domain orchestrator"},
+      {"file":"web\\src\\features\\notifications\\hooks\\useAlertRuleEditorController.ts","lineCount":233,"sha256":"46D91C52DF86E8B2D18E7217A5193DA059BCC5F54541549B2C0EE3F1E9C3EE8F","role":"controller"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\ConditionFields.tsx","lineCount":56,"sha256":"6B16CF9BC82AB8343148FAAFCAF0C11E5099A6F3E000632A1A5D9FF2883AE2AD"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\DeliveryBehaviorFields.tsx","lineCount":91,"sha256":"801E2A780221522CFDA72B56AA5987A463ADF40DF72E1A357C05B4ED72CCEE9F"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EditorActions.tsx","lineCount":45,"sha256":"98EC888DE97069599DFE3B992AF7B8121724AAC2E5587090EE2B9AD91AE43D64"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\editorHydration.ts","lineCount":119,"sha256":"E4C8CE135B82A8E710418BFFC7E92BD93D32535D49F241906E13FBC40244D40E"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EditorNotices.tsx","lineCount":32,"sha256":"FE8288DDBD0F616E60D06D4215918E69F837113132C282667BF28511CA59C0BA"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\editorPayload.ts","lineCount":125,"sha256":"F5A403A81AA2DD031FEA1639DEBC9FE03D554669C66A0AF8EF053537098CFA94"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\editorValidation.ts","lineCount":68,"sha256":"11E18CE3E57B3A88EF419C2904DAA156AAF1BD3D75362A737D4D03FA8339EFB6"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EscalationFields.tsx","lineCount":71,"sha256":"966423395EA77BA1FAFCA8F7A76BE1CE2B667BE46B2DD6E80556A5D77BD9AABD"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\IdentityFields.tsx","lineCount":35,"sha256":"BB772C028F8328D51DC898870CA44C04ED2558A460B97E011412EE3288C5DD7D"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\inputValues.ts","lineCount":40,"sha256":"B15AFDBAF73B81E678FE3E1CFF28630E69C61E7D70AF8F487F3A7913A127CA3B"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\MessageFields.tsx","lineCount":39,"sha256":"08D3AFC839F0932446855296E7D049BAF00BFD963BFC116D4C2BC8779B6EFA10"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\RepeatLimitFields.tsx","lineCount":34,"sha256":"C76808D13EA4F505960C39BCCE463AAA1F650C098A52B8626F66B9A5022C80AA"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\RuleRoutingFields.tsx","lineCount":54,"sha256":"FF6E6AD1F778206DAE71F1CCECB2F51B83FFE3C87BA1AC1E5BEC1D1A0A56E5D3"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\ScopeKindFields.tsx","lineCount":63,"sha256":"C3A7546E08E12FDA7876AED63823DCE792A43DCD870942A643625ED8888067FD"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\SeverityFields.tsx","lineCount":46,"sha256":"2B58719F6FD0C6B5D7E0B29794955EB47B49DB8700B5484DDACEA98705CB4FC6"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\signalCatalog.ts","lineCount":97,"sha256":"AD71DD31EDEF9AC5B8454CF02E227A929B8518208FACC4237B7188143D5CFC9D","inspection":"inventory/hash only"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\SignalOperandFields.tsx","lineCount":52,"sha256":"6646394FA8A10DB8862DCF31D4B743863D1828929D2C5531D0AAAABF89606E6A"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TemplateBrowser.tsx","lineCount":99,"sha256":"F054E20137C10E3F0CBB023D5F41FF176F6898E20AF1B32BAD32D988C1BF71A8"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TestTargetFields.tsx","lineCount":85,"sha256":"30108B22E40A3397033B6F1FC90A796807F0A3743E8084704F91D1A18E27375B"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TypedValueFields.tsx","lineCount":97,"sha256":"07E62E66FF15F91C35879A7081792DAECAEC464506F06A1244F6699160BCDE88"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\types.ts","lineCount":60,"sha256":"C0E59236543B41CF613DB5E297BDEB85727E516973CEC10801120C902E029F23","inspection":"inventory/hash only"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\useEditorOptions.ts","lineCount":80,"sha256":"B6CC995E946C50DE61D3E2442FA6C5A9E2CB587D7F6B148495DB61289AF86CD6","inspection":"inventory/hash only"},
+      {"file":"web\\src\\features\\notifications\\components\\alert-editor-source-closure\\useSignalConditionModel.ts","lineCount":118,"sha256":"50A7FCC6AE25076C8EFD015FDC242F1CEB64CAC6A600722508FA21B709DBAE96"},
+      {"file":"web\\src\\features\\notifications\\components\\ComputedMetricEditor.tsx","lineCount":338,"sha256":"F1E92C107EE3223F11E3947DBF97956967BC535ECE1235496F50842C9DAD813F","inspection":"selected ranges 1-283"},
+      {"file":"web\\src\\features\\notifications\\components\\AlertMessageEditor.tsx","lineCount":811,"sha256":"77DF47768EC83734CC795E766F242F6C603CFDB1C8919C1B3ABF3A038702DCF9","inspection":"selected ranges and matches, not full semantic review"},
+      {"file":"web\\src\\features\\notifications\\components\\PlaceRuleFields.tsx","lineCount":66,"sha256":"5B82E0EE434B9CE40C414B602BAC85C078E1F4AD0053F066D0AC702939806705"},
+      {"file":"web\\src\\features\\notifications\\components\\SystemComponentRuleFields.tsx","lineCount":57,"sha256":"B92D893A1EE564EFA8971F682E1F9D71C85E069136A84607F4098939B6218032"},
+      {"file":"web\\src\\components\\ai\\AINLAlertBuilder.tsx","lineCount":92,"sha256":"E183A4C927C3B3257F35F080244C04FC2C12302ED2A5327BB2C176D30AA30274"},
+      {"file":"web\\src\\components\\forms\\VehicleMultiSelect.tsx","lineCount":454,"sha256":"F94C0BFB52007117C5659CCB2A24E6BA010A1C687DA879CE32D913E2E5A97759","inspection":"ranges 1-355"},
+      {"file":"web\\src\\components\\forms\\SignalUnitInput.tsx","lineCount":20,"sha256":"16482B101F4900C910BF4236DE2576891927256FFC273F3F5F3AD6BFD9CC7B2A"}
+    ]
+  },
+  "evidenceLimits": {
+    "mode":"Phase0 bounded read-only source audit",
+    "runtime":"UNVERIFIED: no application mounted and no request/mutation exercised",
+    "visual":"UNVERIFIED: no screenshot/theme/viewport review",
+    "accessibility":"UNVERIFIED: no keyboard/screen-reader/contrast/forced-colors test",
+    "tests":"NOTRUN: read-only assignment prohibits builds/lint; no validation baton. TypeScript, tests and skill audit.sh were not run (audit.sh invokes project TypeScript).",
+    "backend":"Router registrations inspected only; handlers, query implementations, production auth and AI backend envelope not inspected.",
+    "coverage":"Dependencies with explicit ranges or matching source lines only were not fully reviewed. Hashed inventory is not a claim of full semantic inspection.",
+    "sourceAudit":{"scope":"Root adapter + AlertRuleEditor + non-test TSX files immediately in alert-editor-source-closure only","exitCode":0,"rawOutput":["pattern=style= matches=0","pattern=<button\\b|<input\\b|<textarea\\b|<select\\b|<table\\b matches=0","pattern=from ['\\\"](recharts|react-leaflet|framer-motion) matches=0","pattern=text-white|text-gray matches=0","pattern=neon matches=1","TestTargetFields.tsx:62: isSelected ? 'border-neon-cyan/30 bg-neon-cyan/10 text-cyan-300'"],"method":"PowerShell Select-String source checks; not the full violations script and not an AST or runtime certificate."},
+    "ownedWrites":["docs\\frontend-audits\\audit-page-144.json",".agent-status\\audit-page-144.txt"],
+    "prohibitedWorkNotPerformed":["Source/shared/queue/config/catalog edits","Git","Full build/lint","Production mutations","Questions"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\notifications\\pages\\AlertStudioPage.tsx",
+    "web\\src\\features\\notifications\\components\\AlertRuleEditor.tsx",
+    "web\\src\\features\\notifications\\hooks\\useAlertRuleEditorController.ts",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TemplateBrowser.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EditorNotices.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\ScopeKindFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\RuleRoutingFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TestTargetFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EditorActions.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\ConditionFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TypedValueFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\MessageFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\useSignalConditionModel.ts",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\SeverityFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\DeliveryBehaviorFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\RepeatLimitFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EscalationFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\inputValues.ts",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\editorPayload.ts",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\IdentityFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\SignalOperandFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\editorHydration.ts",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\editorValidation.ts",
+    "web\\src\\features\\notifications\\components\\PlaceRuleFields.tsx",
+    "web\\src\\features\\notifications\\components\\SystemComponentRuleFields.tsx",
+    "web\\src\\features\\notifications\\components\\ComputedMetricEditor.tsx",
+    "web\\src\\features\\notifications\\components\\AlertMessageEditor.tsx",
+    "web\\src\\components\\ai\\AINLAlertBuilder.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\forms\\VehicleMultiSelect.tsx",
+    "web\\src\\components\\forms\\SignalUnitInput.tsx",
+    "web\\src\\api\\hooks\\useNotifications.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useLocations.ts",
+    "web\\src\\api\\hooks\\useSignals.ts",
+    "web\\src\\api\\hooks\\useAlertMessageHelpers.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

@@ -63,6 +63,10 @@ export interface ChargeAdvisorLiveSnapshot {
 }
 
 export interface ChargeAdvisorOptions {
+  /** Vehicle-local ISO dates with independently established complete drive coverage.
+   * A returned list below its cap does not establish coverage by itself.
+   */
+  coveredLocalDates?: readonly string[];
   historyWindowDays?: number;
   historyLimit?: number;
   fallbackMaxAgeMs?: number;
@@ -109,9 +113,13 @@ export interface SupportSummary {
 export interface WeekdayProfile {
   weekday: number;
   calendarOccurrences: number;
+  coveredOccurrences: number;
+  observedNoDrivingDays: number;
+  unknownOccurrences: number;
   drivingDays: number;
+  /** Qualified active-day share, not a measured no-driving probability when coverage is unknown. */
   driveDayShare: number;
-  /** Statistics across every local calendar occurrence, including zero-use days. */
+  /** Complete-day calendar statistics; null if any occurrence has unknown coverage. */
   meanPct: number | null;
   medianPct: number | null;
   p75Pct: number | null;
@@ -207,6 +215,8 @@ export interface ChargeAdvice {
   currentStateNowMs: number;
   reserveFloorPct: number;
   guidance: Guidance;
+  /** All completed local dates in the analysis window have certified coverage. */
+  coverageEstablished: boolean;
   evidenceGatePassed: boolean;
   current: CurrentState;
   driveAccounting: RowAccounting<DriveRowCategory>;
@@ -215,6 +225,7 @@ export interface ChargeAdvice {
   chargingEvidence: EvidenceSummary;
   weekdayProfiles: WeekdayProfile[];
   dailyTrend: DailyDrop[];
+  /** Qualified active-day drops only; excludes unknown and observed no-driving dates. */
   burnDistribution: Distribution;
   scenarios: ScenarioSet;
   reserveSensitivity: ReserveSensitivity[];
@@ -340,13 +351,16 @@ function valueAt(row: Record<string, unknown>, ...keys: string[]): unknown {
 }
 
 function timestamp(value: unknown): number | null {
-  if (finite(value)) return value;
+  if (finite(value)) return Math.abs(value) <= MAX_CLOCK_MS ? value : null;
   if (typeof value !== 'string' || value.trim() === '') return null;
+  const isoDate = value.match(/^(\d{4}-\d{2}-\d{2})(?:T|$)/)?.[1];
+  if (isoDate && dateFromNumber(dateNumber(isoDate)) !== isoDate) return null;
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function validSoc(value: unknown): value is number {
+/** Battery-percentage validity shared by the model and its callers. */
+export function validSoc(value: unknown): value is number {
   return finite(value) && value >= 0 && value <= 100;
 }
 
@@ -852,27 +866,35 @@ function buildWeekdays(
   startDate: string,
   endDate: string,
   daily: ReadonlyMap<string, { dropPct: number; count: number; week: string }>,
+  coveredDates: ReadonlySet<string>,
 ): WeekdayProfile[] {
   const occurrenceCounts = Array.from({ length: 7 }, () => 0);
   const dates = calendarDates(startDate, endDate);
   for (const date of dates) occurrenceCounts[weekdayForDate(date)]! += 1;
   return Array.from({ length: 7 }, (_, weekday) => {
-    const calendarDrops = dates
-      .filter((date) => weekdayForDate(date) === weekday)
+    const weekdayDates = dates.filter((date) => weekdayForDate(date) === weekday);
+    const covered = weekdayDates.filter((date) => coveredDates.has(date));
+    const calendarDrops = covered
       .map((date) => daily.get(date)?.dropPct ?? 0);
     const activeRows = [...daily.entries()]
-      .filter(([date]) => weekdayForDate(date) === weekday)
+      .filter(([date]) => date >= startDate && date <= endDate
+        && weekdayForDate(date) === weekday)
       .map(([, value]) => value);
     const activeDrops = activeRows.map((row) => row.dropPct);
     const activeWeeks = new Set(activeRows.map((row) => row.week)).size;
     const span = activeRows.length > 0
       ? observedSpan([...daily.keys()].filter((date) => weekdayForDate(date) === weekday))
       : { observedSpanDays: 0 };
-    const calendarDistribution = distribution(calendarDrops);
+    const calendarDistribution = distribution(
+      covered.length === weekdayDates.length ? calendarDrops : [],
+    );
     const activeDistribution = distribution(activeDrops);
     return {
       weekday,
       calendarOccurrences: occurrenceCounts[weekday]!,
+      coveredOccurrences: covered.length,
+      observedNoDrivingDays: covered.filter((date) => !daily.has(date)).length,
+      unknownOccurrences: weekdayDates.length - covered.length,
       drivingDays: activeRows.length,
       driveDayShare: occurrenceCounts[weekday]! > 0
         ? round(activeRows.length / occurrenceCounts[weekday]!, 3) ?? 0
@@ -935,7 +957,7 @@ function buildScenarios(
       meanBurnPct: round(meanBurn) ?? 0,
       p75BurnPct: round(p75Burn) ?? 0,
       meanEndSocPct: round(meanSoc) ?? 0,
-      p75EndSocPct: round(meanSoc) ?? 0,
+      p75EndSocPct: round(p75Soc) ?? 0,
     };
     const p75Day = {
       ...meanDay,
@@ -967,7 +989,7 @@ function crossingForFloor(
   floorPct: number,
   key: 'meanEndSocPct' | 'p75EndSocPct',
 ): number | null {
-  if (currentPct == null) return null;
+  if (currentPct == null || path.length === 0) return null;
   if (currentPct <= floorPct) return 0;
   const index = path.findIndex((day) => day[key] <= floorPct);
   return index >= 0 ? index + 1 : null;
@@ -1166,12 +1188,31 @@ export function computeChargeAdvice(
       driveCount: value.count,
       dropPct: round(value.dropPct) ?? 0,
     }));
-  const weekdayProfiles = buildWeekdays(startDate, endDate, dailyMap);
+  // Today is partial. Excluded rows or a capped query cannot certify a complete
+  // calendar day, even when other qualified drives exist on that date.
+  const completeDates = calendarDates(startDate, addDays(endDate, -1));
+  const hasExcludedRows = Object.entries(driveResult.accounting.categories)
+    .some(([category, count]) => category !== 'included'
+      && category !== 'outside_window' && count > 0);
+  const coveredDates = new Set(
+    !driveResult.accounting.historyCapReached && !hasExcludedRows
+      ? (options?.coveredLocalDates ?? []).filter((date) =>
+        typeof date === 'string'
+        && /^\d{4}-\d{2}-\d{2}$/.test(date)
+        && dateFromNumber(dateNumber(date)) === date
+        && date >= startDate && date < endDate)
+      : [],
+  );
+  const weekdayProfiles = buildWeekdays(
+    startDate, addDays(endDate, -1), dailyMap, coveredDates,
+  );
   const dailyDrops = dailyTrend.map((row) => row.dropPct);
   const burnDistribution = distribution(dailyDrops);
-  const calendarDrops = calendarDates(startDate, endDate)
+  const coverageEstablished = completeDates.length > 0
+    && completeDates.every((date) => coveredDates.has(date));
+  const calendarDrops = completeDates
     .map((date) => dailyMap.get(date)?.dropPct ?? 0);
-  const calendarBurnDistribution = dailyDrops.length > 0
+  const calendarBurnDistribution = coverageEstablished && dailyDrops.length > 0
     ? distribution(calendarDrops)
     : distribution([]);
   const driveEvidence = makeEvidence(
@@ -1212,7 +1253,8 @@ export function computeChargeAdvice(
     p75DaysToCross: crossingForFloor(current.batteryPct, scenarios.p75Path, floorPct, 'p75EndSocPct'),
   }));
   const evidenceGatePassed =
-    driveEvidence.observedSpanDays >= config.minCalendarDays
+    coverageEstablished
+    && driveEvidence.observedSpanDays >= config.minCalendarDays
     && driveEvidence.activeLocalDays >= config.minDrivingDays
     && driveEvidence.activeWeeks >= config.minActiveWeeks;
   const latestChargeMs = chargeResult.included.reduce<number | null>(
@@ -1233,6 +1275,7 @@ export function computeChargeAdvice(
       config.reserveFloorPct,
       config.actionableCrossingDays,
     ),
+    coverageEstablished,
     evidenceGatePassed,
     current,
     driveAccounting: driveResult.accounting,
@@ -1245,5 +1288,51 @@ export function computeChargeAdvice(
     scenarios,
     reserveSensitivity,
     chargingProfile,
+  };
+}
+
+export interface ChargeAdvisorCoverageWindow {
+  /** First local analysis date, `YYYY-MM-DD` (inclusive). */
+  startDate: string;
+  /** Local analysis end date, `YYYY-MM-DD` (exclusive); today is partial. */
+  endDate: string;
+  /** Last complete local date in the window, `YYYY-MM-DD` (inclusive). */
+  lastCompleteDate: string;
+  /**
+   * Every complete local date in the analysis window. A caller that fetches
+   * the full window through the paginated drive calendar certifies each of
+   * these dates (drives or certified absence) and may pass this list as
+   * `coveredLocalDates`.
+   */
+  coveredLocalDates: readonly string[];
+}
+
+/**
+ * Derives the analysis window `computeChargeAdvice` uses for the given clock
+ * and timezone, so callers can certify coverage over exactly that window.
+ * The math mirrors `computeChargeAdvice` (same clock, timezone, and window
+ * normalization); the two must stay in sync.
+ */
+export function chargeAdvisorCoverageWindow(
+  nowMs: number,
+  timeZone: string,
+  historyWindowDays?: number,
+): ChargeAdvisorCoverageWindow {
+  const windowDays = integerBounded(
+    historyWindowDays,
+    DEFAULT_HISTORY_WINDOW_DAYS,
+    1,
+    3_650,
+  );
+  const safeNowMs = sanitizeClock(nowMs, 0);
+  const resolvedTimeZone = normalizeTimeZone(timeZone);
+  const endDate = dateKey(localParts(safeNowMs, resolvedTimeZone));
+  const startDate = addDays(endDate, -(windowDays - 1));
+  const lastCompleteDate = addDays(endDate, -1);
+  return {
+    startDate,
+    endDate,
+    lastCompleteDate,
+    coveredLocalDates: calendarDates(startDate, lastCompleteDate),
   };
 }

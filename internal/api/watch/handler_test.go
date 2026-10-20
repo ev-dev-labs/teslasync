@@ -306,7 +306,7 @@ func TestQueryWatchSummary_ErrorPaths(t *testing.T) {
 func TestQueryWatchSummary_Fields(t *testing.T) {
 	signals := map[string]interface{}{
 		"BatteryLevel":          float64(85),
-		"RatedRange":            float64(100), // miles → 160.934 km
+		"RatedRange":            float64(160934.4), // canonical meters
 		"InsideTemp":            float64(21.5),
 		"OutsideTemp":           float64(15),
 		"ChargeRateMilePerHour": float64(30),
@@ -324,8 +324,8 @@ func TestQueryWatchSummary_Fields(t *testing.T) {
 	if got.BatteryLevel != 85 {
 		t.Errorf("BatteryLevel = %d, want 85", got.BatteryLevel)
 	}
-	if !almostEqual(got.RangeKm, 160.934) {
-		t.Errorf("RangeKm = %v, want ~160.934", got.RangeKm)
+	if !almostEqual(got.RangeM, 160934.4) {
+		t.Errorf("RangeM = %v, want 160934.4", got.RangeM)
 	}
 	if !almostEqual(got.InsideTemp, 21.5) {
 		t.Errorf("InsideTemp = %v, want 21.5", got.InsideTemp)
@@ -510,7 +510,7 @@ func TestHandlerSummary(t *testing.T) {
 			repo: &fakeVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{1: veh}},
 			cache: &fakeSignal{signals: map[string]interface{}{
 				"BatteryLevel": float64(72),
-				"RatedRange":   float64(50),
+				"RatedRange":   float64(80467.2),
 				"ChargeState":  "Charging",
 			}},
 			wantStatus: http.StatusOK,
@@ -522,6 +522,14 @@ func TestHandlerSummary(t *testing.T) {
 				}
 				if s.BatteryLevel != 72 {
 					t.Errorf("BatteryLevel = %d, want 72", s.BatteryLevel)
+				}
+				var payload map[string]interface{}
+				mustJSON(t, rr, &payload)
+				if payload["range_m"] != float64(80467.2) {
+					t.Errorf("range_m = %v, want 80467.2", payload["range_m"])
+				}
+				if _, exists := payload["range_km"]; exists {
+					t.Error("summary must not expose legacy range_km")
 				}
 				if !s.IsCharging {
 					t.Error("IsCharging should be true")
@@ -599,7 +607,7 @@ func TestHandlerComplication(t *testing.T) {
 			repo: &fakeVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{1: veh}},
 			cache: &fakeSignal{signals: map[string]interface{}{
 				"BatteryLevel": float64(64),
-				"RatedRange":   float64(100), // → 160 km (int-truncated)
+				"RatedRange":   float64(160934.4), // meters → 160 km (int-truncated)
 				"ChargeState":  "Charging",
 			}},
 			wantStatus: http.StatusOK,

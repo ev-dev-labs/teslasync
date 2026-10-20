@@ -1,0 +1,2525 @@
+{
+  "item": "phase6-qa-charging-powershare",
+  "status": "DONE",
+  "mode": "source-only read-only QA with findings; NOT runtime/native acceptance",
+  "outputs": [
+    "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-charging-powershare.json",
+    "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-powershare.log"
+  ],
+  "authority": {
+    "soleLoop": "docs/orchestrator-loop.md",
+    "queue": {
+      "file": "migration-queue.md",
+      "qaLine": 343,
+      "observedStatus": "[ ]",
+      "acceptedPageLine": 1777,
+      "acceptedSourceCommit": "8d1ff06e5ff2b0dde419f8b9684a9040456d2848"
+    },
+    "acceptedCommitVerification": "Queue-declared source acceptance; no Git command or accepted-commit byte comparison performed. Current source hashes pinned independently.",
+    "designRead": "Base contract 1-605 and historical-observation trust addendum 1342-1436; unrelated geometry addenda were not execution authority.",
+    "applicableInstructions": [
+      ".github/copilot-instructions.md (relevant frontend sections)",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "incidentalHistoricalRead": "shared-library-loop.md was read before locating the sole loop; its superseded workflow was not executed."
+  },
+  "scope": {
+    "primaryFiles": [
+      "web/src/features/charging/pages/PowersharePage.tsx",
+      "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+      "web/src/features/charging/components/powershare-modernization/SnapshotCard.tsx",
+      "web/src/features/charging/components/powershare-modernization/StopReasonCard.tsx",
+      "web/src/features/charging/components/powershare-modernization/TrendCard.tsx",
+      "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "web/src/features/charging/components/powershare/constants.ts",
+      "web/src/features/charging/components/powershare/helpers.ts",
+      "web/src/features/charging/components/powershare/index.ts"
+    ],
+    "supportFiles": [
+      "docs/orchestrator-loop.md",
+      "migration-queue.md",
+      "docs/frontend-design-contract.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      "docs/frontend-audits/audit-page-087.json",
+      "web/src/lib/routeLoaders.ts",
+      "web/src/lib/routeRegistry.ts",
+      "web/src/App.tsx",
+      "web/src/lib/workspaceScope.ts",
+      "web/src/api/client.ts",
+      "web/src/api/hooks/useTelemetry.ts",
+      "web/src/api/dataState.ts",
+      "web/src/hooks/useDataState.ts",
+      "web/src/hooks/useSelectedVehicle.ts",
+      "web/src/hooks/useNumberFormatting.ts",
+      "web/src/lib/signalObservation.ts",
+      "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "web/src/components/layout/PageContainer.tsx",
+      "web/src/components/data-display/DataFreshness.tsx",
+      "web/src/components/data-display/MetricBar.tsx",
+      "web/src/components/charts/ChartTooltip.tsx",
+      "internal/api/router.go",
+      "internal/api/signalscatalog/handler.go",
+      "internal/tesla/protomodel/signal_metadata_gen.go",
+      "internal/tesla/normalize/normalize.go",
+      "internal/tesla/units/conversions.go",
+      "internal/tesla/router/routing.yaml",
+      "web/src/i18n/en.json",
+      "web/src/features/charging/pages/PowersharePage.test.tsx"
+    ],
+    "writablePaths": [
+      "docs/frontend-audits/phase6-qa-charging-powershare.json",
+      "web/logs/phase6-qa-charging-powershare.log"
+    ],
+    "logIgnoredEvidence": "Current .gitignore:80 logs/; initial read-only check-ignore output retained in checks.git. Previous companion log absent.",
+    "readOnly": "All source/tests/backend/catalog/queue unchanged by this worker; only the two outputs are created. Nine primary files match earlier scan pins. No global working-tree cleanliness claim."
+  },
+  "identity": {
+    "route": "/powershare",
+    "routeEvidence": [
+      {
+        "file": "web/src/App.tsx",
+        "line": 814,
+        "endLine": 814,
+        "source": "        <Route path=\"powershare\" element={<SafeRoute name=\"Powershare\"><Powershare /></SafeRoute>} />"
+      },
+      {
+        "file": "web/src/lib/routeLoaders.ts",
+        "line": 22,
+        "endLine": 22,
+        "source": "export const Powershare = () => import('../features/charging/pages/PowersharePage')"
+      },
+      {
+        "file": "web/src/lib/routeRegistry.ts",
+        "line": 201,
+        "endLine": 201,
+        "source": "  { path: \"/powershare\", name: \"Powershare\", label: \"Powershare\", i18nKey: \"routes.powershare\" },"
+      },
+      {
+        "file": "internal/api/router.go",
+        "line": 4926,
+        "endLine": 4926,
+        "source": "\t\tr.With(httprate.LimitByIP(60, 1*time.Minute)).Get(\"/signals/observations\", signalsCatalogHandler.Observations)"
+      }
+    ],
+    "workspaceScope": {
+      "vehicle": true,
+      "range": false,
+      "mechanism": "workspaceScope.ts range is opt-in and /powershare is absent; vehicle is enabled because route is in neither disabled paths nor disabled prefixes. SelectedVehicle supplies workspace vehicle ID, not energy-site/device/workspace ID. No duplicate local picker.",
+      "sourceEvidence": "workspaceScope.ts:22-76 range allowlist omits /powershare; disabled vehicle sets/prefixes at 96-138 omit route; useSelectedVehicle.ts:49-75 scopes vehicle ID, not energy site/device/workspace ID."
+    },
+    "observationIdentity": "Five requests each contain selected vehicle_id and one exact field; text limit=1, numeric limit=48; query key includes vehicleId and opts; enabled only with vehicle; abort signal forwarded. Current hook constructs /signals/observations and client adds /api/v1.",
+    "hookContractEvidence": [
+      {
+        "file": "web/src/api/hooks/useTelemetry.ts",
+        "line": 499,
+        "endLine": 525,
+        "source": "export function useSignalObservations(\n  vehicleId: number | string | undefined,\n  opts?: { signal_name?: string; since?: string; until?: string; limit?: number; refetchInterval?: number },\n) {\n  const params = new URLSearchParams();\n  if (vehicleId != null) params.set('vehicle_id', String(vehicleId));\n  // Backend accepts `field=` (matches `signal_log.field`); frontend\n  // callers still use `signal_name` historically, so translate at the\n  // wire boundary rather than ripple the rename through every caller.\n  if (opts?.signal_name) params.set('field', opts.signal_name);\n  if (opts?.since) params.set('since', opts.since);\n  if (opts?.until) params.set('until', opts.until);\n  if (opts?.limit) params.set('limit', String(opts.limit));\n\n  return useQuery({\n    queryKey: ['signal-observations', vehicleId, opts],\n    queryFn: async ({ signal }) => {\n      const envelope = await request<SignalsObservationsResponseRaw>(\n        `/signals/observations?${params}`,\n        { signal },\n      );\n      return adaptObservations(envelope);\n    },\n    enabled: !!vehicleId,\n    staleTime: STALE_TIMES.REALTIME,\n    refetchInterval: opts?.refetchInterval,\n  });"
+      },
+      {
+        "file": "internal/api/signalscatalog/handler.go",
+        "line": 158,
+        "endLine": 175,
+        "source": "// Observations serves GET /signals/observations?...\n//\n// Filters (all optional, snake_case):\n//\n//\tvehicle_id comma-separated bigints\n//\tfield comma-separated field names\n//\tsince RFC3339 lower bound on ts (inclusive)\n//\tuntil RFC3339 upper bound on ts (inclusive)\n//\tlimit default 100, max 1000\n//\toffset default 0\n//\n// Returns 200 with {count, total, observations: [...]}.\nfunc (h *Handler) Observations(w http.ResponseWriter, r *http.Request) {\n\tparams, ok := h.parseObservationsParams(w, r)\n\tif !ok {\n\t\treturn\n\t}\n"
+      }
+    ],
+    "duplicateObjective": "Existing complete exact-item report found first; one report across current 81 Phase6 QA JSONs, one current queue item. No derived duplicate report/root or closed source migration replayed."
+  },
+  "findings": [
+    {
+      "id": "PS-F01",
+      "rule": "historical-live-claim",
+      "priority": "P1",
+      "root": "Recorded observation is presented as live session evidence",
+      "locations": [
+        {
+          "file": "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+          "line": 37,
+          "endLine": 37,
+          "source": "    <LayoutCard title={t('powershare.runtime.title', 'Live Session')}>"
+        },
+        {
+          "file": "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+          "line": 43,
+          "endLine": 43,
+          "source": "          message={t('powershare.runtime.noData', 'No live Powershare session. Details appear when your vehicle starts sharing power.')}"
+        },
+        {
+          "file": "web/src/features/charging/pages/PowersharePage.tsx",
+          "line": 218,
+          "endLine": 218,
+          "source": "          aria-label={t('powershare.output.sectionLabel', 'Powershare output and live session')}"
+        }
+      ],
+      "mechanism": "All five page DataStates explicitly use historical provenance (48-52). The observation hook supplies no age validation, active-session identity, or polling interval at these calls. RuntimeCard treats any old status/type/power/hours value as data, yet labels it Live Session; successful empty history is described as No live Powershare session. The accessible section label repeats the live assertion. Recorded data presence/absence does not establish a currently active/inactive physical session.",
+      "sourceRepro": "Read an otherwise successful response containing an old PowershareStateEnabled row and no recent observation: status is non-null, so RuntimeCard displays the old enabled label under Live Session. Alternatively return five successful empty arrays: the card asserts no live session without a live-state source. This is a source walkthrough, not an executed API/browser/test reproduction.",
+      "fix": "Use recorded-session/observation wording and preserve status, destination, output, hours and independent retry. Do not infer live activity from request success; obtain explicit freshness/session evidence before a live claim.",
+      "dedup": "Revalidated audit-page-087.json states issue at former RuntimeCard:37/43; one root, not separate title/empty/ARIA fixes. No existing derived Phase6 Powershare objective found.",
+      "classification": "confirmed-source-finding",
+      "confidence": "high",
+      "file": "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+      "line": 37,
+      "evidenceMode": "current source line review; no executed reproduction",
+      "revalidatedUTC": "2026-10-14T00:58:04.846011Z",
+      "newRoot": false
+    },
+    {
+      "id": "PS-F02",
+      "rule": "export-observation-identity-loss",
+      "priority": "P2",
+      "root": "Chart projection discards the complete observation timestamp",
+      "locations": [
+        {
+          "file": "web/src/features/charging/components/powershare-modernization/TrendCard.tsx",
+          "line": 40,
+          "endLine": 41,
+          "source": "      data={data.map(({ label: time, value }) => ({ label: time, value }))}\n      exportData={data.map(({ label: time, value }) => ({ label: time, value }))}"
+        }
+      ],
+      "mechanism": "TrendPoint retains ts, but both accessible chart data and exportData project only formatted clock label and value. buildSeries uses formatTime, not a full instant. Observations at the same clock time on different dates become indistinguishable after projection. The 48-row cap is not a bounded day/time-range guarantee.",
+      "sourceRepro": "Two input points with distinct ts on different dates, equal local time labels and equal values produce identical {label,value} export rows at lines 40-41. Original identity cannot be recovered from those rows. Source projection inspected; no export/browser executed.",
+      "fix": "Preserve full timestamp/offset as evidence identity in exported and accessible rows while retaining chronological ordering, numeric values, existing chart and shared date preferences.",
+      "dedup": "Same root as audit-page-087.json architectureIssues TrendCard:41; both charts and both projections are one root, not four findings.",
+      "classification": "confirmed-source-finding",
+      "confidence": "high",
+      "file": "web/src/features/charging/components/powershare-modernization/TrendCard.tsx",
+      "line": 40,
+      "evidenceMode": "current source line review; no executed reproduction",
+      "revalidatedUTC": "2026-10-14T00:58:04.846011Z",
+      "newRoot": false
+    },
+    {
+      "id": "PS-F03",
+      "rule": "hardcoded-string",
+      "priority": "P2",
+      "root": "Known enum labels bypass localization and use mismatched prefixes",
+      "locations": [
+        {
+          "file": "web/src/features/charging/components/powershare/helpers.ts",
+          "line": 71,
+          "endLine": 80,
+          "source": "export function humanizeEnum(raw: string | null, prefix?: string): string | null {\n  if (!raw) return null;\n  let s = raw;\n  if (prefix && s.startsWith(prefix)) s = s.slice(prefix.length);\n  else if (s.startsWith('Powershare')) s = s.slice('Powershare'.length);\n  s = s\n    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')\n    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')\n    .trim();\n  return s.length > 0 ? s : raw;"
+        }
+      ],
+      "mechanism": "humanizeEnum strips the signal-name prefix or generic Powershare and CamelCase-splits raw text; it never receives t or selects localized known enum labels. Metadata declares PowershareState, PowershareTypeStatus and PowershareStopReasonStatus, not signal-name prefixes. Page and cards directly render its output in summary/session/stop/snapshot.",
+      "sourceRepro": "PowershareStateEnabled with prefix PowershareStatus follows generic stripping and yields State Enabled; PowershareTypeStatusHome with prefix PowershareType yields Status Home. Changing locale does not translate these known status labels. Unknown vendor enums must remain raw rather than inventing a translation. Source walkthrough only.",
+      "fix": "Map verified known enum identities to canonical localized labels using actual enum metadata; retain unknown raw values and existing inactive-before-active severity precedence. Catalog/source changes require separately assigned ownership.",
+      "dedup": "Revalidated audit-page-087.json architectureIssues helpers:71. Count one producer root rather than each consumer or each possible enum literal.",
+      "classification": "confirmed-source-finding",
+      "confidence": "high",
+      "file": "web/src/features/charging/components/powershare/helpers.ts",
+      "line": 71,
+      "evidenceMode": "current source line review; no executed reproduction",
+      "revalidatedUTC": "2026-10-14T00:58:04.846011Z",
+      "newRoot": false
+    },
+    {
+      "id": "PS-F04",
+      "rule": "vehicle-source-state-collapse",
+      "priority": "P2",
+      "root": "Vehicle precondition has no loading/failure/authoritative-empty distinction",
+      "locations": [
+        {
+          "file": "web/src/features/charging/pages/PowersharePage.tsx",
+          "line": 169,
+          "endLine": 178,
+          "source": "  if (vehicleId == null) {\n    return (\n      <PageLayout title={title} subtitle={subtitle}>\n        <EmptyState /* no-action: page precondition — no vehicle in scope yet */\n          icon={<Zap className=\"h-8 w-8\" />}\n          message={t('powershare.noVehicle', 'Select a vehicle to view its Powershare telemetry.')}\n        />\n      </PageLayout>\n    );\n  }"
+        }
+      ],
+      "mechanism": "useSelectedVehicle internally uses useVehicles but returns only selection/list/record/setter, not query status. With no URL/store ID and vehicles undefined during initial load or initial error, selectedId is null and this page takes the same Select a vehicle branch as an authoritative empty fleet. No vehicle-source retry or failure distinction reaches the page.",
+      "sourceRepro": "Fresh workspace without persisted/query selection: let useVehicles be pending, then let its initial request fail without data. In both states effectiveId stays null and PowersharePage renders the identical noVehicle EmptyState; a failed fleet request cannot be retried from that surface. Source walkthrough only.",
+      "fix": "Distinguish vehicle lookup loading/failure/empty through the existing query/trust contract while retaining header-owned selection. Do not add a second device/workspace picker.",
+      "dedup": "Revalidated audit-page-087.json states issue former page:162; integration boundary, not reopening the accepted page migration.",
+      "classification": "confirmed-source-finding",
+      "confidence": "high",
+      "file": "web/src/features/charging/pages/PowersharePage.tsx",
+      "line": 169,
+      "evidenceMode": "current source line review; no executed reproduction",
+      "revalidatedUTC": "2026-10-14T00:58:04.846011Z",
+      "newRoot": false
+    },
+    {
+      "id": "PS-F05",
+      "rule": "noncanonical-category-import",
+      "priority": "P3",
+      "root": "Feature cards bypass the existing layout category barrel",
+      "locations": [
+        {
+          "file": "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+          "line": 3,
+          "endLine": 3,
+          "source": "import { LayoutCard } from '@/components/layout/layout-reference';"
+        },
+        {
+          "file": "web/src/features/charging/components/powershare-modernization/SnapshotCard.tsx",
+          "line": 3,
+          "endLine": 3,
+          "source": "import { LayoutCard } from '@/components/layout/layout-reference';"
+        },
+        {
+          "file": "web/src/features/charging/components/powershare-modernization/StopReasonCard.tsx",
+          "line": 3,
+          "endLine": 3,
+          "source": "import { LayoutCard } from '@/components/layout/layout-reference';"
+        }
+      ],
+      "mechanism": "Three feature renderer imports use @/components/layout/layout-reference for LayoutCard instead of the existing @/components/layout export. No new component is needed. This is a category-boundary issue, not a forbidden vendor-library import or raw-HTML violation.",
+      "sourceRepro": "Resolve the three import statements at line 3 against components/layout/index.ts, which already exports LayoutCard. Static import review only.",
+      "fix": "Use the existing canonical layout category export; do not create a wrapper, alter shared barrels or change behavior as part of this QA.",
+      "dedup": "Revalidated audit-page-087.json architectureIssues RuntimeCard:3, with three exact current sites; one integration root.",
+      "classification": "confirmed-source-finding",
+      "confidence": "high",
+      "file": "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+      "line": 3,
+      "evidenceMode": "current source line review; no executed reproduction",
+      "revalidatedUTC": "2026-10-14T00:58:04.846011Z",
+      "newRoot": false
+    }
+  ],
+  "unpromotedCandidates": [
+    {
+      "id": "PS-C01",
+      "topic": "canonical-W-Wh-and-physical-sign-contract",
+      "locations": [
+        {
+          "file": "web/src/features/charging/pages/PowersharePage.tsx",
+          "line": 131,
+          "endLine": 140,
+          "source": "      rawValue: powerKw != null ? powerKw * 1000 : null,\n      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) },\n      description: t('powershare.kpi.outputPowerSub', 'Instantaneous power draw'),\n      context: t('powershare.kpi.outputPowerSub', 'Instantaneous power draw'),\n    },\n    {\n      metricId: 'duration', occurrenceId: 'hours-remaining',\n      label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'),\n      rawValue: hoursLeft != null ? hoursLeft * 3600 : null,\n      display: { formatter: raw => ({ value: fmtNumber(raw / 3600), unit: 'h' }) },"
+        },
+        {
+          "file": "internal/tesla/protomodel/signal_metadata_gen.go",
+          "line": 1614,
+          "endLine": 1618,
+          "source": "\t{Field: \"PowershareHoursLeft\", ProtoEnumNum: 206, Category: \"charging\", ValueKind: ValueKindFloat, EnumTypeName: \"\", EnumStringPrefix: \"\", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},\n\t{Field: \"PowershareInstantaneousPowerKW\", ProtoEnumNum: 207, Category: \"charging\", ValueKind: ValueKindFloat, EnumTypeName: \"\", EnumStringPrefix: \"\", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},\n\t{Field: \"PowershareStatus\", ProtoEnumNum: 208, Category: \"charging\", ValueKind: ValueKindEnum, EnumTypeName: \"PowershareState\", EnumStringPrefix: \"PowershareState\", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},\n\t{Field: \"PowershareStopReason\", ProtoEnumNum: 209, Category: \"charging\", ValueKind: ValueKindEnum, EnumTypeName: \"PowershareStopReasonStatus\", EnumStringPrefix: \"PowershareStopReasonStatus\", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},\n\t{Field: \"PowershareType\", ProtoEnumNum: 210, Category: \"charging\", ValueKind: ValueKindEnum, EnumTypeName: \"PowershareTypeStatus\", EnumStringPrefix: \"PowershareTypeStatus\", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},"
+        },
+        {
+          "file": "internal/tesla/units/conversions.go",
+          "line": 186,
+          "endLine": 193,
+          "source": "var fixedKiloToBaseFields = map[string]bool{\n\t\"ACChargingEnergyIn\":         true,\n\t\"DCChargingEnergyIn\":         true,\n\t\"ACChargingPower\":            true,\n\t\"DCChargingPower\":            true,\n\t\"LifetimeEnergyChargedKwh\":   true,\n\t\"NominalFullPackEnergyKwh\":   true,\n}"
+        }
+      ],
+      "reasonNotPromoted": "Current inspected metadata marks both numeric Powershare signals UnitKindNone. needsConversion (normalize.go:221-234) and fixedKiloToBaseFields do not scale these fields; handler.go:195-202 forwards stored Value; useTelemetry.ts:567-582 coerces numerics only. Page therefore assumes observed kW/h and synthesizes W/s for StatMetric. Neither authoritative vendor wire units/sign convention nor stored history units were established by this allowed audit. No Wh energy signal is consumed by this page. It would be unjustified to prescribe division by 1000 or assert a proven scale/sign defect.",
+      "nextEvidence": "Integration owner establishes wire and historical units/signs without real-device action. Preserve all finite positive/negative/zero source values meanwhile.",
+      "dedup": "Existing audit-page-087.json verified-unit-contract investigation; not a new canonical conversion fix.",
+      "classification": "unconfirmed-candidate",
+      "confidence": "conditional; not a confirmed defect",
+      "newRoot": false
+    },
+    {
+      "id": "PS-C02",
+      "topic": "request-freshness-versus-measurement-freshness",
+      "locations": [
+        {
+          "file": "web/src/features/charging/pages/PowersharePage.tsx",
+          "line": 185,
+          "endLine": 191,
+          "source": "      query={[statusQ, typeQ, stopQ, hoursQ, powerQ]}\n      dataSources={snapshotState.status === 'partial' ? [\n        { id: 'status', label: t('powershare.kpi.status', 'Status'), query: statusQ },\n        { id: 'type', label: t('powershare.kpi.type', 'Type'), query: typeQ },\n        { id: 'stop', label: t('powershare.stopReason.title', 'Stop Reason'), query: stopQ },\n        { id: 'power', label: t('powershare.kpi.outputPower', 'Output Power'), query: powerQ },\n        { id: 'hours', label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'), query: hoursQ },"
+        },
+        {
+          "file": "web/src/components/layout/PageContainer.tsx",
+          "line": 217,
+          "endLine": 220,
+          "source": "          className={compactHeader ? 'border-0 bg-transparent p-0' : undefined}\n          metadata={\n            resolvedQuery || metadataActions || operationalMode.isReadOnly\n              ? <>"
+        },
+        {
+          "file": "web/src/components/data-display/DataFreshness.tsx",
+          "line": 332,
+          "endLine": 332,
+          "source": "      updatedAt={query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null}"
+        }
+      ],
+      "reasonNotPromoted": "Page query metadata uses shared DataFreshnessAuto whose timestamp is query.dataUpdatedAt, not observation time. A successful history read can coexist with very old observations. This is the existing shared request-freshness wording root, not a new Powershare-only renderer or runtime acceptance result.",
+      "dedup": "21 existing Phase6 reports reference DataFreshness.tsx (exact filenames in log/report dedup.references); no fresh root task or shared edit requested.",
+      "classification": "unconfirmed-candidate",
+      "confidence": "conditional; not a confirmed defect",
+      "newRoot": false
+    },
+    {
+      "id": "PS-C03",
+      "topic": "adapter-ingestion-source-provenance",
+      "locations": [
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 604,
+          "endLine": 608,
+          "source": "      // The modern /signals/observations envelope does not expose the\n      // ingestion source. Default to the dominant per-field MQTT path so\n      // SignalLogWidget's source-color mapping renders something sane\n      // rather than undefined.\n      source: 'fleet_telemetry',"
+        }
+      ],
+      "reasonNotPromoted": "Adapter hardcodes source=fleet_telemetry despite response lacking ingestion provenance. Current Powershare renderer does not display that field and explicitly uses historical provenance. Do not promote an invisible guessed-source field into a new page-visible issue.",
+      "nextEvidence": "Existing adapter owner checks source consumers/envelope contract; no mutation authorized.",
+      "classification": "unconfirmed-candidate",
+      "confidence": "conditional; not a confirmed defect",
+      "newRoot": false
+    },
+    {
+      "id": "PS-C04",
+      "topic": "signed-power-bar-accessible-bound",
+      "locations": [
+        {
+          "file": "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+          "line": 61,
+          "endLine": 64,
+          "source": "            <MetricBar label={t('powershare.runtime.outputPower', 'Output Power')}\n              value={power} max={Math.max(Number.isFinite(powerPeak) ? powerPeak : 0, power, 1)}\n              color={palette[0]} sublabel={`${fmtNumber(power)} kW`} />\n          ) : <Caption>{t('powershare.kpi.outputPower', 'Output Power')}: —</Caption>}"
+        },
+        {
+          "file": "web/src/components/data-display/MetricBar.tsx",
+          "line": 53,
+          "endLine": 54,
+          "source": "  const pct = safeMax > 0 ? Math.min(Math.max((safeValue / safeMax) * 100, 0), 100) : 0\n  const boundedValue = safeMax > 0 ? Math.min(Math.max(safeValue, 0), safeMax) : 0"
+        }
+      ],
+      "reasonNotPromoted": "Runtime text and trend preserve negative values, but shared MetricBar clamps its progress magnitude and bounded accessible value to zero. An authoritative valid-negative/import-export contract for this vendor signal was not established. This is not evidence to abs() or flip signs.",
+      "nextEvidence": "If vendor negative power is valid, verify text/bar/a11y meaning using the existing shared bar owner and a separately authorized safe check.",
+      "classification": "unconfirmed-candidate",
+      "confidence": "conditional; not a confirmed defect",
+      "newRoot": false
+    },
+    {
+      "id": "PS-C05",
+      "topic": "chart-tick-preference-and-reactive-time-labels",
+      "locations": [
+        {
+          "file": "web/src/features/charging/pages/PowersharePage.tsx",
+          "line": 61,
+          "endLine": 62,
+          "source": "\n  const powerSeries = useMemo(() => buildSeries(safeArray(powerQ.data)), [powerQ.data]);"
+        },
+        {
+          "file": "web/src/features/charging/components/powershare-modernization/TrendCard.tsx",
+          "line": 61,
+          "endLine": 62,
+          "source": "            <XAxis dataKey=\"label\" tick={axisTickSm} minTickGap={24} />\n            <YAxis tick={axisTickSm} width={40} unit=\" kW\" />"
+        },
+        {
+          "file": "web/src/features/charging/components/powershare/helpers.ts",
+          "line": 89,
+          "endLine": 97,
+          "source": "export function buildSeries(data: SignalObservation[] | undefined): TrendPoint[] {\n  const rows = data ?? [];\n  const points: TrendPoint[] = [];\n  for (let i = rows.length - 1; i >= 0; i--) {\n    const row = rows[i];\n    const value = row?.value_numeric;\n    if (value == null || !Number.isFinite(value)) continue;\n    points.push({ ts: row.ts, label: formatTime(row.ts), value });\n  }"
+        }
+      ],
+      "reasonNotPromoted": "Page/session/snapshot and shared tooltip use preference-aware formatting, but axis ticks use Recharts default numeric labels and buildSeries memoization depends only on response data. Live updates to locale/precision/timezone may not relabel cached chart points/ticks. Source candidates only; no rendering or preference-change exercise was authorized.",
+      "nextEvidence": "Bounded mounted preference-change verification by the later QA owner; do not replace shared formatting or mutate catalogs here.",
+      "classification": "unconfirmed-candidate",
+      "confidence": "conditional; not a confirmed defect",
+      "newRoot": false
+    }
+  ],
+  "summary": {
+    "counts": {
+      "primarySourceFiles": 9,
+      "primarySourceLines": 795,
+      "pageLines": 297,
+      "sectionShells": 4,
+      "majorSurfaces": 6,
+      "trendCards": 2,
+      "snapshotRows": 5,
+      "snapshotColumns": 3,
+      "signalQueries": 5,
+      "historicalStates": 5,
+      "explicitPageButtons": 1,
+      "actionFamilies": 6,
+      "physicalCommands": 0,
+      "confirmedRoots": 5,
+      "confirmedLocationRecords": 9,
+      "unpromotedCandidates": 5,
+      "newRegressionRoots": 0,
+      "newQueueNeeds": 0,
+      "literalTranslationCalls": 72,
+      "filesRead": 125,
+      "sourceHashRecords": 33,
+      "phase6ReportsScanned": 81,
+      "exactItemReports": 1,
+      "sharedFreshnessReferences": 21
+    },
+    "byRule": {
+      "historical-live-claim": 1,
+      "export-observation-identity-loss": 1,
+      "hardcoded-string": 1,
+      "vehicle-source-state-collapse": 1,
+      "noncanonical-category-import": 1
+    },
+    "filesByConfirmedLocations": {
+      "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx": 3,
+      "web/src/features/charging/pages/PowersharePage.tsx": 2,
+      "web/src/features/charging/components/powershare-modernization/TrendCard.tsx": 1,
+      "web/src/features/charging/components/powershare/helpers.ts": 1,
+      "web/src/features/charging/components/powershare-modernization/SnapshotCard.tsx": 1,
+      "web/src/features/charging/components/powershare-modernization/StopReasonCard.tsx": 1
+    },
+    "priorityFixes": [
+      "P1: avoid live/inactive-session claims from historical observations.",
+      "P2: preserve exported observation timestamps; localize verified known enums; distinguish vehicle source states.",
+      "P3: reuse canonical LayoutCard category imports."
+    ],
+    "dedupPolicy": "Existing exact report reused. Five historical roots revalidated; zero new regression roots or newly created queue needs. Existing shared freshness/date work and closed Phase3 tests are not replayed.",
+    "violationsVersusMatches": "Narrow hardcoded literal-JSX grep finds no matches, but semantic known-enum localization root is confirmed. Three noncanonical LayoutCard imports are one root with three sites, not three vendor-import violations."
+  },
+  "sourceCoverage": {
+    "sections": [
+      {
+        "file": "web/src/features/charging/pages/PowersharePage.tsx",
+        "line": 196,
+        "surface": "KPI summary"
+      },
+      {
+        "file": "web/src/features/charging/pages/PowersharePage.tsx",
+        "line": 217,
+        "surface": "power trend and runtime"
+      },
+      {
+        "file": "web/src/features/charging/pages/PowersharePage.tsx",
+        "line": 250,
+        "surface": "hours trend and stop reason"
+      },
+      {
+        "file": "web/src/features/charging/pages/PowersharePage.tsx",
+        "line": 279,
+        "surface": "five-row signal snapshot"
+      }
+    ],
+    "preservation": "Current page 297 lines versus historical audit-page-087 281 lines = 105.69%; above 70% of that documented snapshot. Accepted queue notes 297 lines, matching current count. No original Git blob/baseline reconstruction or preservation wrapper executed; line count is not behavioral parity.",
+    "loadingAndTrust": "Four section shells and six surfaces remain rendered for a vehicle even when observation payloads are empty/pending/error. Fatal-only card errors preserve retained data; source warnings exist beside both trends, stop and snapshot. Summary now explicitly labels loading/retained/partial, and all-empty snapshot caption now exists: those historical findings are resolved in current source and are not redispatched. Null vehicle is a precondition branch; its source-state collapse is PS-F04, not a generic data-hidden-section finding.",
+    "unknownZero": "latestNumeric/knownNumber preserve finite zero and sign, reject absent/nonfinite values to null. buildSeries drops absent/nonfinite points, retains zero/negative; seriesPeak floors scale at zero, not the source reading. No numeric unknown-to-zero finding promoted.",
+    "preferences": "Page/session/snapshot values use useNumberFormatting; ChartTooltip uses same preference bridge. Palette choice remains useChartPalette; timestamp display uses shared formatTime/DateTime. Specialist kW/h displays intentionally override metric default units; no user power/energy-unit switch was established in this scope. See PS-C01/C05 limitations.",
+    "actions": "Only page refetchAll and per-source read retries; chart export/fullscreen and snapshot table controls use existing shared components. Narrow mutation-command scan found no useMutation/mutate/sendCommand/ConfirmDialog in primary files. No power start/stop/device command is exposed here: confirmation/live-only guards are not applicable to absent physical mutations, not tested/passed. No physical action executed.",
+    "sourceA11y": "Localized refresh accessible name, decorative refresh aria-hidden, mobile refresh h/min/w 11, localized section labels, textual status beside color, both charts expose dataColumns, snapshot mobileColumns preserves all three fields. PageLayout delegates PageContainer for heading/route focus. No browser/screen-reader/contrast/keyboard/forced-color/RTL/touch/motion acceptance claimed; full timestamp identity issue affects chart alternative/export evidence."
+  },
+  "dedup": {
+    "historicalRootReport": "docs/frontend-audits/audit-page-087.json",
+    "phase6ReportsInitiallyScanned": 81,
+    "phase6ReportsReparsedAtCreation": 82,
+    "references": [
+      {
+        "report": "phase6-qa-admin-api-logs.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-data-quality.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-disk-forecast.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-gas-price-auto-poll.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-gdprexport.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-ingest-xray.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-live-signal-inspector.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-redis-signal-viewer.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-schema-drift.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-slow-queries.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-tesla-region.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-admin-vehicle-cost.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-advanced-firmware-canary.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-analytics-analytics.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-analytics-lifetime-stats.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-analytics-mileage.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-analytics-statistics.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-analytics-timeline.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-battery-battery-care.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-battery-battery-degradation.json",
+        "term": "DataFreshness.tsx"
+      },
+      {
+        "report": "phase6-qa-battery-cells.json",
+        "term": "DataFreshness.tsx"
+      }
+    ],
+    "closedRootNotReplayed": "phase6-fix-relative-future-dates was observed as an existing shared root; current dateFormat source had future-aware formatRelative. No closed Phase3 tests or date tests rerun.",
+    "current": {
+      "checkedUTC": "2026-10-14T00:58:04.846011Z",
+      "phase6ReportsScanned": 81,
+      "exactItemReports": [
+        "docs/frontend-audits/phase6-qa-charging-powershare.json"
+      ],
+      "otherPowershareSourceReferences": [],
+      "sharedFreshnessReferences": [
+        "docs/frontend-audits/phase6-qa-admin-api-logs.json",
+        "docs/frontend-audits/phase6-qa-admin-data-quality.json",
+        "docs/frontend-audits/phase6-qa-admin-disk-forecast.json",
+        "docs/frontend-audits/phase6-qa-admin-gas-price-auto-poll.json",
+        "docs/frontend-audits/phase6-qa-admin-gdprexport.json",
+        "docs/frontend-audits/phase6-qa-admin-ingest-xray.json",
+        "docs/frontend-audits/phase6-qa-admin-live-signal-inspector.json",
+        "docs/frontend-audits/phase6-qa-admin-redis-signal-viewer.json",
+        "docs/frontend-audits/phase6-qa-admin-schema-drift.json",
+        "docs/frontend-audits/phase6-qa-admin-slow-queries.json",
+        "docs/frontend-audits/phase6-qa-admin-tesla-region.json",
+        "docs/frontend-audits/phase6-qa-admin-vehicle-cost.json",
+        "docs/frontend-audits/phase6-qa-advanced-firmware-canary.json",
+        "docs/frontend-audits/phase6-qa-analytics-analytics.json",
+        "docs/frontend-audits/phase6-qa-analytics-lifetime-stats.json",
+        "docs/frontend-audits/phase6-qa-analytics-mileage.json",
+        "docs/frontend-audits/phase6-qa-analytics-statistics.json",
+        "docs/frontend-audits/phase6-qa-analytics-timeline.json",
+        "docs/frontend-audits/phase6-qa-battery-battery-care.json",
+        "docs/frontend-audits/phase6-qa-battery-battery-degradation.json",
+        "docs/frontend-audits/phase6-qa-battery-cells.json"
+      ],
+      "explicitPowersharePhase6FixRows": [],
+      "sharedDateRootObserved": [
+        {
+          "line": 316,
+          "item": "phase6-fix-relative-future-dates",
+          "status": "[~]"
+        }
+      ],
+      "instruction": "Consume existing report once. Do not generate duplicate exact-item QA or remigrate accepted source. A mere shared filename reference does not establish a resolved/root-fix objective."
+    }
+  },
+  "pins": {
+    "algorithm": "SHA256",
+    "primary": [
+      {
+        "file": "web/src/features/charging/pages/PowersharePage.tsx",
+        "sha256": "7a4e948cc30a8c66c4dac1713e1c5767baede0f01cc60c6d35a7341dda5dd327",
+        "priorScanSha256": "7a4e948cc30a8c66c4dac1713e1c5767baede0f01cc60c6d35a7341dda5dd327",
+        "unchangedSincePin": true
+      },
+      {
+        "file": "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+        "sha256": "5199a1bfbf453717f0daedf30834d5b35d8c50dc8962bdab3d02842af8912b19",
+        "priorScanSha256": "5199a1bfbf453717f0daedf30834d5b35d8c50dc8962bdab3d02842af8912b19",
+        "unchangedSincePin": true
+      },
+      {
+        "file": "web/src/features/charging/components/powershare-modernization/SnapshotCard.tsx",
+        "sha256": "44a5a062bd35158a81f98fb72fa62bebfc7feeb6fc71e44b09508f143bf4237a",
+        "priorScanSha256": "44a5a062bd35158a81f98fb72fa62bebfc7feeb6fc71e44b09508f143bf4237a",
+        "unchangedSincePin": true
+      },
+      {
+        "file": "web/src/features/charging/components/powershare-modernization/StopReasonCard.tsx",
+        "sha256": "daec880b742b5faf5e0023866017be7748e5057c51994d9b4d3650459c0cf791",
+        "priorScanSha256": "daec880b742b5faf5e0023866017be7748e5057c51994d9b4d3650459c0cf791",
+        "unchangedSincePin": true
+      },
+      {
+        "file": "web/src/features/charging/components/powershare-modernization/TrendCard.tsx",
+        "sha256": "553c9c1c15a3332e7c9753b70b9a7393c332f1580bb1c4398b34dcea7aeb8d25",
+        "priorScanSha256": "553c9c1c15a3332e7c9753b70b9a7393c332f1580bb1c4398b34dcea7aeb8d25",
+        "unchangedSincePin": true
+      },
+      {
+        "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+        "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+        "priorScanSha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+        "unchangedSincePin": true
+      },
+      {
+        "file": "web/src/features/charging/components/powershare/constants.ts",
+        "sha256": "9579e1883b0023e5f03bc9a195c4a5b18465675dfaf923e61ec02d63278bf892",
+        "priorScanSha256": "9579e1883b0023e5f03bc9a195c4a5b18465675dfaf923e61ec02d63278bf892",
+        "unchangedSincePin": true
+      },
+      {
+        "file": "web/src/features/charging/components/powershare/helpers.ts",
+        "sha256": "ce1b2583177542d2a967b1a9fcab7ebafa2313fc0d13855c848f727392981baa",
+        "priorScanSha256": "ce1b2583177542d2a967b1a9fcab7ebafa2313fc0d13855c848f727392981baa",
+        "unchangedSincePin": true
+      },
+      {
+        "file": "web/src/features/charging/components/powershare/index.ts",
+        "sha256": "433cd6281bf88d52e10dba8847ffa491f19f1235d4e0795da416e67819a5986d",
+        "priorScanSha256": "433cd6281bf88d52e10dba8847ffa491f19f1235d4e0795da416e67819a5986d",
+        "unchangedSincePin": true
+      }
+    ],
+    "readOnlySupport": [
+      {
+        "file": "docs/orchestrator-loop.md",
+        "sha256": "61f7a74733404c084c4cb609301e8f860b2c464a6c58104e9493eff5ff0361c6",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "migration-queue.md",
+        "sha256": "e9c99f97d686b011ad2107552ee6b181ae20448af0ae435f206e5ec03302e1f9",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "docs/frontend-design-contract.md",
+        "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": ".github/instructions/react-frontend.instructions.md",
+        "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": ".github/instructions/frontend-si-cutover.instructions.md",
+        "sha256": "4449752aaad173e80fc0ccae103f9455cd1cbf4631b8811d0b896ef7f683d253",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": ".github/instructions/unit-conversion.instructions.md",
+        "sha256": "8716e35c933acee8585dabcf2f1949c833763b0f06674869d6575b9ac92236cf",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "docs/frontend-audits/audit-page-087.json",
+        "sha256": "49ea4c8bc25224b9316295eadedb92aeb637d276b78c7037bd866c8b10dc7f25",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/lib/routeLoaders.ts",
+        "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/lib/routeRegistry.ts",
+        "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/App.tsx",
+        "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/api/hooks/useTelemetry.ts",
+        "sha256": "f536fbdb5705d3abb19869b0b5d73e65e72fb5e992f50e664754e4fa4f76853e",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/lib/signalObservation.ts",
+        "sha256": "107105eae141044fa16ba26e460f4eb17873a1af1f16e8521a7d2871e041c98d",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/components/data-display/DataFreshness.tsx",
+        "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/components/data-display/MetricBar.tsx",
+        "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/components/charts/ChartTooltip.tsx",
+        "sha256": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "internal/api/router.go",
+        "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "internal/api/signalscatalog/handler.go",
+        "sha256": "4305de18243b485e2c93ac800a83db3f6f3997902869c1c9c20c7ee615170094",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "internal/tesla/protomodel/signal_metadata_gen.go",
+        "sha256": "c1fc35d2b746b6f1f64048c2e105fca91a4e81d4de4abc90d0883bb0b225bc3b",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "internal/tesla/normalize/normalize.go",
+        "sha256": "b2b057ace50a2e3a2d1fcd58317a541d38a55e267121aa57552a84a177d711c9",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "internal/tesla/units/conversions.go",
+        "sha256": "edbbd6e68add3e59fedefd2328b30ac091e817e3c4d88d08471a856fef6b5e29",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "internal/tesla/router/routing.yaml",
+        "sha256": "2c8a2a44205fb1fad2ad9d46bb1b7fdccd9f3394744f38ad83aedb6232a7ee0c",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "sha256": "ca087f394590450a80752647120a73009e3a18dedc799fdea0e3af7818ee5e6c",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      },
+      {
+        "file": "web/src/features/charging/pages/PowersharePage.test.tsx",
+        "sha256": "c3291a13fb6b9cf3e488d284bf3b5f6faf41060226248af1985ded463309dc28",
+        "pinKind": "read-only release snapshot; not an accepted-commit equality proof"
+      }
+    ]
+  },
+  "checks": {
+    "builtinScans": "Actual PowerShell Select-String, corrected case-sensitive scan raw output in log; standard-library read/regex/hash/JSON commands only. No audit wrapper/helper file created.",
+    "priorRawExits": [
+      {
+        "shellId": "6248",
+        "exit": 0,
+        "kind": "locate scope"
+      },
+      {
+        "shellId": "6255",
+        "exit": 0,
+        "kind": "locate documents/source; formatting imperfect"
+      },
+      {
+        "shellId": "6257",
+        "exit": 0,
+        "kind": "document matches; formatting imperfect"
+      },
+      {
+        "shellId": "6263",
+        "exit": 0,
+        "kind": "queue/design search; oversized output"
+      },
+      {
+        "shellId": "6269",
+        "exit": 0,
+        "kind": "exact queue/design map"
+      },
+      {
+        "shellId": "6273",
+        "exit": 0,
+        "kind": "dependency/authority scan; oversized output"
+      },
+      {
+        "shellId": "6278",
+        "exit": 0,
+        "kind": "accepted queue receipt"
+      },
+      {
+        "shellId": "6312",
+        "exit": 0,
+        "kind": "route/root scan; oversized output"
+      },
+      {
+        "shellId": "6313",
+        "exit": 0,
+        "kind": "bounded route/dedup scan"
+      },
+      {
+        "shellId": "6316",
+        "exit": 0,
+        "kind": "route/unit/SHA256 scan"
+      },
+      {
+        "shellId": "6317",
+        "exit": 0,
+        "kind": "inline standard-library rule/catalog/pin/dedup scan"
+      },
+      {
+        "shellId": "6318",
+        "exit": 0,
+        "kind": "signed metric/freshness scan"
+      },
+      {
+        "shellId": "6319",
+        "exit": 0,
+        "kind": "actual Select-String checks; case-insensitive Button candidate"
+      },
+      {
+        "shellId": "6320",
+        "exit": 0,
+        "kind": "dedup fragment/vehicle route/date scan"
+      }
+    ],
+    "scanExceptions": [
+      "Earlier PowerShell mixed-object formatting obscured text; bounded explicit-string scans were rerun.",
+      "Three broad searches returned oversized output; only bounded subsequent reads support findings, not an all-output-complete claim.",
+      "Initial inline scanner printed computed grep_exit match codes (1 for no matches); these were NOT raw OS exits. Its actual shell exit was 0.",
+      "Case-insensitive PowerShell raw-html hit page:152 <Button>; shared component exception. Corrected -CaseSensitive scan has no raw-element matches."
+    ],
+    "catalog": {
+      "historicalReceipt": {
+        "literalCallOccurrences": 72,
+        "missingLiteralKeys": [],
+        "scope": "Literal keys only; no catalog runtime loading/plural/RTL acceptance."
+      },
+      "currentStatus": "NOTRUN",
+      "reason": "Current task excludes catalog verification/edits. Startup hash differs from prior catalog pin; do not inherit a fresh zero-missing-key/guard pass."
+    },
+    "creationAndReparse": "Current standard-library JSON serialization/reparse, exact counts/locations and current primary hash equality checked; native/compiler/test acceptance NOTRUN.",
+    "tests": {
+      "status": "NOTRUN",
+      "discovered": null,
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "typescript": {
+      "status": "NOTRUN",
+      "command": "npx tsc --noEmit",
+      "reason": "Explicit dispatch restriction; no compiler pass claimed."
+    },
+    "native": "NOTRUN",
+    "browser": "NOTRUN",
+    "realAPI": "NOTRUN",
+    "mutations": "NOTRUN",
+    "fullSuite": "NOTRUN",
+    "lintBuildAuditWrapper": "NOTRUN",
+    "git": {
+      "currentStatus": "READ_ONLY_PROBE_OCCURRED_OUTSIDE_DISPATCH_CONSTRAINT",
+      "commands": [
+        "git -C D:\\repos\\teslasync --no-pager status --short",
+        "git -C D:\\repos\\teslasync check-ignore web/logs/phase6-qa-charging-powershare.log"
+      ],
+      "actualInitialShellExit": 0,
+      "rawStatusOutput": " M migration-queue.md\n M web/package.json",
+      "rawIgnoreOutput": "web/logs/phase6-qa-charging-powershare.log",
+      "writes": 0,
+      "followupGitCommands": 0,
+      "limitation": "Initial inventory mistakenly included these read-only Git probes despite no-Git scope. Disclosed, not relabeled NOTRUN; no further Git use."
+    },
+    "serverHelpersExtensionsAgentsParentHealth": "NOTRUN",
+    "currentSourceScans": {
+      "command": "PowerShell Select-String -CaseSensitive; primary nine files; observation URL scan limited to useTelemetry.ts:499-526",
+      "actualExit": 0,
+      "rawOutputLog": "web/logs/phase6-qa-charging-powershare.log",
+      "matchingLines": {
+        "static-inline-style-candidate": 0,
+        "raw-html": 0,
+        "direct-library-import": 0,
+        "old-api-import": 0,
+        "hidden-section-candidate": 0,
+        "hardcoded-literal-JSX-candidate": 0,
+        "fetch-useeffect-candidate": 0,
+        "physical-mutation-candidate": 0,
+        "double-prefix": 0,
+        "camelcase-param": 0
+      },
+      "exceptions": [
+        "Dynamic palette/computed styles in shared building blocks and Recharts props are acceptable; they are not static-inline-style violations.",
+        "Shared component native markup/imports are building blocks, not raw-html/direct-library violations.",
+        "PageLayout wraps PageContainer at PageLayout.tsx:11; literal absence of PageContainer is not a violation.",
+        "Null-vehicle precondition is PS-F04, not an entire data-gated-section root; snapshotEmpty only gates explanatory caption.",
+        "Literal JSX grep excludes dynamic known enum labels; PS-F03 is one producer root."
+      ],
+      "backendRules": "NOT_APPLICABLE to this frontend task; backend router read for GET mapping only, no backend-wide scan or zero-violation claim"
+    },
+    "currentProbeFailures": [
+      {
+        "shellId": "59",
+        "exit": 1,
+        "error": "Get-Content could not find the pre-existing companion log (head and tail attempts)",
+        "resolution": "Absent log detected; only authorized new log created."
+      },
+      {
+        "shellId": "125",
+        "exit": 1,
+        "error": "StopIteration from searching mission headings with mistaken ## 43. format",
+        "resolution": "Actual numbered headings located; mission 1416-1517 read."
+      },
+      {
+        "shellId": "267",
+        "exit": 1,
+        "error": "UnicodeEncodeError: 'charmap' codec cannot encode characters in position 43-44: character maps to <undefined>",
+        "resolution": "UTF-8 output configured; bounded forwarding probe shell294 exited0. Earlier counts complete, earlier command not declared pass."
+      }
+    ],
+    "physicalDevice": "NOTRUN",
+    "independentArtifactReadback": {
+      "shellId": "360",
+      "actualExit": 0,
+      "jsonValid": true,
+      "confirmedRoots": 5,
+      "confirmedLocationRecords": 9,
+      "candidates": 5,
+      "sections": 4,
+      "sourceHashesMatched": 33,
+      "native": "NOTRUN",
+      "runtime": "NOTRUN",
+      "citationCorrections": "Readback corrected action metadata only: runtime retry241, snapshot retry291/card287, snapshot onSort62. Confirmed finding lines unchanged."
+    }
+  },
+  "limits": {
+    "currentTask": "phase6-qa-charging-powershare only",
+    "startedUTC": "2026-10-14T00:48:11.9540903Z",
+    "returnDeadlineUTC": "2026-10-14T01:05:28.452Z",
+    "hardDeadlineUTC": "2026-10-14T01:10:28.452Z",
+    "originalClocksPreserved": true,
+    "runtimeAcceptance": "NOTRUN",
+    "nativeAcceptance": "NOTRUN",
+    "browserPhysicalAPI": "NOTRUN",
+    "catalogTestsTypeScriptLintBuild": "NOTRUN",
+    "historicalAcceptance": "Queue-declared accepted source commit; no Git blob comparison or fresh baseline reconstruction. Original test receipts are not rerun or presented as current passes.",
+    "hashOnlyStartupReadsOutsideCurrentContentScope": [
+      "internal/api/signalscatalog/handler.go",
+      "internal/tesla/protomodel/signal_metadata_gen.go",
+      "internal/tesla/normalize/normalize.go",
+      "internal/tesla/units/conversions.go",
+      "internal/tesla/router/routing.yaml",
+      "web/src/i18n/en.json",
+      "web/src/features/charging/pages/PowersharePage.test.tsx"
+    ],
+    "unitSignContract": "Vendor/raw-history W/kW/h/s polarity unknown; no physical/API request allowed. Wh signal not consumed.",
+    "sourceOnlyMatrix": "No mounted 320/375/390/430/768/1024/1280/1440/1920/2560/narrow container/theme/RTL/200% text/keyboard/touch/forced-color/reduced-motion/contrast evidence.",
+    "gitConstraintException": "Initial two read-only Git probes disclosed in checks.git; zero Git writes; no further Git.",
+    "probeFailures": "Three actual exit1 inventory/heading/encoding probes retained; corrected bounded reads/scans exit0, not runtime proof.",
+    "writes": "Only assigned report and ignored companion log; no source/test/catalog/queue/handoff changes.",
+    "releaseUTC": "2026-10-14T00:59:23.223603Z"
+  },
+  "release": {
+    "releaseUTC": "2026-10-14T00:59:23.223603Z",
+    "allClaimsReleased": true,
+    "sourceWriteClaims": "None acquired; zero source writes",
+    "artifactWriteClaims": "Released after synchronous report/log update and readback; no continuing writer",
+    "nativeLocks": "None acquired",
+    "postReturnWrites": false,
+    "continuingWork": "None; no server, background helper, subagent, test or install launched."
+  },
+  "schemaVersion": 2,
+  "routes": [
+    "/powershare"
+  ],
+  "hashAlgorithm": "SHA256",
+  "sourceHashes": [
+    {
+      "file": "web/src/features/charging/pages/PowersharePage.tsx",
+      "sha256": "7a4e948cc30a8c66c4dac1713e1c5767baede0f01cc60c6d35a7341dda5dd327",
+      "lines": 297,
+      "scope": "primary",
+      "matchesExistingReport": true
+    },
+    {
+      "file": "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+      "sha256": "5199a1bfbf453717f0daedf30834d5b35d8c50dc8962bdab3d02842af8912b19",
+      "lines": 74,
+      "scope": "primary",
+      "matchesExistingReport": true
+    },
+    {
+      "file": "web/src/features/charging/components/powershare-modernization/SnapshotCard.tsx",
+      "sha256": "44a5a062bd35158a81f98fb72fa62bebfc7feeb6fc71e44b09508f143bf4237a",
+      "lines": 68,
+      "scope": "primary",
+      "matchesExistingReport": true
+    },
+    {
+      "file": "web/src/features/charging/components/powershare-modernization/StopReasonCard.tsx",
+      "sha256": "daec880b742b5faf5e0023866017be7748e5057c51994d9b4d3650459c0cf791",
+      "lines": 38,
+      "scope": "primary",
+      "matchesExistingReport": true
+    },
+    {
+      "file": "web/src/features/charging/components/powershare-modernization/TrendCard.tsx",
+      "sha256": "553c9c1c15a3332e7c9753b70b9a7393c332f1580bb1c4398b34dcea7aeb8d25",
+      "lines": 79,
+      "scope": "primary",
+      "matchesExistingReport": true
+    },
+    {
+      "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+      "lines": 73,
+      "scope": "primary",
+      "matchesExistingReport": true
+    },
+    {
+      "file": "web/src/features/charging/components/powershare/constants.ts",
+      "sha256": "9579e1883b0023e5f03bc9a195c4a5b18465675dfaf923e61ec02d63278bf892",
+      "lines": 39,
+      "scope": "primary",
+      "matchesExistingReport": true
+    },
+    {
+      "file": "web/src/features/charging/components/powershare/helpers.ts",
+      "sha256": "ce1b2583177542d2a967b1a9fcab7ebafa2313fc0d13855c848f727392981baa",
+      "lines": 105,
+      "scope": "primary",
+      "matchesExistingReport": true
+    },
+    {
+      "file": "web/src/features/charging/components/powershare/index.ts",
+      "sha256": "433cd6281bf88d52e10dba8847ffa491f19f1235d4e0795da416e67819a5986d",
+      "lines": 22,
+      "scope": "primary",
+      "matchesExistingReport": true
+    },
+    {
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "sha256": "f536fbdb5705d3abb19869b0b5d73e65e72fb5e992f50e664754e4fa4f76853e",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/hooks/useChartPalette.ts",
+      "sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/lib/signalObservation.ts",
+      "sha256": "107105eae141044fa16ba26e460f4eb17873a1af1f16e8521a7d2871e041c98d",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/components/layout/index.ts",
+      "sha256": "16105443f3f6c85fc73ae940f65f8b61f751a1fb30e77369b229d24ec7dfc642",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "sha256": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/components/charts/ChartTooltip.tsx",
+      "sha256": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/components/data-display/MetricBar.tsx",
+      "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    },
+    {
+      "file": "internal/api/router.go",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "scope": "support",
+      "pinKind": "current read-only snapshot; no accepted-commit equality assertion"
+    }
+  ],
+  "filesRead": [
+    {
+      "file": "web/src/features/charging/pages/PowersharePage.tsx",
+      "purpose": "current page/direct renderer/constants/helper/barrel source",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+      "purpose": "current page/direct renderer/constants/helper/barrel source",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/features/charging/components/powershare-modernization/SnapshotCard.tsx",
+      "purpose": "current page/direct renderer/constants/helper/barrel source",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/features/charging/components/powershare-modernization/StopReasonCard.tsx",
+      "purpose": "current page/direct renderer/constants/helper/barrel source",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/features/charging/components/powershare-modernization/TrendCard.tsx",
+      "purpose": "current page/direct renderer/constants/helper/barrel source",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "purpose": "current page/direct renderer/constants/helper/barrel source",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/features/charging/components/powershare/constants.ts",
+      "purpose": "current page/direct renderer/constants/helper/barrel source",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/features/charging/components/powershare/helpers.ts",
+      "purpose": "current page/direct renderer/constants/helper/barrel source",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/features/charging/components/powershare/index.ts",
+      "purpose": "current page/direct renderer/constants/helper/barrel source",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/orchestrator-loop.md",
+      "purpose": "full current worker/sole-loop authority",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "purpose": "full contract and all additive decisions",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "purpose": "latest new-machine recovery and recent handoff",
+      "mode": "content",
+      "ranges": [
+        [
+          1,
+          220
+        ]
+      ]
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "purpose": "relevant mission sections 43-45",
+      "mode": "content",
+      "ranges": [
+        [
+          1416,
+          1517
+        ]
+      ]
+    },
+    {
+      "file": "migration-queue.md",
+      "purpose": "exact item, accepted page, historical roots and narrow dedup",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "purpose": "full repository instructions",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "purpose": "full applicable frontend instructions",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "purpose": "full applicable SI instructions",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "purpose": "full applicable unit instructions; older mixed-unit examples do not override canonical contract",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": ".gitignore",
+      "purpose": "allowed log ignore authority",
+      "mode": "content",
+      "ranges": [
+        [
+          77,
+          80
+        ],
+        [
+          110,
+          110
+        ]
+      ]
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-087.json",
+      "purpose": "historical roots/source acceptance boundary",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-powershare.json",
+      "purpose": "existing complete report read before recovery",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "purpose": "exact observation query/adapter",
+      "mode": "content",
+      "ranges": [
+        [
+          455,
+          613
+        ]
+      ]
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "purpose": "retention, null/zero, combination and provenance contract",
+      "mode": "content",
+      "ranges": [
+        [
+          1,
+          430
+        ]
+      ]
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "purpose": "query trust derivation",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "purpose": "vehicle identity/query-state precondition",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "purpose": "preference subscription",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/hooks/useChartPalette.ts",
+      "purpose": "saved palette/theme preference",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "purpose": "metric display/preference boundary",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/lib/signalObservation.ts",
+      "purpose": "latest numeric/text null/zero/sign handling",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "purpose": "actual route vehicle/range ownership",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "purpose": "Powershare lazy loader",
+      "mode": "content",
+      "ranges": [
+        [
+          21,
+          23
+        ]
+      ]
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "purpose": "exact registered route",
+      "mode": "content",
+      "ranges": [
+        [
+          200,
+          202
+        ]
+      ]
+    },
+    {
+      "file": "web/src/App.tsx",
+      "purpose": "actual lazy route mount",
+      "mode": "content",
+      "ranges": [
+        [
+          60,
+          64
+        ],
+        [
+          812,
+          816
+        ]
+      ]
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "purpose": "prefix and request/abort boundary matches",
+      "mode": "content",
+      "ranges": [
+        [
+          73,
+          78
+        ],
+        [
+          91,
+          95
+        ],
+        [
+          342,
+          366
+        ],
+        [
+          394,
+          398
+        ]
+      ]
+    },
+    {
+      "file": "web/src/components/layout/index.ts",
+      "purpose": "existing category export",
+      "mode": "content",
+      "ranges": [
+        [
+          7,
+          13
+        ]
+      ]
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "purpose": "PageContainer delegation",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "purpose": "header trust/retained content and source a11y",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "purpose": "shared chart control delegation",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "purpose": "shared ChartContainer forwarding",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "purpose": "bounded export/fullscreen/accessible table matches only",
+      "mode": "content",
+      "ranges": [
+        [
+          132,
+          147
+        ],
+        [
+          175,
+          201
+        ],
+        [
+          236,
+          236
+        ],
+        [
+          316,
+          335
+        ],
+        [
+          465,
+          510
+        ],
+        [
+          715,
+          748
+        ],
+        [
+          885,
+          945
+        ]
+      ]
+    },
+    {
+      "file": "web/src/components/charts/ChartTooltip.tsx",
+      "purpose": "preference-aware numeric tooltip/dynamic style exception",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "purpose": "bounded identity/sort/mobile API matches; not a whole shared-component audit",
+      "mode": "content",
+      "ranges": [
+        [
+          166,
+          358
+        ],
+        [
+          461,
+          486
+        ],
+        [
+          579,
+          646
+        ]
+      ]
+    },
+    {
+      "file": "web/src/components/data-display/MetricBar.tsx",
+      "purpose": "signed bar bounds and accessible value candidate",
+      "mode": "content",
+      "ranges": "complete"
+    },
+    {
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "purpose": "shared fetch-time vs observation candidate",
+      "mode": "content",
+      "ranges": [
+        [
+          273,
+          351
+        ]
+      ]
+    },
+    {
+      "file": "internal/api/router.go",
+      "purpose": "existing observations GET mapping only; not a backend audit",
+      "mode": "content",
+      "ranges": [
+        [
+          4918,
+          4933
+        ]
+      ]
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-action-center.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-api-logs.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-api-playground.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-audit-log.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-backup-restore.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-data-quality.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-dev-tools.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-disk-forecast.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-dlqinspector.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-feature-flags.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-feedback-queue.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-fleet-api.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-fleet-telemetry-coverage.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-gas-price-auto-poll.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-gdprexport.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-ingest-xray.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-live-signal-inspector.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-redis-signal-viewer.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-schema-drift.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-secret-rotation.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-security-access.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-slow-queries.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-tesla-feature-flags.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-tesla-orders.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-tesla-region.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-admin-vehicle-cost.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-behavioral-sentinel.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-causal-experimentation.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-charging-forensics.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-charging-site-twin.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-component-survival.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-emergency-resilience.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-federated-learning.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-firmware-canary.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-journey-assurance.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-road-hazard-mesh.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-tcooptimizer.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-advanced-twin-lab.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-analytics.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-carbon-intelligence.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-drive-archetypes.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-drive-calendar.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-firmware-impact.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-fleet-compare.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-lifetime-stats.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-mileage-budget.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-mileage.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-milestones.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-statistics.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-timeline.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-true-cost.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-weekly-digest.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-analytics-year-review.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-automations-automation-builder.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-automations-automation-history.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-automations-automation-list.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-automations-automations-list.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-battery-care.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-battery-degradation.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-battery-passport.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-cells.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-charge-advisor.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-cycle-stress.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-energy-flow.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-energy-products.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-pack-capacity.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-power-flow-dashboard.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-projected-range.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-sleep-efficiency.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-battery-vampire-drain.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-charge-departure-alignment.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-charge-interruption.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-charger-health.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-charger-resilience.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-charging-curve.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-charging-detail.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-charging-heatmap.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-charging-list.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-charging-thermal-tax.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    },
+    {
+      "file": "docs/frontend-audits/phase6-qa-charging-cost-analysis.json",
+      "purpose": "JSON exact-item and narrow Powershare/freshness reference scan",
+      "mode": "metadata-root-reference-scan",
+      "ranges": "complete"
+    }
+  ],
+  "priorEvidence": {
+    "reportSHA256BeforeSupplement": "cb4ee7053fc2106a860154c60581f7c761d67f2de2a528e64d77251beb45c06c",
+    "reportBytesBeforeSupplement": 48787,
+    "summary": {
+      "counts": {
+        "primarySourceFiles": 9,
+        "pageLines": 297,
+        "sectionShells": 4,
+        "majorSurfaces": 6,
+        "trendCards": 2,
+        "snapshotRows": 5,
+        "confirmedRoots": 5,
+        "confirmedLocationRecords": 9,
+        "unpromotedCandidates": 5,
+        "newRegressionRoots": 0,
+        "literalTranslationCalls": 72,
+        "missingLiteralCatalogKeys": 0
+      },
+      "byRule": {
+        "historical-live-claim": 1,
+        "export-observation-identity-loss": 1,
+        "hardcoded-string": 1,
+        "vehicle-source-state-collapse": 1,
+        "noncanonical-category-import": 1
+      },
+      "filesByConfirmedLocations": {
+        "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx": 3,
+        "web/src/features/charging/pages/PowersharePage.tsx": 2,
+        "web/src/features/charging/components/powershare-modernization/TrendCard.tsx": 1,
+        "web/src/features/charging/components/powershare/helpers.ts": 1,
+        "web/src/features/charging/components/powershare-modernization/SnapshotCard.tsx": 1,
+        "web/src/features/charging/components/powershare-modernization/StopReasonCard.tsx": 1
+      },
+      "priorityFixes": [
+        "P1: avoid live/inactive-session claims from historical observations.",
+        "P2: preserve exported observation timestamps; localize verified known enums; distinguish vehicle source states.",
+        "P3: reuse canonical LayoutCard category imports."
+      ],
+      "dedupPolicy": "Five existing Phase0 roots revalidated against current source, zero newly claimed regressions, zero fix/source tasks dispatched. Related shared freshness roots remain unpromoted.",
+      "violationsVersusMatches": "Narrow hardcoded literal-JSX grep finds no matches, but semantic known-enum localization root is confirmed. Three noncanonical LayoutCard imports are one root with three sites, not three vendor-import violations."
+    },
+    "limits": {
+      "startUTC": "2026-10-13T23:16:21.042000Z",
+      "targetMinutes": [
+        5,
+        10
+      ],
+      "creationCapMinutes": 20,
+      "hardCapMinutes": 25,
+      "commandLimitSeconds": 180,
+      "allCommandsInitialWaitSeconds": 30,
+      "elapsedMinutesAtRelease": 19.988,
+      "targetExceeded": "Read/scan QA exceeded 10-minute target; artifact creation remains below 20-minute cap.",
+      "releaseUTC": "2026-10-13T23:36:20.321955Z"
+    },
+    "release": {
+      "releaseUTC": "2026-10-13T23:36:20.321955Z",
+      "allClaimsReleased": true,
+      "sourceWriteClaims": "None acquired",
+      "artifactWriteClaims": "Released upon command completion after both artifacts and JSON reparse",
+      "postReturnWrites": false,
+      "continuingWork": "None; no background helper/server/task launched."
+    },
+    "catalog": {
+      "literalCallOccurrences": 72,
+      "missingLiteralKeys": [],
+      "scope": "Literal keys only; no catalog runtime loading/plural/RTL acceptance."
+    },
+    "initialDuplicateObjective": "One exact pending QA row, one completed source row, no existing destination artifacts, no prior Phase6 Powershare references across 81 reports at first scan; older Phase0 audit supplies historical roots only.",
+    "boundary": "Prior checks/times are historical. Missing previous log is not reconstructed as a fresh execution receipt. Original finding IDs/roots, source pins and historical ownership remain retained."
+  },
+  "revalidation": {
+    "startedUTC": "2026-10-14T00:48:11.9540903Z",
+    "checkedUTC": "2026-10-14T00:58:04.846011Z",
+    "disposition": "existing report reused; artifact metadata supplemented and absent ignored log restored",
+    "noChangeNeeded": {
+      "acceptedSource": true,
+      "basis": "All nine primary source SHA256 values equal existing complete report; current route/hooks/source lines rechecked. No remigration."
+    },
+    "duplicateObjective": false,
+    "newConfirmedRoots": 0,
+    "newQueueItemsCreated": 0,
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "catalogWrites": 0,
+    "currentQueue": {
+      "file": "migration-queue.md",
+      "line": 371,
+      "status": "[~]",
+      "item": "phase6-qa-charging-powershare",
+      "rawRow": "| [~] | 6 | phase6-qa-charging-powershare | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-charging-powershare.json | phase5-page-charging-powershare | 1 | actor=640085c3-21ed-4db3-a5a7-7efec0156079; launch-observed=2026-10-14T00:48:33.105Z; conservative return=2026-10-14T01:05:28.452Z; hard=2026-10-14T01:10:28.452Z; LastConsumed=-1 | - | Accepted8d1ff06e5 sourceonly/currentPowersharePage/directparts, physicalimport/export signs/rawW-Wh/preferences/unknownzero/device-vs-workspaceidentity/provenance/querytrust/actionconfirmation/liveonlyguards/sections/i18n/sourcea11y. NoexistingderivedPhase6QA row; verifyactualroute/identity/noduplicate. Report/logonly/no physicaldevice/API/mutations/source/tests/browser/native/fullsuite/helpers/remigration/closedPhase3testreplay. New-machine exact scope reserved for built-in dispatch; recovered attempts continued (new zero-attempt QA starts at one); reservation is NOT a running worker. No browser grant. Actual built-in background launch accepted; exact files held by 640085c3-21ed-4db3-a5a7-7efec0156079, no native lock. Preserve same recovered attempt and original clocks/history; current running state requires health census. |",
+      "acceptedPageLine": 1837,
+      "acceptedPageStatus": "[x]",
+      "acceptedSourceCommit": "8d1ff06e5ff2b0dde419f8b9684a9040456d2848",
+      "historyAuditLine": 576
+    },
+    "sourceAcceptanceOnly": true,
+    "nativeAcceptance": "NOTRUN",
+    "instructionCoverage": "Full orchestrator loop/design contract/applicable instructions; latest handoff; mission 43-45. No AGENTS.md found in probed ancestors."
+  },
+  "sections": [
+    {
+      "id": "metrics",
+      "file": "web/src/features/charging/pages/PowersharePage.tsx",
+      "line": 196,
+      "surfaces": [
+        "ChargingSummaryBrief"
+      ],
+      "sourceLines": [
+        200,
+        212
+      ],
+      "visibility": "Always rendered once vehicle precondition resolves; initial/retained/partial source status supplied; no invented readings",
+      "findingIds": []
+    },
+    {
+      "id": "output-and-runtime",
+      "file": "web/src/features/charging/pages/PowersharePage.tsx",
+      "line": 217,
+      "surfaces": [
+        "power TrendCard",
+        "RuntimeCard"
+      ],
+      "sourceLines": [
+        223,
+        232
+      ],
+      "visibility": "Stable shells; each source uses initial loading/fatal-only error; retained power warning; live-session wording remains PS-F01",
+      "findingIds": [
+        "PS-F01",
+        "PS-F02"
+      ]
+    },
+    {
+      "id": "hours-and-stop",
+      "file": "web/src/features/charging/pages/PowersharePage.tsx",
+      "line": 250,
+      "surfaces": [
+        "hours TrendCard",
+        "StopReasonCard"
+      ],
+      "sourceLines": [
+        256,
+        266
+      ],
+      "visibility": "Independent historical runtime trend and stop source shells/loading/error/empty/retry remain",
+      "findingIds": [
+        "PS-F02"
+      ]
+    },
+    {
+      "id": "snapshot",
+      "file": "web/src/features/charging/pages/PowersharePage.tsx",
+      "line": 279,
+      "surfaces": [
+        "SnapshotCard"
+      ],
+      "sourceLines": [
+        280,
+        281,
+        282,
+        287
+      ],
+      "visibility": "Five signal identities remain even without readings; authoritatively empty response context shown separately; retained notices do not delete table",
+      "rows": 5,
+      "columns": [
+        "label",
+        "value",
+        "ts"
+      ],
+      "tableId": "charging:powershare-signals",
+      "findingIds": []
+    }
+  ],
+  "actions": [
+    {
+      "id": "refresh-all",
+      "file": "web/src/features/charging/pages/PowersharePage.tsx",
+      "line": 152,
+      "handlerLine": 66,
+      "queryRefetchBindings": 5,
+      "semantics": "Read-only requery; localized aria-label at 156; h/min-h/min-w-11 below md at 154; no power/device command"
+    },
+    {
+      "id": "source-retry",
+      "file": "web/src/features/charging/pages/PowersharePage.tsx",
+      "line": 228,
+      "additionalBindings": [
+        241,
+        261,
+        270,
+        291
+      ],
+      "renderedCardBindings": 5,
+      "semantics": "Read-only individual or combined refetch; underlying QueryError/shared ChartCard; not executed"
+    },
+    {
+      "id": "chart-export",
+      "file": "web/src/features/charging/components/powershare-modernization/TrendCard.tsx",
+      "line": 42,
+      "instances": 2,
+      "sharedImplementation": "ChartContainer.tsx:472-483,721",
+      "semantics": "Image/export menu and CSV of loaded chart rows only; not full history; full timestamp omitted PS-F02; NOT executed"
+    },
+    {
+      "id": "chart-fullscreen",
+      "file": "web/src/features/charging/components/powershare-modernization/TrendCard.tsx",
+      "line": 43,
+      "instances": 2,
+      "sharedImplementation": "ChartContainer.tsx:484,731",
+      "semantics": "Canonical fullscreen control gated by loading/error/empty; NOT executed"
+    },
+    {
+      "id": "chart-accessible-data",
+      "file": "web/src/features/charging/components/powershare-modernization/TrendCard.tsx",
+      "line": 44,
+      "instances": 2,
+      "columns": 2,
+      "sharedImplementation": "ChartContainer.tsx:898-922",
+      "semantics": "Canonical tabular alternative with time/value; complete timestamp identity missing PS-F02; screen reader NOTRUN"
+    },
+    {
+      "id": "snapshot-sort",
+      "file": "web/src/features/charging/components/powershare-modernization/SnapshotCard.tsx",
+      "line": 62,
+      "sortableColumns": 3,
+      "semantics": "Shared DataTable/sort controller, stable row keys/tableId and all three mobile fields; keyboard/mobile runtime NOTRUN"
+    }
+  ],
+  "actionSafety": {
+    "physicalCommandCount": 0,
+    "scan": "Actual primary-file Select-String mutation/command/ConfirmDialog grep: zero matching lines",
+    "confirmation": "NOT_APPLICABLE to absent physical mutation; no confirmation flow tested or passed",
+    "liveOnlyGuard": "NOT_APPLICABLE to absent physical mutation; read-only refresh permitted; inherited shared chart annotations not enabled by this page",
+    "physicalDevice": "NOTRUN",
+    "API": "NOTRUN",
+    "mutations": "NOTRUN"
+  },
+  "domainAudit": {
+    "physicalImportExportSigns": {
+      "status": "SOURCE_ONLY / UNIT_CONTRACT_UNKNOWN",
+      "evidence": [
+        "PowersharePage.tsx:59,61,131-132",
+        "helpers.ts:89-97",
+        "MetricBar.tsx:53-62"
+      ],
+      "conclusion": "latestNumeric/knownNumber/buildSeries preserve finite negative/positive/zero values; no abs/sign flip in page. Valid physical import/export polarity is not established by allowed source. Signed bar clamps accessible magnitude to zero: conditional PS-C04, not permission to flip/abs."
+    },
+    "rawWWh": {
+      "status": "CANDIDATE PS-C01",
+      "conclusion": "Page assumes observed kW/h and synthesizes W/s for StatMetric at 131/139, undoing at display 132/140. Hook adapter coerces numeric values without unit scaling. No Wh energy signal consumed. Earlier metadata/normalization evidence remains historical/hash-compared; authoritative vendor/history units unknown; no asserted scale defect or conversion fix."
+    },
+    "preferences": {
+      "status": "SOURCE_REVIEWED; runtime NOTRUN",
+      "conclusion": "Number/precision locale subscription via useNumberFormatting, saved palette via useChartPalette, operational metric preferences via useOperationalMetrics. DateTime/formatTime retained. No power/energy preference switch established. Memoized time labels/default ticks remain PS-C05."
+    },
+    "unknownZero": {
+      "status": "SOURCE_REVIEWED",
+      "conclusion": "Null/nonfinite numeric values stay unknown; genuine zero/signed finite values survive latestNumeric/knownNumber/buildSeries. seriesPeak floors only scale; it is not a synthesized reading. Placeholder snapshot values remain em dashes."
+    },
+    "deviceVsWorkspaceIdentity": {
+      "status": "SOURCE_REVIEWED",
+      "conclusion": "Selected vehicle ID is in five query keys and vehicle_id parameters. Route owns vehicle selection but no workspace date range; 48 recent readings per numeric signal, not a complete period. No energy-site/device identifier or physical command target is fabricated."
+    },
+    "provenanceQueryTrust": {
+      "status": "SOURCE_REVIEWED_WITH_FINDINGS",
+      "conclusion": "Five historical DataStates forward retained payload, fatal-only errors and independent retries. Summary explicitly describes up to 48 recent readings; oldest real row timestamp is used. Runtime live/inactive-session assurance lacks evidence PS-F01; fetch-time badge is existing shared PS-C02. No polling/session age validation is configured in these calls."
+    },
+    "i18n": {
+      "literalTranslationCalls": 72,
+      "currentCatalogKeyValidation": "NOTRUN",
+      "knownEnumFinding": "PS-F03",
+      "conclusion": "Labels/help/errors/action/section names use t; unit symbols kW/h, technical IDs, em dash and server unknown values are not literal-English violations. Verified known enum human-readable presentation bypasses localization. Prior catalog missing-key count is historical, not a current guard pass."
+    },
+    "sourceA11yMobile": {
+      "status": "SOURCE_ONLY; mounted matrix NOTRUN",
+      "conclusion": "PageLayout delegates PageContainer heading/focus. Own refresh is named, decorative refresh hidden, below-md h/min-h/min-w-11. Four localized sections; status has text beside color; chart data columns and all snapshot mobile columns remain. Grid base 1/xl 3 or 2 and min-w-0/wrapping are present. No measured target/viewport/RTL/keyboard/contrast/forced-colors/screen-reader acceptance. Chart timestamp loss affects evidence alternative; negative bar semantics conditional."
+    }
+  },
+  "counts": {
+    "primarySourceFiles": 9,
+    "primarySourceLines": 795,
+    "pageLines": 297,
+    "sectionShells": 4,
+    "majorSurfaces": 6,
+    "trendCards": 2,
+    "snapshotRows": 5,
+    "snapshotColumns": 3,
+    "signalQueries": 5,
+    "historicalStates": 5,
+    "explicitPageButtons": 1,
+    "actionFamilies": 6,
+    "physicalCommands": 0,
+    "confirmedRoots": 5,
+    "confirmedLocationRecords": 9,
+    "unpromotedCandidates": 5,
+    "newRegressionRoots": 0,
+    "newQueueNeeds": 0,
+    "literalTranslationCalls": 72,
+    "filesRead": 125,
+    "sourceHashRecords": 33,
+    "phase6ReportsScanned": 81,
+    "exactItemReports": 1,
+    "sharedFreshnessReferences": 21
+  },
+  "ruleCounts": {
+    "historical-live-claim": 1,
+    "export-observation-identity-loss": 1,
+    "hardcoded-string": 1,
+    "vehicle-source-state-collapse": 1,
+    "noncanonical-category-import": 1
+  },
+  "findingsClassification": "findings = confirmed source issues; unpromotedCandidates = conditional integration/runtime candidates, not included in violation totals",
+  "needs": [
+    {
+      "rootId": "PS-F01",
+      "priority": "P1",
+      "rule": "historical-live-claim",
+      "disposition": "existing reported root; orchestrator triage once, not a new queue task",
+      "existingReport": "docs/frontend-audits/phase6-qa-charging-powershare.json",
+      "historicalRootReport": "docs/frontend-audits/audit-page-087.json",
+      "narrowSourceFiles": [
+        "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+        "web/src/features/charging/pages/PowersharePage.tsx"
+      ],
+      "fix": "Use recorded-session/observation wording and preserve status, destination, output, hours and independent retry. Do not infer live activity from request success; obtain explicit freshness/session evidence before a live claim."
+    },
+    {
+      "rootId": "PS-F02",
+      "priority": "P2",
+      "rule": "export-observation-identity-loss",
+      "disposition": "existing reported root; orchestrator triage once, not a new queue task",
+      "existingReport": "docs/frontend-audits/phase6-qa-charging-powershare.json",
+      "historicalRootReport": "docs/frontend-audits/audit-page-087.json",
+      "narrowSourceFiles": [
+        "web/src/features/charging/components/powershare-modernization/TrendCard.tsx"
+      ],
+      "fix": "Preserve full timestamp/offset as evidence identity in exported and accessible rows while retaining chronological ordering, numeric values, existing chart and shared date preferences."
+    },
+    {
+      "rootId": "PS-F03",
+      "priority": "P2",
+      "rule": "hardcoded-string",
+      "disposition": "existing reported root; orchestrator triage once, not a new queue task",
+      "existingReport": "docs/frontend-audits/phase6-qa-charging-powershare.json",
+      "historicalRootReport": "docs/frontend-audits/audit-page-087.json",
+      "narrowSourceFiles": [
+        "web/src/features/charging/components/powershare/helpers.ts"
+      ],
+      "fix": "Map verified known enum identities to canonical localized labels using actual enum metadata; retain unknown raw values and existing inactive-before-active severity precedence. Catalog/source changes require separately assigned ownership."
+    },
+    {
+      "rootId": "PS-F04",
+      "priority": "P2",
+      "rule": "vehicle-source-state-collapse",
+      "disposition": "existing reported root; orchestrator triage once, not a new queue task",
+      "existingReport": "docs/frontend-audits/phase6-qa-charging-powershare.json",
+      "historicalRootReport": "docs/frontend-audits/audit-page-087.json",
+      "narrowSourceFiles": [
+        "web/src/features/charging/pages/PowersharePage.tsx"
+      ],
+      "fix": "Distinguish vehicle lookup loading/failure/empty through the existing query/trust contract while retaining header-owned selection. Do not add a second device/workspace picker."
+    },
+    {
+      "rootId": "PS-F05",
+      "priority": "P3",
+      "rule": "noncanonical-category-import",
+      "disposition": "existing reported root; orchestrator triage once, not a new queue task",
+      "existingReport": "docs/frontend-audits/phase6-qa-charging-powershare.json",
+      "historicalRootReport": "docs/frontend-audits/audit-page-087.json",
+      "narrowSourceFiles": [
+        "web/src/features/charging/components/powershare-modernization/RuntimeCard.tsx",
+        "web/src/features/charging/components/powershare-modernization/SnapshotCard.tsx",
+        "web/src/features/charging/components/powershare-modernization/StopReasonCard.tsx"
+      ],
+      "fix": "Use the existing canonical layout category export; do not create a wrapper, alter shared barrels or change behavior as part of this QA."
+    }
+  ]
+}

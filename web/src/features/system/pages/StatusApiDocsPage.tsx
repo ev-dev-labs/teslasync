@@ -11,16 +11,19 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  Server, ArrowLeft, ShieldCheck, Radio, Braces, Plug, ExternalLink,
+  Server, ArrowLeft, ShieldCheck, Radio, Plug, ExternalLink,
   Activity, Boxes, Cpu, Clock, AlertTriangle, BarChart3, Home, HeartPulse,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
-import { GlassPanel, Button, Badge, SectionTitle, PanelTitle, Text, Caption } from '@/components/ui'
-import { MetricCard, KVList } from '@/components/data-display'
+import { PageLayout } from '@/components/layout'
+import { GlassPanel, Button, Badge, Accordion, CopyButton, SectionTitle, PanelTitle, Text, Caption, IconBox } from '@/components/ui'
+import { KVList } from '@/components/data-display'
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief'
 import { InlineCallout } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 import { StatusApiEndpointCard, type StatusApiEndpointCardProps } from '../components/StatusApiEndpointCard'
 
 /** Integration target metadata for the "Designed for" panel. */
@@ -39,13 +42,31 @@ interface IntegrationTarget {
  */
 const API_BASE = '/api/v1'
 
+type DocumentedEndpoint = Omit<StatusApiEndpointCardProps, 'example'> & (
+  { example: object; streamExample?: never } |
+  { example?: never; streamExample: string }
+)
+
+// Illustrative documentation only; the REST and SSE snapshots share one wire shape.
+const SNAPSHOT_EXAMPLE = {
+  status: 'operational',
+  generated_at: '2025-01-15T14:32:11Z',
+  version: { build: '1.4.2', go_version: 'go1.22.5', started_at: '2025-01-10T08:00:00Z' },
+  counts: { components_total: 8, components_healthy: 8, components_degraded: 0, components_unhealthy: 0 },
+  components: Array.from({ length: 8 }, (_, index) => ({
+    name: `example-component-${index + 1}`, status: 'healthy', consecutive_failures: 0,
+  })),
+  resources: { goroutines: 142, uptime_seconds: 458321.4, go_version: 'go1.22.5' },
+  incidents: [],
+}
+
 export default function StatusApiDocsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   usePageTitle(t('statusApi.title', 'Status API'))
 
   /* ─── Documented endpoints (static contract) ─────────────── */
-  const endpoints = useMemo<StatusApiEndpointCardProps[]>(
+  const endpoints = useMemo<DocumentedEndpoint[]>(
     () => [
       {
         method: 'GET',
@@ -55,14 +76,7 @@ export default function StatusApiDocsPage() {
           'statusApi.endpoints.status.desc',
           "Overall snapshot — answers 'is it healthy right now?' in a single round-trip. Includes counts, version, resources, maintenance, and a list of active incidents.",
         ),
-        example: {
-          status: 'operational',
-          generated_at: '2025-01-15T14:32:11Z',
-          version: { build: '1.4.2', go_version: 'go1.22.5', started_at: '2025-01-10T08:00:00Z' },
-          counts: { components_total: 8, components_healthy: 8, components_degraded: 0, components_unhealthy: 0 },
-          resources: { goroutines: 142, uptime_seconds: 458321.4, go_version: 'go1.22.5' },
-          incidents: [],
-        },
+        example: SNAPSHOT_EXAMPLE,
       },
       {
         method: 'GET',
@@ -118,18 +132,20 @@ export default function StatusApiDocsPage() {
         method: 'GET',
         path: `${API_BASE}/status/incidents`,
         icon: <AlertTriangle />,
-        query: 'active=1 | limit=N',
+        query: 'active=1&limit=50 | active=true&limit=200',
         description: t(
           'statusApi.endpoints.incidents.desc',
-          'Active incidents list. Pass active=1 to filter to incidents whose resolved_at is NULL.',
+          'Incidents list, including resolved incidents by default, ordered by started_at descending. Pass active=1 or active=true (case-insensitive) to include only incidents whose resolved_at is NULL. Combine active and limit with &: for example, active=1&limit=50. The default limit is 50; limits from 1 to 200 are accepted. Missing, invalid, non-positive, or greater-than-200 limits fall back to 50, not 200.',
         ),
         example: {
           count: 1,
           incidents: [
             {
               id: 17, title: 'MQTT broker reconnect storm', status: 'monitoring', severity: 'minor',
+              description: 'Illustrative incident: MQTT reconnects during TLS certificate rotation.',
               source: 'manual', affected_components: ['mqtt'],
-              started_at: '2025-01-15T13:55:00Z', updated_at: '2025-01-15T14:20:00Z',
+              started_at: '2025-01-15T13:55:00Z', created_at: '2025-01-15T13:55:00Z',
+              updated_at: '2025-01-15T14:20:00Z',
               updates: [
                 { at: '2025-01-15T13:55:00Z', status: 'investigating', message: 'Incident opened.', author: 'operator' },
                 { at: '2025-01-15T14:10:00Z', status: 'identified', message: 'Cause: TLS cert rotation gap.', author: 'operator' },
@@ -147,9 +163,7 @@ export default function StatusApiDocsPage() {
           'statusApi.endpoints.live.desc',
           'Server-Sent Events stream. Pushes a `status` event with the full snapshot every 30 seconds. Heartbeat events emitted every 25s so reverse proxies don\'t garbage-collect the connection mid-flight. Browsers consume this via EventSource(). For curl: -N --no-buffer.',
         ),
-        example: {
-          note: 'event: status\\ndata: <full StatusSnapshot JSON>\\n\\n',
-        },
+        streamExample: `event: status\ndata: ${JSON.stringify(SNAPSHOT_EXAMPLE)}\n\nevent: heartbeat\ndata: {"time":"2025-01-15T14:32:36Z"}\n\n`,
       },
     ],
     [t],
@@ -161,13 +175,13 @@ export default function StatusApiDocsPage() {
       {
         label: t('statusApi.facts.basePath', 'Base path'),
         value: (
-          <Text as="code" mono size="xs" className="text-cyan-300">
+          <Text as="code" mono size="xs" color="secondary">
             {`${API_BASE}/status`}
           </Text>
         ),
       },
-      { label: t('statusApi.facts.auth', 'Authentication'), value: t('statusApi.facts.authValue', 'ForwardAuth or Authorization header') },
-      { label: t('statusApi.facts.contentType', 'Content-Type'), value: 'application/json' },
+      { label: t('statusApi.facts.auth', 'Authentication'), value: t('statusApi.facts.authValue', 'ForwardAuth or authorization header') },
+      { label: t('statusApi.facts.contentType', 'Content-type'), value: 'application/json (REST); text/event-stream (/status/live)' },
       { label: t('statusApi.facts.versioning', 'Versioning'), value: t('statusApi.facts.versioningValue', 'Additive-only (v1)') },
     ],
     [t],
@@ -177,7 +191,7 @@ export default function StatusApiDocsPage() {
   const integrations = useMemo<IntegrationTarget[]>(
     () => [
       { name: 'Grafana', how: t('statusApi.integrations.grafana', 'JSON datasource'), icon: BarChart3 },
-      { name: 'Uptime Kuma', how: t('statusApi.integrations.kuma', 'HTTP(s) JSON Query monitor'), icon: Activity },
+      { name: 'Uptime Kuma', how: t('statusApi.integrations.kuma', 'HTTP(s) JSON query monitor'), icon: Activity },
       { name: 'Home Assistant', how: t('statusApi.integrations.hass', 'REST sensor'), icon: Home },
       { name: 'Healthchecks.io', how: t('statusApi.integrations.healthchecks', 'Synthetic monitor'), icon: HeartPulse },
     ],
@@ -191,65 +205,45 @@ export default function StatusApiDocsPage() {
       icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
       onClick={() => navigate('/system-status')}
     >
-      {t('statusApi.back', 'Back to System Status')}
+      {t('statusApi.back', 'Back to system status')}
     </Button>
   )
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('statusApi.title', 'Status API')}
       subtitle={t('statusApi.subtitle', 'Stable contract for external integrations')}
-      actions={actions}
+      secondaryActions={actions}
     >
       {/* 1 — Quick-reference KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('statusApi.kpi.label', 'API surface summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          <MetricCard
-            label={t('statusApi.kpi.endpoints', 'Endpoints')}
-            value={String(endpoints.length)}
-            subtitle={t('statusApi.kpi.endpointsSub', 'Documented routes')}
-            icon={<Server className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('statusApi.kpi.transport', 'Transport')}
-            value="REST + SSE"
-            subtitle={t('statusApi.kpi.transportSub', 'Poll or stream')}
-            icon={<Radio className="h-5 w-5" aria-hidden="true" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('statusApi.kpi.payload', 'Payload')}
-            value="JSON"
-            subtitle={t('statusApi.kpi.payloadSub', 'application/json')}
-            icon={<Braces className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('statusApi.kpi.contract', 'Contract')}
-            value={t('statusApi.kpi.contractValue', 'Additive-only')}
-            subtitle={t('statusApi.kpi.contractSub', 'v1 stable')}
-            icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
-            color="amber"
-          />
-        </section>
+        <SystemSummaryBrief
+          title={t('statusApi.kpi.label', 'API surface summary')}
+          description={t('statusApi.brief.description', 'Documented endpoint count, transport, payload, and compatibility policy.')}
+          scope={t('statusApi.brief.scope', 'Bundled documentation, not a runtime availability probe.')}
+          available
+          metrics={[{ metricId: 'count', occurrenceId: 'endpoints', rawValue: endpoints.length,
+            label: t('statusApi.kpi.endpoints', 'Endpoints'), context: t('statusApi.kpi.endpointsSub', 'Documented routes') }]}
+          textMetrics={[
+            { key: 'transport', label: t('statusApi.kpi.transport', 'Transport'), value: 'REST + SSE', detail: t('statusApi.kpi.transportSub', 'Poll or stream') },
+            { key: 'payload', label: t('statusApi.kpi.payload', 'Payload'), value: 'JSON', detail: t('statusApi.kpi.payloadSub', 'application/json') },
+            { key: 'contract', label: t('statusApi.kpi.contract', 'Contract'), value: t('statusApi.kpi.contractValue', 'Additive-only'), detail: t('statusApi.kpi.contractSub', 'v1 stable') },
+          ]}
+        />
       </FadeIn>
 
       {/* 2 — Overview + Integrations bento */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <GlassPanel className="space-y-4 p-4 sm:p-5 xl:col-span-2">
+          <GlassPanel role="region" aria-label={t('statusApi.overview.title', 'Overview')} className="space-y-4 p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="flex items-center gap-2">
-              <Server className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Server className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {t('statusApi.overview.title', 'Overview')}
             </PanelTitle>
             <Text as="p" variant="bodySm" className="leading-relaxed">
               {t(
                 'statusApi.overview.body',
-                'All endpoints are mounted under the base path and inherit the same authentication as the rest of the API. If you proxy this with ForwardAuth (Authelia, Authentik, Tinyauth, etc.), the proxy handles auth — otherwise pass an API key in the standard Authorization header. Every response is JSON over HTTP.',
+                'All endpoints are mounted under the base path and inherit the same authentication as the rest of the API. If you proxy this with ForwardAuth (Authelia, Authentik, Tinyauth, etc.), the proxy handles auth — otherwise pass an API key in the standard Authorization header. REST responses use application/json over HTTP. The /status/live endpoint uses text/event-stream, with JSON data in status and heartbeat events.',
               )}
             </Text>
             <KVList items={facts} />
@@ -261,25 +255,25 @@ export default function StatusApiDocsPage() {
             </InlineCallout>
           </GlassPanel>
 
-          <GlassPanel className="space-y-4 p-4 sm:p-5">
+          <GlassPanel role="region" aria-label={t('statusApi.integrations.title', 'Designed for')} className="space-y-4 p-4 sm:p-5">
             <PanelTitle className="flex items-center gap-2">
-              <Plug className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Plug className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {t('statusApi.integrations.title', 'Designed for')}
             </PanelTitle>
             <ul className="space-y-2.5">
               {integrations.map(({ name, how, icon: Icon }) => (
                 <li
                   key={name}
-                  className="flex items-center gap-3 rounded-lg bg-white/[0.02] p-2.5 ring-1 ring-white/[0.04]"
+                  className="flex items-center gap-3 rounded-shape-sm border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-300 ring-1 ring-cyan-400/20">
+                  <IconBox color="neutral" size="sm" aria-hidden="true">
                     <Icon className="h-4 w-4" aria-hidden="true" />
-                  </span>
+                  </IconBox>
                   <span className="min-w-0 flex-1">
-                    <Text as="span" size="sm" weight="medium" color="primary" className="block truncate">
+                    <Text as="span" size="sm" weight="medium" color="primary" className="block break-words">
                       {name}
                     </Text>
-                    <Caption className="block truncate">{how}</Caption>
+                    <Caption className="block break-words">{how}</Caption>
                   </span>
                 </li>
               ))}
@@ -298,7 +292,38 @@ export default function StatusApiDocsPage() {
             </Badge>
           </div>
           <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr))]">
-            {endpoints.map((ep) => (
+            {endpoints.map((ep) => ep.streamExample !== undefined ? (
+              // The existing feature card serializes JSON only; SSE uses the same primitives without changing its API.
+              <GlassPanel key={ep.path} hover glow="cyan" className="flex h-full flex-col gap-3 p-4 sm:p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="info" size="sm">{ep.method}</Badge>
+                  <span className={cn('inline-flex [&>svg]:h-4 [&>svg]:w-4', typography.color.secondary)} aria-hidden="true">
+                    {ep.icon}
+                  </span>
+                  <Text as="code" mono size="sm" color="secondary" className="min-w-0 break-all">
+                    {ep.path}
+                  </Text>
+                  <CopyButton
+                    text={ep.path}
+                    iconOnly
+                    size="sm"
+                    ariaLabel={t('statusApi.copyPath', 'Copy endpoint path {{path}}', { path: ep.path })}
+                    className="ms-auto shrink-0"
+                  />
+                </div>
+                <Text as="p" variant="bodySm" className="leading-relaxed">{ep.description}</Text>
+                <Accordion
+                  title={t('statusApi.exampleResponse', 'Example response')}
+                  className="mt-auto"
+                  bodyClassName="p-0"
+                >
+                  <pre className={cn(
+                    'max-h-72 overflow-auto p-3 leading-relaxed bg-[var(--surface-overlay)]',
+                    typography.family.mono, typography.size['2xs'], typography.color.secondary,
+                  )}>{ep.streamExample}</pre>
+                </Accordion>
+              </GlassPanel>
+            ) : (
               <StatusApiEndpointCard key={ep.path} {...ep} />
             ))}
           </div>
@@ -323,6 +348,6 @@ export default function StatusApiDocsPage() {
           </InlineCallout>
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

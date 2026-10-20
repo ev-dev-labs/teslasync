@@ -27,8 +27,8 @@
  *     widget calls `useTranslation('dashboard')`, so the stub ignores the
  *     namespace argument.
  *   - The global test-setup already mocks `useSettings` (km / °C) and
- *     `useTimezone` (UTC), which the transitive <DataFreshness> header needs.
- *   - `matchMedia` is stubbed before any import runs because <DataFreshness>'s
+ *     `useTimezone` (UTC), which the transitive <FreshnessDot> header needs.
+ *   - `matchMedia` is stubbed before any import runs because <FreshnessDot>'s
  *     `useMotionPreference` (rendered transitively by <WidgetShell>) touches it
  *     on first paint and jsdom does not provide it.
  *   - Renders are wrapped in <MemoryRouter> because <QueryError> (shown on the
@@ -43,7 +43,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
-// jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference reads it on
+// jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference reads it on
 // first paint. Install a no-op (reduced-motion = false) BEFORE any import.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
@@ -60,6 +60,44 @@ vi.hoisted(() => {
       },
     })) as unknown as typeof window.matchMedia;
   }
+});
+
+describe('SafetyFeaturesWidget unknown and retained readings', () => {
+  it('distinguishes all unknown feature states from a measured zero active count', () => {
+    safetyMock.mockReturnValue(makeQuery({}));
+    const unknown = renderWidget(<SafetyFeaturesWidget size={SIZE_COMPACT} />);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0')).toBeNull();
+    expect(screen.getByText('Some feature states are unknown')).toBeInTheDocument();
+    unknown.unmount();
+    safetyMock.mockReturnValue(makeQuery({
+      forward_collision_warning: false, automatic_emergency_braking_off: true,
+      lane_departure_avoidance: false, emergency_lane_departure_avoidance: false,
+      automatic_blind_spot_camera: false, blind_spot_collision_warning: false,
+      speed_limit_warning: false, cruise_follow_distance: 0,
+    }));
+    renderWidget(<SafetyFeaturesWidget size={SIZE_COMPACT} />);
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('does not mark unknown enum strings active while retaining numeric zero', () => {
+    expect(safetyEnumStatus('ForwardCollisionSensitivityUnknown', 'forward_collision_warning')).toBe('unknown');
+    expect(safetyEnumStatus('', 'forward_collision_warning')).toBe('unknown');
+    expect(safetyEnumStatus(0, 'cruise_follow_distance')).toBe('inactive');
+    expect(buildCells({ cruise_follow_distance: 0 }, tt).find((cell) => cell.id === 'cfd')?.value).toBe('0');
+  });
+
+  it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 3 }, { cols: 4, rows: 3 }])('retains readings and warning with working retry in %o', (size) => {
+    const refetch = vi.fn();
+    safetyMock.mockReturnValue(makeQuery(makeActiveSnapshot(), { isError: true, error: new Error('refresh failed'), refetch }));
+    renderWidget(<SafetyFeaturesWidget size={size} />);
+    if (size.cols === 1) expect(screen.getByText('8')).toBeInTheDocument();
+    else expect(screen.getByText('Forward collision warning')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 // react-i18next passthrough — resolve the fallback (2nd arg) and interpolate
@@ -229,8 +267,8 @@ describe('buildCells', () => {
     expect(cells.map((c) => c.id)).toEqual([
       'fcw', 'aeb', 'lda', 'elda', 'bsc', 'bscw', 'slw', 'cfd',
     ]);
-    expect(byId(cells, 'fcw').label).toBe('Forward Collision Warning');
-    expect(byId(cells, 'cfd').label).toBe('Cruise Follow Distance');
+    expect(byId(cells, 'fcw').label).toBe('Forward collision warning');
+    expect(byId(cells, 'cfd').label).toBe('Cruise follow distance');
   });
 
   it('maps an all-active payload to ok statuses with prefix-stripped values', () => {
@@ -267,12 +305,12 @@ describe('SafetyFeaturesWidget', () => {
     renderWidget(<SafetyFeaturesWidget size={SIZE_MEDIUM} />);
 
     // Title header (visible above compact).
-    expect(screen.getByText('Safety Features')).toBeInTheDocument();
+    expect(screen.getByText('Safety features')).toBeInTheDocument();
 
     // A representative set of unique labels.
-    expect(screen.getByText('Forward Collision Warning')).toBeInTheDocument();
-    expect(screen.getByText('Auto Emergency Braking')).toBeInTheDocument();
-    expect(screen.getByText('Cruise Follow Distance')).toBeInTheDocument();
+    expect(screen.getByText('Forward collision warning')).toBeInTheDocument();
+    expect(screen.getByText('Auto emergency braking')).toBeInTheDocument();
+    expect(screen.getByText('Cruise follow distance')).toBeInTheDocument();
 
     // Unique prefix-stripped enum values.
     expect(screen.getByText('Average')).toBeInTheDocument();
@@ -307,17 +345,16 @@ describe('SafetyFeaturesWidget', () => {
     expect(screen.getByText('No safety data')).toBeInTheDocument();
   });
 
-  it('shows the active-feature count and hides the title + grid in compact layout', () => {
+  it('keeps its title and active-feature count without the detailed grid in compact layout', () => {
     // All eight features active ⇒ activeCount 8.
     renderWidget(<SafetyFeaturesWidget size={SIZE_COMPACT} />);
 
-    // 1×1 widget: the title chrome is suppressed by design.
-    expect(screen.queryByText('Safety Features')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Safety features' })).toBeInTheDocument();
     // The compact hero shows the count + label...
     expect(screen.getByText('8')).toBeInTheDocument();
-    expect(screen.getByText('Active Features')).toBeInTheDocument();
+    expect(screen.getByText('Active features')).toBeInTheDocument();
     // ...and omits the per-feature grid entirely.
-    expect(screen.queryByText('Forward Collision Warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Forward collision warning')).not.toBeInTheDocument();
   });
 
   it('always renders every feature cell — inactive and unknown included — never hiding a section', () => {
@@ -326,8 +363,8 @@ describe('SafetyFeaturesWidget', () => {
     renderWidget(<SafetyFeaturesWidget size={SIZE_WIDE} />);
 
     // The section shell + labels always show, regardless of feature state.
-    expect(screen.getByText('Speed Limit Warning')).toBeInTheDocument();
-    expect(screen.getByText('Blind Spot Camera')).toBeInTheDocument();
+    expect(screen.getByText('Speed limit warning')).toBeInTheDocument();
+    expect(screen.getByText('Blind spot camera')).toBeInTheDocument();
     // Disabled (aeb, bscw, elda), unknown (bsc, cfd) and off (fcw, slw) all render.
     expect(screen.getAllByText('Disabled')).toHaveLength(3);
     expect(screen.getAllByText('—')).toHaveLength(2);
@@ -341,7 +378,7 @@ describe('SafetyFeaturesWidget', () => {
     renderWidget(<SafetyFeaturesWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByText('No safety data')).toBeInTheDocument();
-    expect(screen.queryByText('Forward Collision Warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Forward collision warning')).not.toBeInTheDocument();
   });
 
   it('renders a loading skeleton without any content while fetching the first time', () => {
@@ -349,8 +386,8 @@ describe('SafetyFeaturesWidget', () => {
 
     const { container } = renderWidget(<SafetyFeaturesWidget size={SIZE_MEDIUM} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Safety Features')).not.toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
+    expect(screen.queryByText('Safety features')).toBeInTheDocument();
     expect(screen.queryByText('No safety data')).not.toBeInTheDocument();
   });
 
@@ -362,7 +399,7 @@ describe('SafetyFeaturesWidget', () => {
     renderWidget(<SafetyFeaturesWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Forward Collision Warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Forward collision warning')).not.toBeInTheDocument();
   });
 
   it('invokes refetch when the freshness/refresh control is activated', () => {

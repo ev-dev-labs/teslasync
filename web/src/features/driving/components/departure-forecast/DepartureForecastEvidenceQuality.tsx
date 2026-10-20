@@ -26,7 +26,7 @@ export function DepartureForecastEvidenceQuality({
     <section data-testid="departure-evidence-quality">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ShieldCheck className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('departure.quality.title', 'Evidence quality and coverage')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
@@ -44,7 +44,7 @@ export function DepartureForecastEvidenceQuality({
             forecast={forecast}
             locale={locale}
           />
-          <AlertBanner className="mt-4" variant="info">
+          <AlertBanner className="mt-4 border-[var(--border-subtle)] bg-[var(--surface-2)]" variant="info">
             <Text as="p" variant="caption">
               {t(
                 'departure.quality.indexExplanation',

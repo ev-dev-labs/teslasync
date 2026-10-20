@@ -1,0 +1,106 @@
+{
+  "id": "phase6-proof-shared-narrative-limitation-ink",
+  "phase": 6,
+  "kind": "actual-unexecuted-covering-proof",
+  "status": "PASS_SCOPED_COVERING_PROOF",
+  "sourceReceipt": {
+    "id": "phase6-fix-shared-narrative-limitation-ink",
+    "commit": "60dc36a7a4c45b4226c8cfd36d8464890fe9e5b9",
+    "authority": "Commit supplied by the task; not independently read through Git.",
+    "retainedLog": "web/logs/phase6-fix-shared-narrative-limitation-ink.log",
+    "priorRuntimeResult": "Normal startup exit 1, discovered 0, executed 0, due to generated catalog drift; NOTRUN, not PASS.",
+    "historicalChecks": "Existing lint, scoped typing, scanner and preservation evidence retained without rerunning or relabeling."
+  },
+  "startedAt": "2026-10-14T15:08:36.3885732Z",
+  "finishedAt": "2026-10-14T15:14:29.7884638Z",
+  "runtime": "Node v26.8.1",
+  "runner": "Vitest v4.1.11",
+  "command": "node .\\node_modules\\vitest\\vitest.mjs run src\\components\\data-display\\OperationalNarrativeDetails.test.tsx src\\components\\data-display\\CalculationDetails.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --testNamePattern \"preserves authored limitation strings and order in both warning-role lists|keeps normalized exclusions in source order using the existing warning foreground|keeps unknown and blank-exclusion fallbacks muted instead of warning-colored\"",
+  "environment": {
+    "VITE_GIT_SHA": "60dc36a7a4c45b4226c8cfd36d8464890fe9e5b9",
+    "NO_COLOR": "1",
+    "reason": "Supply the provided source identity to avoid the normal config's Git fallback; suppress color only. No startup guards changed."
+  },
+  "exitCode": 0,
+  "counts": {
+    "testFiles": 2,
+    "testFilesPassed": 2,
+    "declaredTests": 8,
+    "selectedTests": 3,
+    "executedTests": 3,
+    "passedTests": 3,
+    "failedTests": 0,
+    "skippedTests": 5
+  },
+  "cases": [
+    {
+      "file": "web/src/components/data-display/OperationalNarrativeDetails.test.tsx",
+      "name": "OperationalNarrativeDetails > preserves authored limitation strings and order in both warning-role lists",
+      "status": "passed",
+      "durationMs": 499,
+      "coverage": "Authored limitation whitespace/order, warning foreground on both lists, nested normalized exclusions, className, narrative/evidence content and unavailable-cause fallback."
+    },
+    {
+      "file": "web/src/components/data-display/CalculationDetails.test.tsx",
+      "name": "CalculationDetails > keeps normalized exclusions in source order using the existing warning foreground",
+      "status": "passed",
+      "durationMs": 374,
+      "coverage": "Trim/deduplicate/filter normalization, source order, warning foreground instead of fixed amber, semantic span, metadata fallbacks and original input preservation."
+    },
+    {
+      "file": "web/src/components/data-display/CalculationDetails.test.tsx",
+      "name": "CalculationDetails > keeps unknown and blank-exclusion fallbacks muted instead of warning-colored",
+      "status": "passed",
+      "durationMs": 19,
+      "coverage": "Blank exclusions produce no list; unavailable metadata and empty-exclusion fallbacks retain muted rather than warning foreground."
+    }
+  ],
+  "startup": {
+    "normalConfig": "web/vite.config.ts",
+    "guardsBypassed": false,
+    "splitCatalog": "OK: 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved).",
+    "namespaceAudit": "Completed: 2 known dotted misses, 25 dotless labels, 0 new dotted, 3 new dotless, 49 newly resolved. Existing baseline notices retained in raw log; no baseline or catalog edits."
+  },
+  "attemptAccounting": {
+    "normalInvocationsThisItem": 1,
+    "executedCoveringProofAttemptsThisItem": 1,
+    "catalogOnlyFailuresThisItem": 0,
+    "priorCatalogOnlyFailureCharged": false,
+    "originalHelperNativeBudgetsRenewed": false,
+    "historicalPassingChecksRepeated": false,
+    "skippedReason": "Five retained cases outside the newly added correction coverage were intentionally deselected; no new pass is claimed for them."
+  },
+  "readOnlyFingerprints": [
+    {
+      "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+      "beforeSha256": "8858b6b1e34f083cc6580ba75a807af53bed6c7883265625c93520e2485d8226",
+      "afterSha256": "8858b6b1e34f083cc6580ba75a807af53bed6c7883265625c93520e2485d8226"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalNarrativeDetails.test.tsx",
+      "beforeSha256": "be6f9cb417962e1c6a2865bdfae98d762da249d2bc0a32eef73e325f8aa1f297",
+      "afterSha256": "be6f9cb417962e1c6a2865bdfae98d762da249d2bc0a32eef73e325f8aa1f297"
+    },
+    {
+      "file": "web/src/components/data-display/CalculationDetails.tsx",
+      "beforeSha256": "3e8a3fb0496d5a68585678d53a6b5ba42abb61ec40816db10d8245dac9e75828",
+      "afterSha256": "3e8a3fb0496d5a68585678d53a6b5ba42abb61ec40816db10d8245dac9e75828"
+    },
+    {
+      "file": "web/src/components/data-display/CalculationDetails.test.tsx",
+      "beforeSha256": "249fa7a91f8c3602e2b576735719d5444d8bda9a98384a4b112e6332e3e35d9c",
+      "afterSha256": "249fa7a91f8c3602e2b576735719d5444d8bda9a98384a4b112e6332e3e35d9c"
+    }
+  ],
+  "changedFiles": [
+    "docs/frontend-audits/phase6-proof-shared-narrative-limitation-ink.json",
+    "web/logs/phase6-proof-shared-narrative-limitation-ink.log"
+  ],
+  "rawLog": "web/logs/phase6-proof-shared-narrative-limitation-ink.log",
+  "limitations": [
+    "Mounted jsdom behavior and token-class assertions only; no browser-computed color or composed contrast proof.",
+    "No native, whole-page, API/network or global-gate approval.",
+    "No source, fixture, canonical catalog, configuration, queue or shared-type changes.",
+    "No Git commands, global typecheck, full suite, full lint, build, browser launch, server startup, Docker or dependency installation."
+  ]
+}

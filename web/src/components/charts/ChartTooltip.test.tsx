@@ -1,11 +1,105 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { ChartTooltipBase } from './ChartTooltip'
+import { act, render, screen } from '@testing-library/react'
+import { ChartTooltip, ChartTooltipBase } from './ChartTooltip'
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 
 // useSettings → fmtNumber locale resolution path is exercised by the existing
 // Format.test.tsx; here we only assert the tooltip's wiring & label heuristics.
 
 describe('ChartTooltipBase', () => {
+  it('uses neutral elevation and wrapping without changing series order or supplied colors', () => {
+    setGlobalLocale('en-US')
+    const longName = 'VeryLongUnbrokenSignalIdentity'.repeat(12)
+    const longLabel = 'Long timestamp context '.repeat(16).trim()
+    const payload = [
+      { name: longName, value: 0, color: '#385e7e', fill: '#83464e', unit: 'W' },
+      { dataKey: 'fallback-series', value: -12.5, fill: '#38614f' },
+    ]
+    render(<ChartTooltipBase active label={longLabel} payload={payload} precision={2} />)
+    const tooltip = screen.getByRole('tooltip')
+    expect(tooltip).toHaveClass('rounded-panel', 'shadow-e2', 'max-w-tooltip-viewport')
+    expect(tooltip.className).not.toMatch(/backdrop-blur|shadow-\[/)
+    expect(screen.getByText(longLabel)).toHaveClass('break-words')
+    const names = [screen.getByText(`${longName}:`), screen.getByText('fallback-series:')]
+    expect(names.map((name) => name.textContent)).toEqual([`${longName}:`, 'fallback-series:'])
+    expect(names[0]).toHaveClass('break-words', 'min-w-0')
+    expect(names[0].parentElement).toHaveClass('flex-wrap')
+    const swatches = tooltip.querySelectorAll('[aria-hidden="true"]')
+    expect(swatches[0]).toHaveStyle({ backgroundColor: '#385e7e' })
+    expect(swatches[1]).toHaveStyle({ backgroundColor: '#38614f' })
+    expect(swatches[0]).toHaveClass('shrink-0')
+    expect(screen.getByText('W')).toHaveClass('ms-0.5')
+    expect(screen.getByText('0.00')).toBeInTheDocument()
+    expect(screen.getByText('-12.50')).toBeInTheDocument()
+  })
+
+  it('keeps zero and valid negative measurements distinct from every missing or nonfinite value', () => {
+    setGlobalLocale('en-US')
+    render(<ChartTooltipBase active precision={2} payload={[
+      { name: 'zero', value: 0 },
+      { name: 'negative', value: -4.5 },
+      { name: 'null', value: null },
+      { name: 'undefined', value: undefined },
+      { name: 'nan', value: Number.NaN },
+      { name: 'infinite', value: Number.POSITIVE_INFINITY },
+    ]} />)
+    expect(screen.getByText('0.00')).toBeInTheDocument()
+    expect(screen.getByText('-4.50')).toBeInTheDocument()
+    expect(screen.getAllByText('—')).toHaveLength(4)
+  })
+
+  it('preserves raw formatter inputs and valueFormatter precedence with rich content', () => {
+    const payload = [{ name: 'Power', value: 0, unit: 'W', color: '#385e7e' }]
+    const formatter = vi.fn(() => 'unused')
+    const valueFormatter = vi.fn((value: unknown, name: string, unit?: string) => (
+      <strong>{`${name} ${String(value)} ${unit}`}</strong>
+    ))
+    const labelFormatter = vi.fn(() => <em>Sample context</em>)
+    render(<ChartTooltipBase active label="raw" payload={payload}
+      valueFormatter={valueFormatter} formatter={formatter} labelFormatter={labelFormatter} />)
+    expect(valueFormatter).toHaveBeenCalledWith(0, 'Power', 'W')
+    expect(labelFormatter).toHaveBeenCalledWith('raw', payload)
+    expect(formatter).not.toHaveBeenCalled()
+    expect(screen.getByText('Power 0 W').tagName).toBe('STRONG')
+    expect(screen.getByText('Sample context').tagName).toBe('EM')
+    expect(payload).toEqual([{ name: 'Power', value: 0, unit: 'W', color: '#385e7e' }])
+  })
+
+  it('refreshes memoized mounted tooltip values while retaining clocks, strings, counts and missing data', () => {
+    setGlobalLocale('en-US')
+    setGlobalPrecision(2)
+    function CountTooltip() {
+      const { fmtInt } = useNumberFormatting()
+      return <ChartTooltip active payload={[{ name: 'count', value: 1234 }]} valueFormatter={(value) => fmtInt(value)} />
+    }
+    render(
+      <>
+        <ChartTooltip active label="14:25" payload={[
+          { name: 'reading', value: 12.3456, unit: 'V' },
+          { name: 'formatted', value: '03:04' },
+          { name: 'missing', value: null },
+        ]} />
+        <ChartTooltip active precision={1} payload={[{ name: 'override', value: 2.3456 }]} />
+        <CountTooltip />
+      </>,
+    )
+    expect(screen.getByText('12.35')).toBeInTheDocument()
+    act(() => setGlobalPrecision(3))
+    expect(screen.getByText('12.346')).toBeInTheDocument()
+    expect(screen.getByText('1,234')).toBeInTheDocument()
+    expect(screen.getByText('2.3')).toBeInTheDocument()
+    expect(screen.getByText('14:25')).toBeInTheDocument()
+    expect(screen.getByText('03:04')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
+    act(() => setGlobalLocale('de-DE'))
+    expect(screen.getByText('12,346')).toBeInTheDocument()
+    expect(screen.getByText('1.234')).toBeInTheDocument()
+    act(() => {
+      setGlobalPrecision(2)
+      setGlobalLocale('en-US')
+    })
+  })
   afterEach(() => {
     vi.restoreAllMocks()
   })

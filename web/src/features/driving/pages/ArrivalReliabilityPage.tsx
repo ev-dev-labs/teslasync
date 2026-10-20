@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useTimezone } from '@/lib/timezone';
@@ -14,7 +16,6 @@ import type { Drive } from '@/types/driving';
 import {
   ArrivalReliabilityDepartureWindowProfile,
   ArrivalReliabilityEvidenceQuality,
-  ArrivalReliabilityKpiBand,
   ArrivalReliabilityMethodology,
   ArrivalReliabilityMonthTrend,
   ArrivalReliabilityRouteDirectory,
@@ -25,6 +26,7 @@ import {
   type ArrivalReliabilityQueryState,
 } from '../components/arrival-reliability';
 import { analyzeArrivalReliability } from '../lib/arrivalReliability';
+import { ArrivalEvidenceBrief } from '../components/operationalbrief-a-m/ArrivalEvidenceBrief';
 
 const DRIVE_HISTORY_LIMIT = 1_000;
 const TWO_COLUMNS = { default: 1, xl: 2 } as const;
@@ -38,14 +40,19 @@ export default function ArrivalReliabilityPage() {
   const selectedTimeZone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
-  const [nowMs] = useState(() => Date.now());
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const hasCachedData =
-    vehicleId != null && drivesQuery.data !== undefined;
+    vehicleId != null && drivesState.hasData;
   const isResolved =
     vehicleId != null && (hasCachedData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
     () => (vehicleId != null ? drivesQuery.data ?? [] : []),
     [drivesQuery.data, vehicleId],
+  );
+  // Snapshot identity includes successful refetches that structurally share data.
+  const nowMs = useMemo(
+    () => Date.now(),
+    [drives, vehicleId, drivesQuery.dataUpdatedAt],
   );
   const analysis = useMemo(
     () =>
@@ -57,31 +64,33 @@ export default function ArrivalReliabilityPage() {
   const state: ArrivalReliabilityQueryState = {
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && !hasCachedData && drivesQuery.isLoading,
+      vehicleId != null && drivesState.status === 'initial' && drivesQuery.fetchStatus === 'fetching',
+    fetchStatus: drivesQuery.fetchStatus,
+    isRefreshBlocked: vehicleId != null && drivesState.isRefreshBlocked,
     isResolved,
     error:
-      drivesQuery.isError && !hasCachedData
-        ? drivesQuery.error
-        : null,
+      drivesState.fatalError,
     refreshError:
-      drivesQuery.isError && hasCachedData
-        ? drivesQuery.error
-        : null,
+      drivesState.refreshError,
     onRetry: () => void drivesQuery.refetch(),
   };
   const locale = i18n.language;
   const timeZone = analysis.timeZone;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('arrivalReliability.title', 'Arrival Reliability')}
+      query={drivesQuery}
       subtitle={t(
         'arrivalReliability.subtitle',
         'Observed timing consistency and evidence coverage for directional routes in the vehicle timezone',
       )}
     >
+      {hasCachedData && state.isRefreshBlocked && !state.refreshError && (
+        <StaleRefreshWarning state={drivesState} label={t('arrivalReliability.title', 'Arrival Reliability')} />
+      )}
       <FadeIn>
-        <ArrivalReliabilityKpiBand
+        <ArrivalEvidenceBrief
           analysis={analysis}
           state={state}
           locale={locale}
@@ -163,6 +172,6 @@ export default function ArrivalReliabilityPage() {
           timeZone={timeZone}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

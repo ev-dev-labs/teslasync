@@ -12,7 +12,7 @@ import type { Drive } from '@/types/driving';
 export interface MileageBudgetConfig {
   /** Allowance per year, kilometres. */
   annualAllowanceKm: number;
-  /** Term start, `yyyy-mm-dd` (local midnight). */
+  /** Term start, `yyyy-mm-dd` (browser-local business-calendar midnight). */
   termStartIso: string;
   /** Term length in months. */
   termMonths: number;
@@ -21,7 +21,7 @@ export interface MileageBudgetConfig {
 }
 
 export interface MonthlyBudgetPoint {
-  /** `yyyy-mm`. */
+  /** `yyyy-mm` in the same browser-local business calendar as the term dates. */
   month: string;
   /** Cumulative driven km up to the end of this month (or `now` for the current month). */
   usedKm: number;
@@ -56,7 +56,10 @@ const DAY_MS = 86_400_000;
 
 function addMonths(ms: number, months: number): number {
   const d = new Date(ms);
-  return new Date(d.getFullYear(), d.getMonth() + months, d.getDate()).getTime();
+  const target = new Date(d.getFullYear(), d.getMonth() + months, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(d.getDate(), lastDay));
+  return target.getTime();
 }
 
 export function isValidBudgetConfig(c: MileageBudgetConfig): boolean {
@@ -82,26 +85,32 @@ export function computeMileageBudget(
   const termEndMs = addMonths(termStartMs, config.termMonths);
   const totalDays = Math.max(1, Math.round((termEndMs - termStartMs) / DAY_MS));
   const clampedNow = Math.min(Math.max(nowMs, termStartMs), termEndMs);
-  const elapsedDays = (clampedNow - termStartMs) / DAY_MS;
+  // Normalize to the same interval so DST cannot leave term-end pacing short or over.
+  const elapsedDays = ((clampedNow - termStartMs) / (termEndMs - termStartMs)) * totalDays;
 
   const totalAllowanceM = config.annualAllowanceKm * 1000 * (config.termMonths / 12);
   const allowedToDateM = totalAllowanceM * (elapsedDays / totalDays);
 
-  // In-term drives only, ascending, for both the total and the monthly series.
+  // The independent term dates, returned period instants and month keys all
+  // use the existing browser-local business calendar, not saved display zones
+  // or the offset written in a producer's timestamp.
   const inTerm = drives
-    .filter((d) => {
-      if (!d.startTs) return false;
-      const t = new Date(d.startTs).getTime();
+    .map((d) => ({
+      drive: d,
+      start: new Date(d.startTs || NaN),
+    }))
+    .filter(({ start }) => {
+      const t = start.getTime();
       return Number.isFinite(t) && t >= termStartMs && t < termEndMs;
     })
-    .sort((a, b) => new Date(a.startTs).getTime() - new Date(b.startTs).getTime());
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
 
   let usedM = 0;
   const byMonth = new Map<string, number>();
-  for (const d of inTerm) {
+  for (const { drive: d, start } of inTerm) {
     const dist = Number.isFinite(d.distanceM) ? Math.max(0, d.distanceM) : 0;
     usedM += dist;
-    const month = d.startTs.substring(0, 7);
+    const month = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
     byMonth.set(month, (byMonth.get(month) ?? 0) + dist);
   }
 
@@ -122,13 +131,13 @@ export function computeMileageBudget(
     monthly.push({
       month,
       usedKm: Math.round(cumulative / 100) / 10,
-      allowedKm: Math.round((totalAllowanceM * ((pointMs - termStartMs) / DAY_MS / totalDays)) / 100) / 10,
+      allowedKm: Math.round((totalAllowanceM * ((pointMs - termStartMs) / (termEndMs - termStartMs))) / 100) / 10,
     });
   }
 
   // A linear projection over the first days of a term is all noise —
   // withhold it until a week of signal exists.
-  const projectedTotalM = elapsedDays >= 7 ? (usedM / elapsedDays) * totalDays : null;
+  const projectedTotalM = elapsedDays >= 7 ? usedM * (totalDays / elapsedDays) : null;
   const projectedOverageM = projectedTotalM != null ? Math.max(0, projectedTotalM - totalAllowanceM) : 0;
 
   return {

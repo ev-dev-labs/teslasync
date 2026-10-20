@@ -7,7 +7,7 @@ import { STALE_TIMES } from '@/lib/constants';
 import { browserTimezone } from '@/lib/timezone';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
-import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse, TcoLedgerResponse, TcoLedgerCreate, TcoLedgerEntry } from '@/types/analytics';
+import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse, TcoLedgerResponse, TcoLedgerCreate, TcoLedgerEntry } from '@/types/analytics';
 import { FSD_DEFAULT_PERIOD_DAYS, type FsdInsights } from '@/types/fsd';
 import type { FleetAnalytics } from '@/api/types';
 
@@ -20,7 +20,8 @@ export const analyticsKeys = {
   dailyMileage: (vehicleId: string, days: number) => ['analytics', 'daily-mileage', vehicleId, days] as const,
   cost: (vehicleId: string) => ['analytics', 'cost', vehicleId] as const,
   timeline: (vehicleId: string) => ['analytics', 'timeline', vehicleId] as const,
-  stateSummary: (vehicleId: string) => ['analytics', 'state-summary', vehicleId] as const,
+  stateSummary: (vehicleId: string, start?: string, end?: string) =>
+    ['analytics', 'state-summary', vehicleId, start, end] as const,
   weeklyDigest: (vehicleId: string) => ['analytics', 'weekly-digest', vehicleId] as const,
   lifetime: (vehicleId?: string) => ['analytics', 'lifetime', vehicleId] as const,
   batteryCells: (vehicleId: string) => ['analytics', 'battery-cells', vehicleId] as const,
@@ -32,6 +33,12 @@ export function useAnalyticsSummary(days = 30) {
   return useQuery({
     queryKey: analyticsKeys.summary(days),
     queryFn: ({ signal }) => request<AnalyticsSummary>(`/analytics/fleet?days=${days}`, { signal }),
+    // The wire's energy key is grandfathered kWh; expose SI watt-hours
+    // once at the boundary so every consumer reads canonical units.
+    select: (data) => ({
+      ...data,
+      totalEnergyWh: (data.total_energy_kwh ?? 0) * 1000,
+    }),
   });
 }
 
@@ -45,6 +52,9 @@ export function useAnalyticsSummary(days = 30) {
  *
  * Backend `/analytics/fleet` precedence: `start`/`end` win over `days`; if no
  * bound is supplied the handler returns full history (no hard-coded window).
+ * A resolved query may still have `partial_result.is_partial`; consumers must
+ * retain the returned aggregates and disclose those reasons independently of
+ * query errors. Refetch retries this fleet source, not unrelated page queries.
  */
 export function useFleetAnalytics(
   arg: number | { days?: number; start?: string; end?: string } = {},
@@ -177,13 +187,35 @@ export function useTimeline(vehicleId: string) {
   });
 }
 
-/** @deprecated See `useTimeline` — `/vehicle-states/summary` was removed by Phase-42 / Prompt 0077. */
-export function useStateSummary(vehicleId: string) {
+export interface VehicleStateSummaryRow {
+  state: string;
+  total_seconds: number;
+  percentage: number;
+  transition_count: number;
+}
+
+export interface VehicleStateSummaryResponse {
+  vehicle_id: number;
+  days: number;
+  start: string;
+  end: string;
+  total_seconds: number;
+  by_state: VehicleStateSummaryRow[];
+}
+
+/**
+ * Restored signal-log summary; unwrap rows without converting seconds or percentages.
+ * Without `start`/`end` the handler applies its 7-day default window.
+ */
+export function useStateSummary(vehicleId: string, range: { start?: string; end?: string } = {}) {
+  const params = new URLSearchParams({ vehicle_id: vehicleId });
+  if (range.start) params.set('start', range.start);
+  if (range.end) params.set('end', range.end);
   return useQuery({
-    queryKey: analyticsKeys.stateSummary(vehicleId),
-    queryFn: ({ signal }) => request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
+    queryKey: analyticsKeys.stateSummary(vehicleId, range.start, range.end),
+    queryFn: ({ signal }) => request<VehicleStateSummaryResponse>(`/vehicle-states/summary?${params}`, { signal }),
     enabled: !!vehicleId,
-    select: safeArray,
+    select: (data) => safeArray(data?.by_state),
   });
 }
 
@@ -194,6 +226,13 @@ export function useWeeklyDigest(vehicleId: string) {
     enabled: !!vehicleId,
     retry: false,
     staleTime: STALE_TIMES.STATIC,
+    // The wire's energy keys are grandfathered kWh; expose SI watt-hours
+    // once at the boundary so every consumer reads canonical units.
+    select: (data) => ({
+      ...data,
+      energyWh: (data.energy_kwh ?? 0) * 1000,
+      prevEnergyWh: (data.prev_energy_kwh ?? 0) * 1000,
+    }),
   });
 }
 

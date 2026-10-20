@@ -12,18 +12,19 @@ const MIN = 60_000;
 
 function series(values: readonly number[]): EntropySample[] {
   return values.map((v, i) => ({
-    timestamp: new Date(BASE + i * MIN).toISOString(),
-    valueNum: v,
+    ts: new Date(BASE + i * MIN).toISOString(),
+    kind: 'ValueKindDouble',
+    value: v,
   }));
 }
 
 describe('toNumericPoints', () => {
   it('drops non-numeric and unparsable-timestamp rows', () => {
     const points = toNumericPoints([
-      { timestamp: new Date(BASE).toISOString(), valueNum: 1 },
-      { timestamp: new Date(BASE + MIN).toISOString(), valueNum: undefined },
-      { timestamp: undefined, valueNum: 2 },
-      { timestamp: 'not-a-date', valueNum: 3 },
+      { ts: new Date(BASE).toISOString(), kind: 'ValueKindDouble', value: 1 },
+      { ts: new Date(BASE + MIN).toISOString(), kind: 'ValueKindDouble', value: null },
+      { ts: '', kind: 'ValueKindDouble', value: 2 },
+      { ts: 'not-a-date', kind: 'ValueKindDouble', value: 3 },
     ]);
     expect(points).toHaveLength(1);
     expect(points[0]!.value).toBe(1);
@@ -31,9 +32,9 @@ describe('toNumericPoints', () => {
 
   it('sorts ascending and de-duplicates identical timestamps', () => {
     const points = toNumericPoints([
-      { timestamp: new Date(BASE + MIN).toISOString(), valueNum: 2 },
-      { timestamp: new Date(BASE).toISOString(), valueNum: 1 },
-      { timestamp: new Date(BASE).toISOString(), valueNum: 9 },
+      { ts: new Date(BASE + MIN).toISOString(), kind: 'ValueKindDouble', value: 2 },
+      { ts: new Date(BASE).toISOString(), kind: 'ValueKindDouble', value: 1 },
+      { ts: new Date(BASE).toISOString(), kind: 'ValueKindDouble', value: 9 },
     ]);
     expect(points.map((p) => p.ms)).toEqual([BASE, BASE + MIN]);
     expect(points[0]!.value).toBe(9);
@@ -69,6 +70,20 @@ describe('binIndex', () => {
 });
 
 describe('summarizeSignalEntropy', () => {
+  it('keeps canonical zero occupancy and its sample-pair denominator', () => {
+    const s = summarizeSignalEntropy(series(Array.from({ length: 40 }, () => 0)));
+    expect(s.samples).toBe(40);
+    expect(s.minValue).toBe(0);
+    expect(s.maxValue).toBe(0);
+    expect(s.entropyBits).toBe(0);
+    expect(s.effectiveBins).toBe(1);
+    expect(s.bins[0]?.count).toBe(40);
+    expect(s.dominantBinFraction).toBe(1);
+    expect(s.changeRate).toBe(0);
+    expect(s.rolling.length).toBeGreaterThan(0);
+    expect(s.rolling.every((point) => point.bits === 0)).toBe(true);
+  });
+
   it('returns a zeroed, empty summary with no samples', () => {
     const s = summarizeSignalEntropy([]);
     expect(s.samples).toBe(0);

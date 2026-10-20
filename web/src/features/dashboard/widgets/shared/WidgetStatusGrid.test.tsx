@@ -115,11 +115,12 @@ describe('WidgetStatusGrid — cell rendering', () => {
     expect(screen.getByText('Off')).toBeInTheDocument();
   });
 
-  it('hides the value line in compact mode but keeps the label', () => {
+  it('preserves the value and status meaning in compact mode', () => {
     render(<WidgetStatusGrid cells={[makeCell({ label: 'Lock', value: 'Locked' })]} compact />);
 
     expect(screen.getByText('Lock')).toBeInTheDocument();
-    expect(screen.queryByText('Locked')).toBeNull();
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(screen.getByText('Healthy')).toBeInTheDocument();
   });
 
   it('omits the value line entirely when a cell has no value', () => {
@@ -134,7 +135,7 @@ describe('WidgetStatusGrid — cell rendering', () => {
   });
 
   it('renders a supplied icon marked decorative (aria-hidden)', () => {
-    const { container } = render(
+    render(
       <WidgetStatusGrid
         cells={[makeCell({ icon: <svg data-testid="cell-icon" /> })]}
       />,
@@ -143,27 +144,30 @@ describe('WidgetStatusGrid — cell rendering', () => {
     const icon = screen.getByTestId('cell-icon');
     expect(icon).toBeInTheDocument();
     // The icon lives inside an aria-hidden wrapper span.
-    const wrapper = container.querySelector('span.shrink-0');
+    const wrapper = icon.closest('span');
     expect(wrapper).toHaveAttribute('aria-hidden', 'true');
     expect(wrapper).toContainElement(icon);
   });
 });
 
-describe('WidgetStatusGrid — status → style map', () => {
-  const cases: Array<[StatusCell['status'], string, string]> = [
-    ['ok', 'bg-emerald-500/10', 'bg-emerald-500'],
-    ['warning', 'bg-amber-500/10', 'bg-amber-500'],
-    ['error', 'bg-red-500/10', 'bg-red-500'],
-    ['inactive', 'bg-white/[0.03]', 'bg-[var(--surface-2)]'],
-    ['unknown', 'bg-white/[0.03]', 'bg-[var(--surface-2)]'],
+describe('WidgetStatusGrid - flat status styles', () => {
+  const cases: Array<[StatusCell['status'], string]> = [
+    ['ok', 'bg-[var(--semantic-success)]'],
+    ['warning', 'bg-[var(--semantic-warning)]'],
+    ['error', 'bg-[var(--semantic-danger)]'],
+    ['inactive', 'bg-[var(--text-muted)]'],
+    ['unknown', 'bg-[var(--text-muted)]'],
   ];
 
-  it.each(cases)('paints the %s status chip and dot with its palette', (status, chipBg, dotBg) => {
+  it.each(cases)('shows the %s status dot while keeping the cell flat', (status, dotBg) => {
     const { container } = render(<WidgetStatusGrid cells={[makeCell({ status })]} />);
 
     const [cell] = getCellNodes(container);
-    expect(cell.className).toContain(chipBg);
     expect(getDot(cell).className).toContain(dotBg);
+    expect(cell.className).toContain('border-b');
+    expect(cell.className).not.toContain('bg-');
+    expect(cell.className).not.toContain('rounded-shape-sm');
+    expect(cell).toHaveTextContent(status === 'ok' ? 'Healthy' : status === 'warning' ? 'Warning' : status === 'error' ? 'Error' : status === 'inactive' ? 'Inactive' : 'Unknown');
   });
 });
 
@@ -179,8 +183,9 @@ describe('WidgetStatusGrid — fail-closed status (hardened bug)', () => {
     }).not.toThrow();
 
     const [cell] = getCellNodes(container);
-    expect(cell.className).toContain('bg-white/[0.03]');
-    expect(getDot(cell).className).toContain('bg-[var(--surface-2)]');
+    expect(cell.className).not.toContain('bg-');
+    expect(getDot(cell).className).toContain('bg-[var(--text-muted)]');
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
     // The label still renders — the widget degrades, it does not blank out.
     expect(screen.getByText('Gateway')).toBeInTheDocument();
   });
@@ -220,14 +225,25 @@ describe('WidgetStatusGrid — column layout', () => {
     const grid = getGrid(container);
     expect(grid.className).toContain('grid-cols-2');
     expect(grid.className).not.toContain('@sm:grid-cols-4');
-    // Compact chips get the tighter px-2 py-1.5 padding.
+    // Compact flat rows keep a tighter vertical rhythm without inset boxes.
     const [cell] = getCellNodes(container);
-    expect(cell.className).toContain('px-2');
     expect(cell.className).toContain('py-1.5');
+    expect(cell.className).not.toContain('px-');
   });
 });
 
 describe('WidgetStatusGrid — accessibility', () => {
+  it('shows a text status independent of color, including compact and missing-value cells', () => {
+    render(<WidgetStatusGrid cells={[makeCell({ status: 'warning' })]} compact />);
+    expect(screen.getByText('Warning')).toBeInTheDocument();
+  });
+
+  it('preserves caller-localized domain status without a runtime casing transform', () => {
+    render(<WidgetStatusGrid cells={[makeCell({ status: 'ok', statusLabel: 'MQTT connected' })]} />);
+    expect(screen.getByText('MQTT connected')).toBeInTheDocument();
+    expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
+  });
+
   it('marks the colour-only status dot decorative (aria-hidden)', () => {
     const { container } = render(<WidgetStatusGrid cells={[makeCell()]} />);
     const [cell] = getCellNodes(container);

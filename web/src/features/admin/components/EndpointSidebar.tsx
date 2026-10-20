@@ -103,9 +103,10 @@ function TagGroup({
             open && 'rotate-180',
           )}
         />
-        <Text size="xs" weight="semibold" color="secondary" className="flex-1 uppercase tracking-wider">
+        <Text size="xs" weight="semibold" color="secondary" className="flex-1 tracking-wider">
           {tag}
         </Text>
+        {' '}
         <Text size="2xs" color="muted" mono>{endpoints.length}</Text>
       </UiButton>
       {open && (
@@ -119,6 +120,7 @@ function TagGroup({
                   type="button"
                   variant="ghost"
                   onClick={() => onSelect(ep)}
+                  aria-current={isSelected ? 'true' : undefined}
                   className={cn(
                     '!h-auto !w-full !justify-start !rounded-none !px-3 !py-1.5 text-left text-xs',
                     'hover:!bg-white/[0.05]',
@@ -127,6 +129,7 @@ function TagGroup({
                   title={ep.summary}
                 >
                   <MethodBadge method={ep.method} />
+                  {' '}
                   <Text size="xs" color="secondary" mono className="truncate">
                     {ep.path}
                   </Text>

@@ -1,0 +1,3046 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-diagnostics-root-cause-intelligence",
+  "attempt": 1,
+  "actor": "2d7dc34f-6fc5-4133-9d4b-19799c7c94bc",
+  "status": "SOURCE_AUDIT_DELIVERED_WITH_FINDINGS",
+  "page": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+  "routes": [
+    "/diagnostics/root-cause"
+  ],
+  "snapshotUTC": "2026-10-14T01:05:53.6611453Z",
+  "queueSnapshotUTC": "2026-10-14T01:08:28.9839860Z",
+  "purpose": "Audit current accepted page/direct parts without remigration; statistical association is not diagnosis or causal proof.",
+  "timebox": {
+    "reservationUTC": "2026-10-14T01:00:00.625Z",
+    "returnUTC": "2026-10-14T01:20:00.625Z",
+    "hardUTC": "2026-10-14T01:25:00.625Z",
+    "firstObservedExecutionUTC": "2026-10-14T01:02:03.0615000Z",
+    "effectiveReturnUTC": "2026-10-14T01:20:00.625Z",
+    "effectiveHardUTC": "2026-10-14T01:25:00.625Z",
+    "earlierRule": "Reservation earlier than first observed execution +20/+25, unchanged."
+  },
+  "acceptance": {
+    "sourceAudit": "DELIVERED_WITH_FINDINGS",
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "freshTests": "NOTRUN",
+    "fullPageAcceptance": "NOTRUN",
+    "phases0to5": "PRESERVED_CLOSED",
+    "phase6": "UNFINISHED",
+    "phase7": "NOTRUN"
+  },
+  "existingReportReuse": {
+    "sameItemReportInitiallyPresent": false,
+    "sameItemReportBeforeCompositionPresent": false,
+    "historicalReportReusedReadOnly": "docs/frontend-audits/audit-page-101.json",
+    "meaning": "Historical source findings rechecked at current pins; no old test/native receipt upgraded to fresh proof, no duplicate campaign."
+  },
+  "authority": {
+    "fullRead": [
+      "docs/orchestrator-loop.md",
+      "docs/frontend-design-contract.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/observability.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      "docs/frontend-worker-conventions.md"
+    ],
+    "mission": {
+      "file": "docs/frontend-mission.md",
+      "sections": [
+        43,
+        44,
+        45
+      ],
+      "readRange": [
+        1416,
+        1535
+      ]
+    },
+    "latestHandoff": {
+      "file": "docs/session-handoff.md",
+      "heading": "New-machine recovery, 2026-10-14T00:44Z",
+      "readRange": [
+        1,
+        210
+      ],
+      "headerRecheckedUTC": "2026-10-14T01:08:52.9998807Z"
+    },
+    "permissions": "Current source-only assignment supersedes older generic gate/browser/heartbeat instructions."
+  },
+  "sourceSnapshot": {
+    "hashAlgorithm": "SHA256",
+    "lineCountDefinition": "Physical UTF-8 lines, excluding final empty split only",
+    "pins": [
+      {
+        "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        "sha256": "6f0648b428f8d76f3256ee1fb87f773145a5269639e1fa4b72a063dd5bc36179",
+        "lineCount": 265,
+        "bytes": 12010,
+        "group": "primary",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 6
+      },
+      {
+        "file": "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+        "sha256": "b047979b5d082032a7c2176ca3893ff732d07b606bfdc7430db7a695edf4a2ad",
+        "lineCount": 91,
+        "bytes": 3549,
+        "group": "primary",
+        "glassPanelOpen": 1,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/components/EvidenceSourceNotice.tsx",
+        "sha256": "a4eef29e9cc17c258d73f13b0c4c466c1f94fa9e851c0ed19c905e868253b99e",
+        "lineCount": 42,
+        "bytes": 1534,
+        "group": "primary",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+        "sha256": "bfa050b201eda4d19630676257dd28f6256eb57ae9ae2500a9188da800f7f478",
+        "lineCount": 70,
+        "bytes": 3753,
+        "group": "primary",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+        "sha256": "96624644a64071076a394b0889f57de17b13cff0b10ef9554d50c4dde676f678",
+        "lineCount": 139,
+        "bytes": 4906,
+        "group": "primary",
+        "glassPanelOpen": 2,
+        "chartContainerOpen": 1,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+        "sha256": "6d3967c4b7e618b75748217e11fe7df467dd65fb3830b8d0065b2d0ce9e89e49",
+        "lineCount": 199,
+        "bytes": 8162,
+        "group": "primary",
+        "glassPanelOpen": 1,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+        "sha256": "a6aae9d94c1c49e8ecabad480d969e806501bd0caa8d608bfedc74af9014116f",
+        "lineCount": 118,
+        "bytes": 5677,
+        "group": "primary",
+        "glassPanelOpen": 1,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+        "sha256": "6bd1abd8a8f1d0ded326ba85ac1dc1211109338e190fc4136431dd4c26aaf7da",
+        "lineCount": 94,
+        "bytes": 3706,
+        "group": "primary",
+        "glassPanelOpen": 1,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+        "sha256": "4e4b4269dc1764c44bc6eb79ac75562667447083a1f71103fecfc2f616343ca0",
+        "lineCount": 86,
+        "bytes": 3822,
+        "group": "primary",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/components/QualityBadge.tsx",
+        "sha256": "af7d94e859d7d4b0ace27710cf9d0062506479723a0551d3317efe081b2abd07",
+        "lineCount": 39,
+        "bytes": 1398,
+        "group": "primary",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+        "sha256": "3cea2105eb993377c38f334c361381924c2311c0421a00f9663da6cf04aa31f2",
+        "lineCount": 131,
+        "bytes": 5345,
+        "group": "primary",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+        "sha256": "8d9cadc97db35509eb958a3c2e2b6fc94b6251d6e2121e2c835e5705ddc9d12b",
+        "lineCount": 1018,
+        "bytes": 40532,
+        "group": "primary",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/lib/signalEvidenceAvailability.ts",
+        "sha256": "78122794815e99d1452bfebb85ad6c19154ee57109412f151ee7d4472dbb776c",
+        "lineCount": 11,
+        "bytes": 504,
+        "group": "primary",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/api/hooks/useTelemetry.ts",
+        "sha256": "f536fbdb5705d3abb19869b0b5d73e65e72fb5e992f50e664754e4fa4f76853e",
+        "lineCount": 683,
+        "bytes": 25746,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "lineCount": 434,
+        "bytes": 15482,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/api/types.ts",
+        "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "lineCount": 4194,
+        "bytes": 120243,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/types/telemetry.ts",
+        "sha256": "15af5c9c884e582b7b79c19c97e21583f38e48f2b69bfdbda0f3bdab74989ce4",
+        "lineCount": 159,
+        "bytes": 5083,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "lineCount": 65,
+        "bytes": 2035,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "lineCount": 174,
+        "bytes": 6593,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "lineCount": 47,
+        "bytes": 2095,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "lineCount": 168,
+        "bytes": 4411,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/App.tsx",
+        "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "lineCount": 919,
+        "bytes": 68125,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/features/diagnostics/components/index.ts",
+        "sha256": "72f2b499574fb6559e590cf48da90a21b295c4a9b32afe3a69eb871caba7937b",
+        "lineCount": 28,
+        "bytes": 1106,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "lineCount": 17,
+        "bytes": 658,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/components/ui/Select.tsx",
+        "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+        "lineCount": 119,
+        "bytes": 4432,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "lineCount": 93,
+        "bytes": 5174,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "lineCount": 39,
+        "bytes": 1493,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+        "lineCount": 321,
+        "bytes": 11591,
+        "group": "support-contract-only",
+        "glassPanelOpen": 1,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/components/charts/ChartContainer.tsx",
+        "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+        "lineCount": 1006,
+        "bytes": 41517,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 5,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "lineCount": 458,
+        "bytes": 17825,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "internal/api/router.go",
+        "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+        "lineCount": 5363,
+        "bytes": 260353,
+        "group": "support-contract-only",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "docs/orchestrator-loop.md",
+        "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+        "lineCount": 296,
+        "bytes": 16978,
+        "group": "authority",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "docs/frontend-design-contract.md",
+        "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+        "lineCount": 2539,
+        "bytes": 182554,
+        "group": "authority",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "docs/session-handoff.md",
+        "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+        "lineCount": 2460,
+        "bytes": 163930,
+        "group": "authority",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "docs/frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "lineCount": 1593,
+        "bytes": 31079,
+        "group": "authority",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "docs/frontend-inventory.md",
+        "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+        "lineCount": 1460,
+        "bytes": 1743758,
+        "group": "authority",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": ".github/copilot-instructions.md",
+        "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+        "lineCount": 707,
+        "bytes": 37483,
+        "group": "authority",
+        "glassPanelOpen": 1,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 1
+      },
+      {
+        "file": ".github/instructions/frontend-si-cutover.instructions.md",
+        "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+        "lineCount": 94,
+        "bytes": 3585,
+        "group": "authority",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": ".github/instructions/react-frontend.instructions.md",
+        "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+        "lineCount": 629,
+        "bytes": 22645,
+        "group": "authority",
+        "glassPanelOpen": 4,
+        "chartContainerOpen": 1,
+        "fadeInOpen": 2
+      },
+      {
+        "file": ".github/instructions/observability.instructions.md",
+        "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+        "lineCount": 45,
+        "bytes": 4267,
+        "group": "authority",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": ".github/instructions/unit-conversion.instructions.md",
+        "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+        "lineCount": 221,
+        "bytes": 6501,
+        "group": "authority",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "docs/frontend-audits/audit-page-101.json",
+        "sha256": "7404e1cde4691f18166c9466dfa06f0b2651e06000950b19d9df681096b02486",
+        "lineCount": 254,
+        "bytes": 39497,
+        "group": "authority",
+        "glassPanelOpen": 0,
+        "chartContainerOpen": 0,
+        "fadeInOpen": 0
+      },
+      {
+        "file": "web/src/hooks/useChartPalette.ts",
+        "sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+        "lineCount": 49,
+        "bytes": 2108,
+        "group": "supplemental-contract"
+      },
+      {
+        "file": "web/src/lib/tokens.ts",
+        "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+        "lineCount": 439,
+        "bytes": 20093,
+        "group": "supplemental-contract"
+      },
+      {
+        "file": "docs/frontend-worker-conventions.md",
+        "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+        "lineCount": 152,
+        "bytes": 8608,
+        "group": "supplemental-contract"
+      },
+      {
+        "file": "web/src/components/ui/HelpTooltip.tsx",
+        "sha256": "fb8d5d08643e810939608e5255f5f967084ec7c7af3c49eb130e38a682a27c86",
+        "lineCount": 112,
+        "bytes": 4388,
+        "group": "support-contract-only"
+      },
+      {
+        "file": "web/src/components/data-display/DataFreshness.tsx",
+        "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+        "lineCount": 342,
+        "bytes": 11545,
+        "group": "support-contract-only"
+      },
+      {
+        "file": "web/src/components/data-display/index.ts",
+        "sha256": "f8495446c7eb521756f6071b4fb021fc71cec90218f2f204db7ad65d841158d9",
+        "lineCount": 178,
+        "bytes": 5585,
+        "group": "support-contract-only"
+      }
+    ],
+    "primaryScope": [
+      "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+      "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+      "web/src/features/diagnostics/components/EvidenceSourceNotice.tsx",
+      "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+      "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+      "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+      "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+      "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+      "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+      "web/src/features/diagnostics/components/QualityBadge.tsx",
+      "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+      "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+      "web/src/features/diagnostics/lib/signalEvidenceAvailability.ts"
+    ],
+    "primaryFileCount": 13,
+    "primaryLineCount": 2303,
+    "supportScope": "Whole-file bytes pinned; only necessary imports/contracts/route declarations read, not whole shared/backend audit."
+  },
+  "preservation": {
+    "pageLines": 265,
+    "pagePlusEightDirectPresentationFiles": {
+      "files": [
+        "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+        "web/src/features/diagnostics/components/EvidenceSourceNotice.tsx",
+        "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+        "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+        "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+        "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+        "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+        "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx"
+      ],
+      "fileCount": 9,
+      "lineCount": 1104
+    },
+    "transitiveQualityBadgeLines": 39,
+    "pagePlusNinePresentationFilesLineCount": 1143,
+    "pageGlassPanelOpen": 0,
+    "pageChartContainerOpen": 0,
+    "directPresentationGlassPanelOpen": 6,
+    "directPresentationChartContainerOpen": 1,
+    "pageFadeInOpen": 6,
+    "tagCountMeaning": "Literal opening sites, not simultaneous mounted panels; timeline empty/error alternatives contribute two GlassPanel sites. Shared OperationalBrief frame excluded from direct-feature count.",
+    "acceptedPhase5Receipt": {
+      "queueLine": 1846,
+      "commit": "a95a88cef535100689ab5771c9cb5be07dc88bd3",
+      "pageLines": 265,
+      "composedLines": 1104,
+      "sections": 7,
+      "meaning": "Historical accepted SOURCE ONLY; not fresh tests/runtime."
+    },
+    "historicalPhase0": {
+      "pageLines": 251,
+      "composedLines": 1089,
+      "notCurrentEvidence": true
+    },
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "sectionCount": 7,
+    "sections": [
+      {
+        "id": "S01",
+        "name": "Focal signal and analysis hours",
+        "existingOwner": "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+        "contract": "Always-mounted panel; catalog initial/fatal/retry/empty/content and four24/72/168/720 presets; RC01/RC03.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "S02",
+        "name": "Per-signal source evidence",
+        "existingOwner": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+        "contract": "Every normalized pending/failed/empty/retained source with sample count/retrieval timestamp/individual retry; RC04/RC07/RC09.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "S03",
+        "name": "Evidence metrics and Review details",
+        "existingOwner": "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+        "contract": "Five typed metrics, actual requested scope/provenance, not_scored confidence, limitations and shared drawer; RC02/RC05/RC06.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "S04",
+        "name": "Normalized multi-signal timeline",
+        "existingOwner": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+        "contract": "Actual derived normalized rows/null gaps; tooltip/persisted legend/accessibility data table/shared image exports; RC07/RC08/RC10.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "S05",
+        "name": "Evidence graph",
+        "existingOwner": "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+        "contract": "Focal/candidate identities, dash-encoded relation/strength, hollow considered nodes and visible text unknown alternative; RC10.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "S06",
+        "name": "Ranked hypotheses",
+        "existingOwner": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+        "contract": "Ordered identity/relation/direction/medians/rank/effect/samples/lag/rationale with unavailable/no focal shift/no corroboration branches; RC05/RC06.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "S07",
+        "name": "Interpretation and limits",
+        "existingOwner": "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+        "contract": "Corrected focal summary guard, quality/coverage/score and all limits; RC02/RC05.",
+        "runtime": "NOTRUN"
+      }
+    ],
+    "actionGroupCount": 13,
+    "actions": [
+      {
+        "id": "A01",
+        "name": "Workspace vehicle selection",
+        "evidence": {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 45,
+          "source": "  const { vehicleId } = useSelectedVehicle();"
+        },
+        "limits": "Actual shell interaction NOTRUN; no duplicate page picker.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "A02",
+        "name": "Select focal signal",
+        "evidence": {
+          "file": "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+          "line": 77,
+          "source": "            onChange={(e) => onFocalSignalChange(e.target.value)}"
+        },
+        "limits": "Shared native Select labels/hints/ID.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "A03",
+        "name": "Select hours24/72/168/720",
+        "evidence": {
+          "file": "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+          "line": 85,
+          "source": "            onChange={(e) => onWindowHoursChange(Number(e.target.value))}"
+        },
+        "limits": "Local scope gap RC01.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "A04",
+        "name": "Retry catalog",
+        "evidence": {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 169,
+          "source": "          onRetrySignals={() => workspace.signalsQuery.refetch()}"
+        },
+        "limits": "Read refetch only, NOT executed.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "A05",
+        "name": "Retry analysis aggregate/catalog",
+        "evidence": {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 53,
+          "source": "  const onRetry = useCallback(() => {"
+        },
+        "limits": "Read refetches, NOT executed.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "A06",
+        "name": "Retry individual source",
+        "evidence": {
+          "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+          "line": 60,
+          "source": "              <Button type=\"button\" variant=\"secondary\" size=\"sm\" onClick={state.retry}"
+        },
+        "limits": "Disabled while refreshing; source target gap RC09.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "A07",
+        "name": "Review details and close existing drawer",
+        "evidence": {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "line": 166,
+          "source": "                  onClick={() => setDetailsOpen(true)}"
+        },
+        "limits": "Open/close/focus/Escape/content acceptance NOTRUN.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "A08",
+        "name": "Inspect chart tooltip",
+        "evidence": {
+          "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+          "line": 120,
+          "source": "          <Tooltip content={<ChartTooltip />} />"
+        },
+        "limits": "Hover/keyboard runtime NOTRUN.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "A09",
+        "name": "Toggle series legend",
+        "evidence": {
+          "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+          "line": 121,
+          "source": "          <ChartLegend state={hidden} />"
+        },
+        "limits": "Stable diagnostics-root-cause-timeline persistence; interaction NOTRUN.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "A10",
+        "name": "PNG/SVG/clipboard image export",
+        "evidence": {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "line": 723,
+          "source": "                onExportPNG={exportPNG}"
+        },
+        "limits": "Current shared default eligible for populated chart. No export/download executed; page does not pass CSV exportData/fullscreen/annotations.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "A11",
+        "name": "Open quality contextual help",
+        "evidence": {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 105,
+          "source": "          i18nKey=\"help.rootCauseIntelligence.quality\""
+        },
+        "runtime": "NOTRUN",
+        "limits": "Existing HelpTooltip respects contextualHelp; localized body; current shared trigger h-11 w-11 below md; no Learn more link passed."
+      },
+      {
+        "id": "A12",
+        "name": "Open hypothesis rank contextual help",
+        "evidence": {
+          "file": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+          "line": 70,
+          "source": "          i18nKey=\"help.rootCauseIntelligence.hypotheses\""
+        },
+        "runtime": "NOTRUN",
+        "limits": "Existing hover/focus/touch/Escape behavior not exercised; explicit localized accessible name."
+      },
+      {
+        "id": "A13",
+        "name": "Header catalog freshness/refetch",
+        "evidence": [
+          {
+            "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+            "line": 157,
+            "source": "      metadataActions={<DataFreshnessAuto"
+          },
+          {
+            "file": "web/src/components/data-display/DataFreshness.tsx",
+            "line": 336,
+            "source": "      onRefresh={refetchable ? () => { void query.refetch(); } : undefined}"
+          }
+        ],
+        "runtime": "NOTRUN",
+        "limits": "Actual catalog query only, not evidence observation freshness. Default refetchable=true; disabled while fetching; no refetch executed."
+      }
+    ]
+  },
+  "boundedScan": {
+    "scopeFileCount": 13,
+    "scopeFiles": [
+      "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+      "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+      "web/src/features/diagnostics/components/EvidenceSourceNotice.tsx",
+      "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+      "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+      "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+      "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+      "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+      "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+      "web/src/features/diagnostics/components/QualityBadge.tsx",
+      "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+      "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+      "web/src/features/diagnostics/lib/signalEvidenceAvailability.ts"
+    ],
+    "method": "Get-Content + System.Text.RegularExpressions.Regex.Matches; lexical candidates, not AST or runtime findings",
+    "numericExit": 0,
+    "checks": [
+      {
+        "rule": "static-inline-style-candidate",
+        "pattern": "style\\s*=\\s*\\{\\s*\\{",
+        "rawOccurrenceCount": 0,
+        "matchedLineCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "raw-html",
+        "pattern": "<(?:button|input|textarea|select|table)\\b",
+        "rawOccurrenceCount": 0,
+        "matchedLineCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "direct-library-import",
+        "pattern": "(?:from\\s+|import\\s*)['\" ](?:recharts|react-leaflet|framer-motion)['\"]",
+        "rawOccurrenceCount": 0,
+        "matchedLineCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "old-api-import",
+        "pattern": "from\\s*['\"](?:\\.\\./){1,2}api['\"]",
+        "rawOccurrenceCount": 0,
+        "matchedLineCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "double-prefix",
+        "pattern": "/api/v1/",
+        "rawOccurrenceCount": 0,
+        "matchedLineCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "camelcase-param",
+        "pattern": "[?&][a-z][A-Za-z0-9_]*[A-Z][A-Za-z0-9_]*=",
+        "rawOccurrenceCount": 0,
+        "matchedLineCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "hidden-section-candidate",
+        "pattern": "(?:data|payload)\\s*&&\\s*<",
+        "rawOccurrenceCount": 0,
+        "matchedLineCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "hardcoded-jsx-text-candidate",
+        "pattern": ">\\s*[A-Za-z][^<{}\\r\\n]*<",
+        "rawOccurrenceCount": 0,
+        "matchedLineCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "page-container-owner",
+        "pattern": "<Page(?:Container|Layout)\\b",
+        "rawOccurrenceCount": 1,
+        "matchedLineCount": 1,
+        "numericExit": 0,
+        "rawMatches": [
+          {
+            "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+            "line": 149,
+            "column": 5,
+            "match": "<PageLayout",
+            "source": "    <PageLayout"
+          }
+        ]
+      },
+      {
+        "rule": "fetch-useeffect-candidate",
+        "pattern": "\\b(?:fetch\\s*\\(|useEffect\\s*\\()",
+        "rawOccurrenceCount": 0,
+        "matchedLineCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "neon-glow-white-candidate",
+        "pattern": "text-neon-|shadow-neon|animate-pulse|text-white|#[fF]{6}\\b",
+        "rawOccurrenceCount": 0,
+        "matchedLineCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "numeric-unknownzero-candidate",
+        "pattern": "\\?\\?\\s*0\\b|overallScore:\\s*0\\b",
+        "rawOccurrenceCount": 6,
+        "matchedLineCount": 6,
+        "numericExit": 0,
+        "rawMatches": [
+          {
+            "file": "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+            "line": 90,
+            "column": 34,
+            "match": "?? 0",
+            "source": "        strength: edge?.strength ?? 0,"
+          },
+          {
+            "file": "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+            "line": 65,
+            "column": 37,
+            "match": "?? 0",
+            "source": "        freshness={(sources?.length ?? 0) > 0"
+          },
+          {
+            "file": "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+            "line": 83,
+            "column": 24,
+            "match": "?? 0",
+            "source": "  const id = vehicleId ?? 0;"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 686,
+            "column": 7,
+            "match": "overallScore: 0",
+            "source": "      overallScore: 0,"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 860,
+            "column": 57,
+            "match": "?? 0",
+            "source": "      sampleCount: seriesBySignal.get(c.signal)?.length ?? 0,"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/signalEvidenceAvailability.ts",
+            "line": 10,
+            "column": 63,
+            "match": "?? 0",
+            "source": "  return state?.hasData === true && (state.data?.data?.length ?? 0) > 0;"
+          }
+        ]
+      },
+      {
+        "rule": "preference-bypassing-date",
+        "pattern": "toLocaleString\\s*\\(",
+        "rawOccurrenceCount": 2,
+        "matchedLineCount": 2,
+        "numericExit": 0,
+        "rawMatches": [
+          {
+            "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+            "line": 52,
+            "column": 51,
+            "match": "toLocaleString(",
+            "source": "                  time: new Date(state.updatedAt).toLocaleString(),"
+          },
+          {
+            "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+            "line": 28,
+            "column": 12,
+            "match": "toLocaleString(",
+            "source": "  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });"
+          }
+        ]
+      },
+      {
+        "rule": "hardcoded-generated-narrative-candidate",
+        "pattern": "(?:['\"`])(?:Choose a focal signal|No robust shift was found|This is an evidence-ranked|This may mean|Ranked by|Every listed item|Analysis is limited|The focal signal|No related signals|None of the related|Evidence quality is low|Temporal proximity|shifted within|shifted about)|robust (?:effect size|shift with|shift, but)",
+        "rawOccurrenceCount": 22,
+        "matchedLineCount": 22,
+        "numericExit": 0,
+        "rawMatches": [
+          {
+            "file": "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+            "line": 112,
+            "column": 60,
+            "match": "'No related signals",
+            "source": "              ? t('rootCauseIntelligence.graph.noRelated', 'No related signals were identified in the catalog for this focal signal.')"
+          },
+          {
+            "file": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+            "line": 60,
+            "column": 62,
+            "match": "'No robust shift was found",
+            "source": "        ? t('rootCauseIntelligence.hypotheses.noFocalShift', 'No robust shift was found for this signal in the analyzed window, so no hypotheses are offered.')"
+          },
+          {
+            "file": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+            "line": 71,
+            "column": 24,
+            "match": "\"Ranked by",
+            "source": "          defaultValue=\"Ranked by robust shift strength, temporal lead/lag proximity, sample coverage, and evidence reliability. Every item is an evidence-ranked hypothesis, never a diagnosis or a claim of causal proof.\""
+          },
+          {
+            "file": "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+            "line": 42,
+            "column": 64,
+            "match": "'Choose a focal signal",
+            "source": "      : !hasChosenSignal ? t('diagnostics.brief.chooseSignal', 'Choose a focal signal')"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 503,
+            "column": 9,
+            "match": "`shifted within",
+            "source": "      ? `shifted within ${minutes} min of ${params.focalSignal}'s change (concurrent)`"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 505,
+            "column": 11,
+            "match": "`shifted about",
+            "source": "        ? `shifted about ${minutes} min before ${params.focalSignal}'s change (leading)`"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 506,
+            "column": 11,
+            "match": "`shifted about",
+            "source": "        : `shifted about ${minutes} min after ${params.focalSignal}'s change (lagging)`;"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 508,
+            "column": 41,
+            "match": "robust effect size",
+            "source": "    `${params.signal} ${timing}, with a robust effect size of ${roundTo(params.effectSize, 2)}. ` +"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 509,
+            "column": 5,
+            "match": "'Ranked by",
+            "source": "    'Ranked by shift strength, timing proximity, sample coverage, and evidence reliability — ' +"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 729,
+            "column": 3,
+            "match": "'This is an evidence-ranked",
+            "source": "  'This is an evidence-ranked hypothesis, not a diagnosis or a claim of causal proof.';"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 739,
+            "column": 12,
+            "match": "'Choose a focal signal",
+            "source": "    return 'Choose a focal signal to generate an evidence-ranked summary.';"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 743,
+            "column": 7,
+            "match": "`No robust shift was found",
+            "source": "      `No robust shift was found for ${focalSignal} in the analyzed window, so no hypotheses are offered. ` +"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 744,
+            "column": 7,
+            "match": "'This may mean",
+            "source": "      'This may mean the signal was stable, or that the window was too short or sparse.'"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 749,
+            "column": 31,
+            "match": "robust shift, but",
+            "source": "      `${focalSignal} shows a robust shift, but no other analyzed signal showed a comparable, well-timed shift. ` +"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 755,
+            "column": 29,
+            "match": "robust shift with",
+            "source": "    `${focalSignal} shows a robust shift with ${hypothesesCount} ranked, evidence-based hypothes${plural} for review ` +"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 768,
+            "column": 5,
+            "match": "`Every listed item",
+            "source": "    `Every listed item is an evidence-ranked hypothesis derived from statistical association. ${NO_CAUSAL_PROOF_DISCLAIMER}`,"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 769,
+            "column": 5,
+            "match": "'Analysis is limited",
+            "source": "    'Analysis is limited to the selected time window and the bounded set of related signals available in the catalog; unrecorded or unavailable signals cannot be considered.',"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 773,
+            "column": 7,
+            "match": "'The focal signal",
+            "source": "      'The focal signal did not show a robust, well-supported shift in this window, so hypotheses are withheld rather than guessed.',"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 777,
+            "column": 16,
+            "match": "'No related signals",
+            "source": "    notes.push('No related signals were identified in the catalog for this focal signal.');"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 779,
+            "column": 16,
+            "match": "'None of the related",
+            "source": "    notes.push('None of the related signals cleared the minimum evidence bar for sample coverage or shift strength.');"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 782,
+            "column": 16,
+            "match": "'Evidence quality is low",
+            "source": "    notes.push('Evidence quality is low — treat any listed hypothesis as preliminary and confirm with additional data before acting.');"
+          },
+          {
+            "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+            "line": 784,
+            "column": 14,
+            "match": "'Temporal proximity",
+            "source": "  notes.push('Temporal proximity alone does not establish which signal, if any, is upstream of the other.');"
+          }
+        ]
+      },
+      {
+        "rule": "arbitrary-geometry-candidate",
+        "pattern": "(?:grid-cols|w|h|max-w|max-h|min-h|z)-\\[(?!var\\()[^\\]]+\\]",
+        "rawOccurrenceCount": 1,
+        "matchedLineCount": 1,
+        "numericExit": 0,
+        "rawMatches": [
+          {
+            "file": "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+            "line": 117,
+            "column": 39,
+            "match": "grid-cols-[auto_1fr]",
+            "source": "        <div className=\"grid gap-4 lg:grid-cols-[auto_1fr] lg:items-center\">"
+          }
+        ]
+      }
+    ],
+    "command": " $checks=[ordered]@{'static-inline-style-candidate'='style\\s*=\\s*\\{\\s*\\{';'raw-html'='<(?:button|input|textarea|select|table)\\b';'direct-library-import'='(?:from\\s+|import\\s*)[''\" ](?:recharts|react-leaflet|framer-motion)[''\"]';'old-api-import'='from\\s*[''\"](?:\\.\\./){1,2}api[''\"]';'double-prefix'='/api/v1/';'camelcase-param'='[?&][a-z][A-Za-z0-9_]*[A-Z][A-Za-z0-9_]*=';'hidden-section-candidate'='(?:data|payload)\\s*&&\\s*<';'hardcoded-jsx-text-candidate'='>\\s*[A-Za-z][^<{}\\r\\n]*<';'page-container-owner'='<Page(?:Container|Layout)\\b';'fetch-useeffect-candidate'='\\b(?:fetch\\s*\\(|useEffect\\s*\\()';'neon-glow-white-candidate'='text-neon-|shadow-neon|animate-pulse|text-white|#[fF]{6}\\b';'numeric-unknownzero-candidate'='\\?\\?\\s*0\\b|overallScore:\\s*0\\b';'preference-bypassing-date'='toLocaleString\\s*\\('; 'hardcoded-generated-narrative-candidate'='(?:[''\"`])(?:Choose a focal signal|No robust shift was found|This is an evidence-ranked|This may mean|Ranked by|Every listed item|Analysis is limited|The focal signal|No related signals|None of the related|Evidence quality is low|Temporal proximity|shifted within|shifted about)|robust (?:effect size|shift with|shift, but)';'arbitrary-geometry-candidate'='(?:grid-cols|w|h|max-w|max-h|min-h|z)-\\[(?!var\\()[^\\]]+\\]'}; $receipts=foreach($entry in $checks.GetEnumerator()){ $matches=foreach($f in $pinBlock.primaryScope){ $lines=Get-Content -LiteralPath (Join-Path $root $f); for($i=0;$i -lt $lines.Count;$i++){ foreach($m in [regex]::Matches($lines[$i],$entry.Value)){ [ordered]@{file=$f;line=$i+1;column=$m.Index+1;match=$m.Value;source=$lines[$i]} } } }; [ordered]@{rule=$entry.Key;pattern=$entry.Value;rawOccurrenceCount=@($matches).Count;matchedLineCount=@($matches | ForEach-Object {\"$($_.file):$($_.line)\"} | Sort-Object -Unique).Count;numericExit=0;rawMatches=@($matches)} }; [ordered]@{scopeFileCount=$pinBlock.primaryScope.Count;scopeFiles=$pinBlock.primaryScope;method='Get-Content + System.Text.RegularExpressions.Regex.Matches; lexical candidates, not AST or runtime findings';numericExit=0;checks=@($receipts)} "
+  },
+  "necessaryHookScan": {
+    "snapshotUTC": "2026-10-14T01:08:28.9839860Z",
+    "numericExit": 0,
+    "command": " $lines=Get-Content (Join-Path $root 'web/src/api/hooks/useTelemetry.ts'); $ranges=@(@(98,125),@(232,291)); $checks=[ordered]@{'double-prefix'='/api/v1/';'camelcase-param'='[?&][a-z][A-Za-z0-9_]*[A-Z][A-Za-z0-9_]*=';'actual-requests'='request<';'cancellation-propagation'='\\{ signal \\}';'read-only-hooks'='useQuery\\(|useQueries\\('}; foreach($c in $checks.GetEnumerator()){ $hits=@(foreach($range in $ranges){for($n=$range[0];$n -le $range[1];$n++){foreach($m in [regex]::Matches($lines[$n-1],$c.Value)){[ordered]@{line=$n;match=$m.Value;source=$lines[$n-1]}}}});[ordered]@{rule=$c.Key;pattern=$c.Value;rawOccurrenceCount=$hits.Count;numericExit=0;rawMatches=$hits} } ",
+    "hookFile": "web/src/api/hooks/useTelemetry.ts",
+    "hookRanges": [
+      [
+        98,
+        125
+      ],
+      [
+        232,
+        291
+      ]
+    ],
+    "checks": [
+      {
+        "rule": "double-prefix",
+        "pattern": "/api/v1/",
+        "rawOccurrenceCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "camelcase-param",
+        "pattern": "[?&][a-z][A-Za-z0-9_]*[A-Z][A-Za-z0-9_]*=",
+        "rawOccurrenceCount": 0,
+        "numericExit": 0,
+        "rawMatches": []
+      },
+      {
+        "rule": "actual-requests",
+        "pattern": "request<",
+        "rawOccurrenceCount": 2,
+        "numericExit": 0,
+        "rawMatches": [
+          {
+            "line": 102,
+            "match": "request<",
+            "source": "      const resp = await request<"
+          },
+          {
+            "line": 257,
+            "match": "request<",
+            "source": "        request<SignalHistoryResponse>("
+          }
+        ]
+      },
+      {
+        "rule": "cancellation-propagation",
+        "pattern": "\\{ signal \\}",
+        "rawOccurrenceCount": 4,
+        "numericExit": 0,
+        "rawMatches": [
+          {
+            "line": 101,
+            "match": "{ signal }",
+            "source": "    queryFn: async ({ signal }): Promise<string[]> => {"
+          },
+          {
+            "line": 105,
+            "match": "{ signal }",
+            "source": "      >(`/signals/${vehicleId}/available`, { signal });"
+          },
+          {
+            "line": 256,
+            "match": "{ signal }",
+            "source": "      queryFn: ({ signal }: { signal: AbortSignal }) =>"
+          },
+          {
+            "line": 259,
+            "match": "{ signal }",
+            "source": "          { signal },"
+          }
+        ]
+      },
+      {
+        "rule": "read-only-hooks",
+        "pattern": "useQuery\\(|useQueries\\(",
+        "rawOccurrenceCount": 2,
+        "numericExit": 0,
+        "rawMatches": [
+          {
+            "line": 99,
+            "match": "useQuery(",
+            "source": "  return useQuery({"
+          },
+          {
+            "line": 248,
+            "match": "useQueries(",
+            "source": "  return useQueries({"
+          }
+        ]
+      }
+    ],
+    "supplementalPins": [
+      {
+        "file": "web/src/hooks/useChartPalette.ts",
+        "sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+        "lineCount": 49,
+        "bytes": 2108,
+        "group": "supplemental-contract"
+      },
+      {
+        "file": "web/src/lib/tokens.ts",
+        "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+        "lineCount": 439,
+        "bytes": 20093,
+        "group": "supplemental-contract"
+      },
+      {
+        "file": "docs/frontend-worker-conventions.md",
+        "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+        "lineCount": 152,
+        "bytes": 8608,
+        "group": "supplemental-contract"
+      }
+    ],
+    "queueRows": [
+      {
+        "line": 382,
+        "raw": "| [~] | 6 | phase6-qa-diagnostics-root-cause-intelligence | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-root-cause-intelligence.json | phase5-page-diagnostics-root-cause-intelligence | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=2d7dc34f-6fc5-4133-9d4b-19799c7c94bc; LastConsumed=-1 | - |CurrentacceptedRootCauseIntelligencePage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Inference-vs-diagnosis/provenance/source trust/scope/unknownzero/SI/preferences/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 2d7dc34f-6fc5-4133-9d4b-19799c7c94bc, no browser lock. |"
+      },
+      {
+        "line": 1846,
+        "raw": "| [x] | 5 | phase5-page-diagnostics-root-cause-intelligence | original-page-migration | web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx; web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.test.tsx | - | 1 | 2026-10-12T14:32:17.5543012Z | a95a88cef535100689ab5771c9cb5be07dc88bd3 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/diagnostics/root-cause; audit=docs\\frontend-audits\\audit-page-101.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Genuinely unstarted third-wave page/test source claim after exact caller fixture correction and normal i18n check0. Prior completed/zero-turn objectives not redispatched. Actual agent launch ID follows; held delivery claims excluded. Actual third-wave source agent=7b6bf5d0-9d2b-4307-acf2-fe57d6e3a636; no source/QA result inferred from launch. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Receipt lint0/style0;265-vs251 page/1104-vs1089 composed/7sections/Glass6Chart1 preserved; final tests external catalog startup1/zero cases; locks/capture blocked, no native QA; commit=a95a88cef535100689ab5771c9cb5be07dc88bd3; pushed. |"
+      },
+      {
+        "line": 807,
+        "raw": "| [x] | 1 | repair-root-cause-adapter | integration | web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts | catalog-generated-freshness,supported-node-runtime | 1 | 2026-10-08T00:09:59.172Z | aa3b972394 | catalog-generated-freshness,supported-node-runtime / 1 / 2026-10-08T00:09:59.172Z / web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts; analysis-only boolean exclusion, raw evidence unchanged; triage assignment; actor=b57af4bc-6222-446b-ae7d-85d5fa09d43c; Delivered DONE; exact hash/scope/diff/projection receipt verified, independent ESLint exit0; commit=aa3b972394; raw evidence/false/zero preserved; regression namespace-blocked, browser unverified |"
+      },
+      {
+        "line": 808,
+        "raw": "| [x] | 1 | repair-root-cause-notice-props | integration | web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx | catalog-generated-freshness,supported-node-runtime,repair-root-cause-adapter | 1 | 2026-10-08T00:18:33.737Z | f33ca6da9e | catalog-generated-freshness,supported-node-runtime,repair-root-cause-adapter / 1 / 2026-10-08T00:18:33.737Z / web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx; preserve summary/limitations at real render owners; triage acceptance dependency; actor=0bc8d9bc-fc53-45a0-b3cb-e5d068a5aacd; Delivered DONE scope/hash/diff verified; independent final-three ESLint exit0; commit=f33ca6da9e; summaries/limitations preserved at real render owners, namespace leaves require catalog integration; no browser acceptance |"
+      },
+      {
+        "line": 410,
+        "raw": "| [~] | 6 | phase6-fix-behavioral-evidence-source-trust | confirmed-BS001-RHM01-shared-query-callers | web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx; web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.sourceTrust.test.tsx; web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx; web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.sourceTrust.test.tsx; web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx; web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.sourceTrust.test.tsx | phase6-qa-advanced-behavioral-sentinel; phase6-qa-advanced-road-hazard-mesh; phase6-fix-advanced-evidence-date-preferences | 1 | conservative reservation=2026-10-14T01:04:13.296Z; return=2026-10-14T01:24:13.296Z; hard=2026-10-14T01:29:13.296Z; actor=d27f0c11-8fc8-4e3e-b969-cd01a3f92fb3; LastConsumed=-1 | - | One BS001/RHM01 query-freeEvidencePanel root/two exactcallers, notduplicatefixes. ExistingInsightPanel/DataStateSource contracts only: threadrealquerytrust while preserving shell/staticunsupportedprivacy-attribution/all sections/actions/rawSI/datefix and distinguishing initialfetch/paused/fatal/unresolved/authoritativeempty/populated/retainedrefresh/error/retry. No otherpages/sharedUI/hooks/types/dateutils/catalog/backend/global changes or fakequery/defaultreadiness. Datefixdependency is actualsameEvidencePanel writeclaim, notphasegate. Historical start: -; rolling exact reservation only/NOT running, no browser lock. Actual builtin background launch accepted; no browserlock. |"
+      },
+      {
+        "line": 411,
+        "raw": "| [ ] | 6 | phase6-fix-evidence-sample-count-plurals | confirmed-BS004-localized-evidence-count | web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx; web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.sampleCounts.test.tsx; web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\usage-manifest.json | phase6-qa-advanced-behavioral-sentinel; phase6-fix-behavioral-evidence-source-trust; phase6-fix-dlq-toast-catalog | 0 | - | - | BS004 exactrawcount template/no_one_other produces1samples and bypassesfmtInt. Preserve numericpluralcount/rawwire; existinguseNumberFormatting supplies separatelyformattedinterpolation, add-onlycanonical singular/other leaves/normalgeneration/preservation. Actualcomponent and soleEnglishwriteclaims serialized afterexistingroots, no competingformatter/globali18n config/otherlocale changes. Null count/date-only/sourceidentity/zero/grouping/nonEnglishreactivity remain distinct tests; no silentguardbypass/currentCatalogpass assumed. |"
+      },
+      {
+        "line": 413,
+        "raw": "| [~] | 6 | phase6-fix-insight-panel-retained-empty | confirmed-RHM03-envelope-empty-trust | web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx; web\\src\\features\\advanced-intelligence\\components\\InsightPanel.retainedEmpty.test.tsx | phase6-qa-advanced-road-hazard-mesh | 1 | actor=4bc02058-c4c5-4bbd-9eb4-dc8cd41a9bc5; launch-observed=2026-10-14T00:48:33.105Z; conservative return=2026-10-14T01:05:28.452Z; hard=2026-10-14T01:10:28.452Z; LastConsumed=-1 | - | RHM03 explicitempty=true+retainedobjectenvelope wrongly loses existingemptybody becauseArray.isArray check. Honor authoritativecallerempty forobject/array responses and retainpaused/stalewarning/retry; preserve nonemptyretainedcontent/fatal/unresolved/load behavior/publicprops. Directfeatureowner only/no sharedUI/trusthook/date/catalog/backend/page changes or newwrapper. New-machine recovery 2026-10-14T00:44:04.100Z: actual built-in agent inventory empty; previous session ended, source leases released; reset pending with attempts unchanged, retained WIP/reports and historical clocks preserved. New-machine exact scope reserved for built-in dispatch; recovered attempts continued (new zero-attempt QA starts at one); reservation is NOT a running worker. No browser grant. Actual built-in background launch accepted; exact files held by 4bc02058-c4c5-4bbd-9eb4-dc8cd41a9bc5, no native lock. Preserve same recovered attempt and original clocks/history; current running state requires health census. |"
+      },
+      {
+        "line": 848,
+        "raw": "| [x] | 3 | chart-palette-policy | shared | - | tokens | 1 | 2026-10-08T13:16:00.163Z | 7288363d68 | tokens / 1 / 2026-10-08T13:16:00.163Z / Bounded chart system owner coordinates tokens.ts chartTokens.series, colors.ts and useChartPalette.ts; preserve saved palettes/series identities and reconcile restrained mode-aware presentation; targeted preservation plus later composed/CVD visual acceptance; verified plan=phase3-chart-palette-policy; preserve chart-only source scope and directly matching tests; failure=First delivered attempt has required post-change normal tests blocked by generated-catalog startup; current generator repair accepted; scoped deltas and receipt preserved, NOT an inherited pre-modernization defect; retry only after prior context releases and refreshed same-item baseline verified; Crash acceptance review READ-ONLY, no implementation retry/attempt increment; validate preserved original/delivered scopes; tests deferred while catalog root unaccepted; parent owns final acceptance and commits.; actor=f9d2ee5d-3c12-476a-842b-a461527c67c9; actor context idle verified 2026-10-08T13:40:48.985Z: Actual idle REVIEWED ready; acquired lint/scan/fixture0; estimated budget overrun explicit; parent normal tests pending; Explicit parent post-root acceptance of preserved delivery; read-only reviewed full scope, first failures retained not fabricated worker DONE. Exact five reviewed file hashes matched; immutable saved palettes/series identities preserved, normal owned65 tests passed, scoped lint/scan/fixture0 in audit. Estimated source budget overrun explicitly retained; composed/CVD provider acceptance pending. Raw independent normal7 suites144/144 exit0 in frontend-reviewed-ready-parent-normal-tests.log. |"
+      },
+      {
+        "line": 2014,
+        "raw": "| [x] | 6 | phase6-fix-secret-rotation-chart-palette | fix | web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\helpers.ts; web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\helpers.test.ts | - | 1 | 2026-10-12T18:47:48.208Z | 5d15e289986e74d62501a59f1b335d09595ff500 | Receipt12-16: restrained semantic palette without changing data/thresholds. Actual delegated finding; no inventory re-audit or unchanged-page retry. Sensitive safeguards remain mandatory. Reserved genuine seventh-wave unstarted scope for actual idle-delivery slot; no provenance or exhausted-objective relaunch. Parent corrects ONE catalog root; no guard bypass. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual terminal0 already read once; receipt own4/4 tests exit0, strict lint0/source-test scans0/fingerprint0; 43/42 lines and byte-equivalent non-palette exports/order/labels/rowKey/truncate preserved. No tkeys added, passing cases not rerun. Runtime running after informational parent message, not new source implementation. Source only.; commit=5d15e289986e74d62501a59f1b335d09595ff500; pushed. |"
+      }
+    ],
+    "queueSHA256": "64add164f9e8de3b1f761f78eebda85467ddd94d22139e24d79377aa0bef9f88",
+    "queueLineCount": 2041,
+    "metadataCorrection": "Raw null hookRanges reflects scriptblock-local variable; exact executed ranges [[98,125],[232,291]] unchanged."
+  },
+  "scanDispositions": {
+    "meaning": "Numeric0 means lexical check ran, NOT validator/native/fullpage pass. Zero-match scans apply only to enumerated scope.",
+    "pageContainer": "PageLayout resolves to PageContainer; valid wrapper.",
+    "exceptions": "SVG presentation attributes and Recharts API tick/tooltip props are not style={{}} violations. Indexed series colors are dynamic. Shared Select native select and FadeIn framer-motion import are building-block exceptions.",
+    "unknownZero": "Six raw candidates include safe id0 disabled sentinel, array-length/availability guards and absent-edge strength. Insufficient-score/candidate sample semantics require source-aware presentation, not wholesale ??0 removal.",
+    "hardcodedNarrative": "Raw22 not total violations: four t/defaultValue exceptions, one suppressed no-choice site and three additional manual rendered literal sites; final20 exact reachable construction sites."
+  },
+  "deduplication": {
+    "queueFile": "migration-queue.md",
+    "snapshotUTC": "2026-10-14T01:08:28.9839860Z",
+    "queueSHA256": "64add164f9e8de3b1f761f78eebda85467ddd94d22139e24d79377aa0bef9f88",
+    "queueLineCount": 2041,
+    "exactScopeRows": [
+      {
+        "line": 384,
+        "status": "[~]",
+        "phase": "6",
+        "item": "phase6-qa-diagnostics-root-cause-intelligence",
+        "files": "docs\\frontend-audits\\phase6-qa-diagnostics-root-cause-intelligence.json",
+        "dependencies": "phase5-page-diagnostics-root-cause-intelligence",
+        "attempt": "1",
+        "raw": "| [~] | 6 | phase6-qa-diagnostics-root-cause-intelligence | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-root-cause-intelligence.json | phase5-page-diagnostics-root-cause-intelligence | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=2d7dc34f-6fc5-4133-9d4b-19799c7c94bc; LastConsumed=-1 | - |CurrentacceptedRootCauseIntelligencePage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Inference-vs-diagnosis/provenance/source trust/scope/unknownzero/SI/preferences/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 2d7dc34f-6fc5-4133-9d4b-19799c7c94bc, no browser lock. |"
+      },
+      {
+        "line": 592,
+        "status": "[x]",
+        "phase": "0",
+        "item": "audit-page-101",
+        "files": "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx; docs\\frontend-audits\\audit-page-101.json",
+        "dependencies": "-",
+        "attempt": "1",
+        "raw": "| [x] | 0 | audit-page-101 | page | web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx; docs\\frontend-audits\\audit-page-101.json | - | 1 | 2026-10-07T07:32:50.290Z | cc2465bba9 | - / 1 / 2026-10-07T07:32:50.290Z / web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx; routes=/diagnostics/root-cause; read-only audit; report docs\\frontend-audits\\audit-page-101.json; actor=d9524b2e-1338-4eab-8fc8-02cd16af420d; verified source audit; commit=cc2465bba9; runtime unverified |"
+      },
+      {
+        "line": 761,
+        "status": "[x]",
+        "phase": "1",
+        "item": "regression-diagnostic-partial-source",
+        "files": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx",
+        "dependencies": "regression-brief-drawer-context",
+        "attempt": "1",
+        "raw": "| [x] | 1 | regression-diagnostic-partial-source | shared | web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx | regression-brief-drawer-context | 1 | 2026-10-08T01:53:42.122Z | 1b4ae1067c | regression-brief-drawer-context / 1 / 2026-10-08T01:53:42.122Z / web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx; exclusive source-only trust classification repair: initial focal/source failure plus ready neighbor is partial evidence, not retained refresh; preserve actual per-source cached refresh/offline semantics, values, narratives, all existing labels and APIs; run preserved EvidencePages.retained suite without editing it; no shared/catalog/page/test writes; verified exclusive idle DONE and exact source SHA256; source-only per-signal retained-vs-initial classification, source86/85 lines and sections1+1 preserved; independent normal31/31 tests and strict scoped lint exit0; preserved test hash unchanged; commit=1b4ae1067c; cadence325,next330; browser acceptance NOTRUN |"
+      },
+      {
+        "line": 771,
+        "status": "[x]",
+        "phase": "1",
+        "item": "regression-root-cause-test",
+        "files": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.test.tsx",
+        "dependencies": "regression-brief-drawer-context",
+        "attempt": "1",
+        "raw": "| [x] | 1 | regression-root-cause-test | integration | web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.test.tsx | regression-brief-drawer-context | 1 | 2026-10-08T01:24:14.834Z | 001fa90392 | regression-brief-drawer-context / 1 / 2026-10-08T01:24:14.834Z / web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.test.tsx; 1 failed case; canonical ts/value response fixtures, raw bundle vs analysis-only adapter evidence preserved; actor=3cd73e88-e438-42c2-b82e-a34e838faf00; verified exact owned release hash and behavioral diff; original assertions retained; independent normal14-suite144 tests exit0 and scoped ESLint exit0; commit=001fa90392; browser acceptance NOTRUN |"
+      },
+      {
+        "line": 809,
+        "status": "[x]",
+        "phase": "1",
+        "item": "repair-root-cause-adapter",
+        "files": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+        "dependencies": "catalog-generated-freshness,supported-node-runtime",
+        "attempt": "1",
+        "raw": "| [x] | 1 | repair-root-cause-adapter | integration | web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts | catalog-generated-freshness,supported-node-runtime | 1 | 2026-10-08T00:09:59.172Z | aa3b972394 | catalog-generated-freshness,supported-node-runtime / 1 / 2026-10-08T00:09:59.172Z / web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts; analysis-only boolean exclusion, raw evidence unchanged; triage assignment; actor=b57af4bc-6222-446b-ae7d-85d5fa09d43c; Delivered DONE; exact hash/scope/diff/projection receipt verified, independent ESLint exit0; commit=aa3b972394; raw evidence/false/zero preserved; regression namespace-blocked, browser unverified |"
+      },
+      {
+        "line": 810,
+        "status": "[x]",
+        "phase": "1",
+        "item": "repair-root-cause-notice-props",
+        "files": "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx",
+        "dependencies": "catalog-generated-freshness,supported-node-runtime,repair-root-cause-adapter",
+        "attempt": "1",
+        "raw": "| [x] | 1 | repair-root-cause-notice-props | integration | web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx | catalog-generated-freshness,supported-node-runtime,repair-root-cause-adapter | 1 | 2026-10-08T00:18:33.737Z | f33ca6da9e | catalog-generated-freshness,supported-node-runtime,repair-root-cause-adapter / 1 / 2026-10-08T00:18:33.737Z / web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx; preserve summary/limitations at real render owners; triage acceptance dependency; actor=0bc8d9bc-fc53-45a0-b3cb-e5d068a5aacd; Delivered DONE scope/hash/diff verified; independent final-three ESLint exit0; commit=f33ca6da9e; summaries/limitations preserved at real render owners, namespace leaves require catalog integration; no browser acceptance |"
+      },
+      {
+        "line": 1848,
+        "status": "[x]",
+        "phase": "5",
+        "item": "phase5-page-diagnostics-root-cause-intelligence",
+        "files": "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx; web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.test.tsx",
+        "dependencies": "-",
+        "attempt": "1",
+        "raw": "| [x] | 5 | phase5-page-diagnostics-root-cause-intelligence | original-page-migration | web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx; web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.test.tsx | - | 1 | 2026-10-12T14:32:17.5543012Z | a95a88cef535100689ab5771c9cb5be07dc88bd3 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/diagnostics/root-cause; audit=docs\\frontend-audits\\audit-page-101.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Genuinely unstarted third-wave page/test source claim after exact caller fixture correction and normal i18n check0. Prior completed/zero-turn objectives not redispatched. Actual agent launch ID follows; held delivery claims excluded. Actual third-wave source agent=7b6bf5d0-9d2b-4307-acf2-fe57d6e3a636; no source/QA result inferred from launch. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Receipt lint0/style0;265-vs251 page/1104-vs1089 composed/7sections/Glass6Chart1 preserved; final tests external catalog startup1/zero cases; locks/capture blocked, no native QA; commit=a95a88cef535100689ab5771c9cb5be07dc88bd3; pushed. |"
+      }
+    ],
+    "existingMatchingPhase6CorrectiveRows": [],
+    "queueWrites": 0,
+    "duplicateCampaignsCreated": 0,
+    "decision": "Only reserved QA report. Accepted repairs and Phases0-5 remain closed. Existing advanced-intelligence roots410/411/413 do not own diagnostics files; palette848 accepted/SecretRotation2014 unrelated. No false attachment or broadened campaign.",
+    "finalCurrentCorrectiveRows": [],
+    "finalQueueCheckUTC": "2026-10-14T01:18:25.326094Z",
+    "finalAuthorityRows": [
+      {
+        "line": 390,
+        "raw": "| [~] | 6 | phase6-qa-diagnostics-root-cause-intelligence | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-root-cause-intelligence.json | phase5-page-diagnostics-root-cause-intelligence | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=2d7dc34f-6fc5-4133-9d4b-19799c7c94bc; LastConsumed=-1 | - |CurrentacceptedRootCauseIntelligencePage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Inference-vs-diagnosis/provenance/source trust/scope/unknownzero/SI/preferences/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 2d7dc34f-6fc5-4133-9d4b-19799c7c94bc, no browser lock. |",
+        "item": "phase6-qa-diagnostics-root-cause-intelligence",
+        "status": "[~]",
+        "attempt": "1"
+      },
+      {
+        "line": 1854,
+        "raw": "| [x] | 5 | phase5-page-diagnostics-root-cause-intelligence | original-page-migration | web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx; web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.test.tsx | - | 1 | 2026-10-12T14:32:17.5543012Z | a95a88cef535100689ab5771c9cb5be07dc88bd3 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/diagnostics/root-cause; audit=docs\\frontend-audits\\audit-page-101.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Genuinely unstarted third-wave page/test source claim after exact caller fixture correction and normal i18n check0. Prior completed/zero-turn objectives not redispatched. Actual agent launch ID follows; held delivery claims excluded. Actual third-wave source agent=7b6bf5d0-9d2b-4307-acf2-fe57d6e3a636; no source/QA result inferred from launch. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Receipt lint0/style0;265-vs251 page/1104-vs1089 composed/7sections/Glass6Chart1 preserved; final tests external catalog startup1/zero cases; locks/capture blocked, no native QA; commit=a95a88cef535100689ab5771c9cb5be07dc88bd3; pushed. |",
+        "item": "phase5-page-diagnostics-root-cause-intelligence",
+        "status": "[x]",
+        "attempt": "1"
+      }
+    ],
+    "finalQueueSHA256": "8ea0d1bb05bf8472dbc4e0cb57fce1bb1e787d2e86e98418681bc2e256affbf8"
+  },
+  "evidenceLimits": {
+    "commands": [
+      {
+        "command": " $root='D:\\repos\\teslasync'; 'QUEUE DEDUPLICATION: exact root and shared owners, excluding unrelated aggregate'; Select-String -LiteralPath (Join-Path $root 'migration-queue.md') -Pattern 'root-cause|RootCause|rootCauseIntelligence|SignalWindowPicker|EvidenceSourceNotice|DiagnosticEvidenceBrief|useTelemetry.ts|workspaceScope.ts|QualityBadge.tsx|signalEvidenceAvailability|diagnostics.*trust|diagnostic.*scope|signal.*workspace' | Where-Object {$_.Line -notmatch 'phase5-feature-migration|phase6-combined-qa'} | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"}; 'ROUTER AND WORKSPACE REGISTRATIONS'; Select-String -LiteralPath (Join-Path $root 'web/src/App.tsx'),(Join-Path $root 'web/src/lib/workspaceScope.ts') -Pattern 'RootCauseIntelligence|root-cause|RANGE_ENABLED_PATHS|VEHICLE|diagnostics' | ForEach-Object {\"$($_.Path):$($_.LineNumber):$($_.Line)\"}; 'TELEMETRY HOOK ENTRY POINTS'; Select-String -LiteralPath (Join-Path $root 'web/src/api/hooks/useTelemetry.ts') -Pattern '^export.*(useSignals|useSignalHistory|useSignalEvidenceBundle)|SignalEvidenceBundle|history|useQueries' | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"}; 'DIRECT BARREL'; Select-String -LiteralPath (Join-Path $root 'web/src/features/diagnostics/components/index.ts') -Pattern 'RootCause|SignalWindow'; Get-Date -AsUTC -Format o ",
+        "numericExit": 0,
+        "rawOutputLocation": "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log",
+        "rawOutputSHA256": "3a15bf1a8b35c3dacdc0bf0f81b7b58b6127f4cf727fbda9a65e4b02e8ad15c9"
+      },
+      {
+        "command": " $root='D:\\repos\\teslasync'; 'EXACT QUEUE OWNER COLUMNS item/files/dependencies only'; $n=0; foreach($line in Get-Content (Join-Path $root 'migration-queue.md')){ $n++; if($line -notmatch '^\\| \\['){continue}; $c=$line.Split('|'); if(($c[3]+' '+$c[5]) -match 'root-cause|RootCause|rootCauseIntelligence|SignalWindowPicker|EvidenceSourceNotice|DiagnosticEvidenceBrief|SignalEvidenceSourceList|signalEvidenceAvailability|useTelemetry.ts|workspaceScope.ts|QualityBadge.tsx|diagnostic.*trust|signal.*scope|date.*preference|datetime'){ \"$n status=$($c[1].Trim()) item=$($c[3].Trim()) files=$($c[5].Trim()) depends=$($c[6].Trim())\" } }; 'TELEMETRY LOCATIONS'; Select-String -LiteralPath (Join-Path $root 'web/src/api/hooks/useTelemetry.ts') -Pattern '^export.*(useSignals|useSignalHistory|useSignalEvidenceBundle)|^export interface SignalEvidenceBundle|^function.*Signal|^export type.*Signal' | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"}; 'ROUTE LOCATIONS'; Select-String -LiteralPath (Join-Path $root 'web/src/App.tsx'),(Join-Path $root 'web/src/lib/workspaceScope.ts') -Pattern 'RootCauseIntelligence|root-cause' | ForEach-Object {\"$($_.Path):$($_.LineNumber):$($_.Line)\"}; 'ROUTE REGISTRY CANDIDATES'; Get-ChildItem (Join-Path $root 'web/src') -File | ForEach-Object {$_.Name}; 'LOG SIZE'; (Get-Item (Join-Path $root 'web/logs/phase6-qa-diagnostics-root-cause-intelligence.log')).Length ",
+        "numericExit": 0,
+        "rawOutputLocation": "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log",
+        "rawOutputSHA256": "04ed54feef588a6eba24f50a4a1d16e0f2fdbbf6da1a902617bd581ecbac49df"
+      },
+      {
+        "command": " 'PHASE6 ROOT OWNER COLUMNS'; $n=0; foreach($line in Get-Content 'D:\\repos\\teslasync\\migration-queue.md'){ $n++; if($line -notmatch '^\\| \\['){continue}; $c=$line.Split('|'); if($c[2].Trim() -eq '6' -and $c[3] -match 'fix.*(scope|trust|source|date|unit|sign|local|token|access|unknown|evidence|pause|chart|semantic)|qa-diagnostics'){ \"${n} status=$($c[1].Trim()) item=$($c[3].Trim()) files=$($c[5].Trim()) depends=$($c[6].Trim())\" } }; 'INVENTORY PAGE'; Select-String -LiteralPath D:\\repos\\teslasync\\docs\\frontend-inventory.md -Pattern 'RootCauseIntelligencePage' | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"}; 'SHARED CHART ACTION LOCATIONS'; Select-String -LiteralPath D:\\repos\\teslasync\\web\\src\\components\\charts\\ChartContainer.tsx -Pattern 'export|fullscreen|showData|dataColumns|mobileHeight|isAnimationActive|useMotion|DataTable' | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"}; 'CLIENT PREFIX'; Select-String -LiteralPath D:\\repos\\teslasync\\web\\src\\api\\client.ts -Pattern '/api/v1|export.*request|BASE' | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"}; 'BACKEND ROUTE REGISTRATION ONLY'; Select-String -LiteralPath D:\\repos\\teslasync\\internal\\api\\router.go -Pattern 'signalinspect|\\{signalName\\}/history|\\{signal\\}/history|AvailableSignals|SignalHistory' | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"}; Get-Date -AsUTC -Format o ",
+        "numericExit": 0,
+        "rawOutputLocation": "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log",
+        "rawOutputSHA256": "ef0915607cb83a91f63d20c716def342521adb4f35c8bb050a115f1447ed0b11"
+      },
+      {
+        "command": " 'ALL EXISTING PHASE6 FIX IDs'; $n=0; foreach($line in Get-Content 'D:\\repos\\teslasync\\migration-queue.md'){ $n++; if($line -notmatch '^\\| \\['){continue}; $c=$line.Split('|'); if($c[2].Trim() -eq '6' -and $c[3] -match 'fix'){ \"${n} $($c[1].Trim()) $($c[3].Trim())\" } }; 'NECESSARY SHARED CHART LOCATIONS'; Select-String -LiteralPath D:\\repos\\teslasync\\web\\src\\components\\charts\\ChartContainer.tsx -Pattern '^export interface|exportable =|fullscreen =|dataColumns|showData|mobileHeight|isAnimationActive|useMotion|resolvedExport|ChartExportMenu' | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"}; 'ROUTE REGISTRATION'; Select-String -LiteralPath D:\\repos\\teslasync\\internal\\api\\router.go -Pattern 'signals.Get.*available|signals.Get.*history|signalinspect.New' | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"}; 'POINT TYPE'; Select-String -LiteralPath D:\\repos\\teslasync\\web\\src\\api\\types.ts -Pattern 'interface SignalHistoryPoint' -Context 0,22 | ForEach-Object {$_.ToString()}; 'PRIMITIVE BUTTON DEFAULT'; Select-String -LiteralPath D:\\repos\\teslasync\\web\\src\\components\\ui\\Button.tsx -Pattern 'sm:|md:|size =|type =|aria-busy|min-h' | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"}; Get-Date -AsUTC -Format o ",
+        "numericExit": 0,
+        "rawOutputLocation": "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log",
+        "rawOutputSHA256": "8ca4b3ef9e3c66c5b0f56346c7d1d87d4841579b14d20239d49a7ffb5fd8e7b1"
+      },
+      {
+        "command": " 'NUMBERED PRIMARY MECHANISMS'; $paths=@(@('web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx',45,152),@('web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx',60,95),@('web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts',44,128),@('web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx',19,67)); foreach($v in $paths){ \"FILE $($v[0])\"; $lines=Get-Content (Join-Path 'D:\\repos\\teslasync' $v[0]); for($i=$v[1];$i -le [Math]::Min($v[2],$lines.Count);$i++){ \"${i}:$($lines[$i-1])\" } }; 'QUEUE SHARED ROOTS FULL ROWS'; $q=Get-Content D:\\repos\\teslasync\\migration-queue.md; foreach($i in @(410,411,413,807,808,1722,1846)){\"${i}:$($q[$i-1])\"}; 'BACKEND ROUTE PATTERN RETRY'; Select-String -LiteralPath D:\\repos\\teslasync\\internal\\api\\router.go -Pattern 'AvailableSignals|History\\)|History,|/available|signalName.*history|signalinspect' | Where-Object {$_.Line -match 'signal|Signal|History'} | ForEach-Object {\"$($_.LineNumber):$($_.Line)\"} ",
+        "numericExit": 0,
+        "rawOutputLocation": "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log",
+        "rawOutputSHA256": "c595ae3f5eca8531b91f5578044896cdd8e5e57db6b8f03ea38d54eeef796608"
+      },
+      {
+        "command": " 'EXACT NARRATIVE LITERAL SITES'; $lines=Get-Content D:\\repos\\teslasync\\web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts; foreach($n in @(503,505,506,508,509,510,729,743,744,749,750,755,756,768,769,773,777,779,782,784)){\"${n}:$($lines[$n-1])\"}; 'PALETTE SOURCE'; Select-String -LiteralPath D:\\repos\\teslasync\\web\\src\\lib\\tokens.ts -Pattern 'export const chartTokens|series:' -Context 0,12 | ForEach-Object {$_.ToString()}; 'EXISTING PALETTE QUEUE OWNERS'; $n=0; foreach($line in Get-Content D:\\repos\\teslasync\\migration-queue.md){$n++; if($line -notmatch '^\\| \\['){continue};$c=$line.Split('|');if(($c[3]+' '+$c[5]) -match 'chart.*palette|useChartPalette.ts'){\"${n} $($c[1].Trim()) $($c[3].Trim()) files=$($c[5].Trim())\"}}; 'ROUTER REGISTRATION'; $lines=Get-Content D:\\repos\\teslasync\\internal\\api\\router.go; for($n=4900;$n -le 4940;$n++){\"${n}:$($lines[$n-1])\"}; Get-Date -AsUTC -Format o ",
+        "numericExit": 0,
+        "rawOutputLocation": "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log",
+        "rawOutputSHA256": "f5a423901e3168f2d34b47232b5a79d32d89ed0393975f381bac2d20c0da85b4"
+      },
+      {
+        "command": " 'NECESSARY SIGNAL ROUTER OWNER'; Get-ChildItem D:\\repos\\teslasync\\internal\\api -File | Where-Object {$_.Name -match 'signal.*route|route.*signal'} | ForEach-Object {$_.FullName}; 'REGISTRATION DEFINITION'; Get-ChildItem D:\\repos\\teslasync\\internal\\api -File -Filter '*routes*.go' | Select-String -Pattern 'func mountSignalInspectRoutes|\"/available\"|\"/\\{signalName\\}/history\"' | ForEach-Object {\"$($_.Path):$($_.LineNumber):$($_.Line)\"}; 'RELEVANT EXISTING SHARED FIX ROWS'; $n=0; foreach($line in Get-Content D:\\repos\\teslasync\\migration-queue.md){$n++;if($line -notmatch '^\\| \\['){continue};$c=$line.Split('|');if($c[3].Trim() -in @('phase6-fix-evidence-sample-count-plurals','phase6-fix-behavioral-evidence-source-trust','phase6-fix-insight-panel-retained-empty','chart-palette-policy','phase4-signal-catalog-consumer-scope')){\"${n}:$line\"}} ",
+        "numericExit": 0,
+        "rawOutputLocation": "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log",
+        "rawOutputSHA256": "3a03bec175f472274986f04d85f89026f9826c873a8cb66b08aec42197c50927"
+      },
+      {
+        "command": " Get-ChildItem D:\\repos\\teslasync\\internal\\api -File -Filter '*.go' | Select-String -Pattern 'func mountSignalInspectRoutes|Get\\(\"/available\"|Get\\(\"/\\{signalName\\}/history\"' | ForEach-Object {\"$($_.Path):$($_.LineNumber):$($_.Line)\"}; Get-Date -AsUTC -Format o ",
+        "numericExit": 0,
+        "rawOutputLocation": "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log",
+        "rawOutputSHA256": "656ed7e162ee01ca82dc6bef75d9000a5b1fa26a583a4fd2ab14d974a5d7a121"
+      },
+      {
+        "command": " 'SIGNAL ROUTE REGISTRATIONS'; $lines=Get-Content D:\\repos\\teslasync\\internal\\api\\router.go; for($n=531;$n -le 561;$n++){\"${n}:$($lines[$n-1])\"}; 'LATEST HANDOFF HEADER'; Get-Content D:\\repos\\teslasync\\docs\\session-handoff.md -TotalCount 47; 'REPORT EXISTENCE RECHECK'; Test-Path D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-diagnostics-root-cause-intelligence.json; Get-Date -AsUTC -Format o ",
+        "numericExit": 0,
+        "rawOutputLocation": "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log",
+        "rawOutputSHA256": "bf3716bc30313ebe167c1adf95aad05322797fd4f91d51c4e3e57964205d70a3"
+      },
+      {
+        "shellId": "479",
+        "numericExit": 1,
+        "rawOutput": "ParserError: Variable reference is not valid. : was not followed by a valid variable name character. \"$n:$line\" corrected to ${n}. Failed command did not execute; corrected probe0."
+      },
+      {
+        "shellId": "774",
+        "numericExit": 1,
+        "rawOutput": "The filename or extension is too long. (os error 206). Oversized composition did not execute; no report write; split into bounded commands."
+      },
+      {
+        "shellId": "909",
+        "numericExit": 1,
+        "command": "Freshness owner read probe; Out-String -Width4096",
+        "rawOutput": "Out-String: A parameter cannot be found that matches parameter name 'Width4096'. No log output appended by failed formatting wrapper. Corrected owner probe shell914 exited0."
+      },
+      {
+        "shellId": "914",
+        "numericExit": 0,
+        "command": "Select-String data-display/index.ts DataFreshnessAuto; Select-String DataFreshness.tsx function/onRefresh/query.refetch -Context 1,3",
+        "rawOutput": "index.ts:62 DataFreshnessAuto; DataFreshness.tsx:177 if(onRefresh&&!isFetching) onRefresh(); :238 if(onRefresh); :293 default clicking triggers query.refetch(); :323 export function DataFreshnessAuto; :326 refetchable=true; :336 onRefresh={refetchable?()=>{void query.refetch();}:undefined}"
+      },
+      {
+        "tool": "view",
+        "status": "FAILED_READ",
+        "numericExit": null,
+        "path": "web/src/components/data-display/DataFreshnessAuto.tsx",
+        "rawOutput": "Path does not exist; resolved actual category re-export to DataFreshness.tsx. Not an absent-functionality/API failure."
+      },
+      {
+        "numericExit": 0,
+        "command": "Python json.loads report; compare every pinned SHA256 and physical line count; verify exact source citation lines; reread current queue QA attempt1 and accepted dependency; serialize then json.loads final JSON; assert exact roots/candidates/sections/actions/counts and release. No application execution.",
+        "rawOutput": "Current48 pins/48 match/0 drift;36 code pins; exact citation comparison0 mismatches; QA attempt1 dependency[x]; final JSON reparse/count/release assertions0."
+      }
+    ],
+    "failedCheckCount": 3,
+    "failures": "Three command failures retained: parser shell479, Windows os206 oversized composition shell774, formatting shell909. Corrected probes/composition succeeded. One wrong-path read resolved to existing DataFreshness owner. No source/test changes or invented runtime failure.",
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "freshTests": "NOTRUN",
+    "fullPageAcceptance": "NOTRUN",
+    "browser": "NOTRUN",
+    "screenshots": "NOTRUN",
+    "device": "NOTRUN",
+    "APIData": "NOTRUN",
+    "diagnosticData": "NOTRUN",
+    "vehicleData": "NOTRUN",
+    "mutations": "NOTRUN",
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "globalTSC": "NOTRUN",
+    "servers": "NOTRUN",
+    "Docker": "NOTRUN",
+    "installs": "NOTRUN",
+    "Git": "NOTRUN",
+    "testCounts": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "numericExit": null
+    },
+    "runtimeVersion": "Node26.8.1 is handoff context, not freshly verified.",
+    "parentPreview": "Parent5173 retained; worker did not contact server. No browser grant; Edge msedge only if later explicitly authorized, no downloads.",
+    "backend": "Router declarations only; no handlers/DB queries/payload audit. Backend SQL/log/panic/context rules not applicable to this frontend scope. No backend zero claims.",
+    "catalog": "Read-only, no catalog key/generator check; fallback strings not proof of installed keys.",
+    "tooling": "Built-in file reads and bounded inline regex/hash/JSON commands only; no saved helper/custom tools/extensions/subagents/heartbeats. No output redirection.",
+    "rangeReadLimits": {
+      "web/src/api/hooks/useTelemetry.ts": [
+        [
+          1,
+          313
+        ]
+      ],
+      "web/src/api/dataState.ts": [
+        [
+          1,
+          300
+        ]
+      ],
+      "web/src/api/types.ts": [
+        [
+          2670,
+          2679
+        ]
+      ],
+      "web/src/lib/tokens.ts": [
+        [
+          382,
+          410
+        ]
+      ],
+      "web/src/components/data-display/OperationalBrief.tsx": [
+        [
+          1,
+          205
+        ]
+      ],
+      "web/src/components/charts/ChartContainer.tsx": [
+        [
+          100,
+          225
+        ],
+        [
+          415,
+          445
+        ],
+        [
+          620,
+          772
+        ],
+        [
+          891,
+          941
+        ]
+      ],
+      "web/src/App.tsx": "Exact lazy import218/mount754 only",
+      "internal/api/router.go": [
+        [
+          531,
+          561
+        ],
+        [
+          4900,
+          4940
+        ]
+      ],
+      "web/src/api/client.ts": "Prefix/request declaration matches only; no full client audit.",
+      "web/src/components/ui/HelpTooltip.tsx": "Full read",
+      "web/src/components/data-display/DataFreshness.tsx": [
+        [
+          238,
+          263
+        ],
+        [
+          287,
+          345
+        ]
+      ],
+      "web/src/components/data-display/index.ts": [
+        [
+          55,
+          70
+        ]
+      ]
+    },
+    "failedReadCount": 1
+  },
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-qa-diagnostics-root-cause-intelligence.json",
+    "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log"
+  ],
+  "writePolicy": "Only report and ignored log writable; .gitignore logs/ rule read without Git. All source/test/catalog/backend/config/queue/handoff read-only.",
+  "finalValidation": {
+    "status": "PASS_SOURCE_ARTIFACT_ONLY",
+    "utc": "2026-10-14T01:18:25.326094Z",
+    "numericExit": 0,
+    "command": "Python json.loads report; compare every pinned SHA256 and physical line count; verify exact source citation lines; reread current queue QA attempt1 and accepted dependency; serialize then json.loads final JSON; assert exact roots/candidates/sections/actions/counts and release. No application execution.",
+    "pinCount": 48,
+    "matchingPinCount": 48,
+    "codeFilePins": 36,
+    "mismatchCount": 0,
+    "citationCount": 138,
+    "citationMismatchCount": 0,
+    "currentChecks": [
+      {
+        "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        "sha256": "6f0648b428f8d76f3256ee1fb87f773145a5269639e1fa4b72a063dd5bc36179",
+        "lineCount": 265,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+        "sha256": "b047979b5d082032a7c2176ca3893ff732d07b606bfdc7430db7a695edf4a2ad",
+        "lineCount": 91,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/components/EvidenceSourceNotice.tsx",
+        "sha256": "a4eef29e9cc17c258d73f13b0c4c466c1f94fa9e851c0ed19c905e868253b99e",
+        "lineCount": 42,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+        "sha256": "bfa050b201eda4d19630676257dd28f6256eb57ae9ae2500a9188da800f7f478",
+        "lineCount": 70,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+        "sha256": "96624644a64071076a394b0889f57de17b13cff0b10ef9554d50c4dde676f678",
+        "lineCount": 139,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+        "sha256": "6d3967c4b7e618b75748217e11fe7df467dd65fb3830b8d0065b2d0ce9e89e49",
+        "lineCount": 199,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+        "sha256": "a6aae9d94c1c49e8ecabad480d969e806501bd0caa8d608bfedc74af9014116f",
+        "lineCount": 118,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+        "sha256": "6bd1abd8a8f1d0ded326ba85ac1dc1211109338e190fc4136431dd4c26aaf7da",
+        "lineCount": 94,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+        "sha256": "4e4b4269dc1764c44bc6eb79ac75562667447083a1f71103fecfc2f616343ca0",
+        "lineCount": 86,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/components/QualityBadge.tsx",
+        "sha256": "af7d94e859d7d4b0ace27710cf9d0062506479723a0551d3317efe081b2abd07",
+        "lineCount": 39,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+        "sha256": "3cea2105eb993377c38f334c361381924c2311c0421a00f9663da6cf04aa31f2",
+        "lineCount": 131,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+        "sha256": "8d9cadc97db35509eb958a3c2e2b6fc94b6251d6e2121e2c835e5705ddc9d12b",
+        "lineCount": 1018,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/lib/signalEvidenceAvailability.ts",
+        "sha256": "78122794815e99d1452bfebb85ad6c19154ee57109412f151ee7d4472dbb776c",
+        "lineCount": 11,
+        "matches": true
+      },
+      {
+        "file": "web/src/api/hooks/useTelemetry.ts",
+        "sha256": "f536fbdb5705d3abb19869b0b5d73e65e72fb5e992f50e664754e4fa4f76853e",
+        "lineCount": 683,
+        "matches": true
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "lineCount": 434,
+        "matches": true
+      },
+      {
+        "file": "web/src/api/types.ts",
+        "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "lineCount": 4194,
+        "matches": true
+      },
+      {
+        "file": "web/src/types/telemetry.ts",
+        "sha256": "15af5c9c884e582b7b79c19c97e21583f38e48f2b69bfdbda0f3bdab74989ce4",
+        "lineCount": 159,
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "lineCount": 65,
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "lineCount": 174,
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "lineCount": 47,
+        "matches": true
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "lineCount": 168,
+        "matches": true
+      },
+      {
+        "file": "web/src/App.tsx",
+        "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "lineCount": 919,
+        "matches": true
+      },
+      {
+        "file": "web/src/features/diagnostics/components/index.ts",
+        "sha256": "72f2b499574fb6559e590cf48da90a21b295c4a9b32afe3a69eb871caba7937b",
+        "lineCount": 28,
+        "matches": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "lineCount": 17,
+        "matches": true
+      },
+      {
+        "file": "web/src/components/ui/Select.tsx",
+        "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+        "lineCount": 119,
+        "matches": true
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "lineCount": 93,
+        "matches": true
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "lineCount": 39,
+        "matches": true
+      },
+      {
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+        "lineCount": 321,
+        "matches": true
+      },
+      {
+        "file": "web/src/components/charts/ChartContainer.tsx",
+        "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+        "lineCount": 1006,
+        "matches": true
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "lineCount": 458,
+        "matches": true
+      },
+      {
+        "file": "internal/api/router.go",
+        "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+        "lineCount": 5363,
+        "matches": true
+      },
+      {
+        "file": "docs/orchestrator-loop.md",
+        "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+        "lineCount": 296,
+        "matches": true
+      },
+      {
+        "file": "docs/frontend-design-contract.md",
+        "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+        "lineCount": 2539,
+        "matches": true
+      },
+      {
+        "file": "docs/session-handoff.md",
+        "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+        "lineCount": 2460,
+        "matches": true
+      },
+      {
+        "file": "docs/frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "lineCount": 1593,
+        "matches": true
+      },
+      {
+        "file": "docs/frontend-inventory.md",
+        "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+        "lineCount": 1460,
+        "matches": true
+      },
+      {
+        "file": ".github/copilot-instructions.md",
+        "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+        "lineCount": 707,
+        "matches": true
+      },
+      {
+        "file": ".github/instructions/frontend-si-cutover.instructions.md",
+        "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+        "lineCount": 94,
+        "matches": true
+      },
+      {
+        "file": ".github/instructions/react-frontend.instructions.md",
+        "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+        "lineCount": 629,
+        "matches": true
+      },
+      {
+        "file": ".github/instructions/observability.instructions.md",
+        "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+        "lineCount": 45,
+        "matches": true
+      },
+      {
+        "file": ".github/instructions/unit-conversion.instructions.md",
+        "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+        "lineCount": 221,
+        "matches": true
+      },
+      {
+        "file": "docs/frontend-audits/audit-page-101.json",
+        "sha256": "7404e1cde4691f18166c9466dfa06f0b2651e06000950b19d9df681096b02486",
+        "lineCount": 254,
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useChartPalette.ts",
+        "sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+        "lineCount": 49,
+        "matches": true
+      },
+      {
+        "file": "web/src/lib/tokens.ts",
+        "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+        "lineCount": 439,
+        "matches": true
+      },
+      {
+        "file": "docs/frontend-worker-conventions.md",
+        "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+        "lineCount": 152,
+        "matches": true
+      },
+      {
+        "file": "web/src/components/ui/HelpTooltip.tsx",
+        "sha256": "fb8d5d08643e810939608e5255f5f967084ec7c7af3c49eb130e38a682a27c86",
+        "lineCount": 112,
+        "matches": true
+      },
+      {
+        "file": "web/src/components/data-display/DataFreshness.tsx",
+        "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+        "lineCount": 342,
+        "matches": true
+      },
+      {
+        "file": "web/src/components/data-display/index.ts",
+        "sha256": "f8495446c7eb521756f6071b4fb021fc71cec90218f2f204db7ad65d841158d9",
+        "lineCount": 178,
+        "matches": true
+      }
+    ],
+    "queueDependencyAccepted": true,
+    "sameQAItemAttempt": 1,
+    "currentCorrectiveQueueMatches": 0,
+    "postWriteJSONReparse": "PASS",
+    "notNativeQA": true
+  },
+  "release": {
+    "status": "RELEASED",
+    "utc": "2026-10-14T01:18:25.326094Z",
+    "allOwnedFilesReleased": [
+      "docs\\frontend-audits\\phase6-qa-diagnostics-root-cause-intelligence.json",
+      "web\\logs\\phase6-qa-diagnostics-root-cause-intelligence.log"
+    ],
+    "sourceClaimAcquired": false,
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "reportAndLogReleased": true,
+    "allOwnedCommandsReleased": true,
+    "remainingOwnedCommands": [],
+    "browserLockHeld": false,
+    "serverOwned": false,
+    "queueOrHandoffWrite": false,
+    "noLaterWrites": true,
+    "meaning": "Release effective at this terminal bounded command completion; no background commands/helpers owned; parent5173 untouched."
+  },
+  "confirmedRootCount": 10,
+  "confirmedRoots": [
+    {
+      "id": "RC01",
+      "rule": "workspace-range-contract",
+      "title": "Dated route uses local hours, not workspace bounds",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "runtimeReproduced": false,
+      "mechanism": "Mounted /diagnostics/root-cause is absent from RANGE_ENABLED_PATHS. Hook stores local72h; evidence key/request use hours/limit without startInstant/endInstantExclusive. Header range is correctly disabled by actual registry; this is a contract adoption gap, not a broken visible control. Shared vehicle/key scope is correct.",
+      "fix": "Parent document any explicit independent diagnostic-horizon exception, otherwise separately lease existing route/workspace/evidence owners and caller adoption preserving both bounds/presets/timezone/DST and other shared-workspace callers.",
+      "evidence": [
+        {
+          "file": "web/src/App.tsx",
+          "line": 754,
+          "source": "        <Route path=\"diagnostics/root-cause\" element={<SafeRoute name=\"RootCauseIntelligence\"><RootCauseIntelligence /></SafeRoute>} />"
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 165,
+          "source": "    range: RANGE_ENABLED_PATHS.has(normalized),"
+        },
+        {
+          "file": "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+          "line": 85,
+          "source": "  const [windowHours, setWindowHours] = useState<number>(DEFAULT_WINDOW_HOURS);"
+        },
+        {
+          "file": "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+          "line": 100,
+          "source": "  const evidenceBundle = useSignalEvidenceBundle(id, bundleSignalNames, windowHours);"
+        },
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 215,
+          "source": "        `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?hours=${boundedHours}&limit=${boundedLimit}`,"
+        }
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+        "web/src/api/hooks/useTelemetry.ts",
+        "web/src/lib/workspaceScope.ts",
+        "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+        "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "RC02",
+      "rule": "unknownzero-evidence-denominator",
+      "title": "Missing numeric focal evidence can publish zero score/coverage and negative-evidence limitations",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "runtimeReproduced": false,
+      "mechanism": "Corrected page guards suppress unavailable focal samples/effect/hypothesis count/summary. But available requires ANY response object; empty/related-only responses make overallScore rawValue=0 from engine insufficient branch. Interpretation always renders overallScore and 0 corroborated of all name-selected candidates when focal/candidate histories may be missing/nonnumeric/unresolved. Limits still say focal did not show supported shift/none cleared evidence. This conflates an unavailable computation or unknown corroboration with measured zero/negative evidence. Adequately observed computed0 remains valid.",
+      "fix": "Separate numeric eligibility and resolved/usable/unknown candidate denominators at existing presentation boundary. Suppress uncomputed scores/negative conclusions, not sections; qualify limitations by actual sources and retain raw calculations.",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 85,
+          "source": "  const available = workspace.hasChosenSignal && evidenceState.hasData;"
+        },
+        {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 112,
+          "source": "      rawValue: available ? analysis.quality.overallScore : null,"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 686,
+          "source": "      overallScore: 0,"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+          "line": 66,
+          "source": "                withEvidence: quality.candidatesWithEvidence,"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+          "line": 88,
+          "source": "            {t('rootCauseIntelligence.interpretation.overallScore', 'Overall evidence score {{n}} of 1.00', { n: fmtNumber(quality.overallScore) })}"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 773,
+          "source": "      'The focal signal did not show a robust, well-supported shift in this window, so hypotheses are withheld rather than guessed.',"
+        }
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+        "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+        "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+        "web/src/features/diagnostics/lib/rootCauseIntelligence.ts"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "RC03",
+      "rule": "initial-paused-state",
+      "title": "Initially paused catalog/history can use resolved-empty/insufficient branches",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "runtimeReproduced": false,
+      "mechanism": "Picker uses isLoading and catalog defaults[]; no pending/paused state passed. No retained catalog + isPending=true/fetchStatus=paused/isLoading=false selects catalog.length===0 recorded-no-signals branch. Evidence aggregate likewise omits isPending/fetchStatus and uses some(isLoading); initially paused history can render insufficient/unavailable analysis rather than deferred first load. Exact predicates establish reachable branch, no offline/network/runtime reproduction performed.",
+      "fix": "Thread existing pending/refresh-blocked semantics through picker/aggregate. Initial deferred sources stay unknown, not authoritative empty; preserve independent retry/retention.",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 167,
+          "source": "          signalsLoading={workspace.signalsQuery.isLoading && !signalsState.hasData}"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+          "line": 66,
+          "source": "      ) : catalog.length === 0 ? ("
+        },
+        {
+          "file": "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+          "line": 88,
+          "source": "  const catalog = useMemo(() => signalsQuery.data ?? [], [signalsQuery.data]);"
+        },
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 280,
+          "source": "      isLoading: results.some((result) => result.isLoading),"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 193,
+          "source": "  const isPaused = source.fetchStatus === 'paused'"
+        }
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+        "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+        "web/src/api/hooks/useTelemetry.ts"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "RC04",
+      "rule": "paused-cause-overclaim",
+      "title": "Any refresh-blocked source is labeled Paused offline",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "runtimeReproduced": false,
+      "mechanism": "Source list maps isRefreshBlocked directly to Paused offline. DataState establishes paused/deferred fetching, not device/vehicle/network cause. Source identities, retained histories and retry otherwise preserved.",
+      "fix": "Existing source-list/copy owner adopt neutral paused/deferred wording without guessed connectivity cause.",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+          "line": 23,
+          "source": "          : state.isRefreshBlocked ? t('dataSources.status.paused', 'Paused offline')"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 193,
+          "source": "  const isPaused = source.fetchStatus === 'paused'"
+        }
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+        "web/src/i18n/en.json"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "RC05",
+      "rule": "hardcoded-string",
+      "title": "Rendered specialist narratives bypass i18n",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "runtimeReproduced": false,
+      "mechanism": "Engine rationale/summary/limitations are English interpolations rendered verbatim. Translated labels and truthful causal disclaimer do not localize narratives. Twenty exact reachable literal construction sites; one mechanism, not20 campaigns. Suppressed no-choice return739 excluded. Raw scanner22 is not violation count.",
+      "fix": "Stable narrative descriptors/arguments localized at existing renderer/catalog boundary, preserving names, every disclaimer/plural/evidence predicate and raw statistics; separately serialized parent-owned canonical copy lease.",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+          "line": 105,
+          "source": "              <Text variant=\"body\">{h.rationale}</Text>"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+          "line": 72,
+          "source": "          <Text variant=\"body\">{summary}</Text>"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+          "line": 80,
+          "source": "                  <li key={note}>"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+          "line": 70,
+          "source": "          whatChanged: summary ?? description,"
+        }
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+        "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+        "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+        "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+        "web/src/i18n/en.json"
+      ],
+      "priority": "medium",
+      "confirmedOccurrenceSites": [
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 503,
+          "source": "      ? `shifted within ${minutes} min of ${params.focalSignal}'s change (concurrent)`"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 505,
+          "source": "        ? `shifted about ${minutes} min before ${params.focalSignal}'s change (leading)`"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 506,
+          "source": "        : `shifted about ${minutes} min after ${params.focalSignal}'s change (lagging)`;"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 508,
+          "source": "    `${params.signal} ${timing}, with a robust effect size of ${roundTo(params.effectSize, 2)}. ` +"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 509,
+          "source": "    'Ranked by shift strength, timing proximity, sample coverage, and evidence reliability — ' +"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 510,
+          "source": "    'a lead worth reviewing, not a diagnosis.'"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 729,
+          "source": "  'This is an evidence-ranked hypothesis, not a diagnosis or a claim of causal proof.';"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 743,
+          "source": "      `No robust shift was found for ${focalSignal} in the analyzed window, so no hypotheses are offered. ` +"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 744,
+          "source": "      'This may mean the signal was stable, or that the window was too short or sparse.'"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 749,
+          "source": "      `${focalSignal} shows a robust shift, but no other analyzed signal showed a comparable, well-timed shift. ` +"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 750,
+          "source": "      `Treat this as an isolated change with weak corroborating evidence. ${NO_CAUSAL_PROOF_DISCLAIMER}`"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 755,
+          "source": "    `${focalSignal} shows a robust shift with ${hypothesesCount} ranked, evidence-based hypothes${plural} for review ` +"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 756,
+          "source": "    `(evidence quality: ${quality.band}). ${NO_CAUSAL_PROOF_DISCLAIMER}`"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 768,
+          "source": "    `Every listed item is an evidence-ranked hypothesis derived from statistical association. ${NO_CAUSAL_PROOF_DISCLAIMER}`,"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 769,
+          "source": "    'Analysis is limited to the selected time window and the bounded set of related signals available in the catalog; unrecorded or unavailable signals cannot be considered.',"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 773,
+          "source": "      'The focal signal did not show a robust, well-supported shift in this window, so hypotheses are withheld rather than guessed.',"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 777,
+          "source": "    notes.push('No related signals were identified in the catalog for this focal signal.');"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 779,
+          "source": "    notes.push('None of the related signals cleared the minimum evidence bar for sample coverage or shift strength.');"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 782,
+          "source": "    notes.push('Evidence quality is low — treat any listed hypothesis as preliminary and confirm with additional data before acting.');"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 784,
+          "source": "  notes.push('Temporal proximity alone does not establish which signal, if any, is upstream of the other.');"
+        }
+      ]
+    },
+    {
+      "id": "RC06",
+      "rule": "si-display-preferences",
+      "title": "Physical medians lack units/display conversion",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "runtimeReproduced": false,
+      "mechanism": "Focal before/after context and hypothesis medians use fmtNumber only. Formatter honors numeric locale/precision, not physical preferences. Names-only catalog and ts/value analysis mapping provide no unit-kind to renderers. Supported physical SI medians cannot follow saved display units; source scale unexplained. Dimensionless scores/effect/timeline must NOT convert. Signed values preserved; no payload corruption or guessed signal unit asserted.",
+      "fix": "Use actual rich typed unit-kind metadata and existing display-only unit formatter, or explicitly retain source-scale/unknown-unit explanation until supported. Never infer unit or favorable outcome from signal name/up/down.",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 124,
+          "source": "          before: fmtNumber(analysis.focalShift.before.median),"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+          "line": 102,
+          "source": "                  <Caption>{fmtNumber(h.shift.before.median)} → {fmtNumber(h.shift.after.median)}</Caption>"
+        },
+        {
+          "file": "web/src/hooks/useNumberFormatting.ts",
+          "line": 29,
+          "source": "      formatNumber(value, decimals ?? preferences.precision, locale ?? preferences.locale)"
+        },
+        {
+          "file": "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+          "line": 52,
+          "source": "function toAnalysisPoint(point: SignalHistoryPoint): RawSignalPoint {"
+        },
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 101,
+          "source": "    queryFn: async ({ signal }): Promise<string[]> => {"
+        }
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+        "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "RC07",
+      "rule": "display-date-preferences",
+      "title": "Two timestamp presentations bypass app preferences",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "runtimeReproduced": false,
+      "mechanism": "Timeline toLocaleString(undefined,fixed options) and source retrieval timestamp toLocaleString() use browser defaults instead of app locale/timezone/12-24h preferences. Retrieval time is not observation time.",
+      "fix": "Use existing application date formatter at both owners, retain exact instants and distinguish requested interval/observation/retrieval time; no wire/cache timestamp rewriting.",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+          "line": 28,
+          "source": "  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+          "line": 52,
+          "source": "                  time: new Date(state.updatedAt).toLocaleString(),"
+        }
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+        "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "RC08",
+      "rule": "stable-section-hierarchy",
+      "title": "Timeline title disappears when empty/fatal",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "runtimeReproduced": false,
+      "mechanism": "Empty/fatal branches return GlassPanel with only EmptyState/QueryError. Named ChartContainer title/purpose/description only in loading/populated branch. Shell survives, named hierarchy disappears when evidence absent or retry needed.",
+      "fix": "Use current ChartContainer empty/error APIs or keep same localized title/purpose across branches; preserve retry/data alternatives without duplicating children.",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+          "line": 79,
+          "source": "  if (!isLoading && !isError && timeline.length === 0) {"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+          "line": 94,
+          "source": "  if (isError) {"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+          "line": 104,
+          "source": "      title={t('rootCauseIntelligence.timeline.title', 'Normalized signal timeline')}"
+        }
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "RC09",
+      "rule": "mobile-target-declaration",
+      "title": "Individual source Retry declares36px below md",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "runtimeReproduced": false,
+      "mechanism": "Source Retry uses size=sm with no mobile override. Current Button sm h-9 is2.25rem/36px at16px root. Unlike current Select and Review details, no min-h-11 below md. Source contract mismatch, not measured WCAG/native geometry or spacing failure.",
+      "fix": "Existing below-md44 utilities at this call with explicit >=md restoration/wrapping; later authorized real hit-box/focus/spacing proof. No global Button resize.",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+          "line": 60,
+          "source": "              <Button type=\"button\" variant=\"secondary\" size=\"sm\" onClick={state.retry}"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 36,
+          "source": "  sm: 'h-9 px-3 text-sm',"
+        }
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "RC10",
+      "rule": "chart-palette-preference",
+      "title": "Graph/timeline ignore saved chart_palette",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "runtimeReproduced": false,
+      "mechanism": "Both renderers index static chartTokens.series. Current useChartPalette consumes persisted chart_palette; neither renderer uses it. Theme-aware restrained light-dark paint is acceptable but not the independent saved palette preference.",
+      "fix": "Adopt accepted existing preference boundary at both owners preserving identities/order/legend key; no page hex palette or reopened accepted palette root. Composed/CVD proof separate.",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+          "line": 86,
+          "source": "        color: chartTokens.series[i % chartTokens.series.length]!,"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+          "line": 128,
+          "source": "              stroke={chartTokens.series[i % chartTokens.series.length]}"
+        },
+        {
+          "file": "web/src/lib/tokens.ts",
+          "line": 399,
+          "source": "  series: ['light-dark(#385e7e, #91b4d2)', 'light-dark(#38614f, #91b9a5)', 'light-dark(#745829, #cfb481)', 'light-dark(#83464e, #d6a0a5)', 'light-dark(#625077, #b5a8c9)', 'light-dark(#3f6268, #91bbc0)', 'light-dark(#785568, #c3a2b5)', 'light-dark(#586437, #acba91)'] as const,"
+        },
+        {
+          "file": "web/src/hooks/useChartPalette.ts",
+          "line": 48,
+          "source": "  return useMemo(() => resolveChartPalette(data?.chart_palette, { theme, mode }), [data?.chart_palette, theme, mode])"
+        }
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+        "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx"
+      ],
+      "priority": "medium"
+    }
+  ],
+  "unpromotedCandidateCount": 8,
+  "unpromotedCandidates": [
+    {
+      "id": "C01",
+      "topic": "Mobile/container wrapping and contrast",
+      "classification": "UNPROMOTED_CANDIDATE",
+      "runtimeReproduced": false,
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+          "line": 156,
+          "source": "            <li className=\"flex items-center gap-2\">"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+          "line": 109,
+          "source": "      height={340}"
+        }
+      ],
+      "reasonUnpromoted": "Long focal name/tag, eight-series axes/legend, fixed cyan icons and small visualization fonts need measurement. No overflow/contrast failure observed.",
+      "needs": "Authorized mission widths/narrow containers/themes/RTL/200% text/forced-colors keyboard matrix."
+    },
+    {
+      "id": "C02",
+      "topic": "Reduced-motion/low-bandwidth Recharts animation",
+      "classification": "UNPROMOTED_CANDIDATE",
+      "runtimeReproduced": false,
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+          "line": 123,
+          "source": "            <Line"
+        },
+        {
+          "file": "web/src/components/motion/FadeIn.tsx",
+          "line": 24,
+          "source": "  const { reduce, durationMs } = useMotionPreference(400)"
+        }
+      ],
+      "reasonUnpromoted": "FadeIn suppresses entry; Line has no explicit animation preference. Vendor defaults and ancestor runtime not exercised; no actual unwanted motion claimed.",
+      "needs": "Current renderer/existing motion owner review then mounted OS/low-bandwidth proof."
+    },
+    {
+      "id": "C03",
+      "topic": "Source provenance/observed coverage/possible cap",
+      "classification": "UNPROMOTED_CANDIDATE",
+      "runtimeReproduced": false,
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+          "line": 52,
+          "source": "function toAnalysisPoint(point: SignalHistoryPoint): RawSignalPoint {"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+          "line": 47,
+          "source": "              <Caption>{t('dashcam.reconstruction.pointCount', '{{count}} sample(s)', { count: state.data.data.length })}</Caption>"
+        },
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 198,
+          "source": "  limit = 10_000,"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 543,
+          "source": "export const MAX_TIMELINE_POINTS = 240;"
+        }
+      ],
+      "reasonUnpromoted": "Analysis mapping ts/value only; source list count/retrieval time not ingest origin/emitted/received/version or actual min/max. Raw responses remain. No cap hit/corrupt metadata/backend completeness observed; handler/payload not audited.",
+      "needs": "Existing workspace/source presentation owner establish supported requested-vs-observed/provenance disclosure. True total/truncation remains UNKNOWN."
+    },
+    {
+      "id": "C04",
+      "topic": "Minimum window union vs focal",
+      "classification": "UNPROMOTED_CANDIDATE",
+      "runtimeReproduced": false,
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 904,
+          "source": "  const dataWindow = computeDataWindow(focalNumeric, seriesBySignal);"
+        },
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 911,
+          "source": "    dataWindow.latestMs - dataWindow.earliestMs >= MIN_WINDOW_MS &&"
+        }
+      ],
+      "reasonUnpromoted": "Gate union span vs near-shift focal span; policy intent not proven focal-only. No numeric data executed or threshold failure diagnosed.",
+      "needs": "Existing engine owner clarify intended denominator/window before narrow fix; thresholds preserved."
+    },
+    {
+      "id": "C05",
+      "topic": "Temporal/direction tone",
+      "classification": "UNPROMOTED_CANDIDATE",
+      "runtimeReproduced": false,
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+          "line": 11,
+          "source": "  leads: 'warning',"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+          "line": 17,
+          "source": "  if (direction === 'up') return <ArrowUp className=\"h-3.5 w-3.5 text-emerald-400\" aria-hidden=\"true\" />;"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+          "line": 18,
+          "source": "  if (direction === 'down') return <ArrowDown className=\"h-3.5 w-3.5 text-rose-400\" aria-hidden=\"true\" />;"
+        }
+      ],
+      "reasonUnpromoted": "Lead/lag/up/down not inherently fault/success, but readable text/arrows persist. No physical-sign loss or actual diagnostic assertion.",
+      "needs": "Existing hypothesis/domain design owner disposition, no universal sign inversion."
+    },
+    {
+      "id": "C06",
+      "topic": "Evidence strength success badge",
+      "classification": "UNPROMOTED_CANDIDATE",
+      "runtimeReproduced": false,
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/QualityBadge.tsx",
+          "line": 6,
+          "source": "  strong: 'success',"
+        }
+      ],
+      "reasonUnpromoted": "Label Strong evidence is not health/diagnosis. Ownership VerdictBadge contract not automatically diagnostics mapping; replacement not guessed.",
+      "needs": "Current diagnostics quality badge owner explicit strength-role decision."
+    },
+    {
+      "id": "C07",
+      "topic": "Arbitrary graph grid geometry",
+      "classification": "UNPROMOTED_CANDIDATE",
+      "runtimeReproduced": false,
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+          "line": 117,
+          "source": "        <div className=\"grid gap-4 lg:grid-cols-[auto_1fr] lg:items-center\">"
+        }
+      ],
+      "reasonUnpromoted": "One exact arbitrary-geometry candidate, not static inline style. No named equivalent/approved disposition established.",
+      "needs": "Parent bounded existing design/token owner naming-only disposition; exact geometry preserved."
+    },
+    {
+      "id": "C08",
+      "topic": "Shared catalog freshness refresh target",
+      "classification": "UNPROMOTED_CANDIDATE",
+      "runtimeReproduced": false,
+      "evidence": [
+        {
+          "file": "web/src/components/data-display/DataFreshness.tsx",
+          "line": 246,
+          "source": "          compact ? '!h-auto !min-h-0 !p-0' : '!h-auto !px-0 !py-1.5',"
+        },
+        {
+          "file": "web/src/components/data-display/DataFreshness.tsx",
+          "line": 243,
+          "source": "        size=\"sm\""
+        }
+      ],
+      "reasonUnpromoted": "Noncompact refresh uses intrinsic h-auto/padding with no explicit44px minimum. Actual content/density/root font may affect final geometry; no measured target/spacing failure asserted. Distinct from explicit h-9 individual source Retry RC09.",
+      "needs": "Existing DataFreshness shared owner later authorized mobile hit-box/focus/spacing proof; no page-side guessed global resize."
+    }
+  ],
+  "summary": {
+    "confirmedRootsByRule": {
+      "workspace-range-contract": 1,
+      "unknownzero-evidence-denominator": 1,
+      "initial-paused-state": 1,
+      "paused-cause-overclaim": 1,
+      "hardcoded-string": 1,
+      "si-display-preferences": 1,
+      "display-date-preferences": 1,
+      "stable-section-hierarchy": 1,
+      "mobile-target-declaration": 1,
+      "chart-palette-preference": 1
+    },
+    "confirmedHardcodedLiteralConstructionSites": 20,
+    "literalSitesNotRootCount": true,
+    "highestPriority": [
+      "RC01",
+      "RC02",
+      "RC03",
+      "RC04"
+    ],
+    "filesWithMostRootMembership": [
+      [
+        "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+        4
+      ],
+      [
+        "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        4
+      ],
+      [
+        "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+        3
+      ],
+      [
+        "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+        3
+      ],
+      [
+        "web/src/api/hooks/useTelemetry.ts",
+        2
+      ],
+      [
+        "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+        2
+      ]
+    ],
+    "followupFamilyCount": 7,
+    "confirmedRootCount": 10,
+    "unpromotedCandidateCount": 8,
+    "actionGroupCount": 13
+  },
+  "dataSources": [
+    {
+      "name": "Signal-name catalog",
+      "hook": "useSignals(vehicleId)",
+      "endpoint": "GET /signals/{vehicleID}/available",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 98,
+          "source": "export function useSignals(vehicleId: number) {"
+        },
+        {
+          "file": "internal/api/router.go",
+          "line": 554,
+          "source": "\tr.Get(\"/available\", h.AvailableSignals)"
+        }
+      ],
+      "meaning": "Vehicle-keyed names, not continuous observations/recorded-history proof; names-only hook drops unit-kind."
+    },
+    {
+      "name": "Independent raw histories",
+      "hook": "useSignalEvidenceBundle(id,[focal,...related],hours)",
+      "endpoint": "GET /signals/{vehicleID}/{encodedSignalName}/history?hours={boundedHours}&limit={boundedLimit}",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 232,
+          "source": "export function useSignalEvidenceBundle("
+        },
+        {
+          "file": "internal/api/router.go",
+          "line": 557,
+          "source": "\tr.Get(\"/{signalName}/history\", h.History)"
+        }
+      ],
+      "policy": "<=8 trimmed/deduped identities; positive vehicle enablement; independent vehicle/signal/hours/limit keys and AbortSignal; MODERATE stale time; no periodic refetch; <=10000 requested rows; every pending/failed source survives; individual retry; retained response remains after refresh failure. No API called."
+    },
+    {
+      "name": "Pure inferred analysis",
+      "owner": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+          "line": 890,
+          "source": "export function analyzeRootCause(input: RootCauseAnalysisInput): RootCauseAnalysisResult {"
+        }
+      ],
+      "policy": "<=7 deterministic name/domain selected candidates; raw robust median/MAD shifts; minimum sample/effect/window gates; weighted rank with leads/lags/concurrent. Scores/effect/normalized chart dimensionless, no causal probability/diagnosis. <=240 resampled normalized rows retain null gaps; not continuous raw measured timeline."
+    }
+  ],
+  "states": {
+    "sourceOnly": true,
+    "runtime": "NOTRUN",
+    "inventory": [
+      {
+        "state": "No vehicle",
+        "mechanism": "All hooks before NoVehicleSelected return; id0 disables queries. Onboarding component internals not reviewed."
+      },
+      {
+        "state": "Catalog initial/fatal/empty/content",
+        "mechanism": "Independent skeleton/QueryError+catalog retry/empty/native labeled Select; RC03 initial paused ambiguity."
+      },
+      {
+        "state": "No focal signal",
+        "mechanism": "No history identities requested, mounted prompts/missing metrics, no guessed hypothesis."
+      },
+      {
+        "state": "History first loading",
+        "mechanism": "Analysis skeleton while no retained aggregate and isLoading true; source identity list stays."
+      },
+      {
+        "state": "Initial paused",
+        "mechanism": "Per-source initial+isRefreshBlocked retained, aggregate/picker insufficient, RC03/RC04."
+      },
+      {
+        "state": "Fatal without retained evidence",
+        "mechanism": "Fatal may replace source analysis content, not picker or panel shells; aggregate and individual recovery."
+      },
+      {
+        "state": "Related failure with neighbor retention",
+        "mechanism": "Every result.data remains in aggregate; source list shows each failure; no page-wide data&& gate."
+      },
+      {
+        "state": "Retained refresh failure/paused",
+        "mechanism": "Historical per-source timestamps/warnings/retry, brief derives retained from sources. Aggregate lacks fetchStatus/dataUpdatedAt; source list is trust authority."
+      },
+      {
+        "state": "Authoritative empty response",
+        "mechanism": "Hook marks success+empty rows unavailable; hasSignalHistory rejects zero rows; RC02 residual score/denominator."
+      },
+      {
+        "state": "Nonnumeric recorded history",
+        "mechanism": "Original string/bool rows remain in raw source response; boolean excluded only from numeric analysis; page guards zero numeric samples. No repair/corruption asserted."
+      },
+      {
+        "state": "Measured0/negative/stable",
+        "mechanism": "Finite0/negative input preserved; bool/null not turned into numeric zero; no robust shift vs no corroboration distinct. Physical signs unchanged."
+      },
+      {
+        "state": "Retry/busy/disabled",
+        "mechanism": "Source retry disabled during refresh; aggregate read refetch; page busy/announcement source wiring present, runtime NOTRUN."
+      }
+    ]
+  },
+  "positiveCurrentEvidence": [
+    {
+      "claim": "Accepted notice-prop repair retained",
+      "evidence": {
+        "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        "line": 176,
+        "source": "      <EvidenceSourceNotice"
+      },
+      "detail": "Only declared state/sources/label/hasChosenSignal; historical prop mismatch not reopened. No typecheck pass claimed."
+    },
+    {
+      "claim": "Accepted focal numeric/summary guards retained",
+      "evidence": {
+        "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        "line": 88,
+        "source": "  const focalAvailable = focalHistoryAvailable && analysis.quality.focalSampleCount > 0;"
+      },
+      "detail": "Missing/nonnumeric focal effect/samples/hypotheses/summary masked; residual score/limitations only RC02."
+    },
+    {
+      "claim": "Accepted page busy/load announcement wiring retained",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 65,
+          "source": "  useLoadAnnouncement({"
+        },
+        {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 155,
+          "source": "      busy={workspace.signalsQuery.isFetching || workspace.evidenceBundle.isFetching || isLoading}"
+        }
+      ],
+      "detail": "Historical wiring finding source-resolved; native announcement NOTRUN."
+    },
+    {
+      "claim": "Current Select stable ID/mobile44 declaration",
+      "evidence": [
+        {
+          "file": "web/src/components/ui/Select.tsx",
+          "line": 58,
+          "source": "    const reactId = useId();"
+        },
+        {
+          "file": "web/src/components/ui/Select.tsx",
+          "line": 36,
+          "source": "  md: 'min-h-11 md:min-h-10 px-3 py-2 text-sm',"
+        }
+      ],
+      "detail": "Historical label-derived-ID/mobile40 defects not reused. Source Retry distinct RC09."
+    },
+    {
+      "claim": "Noncausal framing and no guessed response",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+          "line": 34,
+          "source": " * this is a statistical association, never a diagnosis or a claim of"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+          "line": 73,
+          "source": "            label: 'not_scored', score: null,"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+          "line": 76,
+          "source": "          likelyCause: null,"
+        }
+      ],
+      "detail": "No fake diagnostic recommendation or probabilistic certainty."
+    },
+    {
+      "claim": "Semantic visualization alternatives",
+      "evidence": [
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+          "line": 100,
+          "source": "        <Network className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+          "line": 112,
+          "source": "      dataColumns={dataColumns}"
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "line": 908,
+          "source": "                      scope=\"col\""
+        }
+      ],
+      "detail": "Graph text legend; real normalized chart table/figure name/null gaps. SR/contrast/forced-colors not exercised."
+    }
+  ],
+  "preciseExistingOwnerFollowups": [
+    {
+      "id": "F01",
+      "roots": [
+        "RC01"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+        "web/src/api/hooks/useTelemetry.ts",
+        "web/src/lib/workspaceScope.ts",
+        "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+        "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx"
+      ],
+      "acceptedOwnerReferences": [
+        "repair-root-cause-adapter [x]",
+        "phase5-page-diagnostics-root-cause-intelligence [x]"
+      ],
+      "next": "Parent exception decision or narrow existing route/hook adoption, then caller. No completed migration redispatch.",
+      "currentMatchingCorrectiveQueueItems": [],
+      "parentReservationRequired": true
+    },
+    {
+      "id": "F02",
+      "roots": [
+        "RC02",
+        "RC03"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+        "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+        "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+        "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+        "web/src/api/hooks/useTelemetry.ts"
+      ],
+      "acceptedOwnerReferences": [
+        "repair-root-cause-adapter [x]",
+        "repair-root-cause-notice-props [x]",
+        "regression-diagnostic-partial-source [x]"
+      ],
+      "next": "Existing eligibility/pending-paused workspace/presentation contract; separately lease API change only if needed. Preserve corrected focal guards/neighbor retention.",
+      "currentMatchingCorrectiveQueueItems": [],
+      "parentReservationRequired": true
+    },
+    {
+      "id": "F03",
+      "roots": [
+        "RC04",
+        "RC07",
+        "RC09"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+        "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx"
+      ],
+      "acceptedOwnerReferences": [
+        "audit-page-101 [x], historical source evidence"
+      ],
+      "next": "One existing source-list neutral paused/date/target slice, separately leased timeline date adoption; exact missing copy serialized parent catalog lease only.",
+      "currentMatchingCorrectiveQueueItems": [],
+      "parentReservationRequired": true
+    },
+    {
+      "id": "F04",
+      "roots": [
+        "RC05"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+        "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+        "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+        "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx"
+      ],
+      "acceptedOwnerReferences": [
+        "audit-page-101 [x], historical narrative finding"
+      ],
+      "next": "Existing pure narrative descriptor -> exact canonical catalog copy -> renderer adoption. Preserve statistics/disclaimer; no competing catalog engine.",
+      "currentMatchingCorrectiveQueueItems": [],
+      "parentReservationRequired": true
+    },
+    {
+      "id": "F05",
+      "roots": [
+        "RC06"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+        "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+        "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx"
+      ],
+      "acceptedOwnerReferences": [
+        "repair-root-cause-adapter [x]"
+      ],
+      "next": "Establish actual rich typed unit-kind mapping first; existing display formatter only; no guessed unit/legacy converter/statistical conversion.",
+      "currentMatchingCorrectiveQueueItems": [],
+      "parentReservationRequired": true
+    },
+    {
+      "id": "F06",
+      "roots": [
+        "RC08"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx"
+      ],
+      "acceptedOwnerReferences": [
+        "phase5-page-diagnostics-root-cause-intelligence [x]"
+      ],
+      "next": "Narrow current timeline frame/state adoption via ChartContainer, not wholepage remigration.",
+      "currentMatchingCorrectiveQueueItems": [],
+      "parentReservationRequired": true
+    },
+    {
+      "id": "F07",
+      "roots": [
+        "RC10"
+      ],
+      "existingOwnerFiles": [
+        "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+        "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx"
+      ],
+      "acceptedOwnerReferences": [
+        "chart-palette-policy [x]"
+      ],
+      "next": "Current preference-boundary adoption only; accepted chart palette roots stay closed.",
+      "currentMatchingCorrectiveQueueItems": [],
+      "parentReservationRequired": true
+    }
+  ],
+  "filesRead": [
+    "web/src/features/diagnostics/pages/RootCauseIntelligencePage.tsx",
+    "web/src/features/diagnostics/components/SignalWindowPicker.tsx",
+    "web/src/features/diagnostics/components/EvidenceSourceNotice.tsx",
+    "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+    "web/src/features/diagnostics/components/RootCauseSignalTimelineChart.tsx",
+    "web/src/features/diagnostics/components/RootCauseEvidenceGraph.tsx",
+    "web/src/features/diagnostics/components/RootCauseHypothesisList.tsx",
+    "web/src/features/diagnostics/components/RootCauseInterpretationPanel.tsx",
+    "web/src/features/diagnostics/components/operationalbrief-all/DiagnosticEvidenceBrief.tsx",
+    "web/src/features/diagnostics/components/QualityBadge.tsx",
+    "web/src/features/diagnostics/hooks/useRootCauseWorkspace.ts",
+    "web/src/features/diagnostics/lib/rootCauseIntelligence.ts",
+    "web/src/features/diagnostics/lib/signalEvidenceAvailability.ts",
+    "web/src/api/hooks/useTelemetry.ts",
+    "web/src/api/dataState.ts",
+    "web/src/api/types.ts",
+    "web/src/types/telemetry.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/App.tsx",
+    "web/src/features/diagnostics/components/index.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/ui/Select.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/api/client.ts",
+    "internal/api/router.go",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/session-handoff.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-audits/audit-page-101.json",
+    "web/src/hooks/useChartPalette.ts",
+    "web/src/lib/tokens.ts",
+    "docs/frontend-worker-conventions.md",
+    "migration-queue.md",
+    ".gitignore",
+    "web/src/components/ui/HelpTooltip.tsx",
+    "web/src/components/data-display/DataFreshness.tsx",
+    "web/src/components/data-display/index.ts"
+  ]
+}

@@ -12,8 +12,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -54,7 +54,7 @@ vi.mock('react-i18next', async () => {
 })
 
 import { request } from '@/api/client'
-import FleetTelemetryCoveragePage from './FleetTelemetryCoveragePage'
+import FleetTelemetryCoveragePage, { type FleetTelemetryCoveragePageProps } from './FleetTelemetryCoveragePage'
 import type { FleetTelemetryCoverageResponse } from '@/api/types'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
@@ -110,14 +110,14 @@ function makeResponse(
   }
 }
 
-function renderPage() {
+function renderPage(props: FleetTelemetryCoveragePageProps = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
-        <FleetTelemetryCoveragePage />
+        <FleetTelemetryCoveragePage {...props} />
       </QueryClientProvider>
     </MemoryRouter>,
   )
@@ -128,6 +128,53 @@ beforeEach(() => {
 })
 
 describe('FleetTelemetryCoveragePage', () => {
+  it('describes absent columns without inferring signal_log and preserves unit_history routing', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse({
+      categories: [{
+        category: 'User Preferences',
+        total_fields: 1,
+        destinations: { unit_history: 1 },
+        fields: [{
+          field: 'SettingDistanceUnit',
+          destination: 'unit_history',
+          column: '',
+          also_signal_log: false,
+          subscribed: true,
+        }],
+      }],
+      destination_totals: { unit_history: 1 },
+    }))
+    renderPage()
+    await screen.findByTestId('coverage-categories')
+
+    const legend = screen.getByTestId('coverage-legend-column')
+    expect(legend).toHaveTextContent('A dash means no per-field column is declared')
+    expect(legend).toHaveTextContent('read the Destination cell')
+    expect(legend).toHaveTextContent('Setting*Unit fields retain their explicit unit_history destination')
+    expect(legend).not.toHaveTextContent('the field is stored in signal_log')
+    const table = within(screen.getByTestId('coverage-category-User Preferences')).getByRole('table')
+    const row = within(table).getByText('SettingDistanceUnit').closest('tr')!
+    expect(within(row).getByText('unit_history')).toBeInTheDocument()
+    expect(within(row).getAllByText('—')).toHaveLength(2)
+    expect(within(row).queryByText('signal_log')).not.toBeInTheDocument()
+  })
+
+  it('describes subscription membership as desired configuration rather than observed ingestion', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse())
+    renderPage()
+    await screen.findByTestId('coverage-categories')
+
+    const legend = screen.getByTestId('coverage-legend-subscribed')
+    expect(within(legend).getByText('Configured subscription')).toBeInTheDocument()
+    expect(legend).toHaveTextContent('whether the field belongs to the configured desired subscription')
+    expect(legend).toHaveTextContent('"Yes" does not confirm observed vehicle ingestion.')
+    expect(legend).toHaveTextContent('"No" means the field is routed but omitted from the desired subscription request.')
+    expect(screen.getByText(/Package-derived snapshot of routed Tesla proto fields/)).toHaveTextContent('not confirmation of observed vehicle ingestion')
+    expect(screen.queryByText(/currently pushing this field to us/)).not.toBeInTheDocument()
+    expect(within(screen.getByTestId('coverage-category-driving')).getAllByText('yes')).toHaveLength(2)
+    expect(within(screen.getByTestId('coverage-category-climate')).getByText('no')).toBeInTheDocument()
+  })
+
   it('renders the spinner while the query is loading', () => {
     let resolver: (value: FleetTelemetryCoverageResponse) => void = () => {}
     mockedRequest.mockReturnValueOnce(
@@ -142,6 +189,54 @@ describe('FleetTelemetryCoveragePage', () => {
 
     // Resolve so React-Query teardown is clean.
     resolver({ categories: [], destination_totals: {}, orphan_fields: [] })
+  })
+
+  it.each(['idle', 'paused'] as const)('does not infer an empty snapshot from an unresolved %s source', (fetchStatus) => {
+    mockedRequest.mockReturnValue(new Promise<FleetTelemetryCoverageResponse>(() => {}))
+    const client = new QueryClient()
+    const observer = new QueryObserver<FleetTelemetryCoverageResponse>(client, {
+      queryKey: ['coverage-unresolved'],
+      queryFn: async () => makeResponse(),
+      enabled: false,
+    })
+    const pending = observer.getCurrentResult()
+    renderPage({
+      testHookOverride: { ...pending, fetchStatus },
+    })
+
+    expect(screen.getByTestId('coverage-loading')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-destinations-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-summary')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-legend-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-filter-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('coverage-empty')).not.toBeInTheDocument()
+    expect(screen.queryByText('No destinations reported.')).not.toBeInTheDocument()
+    const tiles = screen.getByTestId('coverage-summary').querySelectorAll('[data-operational-metric]')
+    expect(tiles).toHaveLength(6)
+    for (const tile of tiles) {
+      expect(tile).toHaveAttribute('data-value-state', 'missing')
+    }
+    if (fetchStatus === 'paused') {
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    }
+    observer.destroy()
+    client.clear()
+  })
+
+  it('keeps the localized visible filter label after entering a search', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse())
+    renderPage()
+    await screen.findByTestId('coverage-categories')
+
+    const label = 'Filter by field name, destination, or column…'
+    const input = screen.getByLabelText(label)
+    fireEvent.change(input, { target: { value: 'BrakePedal' } })
+
+    // The filter toolbar fades in on mount; wait for the entry animation to
+    // complete before asserting visibility.
+    await waitFor(() => expect(screen.getByText(label, { selector: 'label' })).toBeVisible(), { timeout: 3000 })
+    expect(screen.getByLabelText(label)).toHaveValue('BrakePedal')
+    expect(screen.getByText('Showing 1 of 2 categories')).toHaveAttribute('role', 'status')
   })
 
   it('renders summary stats and categories from the response', async () => {
@@ -161,11 +256,12 @@ describe('FleetTelemetryCoveragePage', () => {
     // 1 unsubscribed-but-routed, 0 orphans. The presence of the stat
     // tiles confirms the summary path is hit; we don't pin exact text
     // here because StatCard's value rendering is a shared concern.
-    expect(screen.getByTestId('coverage-stat-categories')).toBeInTheDocument()
-    expect(screen.getByTestId('coverage-stat-routed')).toBeInTheDocument()
-    expect(screen.getByTestId('coverage-stat-subscribed')).toBeInTheDocument()
-    expect(screen.getByTestId('coverage-stat-unsubscribed')).toBeInTheDocument()
-    expect(screen.getByTestId('coverage-stat-orphans')).toBeInTheDocument()
+    const summary = screen.getByTestId('coverage-summary')
+    expect(summary).toHaveAttribute('data-operational-brief')
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6)
+    for (const label of ['Categories', 'Routed fields', 'Subscribed', 'Routed, not subscribed', 'Orphan fields']) {
+      expect(within(summary).getByText(label).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value')
+    }
 
     // Destination breakdown chips render in descending count order.
     expect(screen.getByTestId('coverage-dest-signal_log')).toBeInTheDocument()
@@ -259,6 +355,47 @@ describe('FleetTelemetryCoveragePage', () => {
     )
   })
 
+  it('keeps all category fields for a trimmed case-insensitive category match and announces the result', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse())
+    renderPage()
+    await screen.findByTestId('coverage-category-driving')
+
+    fireEvent.change(screen.getByTestId('coverage-filter-input'), { target: { value: '  DRIVING  ' } })
+
+    const category = screen.getByTestId('coverage-category-driving')
+    expect(within(category).getByText('VehicleSpeed')).toBeInTheDocument()
+    expect(within(category).getByText('BrakePedal')).toBeInTheDocument()
+    expect(within(category).getByText('brake_pedal')).toBeInTheDocument()
+    expect(within(category).queryByText('No fields match the current filter.')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('coverage-category-climate')).not.toBeInTheDocument()
+    const results = screen.getByText('Showing 1 of 2 categories')
+    expect(results).toHaveAttribute('role', 'status')
+    expect(results).toHaveAttribute('aria-live', 'polite')
+    expect(results).toHaveAttribute('aria-atomic', 'true')
+    expect(screen.getByTestId('coverage-dest-signal_log')).toHaveTextContent('signal_log: 3')
+
+    fireEvent.change(screen.getByTestId('coverage-filter-input'), { target: { value: '' } })
+    expect(screen.getByTestId('coverage-category-climate')).toBeInTheDocument()
+    expect(results).toHaveTextContent('Showing 2 of 2 categories')
+  })
+
+  it('preserves field destination and column search without narrowing the snapshot summary', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse())
+    renderPage()
+    await screen.findByTestId('coverage-category-driving')
+
+    for (const value of [' BRAKEPEDAL ', ' DRIVE_TELEMETRY ', ' BRAKE_PEDAL ']) {
+      fireEvent.change(screen.getByTestId('coverage-filter-input'), { target: { value } })
+      const category = screen.getByTestId('coverage-category-driving')
+      expect(within(category).getByText('BrakePedal')).toBeInTheDocument()
+      expect(within(category).getByText('brake_pedal')).toBeInTheDocument()
+      expect(within(category).queryByText('VehicleSpeed')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('coverage-category-climate')).not.toBeInTheDocument()
+      expect(screen.getByTestId('coverage-dest-signal_log')).toHaveTextContent('signal_log: 3')
+      expect(screen.getByTestId('coverage-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(6)
+    }
+  })
+
   it('refresh button triggers a refetch', async () => {
     mockedRequest.mockResolvedValue(makeResponse())
 
@@ -274,5 +411,46 @@ describe('FleetTelemetryCoveragePage', () => {
     await waitFor(() =>
       expect(mockedRequest.mock.calls.length).toBeGreaterThan(callsBefore),
     )
+  })
+
+  it('keeps categories, field metadata, orphan evidence and applied filters after refresh failure', async () => {
+    const snapshot = makeResponse({ orphan_fields: ['MysteriousField'] })
+    mockedRequest.mockImplementation((path: string) =>
+      path === '/tesla/fleet-telemetry/coverage' ? Promise.resolve(snapshot) : Promise.resolve([]),
+    )
+    renderPage()
+    await screen.findByTestId('coverage-category-driving')
+    fireEvent.change(screen.getByTestId('coverage-filter-input'), { target: { value: 'BrakePedal' } })
+    expect(screen.queryByText('VehicleSpeed')).not.toBeInTheDocument()
+    mockedRequest.mockImplementation((path: string) =>
+      path === '/tesla/fleet-telemetry/coverage'
+        ? Promise.reject(new Error('routing snapshot refresh failed'))
+        : Promise.resolve([]),
+    )
+    fireEvent.click(screen.getByTestId('coverage-refresh-button'))
+    await waitFor(() => expect(screen.getByText('Data may be stale')).toBeInTheDocument())
+
+    const category = screen.getByTestId('coverage-category-driving')
+    expect(within(category).getByText('BrakePedal')).toBeInTheDocument()
+    expect(within(category).getByText('brake_pedal')).toBeInTheDocument()
+    expect(screen.getByText('MysteriousField')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-dest-signal_log')).toHaveTextContent('signal_log: 3')
+    expect(screen.getByTestId('coverage-legend-dual-write')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-filter-input')).toHaveValue('BrakePedal')
+    expect(screen.queryByTestId('coverage-error')).not.toBeInTheDocument()
+  })
+
+  it('shows unknown summary values rather than zero when no routing snapshot ever loaded', async () => {
+    mockedRequest.mockRejectedValue(new Error('routing unavailable'))
+    renderPage()
+    await screen.findByTestId('coverage-error')
+    const summary = screen.getByTestId('coverage-summary')
+    // Unknown readings are omitted from the face (never zero-filled)...
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0)
+    expect(within(summary).getByText('No metric values are available yet.')).toBeInTheDocument()
+    // ...and counted as hidden in the Review-details drawer.
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog', { name: 'Fleet telemetry coverage details' }))
+      .toHaveTextContent('6 empty fields are hidden.')
   })
 })

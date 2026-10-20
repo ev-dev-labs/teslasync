@@ -165,12 +165,21 @@ describe('PowerTrendPanel — state branches', () => {
   it('shows only the loading skeleton while isLoading (header still mounted)', () => {
     const { container } = renderPanel({ isLoading: true });
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    const skeleton = container.querySelector('div[aria-hidden="true"].w-full');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
     expect(heading()).toBeInTheDocument();
     // No other body branch leaks through the loading gate.
     expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
     expect(screen.queryByText(EMPTY_COPY)).toBeNull();
     expect(screen.queryByText('Server error')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByTestId('embedded-chart')).toBeNull();
+    expect(screen.queryByText('6.8')).toBeNull();
   });
 
   it('renders the shared empty state (role=status + copy) when there are no points', () => {
@@ -216,7 +225,17 @@ describe('PowerTrendPanel — branch precedence', () => {
       points: [],
     });
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    const skeleton = container.querySelector('div[aria-hidden="true"].w-full');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
+    expect(heading()).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
+    expect(screen.queryByTestId('embedded-chart')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText('Server error')).toBeNull();
     expect(screen.queryByText(EMPTY_COPY)).toBeNull();
   });

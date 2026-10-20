@@ -2,14 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Activity, Plus } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { GlassPanel, Pagination, Select, type SelectOption } from '@/components/ui';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { BUTTON_BASE, BUTTON_VARIANTS, GlassPanel, Icon, Pagination, Select, type SelectOption } from '@/components/ui';
+import { DataSourceNotice, DataStateNotice, EmptyState, QueryError, Skeleton, StaleRefreshWarning, resolveDataSourceStatus } from '@/components/feedback';
 import { useAutomations, useAutomationHistoryPage } from '@/api/hooks/useAutomations';
 import type { AutomationHistoryStatus } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useDataState } from '@/hooks/useDataState';
+import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { AutomationHistorySummary } from '../components/AutomationHistorySummary';
 import { AutomationHistoryTrend } from '../components/AutomationHistoryTrend';
 import { AutomationHistoryTable } from '../components/AutomationHistoryTable';
@@ -22,7 +25,7 @@ const STATUSES: AutomationHistoryStatus[] = [
 
 export default function AutomationHistoryPage() {
   const { t } = useTranslation();
-  usePageTitle(t('automations.historyPage.title', 'Automation History'));
+  usePageTitle(t('automations.historyPage.title', 'Automation history'));
   const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'automations.history.range',
   });
@@ -40,6 +43,8 @@ export default function AutomationHistoryPage() {
     since: startInstant, until: endInstantExclusive,
   });
   const automations = useAutomations();
+  const historyState = useDataState({ ...query, data: query.data ?? undefined });
+  const rulesState = useDataState(automations);
   const options = useMemo<SelectOption[]>(() => [
     { value: '', label: t('automations.historyPage.allRules', 'All rules') },
     ...(automations.data ?? []).map((rule) => ({
@@ -71,58 +76,110 @@ export default function AutomationHistoryPage() {
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
   const effectivePage = Math.min(page, totalPages);
   const rows = data?.items ?? [];
-  const isInitialLoading = query.isLoading && !data;
-  const initialError = query.isError && !data;
+  const historySource = {
+    id: 'history',
+    label: t('automations.historyPage.title', 'Automation history'),
+    query: { ...query, data: query.data ?? undefined },
+  };
+  const rulesSource = {
+    id: 'rules',
+    label: t('automations.historyPage.filterRule', 'Filter executions by rule'),
+    query: automations,
+  };
+  const isInitialLoading = resolveDataSourceStatus(historySource) === 'loading';
+  const initialError = historyState.fatalError;
 
   useEffect(() => {
     if (data && page > totalPages) updateFilter('page', String(totalPages));
   }, [data, page, totalPages]);
 
   return (
-    <PageContainer
-      title={t('automations.historyPage.title', 'Automation History')}
+    <PageLayout
+      title={t('automations.historyPage.title', 'Automation history')}
       subtitle={t('automations.historyPage.subtitle', 'Review every execution and its outcome across the selected period.')}
       copyLink
-      actions={
-        <Link to="/automations/new" className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[var(--control-border)] bg-[var(--control-bg)] px-3 text-sm text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]">
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          {t('automations.historyPage.new', 'New automation')}
+      primaryAction={
+        <Link
+          to="/automations/new"
+          className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, typography.size.sm,
+            'min-h-11 min-w-11 max-w-full px-3 py-2 md:min-h-9 whitespace-normal')}
+        >
+          <Icon icon={Plus} />
+          <span className="min-w-0 break-words">{t('automations.historyPage.new', 'New automation')}</span>
         </Link>
       }
     >
       <FadeIn>
-        <AutomationHistorySummary query={query} />
+        <AutomationHistorySummary
+          query={query}
+          scope={t('automations.historyBrief.bounds', '{{start}} inclusive → {{end}} exclusive · rule: {{rule}} · status: {{status}}', {
+            start: startInstant, end: endInstantExclusive,
+            rule: automationId ? options.find((option) => option.value === String(automationId))?.label
+              : t('automations.historyPage.allRules', 'All rules'),
+            status: status ? statusOptions.find((option) => option.value === status)?.label
+              : t('automations.historyPage.allStatuses', 'All statuses'),
+          })}
+        />
       </FadeIn>
       <FadeIn delay={0.05}>
         <AutomationHistoryTrend query={query} />
+        <StaleRefreshWarning state={historyState} label={t('automations.historyPage.title', 'Automation history')} />
       </FadeIn>
       <FadeIn delay={0.1}>
         <GlassPanel className="p-4 sm:p-5">
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <Select
-              options={options}
-              value={automationId ? String(automationId) : ''}
-              onChange={(event) => updateFilter('automation_id', event.target.value)}
-              aria-label={t('automations.historyPage.filterRule', 'Filter executions by rule')}
-              className="min-w-44 flex-1 sm:max-w-72"
-            />
-            <Select
-              options={statusOptions}
-              value={status ?? ''}
-              onChange={(event) => updateFilter('status', event.target.value)}
-              aria-label={t('automations.historyPage.filterStatus', 'Filter executions by status')}
-              className="min-w-40 flex-1 sm:max-w-60"
-            />
+          <div className="mb-4 flex flex-wrap items-end gap-3">
+            <div className="w-full min-w-0 sm:flex-1 sm:max-w-72">
+              <Select
+                options={options}
+                value={automationId ? String(automationId) : ''}
+                onChange={(event) => updateFilter('automation_id', event.target.value)}
+                label={t('automations.historyPage.filterRule', 'Filter executions by rule')}
+                aria-label={t('automations.historyPage.filterRule', 'Filter executions by rule')}
+              />
+            </div>
+            <div className="w-full min-w-0 sm:flex-1 sm:max-w-60">
+              <Select
+                options={statusOptions}
+                value={status ?? ''}
+                onChange={(event) => updateFilter('status', event.target.value)}
+                label={t('automations.historyPage.filterStatus', 'Filter executions by status')}
+                aria-label={t('automations.historyPage.filterStatus', 'Filter executions by status')}
+              />
+            </div>
           </div>
-          {automations.isError && (
-            <QueryError error={automations.error} onRetry={() => { void automations.refetch(); }} />
+          <StaleRefreshWarning state={rulesState} label={t('automations.historyPage.filterRule', 'Filter executions by rule')} />
+          {rulesState.fatalError && (
+            <QueryError error={rulesState.fatalError} onRetry={() => { void automations.refetch(); }} />
+          )}
+          {!rulesState.hasData && !rulesState.fatalError && (
+            resolveDataSourceStatus(rulesSource) === 'loading' ? (
+              <Skeleton className="mb-4 h-12 w-full" aria-label={rulesSource.label} />
+            ) : rulesState.isRefreshBlocked ? (
+              <DataSourceNotice sources={[rulesSource]} />
+            ) : (
+              <DataStateNotice
+                state="unavailable"
+                title={rulesSource.label}
+                message={t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+              />
+            )
           )}
           {isInitialLoading ? (
             <div className="space-y-3" aria-label={t('automations.historyPage.loading', 'Loading executions')}>
               {[1, 2, 3, 4].map((key) => <Skeleton key={key} className="h-12 w-full" />)}
             </div>
           ) : initialError ? (
-            <QueryError error={query.error} onRetry={() => { void query.refetch(); }} />
+            <QueryError error={initialError} onRetry={() => { void query.refetch(); }} />
+          ) : !historyState.hasData ? (
+            historyState.isRefreshBlocked ? (
+              <DataSourceNotice sources={[historySource]} />
+            ) : (
+              <DataStateNotice
+                state="unavailable"
+                title={historySource.label}
+                message={t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+              />
+            )
           ) : rows.length === 0 ? (
             <EmptyState
               icon={<Activity className="h-8 w-8" aria-hidden="true" />}
@@ -140,12 +197,9 @@ export default function AutomationHistoryPage() {
               />
             </>
           )}
-          {query.isError && data && (
-            <QueryError error={query.error} onRetry={() => { void query.refetch(); }} />
-          )}
         </GlassPanel>
       </FadeIn>
       <AutomationExecutionDetail id={selectedId} onClose={() => setSelectedId(null)} />
-    </PageContainer>
+    </PageLayout>
   );
 }

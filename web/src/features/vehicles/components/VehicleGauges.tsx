@@ -7,9 +7,11 @@ import { LinearGauge } from '@/components/charts/LinearGauge'
 import { MetricBar } from '@/components/data-display/MetricBar'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion'
-import { fmtNumber } from '@/lib/numberFormat'
+
 import { batteryColor } from '@/lib/colors'
 import type { Vehicle, VehicleState } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 /** Color constants matching original production palette */
 const COLOR = {
@@ -46,18 +48,21 @@ interface VehicleGaugesProps {
 }
 
 export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs, formatDistance } = useUnits()
 
   // Telemetry numerics can arrive absent (missing signal / cold cache) even
-  // though the wire type says `number`. Coalesce to 0 at the point of use so
-  // the SI→display conversions stay finite and the gauges/bars never receive
-  // NaN (which paints a broken arc / an infinite-width bar).
-  const batteryLevel = state.battery_level ?? 0
-  const ratedRange = state.rated_range ?? 0
-  const speed = state.speed ?? 0
-  const chargeRate = state.charge_rate ?? 0
-  const chargerPower = state.charger_power ?? 0
+  // though the wire type says `number`. Absent readings stay null so the
+  // gauges/bars render their unknown state — never a fabricated zero and
+  // never NaN (which paints a broken arc / an infinite-width bar). The
+  // SI→display conversions below are guarded for the same reason.
+  const batteryLevel = isFiniteNumber(state.battery_level) ? state.battery_level : null
+  const ratedRange = isFiniteNumber(state.rated_range) ? state.rated_range : null
+  const speed = isFiniteNumber(state.speed) ? state.speed : null
+  const chargeRate = isFiniteNumber(state.charge_rate) ? state.charge_rate : null
+  const chargerPower = isFiniteNumber(state.charger_power) ? state.charger_power : null
+  const batteryGaugeColor = batteryLevel == null ? COLOR.MUTED : batteryColor(batteryLevel)
 
   const chips = [
     {
@@ -88,13 +93,13 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
 
   // Pre-convert SI values to user-pref numerics so LinearGauge / MetricBar
   // receive matching value/max pairs in the SAME unit.
-  const rangeDisplay = convertDistanceFromSI(ratedRange, unitPrefs.distance)
+  const rangeDisplay = ratedRange == null ? null : convertDistanceFromSI(ratedRange, unitPrefs.distance)
   const rangeMax = convertDistanceFromSI(MAX_RANGE_METERS, unitPrefs.distance)
-  const speedDisplay = convertSpeedFromSI(speed, unitPrefs.speed)
+  const speedDisplay = speed == null ? null : convertSpeedFromSI(speed, unitPrefs.speed)
   const speedMax = convertSpeedFromSI(MAX_SPEED_MPS, unitPrefs.speed)
   // ChargeRate is delivered as distance-per-hour (m/h) — convert through the
   // distance pref, then label as `<unit>/h` to match the Tesla UX.
-  const chargeRateDisplay = convertDistanceFromSI(chargeRate, unitPrefs.distance)
+  const chargeRateDisplay = chargeRate == null ? null : convertDistanceFromSI(chargeRate, unitPrefs.distance)
   const chargeRateMax = convertDistanceFromSI(MAX_CHARGE_RATE_METERS_PER_HOUR, unitPrefs.distance)
 
   return (
@@ -125,11 +130,11 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 max={100}
                 label={t('common.battery', 'Battery')}
                 unit="%"
-                color={batteryColor(batteryLevel)}
+                color={batteryGaugeColor}
                 size={110}
               />
               <LinearGauge
-                value={Math.round(rangeDisplay)}
+                value={rangeDisplay == null ? null : Math.round(rangeDisplay)}
                 max={Math.round(rangeMax)}
                 label={t('common.range', 'Range')}
                 unit={unitPrefs.distance}
@@ -137,11 +142,11 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 size={110}
               />
               <LinearGauge
-                value={Math.round(speedDisplay)}
+                value={speedDisplay == null ? null : Math.round(speedDisplay)}
                 max={Math.round(speedMax)}
                 label={t('common.speed', 'Speed')}
                 unit={unitPrefs.speed}
-                color={speed > 0 ? COLOR.PURPLE : COLOR.DARK}
+                color={speed != null && speed > 0 ? COLOR.PURPLE : COLOR.DARK}
                 size={110}
               />
               <LinearGauge
@@ -159,15 +164,15 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
               <MetricBar
                 value={batteryLevel}
                 max={100}
-                color={batteryColor(batteryLevel)}
-                label={t('common.batteryLevel', 'Battery Level')}
-                sublabel={`${fmtNumber(batteryLevel, 0)}%`}
+                color={batteryGaugeColor}
+                label={t('common.batteryLevel', 'Battery level')}
+                sublabel={batteryLevel == null ? '—' : `${fmtNumber(batteryLevel)}%`}
               />
               <MetricBar
                 value={rangeDisplay}
                 max={rangeMax}
                 color={COLOR.CYAN}
-                label={t('common.estimatedRange', 'Estimated Range')}
+                label={t('common.estimatedRange', 'Estimated range')}
                 sublabel={formatDistance(ratedRange)}
               />
               {state.is_charging && (
@@ -175,7 +180,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                   value={chargeRateDisplay}
                   max={chargeRateMax}
                   color="#10b981"
-                  label={t('common.chargeRate', 'Charge Rate')}
+                  label={t('common.chargeRate', 'Charge rate')}
                   sublabel={`${formatDistance(chargeRate)}/h`}
                 />
               )}

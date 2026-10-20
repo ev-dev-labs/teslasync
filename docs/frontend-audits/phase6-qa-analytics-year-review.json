@@ -1,0 +1,448 @@
+{
+  "item": "phase6-qa-analytics-year-review",
+  "status": "DONE",
+  "disposition": "Source-only QA report delivered; confirmed findings require parent-owned disposition. No source remigration or application acceptance.",
+  "acceptance": "NOTRUN",
+  "reviewedAtUtc": "2026-10-13T20:10:44.4356090Z",
+  "scope": {
+    "page": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+    "route": "/year-review/:year",
+    "versionedWrites": ["docs\\frontend-audits\\phase6-qa-analytics-year-review.json"],
+    "ignoredWrites": ["logs\\phase6-qa-analytics-year-review.log"],
+    "sourceWrites": [],
+    "directMountedFeatureComponents": [
+      "web\\src\\features\\analytics\\components\\year-review-modernization\\YearMonthlyActivity.tsx",
+      "web\\src\\features\\analytics\\components\\year-review-modernization\\YearChargingMix.tsx",
+      "web\\src\\features\\analytics\\components\\year-review-modernization\\YearDriveRecord.tsx",
+      "web\\src\\features\\analytics\\components\\year-review-modernization\\YearFunFacts.tsx",
+      "web\\src\\features\\analytics\\components\\year-review-modernization\\YearRecap.tsx",
+      "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearSavingsBrief.tsx",
+      "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearEnvironmentBrief.tsx",
+      "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearPatternsBrief.tsx"
+    ],
+    "additionalDirectPresentation": [
+      "web\\src\\features\\analytics\\components\\year-review-modernization\\yearReviewPresentation.ts",
+      "web\\src\\components\\ai\\AIYearReviewNarration.tsx"
+    ],
+    "boundaryReads": [
+      "web\\src\\App.tsx:170,564; web\\src\\lib\\routeLoaders.ts:61; web\\src\\lib\\routeRegistry.ts:288",
+      "web\\src\\lib\\workspaceScope.ts; web\\src\\hooks\\useSelectedVehicle.ts",
+      "web\\src\\api\\hooks\\useAnalytics.ts:274-283; web\\src\\api\\hooks\\useVehicles.ts:73-81",
+      "web\\src\\api\\types.ts:2835-2918; web\\src\\api\\client.ts:73-94,264-268; web\\src\\lib\\resilience.ts:23-41",
+      "web\\src\\hooks\\useDataState.ts; web\\src\\api\\dataState.ts:130-265; web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "web\\src\\hooks\\useUnits.ts; web\\src\\hooks\\useFormatting.ts; web\\src\\hooks\\useNumberFormatting.ts; web\\src\\hooks\\useOperationalMetrics.tsx",
+      "web\\src\\lib\\operationalMetrics.tsx; web\\src\\lib\\metric-reference\\formatMetric.ts; web\\src\\lib\\numberFormat.ts:60-63",
+      "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx; CardGrid.tsx; layoutPolicy.ts; ChartCard.tsx",
+      "web\\src\\components\\charts\\EmbeddedChart.tsx; ChartContainer.tsx source accessibility/control excerpts",
+      "web\\src\\components\\data-display\\stat-reference\\StatGroup.tsx; web\\src\\components\\motion\\FadeIn.tsx",
+      "web\\src\\components\\ai\\AIFeatureCard.tsx:245-330; web\\src\\hooks\\useAiStream.ts source identity/URL excerpts",
+      "internal\\api\\router.go:3210,3362-3363,3942,5050; internal\\api\\ai_routes.go:134,172-176",
+      "internal\\api\\yearreview\\handler.go; internal\\api\\httpx\\json.go:16-21",
+      "web\\src\\i18n\\en.json read-only literal-key lookup"
+    ],
+    "exclusions": "No unmounted legacy YearSavings/YearEnvironment/YearPatterns implementation review, repository-wide dependency traversal, test execution, backend changes, catalog changes, queue/config changes, Git, installations, servers, real data, API calls, browser/native actions, extensions or custom tooling."
+  },
+  "exactQaAlreadyDoneCheck": {
+    "checkedFirst": true,
+    "command": "C01",
+    "currentExactRowStatus": "[ ]",
+    "currentExactRow": "| [ ] | 6 | phase6-qa-analytics-year-review | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-analytics-year-review.json | phase5-page-analytics-year-review | 0 | - | - | Next accepted-page QA under user sweep; actual YearReviewPage/direct support only, calendar year independent of workspace range, SI/sign/denominators/trust/unknown-zero/preferences/actions/sections. Sole report/log writes; source findings separate from candidates, no code/tests/API/browser/native/fullsuite or completed-source rework. |",
+    "existingExactReportAtIntake": false,
+    "acceptedSourceDependency": {
+      "item": "phase5-page-analytics-year-review",
+      "queueStatus": "[x]",
+      "commitFromQueueOnly": "ef5c4a69a395dd262b670375bb13afbdcb4ca0b3",
+      "authority": "Accepted SOURCE ONLY. Historical Vitest exit 1 had zero discovery/execution, not a test pass. Source acceptance did not establish native/application QA."
+    },
+    "priorInventoryAudit": "docs\\frontend-audits\\audit-page-055.json, item audit-page-055 [x], historical source audit with runtime unverified",
+    "decision": "Exact Phase6 QA was not already done. Preserve the accepted page and completed source migration; write this new report only. Do not repeat Phase5."
+  },
+  "authority": {
+    "read": [
+      "migration-queue.md exact QA, accepted source and prior audit rows",
+      "docs\\orchestrator-loop.md entire sole playbook",
+      "docs\\frontend-mission.md sections 43 and 44",
+      "docs\\frontend-design-contract.md MDC-001/002, restrained foundations, MDC-026/033/040-046/060/070",
+      "docs\\session-handoff.md current Phase6/source-versus-acceptance conventions",
+      ".github\\instructions\\react-frontend.instructions.md applicable frontend sections",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\skills\\audit-violations\\audit.sh",
+      ".github\\skills\\verify-api-hooks\\verify.sh"
+    ],
+    "precedence": "Current SI-cutover/design contract overrides legacy source-unit compatibility/neon examples in older frontend/unit guidance. Neither old examples nor this QA authorizes legacy helpers, payload renames or a new converter.",
+    "missingGuidance": ".github\\prompts\\db-refactor\\phase-48-si-canonical\\0000-methodology.prompt.md did not exist at the specified path. No reconstruction or unit-field edits attempted.",
+    "scriptLimits": "audit.sh was inspected, not executed: it includes prohibited global npx tsc --noEmit. verify.sh was inspected, not executed: this assignment excludes custom-tool execution; the three direct endpoint boundaries were checked literally instead.",
+    "orchestration": "Parent only; no queue, claim, phase, worker, server or scheduling decisions made here."
+  },
+  "workspaceAndCalendarScope": {
+    "sourceAssessment": "Independent calendar-year business scope is preserved, not a missing shared-range migration.",
+    "routeEvidence": "App.tsx:564 mounts year-review/:year; App.tsx:170 and routeLoaders.ts:61 keep lazy loading.",
+    "range": "workspaceScope.ts RANGE_ENABLED_PATHS omits /year-review/:year and concrete /year-review/2026. getWorkspaceRouteScope only enables exact listed range paths, so range=false. The page intentionally does not consume useRangeState or add a second date picker.",
+    "vehicle": "No year-review vehicle-disabled path/prefix exists, so vehicle=true. YearReviewPage.tsx:50-56 consumes useSelectedVehicle; useSelectedVehicle.ts:43-77 validates positive IDs and resolves URL > valid persisted selection > first fleet vehicle.",
+    "navigation": "YearReviewPage.tsx:60-62 preserves effective vehicle_id on previous/next year navigation. Shared selection writes the URL/store and repairs invalid/deleted IDs. Current/future next button disable and browser-back Close remain.",
+    "bounds": "Direct hook sends year and vehicle_id only. Handler.go:103-104 uses [January 1 UTC, next January 1 UTC), not workspace from/to. No invented request bounds or timezone parameter.",
+    "limitations": "Actual header/mobile-drawer rendering, selection races and the database session timezone were not exercised. Server calendar bounds and SQL grouping timezone need not be identical; see candidate C05."
+  },
+  "literalApiBoundaries": [
+    {
+      "method": "GET",
+      "caller": "web\\src\\api\\hooks\\useAnalytics.ts:274-283",
+      "literal": "/analytics/year-review?year=${year}&vehicle_id=${encodeURIComponent(vehicleId)}",
+      "optionalSegment": "vehicle_id segment is conditional, but enabled: !!vehicleId prevents an unselected request.",
+      "route": "internal\\api\\router.go:3210 /api/v1 parent and :3942 GET /analytics/year-review",
+      "contract": "Key ['year-review', year, vehicleId]; AbortSignal forwarded; STATIC stale time; raw response retained; no display conversion in hook.",
+      "sourceMatch": true
+    },
+    {
+      "method": "GET",
+      "caller": "web\\src\\api\\hooks\\useVehicles.ts:73-81",
+      "literal": "/vehicles",
+      "route": "internal\\api\\router.go:3210,3362-3363 /api/v1 + /vehicles + GET /",
+      "contract": "Shared fleet query, AbortSignal, FAST stale time and safeArray. Page and selected-vehicle hook reuse it.",
+      "sourceMatch": true
+    },
+    {
+      "method": "POST",
+      "caller": "web\\src\\components\\ai\\AIYearReviewNarration.tsx:18-30",
+      "literal": "/ai/analytics/year-in-review/narrate",
+      "route": "internal\\api\\router.go:3210,5050 mounts internal\\api\\ai_routes.go:134 /ai and :176 POST /analytics/year-in-review/narrate",
+      "contract": "Explicit user action through canonical useAiStream; body vehicle_id and previous calendar year; positive-ID gate; vehicle/default-year scopeKey. No request executed.",
+      "sourceMatch": true
+    }
+  ],
+  "apiBoundaryLimits": "Three direct literal endpoint matches are not a full transitive settings/AI capability/authentication/backend API audit. Client.ts:90-94 adds /api/v1; canonical AI stream owns its prefix. No double prefix or camelCase query parameter was found in the bounded page/direct-support scan.",
+  "countsAndDenominators": {
+    "totalDrives": "Handler.go:123-136 counts all completed, positive-distance drives whose started_at is inside the full UTC year. No limit/offset/page-local total. Active/zero-distance drives are deliberately excluded.",
+    "totalCharges": "Handler.go:171-181 counts all completed charging sessions whose started_at is inside the full UTC year. Monthly and connector aggregations use the same calendar bounds.",
+    "monthly": "Handler.go:266-326 constructs all twelve months in month order. Missing months are zero-filled; failed secondary aggregations are not distinguished from no activity (F04).",
+    "weekly": "Handler.go:358-374 divides past-year drives by 52; current-year drives by elapsed UTC weeks, with a one-week minimum. Future-year elapsed<=0 keeps 52. Not a uniform full-calendar-year denominator (F05).",
+    "distancePerDrive": "Handler.go:376-379 divides total distance by the same qualifying completed positive-distance drive count, guarding zero count.",
+    "efficiency": "Handler.go:147-165 uses unweighted AVG of per-drive Wh/km, only distance>1609.344m and energy_used_wh>0. It is not total-energy/total-distance fleet efficiency; no qualifying observations become 0.",
+    "chargingMix": "Handler.go:386-427 computes percentage of successfully counted completed sessions, not energy share. Tesla-prefixed charger_type is Supercharger; every other non-null type is DC fast; null is AC/other. Physical connector classification accuracy is not established by source-only inspection.",
+    "plugInSoc": "Handler.go:429-436 excludes valid 0% observations and COALESCEs no qualifying average to 0 (F07).",
+    "coverage": "No observation-coverage denominator, error/partial metadata or timezone is returned. Page brief explicitly says coverage is not reported; it does not claim measured completeness."
+  },
+  "states": {
+    "initial": "YearReviewPage.tsx:71-89 retains each shell and source-shaped skeleton while fleet selection or year data is pending.",
+    "fleetFatal": "YearReviewPage.tsx:174 identifies Fleet and provides its own refetch. Gated cards say year evidence unavailable instead of misclassifying fleet failure as a resolved empty list.",
+    "reviewFatal": "YearReviewPage.tsx:79,91,199-201 uses fatalError without retained data and individual Retry; unrelated fleet and AI surfaces remain mounted.",
+    "retainedRefreshFailure": "YearReviewPage.tsx:57,77,176-178 retains data, charts, records, recap and impact cards; compact review retry warns instead of replacing the payload. Only fatalError is passed into chart frames.",
+    "pausedWithRetainedData": "dataState.ts:202-265 marks paused retained data stale/isRefreshBlocked; page keeps it and StaleRefreshWarning exposes a nonblocking status/retry without asserting an offline cause.",
+    "pausedBeforeFirstData": "Pending query remains skeleton; the page has no explicit paused-initial recovery message. Whether the shared shell conveys an actionable pause remains a runtime candidate, not a tested failure.",
+    "authoritativeNoActivity": "YearReviewPage.tsx:64,179-183 requires both resolved counts to be exactly zero and shows an informational year-navigation hint. All six section shells remain.",
+    "optionalEmpty": "Empty charts use existing chart-frame placeholders; null record uses /drives recovery; absent comparisons use an explicit no-facts LayoutCard; empty/unresolved fleet offers /vehicles recovery.",
+    "unknown": "Highlight/extreme OperationalBrief inputs preserve null/undefined and numeric validator displays missing/invalid states. Backend zero-sentinels and specialist text metrics can still defeat this protection (F02-F04 and candidate C04).",
+    "disabled": "Next year is disabled at/after browser-local currentYear; narration requires a positive vehicle ID and is disabled while streaming.",
+    "ai": "Existing gated, explicit-action streaming surface remains. No AI output, off-mode, cancellation, native authentication or provider state was exercised."
+  },
+  "sections": [
+    {"id": "year-review-highlights", "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx", "lines": [187,192], "sourceContent": "Six highlight metrics: distance, drives, energy, charges, savings, CO2; missing data adds gate recovery without removing the Section."},
+    {"id": "year-review-activity", "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx", "lines": [196,206], "sourceContent": "Monthly drives/distance chart with energy table column, retained legend state/export; charging connector mix with session/SOC caption, legend and table alternative; fleet recovery action."},
+    {"id": "year-review-impact", "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx", "lines": [211,219], "sourceContent": "Savings plus gas/electric bars and coffee estimate; environment plus tree estimate; favorite day/peak hour and weekly/distance/efficiency averages. Current data path no longer duplicates outer impact LayoutCard chrome."},
+    {"id": "year-review-records", "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx", "lines": [225,242], "sourceContent": "Four record shells, addresses/date/distance/duration/efficiency and three extreme metrics. Producer defects/unavailable efficient records do not mean the page deleted the sections."},
+    {"id": "year-review-facts", "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx", "lines": [248,254], "sourceContent": "Comparison list/card grid with server labels/values and decorative emojis; explicit optional-empty placeholder."},
+    {"id": "year-review-recap-section", "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx", "lines": [259,267], "sourceContent": "Vehicle/year identity, five recap metrics, positive savings summary and original screenshot guidance; independently gated AI narration. No invented screenshot-download feature."}
+  ],
+  "actions": {
+    "retainedInSource": [
+      "Previous year; next year with future disable; Close via navigate(-1)",
+      "Fleet retry; year fatal/refresh retry; retained/paused refresh notice",
+      "Go to vehicles recovery; View drives for missing records",
+      "Monthly legend toggles keyed year-monthly-chart and canonical chart export menu",
+      "OperationalBrief/StatGroup existing evidence/details presentation",
+      "Screenshot-to-share guidance; explicit gated Ask Helix narration"
+    ],
+    "limits": "Charging ChartCard/EmbeddedChart does not opt into image export/fullscreen, consistent with current source. Monthly data/dataColumns support alternatives but do not by themselves prove a CSV export action. No action was clicked."
+  },
+  "displayAndPreferences": {
+    "wire": "Existing year-review endpoint/type contract carries derived SI distance_km, energy_kwh, speed_kmh, duration_min and efficiency_wh_km, with Celsius and kg. This is a source-confirmed SI-floor exception to MDC-045, not a page-only rename authorization. Hook/cache values are not converted.",
+    "displayBridge": "Page.tsx:105-121 adapts km->m, kWh->Wh and km/h->m/s before shared physical formatting. Patterns convert Wh/km->Wh/m for numeric metrics; display labels follow distance preference. These conversions are dimensionally consistent with the declared current endpoint.",
+    "physicalSigns": "Celsius negatives and numeric signed currency are accepted by shared finite-number formatter; useUnits converts temperature only at display. Source savings clamps and positive-only efficiency policy remain explicit (F06 and record/specialist limitations). No absolute-value rewrite was introduced.",
+    "locale": "useUnits derives saved locale/precision; useNumberFormatting subscribes to formatter preferences; monthShortLabel uses locale; currency retains saved symbol rather than guessing an ISO code.",
+    "specialistRounding": "Existing record/recap/environment/pattern integer rounding and monthly rounded values remain. Duration uses compact h/m text. These are source-preserved policies, not proof that every setting applies to every specialist display.",
+    "timezone": "Backend full-year bounds are UTC. Record date strings and peak-hour/day fields lack explicit timezone metadata. Page correctly does not invent a timezone conversion; full timezone/localization acceptance remains unverified.",
+    "canonicalNeeds": "Any coordinated endpoint/type SI-floor convergence belongs to a separately authorized integration owner after reading the actual current methodology. Preserve raw values, signs and every section; no legacy helpers or dual-shape adapter proposed here."
+  },
+  "sourceAccessibilityAndResponsiveness": {
+    "supported": [
+      "Localized previous/next/close accessible names and min-h-11/min-w-11 targets at Page.tsx:145-169; decorative Icon owner reused.",
+      "Six named Section IDs; CardGrid named groups preserve source order and measured-container stacking.",
+      "PageLayout adds min-w-0; CardGrid/layoutPolicy keeps one-column phone, six-column tablet, twelve-column desktop and 200/240/280 chart heights.",
+      "Record addresses, recap identities and comparison text use min-w-0/break-words; action rows and connector legend wrap.",
+      "Monthly and charging charts provide descriptive ariaLabel plus data/dataColumns; canonical ChartContainer retains table alternative and named group for focusable monthly legend.",
+      "Facts use list/listitem roles; decorative emoji/tree icons are aria-hidden.",
+      "FadeIn and chart components consume reduced-motion preference. Stale notices use polite status semantics.",
+      "Shared AI Button retains named/busy/disabled semantics and mobile minimum height; the older audit's bespoke cyan CTA issue is not present in the inspected current AIFeatureCard."
+    ],
+    "notProven": "Actual layout/overflow, focus/keyboard/announcements, list semantics as exposed by assistive technology, all composed contrasts, forced colors, 200% text, RTL, long translations, themes and native/mobile hosts.",
+    "requiredFutureMatrix": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "observability": "Applicable guidance read. Page/direct presentation inspection does not show added RUM bootstrap, ad-hoc logging or direct page fetch. Canonical AI streaming is an existing sanctioned hook. No telemetry emitted and no transitive tracing/SLO audit claimed."
+  },
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "severity": "medium",
+      "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+      "lines": [42,43],
+      "mechanism": "Number(yearParam) || currentYear accepts fractions, negatives and Infinity and silently substitutes the current year for nonnumeric/zero input. The invalid value flows to title, period, hook and goYear. Backend handler.go:93-97 accepts only an integer 2010..2100.",
+      "narrowOwner": "Separately assigned YearReviewPage calendar-param/navigation boundary owner, coordinated with the existing handler year contract only.",
+      "needs": "Validate the literal year against the actual integer contract and provide truthful invalid-scope recovery; retain independent calendar scope and effective vehicle.",
+      "evidenceLimit": "Deterministic source branch; no invalid URL or HTTP request exercised."
+    },
+    {
+      "id": "F02",
+      "severity": "high",
+      "file": "internal\\api\\yearreview\\handler.go",
+      "lines": [46,54],
+      "mechanism": "driveHighlight has no JSON tags. httpx/json.go:16-21 uses ordinary encoding/json, so populated records serialize DriveID/Date/DistanceKm/DurationS/StartAddress/EndAddress/EfficiencyWhKm. api/types.ts:2835-2844 and YearDriveRecord.tsx:22-26,35-45 expect drive_id/date/distance_km/duration_min/start_address/end_address/efficiency_wh_km. resilience.ts:23-41 only adds snake->camel aliases, not Pascal->snake. Duration is additionally seconds versus expected minutes. A populated record therefore reads as zero distance/duration and absent addresses/date/efficiency.",
+      "narrowOwner": "Year-review highlight serialization contract owner: handler driveHighlight/result boundary plus its directly corresponding YearReviewDriveHighlight type and record consumer, under a separate coordinated claim.",
+      "needs": "Reconcile the exact serialized shape and physical duration unit; do not mask it with a compatibility adapter, broaden to all driving models or remigrate the page.",
+      "evidenceLimit": "Producer/encoder/consumer source chain confirmed; no payload fetched and no serializer/test/browser execution."
+    },
+    {
+      "id": "F03",
+      "severity": "high",
+      "file": "internal\\api\\yearreview\\handler.go",
+      "lines": [477,479],
+      "additionalEvidence": "handler.go:123-136 nullable MAX/MIN aggregates; :502-505 derefFloat(nil)=0; YearReviewPage.tsx:114-123.",
+      "mechanism": "A year with no qualifying drive speed/temperature observations returns fastest=0 and hottest/coldest=0 rather than null. Page numeric metrics then render measured zero speed and 0 degrees, defeating the correct frontend missing-value guard. Zero Celsius is a valid observation, not an absence marker.",
+      "narrowOwner": "Year-review extreme-field nullability/serialization owner and directly matching YearReview type only.",
+      "needs": "Preserve absent versus measured zero in extreme response fields without altering valid negative temperatures or display conversion.",
+      "evidenceLimit": "No-observation branch established by source; no database query executed."
+    },
+    {
+      "id": "F04",
+      "severity": "high",
+      "file": "internal\\api\\yearreview\\handler.go",
+      "lines": [266,326],
+      "additionalEvidence": "handler.go:147-165,329-355,386-436,497; YearReviewPage.tsx:54-58,126-137.",
+      "mechanism": "Secondary monthly/efficiency/pattern/type/SOC queries may fail after headline success. Preinitialized zero months/default values remain, several query or Scan failures are ignored, and the handler still emits HTTP 200 without partial/error provenance. Frontend useDataState consequently treats the payload as recorded/available evidence, not a retained refresh error or partial source. Successful no-activity and failed computation become indistinguishable.",
+      "narrowOwner": "Year-review secondary-aggregation failure/availability response contract owner, with direct page trust mapping only if metadata is approved.",
+      "needs": "Make per-aggregate unavailability explicit; preserve successful neighbors and do not turn a failed secondary computation into authoritative zero activity.",
+      "evidenceLimit": "Error paths confirmed in source; no failure injected and no claim that a current database failure occurred."
+    },
+    {
+      "id": "F05",
+      "severity": "medium",
+      "file": "internal\\api\\yearreview\\handler.go",
+      "lines": [358,374],
+      "additionalEvidence": "YearPatternsBrief.tsx:21-22,41-42; YearMonthlyActivity.tsx:52.",
+      "mechanism": "avg_drives_per_week uses fixed 52 for completed calendar years, elapsed UTC weeks for the current year and a one-week floor, while the response/UI describes calendar-year averages without exposing that denominator. A full non-leap/leap year has 365/7 or 366/7 weeks, not exactly 52. This is a confirmed mixed denominator/interpretation boundary, not a page-local count defect.",
+      "narrowOwner": "Year-review weekly-denominator policy/metadata owner; existing patterns and monthly subtitle copy owners only after policy decision.",
+      "needs": "Declare and preserve the intended full-year versus elapsed-year denominator and its scope; parent must decide any behavior change before source edits.",
+      "evidenceLimit": "Formula and absent denominator metadata confirmed; desired product policy and runtime values are not inferred."
+    },
+    {
+      "id": "F06",
+      "severity": "medium",
+      "file": "internal\\api\\yearreview\\handler.go",
+      "lines": [204,211],
+      "additionalEvidence": "handler.go:174,300 positive-only cost CASE; YearRecap.tsx:41-43 positive-only savings summary.",
+      "mechanism": "Gas-equivalent minus electric cost is clamped to zero when negative, and nonpositive charging cost values are dropped before totaling. Negative savings or valid cost credits cannot survive this endpoint. Recap also hides nonpositive savings. Shared currency formatting itself can preserve signed values; the sign loss is upstream/domain policy.",
+      "narrowOwner": "Year-review savings/net-cost sign policy owner, plus recap conditional copy only if the signed contract changes.",
+      "needs": "Explicitly decide loss-versus-savings and valid-credit semantics; do not silently abs/clamp a signed raw value or change existing policy during QA.",
+      "evidenceLimit": "Source clamping/filtering confirmed; whether persisted negative costs represent credits is a product/data-contract question, not asserted."
+    },
+    {
+      "id": "F07",
+      "severity": "medium",
+      "file": "internal\\api\\yearreview\\handler.go",
+      "lines": [429,436],
+      "additionalEvidence": "YearChargingMix.tsx:32-36.",
+      "mechanism": "AVG(start_soc_pct) filters start_soc_pct>0, excluding a physically valid 0% start from the denominator. No qualifying observation or a Scan/query failure leaves the same numeric zero shown by the plug-in SOC caption. Session count and SOC observation count are not the same denominator.",
+      "narrowOwner": "Year-review plug-in SOC aggregate validity/nullability owner; direct charging caption owner for missing-SOC display.",
+      "needs": "Distinguish unknown from valid 0% and declare the SOC observation denominator without substituting total sessions.",
+      "evidenceLimit": "Filter/default branch confirmed; no real session data inspected."
+    },
+    {
+      "id": "F08",
+      "severity": "medium",
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearPatternsBrief.tsx",
+      "lines": [18,19],
+      "additionalEvidence": "YearPatternsBrief.tsx:36-38; yearReviewPresentation.ts:10-24; YearDriveRecord.tsx:45; handler.go:236,339,439-453; YearFunFacts.tsx:22-25.",
+      "mechanism": "Peak hour is always a wrapped 12-hour AM/PM form, including unknown/nonfinite -> midnight; favorite weekday is rendered as server English. Record date is emitted/displayed as an unlocalized YYYY-MM-DD string and compact duration uses literal h/m. Comparisons are preformatted English, dollar-prefixed and nonlocalized numeric strings rendered verbatim. Catalog-key coverage for surrounding UI cannot localize those server-owned strings.",
+      "narrowOwner": "Year-review specialist temporal formatting owner (PatternsBrief/recordDuration/DriveRecord) and separately coordinated semantic comparison-response/localization owner; canonical catalog integration remains parent-only.",
+      "needs": "Preserve calendar meaning and specialist rounding while using existing locale/temporal owners; do not invent timezone conversion, recase user data or guess an ISO currency from a symbol.",
+      "evidenceLimit": "Forced formatting and English response literals confirmed. No locale, timezone or catalog-runtime behavior executed."
+    },
+    {
+      "id": "F09",
+      "severity": "medium",
+      "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearMonthlyActivity.tsx",
+      "lines": [81,84],
+      "additionalEvidence": "YearChargingMix.tsx:24-26,52; YearSavingsBrief.tsx:35-38; C03 seven literal-hex matching lines.",
+      "mechanism": "Two monthly series, three connector colors and two cost bars use literal hex fills rather than the existing saved palette/semantic owner. Stable connector identity is preserved, but saved chart palette/theme presentation cannot govern these literals. This is a source-confirmed preference/color-ownership bypass, not a measured contrast or visual failure.",
+      "narrowOwner": "Three separate narrow existing consumer color-prop owners: YearMonthlyActivity, YearChargingMix and YearSavingsBrief. Reuse the current palette/semantic API; no new palette engine.",
+      "needs": "Parent may assign bounded palette adoption preserving series identity, legend persistence, values and all seven meanings.",
+      "evidenceLimit": "Seven source literals confirmed. Actual light/dark/custom/forced-colors contrast remains candidate C02."
+    },
+    {
+      "id": "F10",
+      "severity": "medium",
+      "file": "web\\src\\components\\ai\\AIYearReviewNarration.tsx",
+      "lines": [18,30],
+      "additionalEvidence": "AIYearReviewNarration.tsx:42-44,59-61; YearReviewPage.tsx:265-267.",
+      "mechanism": "Narration intentionally posts the previous browser-local calendar year, independently of route year, but description says it recaps the slide data above. The existing HelperText does label the actual defaultYear; therefore this is conflicting scope description, not an absent year label. Visiting another route year does not change the narration body/scopeKey.",
+      "narrowOwner": "Existing AIYearReviewNarration scope-description owner with serialized canonical catalog integration; no AI policy/body change authorized.",
+      "needs": "Make independent previous-year scope truthful in localized description; preserve current body/default and positive-ID/scope cancellation policy unless parent authorizes an explicit-year API.",
+      "evidenceLimit": "Body/copy source mismatch confirmed; no generation or stream performed."
+    },
+    {
+      "id": "F11",
+      "severity": "medium",
+      "file": "internal\\api\\yearreview\\handler.go",
+      "lines": [262,264],
+      "additionalEvidence": "handler.go:475-476; YearReviewPage.tsx:231-239; YearDriveRecord.tsx:28-31.",
+      "mechanism": "mostEfficient and leastEfficient are declared nil and never assigned before serialization. Both efficient-record cards always enter the generic 'No drive data for this year' branch, even for years with qualifying drives and a computed average efficiency. The page retains the sections, but producer unavailability is misdescribed as no drive data.",
+      "narrowOwner": "Year-review efficient-record availability/production owner; direct record empty-reason mapping only under a new bounded claim.",
+      "needs": "Parent must decide supported record capability versus explicit unavailable reason. Do not fabricate records, silently hide either section or rerun the accepted source migration.",
+      "evidenceLimit": "Always-nil producer path confirmed; no promise that restoring these records is within this QA scope."
+    }
+  ],
+  "runtimeCandidates": [
+    {
+      "id": "C01",
+      "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearChargingMix.tsx",
+      "lines": [61,63],
+      "candidate": "Fixed 52/82px donut radii inside the 200px phone plot, translated footer labels and narrow allocated CardGrid containers may crowd or clip.",
+      "requiredEvidence": "Mounted 320/375/430 and narrow desktop-container review, long labels, RTL and 200% text; no source-only promotion to a clipping finding.",
+      "owner": "YearChargingMix/canonical chart sizing acceptance owner"
+    },
+    {
+      "id": "C02",
+      "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearMonthlyActivity.tsx",
+      "lines": [81,84],
+      "candidate": "Actual contrast/CVD differentiation, focus outlines, forced-colors table exposure and restrained appearance of the literal chart/bar colors remain unmeasured.",
+      "requiredEvidence": "Composed light/dark/saved custom theme and forced-colors measurements, keyboard/focus and reduced-motion review. F09 confirms palette bypass only.",
+      "owner": "Existing chart/palette/semantic visual acceptance owners"
+    },
+    {
+      "id": "C03",
+      "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+      "lines": [71,89],
+      "candidate": "Paused initial loads may remain an unqualified skeleton; fleet selection/invalid-ID repair, retained refresh retry, browser-back and AI lifecycle could expose runtime-only transition/focus issues.",
+      "requiredEvidence": "Existing synthetic bounded runtime scenarios and keyboard/source-state transitions, including paused before/after data and route/vehicle changes; no new fixtures or tests authored here.",
+      "owner": "YearReviewPage/shared trust and selection acceptance owners"
+    },
+    {
+      "id": "C04",
+      "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearRecap.tsx",
+      "lines": [35,39],
+      "candidate": "For malformed/partial payloads, safeNumber and ??0 convert absent/invalid values to zero, while text metrics bypass numeric raw validation; record efficiency also hides <=0. Similar prerequisites govern coffee/tree estimates. Required TypeScript fields do not establish whether such payloads actually occur.",
+      "requiredEvidence": "Confirm producer nullability and existing synthetic null/NaN/negative-valid/extreme cases before assigning further frontend guards. F02/F03 are independently source-proven producer defects, not this candidate's runtime proof.",
+      "owner": "Direct YearReview payload validation/specialist numeric boundary owner"
+    },
+    {
+      "id": "C05",
+      "file": "internal\\api\\yearreview\\handler.go",
+      "lines": [270,277],
+      "candidate": "UTC full-year filters coexist with EXTRACT month/day/hour from timestamps without an explicit grouping timezone. Database session timezone and user/vehicle timezone interpretation are not established.",
+      "requiredEvidence": "Integration contract plus bounded year-edge/leap-year/timezone evidence; no database/settings/API access authorized here.",
+      "owner": "Year-review calendar/grouping timezone contract owner"
+    }
+  ],
+  "preservation": {
+    "baselineAuthority": "Read-only historical docs\\frontend-audits\\audit-page-055.json plus the accepted Phase5 queue receipt; not a fresh Git original-source extraction.",
+    "baselinePageLines": 262,
+    "baselinePageAndMountedFeatureLines": 678,
+    "currentPageLines": 272,
+    "currentMountedFeatureLinesExcludingPage": 416,
+    "currentPageAndMountedFeatureLines": 688,
+    "sameFeatureAtLeast70PercentOfBaseline": true,
+    "currentPresentationHelperLinesExcludedFromComparison": 24,
+    "sharedAiLinesExcludedFromComparison": 68,
+    "baselineSectionCountFromAcceptedReceipt": 6,
+    "currentSectionCount": 6,
+    "currentLiteralGlassPanelCountInElevenFileScan": 0,
+    "currentLiteralChartContainerCount": 1,
+    "currentLiteralChartCardCount": 1,
+    "surfaceInterpretation": "Modernized Section/CardGrid/LayoutCard/OperationalBrief owners replace literal page GlassPanel usage. Zero GlassPanel literals is not zero mounted surfaces. Source section/action parity does not establish rendered parity.",
+    "sourceSha256AtC03": {
+      "YearReviewPage.tsx": "214D77F874F97810690966EF8B8037469DD35D27C3D8CBFFC5C96479ECA32368",
+      "YearMonthlyActivity.tsx": "8B7BDFCF5F2BA65B8AFC6B9CD9C1CBA5FF2C487E8BE8FCD4D65123453DEA5658",
+      "YearChargingMix.tsx": "41222C789BEDA9AEA4A8EACFCEF21E323594A63527D3FCFF202D334A388C729A",
+      "YearDriveRecord.tsx": "127C186B03E95DA925E50A83B5031E368CB0DAE53B90C2362C21588713CA39BF",
+      "YearFunFacts.tsx": "3234C6CA36AC25D58147D44AAA0E8596F4D35855347951988DC2C3F22221F670",
+      "YearRecap.tsx": "C272B03C2966048DBEBE75BF5546EDE18F3AF7E349B0484186C8E4CA2E732F18",
+      "yearReviewPresentation.ts": "7D4B5268AC9BA4FCDEC63C20B64D63E065461D10D8C1415DC5D4AF7B86997BCA",
+      "YearSavingsBrief.tsx": "0794DEA5EEFAABC3925C3A8DC0DF558634E1192E9A67A08417C7EA04BC922A2E",
+      "YearEnvironmentBrief.tsx": "A5AEB29B49A652871CFE79091AC5A064148D7F750A852EFCA4365E2FF2388CC7",
+      "YearPatternsBrief.tsx": "D824AA3820A504A10E24AF6E06E64B38CD352E4DE83D43B278324F64B0234E8F",
+      "AIYearReviewNarration.tsx": "6E6109BF1E52BDD0A95A516B15DF47665758F2D188DE8F7F53CBC722E332C14E"
+    }
+  },
+  "executedSourceChecks": {
+    "fileCount": 11,
+    "rawControlsCaseSensitive": 0,
+    "staticCssVariableInlineStyleMatchingLines": 0,
+    "directVendorImportMatchingLines": 0,
+    "oldApiImportMatchingLines": 0,
+    "doublePrefixCallMatchingLinesInDirectPresentation": 0,
+    "camelCaseQueryMatchingLines": 0,
+    "anyTypeMatchingLines": 0,
+    "duplicateLocalWorkspaceControlMatchingLines": 0,
+    "neonBodyGlowMatchingLines": 0,
+    "dynamicNativeInlineStyleMatchingLines": 1,
+    "allowedStyle": "YearChargingMix.tsx:52 style={{ backgroundColor: s.color }} is dynamic connector identity, not a static CSS-variable violation.",
+    "rechartsWrapperStyle": "YearMonthlyActivity.tsx:80 wrapperStyle={{ fontSize: 12 }} is a vendor wrapper API, not native inline style.",
+    "literalHexMatchingLines": 7,
+    "literalTranslationKeys": 83,
+    "missingCanonicalEnglishKeys": 0,
+    "catalogLimit": "Read-only en.json key existence only; split manifest/runtime loading, translations, interpolation/plurals and rendered locale behavior were not validated.",
+    "scanLimit": "Lexical matching-line counts on the exact eleven source files, not a full linter/AST/global violations gate. Hook literals and router boundaries were inspected separately.",
+    "correction": "C03 Select-String was case-insensitive: four shared Button lines appeared as raw-control candidates and wrapperStyle appeared as a second inline-style candidate. C04 -CaseSensitive corrected raw controls to 0 and native styles to 1; neither false positive is reported as a violation."
+  },
+  "commands": [
+    {"id": "C01", "shellId": "5587", "command": "Get-Date; Get-Content migration-queue.md | Select-String exact QA/Phase5/audit-page-055 row patterns; Test-Path exact report; Get-Content frontend-mission.md | Select-String headings/43/44; Tee-Object exact log -Append", "exit": 0, "result": "Exact QA pending; exact report absent; accepted dependency preserved."},
+    {"id": "C02", "shellId": "5603", "command": "Get-Content/Get-FileHash eleven exact sources; & rg -n -- $entry.Value @files; Tee-Object exact log -Append", "exit": 1, "result": "rg executable unavailable in shell PATH; no regex result accepted. Failure recorded by C03; no install."},
+    {"id": "C03", "shellId": "5608", "command": "Get-Content/Get-FileHash eleven exact sources; Select-String -LiteralPath $files -Pattern $entry.Value for thirteen named patterns; Tee-Object exact log -Append", "exit": 0, "result": "Eleven line/hash receipts; thirteen lexical pattern counts. Two case-insensitive categories required C04 correction."},
+    {"id": "C04", "shellId": "5617", "command": "Select-String -LiteralPath $files -Pattern $p -CaseSensitive; Get-Content en.json -Raw | ConvertFrom-Json -AsHashtable; direct literal t-key nested lookup; Select-String exact hooks/router/AI route literals; Tee-Object exact log -Append", "exit": 0, "result": "Raw controls 0; dynamic native style 1; sections 6; chart frames 2; 83 keys and 0 missing; three direct endpoint boundaries matched."},
+    {"id": "C05", "shellId": "5624", "command": "Select-String -CaseSensitive focused page/handler/narration mechanisms; Get-Content audit-page-055.json -Raw | ConvertFrom-Json; Get-Content current page line count; Tee-Object exact log -Append", "exit": 0, "result": "Exact line mechanisms; historical 262/678 versus current 272/688; six sections retained."},
+    {"id": "C06", "shellId": "5654", "command": "Get-Content exact report -Raw | ConvertFrom-Json -AsHashtable; assert twelve report contract predicates; Get-FileHash eleven pinned exact sources; Tee-Object exact log -Append", "exit": 0, "result": "JSON parsed; 12 contract checks, 0 failed; 11 source hashes matched, 0 mismatched; findings11/candidates5/sections6."}
+  ],
+  "documentValidation": {
+    "checkedAtUtc": "2026-10-13T20:14:52.8945622Z",
+    "command": "C06",
+    "exit": 0,
+    "jsonParseExit": 0,
+    "contractChecks": 12,
+    "contractFailures": 0,
+    "sourceHashesMatched": 11,
+    "sourceHashesMismatched": 0,
+    "requiredFinalCommand": "C07: reparse the completed receipt, recheck all eleven pinned source hashes, append actual final counts/exit/release to the sole log and return without further writes.",
+    "receiptAuthority": "Actual C06 output above and final C07 output/exit in logs\\phase6-qa-analytics-year-review.log; documentation checks only, not application tests."
+  },
+  "notRun": {
+    "acceptance": "NOTRUN",
+    "native": "NOTRUN",
+    "browser": "NOTRUN",
+    "apiRequests": "NOTRUN",
+    "realData": "NOTRUN",
+    "tests": "NOTRUN",
+    "testDiscovered": "NOTRUN",
+    "testExecuted": 0,
+    "testPassed": "NOTRUN",
+    "testFailed": "NOTRUN",
+    "testSkipped": "NOTRUN",
+    "globalTypeScript": "NOTRUN",
+    "fullSuites": "NOTRUN",
+    "build": "NOTRUN",
+    "lint": "NOTRUN",
+    "visualResponsiveThemeAccessibilityAcceptance": "NOTRUN"
+  },
+  "limitsAndRelease": {
+    "targetMinutes": 10,
+    "returnDeadlineUtc": "2026-10-13T20:23:47.446Z",
+    "hardDeadlineUtc": "2026-10-13T20:28:47.446Z",
+    "deadlineBasis": "Conservative supplied task timestamp 20:03:47.446Z +20/+25, earlier than 20:25Z/20:30Z; actual earlier actor creation remains authoritative if known to parent.",
+    "maxCommandMinutes": 8,
+    "commandMode": "All commands synchronous, initial_wait=30s; no command left running and no helper process started.",
+    "findingsCount": 11,
+    "runtimeCandidatesCount": 5,
+    "remediation": "NOT AUTHORIZED / NOT PERFORMED",
+    "releaseBoundary": "After final C07 document/hash verification exits and its release line is appended, all source/report/log/JSON/commands are RELEASED. No post-return writes, jobs or retained command ownership.",
+    "parentNeeds": "Prioritize the highlight wire mismatch and unknown/partial aggregate trust; separately disposition calendar/sign/SOC/locale/palette/AI/record-capability findings. Candidates require future authorized acceptance. Only parent orchestrates followups."
+  }
+}

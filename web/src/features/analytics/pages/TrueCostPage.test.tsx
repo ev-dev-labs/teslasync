@@ -1,11 +1,22 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import i18n from 'i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
-import type { CostBreakdown } from '@/types/analytics';
+import type { CostBreakdown, TcoLedgerResponse } from '@/types/analytics';
+import type { StatMetric } from '@/components/data-display';
+
+const bridgeCapture = vi.hoisted(() => vi.fn<(metrics: readonly StatMetric[]) => void>());
+vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
+  return { ...actual, useOperationalMetrics: (...args: Parameters<typeof actual.useOperationalMetrics>) => {
+    bridgeCapture(args[0]);
+    return actual.useOperationalMetrics(...args);
+  } };
+});
 
 const h = vi.hoisted(() => ({
   query: undefined as unknown,
@@ -13,9 +24,23 @@ const h = vi.hoisted(() => ({
   gasUnit: 'gallon' as 'gallon' | 'liter',
   vehicleId: 7 as number | null,
   hookIds: [] as string[],
+  directoryFails: false,
+  narrationFails: false,
+  ledgerData: undefined as TcoLedgerResponse | undefined,
 }));
 
 const refetch = vi.fn();
+
+vi.mock('../components/true-cost/TrueCostMonthlyDirectory', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/true-cost/TrueCostMonthlyDirectory')>();
+  return {
+    ...actual,
+    TrueCostMonthlyDirectory: (props: Parameters<typeof actual.TrueCostMonthlyDirectory>[0]) => {
+      if (h.directoryFails) throw new Error('Monthly directory rendering failed');
+      return <actual.TrueCostMonthlyDirectory {...props} />;
+    },
+  };
+});
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -47,6 +72,11 @@ vi.mock('@/api/hooks/useAnalytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useAnalytics')>();
   return {
     ...actual,
+    useTcoLedger: () => ({
+      data: h.ledgerData, isLoading: false, isPending: h.ledgerData === undefined,
+      isSuccess: h.ledgerData !== undefined, isError: false, error: null,
+      isFetching: false, fetchStatus: 'idle', refetch: vi.fn(),
+    }),
     useCostBreakdown: (vehicleId: string) => {
       h.hookIds.push(vehicleId);
       return h.query;
@@ -90,12 +120,12 @@ vi.mock('@/hooks/useUnits', () => ({
       if (meters == null) return '—';
       const value = h.distance === 'mi' ? meters / 1609.344 : meters / 1000;
       return `${value.toLocaleString('en-US', {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       })} ${h.distance}`;
     },
     formatEnergy: (wh: number | null | undefined) =>
-      wh == null ? '—' : `${(wh / 1000).toFixed(1)} kWh`,
+      wh == null ? '—' : `${(wh / 1000).toFixed(2)} kWh`,
   }),
 }));
 
@@ -110,9 +140,10 @@ vi.mock('@/hooks/useFormatting', () => ({
 }));
 
 vi.mock('@/components/ai/AITCONarration', () => ({
-  AITCONarration: ({ vehicleId }: { vehicleId?: number }) => (
-    <div data-testid="ai-tco-narration" data-vehicle-id={vehicleId ?? ''} />
-  ),
+  AITCONarration: ({ vehicleId }: { vehicleId?: number }) => {
+    if (h.narrationFails) throw new Error('Narration rendering failed');
+    return <div data-testid="ai-tco-narration" data-vehicle-id={vehicleId ?? ''} />;
+  },
 }));
 
 import TrueCostPage from './TrueCostPage';
@@ -250,6 +281,9 @@ beforeEach(() => {
   h.distance = 'km';
   h.gasUnit = 'gallon';
   h.vehicleId = 7;
+  h.directoryFails = false;
+  h.narrationFails = false;
+  h.ledgerData = undefined;
   h.query = query({
     data: cost(),
     isSuccess: true,
@@ -262,6 +296,32 @@ afterEach(() => {
 });
 
 describe('TrueCostPage persistent query states', () => {
+  it.each([
+    { isLoading: true, isPending: true, fetchStatus: 'fetching' as const },
+    { isPending: true, fetchStatus: 'paused' as const },
+    { isError: true, error: new Error('aggregate unavailable') },
+  ])('withholds all-in totals when the aggregate has no data: %o', (overrides) => {
+    h.ledgerData = { vehicle_id: 7, entries: [], totals: { by_category: {}, grand_total: 0, entries: 0 } };
+    h.query = query(overrides);
+    renderPage();
+    expect(screen.getByText('All-in: — (—/km)')).toBeInTheDocument();
+    expect(screen.getByText('0 entries · 0.00 fixed · — km lifetime')).toBeInTheDocument();
+  });
+
+  it('retains aggregate inputs through failure and recovery without inferring a charging currency', () => {
+    h.ledgerData = { vehicle_id: 7, entries: [], totals: { by_category: {}, grand_total: 0, entries: 0 } };
+    h.query = query({ data: cost(), isError: true, error: new Error('refresh failed') });
+    const view = renderPage();
+    expect(screen.getByText('All-in: — (—/km)')).toBeInTheDocument();
+    expect(screen.getByText('0 entries · 0.00 fixed · 1,000.00 km lifetime')).toBeInTheDocument();
+    h.query = query({ data: cost({ total_charging_cost: 0, total_km: 0 }), isSuccess: true });
+    view.rerender(<QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter><ToastProvider><TrueCostPage /></ToastProvider></MemoryRouter>
+    </QueryClientProvider>);
+    expect(screen.getByText('All-in: — (—/km)')).toBeInTheDocument();
+    expect(screen.getByText('0 entries · 0.00 fixed · 0.00 km lifetime')).toBeInTheDocument();
+  });
+
   it('renders all 16 evidence sections, the AI slot, and exact vehicle hook scope', () => {
     renderPage();
 
@@ -291,10 +351,25 @@ describe('TrueCostPage persistent query states', () => {
       isFetching: true,
       fetchStatus: 'fetching',
     });
-    const { container } = renderPage();
+    renderPage();
 
     expectPersistentShells();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(5);
+    const skeletons = SECTION_IDS.flatMap(id => Array.from(
+      screen.getByTestId(id).querySelectorAll(
+        '[role="status"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+      ),
+    ));
+    expect(skeletons.length).toBeGreaterThan(5);
+    for (const skeleton of skeletons) {
+      expect(skeleton).toHaveClass('w-full');
+      expect((skeleton as HTMLElement).style.height).toMatch(/^\d+px$/);
+    }
+    const brief = screen.getByTestId('tco-evidence-kpis');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll(
+      '[data-operational-metric] [aria-hidden="true"].h-5.w-20',
+    )).toHaveLength(8);
+    expect(brief.querySelector('[data-operational-value]')).toBeNull();
     expect(screen.queryAllByRole('button', { name: 'Export chart' })).toHaveLength(0);
   });
 
@@ -364,6 +439,92 @@ describe('TrueCostPage persistent query states', () => {
 });
 
 describe('TrueCostPage evidence rendering', () => {
+  it('isolates a failed monthly directory and retries it without hiding neighboring evidence', async () => {
+    await i18n.init({
+      lng: 'en',
+      resources: {
+        en: {
+          translation: {
+            errorBoundary: {
+              inlineTitle: 'Component failed to load',
+              retry: 'Retry',
+            },
+          },
+        },
+      },
+    });
+    h.directoryFails = true;
+    renderPage();
+
+    const failure = screen.getByText('Monthly directory rendering failed').parentElement?.parentElement;
+    if (!failure) throw new Error('Monthly directory fallback was not rendered');
+    expect(screen.queryByTestId('tco-monthly-directory')).not.toBeInTheDocument();
+    SECTION_IDS.filter(id => id !== 'tco-monthly-directory').forEach(id => {
+      expect(screen.getByTestId(id)).toBeInTheDocument();
+    });
+    expect(screen.getAllByRole('button', { name: 'Export chart' })).toHaveLength(5);
+    expect(screen.getByRole('heading', { name: 'Fixed-cost ledger' })).toBeInTheDocument();
+    expect(failure.closest('[data-tco-layout-slot]')).toHaveAttribute('data-card-size', 'full');
+
+    h.directoryFails = false;
+    fireEvent.click(within(failure).getByRole('button', { name: 'Retry' }));
+
+    expectPersistentShells();
+    expect(screen.queryByText('Monthly directory rendering failed')).not.toBeInTheDocument();
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('isolates failed opt-in narration while keeping every deterministic section and export available', () => {
+    h.narrationFails = true;
+    renderPage();
+
+    expectPersistentShells();
+    expect(within(screen.getByTestId('tco-ai-slot')).getByText('Narration rendering failed'))
+      .toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fixed-cost ledger' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Export chart' })).toHaveLength(5);
+    expect(new Set(h.hookIds)).toEqual(new Set(['7']));
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('reviews numeric source operands and preserved costing boundaries in the real drawer', () => {
+    renderPage();
+    const brief = screen.getByTestId('tco-evidence-kpis');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    const metrics = bridgeCapture.mock.calls.map(call => call[0])
+      .find(items => items.some(metric => metric.occurrenceId === 'tco-recorded-spend'));
+    expect(metrics).toHaveLength(8);
+    for (const metric of metrics ?? []) {
+      expect(metric.metricId).not.toBe('text');
+      if (metric.rawValue != null) expect(typeof metric.rawValue).toBe('number');
+    }
+    expect(metrics?.find(metric => metric.occurrenceId === 'tco-recorded-energy')?.metricId).toBe('energy');
+    expect(metrics?.find(metric => metric.occurrenceId === 'tco-drive-distance')?.metricId).toBe('distance');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Positive-cost sessions only')).toBeInTheDocument();
+    expect(within(drawer).getByText('First-to-last positive-drive span; not tenure')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not a complete ownership-cost account/)).toBeInTheDocument();
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps every accounting operand and temporal evidence row in accessible shared tables', () => {
+    renderPage();
+
+    const tables = within(screen.getByTestId('tco-accounting')).getAllByRole('table');
+    expect(tables.length).toBeGreaterThan(0);
+    for (const table of tables) {
+      expect(within(table).getAllByRole('rowheader').map((header) => header.textContent))
+        .toEqual(['Expected', 'Observed', 'Residual', 'Tolerance']);
+      expect(within(table).getAllByRole('cell').every((cell) => cell.classList.contains('text-right')))
+        .toBe(true);
+    }
+    const coverage = within(screen.getByTestId('tco-temporal-coverage')).getByRole('table');
+    expect(within(coverage).getAllByRole('rowheader')).toHaveLength(6);
+    expectPersistentShells();
+  });
+
   it('withholds the synthetic $50 maintenance floor for a resolved zero envelope', () => {
     h.query = query({
       data: cost({
@@ -390,7 +551,12 @@ describe('TrueCostPage evidence rendering', () => {
     expect(screen.getByText(/valid zero envelope/i)).toBeInTheDocument();
     expect(screen.queryByText('$50.00')).not.toBeInTheDocument();
     expect(screen.queryByText(/^\+?\$50\.\d+$/)).not.toBeInTheDocument();
-    expect(screen.getByText('Withheld')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('tco-savings-envelope')).getByRole('button', { name: 'Review details' }));
+    const withheldDialog = screen.getByRole('dialog');
+    expect(within(withheldDialog).queryByRole('group', { name: 'Maintenance heuristic' })).not.toBeInTheDocument();
+    expect(within(withheldDialog).queryByText('Withheld')).not.toBeInTheDocument();
+    expect(within(withheldDialog).getByText(/empty fields? (is|are) hidden\./)).toBeInTheDocument();
+    fireEvent.keyDown(withheldDialog, { key: 'Escape' });
   });
 
   it('renders partial monthly rows with field-specific support and no fabricated chart rows', () => {
@@ -427,20 +593,23 @@ describe('TrueCostPage evidence rendering', () => {
     });
     renderPage();
 
-    expect(screen.getAllByText('Loss').length).toBeGreaterThan(0);
-    const lossValue = screen.getAllByText('-$50.00')
-      .find((element) => element.classList.contains('text-rose-300'));
+    fireEvent.click(within(screen.getByTestId('tco-savings-envelope')).getByRole('button', { name: 'Review details' }));
+    const lossDialog = screen.getByRole('dialog');
+    expect(within(lossDialog).getAllByText('Loss').length).toBeGreaterThan(0);
+    const lossValue = within(lossDialog).getAllByText('-$50.00')
+      .find((element) => element.classList.contains('text-[var(--semantic-danger)]'));
     expect(lossValue).toBeDefined();
     if (!lossValue) throw new Error('sign-aware loss value was not rendered');
-    expect(lossValue).toHaveClass('text-rose-300');
-    expect(lossValue).not.toHaveClass('text-emerald-300');
+    expect(lossValue).toHaveClass('text-[var(--semantic-danger)]');
+    expect(lossValue).not.toHaveClass('text-[var(--semantic-success)]');
+    fireEvent.keyDown(lossDialog, { key: 'Escape' });
   });
 
   it('converts canonical distance and cost/km to metric display units', () => {
     renderPage();
 
-    expect(screen.getByText('1,000.0 km')).toBeInTheDocument();
-    expect(screen.getAllByText('$0.1000').length).toBeGreaterThan(0);
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
+    expect(screen.getAllByText('$0.10').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Cost per km' })).toBeInTheDocument();
   });
 
@@ -448,8 +617,8 @@ describe('TrueCostPage evidence rendering', () => {
     h.distance = 'mi';
     renderPage();
 
-    expect(screen.getByText('621.4 mi')).toBeInTheDocument();
-    expect(screen.getAllByText('$0.1609').length).toBeGreaterThan(0);
+    expect(screen.getByText('621.37 mi')).toBeInTheDocument();
+    expect(screen.getAllByText('$0.16').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Cost per mi' })).toBeInTheDocument();
   });
 
@@ -472,6 +641,10 @@ describe('TrueCostPage evidence rendering', () => {
     expect(screen.getAllByText('Balances').length).toBeGreaterThan(5);
     expect(screen.getByText('1.0× MPG')).toBeInTheDocument();
     expect(screen.getAllByText(/Gas \$300\.00/).length).toBeGreaterThan(0);
+    const matrix = screen.getByTestId('tco-sensitivity');
+    expect(within(matrix).queryByRole('button', { name: 'Reorder or hide columns' })).not.toBeInTheDocument();
+    expect(within(matrix).queryAllByRole('separator')).toHaveLength(0);
+    expect(matrix.querySelectorAll('[draggable="true"]')).toHaveLength(0);
   });
 
   it('states endpoint assumptions without claiming a complete ownership calculation', () => {
@@ -480,6 +653,6 @@ describe('TrueCostPage evidence rendering', () => {
     expect(screen.getByText(/not a complete ownership-cost calculation/i)).toBeInTheDocument();
     expect(screen.getByText(/Lifetime gasoline equivalent is distance-derived/i)).toBeInTheDocument();
     expect(screen.getByText(/Only monthly gasoline equivalents are energy-derived/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Total Cost of Ownership/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Total cost of Ownership/i)).not.toBeInTheDocument();
   });
 });

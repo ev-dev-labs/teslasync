@@ -1,0 +1,421 @@
+{
+  "item": "audit-page-179",
+  "page": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx",
+  "routes": ["/sharing/trips"],
+  "purpose": "Inspect recent trips, select one for a reduced-summary preview, explain the existing per-drive static share workflow, and optionally draft a propose-only Helix image prompt.",
+  "primaryGoal": "Choose a recent trip and understand its shareable summary without changing the existing publishing workflow or requiring AI.",
+  "dataSources": [
+    {
+      "name": "Recent trips",
+      "hook": "useTrips",
+      "owner": "web\\src\\api\\hooks\\useTrips.ts",
+      "endpoint": "GET /api/v1/trips",
+      "parameters": "vehicle_id from useSelectedVehicle; limit=20; no date bounds or pagination UI",
+      "evidence": [
+        {"file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx", "line": 62},
+        {"file": "web\\src\\api\\hooks\\useTrips.ts", "line": 29},
+        {"file": "internal\\api\\router.go", "line": 4210}
+      ],
+      "behavior": "Query key includes params; queryFn forwards AbortSignal; safeArray normalizes null arrays. Existing inherited retry/cache policies remain unchanged. Totals cover the returned list only, not a full historical window."
+    },
+    {
+      "name": "Workspace vehicle",
+      "hook": "useSelectedVehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "endpoint": "Vehicle-list dependency through useVehicles; its query implementation was not inspected in the limited first-72-line hook read",
+      "evidence": [{"file": "web\\src\\hooks\\useSelectedVehicle.ts", "line": 50}],
+      "behavior": "URL vehicle scope, persisted selection and first known vehicle determine effective vehicleId. Sharing route has vehicle=true and range=false in getWorkspaceRouteScope; no local workspace picker is rendered."
+    },
+    {
+      "name": "Display preferences",
+      "hooks": ["useUnits", "useNumberFormatting", "useOperationalMetrics"],
+      "owners": [
+        "web\\src\\hooks\\useUnits.ts",
+        "web\\src\\features\\sharing\\components\\operationalbrief-all\\SharingTripsBrief.tsx",
+        "web\\src\\features\\sharing\\components\\sharing-trips\\SelectedTripPreview.tsx"
+      ],
+      "endpoint": null,
+      "behavior": "Existing settings-backed formatters are consumed at display boundaries. Underlying preference request endpoints were not traced; do not invent them. Distance meters, energy watt-hours and duration seconds retain their API identities.",
+      "evidence": [{"file": "web\\src\\api\\types.ts", "line": 1615}]
+    },
+    {
+      "name": "Optional trip postcard draft",
+      "hook": "useAiStream",
+      "owner": "web\\src\\components\\ai\\AITripPostcardShareCardImageGeneration.tsx",
+      "endpoint": "POST /api/v1/ai/share-cards/trip-image/draft",
+      "parameters": "trip_id from the resolved current-list selection; optional style_hint is supported by the component but not supplied by this page",
+      "evidence": [
+        {"file": "web\\src\\components\\ai\\AITripPostcardShareCardImageGeneration.tsx", "line": 76},
+        {"file": "internal\\api\\ai_routes.go", "line": 796},
+        {"file": "internal\\api\\router.go", "line": 5109}
+      ],
+      "behavior": "Feature gate controls this section alone. Stream scope identity is trip id plus style hint; shared hook owns cancellation and output reset. Drafting is separate from publishing; no production request or mutation was exercised."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "usage": "Forwards page title, subtitle, refresh action and trip query to PageContainer; retains full-width min-w-0 content."},
+    {"name": "PageContainer", "kind": "layout", "owner": "web\\src\\components\\layout\\PageContainer.tsx", "usage": "Owns header actions, query freshness contract, route heading and announcement integration."},
+    {"name": "LayoutCard", "kind": "composite", "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "usage": "Recent trips, selected preview and static-share explanation; current shared Card, heading and content owner."},
+    {"name": "SharingTripsBrief", "kind": "domain", "owner": "web\\src\\features\\sharing\\components\\operationalbrief-all\\SharingTripsBrief.tsx", "usage": "Uses existing OperationalBrief and useOperationalMetrics for four metrics, bounded scope, trust labels and details drawer. OperationalBrief internals were not inspected."},
+    {"name": "TripShareRow", "kind": "domain", "owner": "web\\src\\features\\sharing\\components\\sharing-trips\\TripShareRow.tsx", "usage": "Uses SelectableCard, Text and InlineMetric to show source name, date, duration, drive count, distance and energy."},
+    {"name": "SelectableCard", "kind": "primitive", "owner": "web\\src\\components\\ui\\SelectableCard.tsx", "usage": "Actual button with option role, aria-selected, focus ring and min-h-11."},
+    {"name": "SelectedTripPreview", "kind": "domain", "owner": "web\\src\\features\\sharing\\components\\sharing-trips\\SelectedTripPreview.tsx", "usage": "Uses LayoutCard, responsive wrapping KVList, Currency and explanatory EmptyState."},
+    {"name": "AITripPostcardShareCardImageGeneration", "kind": "domain shared owner", "owner": "web\\src\\components\\ai\\AITripPostcardShareCardImageGeneration.tsx", "usage": "Existing independently gated AI feature; uses AIFeatureCard and canonical streaming hook."},
+    {"name": "AIFeatureCard", "kind": "composite", "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx", "usage": "Helix badge, translated named action, disabled/busy states and AiOutputPanel; retain shared owner rather than creating page-only AI chrome."},
+    {"name": "Button, Text, GlassPanel, Skeleton, EmptyState, QueryError, FadeIn", "kind": "existing category primitives", "usage": "Page imports through existing category barrels; inspected Button and FadeIn directly. Other internal implementations were not audited."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx",
+      "line": 117,
+      "rule": "Mission 4; MDC-026",
+      "detail": "The same fatal trip-query error and retry action appear in both the KPI position and recent-list card at line 158. Both represent one source; this is repeated recovery presentation, not a second independent failure.",
+      "fix": "Consider one source-level recovery notice with preserved KPI and list section locations/statuses; retain deterministic preview/static guidance and do not introduce a new error primitive.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\sharing\\components\\sharing-trips\\helpers.ts",
+      "line": 27,
+      "rule": "Mission 26; MDC-002/MDC-044/MDC-045",
+      "detail": "A feature-local compact duration formatter is reused by row and preview, but returns literal s/m/h suffixes and partly formats integers outside the settings-backed hook.",
+      "fix": "Retain tested rounding/carry behavior and SI seconds; adapt through the existing locale/number-format owner and translated duration units. Do not blindly replace with the shared default hours formatter, which has a different output contract.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport acceptance unverified",
+    "existingBehavior": [
+      "PageLayout provides w-full/min-w-0.",
+      "Main content stacks below xl and becomes a 2:1 three-column arrangement at xl.",
+      "Rows stack below sm; metadata wraps; metric pair remains a horizontal trailing row.",
+      "KVList is requested with layout=responsive and wrap.",
+      "AI shared header wraps and text uses break-words."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\sharing\\components\\sharing-trips\\TripShareRow.tsx",
+        "line": 86,
+        "rule": "MDC-043; Mission 15/16",
+        "detail": "Distance and energy share a non-wrapping flex row with gap-4/gap-6. Long source values, translations and 200% text can exceed narrow card width; actual overflow has not been exercised.",
+        "fix": "Allow metric groups to wrap while keeping value and unit together; preserve both measurements and all row metadata at every width.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\sharing\\components\\sharing-trips\\SelectedTripPreview.tsx",
+        "line": 89,
+        "rule": "MDC-031/MDC-043; Mission 0 principle 13",
+        "detail": "Selected trip title is truncated without an explicit full-title reveal. The row title at TripShareRow.tsx:65 is likewise truncated; its option aria-label preserves the name for assistive technology but not a sighted full-title inspection.",
+        "fix": "Wrap the selected preview title and retain the exact source name; if row truncation stays, provide a keyboard/touch-accessible existing reveal mechanism rather than only a hover title.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "requiredChecks": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "allocated container widths", "RTL", "200% text", "long names and SI-formatted values"]
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, screen reader, contrast and touch acceptance unverified",
+    "existingBehavior": [
+      "Refresh has a localized accessible name and decorative icon hidden.",
+      "Options use actual buttons and aria-selected; selection is not color-only.",
+      "Fallback row name handles null, empty and whitespace-only strings.",
+      "Shared cards have associated headings; AI action retains feature-specific accessible name and busy/disabled attributes.",
+      "FadeIn consults existing reduced-motion preference."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx",
+        "line": 177,
+        "rule": "MDC-040; Mission 30",
+        "detail": "The parent advertises listbox semantics, but neither it nor the row/SelectableCard implements listbox arrow-key navigation, Home/End or a single tab stop/active-descendant model. Every button retains its native tab stop; the intermediate li is not explicitly presentational. The row test at line 121 checks BUTTON identity, not keyboard interaction.",
+        "fix": "Either implement the full single-selection listbox interaction locally with roving focus and coherent owned options, or use a semantic list of named selection buttons with supported pressed semantics. Keep selection, source content and all controls reachable; do not add an independent global focus engine.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx",
+        "line": 94,
+        "rule": "MDC-040",
+        "detail": "Refresh uses default Button md sizing, whose source is h-10 (40px). This is below the stronger 44px mobile target default; a WCAG spacing exception and actual target reachability have not been measured.",
+        "fix": "Use existing Button classes to provide min-h-11/min-w-11 for this icon-only action without changing the global size defaults.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx",
+        "line": 111,
+        "rule": "MDC-026/MDC-040; Mission 22/24",
+        "detail": "PageLayout receives query but not loading/busy/error inputs. PageContainer's inspected useLoadAnnouncement reads those explicit inputs rather than query. Local skeletons work, but this path does not drive the shared load/failure announcer from the trip query.",
+        "fix": "Wire background busy to the existing container contract and an existing non-destructive source announcement for initial/fatal transitions; do not use global loading/error replacement that would hide static guidance or other sources.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Four recent-list skeletons; brief loading suppresses metrics; preview/static guidance remain.",
+    "empty": "Only resolved empty trips receive real zero aggregates and a driving explanation; preview retains pick-a-trip guidance.",
+    "unresolved": "No data without cold loading or fatal error gets explicit unknown/paused text, not an empty inference.",
+    "fatalError": "KPI location and recent list show retry surfaces; preview, static hint and independent AI gating remain mounted.",
+    "refreshError": "Retains cached trips, metrics and resolved selection; brief says cached trips/refresh failed and header receives query.",
+    "pausedOffline": "No-data paused query gets distinct text; cached paused query gets distinct brief status. Actual network-offline behavior unverified.",
+    "partial": "Numeric holes are silently folded to zero by the current aggregation; no per-metric completeness contract is supplied.",
+    "selected": "Current-list membership resolves one trip for both preview and AI; disappearance from the list clears their effective input.",
+    "AI": "Off gate removes AI alone; no resolved trip disables generation; streaming and output errors use shared AI lifecycle.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\sharing\\components\\sharing-trips\\helpers.ts",
+        "line": 57,
+        "rule": "MDC-026/MDC-033/MDC-045",
+        "detail": "safeNumber causes missing/non-finite distance, energy and drive counts to contribute zero. Once any trip payload exists, SharingTripsBrief publishes aggregate values as measured totals without numeric completeness metadata. Preview also uses ??0 for missing drive/charge counts at lines 65 and 69.",
+        "fix": "Preserve the established aggregation calculation and raw fields; track numeric completeness separately and expose partial/unknown reasons beside totals and counts. Any changed total semantics need the integration/stats owner, not an aesthetic substitution of zero or guessed data.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\sharing\\components\\sharing-trips\\TripShareRow.tsx",
+      "line": 60,
+      "rule": "MDC-010/MDC-012; Mission 5/6/7",
+      "detail": "Repeated cyan route discs/icons, cyan distance icons at line 94 and amber energy text at line 101 apply fixed accents to ordinary metadata, competing with actual selection. Preview also fixes its privacy icon to emerald-300 at line 102. These are toned-down colors, not literal neon classes, but still create repeated saturated hue noise and do not follow the current theme text roles.",
+      "fix": "Use restrained existing semantic text/surface tokens for ordinary metadata; keep privacy meaning and selected-state distinction without painting every measurement. Preserve icon and text explanations.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ui\\SelectableCard.tsx",
+      "line": 41,
+      "rule": "MDC-010/MDC-011/MDC-012/MDC-025",
+      "detail": "Shared selection/focus chrome hardcodes cyan ring/border/background and fixed-white normal/hover overlays at lines 44-45. Fixed-white alpha surfaces are not pure-white text, but introduce theme-independent white noise.",
+      "fix": "Shared owner should replace only chrome with existing focus/control/surface/theme tokens, preserving public props/ref/native button behavior, selected state and disabled behavior. Do not reset persisted themes or remove visible focus.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 299,
+      "rule": "MDC-010/MDC-011/MDC-012; Mission 7",
+      "detail": "AI action overrides the neutral outline Button with cyan border, tinted hover surface, bright dark:text-cyan-100 and a cyan focus ring; AIBadge at line 214 repeats cyan chrome. Optional AI can become visually stronger than the primary recent-trip selection task.",
+      "fix": "Use canonical outline/control/focus tokens and a restrained shared Helix badge treatment while retaining branding, labels, accessible naming, streaming/busy/disabled states and all output.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "line": 3,
+      "rule": "MDC-002 component-first production imports",
+      "detail": "Shared LayoutCard imports Button/Card/Heading/Text/Tooltip from its category barrel rather than concrete modules. This is a source-level contract violation in a page dependency, not evidence that a chunk cycle currently occurs.",
+      "fix": "Have the shared layout owner switch to concrete existing primitive imports without changing its props or rendered content. Do not patch shared files from the page audit or create a replacement card.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\sharing\\components\\sharing-trips\\SelectedTripPreview.tsx",
+      "line": 88,
+      "rule": "MDC-040/MDC-044",
+      "detail": "Preview only uses nullish fallback for its title, unlike TripShareRow's trimmed name guard. An empty/whitespace source name can therefore leave the selected preview title visibly blank.",
+      "fix": "Reuse one feature-local resolved trip-label helper with the existing localized fallback and exact nonblank source name; do not recase user text.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\sharing\\components\\sharing-trips\\SelectedTripPreview.tsx",
+      "line": 107,
+      "rule": "MDC-045/MDC-046; Mission 0 principles 2/3",
+      "detail": "Preview asserts that only this summary is shared and never addresses, but source names are rendered unchanged. This page does not publish anything, and the actual per-drive publish/redaction implementation is outside this audit. Frontend copy alone does not establish the downstream privacy guarantee.",
+      "fix": "Retain existing per-drive/static-link behavior and propose-only distinction; integration owner must verify actual redaction and destination correspondence before claiming preview/published equivalence. Do not silently sanitize source names or invent a trip publishing endpoint.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "overall": "medium",
+    "first": "Correct advertised listbox keyboard interaction and preserve source trust/completeness.",
+    "next": "Shared neutral selection/AI chrome, reachable refresh target, long-content wrapping and locale-aware compact duration.",
+    "acceptance": "Source audit only; no visual/runtime acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "SelectableCard restrained theme-aware chrome",
+      "owner": "web\\src\\components\\ui\\SelectableCard.tsx",
+      "disposition": "extend existing owner; no new primitive",
+      "contract": {
+        "props": "Preserve SelectableCardProps extends ButtonHTMLAttributes<HTMLButtonElement>, selected?, forwarded ref, role, native disabled/type and caller className.",
+        "variants": "Existing selected/unselected treatment only; no new palette variant.",
+        "states": ["selected", "unselected", "hover", "focus-visible", "disabled", "forced-colors"],
+        "tokens": "Use existing focus-ring, theme/control, border and surface roles instead of cyan/fixed-white overlays."
+      },
+      "usedBy": ["TripShareRow on /sharing/trips; other consumers not inspected"],
+      "dependsOn": ["Existing theme/control/focus tokens", "Page-owned choice of listbox versus selection-button semantics"],
+      "evidence": {"file": "web\\src\\components\\ui\\SelectableCard.tsx", "line": 41},
+      "acceptance": "Keep aria-selected on supported roles, min-h-11, native keyboard activation, refs and caller attributes; validate selected/focus distinction on composed light/dark/custom/forced-color backgrounds."
+    },
+    {
+      "name": "AIFeatureCard restrained action and badge chrome",
+      "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "disposition": "extend existing owner; no page AI scaffold",
+      "contract": {
+        "props": "Retain title, description, buttonLabel, badgeLabel, emptyHint, buttonTitle, canStart, stream, onAction, buttonPlacement, inputSlot and children.",
+        "variants": "Preserve inline/below action placement and inputSlot implication.",
+        "states": ["idle", "no selected trip", "streaming", "done", "error", "disabled"],
+        "tokens": "Use canonical outline/control/focus roles; keep Helix identity and restrained badge."
+      },
+      "usedBy": ["AITripPostcardShareCardImageGeneration on /sharing/trips; additional AI consumers not individually inspected"],
+      "dependsOn": ["web\\src\\components\\ui\\Button.tsx", "Existing shared AI output and streaming lifecycle"],
+      "evidence": {"file": "web\\src\\components\\ai\\AIFeatureCard.tsx", "line": 299},
+      "acceptance": "Retain accessible feature-specific action name, busy/disabled mapping, wrapLabel, streaming output and gated-off absence; check mobile/long labels without issuing live draft mutations."
+    },
+    {
+      "name": "LayoutCard concrete internal imports",
+      "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "disposition": "repair existing internal dependency boundary",
+      "contract": {
+        "props": "Unchanged title/description/actions/children/footer/size and CardPlacementContext behavior.",
+        "variants": "Existing CardSize and description-help behavior unchanged.",
+        "states": ["normal", "description tooltip open", "keyboard help", "responsive placement"]
+      },
+      "usedBy": ["Recent trips", "SelectedTripPreview", "Static share-card hint"],
+      "dependsOn": ["Existing concrete Card/Button/Typography/Tooltip modules; no category export or catalog change needed"],
+      "evidence": {"file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "line": 3},
+      "acceptance": "No API/heading/help identity/content/placement change; shared owner validates dependency cycles in its authorized validation window."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\sharing\\components\\sharing-trips\\helpers.ts",
+      "line": 27,
+      "detail": "Compact feature duration labels coexist with useUnits.formatDuration; output shape and rounding differ. Preserve compact semantics with an adapter, not a new unit engine.",
+      "existingOwner": "web\\src\\hooks\\useUnits.ts",
+      "resolution": "Keep SI derivation and carry tests; use existing locale/preference mechanisms where equivalent rather than replacing hours/minutes presentation blindly."
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 299,
+      "detail": "Shared AI-specific action chrome overrides Button's canonical neutral outline/focus chrome.",
+      "existingOwner": "web\\src\\components\\ui\\Button.tsx",
+      "resolution": "Consolidate chrome in the current shared owners; no page-only Helix button."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "882FB4FBFEE862BEA3CB3970B4E19E8BC67FDAD7B3E8AB5D5395A76817BA32F0",
+    "hashAlgorithm": "SHA-256",
+    "hashScope": "Current root page file bytes, not Git commit SHA",
+    "lineCount": 229,
+    "featurePresentationLineCount": 527,
+    "featurePresentationFiles": [
+      {"file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx", "lines": 229},
+      {"file": "web\\src\\features\\sharing\\components\\sharing-trips\\TripShareRow.tsx", "lines": 111},
+      {"file": "web\\src\\features\\sharing\\components\\sharing-trips\\SelectedTripPreview.tsx", "lines": 124},
+      {"file": "web\\src\\features\\sharing\\components\\operationalbrief-all\\SharingTripsBrief.tsx", "lines": 63}
+    ],
+    "supportFiles": [
+      {"file": "web\\src\\features\\sharing\\components\\sharing-trips\\helpers.ts", "lines": 69},
+      {"file": "web\\src\\features\\sharing\\components\\sharing-trips\\index.ts", "lines": 8}
+    ],
+    "sectionCount": 5,
+    "sections": [
+      {"name": "Recent-trip operational brief", "file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx", "line": 116, "metrics": ["shareable trips", "total distance", "total energy", "total drives"], "count": 1},
+      {"name": "Recent trips selectable list", "file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx", "line": 150, "count": 1},
+      {"name": "Selected trip share preview", "file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx", "line": 199, "count": 1},
+      {"name": "Static share-card publishing explanation", "file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx", "line": 209, "count": 1},
+      {"name": "Opt-in AI image-prompt drafting", "file": "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx", "line": 224, "count": 1}
+    ],
+    "sectionCounts": {"rootSectionElements": 2, "rootLayoutCard": 2, "rootGlassPanel": 1, "rootChartContainer": 0, "previewLayoutCard": 1, "conceptualSectionsAIOn": 5, "conceptualSectionsAIOff": 4},
+    "actions": [
+      "Refresh recent trips from header",
+      "Retry fatal trip query from existing error surfaces",
+      "Select one recent trip",
+      "Inspect the operational brief details drawer",
+      "Generate optional Helix draft only for a resolved current-list trip",
+      "Follow the explanatory existing per-drive Share workflow elsewhere; no publishing button/link is currently rendered here"
+    ],
+    "previewFields": ["source trip name/fallback", "start/end dates", "distance", "duration", "energy", "drives", "charges", "cost only when positive", "privacy explanation", "no-selection explanation"],
+    "dataBehavior": [
+      "Retain limit=20 recent-list semantics and bounded totals, not full-history claims.",
+      "Do not add date scope silently: /sharing/trips is intentionally absent from RANGE_ENABLED_PATHS and its brief explicitly disclaims selected-date-window totals.",
+      "Keep URL/persisted/header vehicle selection ownership and no duplicate vehicle picker.",
+      "Keep raw SI meters/watt-hours/seconds and settings-backed display conversions; no legacy converter calls.",
+      "Keep query key params, safeArray, AbortSignal, inherited retry/cache policy and manual refetch.",
+      "Keep fatal versus refresh failure distinction and retained payload/selection.",
+      "Do not gate the whole page behind trip data or AI state.",
+      "Resolve selection through current-list membership for BOTH preview and AI scope; stale raw IDs never drive drafting.",
+      "Preserve timestamp duration fallback, rounding carry, existing aggregation and positive-cost condition until explicitly authorized semantic work.",
+      "Keep AI stream independent of deterministic trip-query presentation and preserve off-mode static usefulness.",
+      "Do not add image generation, persistence, uploads or trip publishing capabilities based on UI copy."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only Phase 0 source audit; only report and owned heartbeat written",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "viewport": "unverified",
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified",
+    "forcedColors": "unverified",
+    "motionRuntime": "unverified",
+    "backend": "Endpoint registration inspected; no request, server filtering/order/permissions/redaction or stream behavior executed.",
+    "testEvidence": "Existing page test description blocks and row keyboard-labelled test were read only; no tests were executed and no historical results are borrowed.",
+    "validation": "No Git, full lint/build, TypeScript, browser or production mutations run. The audit skill script was inspected but not executed because its final step invokes project TypeScript during a source-only assignment.",
+    "staticCounts": {
+      "scope": "Root page, TripShareRow, SelectedTripPreview and SharingTripsBrief only",
+      "method": "PowerShell regex counts against current source contents",
+      "exitCode": 0,
+      "output": "inlineStyles=0\nrawControls=0\ndirectVisualLibraryImports=0\nfixedWhiteOrNeonText=0\nglowGradientClasses=0",
+      "meaning": "Bounded pattern counts only; does not certify all rules, shared dependencies, rendered palette or runtime correctness."
+    },
+    "ownership": "Shared proposals are deduplicated recommendations, not assigned shared writes or accepted new APIs. No uninspected second-consumer inventory is claimed.",
+    "unknowns": [
+      "Actual mounted breakpoint/overflow/contrast behavior",
+      "OperationalBrief and AI output internals beyond inspected composition",
+      "Downstream per-drive/static-share redaction and trip-to-drive destination correspondence",
+      "Backend completeness and optional-field guarantees despite non-null TypeScript declarations",
+      "Settings endpoints, complete vehicle-hook implementation, AI feature-gate internals and complete inherited query policy"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\sharing\\pages\\SharingTripsPage.tsx",
+    "web\\src\\features\\sharing\\components\\operationalbrief-all\\SharingTripsBrief.tsx",
+    "web\\src\\features\\sharing\\components\\sharing-trips\\TripShareRow.tsx",
+    "web\\src\\features\\sharing\\components\\sharing-trips\\SelectedTripPreview.tsx",
+    "web\\src\\features\\sharing\\components\\sharing-trips\\helpers.ts",
+    "web\\src\\features\\sharing\\components\\sharing-trips\\index.ts",
+    "web\\src\\features\\sharing\\components\\sharing-trips\\TripShareRow.test.tsx",
+    "web\\src\\features\\sharing\\pages\\SharingTripsPage.test.tsx",
+    "web\\src\\api\\hooks\\useTrips.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\components\\ui\\SelectableCard.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ai\\AITripPostcardShareCardImageGeneration.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\routeMeta.ts",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\__tests__\\lazyRoutes.list.ts",
+    "web\\src\\ai\\features.ts",
+    "web\\src\\features\\sharing\\__tests__\\TestTripPostcardAIOffStaticShareCardOnly.test.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go"
+  ]
+}

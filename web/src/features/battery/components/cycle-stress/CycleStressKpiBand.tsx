@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
+import { MetricGrid } from '@/components/layout';
 import {
   GlassPanel,
   PanelTitle,
@@ -28,6 +29,7 @@ import {
 } from './labels';
 import { CycleStressQueryStatus } from './CycleStressQueryStatus';
 import type { CycleStressQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressKpiBandProps {
   result: CycleStressResult;
@@ -48,6 +50,7 @@ export function CycleStressKpiBand({
   onDeepThresholdChange,
   onExponentChange,
 }: CycleStressKpiBandProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const unresolvedSubtitle = !state.vehicleSelected
@@ -145,7 +148,7 @@ export function CycleStressKpiBand({
             />
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <MetricGrid>
           <MetricCard
             label={t('cycleStress.kpis.intervals', 'Accepted intervals')}
             value={
@@ -153,7 +156,6 @@ export function CycleStressKpiBand({
                 ? cycleStressNumber(
                     result.continuity.acceptedIntervals,
                     locale,
-                    0,
                   )
                 : '—'
             }
@@ -179,7 +181,6 @@ export function CycleStressKpiBand({
                 ? cycleStressNumber(
                     result.summary.equivalentFullCycles,
                     locale,
-                    2,
                   )
                 : '—'
             }
@@ -203,7 +204,6 @@ export function CycleStressKpiBand({
                 ? cycleStressNumber(
                     result.summary.depthWeightedIndex,
                     locale,
-                    2,
                   )
                 : '—'
             }
@@ -269,7 +269,6 @@ export function CycleStressKpiBand({
                 ? `${cycleStressNumber(
                     result.coverage.support.index,
                     locale,
-                    1,
                   )}/100`
                 : '—'
             }
@@ -283,7 +282,7 @@ export function CycleStressKpiBand({
             icon={<ShieldCheck className="h-5 w-5" />}
             color="red"
           />
-        </div>
+        </MetricGrid>
         <CycleStressQueryStatus result={result} state={state} />
       </GlassPanel>
     </section>

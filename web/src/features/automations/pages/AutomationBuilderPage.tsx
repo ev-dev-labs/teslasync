@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -6,19 +6,17 @@ import {
   ArrowLeft,
   CheckCircle2,
   Circle,
-  Cog,
-  Filter,
   ListChecks,
   PlayCircle,
-  Power,
   Save,
   X,
   Zap,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
+import { PageLayout, SourceContent } from '@/components/layout';
 import {
   Badge,
   GlassPanel,
+  Icon,
   Input as UiInput,
   PanelTitle,
   Select as UiSelect,
@@ -27,19 +25,23 @@ import {
   Toggle,
   Textarea as UiTextarea,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { OperationalBrief } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import {
   AlertBanner,
   DraftRecoveryBanner,
   EmptyState,
   EditConflictBanner,
   OperationalWriteNotice,
+  StaleRefreshWarning,
 } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
-import { AINLAutomationBuilder } from '@/components/ai/AINLAutomationBuilder';
-import { AIGeofenceAwareAutomationSuggestions } from '@/components/ai/AIGeofenceAwareAutomationSuggestions';
+import { AINLAutomationBuilder } from '@/components/ai';
+import { AIGeofenceAwareAutomationSuggestions } from '@/components/ai';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
@@ -82,6 +84,8 @@ import type {
   AutomationTriggerStepInput,
 } from '../components/stepInputTypes';
 import { VisuallyHidden } from '@/components/a11y';
+import { neonColorMap, typography } from '@/lib/tokens';
+import { BOOL_FIELD_KEYS } from '@/lib/signals';
 
 interface FormState {
   name: string;
@@ -185,6 +189,8 @@ export function normalizeActionInput(
   action: AutomationActionStepInput | AutomationActionStep,
 ): AutomationActionStepInput {
   switch (action.kind) {
+    case 'action_wait':
+      return { kind: 'action_wait', duration_s: action.duration_s };
     case 'action_command':
       return {
         kind: 'action_command',
@@ -246,9 +252,9 @@ export function applyDraftToForm(previous: FormState, proposedDraft: AutomationF
     description: proposedDraft.description ?? '',
     vehicle_id: proposedDraft.vehicle_id ?? null,
     enabled: proposedDraft.enabled ?? true,
-    triggers: (proposedDraft.triggers as unknown as AutomationTriggerStepInput[]).map(normalizeTriggerInput),
-    conditions: (proposedDraft.conditions as unknown as AutomationConditionStepInput[]).map(normalizeConditionInput),
-    actions: (proposedDraft.actions as unknown as AutomationActionStepInput[]).map(normalizeActionInput),
+    triggers: proposedDraft.triggers.map(normalizeTriggerInput),
+    conditions: proposedDraft.conditions.map(normalizeConditionInput),
+    actions: proposedDraft.actions.map(normalizeActionInput),
   };
 }
 
@@ -257,11 +263,50 @@ export function triggerNeedsPlace(trigger: AutomationTriggerStepInput): boolean 
 }
 
 export function conditionNeedsPlace(condition: AutomationConditionStepInput): boolean {
-  return condition.kind === 'condition_geofence' && condition.place_id <= 0;
+  return condition.kind === 'condition_geofence'
+    && (!Number.isSafeInteger(condition.place_id) || condition.place_id <= 0);
+}
+
+export function conditionIsIncomplete(condition: AutomationConditionStepInput): boolean {
+  const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+  switch (condition.kind) {
+    case 'condition_geofence':
+      return conditionNeedsPlace(condition) || !['inside', 'outside', 'dwell'].includes(condition.state);
+    case 'condition_other_automation':
+      return !Number.isSafeInteger(condition.other_automation_id) || condition.other_automation_id <= 0
+        || !['enabled', 'disabled', 'recently_triggered'].includes(condition.state);
+    case 'condition_time_window':
+      return !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(condition.start_time)
+        || !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(condition.end_time)
+        || !condition.timezone?.trim()
+        || !Array.isArray(condition.days_of_week)
+        || condition.days_of_week.some((day) => !Number.isInteger(day) || day < 0 || day > 6);
+    case 'condition_signal':
+      if (!condition.signal?.trim() || !['=', '!=', '<', '<=', '>', '>=', 'between', 'in'].includes(condition.op)) return true;
+      if (condition.op === 'between') {
+        return !finite(condition.value_min) || !finite(condition.value_max)
+          || condition.value_min > condition.value_max;
+      }
+      if (condition.op === 'in') {
+        const values = condition.value_text?.split(',').map((value) => value.trim()) ?? [];
+        return values.length === 0 || values.some((value) => value === ''
+          || (BOOL_FIELD_KEYS.has(condition.signal) ? !['true', 'false'].includes(value)
+            : condition.signal !== 'state' && !finite(Number(value))));
+      }
+      if (BOOL_FIELD_KEYS.has(condition.signal)) {
+        return !['=', '!='].includes(condition.op) || typeof condition.value_bool !== 'boolean';
+      }
+      if (condition.signal === 'state') {
+        return !['=', '!='].includes(condition.op) || !condition.value_text?.trim();
+      }
+      return !finite(condition.value_num);
+  }
 }
 
 export function actionIsIncomplete(action: AutomationActionStepInput): boolean {
   switch (action.kind) {
+    case 'action_wait':
+      return !Number.isInteger(action.duration_s) || action.duration_s < 1 || action.duration_s > 3600;
     case 'action_command':
       if (!action.command_name.trim()) return true;
       if (action.command_name === 'set_charge_limit') {
@@ -315,20 +360,28 @@ export default function AutomationBuilderPage() {
 
   usePageTitle(
     isEdit
-      ? t('automations.builder.editTitle', 'Edit Automation')
+      ? t('automations.builder.editTitle', 'Edit automation')
       : presetId
-        ? t('automations.builder.presetTitle', 'Install Preset')
-        : t('automations.builder.createTitle', 'Create Automation'),
+        ? t('automations.builder.presetTitle', 'Install preset')
+        : t('automations.builder.createTitle', 'Create automation'),
   );
 
+  const automationQuery = useAutomation(automationId);
+  const automationState = useDataState(automationQuery);
   const {
     data: existingAutomation,
     isLoading: isLoadingAutomation,
-    error: loadError,
-  } = useAutomation(automationId);
-  const { data: vehicles } = useVehicles();
-  const { data: channels } = useNotificationChannels();
-  const { data: preset } = useAutomationPreset(presetId);
+  } = automationQuery;
+  const loadError = automationState.fatalError;
+  const vehiclesQuery = useVehicles();
+  const vehiclesState = useDataState(vehiclesQuery);
+  const { data: vehicles } = vehiclesQuery;
+  const channelsQuery = useNotificationChannels();
+  const channelsState = useDataState(channelsQuery);
+  const { data: channels } = channelsQuery;
+  const presetQuery = useAutomationPreset(presetId);
+  const presetState = useDataState(presetQuery);
+  const { data: preset } = presetQuery;
 
   const breadcrumbLabels = {
     '/automations/:id/edit': existingAutomation?.name
@@ -355,11 +408,27 @@ export default function AutomationBuilderPage() {
       ? `automation:preset:${presetId}`
       : 'automation:new';
 
+  const saveScopeRef = useRef({ key: draftKey });
+  if (saveScopeRef.current.key !== draftKey) {
+    saveScopeRef.current = { key: draftKey };
+  }
+  const saveSequenceRef = useRef(0);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const [hydrated, setHydrated] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [conflicts, setConflicts] = useState<AutomationConflict[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<number | null>(null);
+  const [validationTarget, setValidationTarget] = useState<'name' | 'trigger' | 'conditions' | 'actions' | null>(null);
+  const saveErrorId = useId();
+  const formRef = useRef<HTMLFormElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const triggerTypeRef = useRef<HTMLSelectElement>(null);
 
   const createMutation_isPendingRef = useRef(createMutation.isPending);
   createMutation_isPendingRef.current = createMutation.isPending;
@@ -460,6 +529,7 @@ export default function AutomationBuilderPage() {
   const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm();
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
+  const presetUnavailable = !isEdit && Boolean(presetId) && (!preset || !hydrated);
 
   const vehicleOptions = useMemo(() => {
     const options = (vehicles ?? []).map((vehicle) => ({
@@ -468,11 +538,17 @@ export default function AutomationBuilderPage() {
         id: vehicle.id,
       }),
     }));
+    if (form.vehicle_id != null && !options.some((option) => option.value === String(form.vehicle_id))) {
+      options.push({
+        value: String(form.vehicle_id),
+        label: t('automations.builder.vehicleFallback', 'Vehicle {{id}}', { id: form.vehicle_id }),
+      });
+    }
     return [
-      { value: '', label: t('automations.builder.allVehicles', 'All Vehicles') },
+      { value: '', label: t('automations.builder.allVehicles', 'All vehicles') },
       ...options,
     ];
-  }, [t, vehicles]);
+  }, [form.vehicle_id, t, vehicles]);
 
   const triggerOptions = useMemo(
     () => [
@@ -506,18 +582,42 @@ export default function AutomationBuilderPage() {
   const nameReady = form.name.trim() !== '';
   const triggerReady = form.triggers.length > 0 && !form.triggers.some(triggerNeedsPlace);
   const actionsReady = form.actions.length > 0 && !form.actions.some(actionIsIncomplete);
+  const incompleteCondition = form.conditions.find(conditionIsIncomplete);
+  const conditionsReady = !incompleteCondition;
+  const conditionError = incompleteCondition
+    ? conditionNeedsPlace(incompleteCondition)
+      ? t('automations.builder.errorConditionPlace', 'Select a geofence for each geofence condition')
+      : `${t('automations.builder.summaryConditions', 'Conditions')}: ${t(
+        incompleteCondition.kind === 'condition_signal' ? 'automations.conditions.signal'
+          : incompleteCondition.kind === 'condition_time_window' ? 'automations.conditions.timeWindow'
+            : incompleteCondition.kind === 'condition_other_automation' ? 'automations.conditions.otherAutomation'
+              : 'automations.conditions.geofence',
+      )} — ${t('automations.builder.readyPending', 'incomplete')}`
+    : null;
+  const conditionErrorId = `${saveErrorId}-conditions`;
   const allReady = nameReady
     && triggerReady
     && actionsReady
-    && !form.conditions.some(conditionNeedsPlace);
+    && conditionsReady
+    && !presetUnavailable;
+  const draftContext = t('automations.builder.brief.context', 'Current editor draft only. Publishing still requires validation and an explicit save.');
+  const rawMetrics: readonly StatMetric[] = [
+    { metricId: 'text', occurrenceId: 'trigger', rawValue: selectedTriggerLabel, label: t('automations.builder.summaryTrigger', 'Trigger'), description: draftContext },
+    { metricId: 'count', occurrenceId: 'conditions', rawValue: conditionCount, label: t('automations.builder.summaryConditions', 'Conditions'), description: t('automations.builder.onlyIfDesc', 'Optional checks that must pass before actions run.') },
+    { metricId: 'count', occurrenceId: 'actions', rawValue: actionCount, label: t('automations.builder.summaryActions', 'Actions'), description: t('automations.builder.thenDesc', 'Actions are executed in order.') },
+    { metricId: 'status', occurrenceId: 'status', rawValue: form.enabled ? t('automations.builder.statusEnabled', 'Enabled') : t('automations.builder.statusDisabled', 'Disabled'),
+      label: t('automations.builder.summaryStatus', 'Status'), description: draftContext },
+  ];
+  const briefMetrics = useOperationalMetrics(rawMetrics);
 
   const readinessItems = useMemo(
     () => [
       { key: 'name', ok: nameReady, label: t('automations.builder.readyName', 'Name added') },
       { key: 'trigger', ok: triggerReady, label: t('automations.builder.readyTrigger', 'Trigger configured') },
+      { key: 'conditions', ok: conditionsReady, label: t('automations.builder.summaryConditions', 'Conditions') },
       { key: 'actions', ok: actionsReady, label: t('automations.builder.readyActions', 'At least one action') },
     ],
-    [nameReady, triggerReady, actionsReady, t],
+    [nameReady, triggerReady, conditionsReady, actionsReady, t],
   );
 
   const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -525,14 +625,24 @@ export default function AutomationBuilderPage() {
     setDirty(true);
   }, [setFormValue]);
 
+  const updateSelectedTrigger = useCallback(
+    (trigger: AutomationTriggerStepInput | null) => {
+      setFormValue((previous) => ({
+        ...previous,
+        triggers: trigger
+          ? [trigger, ...previous.triggers.slice(1)]
+          : previous.triggers.slice(1),
+      }));
+      setDirty(true);
+    },
+    [setFormValue],
+  );
+
   const handleTriggerKindChange = useCallback(
     (nextKind: string) => {
-      update(
-        'triggers',
-        nextKind ? [createDefaultTrigger(nextKind as AutomationTriggerKind)] : [],
-      );
+      updateSelectedTrigger(nextKind ? createDefaultTrigger(nextKind as AutomationTriggerKind) : null);
     },
-    [update],
+    [updateSelectedTrigger],
   );
 
   const validate = useCallback((): string | null => {
@@ -545,9 +655,7 @@ export default function AutomationBuilderPage() {
     if (form.triggers.some(triggerNeedsPlace)) {
       return t('automations.builder.errorTriggerPlace', 'Select a geofence for the trigger');
     }
-    if (form.conditions.some(conditionNeedsPlace)) {
-      return t('automations.builder.errorConditionPlace', 'Select a geofence for each geofence condition');
-    }
+    if (conditionError) return conditionError;
     if (form.actions.length === 0) {
       return t('automations.builder.errorActions', 'At least one action is required');
     }
@@ -555,21 +663,46 @@ export default function AutomationBuilderPage() {
       return t('automations.builder.errorActionDetails', 'Complete every action before saving');
     }
     return null;
-  }, [form, t]);
+  }, [conditionError, form, t]);
 
   const handleSave = useCallback(async () => {
+    if (presetUnavailable) return;
+    setValidationTarget(null);
     const error = validate();
     if (error) {
       setSaveError(error);
+      if (!nameReady) {
+        setValidationTarget('name');
+        nameRef.current?.focus();
+      } else if (form.triggers.length === 0) {
+        setValidationTarget('trigger');
+        triggerTypeRef.current?.focus();
+      } else {
+        setValidationTarget(!triggerReady ? 'trigger' : !conditionsReady ? 'conditions' : 'actions');
+        const section = !triggerReady
+          ? 'automation-builder'
+          : !conditionsReady
+            ? 'automation-conditions'
+            : 'automation-actions';
+        formRef.current?.querySelector<HTMLElement>(
+          `[data-tour="${section}"] :is(input, select, textarea, button):not(:disabled):not([type="hidden"])`,
+        )?.focus();
+      }
       return;
     }
     setSaveError(null);
 
+    const saveScope = saveScopeRef.current;
+    const saveSequence = ++saveSequenceRef.current;
+    const isCurrentSave = () => mountedRef.current
+      && saveScopeRef.current === saveScope
+      && saveSequenceRef.current === saveSequence;
     try {
       const payload = formToPayload(form);
       const result = isEdit && automationId
         ? await updateMutation.mutateAsync({ id: automationId, input: payload })
         : await createMutation.mutateAsync(payload);
+      if (!isCurrentSave()) return;
       setDirty(false);
       setSavedId(result.id);
       // The save API conflict-checks every create/update: surface its
@@ -581,13 +714,15 @@ export default function AutomationBuilderPage() {
       // Successful save → drop the autosaved draft so a future visit
       // doesn't restore stale work.
       discardDraft();
+      setFormValue(applyDraftToForm(form, payload));
       if (resultConflicts.length === 0) {
         navigate('/automations');
       }
     } catch (error) {
+      if (!isCurrentSave()) return;
       setSaveError(error instanceof Error ? error.message : String(error));
     }
-  }, [automationId, createMutation, discardDraft, form, isEdit, navigate, updateMutation, validate]);
+  }, [automationId, conditionsReady, createMutation, discardDraft, form, isEdit, nameReady, navigate, presetUnavailable, setFormValue, triggerReady, updateMutation, validate]);
 
   /**
    * Cancel handler — if the form is dirty, prompt before navigating away.
@@ -624,69 +759,72 @@ export default function AutomationBuilderPage() {
     }
   }, [automationId, savedId, testRunMutation]);
 
-  if (isEdit && isLoadingAutomation) {
+  if (isEdit && isLoadingAutomation && !automationState.hasData) {
     return (
-      <PageContainer
-        title={t('automations.builder.editTitle', 'Edit Automation')}
+      <PageLayout
+        title={t('automations.builder.editTitle', 'Edit automation')}
         loading
         breadcrumbLabels={breadcrumbLabels}
       >
         <div />
-      </PageContainer>
+      </PageLayout>
     );
   }
 
   if (isEdit && loadError) {
     return (
-      <PageContainer
-        title={t('automations.builder.editTitle', 'Edit Automation')}
+      <PageLayout
+        title={t('automations.builder.editTitle', 'Edit automation')}
         error={loadError instanceof Error ? loadError : new Error(String(loadError))}
         breadcrumbLabels={breadcrumbLabels}
       >
         <div />
-      </PageContainer>
+      </PageLayout>
     );
   }
 
   if (isEdit && !existingAutomation && !isLoadingAutomation) {
     return (
-      <PageContainer
-        title={t('automations.builder.editTitle', 'Edit Automation')}
+      <PageLayout
+        title={t('automations.builder.editTitle', 'Edit automation')}
         breadcrumbLabels={breadcrumbLabels}
       >
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<AlertTriangle className="h-8 w-8" />}
+          icon={<Icon icon={AlertTriangle} size="xl" />}
           message={t('automations.builder.notFound', 'Automation not found')}
         />
-      </PageContainer>
+      </PageLayout>
     );
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={isEdit
-        ? t('automations.builder.editTitle', 'Edit Automation')
-        : t('automations.builder.createTitle', 'Create Automation')}
+        ? t('automations.builder.editTitle', 'Edit automation')
+        : t('automations.builder.createTitle', 'Create automation')}
       subtitle={t(
         'automations.builder.subtitle',
         'Configure supported typed triggers, conditions, and actions for your automation.',
       )}
       breadcrumbLabels={breadcrumbLabels}
-      actions={(
+      secondaryActions={(
         <UiButton
           type="button"
           variant="ghost"
           size="sm"
+          wrapLabel
           onClick={handleBackToList}
-          className="min-h-11 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          icon={<ArrowLeft className="h-4 w-4" />}
-          aria-label={t('automations.builder.backToList', 'Back to Automations')}
+          className="min-h-11 max-w-full"
+          icon={<Icon icon={ArrowLeft} />}
+          aria-label={t('automations.builder.backToList', 'Back to automations')}
         >
-          {t('automations.builder.backToList', 'Back to Automations')}
+          {t('automations.builder.backToList', 'Back to automations')}
         </UiButton>
       )}
     >
+      <StaleRefreshWarning state={automationState} label={t('automations.builder.editTitle', 'Edit automation')} />
       <form
+        ref={formRef}
         onSubmit={(event) => {
           event.preventDefault();
           handleSave();
@@ -706,6 +844,23 @@ export default function AutomationBuilderPage() {
           resourceLabel={t('editConflict.resource.automation', 'This automation')}
         />
 
+        {!isEdit && presetId && (
+          <GlassPanel className="min-w-0 space-y-3 p-4">
+            <PanelTitle>{t('automations.builder.presetTitle', 'Install preset')}</PanelTitle>
+            <StaleRefreshWarning state={presetState} label={t('automations.presets.resource', 'Automation presets')} />
+            <SourceContent
+              state={presetState.hasData ? 'ready' : presetState.fatalError ? 'error' : presetQuery.isSuccess ? 'empty' : 'loading'}
+              label={t('automations.presets.resource', 'Automation presets')}
+              emptyMessage={t('automations.presets.empty', 'No preset templates available')}
+              errorMessage={t('error.loadFailed', 'Failed to load data')}
+              error={presetState.fatalError}
+              errorRecovery={{ onRetry: presetState.retry ?? undefined }}
+            >
+              <Text as="p" variant="bodySm" color="secondary">{preset?.name}</Text>
+            </SourceContent>
+          </GlassPanel>
+        )}
+
         {hasDraft && !isEdit && !presetId && (
           <DraftRecoveryBanner
             hasDraft={hasDraft}
@@ -718,53 +873,43 @@ export default function AutomationBuilderPage() {
           />
         )}
 
-        {/* 1 — Summary KPI band: reflows from 2 → 4 columns, fills the width */}
+        {/* 1 — Draft summary; the typed editors remain the source of truth */}
         <FadeIn>
-          <section
-            aria-label={t('automations.builder.summary', 'Automation summary')}
-            className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:gap-5"
-          >
-            <MetricCard
-              label={t('automations.builder.summaryTrigger', 'Trigger')}
-              value={selectedTriggerLabel}
-              icon={<Zap className="h-5 w-5" />}
-              color="cyan"
+          <div>
+            <OperationalBrief
+              compact
+              testId="automation-builder-brief"
+              eyebrow={t('automations.builder.brief.eyebrow', 'Automation draft')}
+              title={t('automations.builder.summary', 'Automation summary')}
+              description={draftContext}
+              statusLabel={allReady ? t('automations.builder.readyToSave', 'Ready to save')
+                : t('automations.builder.notReady', 'Not ready yet')}
+              statusTone="neutral"
+              metrics={briefMetrics}
+              scope={t('automations.builder.brief.scope', 'Editor configuration; not execution history')}
+              freshness={dirty ? t('automations.builder.brief.unsaved', 'Local changes not published')
+                : t('automations.builder.brief.editor', 'Current editor state')}
+              provenance={draftContext}
             />
-            <MetricCard
-              label={t('automations.builder.summaryConditions', 'Conditions')}
-              value={conditionCount}
-              icon={<Filter className="h-5 w-5" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t('automations.builder.summaryActions', 'Actions')}
-              value={actionCount}
-              icon={<Cog className="h-5 w-5" />}
-              color="green"
-            />
-            <MetricCard
-              label={t('automations.builder.summaryStatus', 'Status')}
-              value={form.enabled
-                ? t('automations.builder.statusEnabled', 'Enabled')
-                : t('automations.builder.statusDisabled', 'Disabled')}
-              icon={<Power className="h-5 w-5" />}
-              color={form.enabled ? 'green' : 'amber'}
-            />
-          </section>
+          </div>
         </FadeIn>
 
         {/* 2 — Two-pane bento: build canvas (hero) + assist rail */}
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+        <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           {/* Build canvas — the When → Only If → Then flow */}
-          <div className="space-y-6 xl:col-span-2">
+          <div className="min-w-0 space-y-6 xl:col-span-2">
             <FadeIn>
               <FormSection title={t('automations.builder.general', 'General')}>
                 <UiInput
+                  ref={nameRef}
                   label={t('automations.builder.name', 'Name')}
                   value={form.name}
                   onChange={(event) => update('name', event.target.value)}
-                  placeholder={t('automations.builder.namePlaceholder', 'Morning Commute Prep')}
+                  placeholder={t('automations.builder.namePlaceholder', 'Morning commute prep')}
                   required
+                  className="min-h-11"
+                  aria-invalid={validationTarget === 'name' && !nameReady ? 'true' : undefined}
+                  aria-describedby={validationTarget === 'name' && !nameReady && saveError ? saveErrorId : undefined}
                 />
                 <UiTextarea
                   label={t('automations.builder.description', 'Description')}
@@ -777,15 +922,29 @@ export default function AutomationBuilderPage() {
                   rows={2}
                 />
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-end">
-                  <UiSelect
-                    label={t('automations.builder.vehicle', 'Vehicle')}
-                    options={vehicleOptions}
-                    value={form.vehicle_id != null ? String(form.vehicle_id) : ''}
-                    onChange={(event) => update(
-                      'vehicle_id',
-                      event.target.value ? Number(event.target.value) : null,
-                    )}
-                  />
+                  <div className="min-w-0 space-y-3">
+                    <StaleRefreshWarning state={vehiclesState} label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')} />
+                    <SourceContent
+                      state={vehiclesState.hasData ? (vehicles?.length ? 'ready' : 'empty') : vehiclesState.fatalError ? 'error' : 'loading'}
+                      label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')}
+                      emptyMessage={t('vehicles.emptyTitle', 'No vehicles yet')}
+                      emptyContent={<Text as="p" variant="bodySm" color="secondary">{t('vehicles.emptyTitle', 'No vehicles yet')}</Text>}
+                      errorMessage={t('vehicles.loadError', 'Failed to load vehicles.')}
+                      error={vehiclesState.fatalError}
+                      errorRecovery={{ onRetry: vehiclesState.retry ?? undefined }}
+                      loadingContent={<Text as="p" variant="bodySm" color="secondary">{t('common.loading', 'Loading...')}</Text>}
+                    >{null}</SourceContent>
+                    <UiSelect
+                      label={t('automations.builder.vehicle', 'Vehicle')}
+                      options={vehicleOptions}
+                      value={form.vehicle_id != null ? String(form.vehicle_id) : ''}
+                      className="min-h-11"
+                      onChange={(event) => update(
+                        'vehicle_id',
+                        event.target.value ? Number(event.target.value) : null,
+                      )}
+                    />
+                  </div>
                   <Toggle
                     label={t('automations.builder.enabled', 'Enabled')}
                     checked={form.enabled}
@@ -798,27 +957,31 @@ export default function AutomationBuilderPage() {
             <FadeIn delay={0.05}>
               <div data-tour="automation-builder">
                 <FormSection
-                  title={t('automations.builder.when', 'When (Trigger)')}
+                  title={t('automations.builder.when', 'When (trigger)')}
                   description={t(
                     'automations.builder.whenDesc',
                     'Choose the supported typed contract that starts this automation.',
                   )}
                 >
                   <UiSelect
-                    label={t('automations.builder.triggerType', 'Trigger Type')}
+                    ref={triggerTypeRef}
+                    label={t('automations.builder.triggerType', 'Trigger type')}
                     help={{
                       i18nKey: 'help.fields.automations.triggerType',
                       content: 'Decides when this automation starts: signal change, geofence enter/exit, time of day, charging event, or another automation completing.',
                     }}
                     options={triggerOptions}
                     value={selectedTrigger?.kind ?? ''}
+                    className="min-h-11"
+                    aria-invalid={validationTarget === 'trigger' && !triggerReady ? 'true' : undefined}
+                    aria-describedby={validationTarget === 'trigger' && !triggerReady && saveError ? saveErrorId : undefined}
                     onChange={(event) => handleTriggerKindChange(event.target.value)}
                   />
                   {selectedTrigger ? (
                     <GlassPanel className="mt-3 p-4">
                       <TriggerConfigurator
                         trigger={selectedTrigger}
-                        onChange={(trigger) => update('triggers', [trigger])}
+                        onChange={updateSelectedTrigger}
                       />
                     </GlassPanel>
                   ) : (
@@ -838,7 +1001,9 @@ export default function AutomationBuilderPage() {
             <FadeIn delay={0.1}>
               <div data-tour="automation-conditions">
                 <FormSection
-                  title={t('automations.builder.onlyIf', 'Only If (Conditions)')}
+                  title={t('automations.builder.onlyIf', 'Only if (conditions)')}
+                  aria-invalid={!conditionsReady ? 'true' : undefined}
+                  aria-describedby={conditionError ? conditionErrorId : undefined}
                   description={t(
                     'automations.builder.onlyIfDesc',
                     'Optional checks that must pass before actions run.',
@@ -855,12 +1020,23 @@ export default function AutomationBuilderPage() {
             <FadeIn delay={0.15}>
               <div data-tour="automation-actions">
                 <FormSection
-                  title={t('automations.builder.then', 'Then (Actions)')}
+                  title={t('automations.builder.then', 'Then (actions)')}
                   description={t(
                     'automations.builder.thenDesc',
                     'Actions are executed in order.',
                   )}
                 >
+                  <StaleRefreshWarning state={channelsState} label={t('dataSources.labels.notificationChannels', 'Notification channels')} />
+                  <SourceContent
+                    state={channelsState.hasData ? (channels?.length ? 'ready' : 'empty') : channelsState.fatalError ? 'error' : 'loading'}
+                    label={t('dataSources.labels.notificationChannels', 'Notification channels')}
+                    emptyMessage={t('automations.builder.noChannels', 'No channels configured')}
+                    emptyContent={<Text as="p" variant="bodySm" color="secondary">{t('automations.builder.noChannels', 'No channels configured')}</Text>}
+                    errorMessage={t('error.loadFailed', 'Failed to load data')}
+                    error={channelsState.fatalError}
+                    errorRecovery={{ onRetry: channelsState.retry ?? undefined }}
+                    loadingContent={<Text as="p" variant="bodySm" color="secondary">{t('common.loading', 'Loading...')}</Text>}
+                  >{null}</SourceContent>
                   <ActionBuilder
                     actions={form.actions}
                     channels={notificationChannels}
@@ -874,26 +1050,26 @@ export default function AutomationBuilderPage() {
           {/* Assist rail — readiness, AI helpers, preset hint */}
           <aside
             aria-label={t('automations.builder.assistant', 'Builder assistant')}
-            className="space-y-6 xl:col-span-1 xl:sticky xl:top-4 xl:self-start"
+            className="min-w-0 space-y-6 xl:col-span-1 xl:sticky xl:top-4 xl:self-start"
           >
             <FadeIn>
               <GlassPanel className="p-4 sm:p-5">
                 <PanelTitle className="mb-3 flex items-center gap-2">
-                  <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                  <Icon icon={ListChecks} className={typography.color.secondary} />
                   {t('automations.builder.readiness', 'Readiness')}
                 </PanelTitle>
                 <ul className="space-y-2">
                   {readinessItems.map((item) => (
-                    <li key={item.key} className="flex items-center gap-2">
+                    <li key={item.key} className="flex min-w-0 items-start gap-2">
                       {item.ok ? (
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+                        <Icon icon={CheckCircle2} className={neonColorMap.green.text} />
                       ) : (
-                        <Circle className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                        <Icon icon={Circle} className={typography.color.muted} />
                       )}
                       <Text
                         as="span"
                         variant="bodySm"
-                        className={item.ok ? 'text-[var(--text-primary)]' : undefined}
+                        className="min-w-0 break-words"
                       >
                         {item.label}
                       </Text>
@@ -905,6 +1081,11 @@ export default function AutomationBuilderPage() {
                     </li>
                   ))}
                 </ul>
+                {!conditionsReady && (
+                  <Text id={conditionErrorId} as="p" variant="bodySm" color="secondary" className="mt-3 break-words" role="status">
+                    {conditionError}
+                  </Text>
+                )}
                 <div className="mt-4">
                   <Badge variant={allReady ? 'success' : 'neutral'} size="lg">
                     {allReady
@@ -965,9 +1146,10 @@ export default function AutomationBuilderPage() {
 
         {saveError && (
           <AlertBanner
+            id={saveErrorId}
             variant="danger"
-            icon={<AlertTriangle className="h-4 w-4" />}
-            title={t('automations.builder.saveError', 'Save Error')}
+            icon={<Icon icon={AlertTriangle} />}
+            title={t('automations.builder.saveError', 'Save error')}
           >
             {saveError}
           </AlertBanner>
@@ -979,12 +1161,13 @@ export default function AutomationBuilderPage() {
             <div className="flex flex-wrap items-center gap-3">
               <UiButton
                 type="submit"
+                wrapLabel
+                icon={<Icon icon={Save} />}
                 loading={isSaving}
-                disabled={isSaving || !operationalMode.canWrite}
+                disabled={isSaving || presetUnavailable || !operationalMode.canWrite}
                 title={operationalMode.writeBlockReason ?? undefined}
                 className="min-h-11"
               >
-                <Save className="mr-2 h-4 w-4" />
                 {isEdit
                   ? t('automations.builder.save', 'Save')
                   : t('automations.builder.create', 'Create')}
@@ -992,6 +1175,8 @@ export default function AutomationBuilderPage() {
               {(savedId ?? automationId) && (
                 <UiButton
                   type="button"
+                  wrapLabel
+                  icon={<Icon icon={PlayCircle} />}
                   variant="secondary"
                   onClick={handleTestRun}
                   loading={testRunMutation.isPending}
@@ -999,23 +1184,23 @@ export default function AutomationBuilderPage() {
                   title={operationalMode.writeBlockReason ?? undefined}
                   className="min-h-11"
                 >
-                  <PlayCircle className="mr-2 h-4 w-4" />
-                  {t('automations.builder.testRun', 'Test Run')}
+                  {t('automations.builder.testRun', 'Test run')}
                 </UiButton>
               )}
               <UiButton
                 type="button"
+                wrapLabel
+                icon={<Icon icon={X} />}
                 variant="ghost"
                 onClick={handleBackToList}
                 className="min-h-11"
               >
-                <X className="mr-2 h-4 w-4" />
                 {t('automations.builder.cancel', 'Cancel')}
               </UiButton>
 
               {testRunMutation.isSuccess && (
                 <Badge variant="success" size="lg">
-                  <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Icon icon={Zap} size="sm" />
                   {t('automations.builder.testRunStarted', 'Test run started!')}
                 </Badge>
               )}
@@ -1024,6 +1209,6 @@ export default function AutomationBuilderPage() {
         </FadeIn>
       </form>
       {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -1,0 +1,1129 @@
+[
+  {
+    "title": "Home",
+    "titleKey": "nav.groups.home",
+    "items": [
+      {
+        "to": "/",
+        "label": "Dashboard",
+        "labelKey": "nav.items.dashboard"
+      },
+      {
+        "to": "/action-center",
+        "label": "Action center",
+        "labelKey": "nav.items.action-center"
+      },
+      {
+        "to": "/explore",
+        "label": "Explore features",
+        "labelKey": "nav.items.explore"
+      },
+      {
+        "to": "/live",
+        "label": "Live map",
+        "labelKey": "nav.items.live"
+      },
+      {
+        "to": "/timeline",
+        "label": "Timeline",
+        "labelKey": "nav.items.timeline"
+      },
+      {
+        "to": "/activity",
+        "label": "Activity timeline",
+        "labelKey": "nav.items.activity"
+      },
+      {
+        "to": "/weekly-digest",
+        "label": "Weekly digest",
+        "labelKey": "nav.items.weekly-digest"
+      }
+    ]
+  },
+  {
+    "title": "Vehicles",
+    "titleKey": "nav.groups.vehicles",
+    "items": [
+      {
+        "to": "/vehicles",
+        "label": "My vehicles",
+        "labelKey": "nav.items.vehicles"
+      },
+      {
+        "to": "/vehicle-management",
+        "label": "Vehicle management",
+        "labelKey": "nav.items.vehicle-management"
+      },
+      {
+        "to": "/digital-twin",
+        "label": "Vehicle live view",
+        "labelKey": "nav.items.digital-twin"
+      },
+      {
+        "to": "/day-log",
+        "label": "Day log",
+        "labelKey": "nav.items.day-log"
+      },
+      {
+        "to": "/vehicle-comparison",
+        "label": "Compare vehicles",
+        "labelKey": "nav.items.vehicle-comparison"
+      },
+      {
+        "to": "/locations",
+        "label": "Saved locations",
+        "labelKey": "nav.items.locations"
+      },
+      {
+        "to": "/parking",
+        "label": "Parking analytics",
+        "labelKey": "nav.items.parking"
+      },
+      {
+        "to": "/utilization",
+        "label": "Utilization",
+        "labelKey": "nav.items.utilization"
+      },
+      {
+        "to": "/time-machine",
+        "label": "Time machine",
+        "labelKey": "nav.items.time-machine"
+      },
+      {
+        "to": "/physics-cockpit",
+        "label": "Physics cockpit",
+        "labelKey": "nav.items.physics-cockpit"
+      },
+      {
+        "to": "/fleet-operations",
+        "label": "Fleet operations",
+        "labelKey": "nav.items.fleet-operations"
+      },
+      {
+        "to": "/resale-vault",
+        "label": "Warranty & resale vault",
+        "labelKey": "nav.items.resale-vault"
+      }
+    ]
+  },
+  {
+    "title": "Driving",
+    "titleKey": "nav.groups.driving",
+    "items": [
+      {
+        "to": "/drives",
+        "label": "Drives",
+        "labelKey": "nav.items.drives"
+      },
+      {
+        "to": "/trips",
+        "label": "Trips",
+        "labelKey": "nav.items.trips"
+      },
+      {
+        "to": "/journeys",
+        "label": "Journeys",
+        "labelKey": "nav.items.journeys"
+      },
+      {
+        "to": "/trip-planner",
+        "label": "Trip planner",
+        "labelKey": "nav.items.trip-planner"
+      },
+      {
+        "to": "/navigation",
+        "label": "Navigation",
+        "labelKey": "nav.items.navigation"
+      },
+      {
+        "to": "/geofences",
+        "label": "Geofences",
+        "labelKey": "nav.items.geofences"
+      },
+      {
+        "to": "/mileage",
+        "label": "Mileage log",
+        "labelKey": "nav.items.mileage"
+      },
+      {
+        "to": "/logbook",
+        "label": "Trip logbook",
+        "labelKey": "nav.items.logbook"
+      },
+      {
+        "to": "/mileage-budget",
+        "label": "Mileage budget",
+        "labelKey": "nav.items.mileage-budget"
+      },
+      {
+        "to": "/driving-rhythm",
+        "label": "Driving rhythm",
+        "labelKey": "nav.items.driving-rhythm"
+      },
+      {
+        "to": "/speed-sweetspot",
+        "label": "Speed sweet spot",
+        "labelKey": "nav.items.speed-sweetspot"
+      },
+      {
+        "to": "/efficiency-target",
+        "label": "Efficiency target",
+        "labelKey": "nav.items.efficiency-target"
+      },
+      {
+        "to": "/cold-start",
+        "label": "Cold start cost",
+        "labelKey": "nav.items.cold-start"
+      },
+      {
+        "to": "/drive-compare",
+        "label": "Drive compare",
+        "labelKey": "nav.items.drive-compare"
+      },
+      {
+        "to": "/explorer",
+        "label": "Explorer",
+        "labelKey": "nav.items.explorer"
+      },
+      {
+        "to": "/drive-calendar",
+        "label": "Drive calendar",
+        "labelKey": "nav.items.drive-calendar"
+      },
+      {
+        "to": "/milestones",
+        "label": "Milestones",
+        "labelKey": "nav.items.milestones"
+      },
+      {
+        "to": "/lifetime-stats",
+        "label": "Lifetime stats",
+        "labelKey": "nav.items.lifetime-stats"
+      },
+      {
+        "to": "/drive-score",
+        "label": "Drive score",
+        "labelKey": "nav.items.drive-score"
+      },
+      {
+        "to": "/fsd",
+        "label": "FSD insights",
+        "labelKey": "nav.items.fsd"
+      },
+      {
+        "to": "/speed-profile",
+        "label": "Speed profile",
+        "labelKey": "nav.items.speed-profile"
+      },
+      {
+        "to": "/driving-dynamics",
+        "label": "Driving dynamics",
+        "labelKey": "nav.items.driving-dynamics"
+      },
+      {
+        "to": "/regen-efficiency",
+        "label": "Regen braking",
+        "labelKey": "nav.items.regen-efficiency"
+      },
+      {
+        "to": "/route-efficiency",
+        "label": "Route efficiency",
+        "labelKey": "nav.items.route-efficiency"
+      },
+      {
+        "to": "/drive-dna",
+        "label": "Drive DNA",
+        "labelKey": "nav.items.drive-dna"
+      },
+      {
+        "to": "/what-if",
+        "label": "What-if simulator",
+        "labelKey": "nav.items.what-if"
+      },
+      {
+        "to": "/departure-forecast",
+        "label": "Departure forecast",
+        "labelKey": "nav.items.departure-forecast"
+      },
+      {
+        "to": "/arrival-reliability",
+        "label": "Arrival reliability",
+        "labelKey": "nav.items.arrival-reliability"
+      },
+      {
+        "to": "/destination-transitions",
+        "label": "Destination transitions",
+        "labelKey": "nav.items.destination-transitions"
+      },
+      {
+        "to": "/journey-fragmentation",
+        "label": "Journey fragmentation",
+        "labelKey": "nav.items.journey-fragmentation"
+      },
+      {
+        "to": "/seasonal-efficiency",
+        "label": "Seasonal efficiency",
+        "labelKey": "nav.items.seasonal-efficiency"
+      },
+      {
+        "to": "/segments",
+        "label": "Ghost racing",
+        "labelKey": "nav.items.segments"
+      }
+    ]
+  },
+  {
+    "title": "Charging",
+    "titleKey": "nav.groups.charging",
+    "items": [
+      {
+        "to": "/charging",
+        "label": "Charging overview",
+        "labelKey": "nav.items.charging"
+      },
+      {
+        "to": "/tesla-charging-history",
+        "label": "Charge history",
+        "labelKey": "nav.items.tesla-charging-history"
+      },
+      {
+        "to": "/charging-curve",
+        "label": "Charging curve",
+        "labelKey": "nav.items.charging-curve"
+      },
+      {
+        "to": "/charging-heatmap",
+        "label": "Charging patterns",
+        "labelKey": "nav.items.charging-heatmap"
+      },
+      {
+        "to": "/smart-charge",
+        "label": "Smart charging",
+        "labelKey": "nav.items.smart-charge"
+      },
+      {
+        "to": "/charger-health",
+        "label": "Charger health",
+        "labelKey": "nav.items.charger-health"
+      },
+      {
+        "to": "/charge-interruption",
+        "label": "Charge interruption",
+        "labelKey": "nav.items.charge-interruption"
+      },
+      {
+        "to": "/charger-resilience",
+        "label": "Charger resilience",
+        "labelKey": "nav.items.charger-resilience"
+      },
+      {
+        "to": "/charge-departure-alignment",
+        "label": "Charge alignment",
+        "labelKey": "nav.items.charge-departure-alignment"
+      },
+      {
+        "to": "/charging-thermal-tax",
+        "label": "Charging thermal tax",
+        "labelKey": "nav.items.charging-thermal-tax"
+      },
+      {
+        "to": "/powershare",
+        "label": "Powershare",
+        "labelKey": "nav.items.powershare"
+      }
+    ]
+  },
+  {
+    "title": "Battery",
+    "titleKey": "nav.groups.battery",
+    "items": [
+      {
+        "to": "/battery",
+        "label": "Battery health",
+        "labelKey": "nav.items.battery"
+      },
+      {
+        "to": "/battery-cells",
+        "label": "Battery cells",
+        "labelKey": "nav.items.battery-cells"
+      },
+      {
+        "to": "/battery-degradation",
+        "label": "Battery degradation",
+        "labelKey": "nav.items.battery-degradation"
+      },
+      {
+        "to": "/projected-range",
+        "label": "Projected range",
+        "labelKey": "nav.items.projected-range"
+      },
+      {
+        "to": "/vampire-drain",
+        "label": "Vampire drain",
+        "labelKey": "nav.items.vampire-drain"
+      },
+      {
+        "to": "/sleep-efficiency",
+        "label": "Sleep efficiency",
+        "labelKey": "nav.items.sleep-efficiency"
+      },
+      {
+        "to": "/battery-passport",
+        "label": "Battery passport",
+        "labelKey": "nav.items.battery-passport"
+      },
+      {
+        "to": "/pack-capacity",
+        "label": "Pack capacity",
+        "labelKey": "nav.items.pack-capacity"
+      },
+      {
+        "to": "/cycle-stress",
+        "label": "Battery cycle stress",
+        "labelKey": "nav.items.cycle-stress"
+      },
+      {
+        "to": "/range-buffer",
+        "label": "Range buffer",
+        "labelKey": "nav.items.range-buffer"
+      },
+      {
+        "to": "/battery-care",
+        "label": "Battery care",
+        "labelKey": "nav.items.battery-care"
+      },
+      {
+        "to": "/charge-advisor",
+        "label": "Charge advisor",
+        "labelKey": "nav.items.charge-advisor"
+      }
+    ]
+  },
+  {
+    "title": "Energy",
+    "titleKey": "nav.groups.energy",
+    "items": [
+      {
+        "to": "/energy",
+        "label": "Energy usage",
+        "labelKey": "nav.items.energy"
+      },
+      {
+        "to": "/energy-flow",
+        "label": "Energy flow",
+        "labelKey": "nav.items.energy-flow"
+      },
+      {
+        "to": "/power-flow",
+        "label": "Power flow",
+        "labelKey": "nav.items.power-flow"
+      },
+      {
+        "to": "/energy-products",
+        "label": "Solar & Powerwall",
+        "labelKey": "nav.items.energy-products"
+      },
+      {
+        "to": "/energy-ledger",
+        "label": "Energy ledger",
+        "labelKey": "nav.items.energy-ledger"
+      },
+      {
+        "to": "/energy-orchestrator",
+        "label": "Energy orchestrator",
+        "labelKey": "nav.items.energy-orchestrator"
+      }
+    ]
+  },
+  {
+    "title": "Cabin",
+    "titleKey": "nav.groups.cabin",
+    "items": [
+      {
+        "to": "/climate-control",
+        "label": "Climate control",
+        "labelKey": "nav.items.climate-control"
+      },
+      {
+        "to": "/cabin-thermal",
+        "label": "Cabin thermal Model",
+        "labelKey": "nav.items.cabin-thermal"
+      },
+      {
+        "to": "/hvac-cycling",
+        "label": "HVAC Cycling",
+        "labelKey": "nav.items.hvac-cycling"
+      },
+      {
+        "to": "/comfort-consistency",
+        "label": "Comfort consistency",
+        "labelKey": "nav.items.comfort-consistency"
+      },
+      {
+        "to": "/preconditioning-effectiveness",
+        "label": "Preconditioning effectiveness",
+        "labelKey": "nav.items.preconditioning-effectiveness"
+      },
+      {
+        "to": "/media-player",
+        "label": "Media player",
+        "labelKey": "nav.items.media-player"
+      }
+    ]
+  },
+  {
+    "title": "Service",
+    "titleKey": "nav.groups.service",
+    "items": [
+      {
+        "to": "/tire-pressure",
+        "label": "Tire pressure",
+        "labelKey": "nav.items.tire-pressure"
+      },
+      {
+        "to": "/tire-differential-drift",
+        "label": "Tire differential drift",
+        "labelKey": "nav.items.tire-differential-drift"
+      },
+      {
+        "to": "/drivetrain-health",
+        "label": "Drivetrain health",
+        "labelKey": "nav.items.drivetrain-health"
+      },
+      {
+        "to": "/software-updates",
+        "label": "Software updates",
+        "labelKey": "nav.items.software-updates"
+      },
+      {
+        "to": "/firmware-impact",
+        "label": "Firmware impact",
+        "labelKey": "nav.items.firmware-impact"
+      },
+      {
+        "to": "/maintenance",
+        "label": "Maintenance",
+        "labelKey": "nav.items.maintenance"
+      },
+      {
+        "to": "/service-intelligence",
+        "label": "Recall & service intelligence",
+        "labelKey": "nav.items.service-intelligence"
+      },
+      {
+        "to": "/diagnostics/service-evidence",
+        "label": "Service evidence pack",
+        "labelKey": "nav.items.diagnostics_service-evidence"
+      }
+    ]
+  },
+  {
+    "title": "Reports",
+    "titleKey": "nav.groups.reports",
+    "items": [
+      {
+        "to": "/statistics",
+        "label": "Statistics",
+        "labelKey": "nav.items.statistics"
+      },
+      {
+        "to": "/analytics",
+        "label": "Analytics",
+        "labelKey": "nav.items.analytics"
+      },
+      {
+        "to": "/period-compare",
+        "label": "Period comparison",
+        "labelKey": "nav.items.period-compare"
+      },
+      {
+        "to": "/efficiency",
+        "label": "Efficiency",
+        "labelKey": "nav.items.efficiency"
+      },
+      {
+        "to": "/temperature-impact",
+        "label": "Temperature impact",
+        "labelKey": "nav.items.temperature-impact"
+      },
+      {
+        "to": "/cost-analysis",
+        "label": "Cost analysis",
+        "labelKey": "nav.items.cost-analysis"
+      },
+      {
+        "to": "/tco",
+        "label": "Cost of ownership",
+        "labelKey": "nav.items.tco"
+      },
+      {
+        "to": "/share-card",
+        "label": "Share card studio",
+        "labelKey": "nav.items.share-card"
+      },
+      {
+        "to": "/analytics/carbon",
+        "label": "Carbon intelligence",
+        "labelKey": "nav.items.analytics_carbon"
+      },
+      {
+        "to": "/drive-archetypes",
+        "label": "Drive archetypes",
+        "labelKey": "nav.items.drive-archetypes"
+      },
+      {
+        "to": "/benchmarks/privacy",
+        "label": "Private benchmarks",
+        "labelKey": "nav.items.benchmarks_privacy"
+      }
+    ]
+  },
+  {
+    "title": "Commands",
+    "titleKey": "nav.groups.commands",
+    "items": [
+      {
+        "to": "/commands",
+        "label": "Send commands",
+        "labelKey": "nav.items.commands"
+      },
+      {
+        "to": "/command-history",
+        "label": "Command history",
+        "labelKey": "nav.items.command-history"
+      },
+      {
+        "to": "/command-reliability",
+        "label": "Command reliability",
+        "labelKey": "nav.items.command-reliability"
+      }
+    ]
+  },
+  {
+    "title": "Automation",
+    "titleKey": "nav.groups.automation",
+    "items": [
+      {
+        "to": "/automations",
+        "label": "Automations",
+        "labelKey": "nav.items.automations"
+      },
+      {
+        "to": "/automations/history",
+        "label": "Automation history",
+        "labelKey": "nav.items.automation-history"
+      },
+      {
+        "to": "/notifications/studio",
+        "label": "Alert studio",
+        "labelKey": "nav.items.notifications_studio"
+      },
+      {
+        "to": "/notifications/rules",
+        "label": "Alert rules",
+        "labelKey": "nav.items.notifications_rules"
+      },
+      {
+        "to": "/notifications/packs",
+        "label": "Alert packs",
+        "labelKey": "nav.items.notifications_packs"
+      }
+    ]
+  },
+  {
+    "title": "Notifications",
+    "titleKey": "nav.groups.notifications",
+    "items": [
+      {
+        "to": "/notifications/inbox",
+        "label": "All notifications",
+        "labelKey": "nav.items.notifications_inbox"
+      },
+      {
+        "to": "/notifications/channels",
+        "label": "Notification channels",
+        "labelKey": "nav.items.notifications_channels"
+      },
+      {
+        "to": "/notifications/browser",
+        "label": "Browser notifications",
+        "labelKey": "nav.items.notifications_browser"
+      },
+      {
+        "to": "/notifications/quiet-hours",
+        "label": "Quiet hours",
+        "labelKey": "nav.items.notifications_quiet-hours"
+      },
+      {
+        "to": "/notifications/health",
+        "label": "Notification health",
+        "labelKey": "nav.items.notifications_health"
+      }
+    ]
+  },
+  {
+    "title": "Advanced intelligence",
+    "titleKey": "nav.groups.advanced_intelligence",
+    "items": [
+      {
+        "to": "/intelligence/twin-lab",
+        "label": "Vehicle twin lab",
+        "labelKey": "nav.items.intelligence_twin-lab"
+      },
+      {
+        "to": "/intelligence/firmware-canary",
+        "label": "Firmware canary",
+        "labelKey": "nav.items.intelligence_firmware-canary"
+      },
+      {
+        "to": "/intelligence/component-survival",
+        "label": "Component survival",
+        "labelKey": "nav.items.intelligence_component-survival"
+      },
+      {
+        "to": "/intelligence/road-hazards",
+        "label": "Road hazard mesh",
+        "labelKey": "nav.items.intelligence_road-hazards"
+      },
+      {
+        "to": "/intelligence/behavioral-sentinel",
+        "label": "Behavioral sentinel",
+        "labelKey": "nav.items.intelligence_behavioral-sentinel"
+      },
+      {
+        "to": "/intelligence/charging-forensics",
+        "label": "Charging forensics",
+        "labelKey": "nav.items.intelligence_charging-forensics"
+      },
+      {
+        "to": "/intelligence/journey-assurance",
+        "label": "Journey assurance",
+        "labelKey": "nav.items.intelligence_journey-assurance"
+      },
+      {
+        "to": "/intelligence/charging-site-twin",
+        "label": "Charging site twin",
+        "labelKey": "nav.items.intelligence_charging-site-twin"
+      },
+      {
+        "to": "/intelligence/federated-learning",
+        "label": "Federated learning",
+        "labelKey": "nav.items.intelligence_federated-learning"
+      },
+      {
+        "to": "/intelligence/emergency-resilience",
+        "label": "Emergency resilience",
+        "labelKey": "nav.items.intelligence_emergency-resilience"
+      },
+      {
+        "to": "/intelligence/causal-lab",
+        "label": "Causal experiment lab",
+        "labelKey": "nav.items.intelligence_causal-lab"
+      },
+      {
+        "to": "/intelligence/tco-optimizer",
+        "label": "TCO optimizer",
+        "labelKey": "nav.items.intelligence_tco-optimizer"
+      }
+    ]
+  },
+  {
+    "title": "Ownership intelligence",
+    "titleKey": "nav.groups.ownership_intelligence",
+    "items": [
+      {
+        "to": "/ownership/insurance-telematics",
+        "label": "Insurance telematics",
+        "labelKey": "nav.items.ownership_insurance-telematics"
+      },
+      {
+        "to": "/ownership/tariff-lab",
+        "label": "Utility tariff lab",
+        "labelKey": "nav.items.ownership_tariff-lab"
+      },
+      {
+        "to": "/ownership/charging-reconciliation",
+        "label": "Invoice reconciliation",
+        "labelKey": "nav.items.ownership_charging-reconciliation"
+      },
+      {
+        "to": "/ownership/driver-attribution",
+        "label": "Driver attribution",
+        "labelKey": "nav.items.ownership_driver-attribution"
+      },
+      {
+        "to": "/ownership/warranty-command",
+        "label": "Warranty command",
+        "labelKey": "nav.items.ownership_warranty-command"
+      },
+      {
+        "to": "/ownership/data-governance",
+        "label": "Data governance",
+        "labelKey": "nav.items.ownership_data-governance"
+      },
+      {
+        "to": "/ownership/model-trust",
+        "label": "Model trust lab",
+        "labelKey": "nav.items.ownership_model-trust"
+      },
+      {
+        "to": "/ownership/jurisdiction-compliance",
+        "label": "Jurisdiction compliance",
+        "labelKey": "nav.items.ownership_jurisdiction-compliance"
+      },
+      {
+        "to": "/ownership/consumables-lifecycle",
+        "label": "Consumables lifecycle",
+        "labelKey": "nav.items.ownership_consumables-lifecycle"
+      },
+      {
+        "to": "/ownership/subscription-roi",
+        "label": "Subscription ROI",
+        "labelKey": "nav.items.ownership_subscription-roi"
+      }
+    ]
+  },
+  {
+    "title": "Tesla physics",
+    "titleKey": "nav.groups.tesla_physics",
+    "items": [
+      {
+        "to": "/tesla-physics",
+        "label": "Physics overview",
+        "labelKey": "nav.items.tesla-physics"
+      },
+      {
+        "to": "/science",
+        "label": "Science lab",
+        "labelKey": "nav.items.science"
+      }
+    ]
+  },
+  {
+    "title": "Security",
+    "titleKey": "nav.groups.security",
+    "items": [
+      {
+        "to": "/security-access",
+        "label": "Security & access",
+        "labelKey": "nav.items.security-access"
+      },
+      {
+        "to": "/safety-settings",
+        "label": "Safety settings",
+        "labelKey": "nav.items.safety-settings"
+      },
+      {
+        "to": "/guard-mode",
+        "label": "Guard mode",
+        "labelKey": "nav.items.guard-mode"
+      }
+    ]
+  },
+  {
+    "title": "Account",
+    "titleKey": "nav.groups.account",
+    "items": [
+      {
+        "to": "/tesla-account",
+        "label": "Tesla account",
+        "labelKey": "nav.items.tesla-account"
+      },
+      {
+        "to": "/tesla-orders",
+        "label": "Active orders",
+        "labelKey": "nav.items.tesla-orders"
+      },
+      {
+        "to": "/fleet-api",
+        "label": "Fleet API",
+        "labelKey": "nav.items.fleet-api"
+      },
+      {
+        "to": "/tesla-region",
+        "label": "Region & API",
+        "labelKey": "nav.items.tesla-region"
+      },
+      {
+        "to": "/tesla-features",
+        "label": "Feature flags",
+        "labelKey": "nav.items.tesla-features"
+      },
+      {
+        "to": "/account/2fa",
+        "label": "Two-factor auth",
+        "labelKey": "nav.items.account_2fa"
+      },
+      {
+        "to": "/account/sessions",
+        "label": "Active sessions",
+        "labelKey": "nav.items.account_sessions"
+      },
+      {
+        "to": "/account/privacy",
+        "label": "Privacy",
+        "labelKey": "nav.items.account_privacy"
+      },
+      {
+        "to": "/me/activity",
+        "label": "My activity",
+        "labelKey": "nav.items.me_activity"
+      }
+    ]
+  },
+  {
+    "title": "Settings",
+    "titleKey": "nav.groups.settings",
+    "items": [
+      {
+        "to": "/settings",
+        "label": "General settings",
+        "labelKey": "nav.items.settings"
+      },
+      {
+        "to": "/settings/fleet-setup",
+        "label": "Fleet setup",
+        "labelKey": "nav.items.settings_fleet-setup"
+      },
+      {
+        "to": "/chatbot",
+        "label": "Helix chat",
+        "labelKey": "nav.items.chatbot"
+      },
+      {
+        "to": "/dev-tools",
+        "label": "Developer tools",
+        "labelKey": "nav.items.dev-tools"
+      }
+    ]
+  },
+  {
+    "title": "Integrations",
+    "titleKey": "nav.groups.integrations",
+    "items": [
+      {
+        "to": "/integrations/helix",
+        "label": "Helix",
+        "labelKey": "nav.items.integrations_helix"
+      },
+      {
+        "to": "/api-keys",
+        "label": "API keys",
+        "labelKey": "nav.items.api-keys"
+      },
+      {
+        "to": "/gas-price",
+        "label": "Gas prices",
+        "labelKey": "nav.items.gas-price"
+      },
+      {
+        "to": "/intelligence-packs",
+        "label": "Intelligence packs",
+        "labelKey": "nav.items.intelligence-packs"
+      }
+    ]
+  },
+  {
+    "title": "Data",
+    "titleKey": "nav.groups.data",
+    "items": [
+      {
+        "to": "/data-export",
+        "label": "Data export",
+        "labelKey": "nav.items.data-export"
+      },
+      {
+        "to": "/backup",
+        "label": "Backup & restore",
+        "labelKey": "nav.items.backup"
+      },
+      {
+        "to": "/data-repair",
+        "label": "Data repair",
+        "labelKey": "nav.items.data-repair"
+      }
+    ]
+  },
+  {
+    "title": "Diagnostics",
+    "titleKey": "nav.groups.diagnostics",
+    "items": [
+      {
+        "to": "/system-status",
+        "label": "System status",
+        "labelKey": "nav.items.system-status"
+      },
+      {
+        "to": "/tesla-api-usage",
+        "label": "Tesla API usage",
+        "labelKey": "nav.items.tesla-api-usage"
+      },
+      {
+        "to": "/outage",
+        "label": "Outage autobiography",
+        "labelKey": "nav.items.outage"
+      },
+      {
+        "to": "/db-health",
+        "label": "Database health",
+        "labelKey": "nav.items.db-health"
+      },
+      {
+        "to": "/anomaly-detection",
+        "label": "Anomaly detection",
+        "labelKey": "nav.items.anomaly-detection"
+      },
+      {
+        "to": "/diagnostics/rul",
+        "label": "Remaining useful life",
+        "labelKey": "nav.items.diagnostics_rul"
+      },
+      {
+        "to": "/diagnostics/root-cause",
+        "label": "Root-cause intelligence",
+        "labelKey": "nav.items.diagnostics_root-cause"
+      },
+      {
+        "to": "/dashcam",
+        "label": "Dashcam & Sentry",
+        "labelKey": "nav.items.dashcam"
+      },
+      {
+        "to": "/signals",
+        "label": "Live signals",
+        "labelKey": "nav.items.signals"
+      },
+      {
+        "to": "/admin/live-signals",
+        "label": "Live signal inspector",
+        "labelKey": "nav.items.admin_live-signals"
+      },
+      {
+        "to": "/admin/ingest-xray",
+        "label": "Ingest X-Ray",
+        "labelKey": "nav.items.admin_ingest-xray"
+      },
+      {
+        "to": "/admin/dlq",
+        "label": "DLQ inspector",
+        "labelKey": "nav.items.admin_dlq"
+      },
+      {
+        "to": "/admin/flags",
+        "label": "Platform feature flags",
+        "labelKey": "nav.items.admin_flags"
+      },
+      {
+        "to": "/admin/schema-drift",
+        "label": "Schema drift",
+        "labelKey": "nav.items.admin_schema-drift"
+      },
+      {
+        "to": "/admin/slow-queries",
+        "label": "Slow queries",
+        "labelKey": "nav.items.admin_slow-queries"
+      },
+      {
+        "to": "/admin/vehicle-cost",
+        "label": "Vehicle cost",
+        "labelKey": "nav.items.admin_vehicle-cost"
+      },
+      {
+        "to": "/admin/data-quality",
+        "label": "Data quality",
+        "labelKey": "nav.items.admin_data-quality"
+      },
+      {
+        "to": "/admin/disk-forecast",
+        "label": "Disk forecast",
+        "labelKey": "nav.items.admin_disk-forecast"
+      },
+      {
+        "to": "/admin/secret-rotation",
+        "label": "Secret rotation",
+        "labelKey": "nav.items.admin_secret-rotation"
+      },
+      {
+        "to": "/admin/audit-log",
+        "label": "Audit log",
+        "labelKey": "nav.items.admin_audit-log"
+      },
+      {
+        "to": "/admin/gdpr-exports",
+        "label": "GDPR exports",
+        "labelKey": "nav.items.admin_gdpr-exports"
+      },
+      {
+        "to": "/state-debugger",
+        "label": "State debugger",
+        "labelKey": "nav.items.state-debugger"
+      },
+      {
+        "to": "/mqtt-inspector",
+        "label": "MQTT inspector",
+        "labelKey": "nav.items.mqtt-inspector"
+      },
+      {
+        "to": "/signal-correlation",
+        "label": "Signal correlation",
+        "labelKey": "nav.items.signal-correlation"
+      },
+      {
+        "to": "/signal-entropy",
+        "label": "Signal entropy",
+        "labelKey": "nav.items.signal-entropy"
+      },
+      {
+        "to": "/signal-trend",
+        "label": "Signal trend",
+        "labelKey": "nav.items.signal-trend"
+      },
+      {
+        "to": "/signal-change-points",
+        "label": "Signal change points",
+        "labelKey": "nav.items.signal-change-points"
+      },
+      {
+        "to": "/signal-deadband",
+        "label": "Signal deadband advisor",
+        "labelKey": "nav.items.signal-deadband"
+      },
+      {
+        "to": "/signal-mutual-information",
+        "label": "Nonlinear signal coupling",
+        "labelKey": "nav.items.signal-mutual-information"
+      },
+      {
+        "to": "/redis-signals",
+        "label": "Redis signals",
+        "labelKey": "nav.items.redis-signals"
+      },
+      {
+        "to": "/admin/telemetry/coverage",
+        "label": "Telemetry coverage",
+        "labelKey": "nav.items.admin_telemetry_coverage"
+      },
+      {
+        "to": "/api-logs",
+        "label": "API logs",
+        "labelKey": "nav.items.api-logs"
+      },
+      {
+        "to": "/api-playground",
+        "label": "API playground",
+        "labelKey": "nav.items.api-playground"
+      }
+    ]
+  },
+  {
+    "title": "About",
+    "titleKey": "nav.groups.about",
+    "items": [
+      {
+        "to": "/roadmap",
+        "label": "Roadmap",
+        "labelKey": "nav.items.roadmap"
+      }
+    ]
+  }
+]

@@ -1,0 +1,263 @@
+{
+  "item": "audit-page-084",
+  "page": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx",
+  "routes": ["/charging"],
+  "purpose": "Review workspace-scoped charging history alongside departure posture, cost, charging trends, deterministic exceptions, charger insights and a fleet shared-charger queue advisor.",
+  "primaryGoal": "Find, inspect, compare and export charging sessions while distinguishing live readiness from retained or unverified state and bounded recorded history from complete-range evidence.",
+  "dataSources": [
+    {
+      "hook": "useChargingSessionsPaginated",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 122,
+      "endpoint": "GET /api/v1/charging?vehicle_id=<id>&limit=500&offset=0&start=<startInstant>&end=<endInstantExclusive>",
+      "owner": "Charging hook; chargingHandler.ListByVehicle",
+      "routeEvidence": "internal\\api\\router.go:3502-3503",
+      "behavior": "Vehicle-enabled query; key ['charging', vehicleId, start, end, limit, offset]; AbortSignal forwarded; FAST stale time and safeArray. One bounded response drives all client filtering, pagination, trends and period statistics. Desktop heading and overview provenance explicitly disclose up to 500 loaded sessions.",
+      "units": "Wh, W, m and source timestamps remain raw API/cache values. Existing view models and CSV convert to kWh, kW and minutes; JSON exports raw rows.",
+      "backendLimits": "Registration confirmed; list handler, server cap, ordering, live enrichment and exact start/end semantics not inspected or exercised."
+    },
+    {
+      "hook": "useVehicleState",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 260,
+      "endpoint": "GET /api/v1/vehicles/<id>/state (with existing withAsOf query when time-machine mode is active)",
+      "owner": "Vehicle-state hook and vehicleHandler.CurrentState",
+      "routeEvidence": "internal\\api\\router.go:3319,3333",
+      "behavior": "Enabled for positive IDs; live query policy and existing STANDARD polling except as-of snapshots. Response includes state, live, observedAt, freshness and verifiedFields. Page consumes state and useDataState but does not check per-field trust.",
+      "backendLimits": "Current-state handler and time_to_full_charge wire units were not traced; do not assume the page's hours-to-minutes conversion proves the wire contract."
+    },
+    {
+      "hook": "useChargingOptimizer",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 145,
+      "endpoint": "GET /api/v1/analytics/charging-optimizer?vehicle_id=<id>",
+      "owner": "Charging optimizer hook; chargingOptimizerHandler.GetOptimization",
+      "routeEvidence": "internal\\api\\router.go:3896",
+      "behavior": "Independent vehicle-only source with SLOW stale time and AbortSignal. No workspace range supplied. Existing OptimizerSection explicitly calls its bounds unknown and savings illustrative, not measured.",
+      "backendLimits": "Backend history bounds and tariff/currency contract unverified."
+    },
+    {
+      "hook": "useBulkDeleteCharging",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 621,
+      "endpoint": "DELETE /api/v1/charging/bulk; body {ids}",
+      "owner": "Charging mutation hook; chargingHandler.BulkDelete",
+      "routeEvidence": "internal\\api\\router.go:3506",
+      "behavior": "requiresLiveMode=true; shared confirmation toolbar; success/error toasts and broadcast invalidation. Response supports deleted and failed IDs. Page clears selection after any resolved response.",
+      "eligibility": "No page/card/table completed-only selection guard observed. Inspected handler and repository delete by existing ID without an ended_at predicate. This is current source behavior, not authorization to silently change eligibility or proof that deleting an active session is operationally safe.",
+      "evidence": "internal\\api\\charging\\bulk.go:45-82; internal\\database\\charging\\repo.go:357-394"
+    },
+    {
+      "hook": "ChargeQueuePlanner: useVehicles / useAdviseChargeQueue",
+      "file": "web\\src\\features\\charging\\components\\ChargeQueuePlanner.tsx",
+      "line": 30,
+      "endpoint": "GET /api/v1/vehicles; POST /api/v1/charge-planner/queue",
+      "owner": "Fleet vehicles hook and existing queue-advice hook",
+      "routeEvidence": "internal\\api\\router.go:3319; internal\\api\\router.go:3942-3944",
+      "behavior": "Deliberately fleet-wide business form, independent of selected workspace vehicle/range. User supplies current/target SOC, ready-by time and charger power; default form inputs are not measured live readings. Advice is user-initiated; no request was executed.",
+      "units": "Inspected QueueAdviseRequest still sends charger_kw; response slot exposes kwh_needed and slack_hours. This existing non-SI contract requires coordinated integration review, not a unilateral UI rename."
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState / useUnits / useFormatting / useNumberFormatting",
+      "file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx",
+      "line": 92,
+      "endpoint": null,
+      "owner": "Existing workspace, timezone, formatting and preference infrastructure",
+      "behavior": "Header owns selection; /charging is range-enabled at workspaceScope.ts:29. persistKey charging.list.range, vehicle timezone, URL calendar bounds and exact server instants retained. Display distance conversion occurs at the boundary; no competing local workspace picker.",
+      "limits": "Shared hooks' internal persistence, DST handling and settings endpoints were not independently traced."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageHeaderSticky / PullToRefresh", "owner": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 815, "contract": "Existing category imports; compact header, copy link, saved views, query health and sticky charging-overview target; pull refresh refetches sessions only."},
+    {"name": "ChargingEvidenceTable / DataTable / DataTableValueFilter", "owner": "web\\src\\features\\charging\\components\\ChargingEvidenceTable.tsx", "line": 46, "contract": "14 columns including actions; stable tableId charging:evidence; SI filter values, persisted URL grid_values, resize/reorder, external sorting/pagination, cross-page selection merge, preview and typed toolbar controls. Default-hidden peak power, range, rate and score remain available."},
+    {"name": "ChargingSessionCard / HistoryListRow", "owner": "web\\src\\features\\charging\\components\\ChargingSessionCard.tsx", "line": 58, "contract": "Below 1024px: date groups, source location, score, charger badge, energy, duration, optional battery/power/cost/range, selection and quick preview. Compact density hides secondary metrics but detail navigation remains."},
+    {"name": "ChargingOverviewStats / ChargingSummaryBrief / OperationalBrief", "owner": "web\\src\\features\\charging\\components\\stat-modernization\\ChargingOverviewStats.tsx", "line": 28, "contract": "Six distinct aggregates; specialized Delta comparisons, raw canonical metric values, missing-cost reason, prior-period label, bounded-source period provenance, loading/retained state and overview recovery."},
+    {"name": "MetricSwitcherChart / ChartContainer", "owner": "web\\src\\components\\charts\\MetricSwitcherChart.tsx", "line": 245, "contract": "Four persisted metric identities; selected-series chart and accessible dataColumns forwarded to canonical ChartContainer. Do not replace with a decorative chart or remove data alternatives."},
+    {"name": "ChargingInsights", "owner": "web\\src\\features\\charging\\components\\charging-list\\ChargingInsights.tsx", "line": 23, "contract": "AC/DC panel, battery distribution, measured delivery rate, four charger-spec groups and independent optimizer; battery/spec threshold 5, optimizer threshold 10. Keeps explanatory efficiency and optimizer scope limitations."},
+    {"name": "ChargeQueuePlanner", "owner": "web\\src\\features\\charging\\components\\ChargeQueuePlanner.tsx", "line": 26, "contract": "Fleet business form using existing Input/Button/Badge; 2-vehicle prerequisite, pending/error/result, ordered slots and feasibility. Do not remove it as a competing workspace selector."},
+    {"name": "EntityPreviewDrawer", "owner": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 1350, "contract": "Six fields, active/completed/unknown distinction, full session details and related vehicle/drives/location/alerts/service/signals destinations. Retain original contextual bounds and signal identities."},
+    {"name": "FilterBar / ActiveFilterChips / SavedViewMenu / BulkActionsToolbar / ListExportMenu", "owner": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 843, "contract": "Existing shared owners for URL search/collection/value filters, saved views, selection confirmation and CSV/JSON scopes; preserve stable IDs and shared accessibility behavior."},
+    {"name": "QueryError / StaleRefreshWarning / DataStateNotice / EmptyState / Skeleton", "owner": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 860, "contract": "Historical and live failures independent; retained rows survive refresh failures; named sections, reset/retry and governed onboarding guidance are present."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 990, "rule": "MDC-002/MDC-023", "detail": "Mobile composes sort/density/export controls separately from desktop TableControls at 1056. Two render strategies are intentional, but labels, callbacks and scope contracts are repeated.", "fix": "Reuse the existing typed table-control configuration where compatible; retain mobile controls and desktop grid rather than creating a second table engine.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\components\\charging-list\\helpers.ts", "line": 6, "rule": "MDC-045/preservation", "detail": "Insights import rounded durationMinutes(startedAt, endedAt), while list/stats use fractional durationMinutes(session) from chargingAggregation.ts:68. Rate and duration results can differ for sub-minute evidence.", "fix": "Record and test the specialist semantics before any consolidation; share a computation only after proving parity or explicitly correcting the discrepancy.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "sourceStrategy": "Desktop evidence grid at min-width 1024; date-grouped cards and separate controls below it. Overview/trend single-column; insights expand to 6 columns only at 2xl. Queue rows reflow 2 to 4 columns; optimizer habits expand at lg. DataTable has bounded internal height and resizable columns.",
+    "verification": "All ten contract viewport widths, container widths, RTL, long labels and 200% text are unverified.",
+    "issues": [
+      {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 325, "rule": "MDC-043/MDC-023", "detail": "Mobile groups rows by date and re-sorts group keys by sortDesc even when selected sort is energy/cost/duration/power; desktop preserves the global sortedSessions order. The same sort control therefore has different visible ordering across the breakpoint.", "fix": "Preserve current grouping capability and explicitly reconcile non-date sort presentation; verify identical membership, selection and export scope at 1023/1024px.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\charging\\components\\charging-list\\CostHeatmap.tsx", "line": 73, "rule": "MDC-043", "detail": "The heatmap uses min-w-[600px] within horizontal overflow. This intentionally preserves all 168 cells, but touch navigation and discoverability at 320px are not established.", "fix": "Exercise internal scrolling and provide an existing accessible data alternative; preserve every weekday/hour value rather than deleting columns for mobile.", "owner": "page", "confidence": "medium"}
+    ]
+  },
+  "accessibility": {
+    "sourceEvidence": "Four explicitly named page sections, labeled preview/selection actions, 44px preview buttons, table caption/row labels, canonical chart dataColumns and shared primitives are present. HistoryListRow puts checkbox and action controls outside its navigation link and reveals actions on focus-within.",
+    "verification": "Browser keyboard/focus, screen-reader output, composed contrast, target spacing, forced colors and reduced motion unverified.",
+    "issues": [
+      {"file": "web\\src\\features\\charging\\components\\charging-list\\CostHeatmap.tsx", "line": 75, "rule": "MDC-040/MDC-034", "detail": "Heatmap role=img has only a generic description; per-cell values exist in native title attributes on non-focusable divs at 103-118. No equivalent value table or keyboard-accessible cell detail is rendered in this component.", "fix": "Compose the existing chart frame/data-table alternative with weekday/hour/session/cost columns, preserving all cells and mouse/touch evidence; do not add a competing tooltip engine.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\charging\\components\\charging-list\\AcDcStatsPanel.tsx", "line": 90, "rule": "MDC-040/MDC-012", "detail": "Tiny text sits within saturated proportional 16px split segments; small percentages can constrain labels. Actual clipping and composed contrast require measurement, not a token-name pass.", "fix": "Keep textual AC/DC totals and table; use restrained semantic fills and accessible labels outside narrow geometry when necessary.", "owner": "page", "confidence": "medium"}
+    ]
+  },
+  "states": {
+    "loading": "Overview and session rows have skeletons; trend skeleton and insights loading are present. The secondary OperationalBrief has no loading prop, and fleet queue only reads vehicles.data.",
+    "empty": "Session empty/reset/guidance, missing-vehicle early return, insight thresholds and shared queue prerequisite exist. Some insight shells disappear entirely when no source or usable measurement exists.",
+    "error": "History QueryError, retained warning and independent live partial notice exist. Optimizer only passes data, discarding its error/loading/refresh state. Fleet queue conflates unresolved vehicle source with fewer than two cars.",
+    "staleOffline": "useDataState and separate provenance badges retain history/live data; no runtime offline case was exercised. Source freshness of vehicle fields is not enforced by the operational narrative.",
+    "issues": [
+      {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 1141, "rule": "MDC-026", "detail": "OperationalBrief receives neither loading nor a fatal-history guard. While history is unresolved or failed, currentStats.count defaults to zero, chargingAttention adds 'No charging activity', and narrative reports zero sessions/energy. Session empty state also renders after initial failure despite the error notice above at line 842.", "fix": "Carry each source's loading/fatal/retained/empty distinction into its own metrics, attention and narrative; only resolved empty history may assert no activity. Keep live metrics independently usable.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 142, "rule": "MDC-026", "detail": "Only optimizer.data is retained; ChargingInsights receives no optimizer query state. At ten or more sessions a pending/failed/missing optimizer results in no optimizer shell or recovery.", "fix": "Pass the existing query/data-state contract to the optimizer section and retain its shell, independent bounds, recommendations and retry; do not let optimizer failure hide session insights.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\charging\\components\\ChargeQueuePlanner.tsx", "line": 30, "rule": "MDC-026", "detail": "Vehicle loading/failure is reduced to vehicles ?? [] and shown as 'Add a second vehicle'. A retained vehicle response has no warning. It is not proof of a single-car fleet.", "fix": "Use the existing source-state notices, skeleton and retry while retaining valid queue form/result; resolve the actual two-vehicle prerequisite only after source success.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\charging\\components\\charging-list\\ChargingInsights.tsx", "line": 44, "rule": "MDC-026/preservation", "detail": "AC/DC and delivery-rate panels are conditional on derived data, and battery/spec/optimizer shells disappear at zero sessions. Completed-session wording does not itself filter open rows; thresholds use all returned rows.", "fix": "Keep specialist panel names and explicit prerequisite/unknown states visible; document actual eligibility and preserve thresholds without silently substituting different session populations.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 359, "rule": "MDC-010/MDC-034", "detail": "Four fixed green/cyan/red/purple hex series colors and active-pill accents bypass the current saved chart palette. Cost is red by default regardless of an actual adverse finding.", "fix": "Use the existing chart-palette/token owner with stable metric identities and subdued default accents; retain user opt-in palette choices and series distinctions.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\components\\charging-list\\OptimizerSection.tsx", "line": 149, "rule": "MDC-010/MDC-015", "detail": "Recommendations use bg-neon-amber/bg-neon-green plus fixed white surfaces/borders; battery score has fixed saturated colors at 98. Queue slots similarly use bg-white/[0.03] at ChargeQueuePlanner.tsx:145.", "fix": "Compose existing neutral surfaces and semantic severity tokens; preserve priority text, score, savings and explicit user palette preferences.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\components\\ChargingSessionCard.tsx", "line": 110, "rule": "MDC-013", "detail": "TimeStamp and metadata use ad-hoc text-sm/font-semibold/text-2xs instead of role typography. Spec/optimizer headings and AC/DC metadata contain similar custom typography.", "fix": "Reuse current Caption/Text/PanelTitle roles with semantic as overrides; preserve tabular numbers, hierarchy and settings.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\api\\hooks\\useCharging.ts", "line": 635, "rule": "MDC-046", "detail": "Bulk delete invalidates ['charging-sessions'], but this page reads ['charging', ...] at line 128. invalidateAndBroadcast only forwards the supplied prefix (queryBroadcast.ts:68-74), so successful deletion does not directly invalidate the mounted list or its derived summaries.", "fix": "Extend the existing mutation's invalidation to the actual paginated key family and affected detail/derived sources, retaining query keys, broadcasts and mutation guard; verify successful and partial results.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 412, "rule": "MDC-026/MDC-046", "detail": "Any resolved bulk-delete response clears all selected IDs, ignoring failed[] from the response. The backend computes not_found/conflict per ID; remaining failures can lose their selection context.", "fix": "Consume returned outcomes through the existing bulk workflow, retain failed selection and actionable feedback, and clear only confirmed successes; preserve explicit confirmation and live-only guard.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 611, "rule": "MDC-026/MDC-046", "detail": "isChargingNow and departure readiness inspect raw is_charging/battery_level without verifiedFields/freshness/observedAt. A successful stale/durable/as-of response can be labeled 'Charging now' or near-term-ready. Existing useVehicles.ts:1117-1128 already owns field-current checks.", "fix": "Use existing per-field trust and as-of semantics for current claims; retain historical/retained values with explicit provenance and unknown readiness rather than zero/offline. Do not create a new trust registry.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 164, "rule": "MDC-032/MDC-026", "detail": "Prior-period stats are derived from the same response requested only for the current exact bounds. Under the intended server range filtering, prior data is absent by construction; unavailable labeling is honest but no independent prior source is fetched.", "fix": "Preserve unavailable comparison wording. If comparisons are restored, request a separately scoped prior source or an existing server aggregate and carry its own trust/completeness; do not fabricate zero deltas.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 132, "rule": "MDC-032/MDC-034", "detail": "One 500-row window backs range summary and trend; overview exposes completeness unknown and desktop heading discloses the bound, but mobile export/list and trend have no equally explicit local loaded-window context.", "fix": "Retain bounded behavior and label each affected view/export. Full-range aggregates require verified server support or explicit pagination, not filtering the current page or inventing lifetime coverage.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\components\\charging-list\\helpers.ts", "line": 159, "rule": "MDC-026", "detail": "computeStartLevelDist maps non-finite start_soc_pct to 0, counting unknown values as observed 0-10% SOC. Missing charger types similarly fall into AC in computeAcDcBreakdown at 173-177.", "fix": "Preserve all records while distinguishing unknown SOC/charger evidence from measured zero/confirmed AC; review domain calculations explicitly rather than hiding rows or silently changing counts during styling.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\components\\charging-curve\\helpers.ts", "line": 28, "rule": "MDC-045/domain-evidence", "detail": "distanceAddedM derives 'Range added' from end_odometer_m - start_odometer_m, an odometer distance change rather than a proven battery range gain. It is consumed by the table, value filters and mobile card.", "fix": "Keep raw meter values and existing capability visible; resolve the intended source/label with the domain owner before any calculation change. Do not invent range telemetry.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\components\\ChargeQueuePlanner.tsx", "line": 46, "rule": "MDC-045", "detail": "Queue request sends charger_kw and displays kwh_needed (types/charging.ts:239-250); these are existing non-SI wire fields, not merely display conversions.", "fix": "Track a coordinated backend/type/hook SI cutover dependency. Preserve existing request compatibility until integration changes are owned; no unilateral field rename or legacy adapter in a cosmetic page pass.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 1494, "rule": "MDC-044", "detail": "formatHour hardcodes English AM/PM and 12-hour presentation. chargingAggregation.ts:359-405 returns hardcoded English anomaly messages/actions, while optimizer currency displays hardcode dollar signs at OptimizerSection.tsx:44-47,69,168.", "fix": "Reuse existing timezone/date/locale/currency formatting and canonical translation mechanisms without altering anomaly thresholds, ordering, source currency or user text.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 16, "rule": "MDC-002", "detail": "Several shared implementations are imported through concrete paths in this feature: ActionableEmptyState, DensityToggle, SortControl; card imports Checkbox similarly. Contract requires feature category barrels, unlike shared-internal imports.", "fix": "Use existing category exports where available; report missing barrel exports to their shared owner instead of editing shared files or creating wrappers.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "order": [
+      "Correct source trust and unresolved-versus-empty claims without losing retained history or independent live data.",
+      "Resolve paginated-key invalidation and partial bulk-result reporting; explicitly retain current eligibility until integration policy is verified.",
+      "Carry optimizer/fleet source states and preserve every insight shell and threshold.",
+      "Restore heatmap value accessibility and responsive parity before visual acceptance.",
+      "Adopt restrained existing palette/typography/surface owners without changing wire units, exports or persistence."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Charging mutation cache invalidation",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "propsVariantsStates": "Existing useBulkDeleteCharging: retain requiresLiveMode, existing mutation/result contract and cross-tab broadcast; invalidate the existing ['charging', ...] family as well as charging-sessions and affected detail caches on successful/partial deletion.",
+      "usedBy": ["web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "other existing charging hook consumers (not inventoried in this scope)"],
+      "dependsOn": ["Existing query keys at useCharging.ts:46,128", "Existing invalidateAndBroadcast at web\\src\\lib\\queryBroadcast.ts:68"]
+    },
+    {
+      "name": "Queue-advice SI contract integration",
+      "owner": "web\\src\\types\\charging.ts",
+      "propsVariantsStates": "Existing QueueAdviseRequest/QueueSlot expose charger_kw/kwh_needed/slack_hours. A coordinated integration must define canonical power/energy/duration fields and display-boundary conversions, retaining defaults, feasibility, ready-by and result explanation.",
+      "usedBy": ["web\\src\\features\\charging\\components\\ChargeQueuePlanner.tsx"],
+      "dependsOn": ["web\\src\\api\\hooks\\useCharging.ts:595-604", "POST /api/v1/charge-planner/queue backend contract; handler implementation uninspected"]
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\charging\\components\\charging-list\\helpers.ts", "line": 6, "rule": "MDC-002/preservation", "detail": "Two current duration helpers differ in signature and rounding; this is a concrete dependency mismatch, not evidence to delete specialist behavior.", "fix": "Keep both until precision/equivalence is tested; use the existing calculation owner when adopting a proven common contract.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 92, "rule": "MDC-032", "detail": "No competing local workspace vehicle/date picker observed. Fleet queue inputs are independent planning business fields and intentionally include multiple cars.", "fix": "Retain header ownership and the fleet business form; do not remove queue capability under a workspace-selector cleanup.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\charging\\components\\ChargingSessionCard.tsx", "line": 224, "rule": "MDC-015", "detail": "The glow prop name is not proof of glowing shadows: inspected GlassPanel.tsx:31-35 maps it to hover border tint and shared neutral elevation.", "fix": "Reuse the existing surface owner; subdue only source-confirmed color noise, not a speculative legacy glass/glow implementation.", "owner": "page", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceHash": "C32922E0BD1477B14D915FC2CBCB1BF8E740AA453B244F6BE5B280FE54B3B47C",
+    "hashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact root page file bytes, not a dependency graph or normalized source hash.",
+    "currentLineCount": 1499,
+    "sourceCounts": {"namedSectionShells": 4, "directGlassPanelSites": 1, "directChartContainerSites": 0, "directMetricSwitcherChartSites": 1, "majorContentBands": 7, "insightFamilies": 5, "overviewMetrics": 6, "operationalMetrics": 6, "previewFields": 6, "evidenceColumnsIncludingActions": 14},
+    "sections": [
+      {"name": "Search and active filter chips", "file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 871, "count": 1},
+      {"name": "Overview and sticky summary", "file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 913, "count": 1},
+      {"name": "Charging over time; sessions/energy/cost/power", "file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 937, "count": 1},
+      {"name": "All charging sessions; desktop evidence / mobile groups; selection and pagination", "file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 970, "count": 1},
+      {"name": "Operational charging posture; six metrics, attention, narrative and provenance", "file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 1141, "count": 1},
+      {"name": "Fleet shared-charger queue planner", "file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 1335, "count": 1},
+      {"name": "Charging insights: AC/DC, battery start distribution, delivery rate, charger specifications, optimizer", "file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 1339, "count": 1},
+      {"name": "Optimizer subsections: conditional savings banner, habits, battery-friendly score, cost analysis, heatmap, recommendations", "file": "web\\src\\features\\charging\\components\\charging-list\\OptimizerSection.tsx", "line": 65, "count": 6},
+      {"name": "Session preview drawer with related context", "file": "web\\src\\features\\charging\\pages\\ChargingListPage.tsx", "line": 1350, "count": 1}
+    ],
+    "actions": [
+      "Header copy link and saved-view apply; pull-to-refresh and source retry.",
+      "Search free text plus charger/cost/kwh/power/dur/in/at/free tokens; deferred-search pending indicator.",
+      "URL collections all/home/supercharger/dc/free/anomalies/notable/tagged; tagged currently returns [] and is not an implemented tagging capability.",
+      "Per-column available-value filters, chips, invalid-filter clearing and reset; mobile clear with desktop-edit explanation.",
+      "Sort date/energy/cost/duration/power ascending/descending; compact/comfortable density; page and size changes.",
+      "Grid reorder/resize/default-hidden columns; multi-page bulk selection, clear, confirmation and live-only deletion.",
+      "CSV and JSON exports of all filtered/sorted loaded rows or selected rows; 'visible' is not merely current paginated rows.",
+      "Anomaly collection shortcut; overview comparisons and four trend metrics plus canonical chart data alternative.",
+      "Fleet queue form, Plan queue action, pending/error/result and feasibility.",
+      "Session preview/open details; related vehicle, drives, optional location, inbox, maintenance and signals."
+    ],
+    "dataBehavior": [
+      "Preserve raw SI session payloads/cache, original JSON export fields, exact server range instants and vehicle timezone. Do not guess legacy live ETA units.",
+      "Current CSV explicitly exports kwh/duration_min/avg_kw/peak_kw derived display values; preserve format compatibility until a separately owned SI/export contract change, not a cosmetic rename.",
+      "Overview/trend use date-filtered loaded rows independently of search/collections/value filters; insights use loaded sessions; optimizer has independent unknown bounds; queue is fleet-wide.",
+      "Range changes reset page. Search/value filters also reset page. Keep q/coll/trend/sort/sort_desc/density/page/size/grid_values and charging.list.range identities.",
+      "Selection is pruned to filtered membership, not just current page; table changes merge selections across pages.",
+      "Only cost_decimal === 0 qualifies as free; missing cost is not free. Rate calculations exclude unusable durations where currently specified.",
+      "Open/malformed session duration shows unknown placeholder, not a measured zero-length session; no silent switch to completed-only counts, exports or selection.",
+      "Active-session eligibility currently has no client or inspected repository ended_at restriction. Retain current behavior for presentation work and surface any required domain-policy correction as a separate integration dependency.",
+      "Keep separate fatal/refresh errors and retained data, optimizer illustrative-savings caveats, efficiency-not-measured explanation and reliability-not-SLA wording.",
+      "Keep stable table IDs charging:evidence and charging:ac-dc-stats; charging-overview sticky target, search historyScope charging and saved-view route /charging.",
+      "Keep all preview destinations and signals ACChargingPower/DCChargingPower/BatteryLevel; drawer scope changes and stale preview behavior require acceptance rather than invented reset semantics."
+    ],
+    "lineCountPolicy": "Any future decomposition must count root plus extracted feature components against this baseline; this audit changes no source and is not a modernization parity certificate."
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only source inspection; only assigned report and heartbeat writes.",
+    "runtime": "UNVERIFIED; no page mounted, network request, advice or destructive mutation executed.",
+    "visual": "UNVERIFIED; no screenshots, actual themes, palette rendering or composed contrast measurements.",
+    "keyboardViewportMotion": "UNVERIFIED; no keyboard, focus restoration, screen reader, viewport, RTL, forced-colors or reduced-motion exercise.",
+    "checksNotRun": "No Git, queue changes, TypeScript, lint, tests or builds. Loaded audit-violations skill script was inspected but not executed: it always invokes project-wide TypeScript, which conflicts with this bounded read-only audit's validation constraints.",
+    "schema": "Assigned report did not exist at first read; schema/protocol taken from docs\\frontend-worker-conventions.md Phase 0 audit report section. Adjacent report inspected only for representation context, not borrowed page evidence.",
+    "sourceSnapshot": "Source may change under concurrent workers; root source SHA256 and report validity are checked at release. Line citations describe the inspected snapshot.",
+    "boundedChecks": [
+      {"command": "Get-FileHash web\\src\\features\\charging\\pages\\ChargingListPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\charging\\pages\\ChargingListPage.tsx).Count", "exitCode": 0, "output": "SHA256=C32922E0BD1477B14D915FC2CBCB1BF8E740AA453B244F6BE5B280FE54B3B47C\nLINES=1499"},
+      {"command": "PowerShell read-only regex counts on ChargingListPage.tsx: static CSS-variable inline styles, raw controls, direct library imports, old API imports, fixed hex colors, section and chart sites", "exitCode": 0, "output": "directLibraryImports=0\nfixedHexColors=4\nGlassPanel=1\nMetricSwitcherChart=1\nnamedSectionShells=4\noldApiImports=0\nrawControls=0\nstaticInlineCssVariable=0", "limit": "Narrow lexical counts on root only, not zero total violations or a parser/runtime acceptance claim."}
+    ],
+    "backend": "Known hook registrations and deletion handler/repository inspected. No list query filtering, optimizer/queue service, full auth chain, live enrichment or backend units exercised. No invented server aggregates.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-084.json", ".agent-status\\audit-page-084.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-081.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\ChargingListPage.tsx",
+    "web\\src\\features\\charging\\components\\ChargingEvidenceTable.tsx",
+    "web\\src\\features\\charging\\components\\ChargingSessionCard.tsx",
+    "web\\src\\features\\charging\\components\\chargingGridValues.ts",
+    "web\\src\\features\\charging\\components\\ChargeQueuePlanner.tsx",
+    "web\\src\\features\\charging\\components\\charging-list\\ChargingInsights.tsx",
+    "web\\src\\features\\charging\\components\\charging-list\\ChargingSearchControl.tsx",
+    "web\\src\\features\\charging\\components\\charging-list\\index.ts",
+    "web\\src\\features\\charging\\components\\charging-list\\helpers.ts",
+    "web\\src\\features\\charging\\components\\charging-list\\AcDcStatsPanel.tsx",
+    "web\\src\\features\\charging\\components\\charging-list\\BatteryLevelChart.tsx",
+    "web\\src\\features\\charging\\components\\charging-list\\ChargeRatePanel.tsx",
+    "web\\src\\features\\charging\\components\\charging-list\\ChargerSpecsPanel.tsx",
+    "web\\src\\features\\charging\\components\\charging-list\\OptimizerSection.tsx",
+    "web\\src\\features\\charging\\components\\charging-list\\CostHeatmap.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve\\helpers.ts",
+    "web\\src\\features\\charging\\components\\stat-modernization\\ChargingOverviewStats.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\types\\charging.ts",
+    "web\\src\\lib\\chargingAggregation.ts",
+    "web\\src\\lib\\queryBroadcast.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\charts\\MetricSwitcherChart.tsx",
+    "web\\src\\components\\data-display\\HistoryListRow.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\charging\\bulk.go",
+    "internal\\api\\charging\\handler.go",
+    "internal\\api\\charging\\handler_test.go",
+    "internal\\database\\charging\\repo.go",
+    "internal\\database\\charging\\repair_boundary_test.go"
+  ]
+}

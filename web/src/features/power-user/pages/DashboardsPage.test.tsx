@@ -33,9 +33,21 @@
 // Network is never touched; the clipboard is stubbed per-test.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, within, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, within, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createInstance } from 'i18next';
+
+const descriptionI18n = createInstance();
+const descriptionT = descriptionI18n.t.bind(descriptionI18n);
+
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
+  return {
+    ...actual,
+    useTranslation: () => ({ t: descriptionT, i18n: descriptionI18n }),
+  };
+});
 
 // The AI drafter's own envelope is fixed here so both the stub (hoisted above
 // imports by vi.mock) and the assertions can reference the exact same object.
@@ -104,7 +116,13 @@ function typeInEditor(value: string) {
   fireEvent.change(editor(), { target: { value } });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await descriptionI18n.init({
+    lng: 'en',
+    fallbackLng: 'en',
+    resources: { en: { translation: {} } },
+    interpolation: { escapeValue: false },
+  });
   window.localStorage.removeItem(DRAFT_KEY);
 });
 
@@ -115,12 +133,52 @@ afterEach(() => {
 });
 
 describe('DashboardsPage', () => {
+  it('retains the full draft for manual copy after denial and retries the trimmed payload', async () => {
+    const writeText = vi.fn().mockRejectedValueOnce(new Error('denied')).mockResolvedValueOnce(undefined);
+    stubClipboard({ writeText });
+    renderPage();
+    const draft = '  {"title":"Complete dashboard","panels":[{"id":42}]}  ';
+    typeInEditor(draft);
+    fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
+    expect(await screen.findByText(/Select the text manually/)).toBeInTheDocument();
+    editor().select();
+    expect(editor().selectionEnd).toBe(draft.length);
+    expect(editor().value).toBe(draft);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(draft);
+    fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
+    expect(await screen.findByText(/Copied\. Paste the JSON/)).toBeInTheDocument();
+    expect(screen.queryByText(/Select the text manually/)).toBeNull();
+    expect(writeText.mock.calls).toEqual([[draft.trim()], [draft.trim()]]);
+  });
+
+  it.each(['edit', 'clear', 'apply'] as const)('does not announce a stale pending copy after %s', async (change) => {
+    let resolveCopy: (() => void) | undefined;
+    stubClipboard({ writeText: vi.fn(() => new Promise<void>((resolve) => { resolveCopy = resolve; })) });
+    renderPage();
+    typeInEditor('{"title":"old"}');
+    fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
+    if (change === 'edit') typeInEditor('{"title":"new"}');
+    if (change === 'clear') {
+      fireEvent.click(screen.getByRole('button', { name: /^Clear$/i }));
+      const clearDialog = screen.getByRole('dialog');
+      expect(within(clearDialog).getByText('Clear the editor?')).toBeInTheDocument();
+      fireEvent.click(within(clearDialog).getByRole('button', { name: 'Confirm' }));
+      // The clear must land before the pending copy resolves, as before.
+      await waitFor(() => expect(editor().value).toBe(''));
+    }
+    if (change === 'apply') fireEvent.click(screen.getByTestId('stub-apply-draft'));
+    await act(async () => { resolveCopy?.(); });
+    expect(screen.queryByText(/Copied\. Paste the JSON/)).toBeNull();
+    if (change === 'edit') expect(editor().value).toBe('{"title":"new"}');
+    if (change === 'clear') expect(editor().value).toBe('');
+    if (change === 'apply') expect(editor().value).toBe(JSON.stringify(SAMPLE_DRAFT.dashboard, null, 2));
+  });
   it('renders the page scaffold: title, how-it-works intro, and three numbered workflow steps', () => {
     const { container } = renderPage();
 
     expect(screen.getByTestId('power-dashboards-composer-root')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 1, name: /Dashboard Composer/i }),
+      screen.getByRole('heading', { level: 1, name: /Dashboard composer/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('How it works')).toBeInTheDocument();
 
@@ -144,6 +202,52 @@ describe('DashboardsPage', () => {
     expect(screen.getByRole('button', { name: /^Clear$/i })).toBeInTheDocument();
   });
 
+  it('associates the editor with the existing guidance and preserves raw text across locale changes', async () => {
+    renderPage();
+    const guidance = 'Edit the Grafana JSON model directly. Nothing is sent to Grafana — you copy it in yourself.';
+    const descriptionId = editor().getAttribute('aria-describedby');
+    expect(descriptionId).toBeTruthy();
+    expect(document.getElementById(descriptionId ?? '')).toBe(screen.getByText(guidance));
+    expect(editor()).toHaveAccessibleDescription(guidance);
+    expect(editor()).toHaveAttribute('spellcheck', 'false');
+
+    const rawText = '  not JSON: { unfinished }\n\tuser text  ';
+    typeInEditor(rawText);
+    expect(editor()).toHaveValue(rawText);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(rawText);
+
+    const translatedGuidance = 'Edita el modelo JSON de Grafana. Copia el texto manualmente; nada se envia a Grafana.';
+    descriptionI18n.addResourceBundle('es', 'translation', {
+      powerDashboards: { editor: { label: 'Editor JSON del panel', helper: translatedGuidance } },
+    });
+    await descriptionI18n.changeLanguage('es');
+    typeInEditor(`${rawText}\n`);
+    expect(screen.getByRole('textbox', { name: 'Editor JSON del panel' })).toBe(editor());
+    expect(editor()).toHaveAttribute('aria-describedby', descriptionId);
+    expect(document.getElementById(descriptionId ?? '')).toBe(screen.getByText(translatedGuidance));
+    expect(editor()).toHaveAccessibleDescription(translatedGuidance);
+    expect(screen.queryByText(guidance)).not.toBeInTheDocument();
+    expect(editor()).toHaveAttribute('spellcheck', 'false');
+    expect(editor()).toHaveValue(`${rawText}\n`);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(`${rawText}\n`);
+  });
+
+  it('gives each mounted editor its own guidance identity', () => {
+    const first = renderPage();
+    const second = renderPage();
+    const firstEditor = within(first.container).getByRole('textbox');
+    const secondEditor = within(second.container).getByRole('textbox');
+    const firstId = firstEditor.getAttribute('aria-describedby');
+    const secondId = secondEditor.getAttribute('aria-describedby');
+    expect(firstId).toBeTruthy();
+    expect(secondId).toBeTruthy();
+    expect(firstId).not.toBe(secondId);
+    expect(first.container.contains(document.getElementById(firstId ?? ''))).toBe(true);
+    expect(second.container.contains(document.getElementById(secondId ?? ''))).toBe(true);
+    expect(firstEditor).toHaveAccessibleDescription();
+    expect(secondEditor).toHaveAccessibleDescription();
+  });
+
   it('renders all six curated panels in alphabetical order', () => {
     const { container } = renderPage();
 
@@ -161,6 +265,20 @@ describe('DashboardsPage', () => {
     positions.forEach((p) => expect(p).toBeGreaterThanOrEqual(0));
     const ascending = positions.every((p, i) => i === 0 || positions[i - 1] < p);
     expect(ascending).toBe(true);
+  });
+
+  it('keeps the manual composer and workflow reference free of fabricated fleet summary measurements', () => {
+    const { container } = renderPage();
+    expect(container.querySelector('[data-operational-brief]')).toBeNull();
+    expect(container.querySelector('[data-operational-metric]')).toBeNull();
+    expect(screen.getByText('How it works')).toBeInTheDocument();
+    expect(screen.getByText('Curated panel catalog')).toBeInTheDocument();
+    expect(editor()).toHaveValue('');
+    for (const name of SORTED_PANEL_NAMES) {
+      expect(screen.getByText(name)).toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: /Copy to clipboard/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Clear$/i })).toBeDisabled();
   });
 
   it('maps each curated panel to its Grafana panel-kind glyph via panelKindIcon', () => {
@@ -215,7 +333,7 @@ describe('DashboardsPage', () => {
     expect(copy).toBeEnabled();
   });
 
-  it('keeps Clear enabled for whitespace-only content and wipes editor + persisted draft', () => {
+  it('keeps Clear enabled for whitespace-only content and wipes editor + persisted draft', async () => {
     renderPage();
     const clear = screen.getByRole('button', { name: /^Clear$/i });
 
@@ -228,7 +346,10 @@ describe('DashboardsPage', () => {
     expect(window.localStorage.getItem(DRAFT_KEY)).toBe('   \n  ');
 
     fireEvent.click(clear);
-    expect(editor().value).toBe('');
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(editor().value).toBe(''));
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 
@@ -293,5 +414,78 @@ describe('DashboardsPage', () => {
     expect(screen.queryByText(/Clipboard access is not available/i)).not.toBeInTheDocument();
     // The applied draft is persisted like any other edit.
     expect(window.localStorage.getItem(DRAFT_KEY)).toBe(expectedJson);
+  });
+});
+
+
+describe('DashboardsPage restrained catalog presentation', () => {
+  const descriptions = [
+    ['alerts_count_stat', 'Stat panel: count of alerts fired in the last 7 days'],
+    ['battery_soc_stat', 'Stat panel: latest BatteryLevel sample from signal_log_view'],
+    ['charging_sessions_table', 'Table panel: recent rows from the charging_sessions table'],
+    ['drives_per_day_timeseries', 'Timeseries panel: SUM(distance_m)/day from the drives table'],
+    ['energy_used_per_day_barchart', 'Barchart panel: SUM(energy_used_wh)/day from the drives table'],
+    ['vehicles_table', 'Table panel: vehicles metadata overview (id, model, color)'],
+  ] as const;
+
+  it('uses neutral shared icon chrome without changing catalog glyphs or responsive sections', () => {
+    const { container } = renderPage();
+    const workflow = container.querySelector('ol');
+    const catalog = container.querySelector('ul');
+    expect(workflow).not.toBeNull();
+    expect(catalog).not.toBeNull();
+    expect(workflow).toHaveClass('grid-cols-1', 'sm:grid-cols-3');
+    expect(catalog).toHaveClass('grid-cols-1', 'sm:grid-cols-2', 'xl:grid-cols-1', '3xl:grid-cols-2');
+    const items = [
+      ...within(workflow as HTMLElement).getAllByRole('listitem'),
+      ...within(catalog as HTMLElement).getAllByRole('listitem'),
+    ];
+    expect(items).toHaveLength(9);
+    for (const item of items) {
+      const icon = item.querySelector('svg');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+      expect(icon).toHaveClass('shrink-0');
+      expect(icon?.parentElement).toHaveClass(
+        'bg-[var(--surface-2)]', 'text-[var(--text-secondary)]', 'ring-[var(--border-default)]',
+      );
+    }
+    for (const name of SORTED_PANEL_NAMES) {
+      expect(screen.getByText(name)).toHaveClass('text-[var(--text-primary)]', 'break-all');
+    }
+    expect(container.innerHTML).not.toMatch(/(?:text|bg|ring|border)-cyan-|(?:text|bg|ring)-white/);
+    expect(screen.getByRole('heading', { name: 'How it works' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Manual dashboard JSON editor' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Curated panel catalog' })).toBeInTheDocument();
+  });
+
+  it('retains all six exact English description defaults and SI query identifiers without catalog entries', () => {
+    renderPage();
+    for (const [name, description] of descriptions) {
+      const item = screen.getByText(name).closest('li');
+      expect(item).not.toBeNull();
+      expect(within(item as HTMLElement).getByText(description)).toBeInTheDocument();
+    }
+  });
+
+  it('translates all six descriptions while preserving protocol names and alphabetical order', async () => {
+    const translatedDescriptions = Object.fromEntries(
+      descriptions.map(([name], index) => [name, `Descripcion del panel ${index + 1}`]),
+    );
+    descriptionI18n.addResourceBundle('es', 'translation', {
+      powerDashboards: { panels: { descriptions: translatedDescriptions } },
+    });
+    await descriptionI18n.changeLanguage('es');
+    const { container } = renderPage();
+    const items = within(container.querySelector('ul') as HTMLElement).getAllByRole('listitem');
+    expect(items).toHaveLength(6);
+    descriptions.forEach(([name, fallback], index) => {
+      expect(within(items[index]).getByText(name)).toBeInTheDocument();
+      expect(within(items[index]).getByText(translatedDescriptions[name])).toBeInTheDocument();
+      expect(within(items[index]).queryByText(fallback)).not.toBeInTheDocument();
+    });
+    expect(editor()).toHaveValue('');
+    expect(screen.getByRole('button', { name: /Copy to clipboard/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Clear$/i })).toBeDisabled();
   });
 });

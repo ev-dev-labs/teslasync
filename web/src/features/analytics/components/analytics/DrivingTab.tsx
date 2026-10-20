@@ -72,13 +72,15 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
       })),
     [tempEff, tempUnit, fromWhPerKm, fromKm],
   );
-  // Keep only points with a positive efficiency, then project the survivors into
-  // the user's efficiency unit (Wh/mi vs Wh/km) to match the axis label.
+  // A returned efficiency needs usable driving distance; charging energy is
+  // not a substitute for a missing daily driving-energy measurement.
   const effTrend = useMemo(
     () =>
       dailyTrend
-        .filter((d) => safe(d.efficiency) > 0)
-        .map((d) => ({ ...d, efficiency: fromWhPerKm(safe(d.efficiency)) })),
+        .flatMap((d) => Number.isFinite(d.distance) && d.distance > 0
+          && d.efficiency != null && Number.isFinite(d.efficiency) && d.efficiency > 0
+          ? [{ ...d, efficiency: fromWhPerKm(d.efficiency) }]
+          : []),
     [dailyTrend, fromWhPerKm],
   );
 
@@ -92,7 +94,7 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
       >
         {/* Speed Distribution */}
         <AnalyticsChartPanel
-          title={t('analytics.driving.speedDist', 'Speed Distribution')}
+          title={t('analytics.driving.speedDist', 'Speed distribution')}
           icon={<Gauge className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -120,7 +122,7 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Trip Distance Distribution */}
         <AnalyticsChartPanel
-          title={t('analytics.driving.distDist', 'Trip Distance Distribution')}
+          title={t('analytics.driving.distDist', 'Trip distance distribution')}
           icon={<MapPin className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -148,7 +150,7 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Hourly Driving Pattern */}
         <AnalyticsChartPanel
-          title={t('analytics.driving.hourlyPattern', 'Hourly Driving Pattern')}
+          title={t('analytics.driving.hourlyPattern', 'Hourly driving pattern')}
           icon={<Clock className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -186,7 +188,7 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Temp vs Efficiency */}
         <AnalyticsChartPanel
-          title={t('analytics.driving.tempVsEff', 'Temperature vs Efficiency')}
+          title={t('analytics.driving.tempVsEff', 'Temperature vs efficiency')}
           icon={<Thermometer className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -219,7 +221,7 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Daily Driving Trend */}
         <AnalyticsChartPanel
-          title={t('analytics.driving.dailyTrend', 'Daily Driving Trend')}
+          title={t('analytics.driving.dailyTrend', 'Daily driving trend')}
           icon={<TrendingUp className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -257,7 +259,7 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Drive Duration Distribution */}
         <AnalyticsChartPanel
-          title={t('analytics.driving.durationDist', 'Drive Duration Distribution')}
+          title={t('analytics.driving.durationDist', 'Drive duration distribution')}
           icon={<Timer className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -286,13 +288,13 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
         {/* Efficiency Trend — hero band */}
         <AnalyticsChartPanel
           className="md:col-span-2 2xl:col-span-3"
-          title={t('analytics.driving.effTrend', 'Efficiency Trend')}
+          title={t('analytics.driving.effTrend', 'Efficiency trend')}
           icon={<Activity className="h-4 w-4" />}
           loading={isLoading}
           error={err}
           onRetry={refetch}
           isEmpty={effTrend.length === 0}
-          emptyMessage={t('analytics.driving.noEffTrend', 'No efficiency trend data')}
+          emptyMessage={`${t('analytics.brief.unavailable', 'Evidence unavailable')}: ${t('analytics.driving.noEffTrend', 'No efficiency trend data')}`}
           ariaLabel={`${t('analytics.driving.effTrendAria', 'Daily efficiency trend')} (${efficiencyUnit})`}
           size="detail"
           data={effTrend}

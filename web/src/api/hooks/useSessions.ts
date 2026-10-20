@@ -19,10 +19,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, isApiError, request } from '../client'
 import { useMutationToast } from './_toastHelpers'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast'
 import type { ActiveSession, ActiveSessionsResponse, RevokeAllOthersResponse } from '@/api/types'
 
 export type { ActiveSession, ActiveSessionsResponse, RevokeAllOthersResponse }
+
+export type RevokeAllOthersResult = Omit<RevokeAllOthersResponse, 'revoked'> & {
+  revoked: number | null
+}
 
 export const sessionKeys = {
   list: ['sessions', 'list'] as const,
@@ -37,15 +42,46 @@ export const sessionKeys = {
 const AUTH_MODE_OPEN_CODE = 'AUTH_MODE_OPEN'
 
 /**
- * Backend list payload before the SPA reshapes it. The handler always
- * sends `{ mode, sessions }`; we map the 501 path to `{ mode: 'open' }`
- * client-side because TanStack's queryFn must reject on a real network
- * error to drive `isError`, and we want the open-mode case to read as
- * a successful no-op instead.
+ * Validate wire data before accepting an explicit empty list. Malformed
+ * list responses reject so TanStack retains previously validated data.
  */
-interface SessionListPayload {
-  mode: 'session'
-  sessions: ActiveSession[]
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function isActiveSession(value: unknown): value is ActiveSession {
+  return isRecord(value)
+    && typeof value.id === 'string'
+    && typeof value.user_agent === 'string'
+    && typeof value.ip === 'string'
+    && typeof value.created_at === 'string'
+    && typeof value.last_seen_at === 'string'
+    && (value.revoked_at === undefined || typeof value.revoked_at === 'string')
+    && typeof value.current === 'boolean'
+}
+
+function readSessionList(payload: unknown): ActiveSessionsResponse {
+  if (isRecord(payload)) {
+    if (payload.mode === 'open') return { mode: 'open' }
+    if (payload.mode === 'session'
+      && Array.isArray(payload.sessions)
+      && payload.sessions.every(isActiveSession)) {
+      return { mode: 'session', sessions: payload.sessions }
+    }
+  }
+  throw new ApiError('Invalid active sessions response', 502, 'INVALID_RESPONSE')
+}
+
+function readRevokeAllOthers(payload: unknown): RevokeAllOthersResult {
+  if (isRecord(payload) && payload.mode === 'session') {
+    const revoked = typeof payload.revoked === 'number'
+      && Number.isSafeInteger(payload.revoked)
+      && payload.revoked >= 0
+      ? payload.revoked
+      : null
+    return { mode: 'session', revoked }
+  }
+  throw new ApiError('Invalid session revocation response', 502, 'INVALID_RESPONSE')
 }
 
 /**
@@ -62,8 +98,7 @@ export function useSessions(options?: { enabled?: boolean }) {
     queryKey: sessionKeys.list,
     queryFn: async ({ signal }) => {
       try {
-        const payload = await request<SessionListPayload>('/auth/sessions', { signal })
-        return { mode: 'session', sessions: payload?.sessions ?? [] }
+        return readSessionList(await request<unknown>('/auth/sessions', { signal }))
       } catch (err) {
         if (isApiError(err) && err.code === AUTH_MODE_OPEN_CODE) {
           return { mode: 'open' }
@@ -98,36 +133,51 @@ export function useRevokeSession() {
       request<void>(`/auth/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: sessionKeys.list })
-      toast.success('settings.sessions.toasts.revoked', 'Session signed out.')
+      toast.success('settingsSessions.toasts.revoked', 'Session signed out.')
     },
     onError: (err) =>
-      toast.error(err, 'settings.sessions.errors.revoke', 'Failed to sign out session'),
+      toast.error(err, 'settingsSessions.errors.revoke', 'Failed to sign out session'),
   })
 }
 
 /**
  * Revoke every other session for the current subject. RequireSudo-
- * gated upstream. Returns the count of revoked rows so the toast can
- * confirm how many devices were signed out.
+ * gated upstream. A session-mode response confirms the operation; only a
+ * safe nonnegative integer confirms its count. Unknown counts remain null.
  */
 export function useRevokeAllOtherSessions() {
   const qc = useQueryClient()
   const toast = useMutationToast()
-  return useMutation<RevokeAllOthersResponse, ApiError, void>({
+  const { fmtInt } = useNumberFormatting()
+  return useMutation<RevokeAllOthersResult, ApiError, void>({
     mutationFn: () =>
-      request<RevokeAllOthersResponse>('/auth/sessions/all-others', { method: 'DELETE' }),
+      request<unknown>('/auth/sessions/all-others', { method: 'DELETE' })
+        .then(readRevokeAllOthers),
     onSuccess: (result) => {
       invalidateAndBroadcast(qc, { queryKey: sessionKeys.list })
-      const revoked = result?.revoked ?? 0
+      const revoked = result.revoked
+      if (revoked === null) {
+        toast.success(
+          'settingsSessions.toasts.revokedAllOthersCountUnknown',
+          'Other sessions signed out. The number of signed-out devices is unavailable.',
+        )
+        return
+      }
       toast.success(
-        'settings.sessions.toasts.revokedAllOthers',
+        'settingsSessions.toasts.revokedAllOthers',
         `Signed out ${revoked} other device${revoked === 1 ? '' : 's'}.`,
+        {
+          count: revoked,
+          displayCount: fmtInt(revoked),
+          defaultValue_one: 'Signed out {{displayCount}} other device.',
+          defaultValue_other: 'Signed out {{displayCount}} other devices.',
+        },
       )
     },
     onError: (err) =>
       toast.error(
         err,
-        'settings.sessions.errors.revokeAllOthers',
+        'settingsSessions.errors.revokeAllOthers',
         'Failed to sign out other sessions',
       ),
   })

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -6,14 +6,16 @@ import {
   useTransitionRepairCase,
   type RepairCaseStatus,
 } from '@/api/hooks/useDataRepair';
-import { QueryError, Skeleton } from '@/components/feedback';
+import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Badge, Button, ConfirmDialog, Drawer, Text, Textarea } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
+import { useDataState } from '@/hooks/useDataState';
 import { RepairCaseCollaboration } from './RepairCaseCollaboration';
 import { RepairCaseControlledActions } from './RepairCaseControlledActions';
 import { RepairCaseEvidencePanel } from './RepairCaseEvidencePanel';
 import {
   repairStatusLabel,
+  isStructuralRepairCase,
   REPAIR_STATUS_BADGE_VARIANTS,
 } from './repairCasePresentation';
 
@@ -32,20 +34,29 @@ export function RepairCaseDrawer({
 }: RepairCaseDrawerProps) {
   const { t } = useTranslation();
   const detailQuery = useRepairCase(caseId);
+  const detailState = useDataState(detailQuery);
   const transition = useTransitionRepairCase();
+  const resetTransition = transition.reset;
   const [resolveReason, setResolveReason] = useState('');
   const [resolveOpen, setResolveOpen] = useState(false);
+  const inFlight = useRef(false);
+  const activeCaseId = useRef(caseId);
+  activeCaseId.current = caseId;
   useEffect(() => {
     setResolveReason('');
     setResolveOpen(false);
-  }, [caseId]);
+    resetTransition();
+  }, [caseId, resetTransition]);
   const detail = detailQuery.data;
   const repairCase = detail?.case;
   const drawerTitle = repairCase
     ? t('dataRepair.cases.drawerTitle', 'Case #{{id}}', { id: repairCase.id })
     : t('dataRepair.cases.drawerLoadingTitle', 'Repair case');
   const transitionTo = (status: RepairCaseStatus, resolutionNote?: string) => {
-    if (!repairCase) return;
+    if (!repairCase || !canWrite || inFlight.current || transition.isPending
+      || (status === 'resolved' && !resolutionNote?.trim())) return;
+    inFlight.current = true;
+    const submittedCaseId = repairCase.id;
     transition.mutate({
       case_id: repairCase.id,
       status,
@@ -53,13 +64,19 @@ export function RepairCaseDrawer({
       resolution_note: resolutionNote,
     }, {
       onSuccess: () => {
-        if (status === 'resolved') {
+        if (status === 'resolved' && activeCaseId.current === submittedCaseId) {
           setResolveOpen(false);
           setResolveReason('');
         }
       },
+      onSettled: () => { inFlight.current = false; },
     });
   };
+  const transitionError = transition.error ? t('dataRepair.cases.transitionFailed', {
+    message: transition.error instanceof Error ? transition.error.message
+      : t('toast.dataRepair.case.transition.error', 'Failed to update repair case'),
+    defaultValue: 'The case could not be updated. {{message}}',
+  }) : null;
 
   return (
     <Drawer
@@ -92,6 +109,7 @@ export function RepairCaseDrawer({
                   loading={transition.isPending}
                   disabled={!canWrite}
                   title={!canWrite ? writeBlockReason : undefined}
+                  wrapLabel
                 >
                   {t('dataRepair.cases.beginReview', 'Begin review')}
                 </Button>
@@ -105,6 +123,7 @@ export function RepairCaseDrawer({
                   loading={transition.isPending}
                   disabled={!canWrite}
                   title={!canWrite ? writeBlockReason : undefined}
+                  wrapLabel
                 >
                   {t('dataRepair.cases.reopen', 'Reopen')}
                 </Button>
@@ -115,9 +134,11 @@ export function RepairCaseDrawer({
                 size="sm"
                 variant="primary"
                 icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
-                onClick={() => setResolveOpen(true)}
+                onClick={() => { transition.reset(); setResolveOpen(true); }}
+                loading={transition.isPending}
                 disabled={!canWrite}
                 title={!canWrite ? writeBlockReason : undefined}
+                wrapLabel
               >
                 {t('dataRepair.cases.resolve', 'Resolve case')}
               </Button>
@@ -126,26 +147,26 @@ export function RepairCaseDrawer({
         ) : null
       }
     >
-      {detailQuery.isLoading ? (
+      <StaleRefreshWarning state={detailState} />
+      {!resolveOpen && transitionError && <Text as="p" role="alert" className="mb-3 text-[var(--semantic-danger)]">{transitionError}</Text>}
+      {detailQuery.isLoading && !detail ? (
         <div className="space-y-3">
           <Skeleton height={120} />
           <Skeleton height={220} />
           <Skeleton height={180} />
         </div>
-      ) : detailQuery.error ? (
-        <QueryError error={detailQuery.error} onRetry={() => void detailQuery.refetch()} />
+      ) : detailState.fatalError ? (
+        <QueryError error={detailState.fatalError} onRetry={() => void detailQuery.refetch()} />
       ) : repairCase && detail ? (
-        <div className="space-y-4">
+        <div className="space-y-4 pb-24">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={REPAIR_STATUS_BADGE_VARIANTS[repairCase.status]}>
               {repairStatusLabel(t, repairCase.status)}
             </Badge>
-            <Badge variant={repairCase.confidence === 'high' ? 'danger' : repairCase.confidence === 'medium' ? 'warning' : 'neutral'}>
-              {t('dataRepair.cases.confidenceBadge', '{{confidence}} confidence', {
-                confidence: repairCase.confidence === 'high'
-                  ? t('dataRepair.confidence.high', 'High')
-                  : t('dataRepair.confidence.medium', 'Medium'),
-              })}
+            <Badge variant="neutral">
+              {repairCase.confidence === 'high'
+                ? t('dataRepair.confidence.high', 'High confidence')
+                : t('dataRepair.confidence.medium', 'Medium confidence')}
             </Badge>
             <Text variant="caption">
               {t('dataRepair.cases.lastSeen', 'Last seen {{time}}', {
@@ -184,17 +205,27 @@ export function RepairCaseDrawer({
         variant="warning"
         loading={transition.isPending}
         details={(
-          <Textarea
-            id="repair-case-resolution-reason"
-            label={t('dataRepair.cases.reasonLabel', 'Operator note')}
-            value={resolveReason}
-            onChange={(event) => setResolveReason(event.target.value)}
-            rows={3}
-            maxLength={4000}
-            placeholder={t('dataRepair.cases.reasonPlaceholder', 'Explain the evidence and decision')}
-          />
+          <>
+            {transitionError && <Text as="p" role="alert" className="text-[var(--semantic-danger)]">{transitionError}</Text>}
+            {repairCase && isStructuralRepairCase(repairCase) && <Text as="p" variant="bodySm">
+              {t('dataRepair.cases.manualResolutionHint', 'Resolution records your review; it does not correct the source data. Document the manual correction in the operator note.')}
+            </Text>}
+            {!canWrite && <Text as="p" variant="caption" role="note">
+              {writeBlockReason ?? t('dataRepair.cases.readOnly', 'Repair controls are read-only')}
+            </Text>}
+            <Textarea
+              id="repair-case-resolution-reason"
+              label={t('dataRepair.cases.reasonLabel', 'Operator note')}
+              value={resolveReason}
+              onChange={(event) => setResolveReason(event.target.value)}
+              rows={3}
+              maxLength={4000}
+              placeholder={t('dataRepair.cases.reasonPlaceholder', 'Explain the evidence and decision')}
+              disabled={!canWrite}
+            />
+          </>
         )}
-        confirmDisabled={!resolveReason.trim()}
+        confirmDisabled={!canWrite || !resolveReason.trim()}
       />
     </Drawer>
   );

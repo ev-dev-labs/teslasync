@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { createInstance } from 'i18next';
+import en from '@/i18n/en.json';
 import {
   analyzeRootCause,
   buildNormalizedTimeline,
@@ -6,6 +8,7 @@ import {
   CONCURRENT_TOLERANCE_MS,
   findStrongestRobustShift,
   isAnalysisDefensible,
+  localizeRootCause,
   mad,
   MAX_EFFECT_SIZE,
   MAX_RELATED_SIGNALS,
@@ -13,6 +16,7 @@ import {
   MIN_CANDIDATE_EFFECT_SIZE,
   MIN_FOCAL_EFFECT_SIZE,
   NO_CAUSAL_PROOF_DISCLAIMER,
+  presentRootCause,
   robustSpread,
   selectRelatedSignals,
   toNumericPoints,
@@ -24,6 +28,125 @@ import {
 
 const MIN = 60_000;
 const BASE = Date.UTC(2024, 0, 1, 0, 0, 0);
+
+describe('diagnostic display localization', () => {
+  it('has catalog-backed descriptors for every emitted narrative and preserves English statistics and disclaimers', async () => {
+    const i18n = createInstance();
+    await i18n.init({ lng: 'en', resources: { en: { translation: en } }, initImmediate: false });
+    const focalPoints = flatStep({ count: 120, before: -2.5, after: 0.125, shiftAtIndex: 60 });
+    const relatedSeries = ['BatteryTemp', 'BatteryCurrent'].map(signal => ({
+      signal, points: flatStep({ count: 120, before: 0, after: -0.125, shiftAtIndex: 55 }),
+    }));
+    const analyses = [
+      analyzeRootCause({ focalSignal: '', catalog: [], focalPoints: [], relatedSeries: [] }),
+      analyzeRootCause({ focalSignal: 'BatteryVoltage', catalog: [], focalPoints: flatConstant({ count: 120, value: 0 }), relatedSeries: [] }),
+      analyzeRootCause({ focalSignal: 'BatteryVoltage', catalog: ['BatteryTemp'], focalPoints, relatedSeries: [] }),
+      analyzeRootCause({ focalSignal: 'BatteryVoltage', catalog: relatedSeries.map(s => s.signal), focalPoints, relatedSeries }),
+    ];
+    const presentations = [
+      ...analyses.map(analysis => presentRootCause(analysis, [])),
+      presentRootCause(analyses[2]!, [{ signal: 'BatteryVoltage', points: focalPoints }]),
+      presentRootCause(analyses[2]!, [{ signal: 'BatteryVoltage', points: [{ ts: BASE, value: 'invalid' }] }]),
+    ];
+    for (const result of [...analyses, ...presentations]) {
+      expect(result.limitationReasons).toHaveLength(result.limitations.length);
+      for (const reason of [result.summaryReason!, ...result.limitationReasons!]) {
+        expect(i18n.exists(`rootCauseIntelligence.reasons.${reason.id}`)).toBe(true);
+      }
+      const display = localizeRootCause(result, i18n.t);
+      expect(display.summary).toBe(result.summary);
+      expect(display.limitations).toEqual(result.limitations);
+    }
+    const ranked = analyses[3]!;
+    expect(ranked.summaryReason?.args.count).toBe(2);
+    expect(ranked.summary).toContain('2 ranked, evidence-based hypotheses');
+    expect(ranked.focalShift?.before.median).toBe(-2.5);
+    expect(ranked.focalShift?.after.median).toBe(0.125);
+    for (const hypothesis of ranked.hypotheses) {
+      expect(i18n.exists(`rootCauseIntelligence.reasons.${hypothesis.rationaleReason!.id}`)).toBe(true);
+      expect(localizeRootCause(ranked, i18n.t).hypotheses.find(h => h.signal === hypothesis.signal)?.rationale)
+        .toBe(hypothesis.rationale);
+    }
+  });
+
+  it.each([
+    ['concurrent', 60], ['leads', 50], ['lags', 70],
+  ] as const)('preserves the populated %s rationale through English display formatting', async (relation, shiftAtIndex) => {
+    const analysis = analyzeRootCause({
+      focalSignal: 'BatteryVoltage', catalog: ['BatteryTemp'],
+      focalPoints: jitteredStep({ count: 120, before: -20, after: 0, shiftAtIndex: 60, jitterAmplitude: 0.4 }),
+      relatedSeries: [{
+        signal: 'BatteryTemp', points: jitteredStep({ count: 120, before: 0, after: -10, shiftAtIndex, jitterAmplitude: 0.2 }),
+      }],
+    });
+    const i18n = createInstance();
+    await i18n.init({ lng: 'en', resources: { en: { translation: en } }, initImmediate: false });
+    expect(analysis.hypotheses[0]!.rationaleReason?.id).toBe(relation);
+    const display = localizeRootCause(analysis, i18n.t);
+    expect(display.hypotheses[0]!.rationale).toBe(analysis.hypotheses[0]!.rationale);
+    expect(display.hypotheses[0]!.shift.after.median).toBe(analysis.hypotheses[0]!.shift.after.median);
+    expect(display.hypotheses[0]!.shift.before.median).toBe(analysis.hypotheses[0]!.shift.before.median);
+    expect(analysis.hypotheses[0]!.shift.after.median).toBeCloseTo(-10, 0);
+    expect(analysis.hypotheses[0]!.shift.before.median).toBeCloseTo(0, 0);
+    // Estimated split points carry a few minutes of estimation slop (see the
+    // lead/lag suites below); the 10-minute injected separation keeps the
+    // relation assertion meaningful.
+    if (relation === 'concurrent') {
+      expect(Math.abs(analysis.hypotheses[0]!.lagMs)).toBeLessThanOrEqual(CONCURRENT_TOLERANCE_MS);
+    } else {
+      expect(Math.abs(analysis.hypotheses[0]!.lagMs - (shiftAtIndex - 60) * MIN)).toBeLessThanOrEqual(6 * MIN);
+    }
+  });
+
+  it('localizes stable reasons without changing canonical text, signed raw facts or identifiers', async () => {
+    const focalPoints = jitteredStep({ count: 120, before: -20, after: 0, shiftAtIndex: 60, jitterAmplitude: 0.4 });
+    const relatedSeries = [
+      { signal: 'BatteryTemp<&>', points: jitteredStep({ count: 120, before: -10, after: 0, shiftAtIndex: 50, jitterAmplitude: 0.2 }) },
+    ];
+    const analysis = analyzeRootCause({
+      focalSignal: 'BatteryVoltage<&>', catalog: ['BatteryTemp<&>'], focalPoints, relatedSeries,
+    });
+    expect(analysis.hypotheses).toHaveLength(1);
+    const canonical = JSON.stringify(analysis);
+    const i18n = createInstance();
+    await i18n.init({ lng: 'en', resources: { en: { translation: en } }, initImmediate: false });
+    const english = localizeRootCause(analysis, i18n.t);
+    expect(english.summary).toBe(analysis.summary);
+    expect(english.limitations).toEqual(analysis.limitations);
+    expect(english.hypotheses[0]!.rationale).toBe(analysis.hypotheses[0]!.rationale);
+    const reason = analysis.hypotheses[0]!.rationaleReason!;
+    expect(reason.id).toBe('leads');
+    expect(reason.args).toMatchObject({
+      focalSignal: 'BatteryVoltage<&>', signal: 'BatteryTemp<&>', minutes: 12,
+    });
+    i18n.addResourceBundle('de', 'translation', {
+      rootCauseIntelligence: { reasons: {
+        leads: '{{signal}} vor {{focalSignal}}: {{minutes}} min, Effekt {{effectSize}}; keine Diagnose.',
+        association: 'Statistische Assoziation, keine Diagnose oder Kausalitätsbeweis.',
+        temporalLimit: 'Zeitliche Nähe ist kein Kausalitätsbeweis.',
+        rankedSummary: '{{focalSignal}}: {{count}} {{hypothesisLabel}}, {{band}}.',
+        hypothesis: 'Hypothese', band: { moderate: 'mäßig', strong: 'stark', weak: 'schwach' },
+        coverage: '{{resolved}}/{{selected}} aufgelöst; {{usable}} nutzbar; {{unknown}} unbekannt.',
+      } },
+    });
+    await i18n.changeLanguage('de');
+    const display = localizeRootCause(analysis, i18n.t);
+    expect(display.hypotheses[0]!.rationale).toContain('BatteryTemp<&> vor BatteryVoltage<&>: 12 min');
+    expect(display.limitations[0]).toBe('Statistische Assoziation, keine Diagnose oder Kausalitätsbeweis.');
+    expect(display.summary).toContain('1 Hypothese');
+    expect(display.hypotheses[0]!.shift.before.median).toBe(analysis.hypotheses[0]!.shift.before.median);
+    expect(display.focalShift!.before.median).toBe(analysis.focalShift!.before.median);
+    expect(analysis.hypotheses[0]!.shift.before.median).toBeCloseTo(-10, 0);
+    expect(analysis.focalShift!.before.median).toBeCloseTo(-20, 0);
+    expect(display.graph).toBe(analysis.graph);
+    expect(display.timeline).toBe(analysis.timeline);
+    expect(JSON.stringify(analysis)).toBe(canonical);
+    expect(analysis.limitations[0]).toContain(NO_CAUSAL_PROOF_DISCLAIMER);
+    const presentation = presentRootCause(analysis, [{ signal: analysis.focalSignal, points: focalPoints }]);
+    expect(presentation.limitationReasons?.some(({ id }) => id === 'coverage')).toBe(true);
+    expect(localizeRootCause(presentation, i18n.t).limitations).toContain('0/1 aufgelöst; 0 nutzbar; 1 unbekannt.');
+  });
+});
 
 /**
  * Deterministic pseudo-noise (sine-hash trick) — no `Math.random`, fully
@@ -119,10 +242,97 @@ describe('classifySignalDomains', () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe('toNumericPoints', () => {
+  it('distinguishes absent and invalid values from measured zero, signed and fractional values', () => {
+    expect(toNumericPoints([
+      { ts: BASE, value: null },
+      { ts: BASE, value: '' },
+      { ts: BASE, value: '  ' },
+      { ts: BASE, value: false },
+      { ts: BASE, value: Infinity },
+      { ts: BASE, value: 'invalid' },
+      { ts: 'invalid', value: 0 },
+      { ts: BASE, value: 0 },
+      { ts: BASE + MIN, value: -2.5 },
+      { ts: BASE + 2 * MIN, value: '+0.125' },
+    ])).toEqual([
+      { ms: BASE, value: 0 },
+      { ms: BASE + MIN, value: -2.5 },
+      { ms: BASE + 2 * MIN, value: 0.125 },
+    ]);
+  });
   it('returns an empty array for empty/null/undefined input', () => {
     expect(toNumericPoints([])).toEqual([]);
     expect(toNumericPoints(null)).toEqual([]);
     expect(toNumericPoints(undefined)).toEqual([]);
+  });
+
+  describe('root-cause presentation eligibility', () => {
+    const focalPoints = flatStep({ count: 48, before: -2.5, after: 0.125, shiftAtIndex: 24 });
+    const catalog = ['Soc', 'PackVoltage', 'BatteryLevel', 'BatteryVoltage'];
+
+    it('keeps selected, resolved, usable and unknown candidate counts distinct without changing raw scores', () => {
+      const relatedSeries = [
+        { signal: 'PackVoltage', points: flatConstant({ count: 48, value: 0 }) },
+        { signal: 'BatteryLevel', points: [{ ts: BASE, value: 'invalid' }] },
+      ];
+      const analysis = analyzeRootCause({ focalSignal: 'Soc', catalog, focalPoints, relatedSeries });
+      const before = JSON.stringify(analysis);
+      const presentation = presentRootCause(analysis, [{ signal: 'Soc', points: focalPoints }, ...relatedSeries]);
+      expect(analysis.relatedCandidates).toHaveLength(3);
+      expect(presentation).toMatchObject({
+        focalNumericEligible: true, scoreComputed: true,
+        candidatesResolved: 2, candidatesUsable: 1, candidatesUnknown: 1, candidateCoverageComplete: false,
+      });
+      expect(presentation.summary).toContain('corroboration is unknown');
+      expect(presentation.summary).not.toContain('isolated change');
+      expect(presentation.limitations.join(' ')).not.toContain('None of the related signals cleared');
+      expect(presentation.limitations.join(' ')).toContain('2 of 3 selected related histories resolved');
+      expect(JSON.stringify(analysis)).toBe(before);
+    });
+
+    it.each([[], [{ ts: BASE, value: 0 }], [{ ts: 'invalid', value: 0 }], [{ ts: BASE, value: 'Park' }]]
+      .map(points => ({ points })))(
+      'withholds uncomputed scores and negative conclusions for ineligible focal history %#', ({ points }) => {
+        const analysis = analyzeRootCause({ focalSignal: 'Soc', catalog, focalPoints: points, relatedSeries: [] });
+        const presentation = presentRootCause(analysis, [{ signal: 'Soc', points }]);
+        expect(presentation.focalNumericEligible).toBe(false);
+        expect(presentation.scoreComputed).toBe(false);
+        expect(presentation.summary).not.toContain('No robust shift');
+        expect(presentation.limitations.join(' ')).not.toContain('did not show a robust');
+        expect(analysis.quality.overallScore).toBe(0);
+      },
+    );
+
+    it('reports measured stable zero only after sufficient numeric coverage, without inventing a computed score', () => {
+      const points = flatConstant({ count: 48, value: 0 });
+      const analysis = analyzeRootCause({ focalSignal: 'Soc', catalog: ['Soc'], focalPoints: points, relatedSeries: [] });
+      const presentation = presentRootCause(analysis, [{ signal: 'Soc', points }]);
+      expect(presentation).toMatchObject({ focalNumericEligible: true, scoreComputed: false });
+      expect(presentation.summary).toBe(analysis.summary);
+      expect(presentRootCause(analysis, []).focalResolved).toBe(false);
+    });
+
+    it('distinguishes a resolved empty candidate from an unresolved candidate', () => {
+      const analysis = analyzeRootCause({
+        focalSignal: 'Soc', catalog: ['Soc', 'PackVoltage'], focalPoints, relatedSeries: [],
+      });
+      expect(presentRootCause(analysis, [{ signal: 'Soc', points: focalPoints }])).toMatchObject({
+        candidatesResolved: 0, candidatesUsable: 0, candidatesUnknown: 1,
+      });
+      expect(presentRootCause(analysis, [
+        { signal: 'Soc', points: focalPoints }, { signal: 'PackVoltage', points: [] },
+      ])).toMatchObject({ candidatesResolved: 1, candidatesUsable: 0, candidatesUnknown: 0 });
+    });
+
+    it('does not infer stability from enough rows that cannot support a before/after split', () => {
+      const points = Array.from({ length: 48 }, (_, index) => ({
+        ts: index === 0 ? BASE : BASE + 20 * MIN, value: 0,
+      }));
+      const analysis = analyzeRootCause({ focalSignal: 'Soc', catalog: ['Soc'], focalPoints: points, relatedSeries: [] });
+      expect(presentRootCause(analysis, [{ signal: 'Soc', points }])).toMatchObject({
+        focalNumericEligible: false, scoreComputed: false,
+      });
+    });
   });
 
   it('drops malformed/non-numeric/null entries without throwing', () => {

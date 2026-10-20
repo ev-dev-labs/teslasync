@@ -129,7 +129,7 @@ export function LayoutSwitcher({
 
   const handleSaveAs = useCallback(() => {
     setOpen(false);
-    const suggestion = active ? `${active.name} (Copy)` : t('layout.newLayoutDefault', 'New Layout');
+    const suggestion = active ? `${active.name} (Copy)` : t('layout.newLayoutDefault', 'New layout');
     const name = window.prompt(
       t('layout.saveAsPrompt', 'Name for the new layout:'),
       suggestion,
@@ -236,7 +236,7 @@ export function LayoutSwitcher({
           'hover:border-[var(--border-strong)] hover:bg-white/[0.06]',
         )}
       >
-        <span className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
+        <span className="text-xs tracking-wider text-[var(--text-muted)]">
           {t('layout.label', 'Layout')}
         </span>
         <span className="max-w-[10rem] truncate">{activeName}</span>
@@ -259,7 +259,7 @@ export function LayoutSwitcher({
           role="menu"
           aria-label={t('layout.menuLabel', 'Saved layouts')}
           className={cn(
-            'absolute bottom-full left-0 z-50 mb-1 min-w-[16rem] max-h-[min(18rem,calc(100dvh-8rem))] overflow-y-auto rounded-xl border border-[var(--border-subtle)]',
+            'absolute top-full left-0 z-50 mt-1 min-w-[16rem] max-h-[min(18rem,calc(100dvh-8rem))] overflow-y-auto rounded-xl border border-[var(--border-subtle)]',
             'bg-[var(--surface-1)] p-1.5 shadow-xl sm:bottom-auto sm:top-full sm:mb-0 sm:mt-1',
           )}
         >

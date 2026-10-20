@@ -1,0 +1,897 @@
+{
+  "item": "phase6-qa-vehicle-systems-maintenance",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "acceptedSource": "a35444f15 (queue authority; no Git edits)",
+  "page": "web/src/features/vehicle-systems/pages/MaintenancePage.tsx",
+  "routes": [
+    "/maintenance"
+  ],
+  "createdAt": "2026-10-14T01:40:26.5653588Z",
+  "clock": {
+    "renewed": false,
+    "firstCommandUtc": "2026-10-14T01:27:59.8943517Z",
+    "hardBy": "2026-10-14T01:49:50.678Z",
+    "returnBy": "2026-10-14T01:44:50.678Z",
+    "reservationUtc": "2026-10-14T01:24:50.678Z"
+  },
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-vehicle-systems-maintenance.json",
+    "web/logs/phase6-qa-vehicle-systems-maintenance.log"
+  ],
+  "purpose": "Read-only QA of accepted selected-vehicle maintenance schedule, independent service history/cost evidence, projections, metadata, optional advisor and record evidence drawer.",
+  "instructions": {
+    "inventory": "Maintenance audit-page-222, G221/P438/P439 and current inventory excerpts read",
+    "repository": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      "docs/frontend-worker-conventions.md"
+    ],
+    "queue": "Exact claim and maintenance/formatter/palette fix overlap searched",
+    "handoff": "Current recovery and relevant Maintenance history read",
+    "mission": "Relevant preservation, responsive, trust, recovery, architecture and privacy sections read",
+    "design": "Base and applicable scope/trust/statistics/SI/localization/mobile/a11y clauses read; unrelated appendices not treated as proof",
+    "orchestrator": "docs/orchestrator-loop.md read fully; root playbook authority found under docs"
+  },
+  "summary": {
+    "inspectionFailures": 1,
+    "discovered": 75,
+    "failed": 0,
+    "confirmedFindings": 8,
+    "nativeRuns": 0,
+    "passed": 75,
+    "uniqueTestFiles": 5,
+    "executed": 75,
+    "skipped": 0,
+    "sourceEdits": 0,
+    "unprovedCandidates": 7,
+    "confirmedByPrimaryRule": [
+      {
+        "rule": "MDC-010 / MDC-034 persisted palette preferences",
+        "count": 1
+      },
+      {
+        "rule": "MDC-013 shared typography roles",
+        "count": 1
+      },
+      {
+        "rule": "MDC-026 initial paused / prerequisite / empty recovery",
+        "count": 1
+      },
+      {
+        "rule": "MDC-026 unknown-zero / source-versus-derived status",
+        "count": 1
+      },
+      {
+        "rule": "MDC-040 stronger mobile default declaration",
+        "count": 1
+      },
+      {
+        "rule": "MDC-044 date locale preferences",
+        "count": 1
+      },
+      {
+        "rule": "mission-0 functional honesty / inherited capability limitation",
+        "count": 1
+      },
+      {
+        "rule": "mission-23 recovery honesty / current local capability",
+        "count": 1
+      }
+    ],
+    "filesWithMostConfirmedIssues": [
+      {
+        "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemCard.tsx",
+        "count": 3
+      },
+      {
+        "file": "web/src/features/vehicle-systems/pages/MaintenancePage.tsx",
+        "count": 2
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceCostPanel.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/maintenance-modernization/maintenancePresentation.ts",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceSource.tsx",
+        "count": 1
+      }
+    ],
+    "finalCommandFailures": 1
+  },
+  "confirmedIssues": [
+    {
+      "id": "F01",
+      "priority": "P1",
+      "rule": "MDC-026 unknown-zero / source-versus-derived status",
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemCard.tsx",
+      "line": 25,
+      "endLine": 26,
+      "related": [
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/maintenanceModel.ts",
+          "lines": [
+            58,
+            66,
+            73,
+            76,
+            79
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemCard.tsx",
+          "lines": [
+            85,
+            93,
+            104
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceSummary.tsx",
+          "lines": [
+            16,
+            22
+          ]
+        }
+      ],
+      "mechanism": "computeProgress returns numeric zero for absent or invalid service basis. Non-completed cards then derive Good from 0, while summary, sorting and projections use the raw source status. Missing basis is presented as measured 0% with aria-valuenow=0.",
+      "repro": "Synthetic item: status=overdue, interval_months=12, last_service_date=null, due_mileage=null, last_service_mileage=null. Source logic yields 0%/Good on card, overdue in summary/projections, and Overdue in disclosed source status. Existing invalid-date regression tests prove zero fallback, not trust correctness.",
+      "reproStatus": "source-confirmed; existing zero-fallback cases executed, exact overdue/null tuple not separately executed",
+      "fix": "Coordinate an explicit unavailable-basis representation and distinguish derived versus source status; retain established 30.44-day calculation and 70/90 thresholds for valid data.",
+      "owner": "page/API integration",
+      "confidence": "high",
+      "historical": "Also reported by audit-page-222; still present, not a new remigration."
+    },
+    {
+      "id": "F02",
+      "priority": "P1",
+      "rule": "MDC-026 initial paused / prerequisite / empty recovery",
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceSource.tsx",
+      "line": 25,
+      "endLine": 36,
+      "related": [
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceRecordsPanel.tsx",
+          "lines": [
+            24,
+            26
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceCategoriesPanel.tsx",
+          "lines": [
+            22,
+            24
+          ]
+        }
+      ],
+      "mechanism": "No-data disabled selection and initial isRefreshBlocked both map to empty. emptyContent replaces prepared panel-specific EmptyStates and Manage vehicles links with generic No data available, with no explanation of paused fetch or selection prerequisite.",
+      "repro": "Render an undefined no-error source with enabled=true and fetchStatus=paused, then enabled=false with no cache. Both take empty/generic text branch. Retained paused data correctly remains visible and is not part of this defect.",
+      "reproStatus": "source-confirmed; existing paused/disabled presenter coverage executed",
+      "fix": "Keep SourceContent and source-local boundaries; explain selection-required versus initial paused/unknown and preserve applicable recovery links without fabricating empty arrays.",
+      "owner": "page",
+      "confidence": "high",
+      "historical": "Matches audit-page-222 state finding."
+    },
+    {
+      "id": "F03",
+      "priority": "P2",
+      "rule": "mission-0 functional honesty / inherited capability limitation",
+      "file": "web/src/features/vehicle-systems/pages/MaintenancePage.tsx",
+      "line": 101,
+      "endLine": 103,
+      "related": [
+        {
+          "file": "web/src/features/vehicle-systems/pages/MaintenancePage.tsx",
+          "lines": [
+            158,
+            160
+          ]
+        }
+      ],
+      "mechanism": "Enabled primary Schedule button calls an intentionally empty callback and provides no outcome or unavailable-capability guidance.",
+      "repro": "Click Schedule in the existing mocked presenter test: no dialog and no request. No production action was attempted.",
+      "reproStatus": "existing synthetic no-op test executed",
+      "fix": "Preserve discoverability and report honest localized capability/context guidance. Do not invent scheduling endpoint, record mutation, or fake success.",
+      "owner": "capability integration",
+      "confidence": "high",
+      "historical": "Inherited intentionally preserved no-op, not an audit-created regression."
+    },
+    {
+      "id": "F04",
+      "priority": "P2",
+      "rule": "MDC-044 date locale preferences",
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemCard.tsx",
+      "line": 44,
+      "related": [
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemCard.tsx",
+          "lines": [
+            49,
+            74,
+            96,
+            128
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/MaintenancePage.tsx",
+          "lines": [
+            37,
+            77,
+            80
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/serviceColumns.tsx",
+          "lines": [
+            21
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceEvidenceDrawer.tsx",
+          "lines": [
+            39,
+            69
+          ]
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "lines": [
+            44,
+            50,
+            54,
+            58,
+            65,
+            69
+          ]
+        }
+      ],
+      "mechanism": "Maintenance date calls omit formatter locale options. formatDate/formatDateTime resolve omitted locale to undefined/browser locale, unlike numeric useUnits/useNumberFormatting application preferences. Subscribing to displayLocale for columns does not pass it to date formatting; projections memo depends only on items.",
+      "repro": "Configure application locale de-DE with browser en-US and retain same query data. Numeric formatting follows the app setting; maintenance date call sites still select browser locale. Source mechanism confirmed; this preference mismatch was not exercised in native browser.",
+      "reproStatus": "source-confirmed omission; manual/native reproduction NOT_RUN",
+      "fix": "Use existing date-format preference boundary consistently, pass effective locale and the established timezone/time-format semantics; keep service/due dates independent of analysis range. Coordinate shared date owner without broad refactor.",
+      "owner": "page/shared formatting adoption",
+      "confidence": "high"
+    },
+    {
+      "id": "F05",
+      "priority": "P2",
+      "rule": "MDC-010 / MDC-034 persisted palette preferences",
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/maintenancePresentation.ts",
+      "line": 22,
+      "endLine": 34,
+      "related": [
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceCategoriesPanel.tsx",
+          "lines": [
+            38,
+            41
+          ]
+        }
+      ],
+      "mechanism": "Eight fixed categorical hex colors plus fixed fallback supply MetricBar without reading canonical palette or saved chart choices. Labels preserve non-color meaning; rendered neon or contrast failure is not established.",
+      "repro": "Change saved chart palette: categoryColor(tires) still returns #22d3ee because lookup has no preference input/subscription.",
+      "reproStatus": "source-confirmed; rendered palette comparison NOT_RUN",
+      "fix": "Adopt existing palette with stable category identity and neutral fallback; preserve explicit saved choices and bar denominator. Do not add a palette engine.",
+      "owner": "page/canonical palette integration",
+      "confidence": "high",
+      "historical": "Matches audit-page-222 P439; unrelated completed export/secret-rotation/access palettes are not this consumer fix."
+    },
+    {
+      "id": "F06",
+      "priority": "P3",
+      "rule": "MDC-013 shared typography roles",
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemCard.tsx",
+      "line": 92,
+      "related": [
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemCard.tsx",
+          "lines": [
+            118
+          ]
+        }
+      ],
+      "mechanism": "Progress and footer metadata use raw text-xs spans instead of the existing Text/caption roles used for other metadata in the same card.",
+      "repro": "Inspect both metadata containers and compare with Text as=dt/dd at lines136-137. Saved scaling/rendered contrast was not measured.",
+      "reproStatus": "source declaration confirmed",
+      "fix": "Adopt existing semantic caption role while preserving tabular values, ARIA, wrapping, units and all metadata.",
+      "owner": "page",
+      "confidence": "high",
+      "historical": "Matches prior source-only typography finding."
+    },
+    {
+      "id": "F07",
+      "priority": "P2",
+      "rule": "MDC-040 stronger mobile default declaration",
+      "file": "web/src/features/vehicle-systems/pages/MaintenancePage.tsx",
+      "line": 154,
+      "endLine": 159,
+      "related": [
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "lines": [
+            35,
+            36
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/maintenance-modernization/serviceColumns.tsx",
+          "lines": [
+            64,
+            65
+          ]
+        }
+      ],
+      "mechanism": "Header Refresh and Schedule request size=sm with no local mobile target minimum. Inspected shared sm is h-9 (36px declaration), whereas record inspection explicitly requests h-11/w-11. This is a source-contract omission, not a measured WCAG spacing or physical-size failure.",
+      "repro": "Compare sm classes at Button.tsx:36 with page actions and the 44px inspection action. Mounted dimensions, root font scale and exceptions remain native QA.",
+      "reproStatus": "source declaration confirmed; geometry NOT_RUN",
+      "fix": "Use existing responsive target sizing and wrapping without removing actions or overriding density globally; measure native target geometry before WCAG acceptance.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "id": "F08",
+      "priority": "P2",
+      "rule": "mission-23 recovery honesty / current local capability",
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceCostPanel.tsx",
+      "line": 25,
+      "related": [
+        {
+          "file": "web/src/api/hooks/useMaintenance.ts",
+          "lines": [
+            28,
+            31,
+            57
+          ]
+        }
+      ],
+      "mechanism": "Empty cost copy directs users to Log service records, but this workspace contains only typed reads, refresh/navigation, and an inherited Schedule no-op; no logging affordance is available here. Hook comments explicitly describe an empty-only records producer, which is documentation rather than a fresh backend verification.",
+      "repro": "Both queries return synthetic []: cost panel renders logging advice and refresh, with no record logging control. Existing empty-state tests executed.",
+      "reproStatus": "source/local capability confirmed; real producer/access NOT_VERIFIED",
+      "fix": "Explain available history source and recovery honestly while retaining cost/history/evidence sections. No new write capability or denomination inference authorized.",
+      "owner": "page/capability integration",
+      "confidence": "high",
+      "historical": "Matches audit-page-222 recovery advice limitation."
+    }
+  ],
+  "unprovedCandidates": [
+    {
+      "mechanism": "No availability/provenance field distinguishes backend default schedule or missing odometer from genuine zero; historical audit cites backend coercion. Current backend was not inspected or invoked in this scope.",
+      "id": "C01",
+      "line": 7,
+      "needs": "Approved integration owner to verify producer/availability contract; do not infer unknown from a genuine zero.",
+      "kind": "backend integration unproved",
+      "file": "web/src/api/hooks/useMaintenance.ts"
+    },
+    {
+      "mechanism": "No real records accessed. Populated mileage units, cost denomination, nullable/malformed inputs and all-record cost??0 fallback are not validated by synthetic SI-shaped fixtures.",
+      "id": "C02",
+      "line": 28,
+      "needs": "Approved populated producer contract without service mutation or production records; preserve current raw payloads.",
+      "kind": "populated records contract unproved",
+      "file": "web/src/api/hooks/useMaintenance.ts"
+    },
+    {
+      "mechanism": "snapshot.observedAt receives dataState.updatedAt (last successful fetch, dataState.ts:147/195-198), not a vehicle observation timestamp. A count snapshot may legitimately mean fetched snapshot; rendered labeling/producer provenance needs adjudication.",
+      "id": "C03",
+      "line": 36,
+      "needs": "Clarify fetched-count-snapshot versus vehicle observation semantics; no current live-age claim made.",
+      "kind": "freshness meaning review",
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceSummary.tsx"
+    },
+    {
+      "mechanism": "Category filter persists across vehicle change while available options change. A category absent on new vehicle can yield no match and an absent selected option; Clear filter remains available, so no unrecoverable hidden section is claimed.",
+      "id": "C04",
+      "line": 45,
+      "needs": "Decide reconcile-invalid-filter policy using existing workspace owner; preserve intentional valid filters.",
+      "kind": "scope/filter UX policy",
+      "file": "web/src/features/vehicle-systems/pages/MaintenancePage.tsx"
+    },
+    {
+      "mechanism": "localDayKey and instant date helpers could shift a YYYY-MM-DD business date in negative-offset zones. Hook synthetic fixtures include date-only strings, but real record producer and business-date shape are unverified.",
+      "id": "C05",
+      "line": 25,
+      "needs": "Establish date-only versus instant contract and timezone ownership; do not substitute header analysis range.",
+      "kind": "business-date shape/timezone unproved",
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceEvidenceDrawer.tsx"
+    },
+    {
+      "mechanism": "Business-day links pass from/to without explicit record.vehicle_id; EntityPreviewDrawer uses direct router Links. Current same-vehicle sticky selection and scope-reset tests work, but record owner mismatch or portable link behavior is untested.",
+      "id": "C06",
+      "line": 82,
+      "needs": "Adjudicate explicit record-owned vehicle/day deep links without claiming an exercised cross-vehicle leak.",
+      "kind": "deep-link ownership completeness unproved",
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceEvidenceDrawer.tsx"
+    },
+    {
+      "mechanism": "No browser/API/device/server used. Mission widths 320,375,390,430,768,1024,1280,1440,1920,2560; dark/light/custom themes, forced colors, reduced motion, RTL/long translations, 200% text, keyboard/focus/restore, screen-reader announcements, contrast and hit geometry remain unverified.",
+      "id": "C07",
+      "line": 151,
+      "needs": "Parent-owned safe synthetic native acceptance with approved locks/tools; passing JSDOM is not native proof.",
+      "kind": "native acceptance unproved",
+      "file": "web/src/features/vehicle-systems/pages/MaintenancePage.tsx"
+    }
+  ],
+  "dataSources": [
+    {
+      "policy": "inherits QueryClient retry/stale policy",
+      "enabled": "vehicleId !== null",
+      "endpoint": "GET /maintenance?vehicle_id=N (client owns /api/v1)",
+      "hook": "useMaintenance(vehicleId)",
+      "queryKey": "[maintenance, vehicleId]",
+      "abortSignal": "forwarded"
+    },
+    {
+      "policy": "independent; historical provenance presentation",
+      "enabled": "vehicleId !== null",
+      "endpoint": "GET /maintenance/records?vehicle_id=N",
+      "hook": "useServiceRecords(vehicleId)",
+      "queryKey": "[maintenance-records, vehicleId]",
+      "abortSignal": "forwarded"
+    },
+    {
+      "hook": "AIPredictiveMaintenance/useAiStream",
+      "invoked": false,
+      "endpoint": "source-declared propose-only POST /ai/maintenance/predict",
+      "scope": "vehicleId positive gate / reset-on-change; feature-gated opt-in narration, no service mutation"
+    }
+  ],
+  "scopeOwnership": {
+    "preview": "Effect at page49-51 clears preview on vehicle change/deselection; four scope tests passed. Historical audit stale-preview defect is superseded and must not be queued again.",
+    "businessDates": "Due/last-service/created dates and independent all-record span determine item progress/cost; record.date determines evidence-day links. They are not header range filters.",
+    "headerRange": "Not consumed; /maintenance absent from RANGE_ENABLED_PATHS, workspaceScope.ts156-167 resolves range=false, vehicle=true. No competing local analysis picker.",
+    "headerVehicle": "useSelectedVehicle at page33, both query identities at39-40 and hook48/60"
+  },
+  "states": {
+    "initialPaused": "F02: generic empty instead of truthful paused state",
+    "unknownMeasurement": "F01: missing/invalid progress basis becomes 0/Good; producer ambiguity C01",
+    "disabledNoVehicle": "Reads gated; missing values not zero; F02 recovery guidance lost",
+    "pausedRetained": "Data remains with paused warning, covered",
+    "nullOrMissing": "Missing KPI rawValue null versus [] zero distinction covered; resolved null empty covered",
+    "authoritativeEmpty": "[] keeps shells and source-specific empty state; six KPI zero counts; cost null/no fabricated total, covered",
+    "initialLoading": "Independent shaped skeletons and summary loading; no ready values, covered",
+    "independentBusinessDates": "No header range coupling; span/30.44-day month rules preserved",
+    "retained": "Refresh failures retain rows/cost/projections and preview for same vehicle with warnings/retry, covered",
+    "fatal": "Source-local fatal boundaries/retries; successful neighbor remains, covered"
+  },
+  "preservation": {
+    "sections": [
+      "Maintenance summary",
+      "Optional Helix advisor",
+      "Maintenance items",
+      "Service projections",
+      "Estimated annual cost",
+      "Maintenance by category",
+      "Service records",
+      "Record evidence drawer"
+    ],
+    "historicalBaseline": "Queue acceptance retained. No source remigration/history diff asserted; before/after pins establish this attempt preservation.",
+    "counts": {
+      "localLayoutCards": 5,
+      "gridSlots": 7,
+      "optionalAdvisor": 1,
+      "deterministicMainSections": 6,
+      "recordDrawer": 1
+    },
+    "rootLineCount": 170,
+    "siAndSigns": "Raw item distance fields, including interval_miles legacy name, remain metres; useUnits boundary handles km/mi. Copy-sort does not mutate cache. Projections keep nonnegative remaining-distance floor by definition, eight-row horizon, overdue-first source order. Cost raw arithmetic unchanged, minimum0.1-year span/365.25-year/all-record denominator, valid zero preserved. No new physical-sign normalization. Real record unit/currency and signed malformed inputs remain C02.",
+    "accessibilityDeclarations": "Named shared controls, decorative aria-hidden icons, labeled progressbar, dl metadata accordion, 44px inspect action, shared drawer/footer labels. Text/wrapping/min-w-0/container-responsive grids preserve fields. Target declarations F07; native proof C07.",
+    "actions": [
+      "Refresh both reads",
+      "Schedule inherited no-op",
+      "Category filter/clear",
+      "Four sort choices",
+      "Full interval/metadata accordion",
+      "Independent retry",
+      "Embedded records sorting/value filters/pagination/saved columns/loaded-result CSV/JSON",
+      "Inspect/dismiss record",
+      "Seven evidence navigation destinations",
+      "Opt-in advisor stream (not invoked)"
+    ],
+    "preferences": "Stable tableId vehicle-systems:maintenance-records/column keys/export raw measurements; existing display unit/currency/precision preferences exercised. F04/F05 and F06 are adoption gaps, no saved value reset."
+  },
+  "engineeringRuleChecks": {
+    "caveat": "Regex probes are candidate checks, not complete AST/i18n proof. Zero literal-English JSX matches do not establish locale-preference compliance.",
+    "scopeFiles": 17,
+    "rawMatchCounts": {
+      "direct-library-import": 0,
+      "missing-page-container": 3,
+      "static-inline-style": 1,
+      "old-api-import": 0,
+      "fetch-useeffect": 1,
+      "raw-html": 0,
+      "hardcoded-string": 0,
+      "hidden-section": 1,
+      "double-prefix": 0,
+      "camelcase-param": 0
+    },
+    "exceptions": [
+      "Dynamic pct width is acceptable, not static var style",
+      "Optional projection date text is not a hidden section",
+      "useEffect resets preview, does not load data",
+      "PageLayout delegates to PageContainer",
+      "Shared components use expected raw controls/imports",
+      "API relative client import is not an old ../api import"
+    ],
+    "backendRules": "11-14 N/A; no internal Go file audited"
+  },
+  "tests": [
+    {
+      "passed": 28,
+      "command": "node node_modules/vitest/vitest.mjs run src/features/vehicle-systems/pages/MaintenancePage.test.tsx src/api/hooks/useMaintenance.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+      "tests": 28,
+      "files": 2,
+      "skipped": 0,
+      "exit": 0,
+      "failed": 0
+    },
+    {
+      "passed": 47,
+      "command": "node node_modules/vitest/vitest.mjs run src/features/vehicle-systems/components/maintenance-modernization/__tests__/maintenanceModel.test.ts src/features/vehicle-systems/components/maintenance-modernization/__tests__/MaintenancePresenters.test.tsx src/features/vehicle-systems/components/maintenance-modernization/__tests__/maintenanceSource.test.ts --pool=forks --maxWorkers=2 --reporter=verbose",
+      "tests": 47,
+      "files": 3,
+      "skipped": 0,
+      "exit": 0,
+      "failed": 0
+    }
+  ],
+  "testLimits": "Existing tests/fixtures mock APIs, settings, selection, AI and downloads. No new tests or fixtures. No real records or mutation access. Existing passing fallback/no-op cases preserve behavior but do not certify semantic trust.",
+  "failedInspections": [
+    {
+      "exit": 1,
+      "command": "Select-String D:\\repos\\teslasync\\docs\\frontend-inventory.md -SimpleMatch 'MaintenancePage.tsx'",
+      "shellId": "1211",
+      "cause": "Missing explicit -Path/-Pattern bound the literal as a path",
+      "rawError": "Cannot find path 'D:\\repos\\teslasync\\web\\MaintenancePage.tsx' because it does not exist.",
+      "recovery": "Explicit -Path/-Pattern retry in shell1228 succeeded; raw failure and retry retained in log"
+    },
+    {
+      "shellId": "1524",
+      "exit": 1,
+      "kind": "post-verification clock guard",
+      "command": "if((Get-Date -AsUTC) -ge [datetime]'2026-10-14T01:44:50.678Z') {throw 'Return deadline reached; no further commands authorized'}",
+      "rawError": "Return deadline reached; no further commands authorized",
+      "cause": "Mixed UTC/local DateTime tick comparison; actual release01:43:22 was before fixed deadline01:44:50",
+      "recovery": "Report parse and all37 pin checks had passed; failed command exit explicitly recorded. Corrected DateTimeOffset check and final reparse/pins; no clock renewal."
+    }
+  ],
+  "queueDeduplication": {
+    "performed": true,
+    "queueEdited": false,
+    "directMaintenanceFixRowsFound": 0,
+    "newQueueItemsCreated": 0,
+    "needs": [
+      "One narrow maintenance basis/status trust owner for F01, separate backend availability verification C01",
+      "One source-initial prerequisite/paused recovery owner for F02",
+      "One honest local capability copy/action owner for F03/F08; no service writes",
+      "One date-preference adoption owner F04 coordinated with active shared formatter owner; business-date shape remains unproved C05",
+      "One existing palette adoption owner F05",
+      "One bounded typography/mobile declaration owner F06/F07; native C07 deferred"
+    ],
+    "existingRelated": [
+      {
+        "overlap": "dateFormat.ts shared file only",
+        "disposition": "Own future-relative-format objective is distinct from F04 date locale adoption. Coordinate with owner; do not duplicate or expand existing scope.",
+        "item": "phase6-fix-relative-future-dates"
+      },
+      {
+        "item": "phase6-fix-secret-rotation-chart-palette",
+        "disposition": "Completed different consumer, not maintenance palette fix"
+      },
+      {
+        "item": "phase6-vehicle-access-role-palette",
+        "disposition": "Completed different semantic consumer, not maintenance category identity fix"
+      }
+    ],
+    "historicalFindings": "F01/F02/F03/F05/F06/F07/F08 re-confirm inherited source limitations. Historical preview leak resolved; no redispatch of accepted maintenance page or completed preview fix."
+  },
+  "pins": [
+    {
+      "file": "web/src/api/dataState.ts",
+      "before": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "after": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useMaintenance.test.tsx",
+      "before": "517A5AA77F83255EAAB565080A4B5FD7038B3DDF3BFC1C81088364DFCFB55624",
+      "after": "517A5AA77F83255EAAB565080A4B5FD7038B3DDF3BFC1C81088364DFCFB55624",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useMaintenance.ts",
+      "before": "49CD63205ADB06D837CD2B02D07148F31E0F86108442DEAE24B11D597BA7128F",
+      "after": "49CD63205ADB06D837CD2B02D07148F31E0F86108442DEAE24B11D597BA7128F",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ai/AIPredictiveMaintenance.tsx",
+      "before": "81246CD1BC5EDC262B1F92D54800C64D5E8200D1363DAD280994A788488B5419",
+      "after": "81246CD1BC5EDC262B1F92D54800C64D5E8200D1363DAD280994A788488B5419",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/EntityPreviewDrawer.tsx",
+      "before": "815B8F2AB797B75D6D8D4A4E2E3D269621CA3EB24ED145BC3CAE2A84CEF9A60E",
+      "after": "815B8F2AB797B75D6D8D4A4E2E3D269621CA3EB24ED145BC3CAE2A84CEF9A60E",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "before": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "after": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "before": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+      "after": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/__tests__/fixtures.ts",
+      "before": "295D417F1B64F093820C853D032744261DFB9553FA509D7EB7B3D1D9A1312BCB",
+      "after": "295D417F1B64F093820C853D032744261DFB9553FA509D7EB7B3D1D9A1312BCB",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/__tests__/maintenanceModel.test.ts",
+      "before": "A482038495A0194C48C692A1AEE0A61B3F6D9022AEC7D555F1F907B82C6181B0",
+      "after": "A482038495A0194C48C692A1AEE0A61B3F6D9022AEC7D555F1F907B82C6181B0",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/__tests__/MaintenancePresenters.test.tsx",
+      "before": "E76E3872A415A979BFF535B74D54F770280FF5E17CE84733C3C081E04675018B",
+      "after": "E76E3872A415A979BFF535B74D54F770280FF5E17CE84733C3C081E04675018B",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/__tests__/maintenanceSource.test.ts",
+      "before": "6C6B188E438170CCFE82224F2F38CF2FD6770BE41B5DDF7486DA6075EFCA9045",
+      "after": "6C6B188E438170CCFE82224F2F38CF2FD6770BE41B5DDF7486DA6075EFCA9045",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/index.ts",
+      "before": "84E48D5AF4BC8667079968276FD9C198986ABA4FF901F452C010421BB4DF6513",
+      "after": "84E48D5AF4BC8667079968276FD9C198986ABA4FF901F452C010421BB4DF6513",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceCategoriesPanel.tsx",
+      "before": "C73C5E44054D15B96CEFC72E9B084A6670C4E1ADE66178FAA8375552E71DEAE3",
+      "after": "C73C5E44054D15B96CEFC72E9B084A6670C4E1ADE66178FAA8375552E71DEAE3",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceCostPanel.tsx",
+      "before": "84F6E90634EF402A4CD05D868A0A753F3553D72D46D2583BF65BBBF81DAE35A1",
+      "after": "84F6E90634EF402A4CD05D868A0A753F3553D72D46D2583BF65BBBF81DAE35A1",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceEvidenceDrawer.tsx",
+      "before": "E63D05625C6A19AC2EC46779BF0A4EB19B19330D20A04BE27320B3CF6C2C8EE7",
+      "after": "E63D05625C6A19AC2EC46779BF0A4EB19B19330D20A04BE27320B3CF6C2C8EE7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceGridSlot.tsx",
+      "before": "464E65BC2CBA85CD23260938703678BE340A2A4D6AF47170CB43D1D1F6207293",
+      "after": "464E65BC2CBA85CD23260938703678BE340A2A4D6AF47170CB43D1D1F6207293",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemCard.tsx",
+      "before": "B8204C3F23866895F8D6CD4BD1423F095816B146C5769EC66EA679253C4ABC12",
+      "after": "B8204C3F23866895F8D6CD4BD1423F095816B146C5769EC66EA679253C4ABC12",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemsPanel.tsx",
+      "before": "F393A7358F7C71978E40617D06A7A19E04A581EC0693BF923305A591012B352B",
+      "after": "F393A7358F7C71978E40617D06A7A19E04A581EC0693BF923305A591012B352B",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/maintenanceModel.ts",
+      "before": "C7E8CE2941F70A007299BD42F62B235856228EA5061FFA3E3EE6F57DB1E09E0F",
+      "after": "C7E8CE2941F70A007299BD42F62B235856228EA5061FFA3E3EE6F57DB1E09E0F",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/maintenancePresentation.ts",
+      "before": "FEDE9029575D0D485F689DF4B65AD47F2FF1F770CE8753EB0BF3803FDB8819A4",
+      "after": "FEDE9029575D0D485F689DF4B65AD47F2FF1F770CE8753EB0BF3803FDB8819A4",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceProjectionsPanel.tsx",
+      "before": "839FB2856D626C4013CEB93B697E8F94BB7475DC37DD0EDD84B8B4016202B49A",
+      "after": "839FB2856D626C4013CEB93B697E8F94BB7475DC37DD0EDD84B8B4016202B49A",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceRecordsPanel.tsx",
+      "before": "61BD01D987659BBCEB5CA0BD9BF390A9759E7B2F5233770429BCD6F2442A6D72",
+      "after": "61BD01D987659BBCEB5CA0BD9BF390A9759E7B2F5233770429BCD6F2442A6D72",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceSource.tsx",
+      "before": "46972BFB56645096268FD9501C6CB79F2E19CC0B83C0E802E5897CB1B44A70C3",
+      "after": "46972BFB56645096268FD9501C6CB79F2E19CC0B83C0E802E5897CB1B44A70C3",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceStatusBadge.tsx",
+      "before": "02E720BCBDB190DFA00E469C9B8D73F567BBC87234297A8C324B6A50B2EA736C",
+      "after": "02E720BCBDB190DFA00E469C9B8D73F567BBC87234297A8C324B6A50B2EA736C",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceSummary.tsx",
+      "before": "EFD9E3A6FF582046E0B8F1653E127BB2E748D8A56A2C3E12D253A5C7EF7DF211",
+      "after": "EFD9E3A6FF582046E0B8F1653E127BB2E748D8A56A2C3E12D253A5C7EF7DF211",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/maintenance-modernization/serviceColumns.tsx",
+      "before": "D7C32096A7E5DCB3F476712983B64CB24441200AE9E4793B464A65E9FF752F05",
+      "after": "D7C32096A7E5DCB3F476712983B64CB24441200AE9E4793B464A65E9FF752F05",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "before": "E0B859E45485E60C9CCE07BBF523817C6971C9C95C3D4DDDB254294A19F2B173",
+      "after": "E0B859E45485E60C9CCE07BBF523817C6971C9C95C3D4DDDB254294A19F2B173",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/pages/MaintenancePage.test.tsx",
+      "before": "9879A87599D6D6F1D7DE81AE03237662CBB58DFE4C272B2EC31C3342674D1F2C",
+      "after": "9879A87599D6D6F1D7DE81AE03237662CBB58DFE4C272B2EC31C3342674D1F2C",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/pages/MaintenancePage.tsx",
+      "before": "C4569CFBF29A21C5A10DB4E90ABED6B6056E6E940DDF529C5FA2623C0A0CCF82",
+      "after": "C4569CFBF29A21C5A10DB4E90ABED6B6056E6E940DDF529C5FA2623C0A0CCF82",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "before": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "after": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "before": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "after": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "before": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "after": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "before": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "after": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/contextNavigation.ts",
+      "before": "F8F99848167DF92589120D406B3BDA5A9625B0576AA8F31CFBF719372D9A70A5",
+      "after": "F8F99848167DF92589120D406B3BDA5A9625B0576AA8F31CFBF719372D9A70A5",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "before": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "after": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "before": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "after": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "before": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "after": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "unchanged": true
+    }
+  ],
+  "pinCheck": {
+    "allUnchanged": true,
+    "algorithm": "SHA256",
+    "count": 37,
+    "finalParseAndDiskRecheck": "PASS: final JSON reparsed and all37 SHA256 disk pins verified"
+  },
+  "filesRead": [
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useMaintenance.test.tsx",
+    "web/src/api/hooks/useMaintenance.ts",
+    "web/src/components/ai/AIPredictiveMaintenance.tsx",
+    "web/src/components/data-display/EntityPreviewDrawer.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/SourceContent.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/__tests__/fixtures.ts",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/__tests__/maintenanceModel.test.ts",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/__tests__/MaintenancePresenters.test.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/__tests__/maintenanceSource.test.ts",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/index.ts",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceCategoriesPanel.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceCostPanel.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceEvidenceDrawer.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceGridSlot.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemCard.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceItemsPanel.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/maintenanceModel.ts",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/maintenancePresentation.ts",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceProjectionsPanel.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceRecordsPanel.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceSource.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceStatusBadge.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/MaintenanceSummary.tsx",
+    "web/src/features/vehicle-systems/components/maintenance-modernization/serviceColumns.tsx",
+    "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+    "web/src/features/vehicle-systems/pages/MaintenancePage.test.tsx",
+    "web/src/features/vehicle-systems/pages/MaintenancePage.tsx",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/lib/contextNavigation.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/components/ui/Button.tsx",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md (base/applicable sections)",
+    "docs/frontend-mission.md (relevant sections)",
+    "docs/frontend-inventory.md (maintenance entries)",
+    "docs/session-handoff.md (current/relevant sections)",
+    "migration-queue.md (claim/overlap searches)",
+    "docs/frontend-audits/audit-page-222.json",
+    "docs/frontend-worker-conventions.md",
+    ".github/copilot-instructions.md (applicable sections)",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "web/package.json"
+  ],
+  "evidenceLimits": {
+    "source": "Source QA and 75 synthetic tests only, not application/native acceptance",
+    "postReturnWrites": "NONE planned",
+    "readOnlyGitCommands": "Initial status and check-ignore only, no Git edits; all inherited dirty changes preserved",
+    "lintBuildFullSuites": "NOT_RUN",
+    "rawEvidence": "Commands, outputs, numeric native exits, failed inspection and corrected retry in assigned log; inspection commands record PowerShell errors separately",
+    "artifactWrites": "Only assigned JSON and ignored log",
+    "browserApiDeviceServer": "NOT_RUN",
+    "sourceTestsCatalogGitEdits": "NONE",
+    "backendAndRealServiceRecords": "NOT_ACCESSED",
+    "typescript": "NOT_RUN: global TSC prohibited, no compiler pass claimed",
+    "logAppendRecovery": "Concurrent append completeness gap detected in own log; raw saved tool outputs sequentially restored and original failed inspection explicitly preserved. Duplicate raw transcripts are evidence recovery, not additional checks/tests.",
+    "finalClockGuardFailure": "shell1524 exited1 after successful parse/pins because its mixed local/UTC clock guard was erroneous; disclosed and corrected, not hidden or a source/test failure."
+  },
+  "release": {
+    "artifactClaim": "RELEASED: both assigned JSON and ignored log; no post-return writes",
+    "deadline": "Return before 2026-10-14T01:44:50.678Z; no renewed clocks",
+    "sourceClaim": "Read-only; no source write lease acquired",
+    "commandClaim": "RELEASED: both scoped Vitest commands completed exit0; no attempt-owned command/session retained",
+    "releasedAtUtc": "2026-10-14T01:44:12.1977013+00:00"
+  }
+}

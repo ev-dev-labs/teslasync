@@ -101,10 +101,10 @@ describe('InfrastructureSection', () => {
   it('renders all five infrastructure tools as titled cards', () => {
     renderSection()
 
-    expect(screen.getByRole('heading', { name: 'Db Stats' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'DB stats' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Migrations' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Mqtt' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Env Check' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'MQTT' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Env check' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Runtime' })).toBeInTheDocument()
   })
 
@@ -117,7 +117,7 @@ describe('InfrastructureSection', () => {
       screen.getByText('Inspect TimescaleDB table sizes and row counts'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('Publish a test message to the MQTT broker'),
+      screen.getByText('Run the fixed MQTT connectivity ping. The server publishes to teslasync/dev-tools/ping with a generated timestamp/source payload; topic and message inputs are ignored.'),
     ).toBeInTheDocument()
     expect(screen.queryByText(/Desc$/)).toBeNull()
   })
@@ -135,14 +135,14 @@ describe('InfrastructureSection', () => {
     renderSection()
 
     expect(screen.getAllByRole('button', { name: 'Run' })).toHaveLength(4)
-    expect(screen.getByRole('button', { name: 'Send Test' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Send test' })).toBeInTheDocument()
   })
 
   it('runs a backend tool against its endpoint and shows the success result', async () => {
     mockedRequest.mockResolvedValueOnce({ tables: 12, hypertables: 3 })
     renderSection()
 
-    const card = cardByTitle('Db Stats')
+    const card = cardByTitle('DB stats')
     fireEvent.click(within(card).getByRole('button', { name: 'Run' }))
 
     await waitFor(() => {
@@ -159,9 +159,9 @@ describe('InfrastructureSection', () => {
     renderSection()
 
     const wiring: Array<[string, string]> = [
-      ['Db Stats', 'db-stats'],
+      ['DB stats', 'db-stats'],
       ['Migrations', 'migration-status'],
-      ['Env Check', 'env-check'],
+      ['Env check', 'env-check'],
       ['Runtime', 'runtime-info'],
     ]
     for (const [title] of wiring) {
@@ -184,7 +184,7 @@ describe('InfrastructureSection', () => {
     mockedRequest.mockRejectedValueOnce(new Error('db unreachable'))
     renderSection()
 
-    const card = cardByTitle('Db Stats')
+    const card = cardByTitle('DB stats')
     fireEvent.click(within(card).getByRole('button', { name: 'Run' }))
 
     await waitFor(() => {
@@ -208,9 +208,9 @@ describe('InfrastructureSection', () => {
 
   it('does not render an MQTT result panel before anything is sent', () => {
     renderSection()
-    const card = cardByTitle('Mqtt')
+    const card = cardByTitle('MQTT')
 
-    expect(within(card).getByRole('button', { name: 'Send Test' })).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Send test' })).toBeInTheDocument()
     // No result <pre> and no idle placeholder — the panel only mounts on demand.
     expect(card.querySelector('pre')).toBeNull()
     expect(mockedRequest).not.toHaveBeenCalled()
@@ -226,15 +226,16 @@ describe('InfrastructureSection', () => {
     fireEvent.change(screen.getByLabelText('Message'), {
       target: { value: '{"c":21}' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send Test' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send test' }))
 
     await waitFor(() => {
       expect(mockedRequest).toHaveBeenCalledWith('/dev-tools/mqtt-test', {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify({ topic: 'sensors/temp', message: '{"c":21}' }),
       })
     })
-    const card = cardByTitle('Mqtt')
+    const card = cardByTitle('MQTT')
     await waitFor(() => {
       expect(card).toHaveTextContent(/"published": true/)
     })
@@ -247,14 +248,14 @@ describe('InfrastructureSection', () => {
     fireEvent.change(screen.getByLabelText('Topic'), {
       target: { value: 'test/topic' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send Test' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send test' }))
 
-    const card = cardByTitle('Mqtt')
+    const card = cardByTitle('MQTT')
     await waitFor(() => {
       expect(within(card).getByText('broker unreachable')).toBeInTheDocument()
     })
-    // Error branch renders a rose <p>, never a data <pre>.
-    expect(within(card).getByText('broker unreachable').className).toMatch(/rose/)
+    // Error branch renders a danger-ink <p>, never a data <pre>.
+    expect(within(card).getByText('broker unreachable').className).toMatch(/semantic-danger/)
     expect(card.querySelector('pre')).toBeNull()
   })
 
@@ -268,7 +269,7 @@ describe('InfrastructureSection', () => {
     )
     renderSection()
 
-    const sendBtn = screen.getByRole('button', { name: 'Send Test' })
+    const sendBtn = screen.getByRole('button', { name: 'Send test' })
     fireEvent.click(sendBtn)
 
     await waitFor(() => {

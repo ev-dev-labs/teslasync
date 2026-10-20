@@ -144,11 +144,14 @@ function installEnv(opts: EnvOpts = {}): EnvHandles {
   return handles
 }
 
+const renderCleanups = new Set<() => void>()
+
 async function loadHook(env: EnvOpts = {}) {
   vi.resetModules()
   clearEnv()
   const handles = installEnv(env)
   const rtl = await import('@testing-library/react')
+  renderCleanups.add(rtl.cleanup)
   const mod = await import('../useWebPush')
   return {
     renderHook: rtl.renderHook,
@@ -176,6 +179,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  for (const cleanup of renderCleanups) cleanup()
+  renderCleanups.clear()
   clearEnv()
   vi.restoreAllMocks()
 })
@@ -230,6 +235,32 @@ describe('useWebPush — feature detection & permission', () => {
     expect(perm).toBe('granted')
     expect(NotificationMock?.requestPermission).toHaveBeenCalledTimes(1)
     expect(result.current.permission).toBe('granted')
+  })
+
+  it('reflects permission changes from browser settings without prompting', async () => {
+    const { renderHook, act, useWebPush, NotificationMock } = await loadHook({
+      permission: 'default',
+      pushSupported: false,
+    })
+    const { result } = renderHook(() => useWebPush())
+    await act(async () => {
+      if (NotificationMock) NotificationMock.permission = 'denied'
+      window.dispatchEvent(new Event('focus'))
+    })
+    expect(result.current.permission).toBe('denied')
+    await act(async () => {
+      if (NotificationMock) NotificationMock.permission = 'granted'
+      window.dispatchEvent(new Event('focus'))
+    })
+    expect(result.current.permission).toBe('granted')
+    expect(NotificationMock?.requestPermission).not.toHaveBeenCalled()
+  })
+
+  it('marks unsupported Push API capability separately from known absence', async () => {
+    const { renderHook, useWebPush } = await loadHook({ pushSupported: false })
+    const { result } = renderHook(() => useWebPush())
+    expect(result.current.browserSubscriptionStatus).toBe('unsupported')
+    expect(result.current.browserSubscriptionError).toBeNull()
   })
 })
 
@@ -292,6 +323,48 @@ describe('useWebPush — sendNotification (in-app toast path)', () => {
 })
 
 describe('useWebPush — mount reflection of existing subscription', () => {
+  it('keeps a pending subscription read unresolved until the browser confirms absence', async () => {
+    let resolveSubscription!: (value: null) => void
+    const reg = makeReg()
+    reg.pushManager.getSubscription.mockImplementation(
+      () => new Promise<null>((resolve) => { resolveSubscription = resolve }),
+    )
+    const { renderHook, act, useWebPush } = await loadHook({
+      getRegistration: vi.fn().mockResolvedValue(reg),
+    })
+    const { result } = renderHook(() => useWebPush())
+    await flush(act)
+    expect(result.current.browserSubscriptionStatus).toBe('checking')
+    expect(mocks.subscribeMutateAsync).not.toHaveBeenCalled()
+    await act(async () => resolveSubscription(null))
+    expect(result.current.browserSubscriptionStatus).toBe('absent')
+  })
+
+  it('keeps an unresolved browser lookup distinct from known absence', async () => {
+    let resolveRegistration!: (value: undefined) => void
+    const getRegistration = vi.fn(() => new Promise<undefined>((resolve) => { resolveRegistration = resolve }))
+    const { renderHook, act, useWebPush } = await loadHook({ getRegistration })
+    const { result } = renderHook(() => useWebPush())
+    await flush(act)
+    expect(result.current.browserSubscriptionStatus).toBe('checking')
+    expect(result.current.currentEndpoint).toBeNull()
+    await act(async () => resolveRegistration(undefined))
+    expect(result.current.browserSubscriptionStatus).toBe('absent')
+  })
+
+  it('does not infer absence when PushManager subscription lookup rejects', async () => {
+    const reg = makeReg()
+    reg.pushManager.getSubscription.mockRejectedValue(new Error('subscription lookup failed'))
+    const { renderHook, act, useWebPush } = await loadHook({
+      getRegistration: vi.fn().mockResolvedValue(reg),
+    })
+    const { result } = renderHook(() => useWebPush())
+    await flush(act)
+    expect(result.current.browserSubscriptionStatus).toBe('error')
+    expect(result.current.browserSubscriptionError?.message).toBe('subscription lookup failed')
+    expect(mocks.subscribeMutateAsync).not.toHaveBeenCalled()
+  })
+
   it('reflects an existing browser subscription into state on mount', async () => {
     const existing = makeSub('https://push.example/existing')
     const getRegistration = vi.fn().mockResolvedValue(makeReg({ existing }))
@@ -318,10 +391,11 @@ describe('useWebPush — mount reflection of existing subscription', () => {
 
     expect(result.current.isSubscribed).toBe(false)
     expect(result.current.currentEndpoint).toBeNull()
+    expect(result.current.browserSubscriptionStatus).toBe('absent')
     expect(getRegistration).toHaveBeenCalledTimes(1)
   })
 
-  it('swallows a rejected getRegistration on mount without crashing', async () => {
+  it('surfaces a rejected getRegistration as unknown and allows a browser-only retry', async () => {
     const getRegistration = vi.fn().mockRejectedValue(new Error('SW registration boom'))
     const { renderHook, act, useWebPush } = await loadHook({
       permission: 'granted',
@@ -333,7 +407,15 @@ describe('useWebPush — mount reflection of existing subscription', () => {
 
     expect(result.current.isSubscribed).toBe(false)
     expect(result.current.currentEndpoint).toBeNull()
+    expect(result.current.browserSubscriptionStatus).toBe('error')
+    expect(result.current.browserSubscriptionError?.message).toBe('SW registration boom')
     expect(getRegistration).toHaveBeenCalledTimes(1)
+    getRegistration.mockResolvedValue(makeReg())
+    await act(async () => result.current.retryBrowserSubscription())
+    await flush(act)
+    expect(result.current.browserSubscriptionStatus).toBe('absent')
+    expect(result.current.browserSubscriptionError).toBeNull()
+    expect(mocks.subscribeMutateAsync).not.toHaveBeenCalled()
   })
 })
 
@@ -477,10 +559,11 @@ describe('useWebPush — subscribe()', () => {
 
     expect(ok).toBe(false)
     expect(mocks.subscribeMutateAsync).not.toHaveBeenCalled()
-    expect(result.current.isSubscribed).toBe(false)
+    expect(result.current.isSubscribed).toBe(true)
+    expect(result.current.browserSubscriptionStatus).toBe('subscribed')
   })
 
-  it('returns false and does not mark subscribed when the server POST fails', async () => {
+  it('retains browser registration separately when the server POST fails', async () => {
     const created = makeSub('https://push.example/server-fail')
     const reg = makeReg({ existing: null, created })
     const getRegistration = vi.fn().mockResolvedValue(reg)
@@ -501,7 +584,9 @@ describe('useWebPush — subscribe()', () => {
 
     expect(ok).toBe(false)
     expect(mocks.subscribeMutateAsync).toHaveBeenCalledTimes(1)
-    expect(result.current.isSubscribed).toBe(false)
+    expect(result.current.isSubscribed).toBe(true)
+    expect(result.current.currentEndpoint).toBe(created.endpoint)
+    expect(result.current.browserSubscriptionStatus).toBe('subscribed')
   })
 
   it('returns false (never throws) when PushManager.subscribe rejects', async () => {
@@ -537,6 +622,10 @@ describe('useWebPush — unsubscribe()', () => {
   it('removes on the server, unsubscribes the browser, and clears state', async () => {
     const existing = makeSub('https://push.example/to-remove')
     const reg = makeReg({ existing })
+    existing.unsubscribe.mockImplementation(async () => {
+      reg.pushManager.getSubscription.mockResolvedValue(null)
+      return true
+    })
     const getRegistration = vi.fn().mockResolvedValue(reg)
     const { renderHook, act, waitFor, useWebPush } = await loadHook({
       permission: 'granted',
@@ -593,6 +682,10 @@ describe('useWebPush — unsubscribe()', () => {
   it('still tears down the browser subscription when the server call fails', async () => {
     const existing = makeSub('https://push.example/server-500')
     const reg = makeReg({ existing })
+    existing.unsubscribe.mockImplementation(async () => {
+      reg.pushManager.getSubscription.mockResolvedValue(null)
+      return true
+    })
     const getRegistration = vi.fn().mockResolvedValue(reg)
     mocks.unsubscribeMutateAsync.mockRejectedValue(new Error('500'))
     const { renderHook, act, waitFor, useWebPush } = await loadHook({
@@ -607,12 +700,83 @@ describe('useWebPush — unsubscribe()', () => {
       ok = await result.current.unsubscribe()
     })
 
-    expect(ok).toBe(true)
+    expect(ok).toBe(false)
     expect(existing.unsubscribe).toHaveBeenCalledTimes(1)
     expect(result.current.isSubscribed).toBe(false)
+    expect(result.current.currentEndpoint).toBeNull()
+
+    mocks.unsubscribeMutateAsync.mockResolvedValue(undefined)
+    await act(async () => {
+      ok = await result.current.unsubscribe()
+    })
+    expect(ok).toBe(true)
+    expect(mocks.unsubscribeMutateAsync).toHaveBeenLastCalledWith(existing.endpoint)
+    expect(existing.unsubscribe).toHaveBeenCalledTimes(1)
   })
 
-  it('clears state and returns true even when the browser unsubscribe rejects', async () => {
+  it.each(['false', 'rejection', 'remaining', 'lookup failure'])(
+    'reconciles browser state after server-first removal with browser %s',
+    async (outcome) => {
+      const existing = makeSub('https://push.example/partial')
+      const replacement = makeSub('https://push.example/replacement')
+      const reg = makeReg({ existing })
+      const { renderHook, act, waitFor, useWebPush } = await loadHook({
+        pushSupported: true,
+        getRegistration: vi.fn().mockResolvedValue(reg),
+      })
+      const { result } = renderHook(() => useWebPush())
+      await waitFor(() => expect(result.current.currentEndpoint).toBe(existing.endpoint))
+      existing.unsubscribe.mockImplementation(async () => {
+        expect(mocks.unsubscribeMutateAsync).toHaveBeenCalledWith(existing.endpoint)
+        if (outcome === 'rejection') throw new Error('browser refused')
+        if (outcome === 'lookup failure') {
+          reg.pushManager.getSubscription.mockRejectedValue(new Error('lookup failed'))
+        } else {
+          reg.pushManager.getSubscription.mockResolvedValue(replacement)
+        }
+        return outcome !== 'false'
+      })
+      let ok = true
+      await act(async () => { ok = await result.current.unsubscribe() })
+      expect(ok).toBe(false)
+      if (outcome === 'lookup failure') {
+        expect(result.current.browserSubscriptionStatus).toBe('error')
+        expect(result.current.browserSubscriptionError?.message).toBe('lookup failed')
+      } else {
+        expect(result.current.isSubscribed).toBe(true)
+        expect(result.current.currentEndpoint).toBe(
+          outcome === 'rejection' ? existing.endpoint : replacement.endpoint,
+        )
+
+      }
+    },
+  )
+
+  it('preserves server deletion failure after browser-first removal and retries the known endpoint', async () => {
+    const existing = makeSub('https://push.example/browser-first')
+    const reg = makeReg({ existing })
+    const { renderHook, act, waitFor, useWebPush } = await loadHook({
+      pushSupported: true,
+      getRegistration: vi.fn().mockResolvedValue(reg),
+    })
+    const { result } = renderHook(() => useWebPush())
+    await waitFor(() => expect(result.current.currentEndpoint).toBe(existing.endpoint))
+    reg.pushManager.getSubscription.mockResolvedValue(null)
+    mocks.unsubscribeMutateAsync.mockRejectedValue(new Error('server unavailable'))
+    let ok = true
+    await act(async () => { ok = await result.current.unsubscribe() })
+    expect(ok).toBe(false)
+    expect(mocks.unsubscribeMutateAsync).toHaveBeenCalledWith(existing.endpoint)
+    expect(existing.unsubscribe).not.toHaveBeenCalled()
+    expect(result.current.currentEndpoint).toBeNull()
+    expect(result.current.isSubscribed).toBe(false)
+    mocks.unsubscribeMutateAsync.mockResolvedValue(undefined)
+    await act(async () => { ok = await result.current.unsubscribe() })
+    expect(ok).toBe(true)
+    expect(mocks.unsubscribeMutateAsync).toHaveBeenLastCalledWith(existing.endpoint)
+  })
+
+  it('retains browser truth and returns false when browser unsubscribe rejects', async () => {
     const existing = makeSub(
       'https://push.example/browser-fail',
       { p256dh: 'p', auth: 'a' },
@@ -638,9 +802,9 @@ describe('useWebPush — unsubscribe()', () => {
     })
 
     expect(threw).toBe(false)
-    expect(ok).toBe(true)
+    expect(ok).toBe(false)
     expect(existing.unsubscribe).toHaveBeenCalledTimes(1)
-    expect(result.current.isSubscribed).toBe(false)
-    expect(result.current.currentEndpoint).toBeNull()
+    expect(result.current.isSubscribed).toBe(true)
+    expect(result.current.currentEndpoint).toBe(existing.endpoint)
   })
 })

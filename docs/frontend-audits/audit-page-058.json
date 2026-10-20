@@ -1,0 +1,398 @@
+{
+  "item": "audit-page-058",
+  "page": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx",
+  "routes": ["/automations/list"],
+  "purpose": "Bulk-manage the loaded automation rule inventory and install existing geofence routine templates.",
+  "primaryGoal": "Find rules, inspect their status and cumulative counters, select matching rules, and safely enable, disable or delete the intended selection while retaining builder access.",
+  "dataSources": [
+    {
+      "hook": "useAutomations",
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 44,
+      "endpoints": ["GET /automations"],
+      "owner": "internal\\api\\automation\\crud.go:20-38",
+      "routeEvidence": "internal\\api\\router.go:3804-3805",
+      "behavior": "automationKeys.all, cancellation signal, INTERVALS.STANDARD polling and safeArray selection. Handler calls ListFull and returns base automation rows; page requests no server pagination or enabled filter. Page status/search and table sorting/value filtering/pagination are client-side over the loaded set.",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx:42-48,72-115", "web\\src\\features\\automations\\pages\\AutomationListTable.tsx:64-107,280-304"],
+      "limitations": "Repository query implementation, actual completeness of live inventory and safeArray implementation not inspected. Full loaded scope must not become a claim of live execution coverage."
+    },
+    {
+      "hook": "useVehicles",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoints": ["GET /vehicles"],
+      "owner": "Existing vehicle query and vehicleHandler.List",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "behavior": "Cancellation-aware shared list query with safeArray selection supplies vehicle_id to display_name-or-VIN lookup; absent lookup entries show Vehicle #id and null vehicle_id means All vehicles.",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx:50-55", "web\\src\\features\\automations\\pages\\AutomationListTable.tsx:136-150"],
+      "limitations": "Page does not consume this source's loading/error/retained state. No VIN or location was read from a live response."
+    },
+    {
+      "hook": "useBulkAutomationsUpdate",
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 269,
+      "endpoints": ["POST /automations/bulk"],
+      "owner": "internal\\api\\automation\\bulk.go:35-95",
+      "routeEvidence": "internal\\api\\router.go:3809-3810",
+      "behavior": "Explicit requiresLiveMode, networkMode always, ids/op allowlist, mutation toasts and list/history invalidation+broadcast. Handler prevalidates IDs, returns missing IDs in failed[] with HTTP 200 alongside updated/deleted counts, and reloads existing rules.",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx:126-142,226-266", "web\\src\\api\\hooks\\useAutomations.ts:255-294", "internal\\api\\automation\\bulk.go:47-75,90-95"],
+      "limitations": "No mutation executed; transaction implementation and worker reload effects unverified."
+    },
+    {
+      "hook": "useRoutineTemplates / useInstallRoutine",
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 405,
+      "endpoints": ["GET /automations/routine-templates", "POST /automations/routine-templates/{id}/install"],
+      "owner": "automationHandler.ListRoutineTemplates / InstallRoutine",
+      "routeEvidence": "internal\\api\\router.go:3833-3835",
+      "behavior": "Static-stale-time safeArray catalogue; each RoutineCard owns its install mutation. Encoded template ID plus place_id and template-name/place-name compose the request; success invalidates and broadcasts automation inventory and toasts.",
+      "evidence": ["web\\src\\api\\hooks\\useAutomations.ts:400-429", "web\\src\\features\\automations\\components\\RoutineWizard.tsx:23-64,75-83,137-144"],
+      "limitations": "Installation handler internals uninspected. Unlike bulk mutation, hook does not explicitly set requiresLiveMode; page supplies disabled control state. Central request policy was not inspected, so no bypass is asserted."
+    },
+    {
+      "hook": "useGeofencesFull",
+      "file": "web\\src\\api\\hooks\\useLocations.ts",
+      "line": 101,
+      "endpoints": ["GET /geofences"],
+      "owner": "Existing canonical geofence query / geofenceHandler.List",
+      "routeEvidence": "internal\\api\\router.go:3614-3615",
+      "behavior": "Default includeArchived=false, dedicated cache key, cancellation signal, safeArray, 15-second staleTime and 30-second polling. Wizard further keeps enabled and non-archived places; selection is local business input, not a competing workspace vehicle selector.",
+      "evidence": ["web\\src\\api\\hooks\\useLocations.ts:94-112", "web\\src\\features\\automations\\components\\RoutineWizard.tsx:76-84,118-131"],
+      "limitations": "Wizard reads data only and does not distinguish query failure from successful zero eligible places."
+    },
+    {
+      "hook": "useDataState / useOperationalMode / useOperationalMetrics",
+      "file": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx",
+      "line": 44,
+      "endpoints": [],
+      "owner": "Existing asynchronous trust, operational-mode context and operational measurement formatting",
+      "behavior": "Main inventory uses fatalError versus retained-data warnings. OperationalModeProvider disables writes for historical and cached/offline contexts. Six full-loaded inventory metrics retain raw count inputs and cumulative-counter provenance through AutomationRulesBrief.",
+      "evidence": ["web\\src\\hooks\\useOperationalMode.tsx:43-96", "web\\src\\features\\automations\\components\\operationalbrief-all\\AutomationRulesBrief.tsx:24-65", "web\\src\\lib\\workspaceScope.ts:96-98"],
+      "limitations": "useDataState and metric formatter internals not inspected. List is inventory, not a dated history page; no date bounds were invented."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-15", "usage": "Full allocated width, min-w-0 orchestration, title/subtitle, context filters and primary New action; delegates shell behavior."},
+    {"name": "AutomationRulesBrief / OperationalBrief", "kind": "domain / shared composite", "owner": "web\\src\\features\\automations\\components\\operationalbrief-all\\AutomationRulesBrief.tsx:20-65", "usage": "Six metrics in bulk mode, scope/freshness/provenance and loading/unavailable/retained status; shared presentation, not replacement KPI cards."},
+    {"name": "AutomationListTable / DataTable", "kind": "domain / shared composite", "owner": "web\\src\\features\\automations\\pages\\AutomationListTable.tsx:43-309", "usage": "Seven data columns, controlled field-correct sort, local value filters, multi-selection/shift range/select all, pagination, loaded/selected export and stable automations:bulk-list persistence."},
+    {"name": "AutomationStatusPanel / MetricBar / AlertBanner", "kind": "domain / shared composite", "owner": "web\\src\\features\\automations\\pages\\AutomationStatusPanel.tsx:42-137", "usage": "Unfiltered active/disabled/auto-disabled proportions, numeric text and actionable auto-disable explanation; loading/empty/fatal-error branches."},
+    {"name": "BulkActionToolbar alias / BulkActionsToolbar / ConfirmDialog", "kind": "shared action composite", "owner": "web\\src\\components\\data-display\\BulkActionToolbar.tsx:16-20; web\\src\\components\\data-display\\BulkActionsToolbar.tsx:96-253", "usage": "One existing implementation, sticky height guard, wrapped action labels, per-action pending state, visible disabled reasons, destructive confirmation and polite selection summary."},
+    {"name": "RoutineWizard / local RoutineCard", "kind": "domain", "owner": "web\\src\\features\\automations\\components\\RoutineWizard.tsx:11-150", "usage": "Eligible-place selection and source-driven enter/exit routine cards with action count, description and install state; only RoutineWizard is exported."},
+    {"name": "Button, Input, Select, GlassPanel, Badge, Text, PanelTitle", "kind": "primitives", "owner": "Existing @/components/ui category", "usage": "Localized named controls, surfaces, semantic status labels and typography; existing primitives rather than raw form/table elements."},
+    {"name": "OperationalWriteNotice, StaleRefreshWarning, QueryError, EmptyState, Skeleton, VisuallyHidden", "kind": "feedback / accessibility", "owner": "Existing feedback and a11y categories", "usage": "Read-only explanation, retained inventory warning, retry, first-rule/no-match states, named loading region."},
+    {"name": "FadeIn", "kind": "motion", "owner": "web\\src\\components\\motion\\FadeIn.tsx:23-35", "usage": "Three section entrances; existing motion preference removes initial reveal and delay when reduction is requested."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx",
+      "line": 146,
+      "rule": "MDC-002/MDC-023",
+      "detail": "Page name/description search coexists with DataTable default local search and seven column value filters. They are separate predicates and separate result scopes, not interchangeable search controls.",
+      "fix": "Use the existing DataTable controls/filter contract to make scope explicit and avoid redundant search chrome; preserve status, name/description search and every existing value-filter capability.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx:80-88,155-164", "web\\src\\components\\ui\\DataTable.tsx:525-555", "web\\src\\features\\automations\\pages\\AutomationListTable.tsx:275-280"]
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": [
+      "Header controls flex-wrap, search w-full then sm:w-56; status select w-40. Page table/status layout stacks until xl then uses 2:1 columns.",
+      "Table has mobileColumns name/status; DataTable hides other five columns below md. It supplies no mobilePresentation or expandable detail adapter.",
+      "Routine cards use one, two at sm, and four at lg columns; place wrapper min-w-52/flex-1/sm:max-w-72. Install controls remain full-width.",
+      "Shared bulk toolbar wraps and stops sticking when its measured height reaches the viewport."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationListTable.tsx",
+        "line": 285,
+        "rule": "MDC-023/MDC-043",
+        "detail": "Below md only name/status remain visible; vehicle, description, runs, failures and last-triggered fields have no page-provided mobile detail view. CSV export is not a substitute for readable mobile metadata. Builder link currently targets an unregistered route.",
+        "fix": "Adopt existing DataTable mobilePresentation/full-detail capability with all seven values, selection, sorting and export, and repair builder destination; do not discard columns.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": ["web\\src\\components\\ui\\DataTable.tsx:714-725", "web\\src\\features\\automations\\pages\\AutomationListTable.tsx:117-120,272-304"]
+      },
+      {
+        "file": "web\\src\\features\\automations\\components\\RoutineWizard.tsx",
+        "line": 136,
+        "rule": "MDC-043",
+        "detail": "Four routine cards begin at lg even though available allocated content width may be much smaller than viewport; source titles truncate and descriptions line-clamp to two lines without an expansion control.",
+        "fix": "Use existing container-aware grid/layout contracts and retain complete routine identity/description through an accessible detail affordance; validate long labels and 200% text before choosing breakpoints.",
+        "owner": "page",
+        "confidence": "medium",
+        "evidence": ["web\\src\\features\\automations\\components\\RoutineWizard.tsx:32-48,116-117,136"]
+      }
+    ],
+    "requiredChecks": "320/375/390/430/768/1024/1280/1440/1920/2560, allocated shell/container width, long localized names, 200% text, selected rows, open delete confirmation and routine loading/error; not exercised."
+  },
+  "accessibility": {
+    "verified": false,
+    "positiveSourceEvidence": [
+      "Search and status filter have localized aria-labels; routine Place uses shared Select label association; primary/search/section/routine icons carry aria-hidden.",
+      "Table initial loading has role=status, aria-busy and VisuallyHidden localized text; shared DataTable provides caption, row labels, selection/sort announcements.",
+      "Status badges and MetricBar numeric/sublabel text prevent color-only status communication.",
+      "Bulk toolbar names its region, politely announces selection, associates disabled reasons, and reuses ConfirmDialog rather than a second focus system.",
+      "FadeIn source honors shared reduced-motion preference; browser/OS behavior remains unverified."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationListTable.tsx",
+        "line": 117,
+        "rule": "MDC-040",
+        "detail": "Rule link uses text-only local chrome with no explicit target sizing/focus styling and description truncates without a reveal. Actual default browser focus and spacing exceptions have not been measured.",
+        "fix": "Preserve native Link semantics and localized rule identity while using shared focus/target styling and a keyboard/touch-accessible full-description view.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx",
+        "line": 147,
+        "rule": "MDC-040",
+        "detail": "Status Select uses default md sizing, whose source minimum is 40px rather than the contract's stronger 44px mobile default. Routine installs use size=sm; their computed target size was not inspected.",
+        "fix": "Use existing appropriate shared mobile target sizing and test target spacing, not a new primitive.",
+        "owner": "page",
+        "confidence": "medium",
+        "evidence": ["web\\src\\components\\ui\\Select.tsx:33-38", "web\\src\\features\\automations\\components\\RoutineWizard.tsx:51-53"]
+      },
+      {
+        "file": "web\\src\\components\\data-display\\BulkActionsToolbar.tsx",
+        "line": 82,
+        "rule": "MDC-040",
+        "detail": "Prop comment promises Clear plus Escape, and component header says Escape is consumer-owned; inspected toolbar has no Escape handler and page has no keyboard handler. Escape-to-clear behavior is not source-backed in this composition.",
+        "fix": "Resolve keyboard ownership using existing interaction contracts, preserving modal Escape priority and avoiding a competing global listener.",
+        "owner": "shared",
+        "confidence": "high",
+        "evidence": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx:117-124,210-220", "web\\src\\components\\data-display\\BulkActionsToolbar.tsx:23-24,82-83,241-250"]
+      }
+    ],
+    "evidenceLimits": "No keyboard, screen reader, focus restoration, effective contrast, forced-colors or real touch-target test. Shared ConfirmDialog focus internals not inspected."
+  },
+  "states": {
+    "initialLoading": "Main inventory uses !hasData plus query.isLoading; table exposes five skeleton rows, status panel a 168px skeleton, brief shared loading. Routine catalogue shows four source-independent skeleton cards.",
+    "empty": "Zero inventory keeps table/status/brief sections and offers builder navigation. Filtered zero matches remains a DataTable no-match message. No templates returns null from RoutineWizard; eligible-place zero shows a geofence setup explanation.",
+    "fatalError": "Inventory fatalError appears in summary, table and status panel with retry. Routine template error uses its own QueryError/refetch. Vehicles and places expose no caller-level failure/retry.",
+    "refreshError": "Inventory retained rows and metrics remain under StaleRefreshWarning and Retained rules status. RoutineWizard uses raw isError, so a refresh error replaces retained routine cards with QueryError.",
+    "offline": "Operational mode disables New, bulk mutations and routine installs, and inventory warning handles refresh-blocked state through shared DataState. Cold offline behavior is unverified.",
+    "unknownUnavailable": "Brief hasData=false passes null count metrics and marks rules unavailable. Page/table cumulative counters default missing values to zero; vehicle lookup falls back to ID. No additional backend availability envelope was invented.",
+    "partialMutation": "HTTP-success bulk response can include failed[]; current hook reports generic success and page clears all selection without consuming those failures.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\components\\RoutineWizard.tsx",
+        "line": 76,
+        "rule": "MDC-026",
+        "detail": "Geofence loading/error/unavailable all become [] and the same Create a geofence message; catalogue empty returns null. Catalogue raw isError replaces retained cards on refresh failure.",
+        "fix": "Use existing per-source DataState, preserve wizard section identity and retained templates, and distinguish eligible-place empty, loading, failure, paused and stale with independent retry.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": ["web\\src\\features\\automations\\components\\RoutineWizard.tsx:75-84,99-110,128-133"]
+      },
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx",
+        "line": 50,
+        "rule": "MDC-026",
+        "detail": "Vehicle query data-only destructuring conceals lookup loading/failure/retained status. Vehicle #id fallback is safe but does not explain failed name resolution.",
+        "fix": "Surface existing independent vehicle-source trust/retry without replacing otherwise usable automation rows.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx",
+        "line": 105,
+        "rule": "MDC-026/MDC-045",
+        "detail": "Missing execution/failure counters are summed as zero before the brief sees them; table also renders/exports zero for missing counters. This preserves current behavior but cannot prove a measured zero from malformed/partial data.",
+        "fix": "Retain legitimate zero counts, and agree on typed missing-counter semantics at the source adapter rather than guessing or silently changing totals.",
+        "owner": "integration",
+        "confidence": "high",
+        "evidence": ["web\\src\\features\\automations\\pages\\AutomationListTable.tsx:163-175,297-298", "web\\src\\features\\automations\\components\\operationalbrief-all\\AutomationRulesBrief.tsx:36-43"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\automations\\components\\RoutineWizard.tsx",
+      "line": 26,
+      "rule": "MDC-010/MDC-015",
+      "detail": "Every routine card explicitly requests cyan glow and hover treatment inside another GlassPanel; cyan-500 icon decoration and cyan-400/300 accents spread emphasis across secondary catalogue cards.",
+      "fix": "Remove decorative glow and use existing neutral surfaces/icon tokens, reserving semantic emphasis for meaningful status/action feedback. Retain all cards and install controls.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx:286-289", "web\\src\\features\\automations\\components\\RoutineWizard.tsx:26-29,114"]
+    },
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationStatusPanel.tsx",
+      "line": 28,
+      "rule": "MDC-010/MDC-012/MDC-025",
+      "detail": "Feature-local fixed emerald/slate/rose hex palette competes with canonical semantic tokens. Table link/section icons use fixed cyan-300 and failure text fixed rose-300. Source intent is semantic in bars/failure counts, but rendered saturation and light-theme contrast are unverified.",
+      "fix": "Use existing subdued semantic tokens and theme-aware link/icon/text roles; preserve status meanings, three series and numeric labels.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListTable.tsx:119,180,236", "web\\src\\features\\automations\\pages\\AutomationStatusPanel.tsx:28-32,92"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationListTable.tsx",
+      "line": 118,
+      "rule": "MDC-030/MDC-031",
+      "detail": "Rule links target /automations/{id}; inspected App registers /automations/:id/edit, not /automations/:id. This contradicts the page subtitle promising editor access. No such editor route appeared in the scoped App route search.",
+      "fix": "Point this existing Link to the registered builder destination /automations/{id}/edit; retain editor and its run/delete capabilities, not a new router or page.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["web\\src\\App.tsx:615-619", "web\\src\\features\\automations\\pages\\AutomationListPage.tsx:174-177"],
+      "runtime": "unverified"
+    },
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx",
+      "line": 119,
+      "rule": "MDC-023/MDC-046",
+      "detail": "effectiveSelected prunes only outer status/name-description filters. DataTable applies additional search/value filters internally and deliberately preserves selected rows outside those filters. Page's filtered selection scope/count and bulk IDs therefore need not match rows currently shown by the table.",
+      "fix": "Expose the existing composed loaded-filter result via the DataTable controller/adapter contract, or explicitly label retained hidden selections and provide review. Preserve intentional cross-page selection and all filters; never silently expand destructive scope.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx:118-123,210-219", "web\\src\\components\\ui\\DataTable.tsx:536-547,810-820", "web\\src\\features\\automations\\pages\\AutomationListTable.tsx:275-282"]
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 281,
+      "rule": "MDC-026/MDC-046",
+      "detail": "Bulk onSuccess ignores failed[] and emits generic success; page awaits success then clears all selectedKeys. Backend explicitly returns HTTP 200 with missing-ID failures. Retry selection guarantee only covers rejected requests, not partial HTTP-success outcomes.",
+      "fix": "Use the existing typed AutomationBulkResult to present updated/deleted and failed IDs/reasons, retaining failed selection for review/retry while maintaining invalidation and mutation guards.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx:129-139", "internal\\api\\automation\\bulk.go:54,75,95"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "Source-confirmed broken editor destination, destructive-selection scope ambiguity and unreported partial bulk failure take precedence over cosmetic work. Existing modern layout/brief/table composition should be retained."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Composed table-filter and retained-selection scope contract",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 536,
+      "concreteContract": "Prefer existing table controller/adapter capabilities; if absent, a typed integration-owned readback of composed matching loaded row IDs/count and hidden selected count. Keep selectedKeys/onSelectionChange, value filters, local search, pagination, export scopes and stable tableId. Do not add a second query/state engine.",
+      "propsVariantsStates": ["filtered loaded rows", "selected visible rows", "selected hidden rows", "empty match", "page versus loaded scope"],
+      "usedBy": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx", "web\\src\\features\\automations\\pages\\AutomationListTable.tsx", "web\\src\\components\\data-display\\BulkActionsToolbar.tsx"],
+      "dependsOn": ["MDC-023", "DataTable internal filteredData and valueSelections", "BulkActionsToolbar.selectionScope/selectionSummary", "page effectiveSelected"],
+      "classification": "Existing-contract integration gap, not authorization for a speculative shared component",
+      "confidence": "high"
+    },
+    {
+      "name": "Typed bulk partial-outcome presentation",
+      "owner": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 255,
+      "concreteContract": "Consume existing AutomationBulkResult.updated/deleted/failed[{id,reason}]; distinguish complete success, partial success and request failure, retain failed IDs for review and preserve live-only guards, toast policy and broadcast invalidation.",
+      "propsVariantsStates": ["complete success", "partial HTTP-success", "fatal request failure", "pending", "read-only"],
+      "usedBy": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx", "web\\src\\api\\hooks\\useAutomations.ts:269-294"],
+      "dependsOn": ["internal\\api\\automation\\bulk.go:54-95", "AutomationBulkResult", "BulkActionsToolbar per-action pending and confirmation"],
+      "classification": "Integration-owned use of existing backend response, no new endpoint",
+      "confidence": "high"
+    },
+    {
+      "name": "Bulk toolbar Escape ownership",
+      "owner": "web\\src\\components\\data-display\\BulkActionsToolbar.tsx",
+      "line": 82,
+      "concreteContract": "Resolve documented onClear/Escape ownership through the existing keyboard/overlay policy, giving open confirmation dialog Escape precedence; retain Clear button and focus.",
+      "propsVariantsStates": ["selection present", "no selection", "confirmation open", "keyboard clear"],
+      "usedBy": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx"],
+      "dependsOn": ["BulkActionsToolbar.onClear", "existing ConfirmDialog/useConfirm focus and Escape policy"],
+      "classification": "Existing shared contract/documentation mismatch; no second overlay system",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\automations\\pages\\AutomationStatusPanel.tsx", "line": 28, "detail": "Feature-local status hex palette competes with canonical semantic tokens; consolidate by reuse."},
+    {"file": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx", "line": 155, "detail": "Outer search and table-local search create overlapping but distinct loaded-filter pipelines. Preserve capabilities while clarifying/unifying control ownership."},
+    {"file": "web\\src\\components\\data-display\\BulkActionToolbar.tsx", "line": 16, "detail": "Singular name is an alias of existing plural implementation, not a competing toolbar. Do not replace it with a new implementation."}
+  ],
+  "preservation": {
+    "sourceHash": "9A3D74F7598CD888F465B442ECACC56EF32689EE4EECCF70D404494F4AF58456",
+    "hashAlgorithm": "SHA-256",
+    "hashScope": "Exact bytes of assigned root page, not concatenated dependencies",
+    "currentLineCount": 294,
+    "pageAndNarrowComponentLineCount": 956,
+    "componentLineCounts": {
+      "AutomationListTable.tsx": 309,
+      "AutomationStatusPanel.tsx": 137,
+      "RoutineWizard.tsx": 150,
+      "AutomationRulesBrief.tsx": 66
+    },
+    "sectionCount": 5,
+    "sections": [
+      "Read-only and retained-inventory notices",
+      "Full-loaded rule summary: total, active, disabled, auto-disabled, cumulative runs and failures",
+      "Conditional sticky selected-rule actions and destructive confirmation",
+      "Selectable inventory table plus three-status breakdown and auto-disable attention",
+      "Geofence place selection and source-driven routine catalogue cards/install controls"
+    ],
+    "sourceSectionCounts": {"pageSectionElements": 2, "pageGlassPanelInstances": 1, "tableGlassPanelInstances": 1, "statusGlassPanelInstances": 1, "routineCardGlassPanelInstances": 1, "routineSkeletonGlassPanelInstances": 1, "ChartContainerInstances": 0},
+    "actions": [
+      "New rule navigation to /automations/new with write guard",
+      "Status all/active/disabled/auto-disabled and trimmed case-insensitive name/description search",
+      "Rule link/editor access; current /automations/{id} target must be reconciled to registered /automations/:id/edit",
+      "Field-correct ascending/descending name/vehicle/runs/failures/time/status sorting",
+      "DataTable local search, seven value filters, column persistence/resizing/reordering/density and client pagination inherited from existing table pipeline",
+      "Multi-select, select-all across matching loaded table rows, additive shift range and Clear",
+      "Bulk enable/disable and confirmed irreversible delete; pending indicators, write reasons, successful invalidation and request-failure retry selection",
+      "Loaded/selected CSV export with ID/name/description/vehicle/counters/timestamp/enabled/auto_disabled",
+      "Independent inventory/template retries and empty-state builder navigation",
+      "Eligible-place selection and per-template enter/exit routine install, action count and complete source descriptions"
+    ],
+    "dataBehavior": [
+      "Summary/status derive from unfiltered loaded inventory, not table page or search matches.",
+      "Auto-disabled takes priority over enabled/disabled classification; counts and status meanings must survive.",
+      "Routine templates/actions come from API, eligible places are enabled and not archived; installation retains place_id and composed name.",
+      "Retained inventory remains readable after refresh failure; raw SI/wire/cache values and query keys must remain unchanged.",
+      "No fake data, added server capabilities, workspace selector duplication or executed mutations.",
+      "The sibling card-based /automations page and builder run/delete actions are outside this one-page audit. Preserve their destinations/actions; direct test-run, single-rule delete and card-browse controls are not mounted by this bulk page. Hook and router source confirms existing test-run and single-delete endpoints, but their destination UI was not audited."
+    ]
+  },
+  "evidenceLimits": {
+    "basis": "Read-only bounded source inspection plus source hash/line-count commands; no source edits or Git.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "actionsExecuted": [],
+    "testsRun": [],
+    "validationNotRun": [
+      "No TypeScript, full-repository lint/build or browser automation during Phase 0.",
+      "The audit skill script was inspected but not executed because it unconditionally runs full frontend TypeScript; bounded source-pattern search used instead.",
+      "No live data fetch, installation, enable/disable, delete, test-run, export download or editor interaction.",
+      "No source claim of overall no-data/feature-loss or historical runtime acceptance."
+    ],
+    "boundedPatternResult": "Search of the five narrow page/dependency TSX files found one explicit glow prop, cyan and rose fixed text accents. No matched neon or pure-white literal decoration, raw button/input/table, inline style or direct recharts import in that exact search scope. Shared theme/primitives were not globally scanned, so this is not whole-page composed visual clearance.",
+    "scopeUnknowns": "Builder/card presentation, safeArray validation, shared request enforcement, DataState internals, full table controller API, shared dialog focus, routine backend semantics and SQL transaction details remain uninspected."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-audits\\audit-page-057.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\automations\\pages\\AutomationListPage.tsx",
+    "web\\src\\features\\automations\\pages\\AutomationListTable.tsx",
+    "web\\src\\features\\automations\\pages\\AutomationStatusPanel.tsx",
+    "web\\src\\features\\automations\\components\\RoutineWizard.tsx",
+    "web\\src\\features\\automations\\components\\operationalbrief-all\\AutomationRulesBrief.tsx",
+    "web\\src\\api\\hooks\\useAutomations.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useLocations.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\components\\data-display\\BulkActionToolbar.tsx",
+    "web\\src\\components\\data-display\\BulkActionsToolbar.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\useOperationalMode.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\automation\\bulk.go",
+    "internal\\api\\automation\\crud.go"
+  ]
+}

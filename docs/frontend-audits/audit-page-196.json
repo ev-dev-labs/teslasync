@@ -1,0 +1,240 @@
+{
+  "item": "audit-page-196",
+  "page": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx",
+  "routes": ["/docs/status-api"],
+  "purpose": "Bundled operator-facing reference for six read-only Status API endpoints and external integrations; not a live availability dashboard.",
+  "primaryGoal": "Understand authentication, paths, query parameters, transport and sample responses; copy paths and return to system status or request additions.",
+  "dataSources": [
+    {
+      "name": "Bundled endpoint reference",
+      "hook": "useMemo keyed by t; no status query or EventSource subscription",
+      "endpoints": ["/api/v1/status", "/api/v1/status/components", "/api/v1/status/resources", "/api/v1/status/uptime", "/api/v1/status/incidents", "/api/v1/status/live"],
+      "owner": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx",
+      "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:41-155", "internal\\api\\router.go:4522-4541"],
+      "behavior": "Six static examples, counts derived from endpoints.length, localized descriptions. Router source mounts all six GET surfaces; nested '/' spelling and actual redirects/HTTP responses were not exercised. The public prefix is documentation, not a request() double-prefix bug."
+    },
+    {
+      "name": "Quick-reference and integrations",
+      "hook": "useMemo keyed by t",
+      "endpoints": [],
+      "owner": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx",
+      "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:159-186"],
+      "behavior": "Four facts and four integration targets. Product names, protocol names, query literals, timestamps and sample incident text are reference examples, not runtime observations."
+    },
+    {
+      "name": "Inherited formatting preferences",
+      "hook": "SystemSummaryBrief -> useOperationalMetrics -> useUnits/useFormatting -> useSettings",
+      "endpoints": ["/api/v1/settings"],
+      "owner": "web\\src\\hooks\\useSettings.ts",
+      "evidence": ["web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx:26-27", "web\\src\\hooks\\useOperationalMetrics.tsx:11-23", "web\\src\\hooks\\useUnits.ts:119", "web\\src\\hooks\\useFormatting.ts:39-42", "web\\src\\hooks\\useSettings.ts:81-91", "web\\src\\api\\settings.ts:24", "internal\\api\\router.go:3659"],
+      "behavior": "Shared settings query key ['settings'], five-minute staleTime, refetchOnMount='always', retry=1, default preferences and broadcast-driven refetch. Page has no direct status fetching, but the rendered summary subscribes to a settings query. Actual network traffic and query deduplication are unverified."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "props": ["title", "subtitle", "secondaryActions"], "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:199-204", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-15"], "reuse": "Keep existing shell/header adapter and full-width min-w-0 content."},
+    {"name": "SystemSummaryBrief / OperationalBrief", "kind": "domain adapter / shared composite", "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "props": ["title", "description", "scope", "available", "metrics", "textMetrics", "freshness", "statusLabel"], "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:207-219", "web\\src\\components\\data-display\\OperationalBrief.tsx:152-160,234-300"], "reuse": "Four summary metrics plus Review details drawer, decision narrative, provenance, limitations and attention fallback."},
+    {"name": "StatusApiEndpointCard", "kind": "page-specific presentation owner", "owner": "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx", "props": ["method:'GET'", "path", "description", "query?", "example:object", "icon?"], "evidence": ["web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx:15-23,36-108"], "reuse": "Reuse six times; keep path copying, optional query and guarded serialized example disclosure."},
+    {"name": "GlassPanel / Button / Badge / Typography", "kind": "primitives", "owner": "web\\src\\components\\ui", "props": ["hover/glow", "variant/size/wrapLabel", "semantic badge variants", "Text as/mono/color/size", "PanelTitle", "SectionTitle", "Caption"], "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:19,189-196,225-276", "web\\src\\components\\ui\\GlassPanel.tsx:45-74", "web\\src\\components\\ui\\Button.tsx:37-81"], "reuse": "Neutral surface owner already exists; no new card or typography engine needed."},
+    {"name": "KVList", "kind": "data-display primitive", "owner": "web\\src\\components\\data-display\\KVList.tsx", "props": ["items", "layout:'responsive'", "wrap", "emptyMessage"], "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:236", "web\\src\\components\\data-display\\KVList.tsx:16-30,67-117"], "reuse": "Use existing responsive definition-list layout rather than inventing a facts grid."},
+    {"name": "CopyButton / Accordion", "kind": "interaction primitives", "owner": "web\\src\\components\\ui", "props": ["text/iconOnly/ariaLabel/withToast/onCopyError", "title/defaultOpen/open/onOpenChange/bodyClassName"], "evidence": ["web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx:63-70,86-107", "web\\src\\components\\ui\\CopyButton.tsx:25-48,98-119", "web\\src\\components\\ui\\Accordion.tsx:54-61,79-88,118-132"], "reuse": "Existing clipboard and disclosure APIs; no replacement clipboard or accordion implementation."},
+    {"name": "InlineCallout", "kind": "shared feedback", "owner": "web\\src\\components\\feedback\\InlineCallout.tsx", "props": ["variant", "icon", "children", "action.label", "action.href", "action.onClick", "className"], "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:237-242,292-304", "web\\src\\components\\feedback\\InlineCallout.tsx:53-100"], "reuse": "Preserve additive-compatibility warning and native issue link."},
+    {"name": "FadeIn", "kind": "motion primitive", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "props": ["children", "delay", "className"], "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:206,223,273,290", "web\\src\\components\\motion\\FadeIn.tsx:24-35"], "reuse": "Four entry groups; shared motion preference controls reduced entrance motion."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 283, "rule": "MDC-002 reuse", "detail": "Six endpoint references already share one renderer; no confirmed competing endpoint implementation in this bounded scope.", "fix": "Retain the existing StatusApiEndpointCard; do not duplicate six custom panels.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 254, "rule": "MDC-010/MDC-015", "detail": "Integration row surfaces and icon chips hand-compose surface/ring colors four times through one map, outside neutral surface tokens.", "fix": "Keep the local mapped list; switch its classes to existing surface/border/text tokens. A new shared integration card is not justified by a second independent consumer.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": ["PageLayout min-w-0/full-width allocated content", "Overview/integrations stack until xl and then use a 2:1 three-column split", "Endpoint grid auto-fits min(100%,22rem) cards", "Endpoint path/query break-all; example pre has max-h-72 and local overflow-auto", "Compact OperationalBrief uses 1/2/3/6 metric columns by breakpoint"],
+    "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:224-225,281", "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx:60,76,99", "web\\src\\components\\data-display\\OperationalBrief.tsx:165-170"],
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 236, "rule": "MDC-043/MDC-023 full metadata reachability", "detail": "KVList is called without layout or wrap, selecting its inline nonwrapping flex layout. Long authentication values and translated labels can compete for narrow width.", "fix": "Pass layout='responsive' using its existing allocated-container wrapping behavior; retain all four facts.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 263, "rule": "MDC-043 preservation", "detail": "Integration name and explanatory caption use truncate without an alternate full-text disclosure; narrow/long-localized captions may lose visible information.", "fix": "Wrap both texts and let rows grow instead of hiding integration guidance.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\components\\feedback\\InlineCallout.tsx", "line": 63, "rule": "MDC-043/MDC-040", "detail": "Footer callout has a shrink-0 action label and a flex-1 body in a nonwrapping inline-flex row; long translated action labels can squeeze or overflow the prose.", "fix": "Shared callout should reflow its action at narrow allocated width without hiding prose or changing native link semantics.", "owner": "shared", "confidence": "medium"}
+    ],
+    "requiredWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "notExercised": ["all viewport widths", "allocated narrow shell width", "long translations", "RTL", "200% text", "open examples", "details drawer"]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": ["Localized page title and endpoint section label", "Overview/integration icons and endpoint decorative glyphs hidden from assistive technology", "Semantic KVList dl/dt/dd", "Per-path copy accessible name", "Accordion useId relationships, aria-expanded, labelled region and Button trigger", "Shared forced-color panel borders and reduced-motion handling"],
+    "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:46,192,227,247,257,274", "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx:55-69", "web\\src\\components\\ui\\Accordion.tsx:54-61,79-88,122-129"],
+    "issues": [
+      {"file": "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx", "line": 66, "rule": "MDC-040 touch target", "detail": "CopyButton uses size='sm', inheriting h-9 (36px); page back and brief Review details also use sm. This is below the contract's stronger 44px mobile default, though WCAG spacing exceptions may apply.", "fix": "Use existing Button/CopyButton className to provide at least 44px mobile targets and preserve compact desktop sizing; measure actual target spacing.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 189, "rule": "MDC-040/MDC-044", "detail": "Back button has a fixed small height without wrapLabel; long localized text may not fit allocated header width.", "fix": "Enable existing wrapLabel and validate header layout with long labels while retaining /system-status destination.", "owner": "page", "confidence": "medium"}
+    ],
+    "notExercised": ["keyboard traversal and activation", "copy announcements", "screen reader", "focus visibility/restoration", "drawer Escape/trap", "effective text/UI contrast", "forced colors", "OS reduced motion", "touch geometry"]
+  },
+  "states": {
+    "sourceEvidence": ["web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx:36-48,91-97", "web\\src\\components\\ui\\CopyButton.tsx:98-119", "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx:27-35"],
+    "initialLoading": "Bundled docs need no status-source loading spinner. Inherited settings can load with defaults; summary is supplied available=true and is not a runtime health assertion.",
+    "empty": "Static six-endpoint reference is populated. Individual card empty example renders localized placeholder, never replaces all page content.",
+    "error": "JSON serialization failures are caught per card and render localized unavailable example. No status network-error state applies to this page.",
+    "partial": "Examples, facts, integrations and footer are independent and always remain rendered.",
+    "staleOffline": "Bundled docs are not live snapshots. Their source scope says so. Inherited settings state is not presented as docs health; no measured-zero substitution should be introduced.",
+    "success": "CopyButton swaps Copy icon to check for two seconds. Explicit ariaLabel remains the path-specific name; actual live announcement behavior is unverified.",
+    "disabled": "No page mutation/loading disable state; CopyButton supports disabled but page does not supply it.",
+    "issues": [
+      {"file": "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx", "line": 63, "rule": "MDC-026/MDC-040 actionable recovery", "detail": "CopyButton is invoked without withToast or onCopyError. Shared failure path logs and clears copied state, but this caller provides no visible clipboard failure/manual-copy recovery.", "fix": "Use existing withToast and onCopyError props with localized manual-copy guidance while leaving path text selectable.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 207, "rule": "MDC-026 source trust / mission 43 reduced noise", "detail": "Bundled documentation is wrapped in System evidence/Source available plus Source observation time not supplied, and a generic decision-narrative drawer with absent impact/cause/recommendation. This is source-truthful but implies operational evidence for static docs and adds repeated unknown metadata.", "fix": "Provide documentation-specific statusLabel/freshness through existing adapter props; coordinate any optional static-document narrative mode with shared owners. Preserve four metrics and every current detail/provenance/limitation capability until equivalence is demonstrated.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 254, "rule": "MDC-010/MDC-012/MDC-015", "detail": "Integration rows use fixed white translucent surfaces/rings plus cyan chips; factual code/icons also use text-cyan-300 at lines 165,227,247. These ignore theme-neutral surface/text hierarchy and use accent for nonsemantic metadata.", "fix": "Use current neutral surface/border/text tokens; reserve semantic accent for meaningful interactive or status cues. Validate both light/dark contrast rather than assume toned-down cyan passes.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx", "line": 52, "rule": "MDC-015/mission 43 restraint", "detail": "Read-only reference panels opt into hover glow='cyan', cyan icons and cyan path text. GlassPanel implements this as cyan border tint/elevation, not literal glowing text; still decorative emphasis competes with actual Copy/disclosure actions.", "fix": "Keep canonical neutral GlassPanel with hover disabled or neutral; use neutral code text and focus emphasis on actual controls.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\components\\ui\\Accordion.tsx", "line": 75, "rule": "MDC-010/MDC-012", "detail": "Example disclosures inherit border-white/[0.06], hover:bg-white/[0.02], fixed cyan focus ring and border-white/[0.04] body separator at line 130; forced-colors support exists but ordinary themes retain dark-biased chrome.", "fix": "Centralize neutral border/control/focus token treatment in existing Accordion without altering controlled/uncontrolled behavior, IDs, open state or motion preferences.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 237, "rule": "MDC-025 semantic severity", "detail": "Additive-compatibility policy uses warning styling despite not describing a current fault or required intervention.", "fix": "Consider informational/neutral emphasis using existing callout variants, retaining the complete compatibility statement.", "owner": "page", "confidence": "medium"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 8, "rule": "mission 33 / source evidence accuracy", "detail": "Comment says no backend round-trip, but SystemSummaryBrief's format bridge reaches shared settings GET. The six documented status endpoints are not fetched.", "fix": "Clarify static status-reference content versus inherited preference subscriptions; retain settings/query policy rather than creating another preference store.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\hooks\\useSettings.ts", "line": 84, "rule": "MDC-002 cancellation", "detail": "Inherited settings query uses getSettings directly; getSettings has no signal argument and calls request('/settings') without cancellation. Existing canonical API hook already forwards signal, but replacing policies casually could change behavior.", "fix": "Shared integration owner should add cancellation to the existing settings query path while retaining query key, defaults, five-minute stale policy, mount revalidation, retry and broadcasts; page must not fork this logic.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 233, "rule": "mission 0.3 / documentation accuracy", "detail": "Overview says every response is JSON over HTTP and facts advertise application/json universally, while /status/live explicitly sets text/event-stream (v1.go:355). Status payload data is JSON inside SSE framing, not a JSON HTTP response.", "fix": "Document JSON for REST and text/event-stream for SSE; preserve live path, event names, 30s default push, 25s heartbeat and curl flags.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 123, "rule": "mission 0.3 / documentation accuracy", "detail": "Incidents description says Active incidents list, but mounted List only enables active filtering when active=1/true; unfiltered path is not explicitly active-only (incidents.go:57-63).", "fix": "Clarify default versus active=1 behavior against the handler, without assuming repository ordering, limit defaults or HTTP behavior not inspected.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx", "line": 59, "rule": "MDC-045 preservation / contract completeness", "detail": "Overall example omits the components array defined in StatusSnapshot and optional maintenance despite its descriptive claim. It is a static illustration, not necessarily a complete schema; sample version timestamps are intentionally fictional.", "fix": "Label examples illustrative or show source-confirmed fields; retain descriptions and all sample details. Do not fabricate live measurements or upgrade current_snapshot uptime into historical availability.", "owner": "integration", "confidence": "medium"}
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Static read-only page already uses shared layout, typography and endpoint cards. Prioritize documentation truth, copy recovery and narrow-width full-text reachability, then neutral presentation and inherited shared chrome. No page source change belongs to Phase0.",
+    "order": ["Clarify REST/SSE and active filter contract", "Preserve complete text/copy recovery at narrow width", "Neutralize decorative surface/path accents", "Coordinate inherited Accordion/callout/settings changes", "Runtime responsive/accessibility validation"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Neutral disclosure chrome",
+      "owner": "web\\src\\components\\ui\\Accordion.tsx",
+      "props": ["Retain title, description, defaultOpen, open/onOpenChange, icon, badge, headerExtra, headerClassName, bodyClassName and className; no new disclosure engine"],
+      "variants": ["Existing neutral ghost trigger with tokenized border/hover/focus"],
+      "states": ["closed/open", "controlled/uncontrolled", "focus", "forced colors", "reduced motion"],
+      "usedBy": ["web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx (six mounted instances)"],
+      "dependsOn": ["Existing --border-*, --control-*, --focus-ring tokens", "Shared Button", "Accordion owner focused tests and centralized browser acceptance"],
+      "evidence": ["web\\src\\components\\ui\\Accordion.tsx:75-88,118-132"],
+      "scopeLimit": "Other independent production consumers were not enumerated; shared owner must assess blast radius."
+    },
+    {
+      "name": "Callout action reflow and canonical typography",
+      "owner": "web\\src\\components\\feedback\\InlineCallout.tsx",
+      "props": ["Retain variant, icon, children, action:{label,href?,onClick?}, className, testId"],
+      "variants": ["info/warning/success/danger; no new competing callout"],
+      "states": ["long body/action", "narrow allocated width", "native href", "onClick action", "focus"],
+      "usedBy": ["StatusApiDocsPage compatibility policy", "StatusApiDocsPage issue-request footer"],
+      "dependsOn": ["Shared typography roles", "Existing surface/severity/focus tokens", "Shared owner long-label/keyboard/responsive tests"],
+      "evidence": ["web\\src\\components\\feedback\\InlineCallout.tsx:59-75,79-100"],
+      "scopeLimit": "Use source-confirmed callout extension, not a page-local clone. A second independent page consumer was not inspected."
+    },
+    {
+      "name": "Settings query cancellation",
+      "owner": "web\\src\\hooks\\useSettings.ts",
+      "props": ["Forward queryFn context signal through getSettings/request options; retain public settings result contract"],
+      "variants": ["Existing application settings query only"],
+      "states": ["mount/unmount", "refresh", "offline/default/retained preferences", "broadcast refetch"],
+      "usedBy": ["SystemSummaryBrief -> useOperationalMetrics", "useUnits", "useFormatting"],
+      "dependsOn": ["web\\src\\api\\settings.ts getSettings", "Existing request AbortSignal option", "Preservation of ['settings'] key/staleTime/refetchOnMount/retry/defaults/broadcast policy"],
+      "evidence": ["web\\src\\hooks\\useSettings.ts:81-91,117-123", "web\\src\\api\\settings.ts:24", "web\\src\\api\\hooks\\useSettings.ts:30"],
+      "scopeLimit": "Integration/shared ownership only; no Phase0 implementation."
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "Endpoint presentation", "finding": "One local StatusApiEndpointCard already owns repeated reference rendering; no second implementation confirmed.", "evidence": ["web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx:283"]},
+    {"pattern": "Settings subscriptions", "finding": "useSettings app-level hook and api/hooks/useSettings both read /settings; the summary uses the app-level path. Cancellation differs. This is existing ownership overlap, not authorization for a page-local replacement.", "evidence": ["web\\src\\hooks\\useSettings.ts:81-91", "web\\src\\api\\hooks\\useSettings.ts:28-30"]},
+    {"pattern": "Layout/surface/metrics", "finding": "Existing PageLayout -> PageContainer, GlassPanel and OperationalBrief pipeline are canonical; no new wrapper/palette/stat engine needed.", "evidence": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-15", "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx:37-61"]}
+  ],
+  "preservation": {
+    "sourceHash": "ffec826ac52ad0ad0a7fd89db00fde8e1b5dbd8434006660de51dd4ef65bd68a",
+    "hashAlgorithm": "SHA-256 of current raw page bytes",
+    "currentLineCount": 309,
+    "pageSpecificDependencyLineCounts": {
+      "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx": 111,
+      "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx": 63
+    },
+    "pagePlusInspectedFeatureComponentsLineCount": 483,
+    "sectionCount": 5,
+    "sourceGroupingCount": 4,
+    "sections": [
+      {"name": "API surface summary", "line": 207, "count": 1, "content": "Endpoint count 6, REST + SSE, JSON, additive-only v1; bundled-doc scope; shared Review details."},
+      {"name": "Overview", "line": 225, "count": 1, "content": "Authentication/proxy/API-key prose; base path, authentication, content type, versioning facts; additive-only compatibility statement."},
+      {"name": "Designed for", "line": 245, "count": 1, "content": "Grafana/JSON datasource, Uptime Kuma/HTTP(s) JSON query monitor, Home Assistant/REST sensor, Healthchecks.io/synthetic monitor."},
+      {"name": "Endpoint reference", "line": 274, "count": 1, "childCount": 6, "content": "GET method, public path, icon, description, optional query, copy control and collapsed example for each endpoint."},
+      {"name": "Request additions footer", "line": 291, "count": 1, "content": "Issue-link action and intentionally-small additive API policy."}
+    ],
+    "renderCounts": {
+      "pageLiteralGlassPanel": 3,
+      "endpointCardGlassPanels": 6,
+      "summaryGlassPanel": 1,
+      "totalBaseSurfacePanelsFromInspectedComposition": 10,
+      "pageLiteralSection": 2,
+      "pageFadeInGroups": 4,
+      "chartContainer": 0,
+      "facts": 4,
+      "integrationTargets": 4,
+      "summaryMetrics": 4,
+      "endpointCards": 6,
+      "exampleDisclosures": 6,
+      "pathCopyControls": 6,
+      "runtimeRenderedCountsVerified": false
+    },
+    "actions": [
+      {"name": "Back to system status", "line": 193, "destination": "/system-status", "behavior": "react-router navigate through header secondaryActions"},
+      {"name": "Copy endpoint path", "file": "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx", "line": 63, "count": 6, "behavior": "Copies exact public path, not optional query string; shared two-second success state"},
+      {"name": "Expand/collapse example response", "file": "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx", "line": 86, "count": 6, "behavior": "Initially collapsed independent Accordion; full indented sample JSON with local scrolling; serialization/empty placeholders"},
+      {"name": "Review details / close details", "file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 152, "count": 1, "behavior": "Drawer receives description, status, narrative/provenance/limitations, all four metrics and attention fallback; onClose resets open state at line 236"},
+      {"name": "Open an issue", "line": 295, "destination": "https://github.com/ev-dev-labs/teslasync/issues", "behavior": "Native anchor supplied by InlineCallout; no target=_blank override"}
+    ],
+    "dataBehavior": [
+      "Keep six GET documented endpoints in current order and all examples/descriptions/icons; no backend mutation actions are presented.",
+      "Retain uptime window choices 24h/7d/30d/90d/1y, current_snapshot provenance and planned-history caveat.",
+      "Retain incidents active=1/limit=N guidance, update timeline sample, source/components/severity and timestamps.",
+      "Retain live SSE status framing, heartbeat explanation, EventSource and curl -N --no-buffer guidance; SSE example is illustrative JSON containing a note, not an actual SSE connection.",
+      "Keep counts derived from endpoint array, typed domain-card props, translation memo dependencies and usePageTitle.",
+      "Retain user formatting/preferences and query policy; never convert static illustration values into live measurements or fabricate healthy state.",
+      "No local date/vehicle controls are present or required for static documentation.",
+      "No user-configurable table/export/filter/source calculations are present; no capability may be added by assumption."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 source-only audit; source, routes and dependencies read without edits.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Read router plus status response structs/handlers only. No HTTP/SSE/auth exercise. Incident repository details, authorization-header acceptance, reverse-proxy deployment and rate-limit behavior unverified.",
+    "notRun": ["Git", "full build", "lint", "TypeScript", "tests", "browser/runtime QA", "audit.sh (contains project-wide TypeScript; source-only counts used instead)"],
+    "sourceOnlyChecks": [
+      {"command": "Get-FileHash web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx -Algorithm SHA256", "exitCode": 0, "output": "FFEC826AC52AD0AD0A7FD89DB00FDE8E1B5DBD8434006660DE51DD4EF65BD68A"},
+      {"command": "PowerShell Get-Content line counts for page, StatusApiEndpointCard and SystemSummaryBrief", "exitCode": 0, "output": "309 / 111 / 63 lines; total 483"},
+      {"command": "PowerShell regex counts on page and StatusApiEndpointCard: style={{; raw button/input/textarea/select/table; direct recharts/react-leaflet/framer-motion; old ../api/../../api; text-neon-", "exitCode": 0, "output": "Each of five patterns: page=0; card=0. This bounded scan is not a full violations or i18n acceptance result."}
+    ],
+    "coverage": "Assigned page plus bounded page-specific presentation/preferences and shared component implementation inspection. No whole-app consumer census, full import graph or shared ownership blast-radius certification.",
+    "snapshotCaveat": "Citations refer to current inspected source; other workers may change dependencies. Page hash is rechecked at release."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx",
+    "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\ui\\Accordion.tsx",
+    "web\\src\\components\\data-display\\KVList.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\OperationalNarrativeDetails.tsx",
+    "web\\src\\components\\feedback\\InlineCallout.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\status\\v1.go",
+    "internal\\api\\status\\incidents.go"
+  ]
+}

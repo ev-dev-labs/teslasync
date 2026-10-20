@@ -1,0 +1,1255 @@
+{
+  "item": "phase6-qa-ownership-tariff-lab",
+  "attempt": 1,
+  "status": "SOURCE_AUDIT_COMPLETE_FINDINGS_NATIVE_NOT_ACCEPTED",
+  "mode": "READONLY_SOURCE_ONLY",
+  "started_at_utc": "2026-10-14T02:12:35.5730989Z",
+  "return_deadline_utc": "2026-10-14T02:30:36.129Z",
+  "hard_deadline_utc": "2026-10-14T02:35:36.129Z",
+  "writable_files": [
+    "docs/frontend-audits/phase6-qa-ownership-tariff-lab.json",
+    "web/logs/phase6-qa-ownership-tariff-lab.log"
+  ],
+  "source_pins": [
+    {
+      "path": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "sha256_before": "0cda208d2e731e6a1ee140b37c1510082807ce84331c1b350d30fa11e3f039e6",
+      "lines_before": 952,
+      "sha256_after": "0cda208d2e731e6a1ee140b37c1510082807ce84331c1b350d30fa11e3f039e6",
+      "unchanged": true,
+      "lines_after": 952
+    },
+    {
+      "path": "web/src/features/ownership/pages/TariffLabPage.test.tsx",
+      "sha256_before": "b85034069a824547173c6df27f95a1738d4fbe631515ed85ce39e7cfc70affd6",
+      "lines_before": 598,
+      "sha256_after": "b85034069a824547173c6df27f95a1738d4fbe631515ed85ce39e7cfc70affd6",
+      "unchanged": true,
+      "lines_after": 598
+    },
+    {
+      "path": "web/src/api/hooks/useOwnership.ts",
+      "sha256_before": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "lines_before": 801,
+      "sha256_after": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "unchanged": true,
+      "lines_after": 801
+    },
+    {
+      "path": "web/src/types/ownership.ts",
+      "sha256_before": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "lines_before": 1106,
+      "sha256_after": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "unchanged": true,
+      "lines_after": 1106
+    },
+    {
+      "path": "web/src/features/ownership/formatters.ts",
+      "sha256_before": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "lines_before": 148,
+      "sha256_after": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "unchanged": true,
+      "lines_after": 148
+    },
+    {
+      "path": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "sha256_before": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "lines_before": 88,
+      "sha256_after": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "unchanged": true,
+      "lines_after": 88
+    },
+    {
+      "path": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+      "sha256_before": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "lines_before": 193,
+      "sha256_after": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "unchanged": true,
+      "lines_after": 193
+    },
+    {
+      "path": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "sha256_before": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "lines_before": 194,
+      "sha256_after": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "unchanged": true,
+      "lines_after": 194
+    },
+    {
+      "path": "web/src/features/ownership/components/MutationError.tsx",
+      "sha256_before": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "lines_before": 22,
+      "sha256_after": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "unchanged": true,
+      "lines_after": 22
+    },
+    {
+      "path": "web/src/features/ownership/components/VerdictBadge.tsx",
+      "sha256_before": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "lines_before": 130,
+      "sha256_after": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "unchanged": true,
+      "lines_after": 130
+    },
+    {
+      "path": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+      "sha256_before": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "lines_before": 141,
+      "sha256_after": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "unchanged": true,
+      "lines_after": 141
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "sha256_before": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "lines_before": 81,
+      "sha256_after": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "unchanged": true,
+      "lines_after": 81
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+      "sha256_before": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+      "lines_before": 112,
+      "sha256_after": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+      "unchanged": true,
+      "lines_after": 112
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+      "sha256_before": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "lines_before": 9,
+      "sha256_after": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "unchanged": true,
+      "lines_after": 9
+    },
+    {
+      "path": "web/src/hooks/useRetainedMutation.ts",
+      "sha256_before": "66a0a02b03b82fa84bddcb8770ed076150476fb5b5d9219298e61c62b748b64f",
+      "lines_before": 96,
+      "sha256_after": "66a0a02b03b82fa84bddcb8770ed076150476fb5b5d9219298e61c62b748b64f",
+      "unchanged": true,
+      "lines_after": 96
+    },
+    {
+      "path": "web/src/hooks/useRetainedMutation.test.tsx",
+      "sha256_before": "e7ad8288e6b95224a015eba2721c91fd4722781e53c7efa0006f8e4e6968bed7",
+      "lines_before": 272,
+      "sha256_after": "e7ad8288e6b95224a015eba2721c91fd4722781e53c7efa0006f8e4e6968bed7",
+      "unchanged": true,
+      "lines_after": 272
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256_before": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines_before": 174,
+      "sha256_after": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "unchanged": true,
+      "lines_after": 174
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256_before": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines_before": 194,
+      "sha256_after": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "unchanged": true,
+      "lines_after": 194
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256_before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines_before": 47,
+      "sha256_after": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "unchanged": true,
+      "lines_after": 47
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256_before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines_before": 17,
+      "sha256_after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true,
+      "lines_after": 17
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256_before": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines_before": 1707,
+      "sha256_after": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "unchanged": true,
+      "lines_after": 1707
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256_before": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lines_before": 1006,
+      "sha256_after": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "unchanged": true,
+      "lines_after": 1006
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256_before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines_before": 168,
+      "sha256_after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "unchanged": true,
+      "lines_after": 168
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "sha256_before": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lines_before": 458,
+      "sha256_after": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "unchanged": true,
+      "lines_after": 458
+    },
+    {
+      "path": "web/src/api/hooks/_toastHelpers.ts",
+      "sha256_before": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "lines_before": 123,
+      "sha256_after": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "unchanged": true,
+      "lines_after": 123
+    },
+    {
+      "path": "web/src/api/queryPolicy.ts",
+      "sha256_before": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "lines_before": 294,
+      "sha256_after": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "unchanged": true,
+      "lines_after": 294
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/testAssertions.ts",
+      "sha256_before": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+      "lines_before": 16,
+      "sha256_after": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+      "unchanged": true,
+      "lines_after": 16
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256_before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines_before": 434,
+      "sha256_after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true,
+      "lines_after": 434
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256_before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines_before": 65,
+      "sha256_after": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true,
+      "lines_after": 65
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256_before": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lines_before": 148,
+      "sha256_after": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "unchanged": true,
+      "lines_after": 148
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256_before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines_before": 462,
+      "sha256_after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "unchanged": true,
+      "lines_after": 462
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256_before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines_before": 259,
+      "sha256_after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true,
+      "lines_after": 259
+    },
+    {
+      "path": "web/src/components/ui/Input.tsx",
+      "sha256_before": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "lines_before": 116,
+      "sha256_after": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "unchanged": true,
+      "lines_after": 116
+    },
+    {
+      "path": "web/src/components/ui/Select.tsx",
+      "sha256_before": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lines_before": 119,
+      "sha256_after": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "unchanged": true,
+      "lines_after": 119
+    },
+    {
+      "path": "web/src/components/ui/Toggle.tsx",
+      "sha256_before": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "lines_before": 140,
+      "sha256_after": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "unchanged": true,
+      "lines_after": 140
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256_before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lines_before": 93,
+      "sha256_after": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "unchanged": true,
+      "lines_after": 93
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256_before": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lines_before": 39,
+      "sha256_after": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "unchanged": true,
+      "lines_after": 39
+    },
+    {
+      "path": "web/src/features/ownership/components/index.ts",
+      "sha256_before": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "lines_before": 8,
+      "sha256_after": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "unchanged": true,
+      "lines_after": 8
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256_before": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines_before": 74,
+      "sha256_after": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "unchanged": true,
+      "lines_after": 74
+    }
+  ],
+  "page": "web/src/features/ownership/pages/TariffLabPage.tsx",
+  "routes": [
+    "/ownership/tariff-lab"
+  ],
+  "purpose": "Author tariff library plans and replay historical measured vehicle load, not a bill/forecast/charging action.",
+  "primaryGoal": "Compare modelled tariff economics without losing observations, raw SI, scope, unknowns, preferences or actions.",
+  "findings": [
+    {
+      "id": "TL01",
+      "rule": "mobile-field-action-preservation",
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 920,
+      "title": "Mobile hides library Compare/Remove and six economics fields",
+      "mechanism": "Plan mobileColumns is name/structure/current; results is name/annual/delta. DataTable maps other cells to hidden md:table-cell, expandable defaults false, neither call supplies mobilePresentation/renderExpanded. No mobile equivalent is declared.",
+      "evidence": [
+        "TariffLabPage.tsx:596-603,918-925",
+        "DataTable.tsx:479,733-743"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Follow <768px colHiddenClass: select/actions and rank/effective/shift/breakeven/peak/breakdown disappear.",
+          "No alternate details/actions are supplied; no browser was opened."
+        ],
+        "executed": false
+      },
+      "fix": "Use existing complete mobile detail/action API or contained complete-table strategy; preserve IDs/fields/confirmation.",
+      "owner_key": "tariff-page",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 2
+    },
+    {
+      "id": "TL02",
+      "rule": "currency-denomination",
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 145,
+      "title": "Annual-cost chart hardcodes two minor digits",
+      "mechanism": "chartData and chartTableRows divide annual_cost_minor by100, while formatCurrencyMinor derives ISO digits and divides by10**digits. Chart and accessible table disagree with ranked money for permitted JPY/KWD currencies; chart labels omit denomination.",
+      "evidence": [
+        "TariffLabPage.tsx:133-158,319,559-572",
+        "formatters.ts:15-30",
+        "types/ownership.ts:175-189,220-233"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Synthetic same-currency JPY12345 -> chart123.45 versus money12345 JPY.",
+          "Synthetic KWD12345 -> chart123.45 versus money12.345. Arithmetic source walkthrough only."
+        ],
+        "executed": false
+      },
+      "fix": "Use existing currency denomination owner and label axis/tooltip/table; retain raw minor units, no invented FX.",
+      "owner_key": "tariff-page",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 2
+    },
+    {
+      "id": "TL03",
+      "rule": "tariff-business-time-control",
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 861,
+      "title": "1440 end-of-day is passed as invalid native time24:00",
+      "mechanism": "newRate.end_minute=1440; minutesToClock clamps inclusively and formats24:00. Native time accepts hours00-23. clockToMinutes(\"00:00\") returns0, not1440. Field is not required, so default save blockage is NOT established.",
+      "evidence": [
+        "TariffLabPage.tsx:65,73-84,855-871",
+        "Input.tsx:87-107",
+        "TariffLabPage.test.tsx:574-596"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Follow1440 -> hours24/minutes00 -> input type=time value24:00.",
+          "00:00 edits back to0. Native sanitization/display/keyboard NOTRUN."
+        ],
+        "executed": false
+      },
+      "fix": "Expose valid end-of-day representation round-tripping1440; preserve business interval, not workspace UTC conversion.",
+      "owner_key": "tariff-page",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 1
+    },
+    {
+      "id": "TL04",
+      "rule": "library-server-scope",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 111,
+      "title": "Only first100 plans can be managed/selected",
+      "mechanism": "Fixed useTariffs(100,0); page reads items only, with no total/offset state/server pagination at library table. Loaded-row controls cannot fetch later records.",
+      "evidence": [
+        "TariffLabPage.tsx:111,134,918-930",
+        "useOwnership.ts:191-196",
+        "types/ownership.ts:30-35"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Synthetic total101/limit100/offset0 response: there is no path requesting offset100; record101 has no toggle/remove.",
+          "No live total queried; empty-selection server policy unknown."
+        ],
+        "executed": false
+      },
+      "fix": "Use existing limit/offset hook and DataTable server paging; keep loaded scope and selection truthful.",
+      "owner_key": "tariff-page",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 1
+    },
+    {
+      "id": "TL05",
+      "rule": "replay-source-trust-propagation",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 540,
+      "title": "Four dependent replay sections omit publication.source",
+      "mechanism": "Chart/economics/occupancy/evidence receive retained values without source. OwnershipPanel with absent source resolves ready/empty. Only summary brief declares replay trust; controls error alone cannot explain paused state.",
+      "evidence": [
+        "TariffLabPage.tsx:469-500,540-548,588-595,618-625,934-950",
+        "OwnershipPanel.tsx:39-58",
+        "EvidencePanel.tsx:49-51",
+        "useRetainedMutation.ts:85-93"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Consider retained success then pending/error/paused replay.",
+          "Four panel calls still receive values only; source adapter cannot declare trust. No mutation run."
+        ],
+        "executed": false
+      },
+      "fix": "Thread real publication.source/enablement through existing adapters; preserve retained data and independent library.",
+      "owner_key": "tariff-page",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 4
+    },
+    {
+      "id": "TL06",
+      "rule": "initial-paused-source-state",
+      "severity": "medium",
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "line": 43,
+      "title": "Initial paused replay labelled Loading source",
+      "mechanism": "Retained mutation sets isLoading=pending without publication and fetchStatus=paused. deriveDataState exposes isRefreshBlocked. Brief ignores it, selects Loading source and loading=true; summary OwnershipPanel itself has no source to compensate.",
+      "evidence": [
+        "useRetainedMutation.ts:85-93",
+        "api/dataState.ts:191-216",
+        "OwnershipBrief.tsx:36-48,75",
+        "TariffLabPage.tsx:469-500",
+        "OwnershipBrief.test.tsx:68-77"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Synthetic data undefined/error null/isPending true/isPaused true/matching vehicle -> isLoading true/isFetching false/fetchStatus paused.",
+          "Brief says Loading source/busy without initial-pause explanation. Offline action NOTRUN."
+        ],
+        "executed": false
+      },
+      "fix": "Use existing isRefreshBlocked distinction; do not imply cached data, empty response, active fetch or fatal server failure.",
+      "owner_key": "ownership-domain-adapters",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 1
+    },
+    {
+      "id": "TL07",
+      "rule": "date-preference-bypass",
+      "severity": "medium",
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "line": 62,
+      "title": "Recorded bounds/evidence dates bypass effective preferences",
+      "mechanism": "Brief/EvidencePanel import pure formatDateTime with no options. Pure helper uses browser locale/timezone; existing useDateFormat supplies settings locale/timezone. Eight calls on six lines bypass differing saved preferences.",
+      "evidence": [
+        "OwnershipBrief.tsx:62,68,71",
+        "EvidencePanel.tsx:99,143,145",
+        "lib/dateFormat.ts:29-61",
+        "hooks/useDateFormat.ts:73-92"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Synthetic UTC instant near midnight plus saved timezone/locale different from browser: all eight calls follow host defaults.",
+          "No preferences changed or formatter tests executed."
+        ],
+        "executed": false
+      },
+      "fix": "One shared domain root adopts existing date hook in both adapters; retain raw instants/unknowns/business minutes.",
+      "owner_key": "ownership-domain-adapters",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 8
+    },
+    {
+      "id": "TL08",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 62,
+      "title": "Three generated tariff labels bypass i18n",
+      "mechanism": "newRate seeds visible Standard; plan structure badge and structure option render underscore-replaced English enums without t(). These are generated labels, not authored data.",
+      "evidence": [
+        "TariffLabPage.tsx:62,224,745,828-840"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Non-English locale still takes all three untranslated paths."
+        ],
+        "executed": false
+      },
+      "fix": "Translate display enum/new defaults only; retain raw enums and existing user labels; parent serializes catalog needs.",
+      "owner_key": "tariff-page",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 3
+    },
+    {
+      "id": "TL09",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "line": 72,
+      "title": "Quality badge renders closed English status raw",
+      "mechanism": "quality.status sufficient/limited/insufficient is rendered directly, unlike surrounding translated copy and existing localized verdict mapping.",
+      "evidence": [
+        "EvidencePanel.tsx:70-73",
+        "types/ownership.ts:12-15",
+        "VerdictBadge.tsx:53-58,95-97,117-124"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Synthetic limited quality under non-English locale still renders limited; no t() lookup."
+        ],
+        "executed": false
+      },
+      "fix": "Reuse localized closed-status labels with unchanged tones/unknown behavior.",
+      "owner_key": "ownership-domain-adapters",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 1
+    },
+    {
+      "id": "TL10",
+      "rule": "selected-plan-identity",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 131,
+      "title": "Deleted/disappeared selected IDs persist in next replay",
+      "mechanism": "Selection changes only via toggleSelected. Delete success invalidates query but does not clean local selected. A disappeared selected row loses its toggle; no clear-selection action exists. Run forwards selected unchanged.",
+      "evidence": [
+        "TariffLabPage.tsx:95,119-131,166-180,441-467",
+        "useOwnership.ts:214-225"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Source walkthrough select ID2 then successful deletion/refetch omitting2 -> selected remains[2].",
+          "Next Run submits tariff_ids:[2]; backend rejection/ignore unknown, no deletion run."
+        ],
+        "executed": false
+      },
+      "fix": "Remove success-confirmed deleted IDs and offer truthful clear/reconciliation; do not clear selections merely because partial page unloaded.",
+      "owner_key": "tariff-page",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 1
+    },
+    {
+      "id": "TL11",
+      "rule": "known-zero-display",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 357,
+      "title": "Returned zero shift saving appears unavailable",
+      "mechanism": "Required numeric load_shift_saving_minor uses >0 ? money(value) : em-dash. Supplied0 is indistinguishable from unavailable. Existing zero fixtures cover other economics, not this field.",
+      "evidence": [
+        "TariffLabPage.tsx:352-359",
+        "types/ownership.ts:235-238",
+        "TariffLabPage.test.tsx:432-445"
+      ],
+      "repro": {
+        "kind": "unexecuted synthetic source-path walkthrough",
+        "steps": [
+          "Synthetic load_shift_saving_minor0 takes em-dash branch.",
+          "Negative also takes branch, but backend validity of negative upside remains unknown."
+        ],
+        "executed": false
+      },
+      "fix": "Render finite supplied zero in response denomination; unknown only for missing/invalid; preserve valid domain sign.",
+      "owner_key": "tariff-page",
+      "confidence": "source-confirmed",
+      "occurrence_sites": 1
+    }
+  ],
+  "command_failures": [
+    {
+      "shell_id": "2544",
+      "command": "PowerShell single-quoted here-string containing inline Python source-only JSON assembly, piped to python - (full attempted command in tool transcript)",
+      "exit_code": 1,
+      "raw_error": "The filename or extension is too long. (os error 206)",
+      "execution": "Failed at Windows command invocation; Python assembly did not start and no output artifact write occurred. Split artifact-only assembly follows; no tests/lint/build rerun."
+    }
+  ],
+  "bookkeeping_corrections": [
+    "LF-only receipt regex yielded27 pins; corrected CRLF parser recovered12 already-recorded original hashes to39. Both commands exited0; no source rebaseline."
+  ],
+  "candidates": [
+    {
+      "id": "TLC01",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 137,
+      "title": "Mixed currencies and switching-fee denomination",
+      "mechanism": "money captures first result currency for all row/band costs; effective price uses row.currency. Types permit per-row currency. Backend homogeneity/FX/rejection policy unknown.",
+      "need": "Resolve backend comparison/fee policy; do not invent FX. Distinct from confirmed same-currency divisor TL02."
+    },
+    {
+      "id": "TLC02",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 420,
+      "title": "Independent model window versus workspace bounds/tariff timezone",
+      "mechanism": "Route range=false/vehicle=true; window_days request has no absolute bounds. Business minutes/months are not workspace instants. Utility timezone/DST interpretation unverified.",
+      "need": "Integration decides independent model horizon versus global bounds; preserve30/90/180/365 choices, no invented endpoint or second picker."
+    },
+    {
+      "id": "TLC03",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 63,
+      "title": "Fixed day-mask/season/tier authoring limits",
+      "mechanism": "Defaults127/null/1/12 have no existing editing controls despite broad any-plan copy. Historical preservation explicitly says not to add capabilities from type fields alone.",
+      "need": "Confirm supported product/engine structures and truthful limits before expanding controls; not a proven regression."
+    },
+    {
+      "id": "TLC04",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 783,
+      "title": "Negative prices and zero demand not-applicable semantics",
+      "mechanism": "Price/export/demand fields min0; library demand0 displays dash. Valid negative market prices and known-zero versus not-applicable meanings are domain-policy unknowns.",
+      "need": "Do not redefine existing business validation/signs without contract evidence."
+    },
+    {
+      "id": "TLC05",
+      "file": "web/src/features/ownership/pages/TariffLabPage.tsx",
+      "line": 575,
+      "title": "Duplicate name/label keys",
+      "mechanism": "Chart Cell key uses entry.name (ID dropped); bands use labels. Actual uniqueness guarantees and rendered collisions unexercised.",
+      "need": "Check allowed duplicates; stable tariff IDs must preserve every row."
+    },
+    {
+      "id": "TLC06",
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "line": 141,
+      "title": "Count plurals/grouping and period copy",
+      "mechanism": "Raw interpolated counts, /d and fixed separators; actual plural catalog and number localization behavior unreviewed. Identifiers must not be confused with quantities.",
+      "need": "Cold real-i18n/catalog checks NOTRUN; do not invent missing keys or change authored data."
+    }
+  ],
+  "native_acceptance_gaps": [
+    {
+      "id": "TLN01",
+      "scope": "All ten mission widths, allocated containers, overflow/RTL/200% text",
+      "source": "Grid stacking exists; band flex labels at649 and CTA at445 not mounted.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "TLN02",
+      "scope": "Native end-of-day editing/form validation/confirm and drawer focus",
+      "source": "TL03 value mismatch established; native sanitization/keyboard/save behavior unexercised.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "TLN03",
+      "scope": "Mobile target/hit geometry and spacing exceptions",
+      "source": "Button.tsx36-37 declares36/40px; page defaults/sm have no44 override. Input min40; Toggle mobile44. No target rectangles/edge hits measured; no global resize authorized.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "TLN04",
+      "scope": "Dark/light/custom/forced-colors, composed contrast and chart fidelity",
+      "source": "Shared palette/tokens adopted; chart subtitle544 promises Green/grey while fill576 uses palette roles. Visual meaning/contrast/export/fullscreen NOTRUN.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "TLN05",
+      "scope": "Keyboard/assistive/reduced-motion/low-bandwidth/source recovery",
+      "source": "Named switches/meters, decorative icons, motion hooks declared; not mounted acceptance.",
+      "status": "NOTRUN"
+    }
+  ],
+  "counts": {
+    "confirmed_findings": 11,
+    "candidate_findings": 6,
+    "native_acceptance_gaps": 5,
+    "deduplicated_owner_bundles": 4,
+    "confirmed_findings_by_rule": {
+      "mobile-field-action-preservation": 1,
+      "currency-denomination": 1,
+      "tariff-business-time-control": 1,
+      "library-server-scope": 1,
+      "replay-source-trust-propagation": 1,
+      "initial-paused-source-state": 1,
+      "date-preference-bypass": 1,
+      "hardcoded-string": 2,
+      "selected-plan-identity": 1,
+      "known-zero-display": 1
+    },
+    "confirmed_findings_by_file": {
+      "web/src/features/ownership/pages/TariffLabPage.tsx": 8,
+      "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx": 2,
+      "web/src/features/ownership/components/EvidencePanel.tsx": 1
+    },
+    "confirmed_finding_occurrence_sites": 25,
+    "hardcoded_string_occurrences": 4,
+    "policy": "11 distinct source mechanisms;25 occurrence sites; supporting references not recounted. Date8 invocations on6 lines; i18n4 sites in2 findings. Candidates/native excluded."
+  },
+  "needs": [
+    {
+      "owner_key": "tariff-page",
+      "kind": "confirmed-remediation",
+      "files": [
+        "web/src/features/ownership/pages/TariffLabPage.tsx",
+        "web/src/features/ownership/pages/TariffLabPage.test.tsx"
+      ],
+      "finding_ids": [
+        "TL01",
+        "TL02",
+        "TL03",
+        "TL04",
+        "TL05",
+        "TL08",
+        "TL10",
+        "TL11"
+      ],
+      "need": "ONE exact page/test owner: full mobile parity, currency/end sentinel, source trust, paging/selection, i18n/zero. Reuse existing APIs. Parent serializes exact enum/default catalog needs. Completed Phase5/callable-mock root must not be redispatched."
+    },
+    {
+      "owner_key": "ownership-domain-adapters",
+      "kind": "confirmed-remediation",
+      "files": [
+        "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "web/src/features/ownership/components/EvidencePanel.tsx",
+        "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx"
+      ],
+      "finding_ids": [
+        "TL06",
+        "TL07",
+        "TL09"
+      ],
+      "need": "ONE shared-domain root for initial pause/effective dates/quality labels, reused useDateFormat/useDataState/verdict labels. Deduplicate against later ownership deliveries before dispatch; no global date/token/type edits."
+    },
+    {
+      "owner_key": "tariff-policy-integration",
+      "kind": "candidate-decision",
+      "candidate_ids": [
+        "TLC01",
+        "TLC02",
+        "TLC03",
+        "TLC04"
+      ],
+      "need": "Resolve currency/fee/model-range/utility timezone/DST/sign/authoring policy from actual contract; this report proves no backend capabilities or financial action."
+    },
+    {
+      "owner_key": "tariff-native-acceptance",
+      "kind": "NOTRUN",
+      "native_gap_ids": [
+        "TLN01",
+        "TLN02",
+        "TLN03",
+        "TLN04",
+        "TLN05"
+      ],
+      "need": "Future authorized safe-synthetic read-only native QA. No browser lock/server/API/account/deployment/reseed taken here."
+    }
+  ],
+  "sections": [
+    {
+      "name": "Replay not forecast notice",
+      "line": 400,
+      "always_mounted": true,
+      "check": "Model replay/annualisation not consumption forecast; exact engine computation unverified."
+    },
+    {
+      "name": "Comparison parameters",
+      "line": 411,
+      "check": "Model days30/90/180/365, shiftable share/switch fee; explicit vehicle Run, pending disabled; no charging command."
+    },
+    {
+      "name": "Arbitrage summary",
+      "line": 469,
+      "check": "4 raw numeric metrics, missing currency/saving preserved; submitted inputs snapshot distinct from edited controls and recorded returned bounds. Initial-pause gapTL06."
+    },
+    {
+      "name": "Annualised cost by plan",
+      "line": 540,
+      "check": "Canonical chart/table alternative/palette; TL02/TL05."
+    },
+    {
+      "name": "Ranked plan economics",
+      "line": 588,
+      "check": "9 desktop columns/all warnings; mobile/trust/zero gaps. Sortable flags lack onSort; DataTable only creates sort action with onSort, so no actual broken sort action counted."
+    },
+    {
+      "name": "Where energy landed",
+      "line": 618,
+      "check": "Every returned tariff/band energy/cost; meter min0/max100/numeric aria share. Dynamic width allowed. Trust gapTL05."
+    },
+    {
+      "name": "Rate plan library",
+      "line": 682,
+      "check": "Account library source-owned, editor independent of first read. Add/Cancel/all current fields/add-remove bands/save/compare/delete preserved; no invented controls."
+    },
+    {
+      "name": "Evidence quality limitations",
+      "line": 934,
+      "check": "Samples/coverage/window/reasons/evidence/unsupported future prices and household load all preserved. Response type has no extra limitations field; no loss invented. TL05/TL07/TL09."
+    }
+  ],
+  "preservation": {
+    "source_lines": 952,
+    "test_lines": 598,
+    "named_panels": 7,
+    "notice": 1,
+    "OwnershipPanel": 6,
+    "EvidencePanel": 1,
+    "ChartContainer": 1,
+    "DataTable": 2,
+    "OwnershipBrief": 1,
+    "summary": [
+      "saving",
+      "observed",
+      "plans",
+      "shift"
+    ],
+    "result_columns": [
+      "rank",
+      "name",
+      "annual",
+      "delta",
+      "effective",
+      "shift",
+      "breakeven",
+      "peak",
+      "breakdown"
+    ],
+    "library_columns": [
+      "select",
+      "name",
+      "structure",
+      "bands",
+      "standing",
+      "demand",
+      "current",
+      "actions"
+    ],
+    "defaults": "90days/35pct/0fee/USD/tou; day_mask127/start0/end1440/price0.015/tiernull/months1-12 retained.",
+    "raw_si": "Wh/W/minor-perWh/minor-perW remain wire/cache; business minutes/months not converted to workspace instants.",
+    "signs_unknowns": "Signed delta preserved via currency formatter; null saving/delta/break-even/peak not zero. Supplied0 saving/delta/break-even preserved; shift0 defectTL11. Negative price semantics candidate only.",
+    "preferences": "Unit/locale/precision hooks, ISO table formatter, theme palette/table IDs retained. Date bypassTL07; mixed denomination policy candidate.",
+    "source_test_writes": 0
+  },
+  "states": {
+    "initial": "No auto simulation; unknown4 metrics/no fake zero. Library pending source skeleton.",
+    "loading": "Pending Run busy/disabled; first summary suppresses values; successful payload retained during recalculation.",
+    "fatal": "Library fatal confined to library; independent editor/controls/replay sections stay. Initial replay error -> inline error + Source unavailable, not retained success.",
+    "retained": "Publication clones submitted inputs and keeps success through pending/error; edited assumptions do not relabel source. Four section trust omissionsTL05.",
+    "paused": "Library has distinct initial/cached pause via OwnershipPanel and authored fixtures. Retained replay stale; initial brief gapTL06.",
+    "empty": "All7 shells remain; authoritative items[] distinct from unresolved read. No-result/chart/no-priced/evidence empty reasons preserved.",
+    "unknown_zero": "Missing source denomination stays missing; zero not guessed. TL11 zero-shift loss.",
+    "identity": "Global selected vehicle; A->B clears and resets observer; late prior outcomes blocked in source/authored fixtures. Library IDs account-wide; stale selectionTL10.",
+    "freshness": "Response has no freshness timestamp; source freshness stays unknown, not fabricated current-time observation."
+  },
+  "action_readiness": [
+    {
+      "action": "Replay",
+      "line": 173,
+      "boundary": "POST /tariff-lab/simulate via hook; rawvehicle/window_days/IDs/pct/fee/confirmedtrue",
+      "declaration": "Null vehicle guarded, pending disabled. Pure model request not actual charge/switch/payment; auth/offline scheduling/server validation unverified."
+    },
+    {
+      "action": "Compare",
+      "line": 197,
+      "boundary": "Local ID Toggle",
+      "declaration": "Localized row name now supplied; mobile/selection gapsTL01/TL10."
+    },
+    {
+      "action": "Add/Cancel editor",
+      "line": 700,
+      "boundary": "Local formOpen",
+      "declaration": "Draft retained on cancel/reopen; no API until submit."
+    },
+    {
+      "action": "Add/remove bands",
+      "line": 815,
+      "boundary": "Local rates",
+      "declaration": "Min1 band, default raw values; current label/start/end/price only; sentinelTL03."
+    },
+    {
+      "action": "Save",
+      "line": 184,
+      "boundary": "POST /tariff-lab/tariffs",
+      "declaration": "Native required name/currency, minima/steps; pending disables; success-only close/reset name/provider/rates; failed draft retained."
+    },
+    {
+      "action": "Delete",
+      "line": 119,
+      "boundary": "ConfirmDialog -> DELETE /tariff-lab/tariffs/{id}",
+      "declaration": "Danger names plan, confirmed only, pending row identity. api/client.ts358 operational write assert and372 offline class guard declared; no real action/guard evaluation."
+    },
+    {
+      "action": "Retry/review/chart-table tools",
+      "line": 497,
+      "boundary": "Shared owners",
+      "declaration": "Library actual source retry; replay retry explicit Run not invented refetch. Native focus/export/fullscreen NOTRUN."
+    }
+  ],
+  "workspace_business_model_contract": {
+    "route_scope": {
+      "range": false,
+      "vehicle": true
+    },
+    "source": "workspaceScope.ts23-75,156-168",
+    "business": "Band minutes/day-mask/season/tier constraints are not global observation dates.",
+    "assumptions": "Submitted model window_days/share/fee/IDs preserved separately from edited inputs.",
+    "observations": "Returned window/session_count/Wh/quality/evidence show recorded source; not bill/switch/charge outcome.",
+    "unknowns": "Server temporal bounds, timezone/DST, real-time feed, FX, coverage denominator, annualisation and auth/readiness not established."
+  },
+  "test_evidence": {
+    "status": "NOTRUN_SOURCE_ONLY",
+    "page_authored_declarations": 18,
+    "page_authored_cases": 20,
+    "support_authored_cases": {
+      "OwnershipPanel": 18,
+      "OwnershipBrief": 5,
+      "useRetainedMutation": 12,
+      "VerdictBadge": 103
+    },
+    "runtime_discovered": null,
+    "runtime_executed": 0,
+    "runtime_passed": 0,
+    "runtime_failed": 0,
+    "runtime_skipped": 0,
+    "covered_by_authored_source": "Observer retention/late A-B-A isolation/initial failure/unknown-zero/confirm-cancel-delete/per-row pending/empty panels/named compare/signed delta/share/raw rate precision/success-only editor.",
+    "not_covered": "Mobile,JPY/KWD chart,native sentinel,paging,delete selection cleanup,initial pause,effective date prefs,cold real-i18n,shiftzero.",
+    "historical": "Queue2254 accepted narrow20/20/ownedtype/lint0 but initial19/20 visibility failure causeUNKNOWN. Historical only; no passing rerun/fresh/native/type claim."
+  },
+  "authority_read": {
+    "orchestrator": "docs/orchestrator-loop.md fully1-EOF; inspected root has no root-level namesake.",
+    "contract": "docs/frontend-design-contract.md core1-635 and ownership badge addendum1254-1341; unrelated appendices not a full semantic read.",
+    "mission": "Relevant0-3,15-18,22-27,30-37,43-45; exact range reads in tool transcript.",
+    "handoff": "docs/session-handoff.md current1-160 and matched TariffLab history",
+    "queue": "Exact QA row112 attempt1 and historical864/1702/2119/2254; current owner-dedup grep. Queue untouched.",
+    "inventory": "frontend-inventory.md212 + audit-page-161.json fully; historical fixed names/palette/meter not copied as current defects.",
+    "instructions": [
+      "copilot-instructions integrity/SI/frontend/security/testing sections",
+      "react-frontend instructions fully incl565-EOF",
+      "frontend-si-cutover instructions fully",
+      "unit-conversion instructions fully",
+      "frontend-worker-conventions fully"
+    ],
+    "precedence": "Explicit task source-only/no tests/no Git writes/two writable artifacts overrides broad gate/server/status-file prescriptions."
+  },
+  "guideline_scan": {
+    "status": "ACTUAL_SELECT_STRING_SCANS",
+    "scope": "All39 pins scanned for10frontend patterns; additional tighter main-page scans. Semantic review limited to actual direct relevant ranges.",
+    "main_page_zero_matches": [
+      "static CSS-var inline",
+      "raw controls/table",
+      "direct vendor import",
+      "old api import",
+      "api/v1 prefix",
+      "camelCase URL params",
+      "conditional gated panel shell",
+      "fetch/useEffect loading"
+    ],
+    "page_container": "PageLayout392 delegates to PageContainer via PageLayout.tsx11-15; not missing wrapper.",
+    "i18n": "Four shipping sites TL08/TL09; test fixture text/generic TS-method lexical matches excluded.",
+    "exceptions": [
+      "Computed share width664 permitted; Tailwind var tokens not static inline.",
+      "Empty props choose content, all7 shells remain.",
+      "Retained/selection effects detach or sync, not data fetch.",
+      "Shared building-block raw controls/vendor imports expected.",
+      "Formatter comments not controls; tests not shipping labels.",
+      "Client defensive prefix/comment not hook URL."
+    ],
+    "backend_rules": {
+      "sql-interpolation": "NOTAPPLICABLE",
+      "fmt-println": "NOTAPPLICABLE",
+      "bare-panic": "NOTAPPLICABLE",
+      "missing-context": "NOTAPPLICABLE"
+    },
+    "backend_reason": "No assigned internal/**/*.go source; no backend audit/actions."
+  },
+  "deduplication": {
+    "closed_roots": [
+      "phase5-page-ownership-tariff-lab",
+      "phase6-tariff-lab-callable-mock-types",
+      "phase3-verdict-label-adoption"
+    ],
+    "queue_owner_scan": "phase6-fix-ownership / phase6.*OwnershipBrief / phase6.*EvidencePanel.*ownership returned0. Completed status-bar target and home-energy tariff heatmap scopes are unrelated, not reusable acceptance.",
+    "neighbor_reports": "Insurance/Reconciliation/Jurisdiction reports inspected were baseline-only/in-progress02:17; no final shared ownership inferred. Parent must reconcile later deliveries.",
+    "fixed_historical": [
+      "Compare now named at200",
+      "Band meter/share now exposed654-664",
+      "Palette/surfaces now shared tokens"
+    ],
+    "no_queue_writes": true
+  },
+  "limits": {
+    "actual_tariff_config_financial_charging_network_API_browser_actions": 0,
+    "fresh_tests": "NOTRUN explicitly prohibited",
+    "lint": "NOTRUN explicitly prohibited",
+    "build": "NOTRUN explicitly prohibited",
+    "global_tsc": "NOTRUN: npx tsc --noEmit not executed; no TypeScript pass",
+    "catalog_guards": "NOTRUN; no catalog writes/bypass",
+    "native": "NOTRUN; no browser lock/server/deploy/auth/live fixtures",
+    "backend": "NOTRUN; no auth/price/currency/coverage/annualisation/readiness guarantee",
+    "subagents_installs_helpers_servers_Git_writes": "None",
+    "source_repros": "Unexecuted synthetic source-path mechanisms, NOT runtime reproductions.",
+    "truncated_output": "Early broad searches too large; exact scoped probes replaced them. Raw stdout preserved, unrelated broad matches not all reviewed.",
+    "command_failure": "shell2544 exit1 OS206 command length, assembly not started; smaller artifact-only writes used.",
+    "bookkeeping": "LF-only hash receipt parser27 corrected using already-captured CRLF hashes to39, not new baseline; site-policy text corrected27 to actual sum25 before final validation."
+  },
+  "files_read": [
+    "web/src/features/ownership/pages/TariffLabPage.tsx",
+    "web/src/features/ownership/pages/TariffLabPage.test.tsx",
+    "web/src/api/hooks/useOwnership.ts",
+    "web/src/types/ownership.ts",
+    "web/src/features/ownership/formatters.ts",
+    "web/src/features/ownership/components/OwnershipPanel.tsx",
+    "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+    "web/src/features/ownership/components/EvidencePanel.tsx",
+    "web/src/features/ownership/components/MutationError.tsx",
+    "web/src/features/ownership/components/VerdictBadge.tsx",
+    "web/src/features/ownership/components/VerdictBadge.test.tsx",
+    "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+    "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+    "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+    "web/src/hooks/useRetainedMutation.ts",
+    "web/src/hooks/useRetainedMutation.test.tsx",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/api/client.ts",
+    "web/src/api/hooks/_toastHelpers.ts",
+    "web/src/api/queryPolicy.ts",
+    "web/src/features/ownership/components/operationalbrief-all/testAssertions.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/ui/Input.tsx",
+    "web/src/components/ui/Select.tsx",
+    "web/src/components/ui/Toggle.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/features/ownership/components/index.ts",
+    "web/src/components/layout/layout-reference/SourceContent.tsx"
+  ],
+  "files_read_scope": "Shared owner full-file hash/regex scans plus relevant ranges, not full repository semantic certification. testAssertions pin/scan only.",
+  "commands": [
+    {
+      "shell_id": "2324",
+      "actual_command_scope": "Get-Date -AsUTC -Format o; git --no-pager status --short; root/audit directory listing; TariffLab Get-Content | Measure-Object -Line",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2329",
+      "actual_command_scope": "Get-ChildItem root/docs recursively with orchestrator/design/mission/inventory/handoff/queue/instruction names",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2334",
+      "actual_command_scope": "Get-ChildItem .agents/.github/docs; git --no-pager ls-files instruction/orchestrator patterns",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2340",
+      "actual_command_scope": "Select-String contract/mission/inventory/handoff/queue/instructions broad headings/ownership; support inventory; git --no-pager rev-parse HEAD",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2348",
+      "actual_command_scope": "Select-String queue/inventory/handoff TariffLab/phase6/source-only; support directory matches; root orchestrator lookup",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2352",
+      "actual_command_scope": "Exact TariffLab queue/inventory/handoff; contract headings; support/test file location; git --no-pager rev-parse HEAD",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2364",
+      "actual_command_scope": "Instruction/support paths; mission heading lines; UTC",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2372",
+      "actual_command_scope": "Explicit23 before Get-FileHash SHA256 + baseline log bootstrap; contract headings",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2384",
+      "actual_command_scope": "Ownership queue dedup/type/table/workspace declarations Select-String",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2396",
+      "actual_command_scope": "Owner dedup + DataTable sort + instruction heading Select-String",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2411",
+      "actual_command_scope": "Date defaults/PageContainer/source trust/neighbor reports Select-String",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2423",
+      "actual_command_scope": "10frontend grep and page section/action/test declaration counts (exact body/raw in log)",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2439",
+      "actual_command_scope": "Added direct-support pins + control/source/neighbor declarations (exact body/raw in log)",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2445",
+      "actual_command_scope": "Native/shared owner lookup + neighboring report parse",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2460",
+      "actual_command_scope": "Exact owner queue scans/neighbor report fields/numbered repro ranges (body/raw in log)",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2475",
+      "actual_command_scope": "Safety-dependency pins and declaration scan; initial27pin artifact",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2481",
+      "actual_command_scope": "Recover original CRLF receipt hashes to39 (body/raw in log)",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2492",
+      "actual_command_scope": "Tight page zero-match checks/shared exact lines (body/raw in log)",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2500",
+      "actual_command_scope": "All39 pinned file10pattern scans (body/raw in log)",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2544",
+      "actual_command_scope": "Inline Python report assembly via PowerShell here-string | python -; OS206 before start",
+      "exit_code": 1,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2546",
+      "actual_command_scope": "Inline Python split assembly1 ->11findings + failure record",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2589",
+      "actual_command_scope": "Inline Python split assembly2 ->candidates/native/owners/sections/actions/states",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript; later checks also pasted verbatim into authorized log. Exact script bodies in log where indicated; no memory-derived pass."
+    },
+    {
+      "shell_id": "2608",
+      "actual_command_scope": "Inline Python split assembly3 authority/check/failure ledger and original raw stdout preservation",
+      "exit_code": 0,
+      "raw_output": "Original tool transcript and authorized log"
+    },
+    {
+      "id": "FINALVALIDATE",
+      "actual_command": "inline Python: json.loads; hashlib.sha256 all39 pinned files; validate11/6/5/4 and25sites; write final metadata; reparse JSON and recheck persisted pins; append raw results and print RELEASE",
+      "exit_code": 0,
+      "classification": "Artifact/pin bookkeeping only; no fresh tests/lint/build/tsc/helper or API/browser action"
+    }
+  ],
+  "final_validation": {
+    "status": "PASS_ARTIFACT_AND_PINS_ONLY",
+    "checked_at_utc": "2026-10-14T02:29:47.785988+00:00",
+    "source_test_pin_count": 39,
+    "source_test_pins_unchanged": 39,
+    "source_test_pin_drift": 0,
+    "json_parse": "before metadata and after final JSON write",
+    "counts_checked": "11confirmed/6candidate/5native/4needs;25sites;4i18n occurrences",
+    "source_test_writes": 0,
+    "no_application_gate_claim": true
+  },
+  "release": {
+    "status": "RELEASE",
+    "released_at_utc": "2026-10-14T02:29:47.785988+00:00",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-ownership-tariff-lab.json",
+      "web/logs/phase6-qa-ownership-tariff-lab.log"
+    ],
+    "source_test_claim": "READONLY throughout;39before/after pins unchanged",
+    "command_claim": "All bounded commands terminal after this synchronous artifact check; no background work/services/agents started. No future source/test/artifact writes after return."
+  }
+}

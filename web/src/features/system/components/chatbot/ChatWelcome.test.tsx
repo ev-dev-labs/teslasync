@@ -28,6 +28,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 const { tSpy } = vi.hoisted(() => ({ tSpy: vi.fn() }))
 
@@ -91,15 +92,46 @@ describe('ChatWelcome — hero copy', () => {
 describe('ChatWelcome — brand mark accessibility', () => {
   it('renders the Helix mark as a decorative (aria-hidden) graphic', () => {
     const { container } = render(<ChatWelcome onPick={vi.fn()} />)
-    const helix = container.querySelector('svg.text-purple-300')
+    const helix = container.querySelector('svg')
     expect(helix).not.toBeNull()
     expect(helix).toHaveAttribute('aria-hidden', 'true')
+    expect(helix).toHaveClass('text-[var(--text-secondary)]', 'h-12', 'w-12')
   })
 
   it('exposes no unlabelled image role to screen readers', () => {
     render(<ChatWelcome onPick={vi.fn()} />)
     // The brand glyph + chip sparkles are decorative — none surface as `img`.
     expect(screen.queryAllByRole('img')).toHaveLength(0)
+  })
+})
+
+describe('ChatWelcome — restrained surface', () => {
+  it('uses a single existing neutral surface and border around the decorative mark', () => {
+    const { container } = render(<ChatWelcome onPick={vi.fn()} />)
+    const surface = container.querySelector('svg')?.parentElement
+    expect(surface).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'border-[var(--border-subtle)]',
+      'rounded-shape-lg',
+      'p-6',
+    )
+    expect(surface?.children).toHaveLength(1)
+    // Token match (~=), not substring (*=): the four chip buttons carry a
+    // `disabled:bg-[var(--surface-2)]` token from the shared Button, which is
+    // not an applied surface. Exactly one element wears the real token.
+    expect(container.querySelectorAll('[class~="bg-[var(--surface-2)]"]')).toHaveLength(1)
+  })
+
+  it('adds no halo, gradient, shadow or decorative motion around the welcome mark', () => {
+    const { container } = render(<ChatWelcome onPick={vi.fn()} />)
+    const mark = container.querySelector('svg')
+    const surface = mark?.parentElement
+    for (const element of [container.firstElementChild, surface, mark]) {
+      expect(element?.getAttribute('class') ?? '').not.toMatch(
+        /(?:blur|gradient|scale-|shadow|animate-|transition|motion-|purple-|blue-)/,
+      )
+    }
+    expect(container.querySelector('[style]')).toBeNull()
   })
 })
 
@@ -123,6 +155,14 @@ describe('ChatWelcome — suggested prompts', () => {
 })
 
 describe('ChatWelcome — onPick interaction', () => {
+  it.each(SUGGESTIONS)('picks the editable suggestion $key exactly once', ({ text }) => {
+    const onPick = vi.fn()
+    render(<ChatWelcome onPick={onPick} />)
+    expect(onPick).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: text }))
+    expect(onPick).toHaveBeenCalledExactlyOnceWith(text)
+  })
+
   it('forwards the exact chip text to onPick exactly once when clicked', () => {
     const onPick = vi.fn()
     render(<ChatWelcome onPick={onPick} />)
@@ -173,6 +213,19 @@ describe('ChatWelcome — onPick interaction', () => {
     first.focus()
     expect(first).toHaveFocus()
   })
+
+  it('allows keyboard selection without picking a suggestion just by focusing it', async () => {
+    const user = userEvent.setup()
+    const onPick = vi.fn()
+    render(<ChatWelcome onPick={onPick} />)
+
+    await user.tab()
+    expect(screen.getByRole('button', { name: SUGGESTIONS[0].text })).toHaveFocus()
+    expect(onPick).not.toHaveBeenCalled()
+
+    await user.keyboard('{Enter}')
+    expect(onPick).toHaveBeenCalledExactlyOnceWith(SUGGESTIONS[0].text)
+  })
 })
 
 describe('ChatWelcome — i18n indirection', () => {
@@ -184,12 +237,17 @@ describe('ChatWelcome — i18n indirection', () => {
       }
       return de[key] ?? key
     })
-    render(<ChatWelcome onPick={vi.fn()} />)
+    const onPick = vi.fn()
+    render(<ChatWelcome onPick={onPick} />)
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Wie kann Helix dir helfen?')
-    expect(
-      screen.getByRole('button', {
-        name: 'Wie steht es um die Einsatzbereitschaft meiner Flotte?',
-      }),
-    ).toBeInTheDocument()
+    const translatedSuggestion = screen.getByRole('button', {
+      name: 'Wie steht es um die Einsatzbereitschaft meiner Flotte?',
+    })
+    expect(translatedSuggestion).toBeInTheDocument()
+    expect(onPick).not.toHaveBeenCalled()
+    fireEvent.click(translatedSuggestion)
+    expect(onPick).toHaveBeenCalledExactlyOnceWith(
+      'Wie steht es um die Einsatzbereitschaft meiner Flotte?',
+    )
   })
 })

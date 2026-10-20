@@ -97,7 +97,7 @@ const DESCRIPTIONS: Record<string, string> = {
   // ── Driving ────────────────────────────────────────────────────────
   '/drives': 'Every drive with route, energy used, and efficiency.',
   '/trips': 'Multi-leg trips grouped into a single journey.',
-  '/journeys': 'Named journeys stitched from consecutive drives.',
+  '/journeys': 'Vehicle-scoped Journey Autopilot sessions: planning, live drive, and debrief.',
   '/trip-planner': 'Plan a route with charging stops and ETA before you leave.',
   '/navigation': 'Send a destination to the car or save it for later.',
   '/geofences': 'Trigger automations when the car enters or leaves a zone.',

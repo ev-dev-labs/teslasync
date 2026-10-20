@@ -1,0 +1,782 @@
+{
+  "item": "phase6-qa-admin-feedback-queue",
+  "phase": 6,
+  "status": "READ_ONLY_SOURCE_QA_COMPLETED_WITH_CONFIRMED_FINDINGS",
+  "fullPageAcceptance": "NOTRUN",
+  "native": "NOTRUN",
+  "page": "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+  "routes": [
+    "/admin/feedback"
+  ],
+  "purpose": "Review the accepted feedback queue and direct presentation/data dependencies without mounting, reading real feedback or executing any request.",
+  "authority": {
+    "queue": "migration-queue.md:143-177,199",
+    "predecessor": "migration-queue.md:1527",
+    "predecessorSourceCommitFromQueue": "367933b9085b65d1e209267099f0539d2056c471",
+    "historicalInventory": "docs\\frontend-audits\\audit-page-012.json",
+    "acceptanceLimit": "Predecessor accepted SOURCE ONLY. Historical lint exit0, style exit1, page test startup exit1 with zero cases and privacy capture exit2 are not fresh or native passes.",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-qa-admin-feedback-queue.json",
+      "web\\logs\\phase6-qa-admin-feedback-queue.log"
+    ],
+    "logLocationReason": "Current rolling QA contract explicitly specifies web\\logs\\<item>.log; the older worker-conventions root-log convention is superseded by the current queue/loop and cwd-web assignment. logs/ is ignored by .gitignore.",
+    "applicationFiles": "READ ONLY",
+    "sourceTestCatalogConfigEdits": 0,
+    "browserOrApiCalls": 0,
+    "sendForwardDeleteActions": 0,
+    "realUserContentReadOrCaptured": false,
+    "gitCommands": 0,
+    "subagents": 0,
+    "installsHelpersExtensionsServersDocker": 0
+  },
+  "timebox": {
+    "instructionTimestamp": "2026-10-13T09:20:09.936-07:00",
+    "firstActualClockRead": "2026-10-13T09:21:19.46871-07:00",
+    "returnDeadline": "2026-10-13T09:40:09.936-07:00",
+    "hardDeadline": "2026-10-13T09:45:09.936-07:00",
+    "lastReviewClockRead": "2026-10-13T09:29:36.3979199-07:00",
+    "finalizedAt": "2026-10-13T09:34:22.9490501-07:00",
+    "elapsedSecondsAtFinalization": 853.013,
+    "commands": "Own commands completed synchronously with 30/60-second initial waits, no ongoing process and no eight-minute ceiling reached.",
+    "stopPolicy": "On STOP, return immediately, release all ownership and make no post-return writes."
+  },
+  "statusDefinitions": {
+    "PASS": "Only the individually named source property or actually executed document/source scan is established.",
+    "FAIL": "An exact source mechanism violates the stated contract. Reproduction steps are synthetic source-derived specifications, not executed browser/API reproductions.",
+    "NOTRUN": "The named runtime/gate check was not executed; absence of authorization or evidence never becomes a pass."
+  },
+  "instructionsRead": [
+    "migration-queue.md:143-177,199,1527",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md:1-240,419-610",
+    "docs\\frontend-mission.md:1-260,1416-1520",
+    "docs\\session-handoff.md:1-200",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\instructions\\react-frontend.instructions.md:1-560",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh"
+  ],
+  "checks": [
+    {
+      "id": "P01",
+      "status": "PASS",
+      "name": "Existing exclusive report-only item and accepted predecessor",
+      "evidence": [
+        "migration-queue.md:143-177,199,1527"
+      ],
+      "detail": "No completed page was redispatched for implementation; queue/handoff/catalog remain untouched."
+    },
+    {
+      "id": "P02",
+      "status": "PASS",
+      "name": "Lazy route and workspace scope",
+      "evidence": [
+        "web\\src\\App.tsx:706",
+        "web\\src\\lib\\routeLoaders.ts:105",
+        "web\\src\\lib\\workspaceScope.ts:23,95-107,157-167"
+      ],
+      "detail": "SafeRoute mounts /admin/feedback. Administration intentionally excludes header vehicle scope. Page has no duplicate vehicle/date picker; status/category filters are queue-specific."
+    },
+    {
+      "id": "P03",
+      "status": "PASS",
+      "name": "Feedback hook methods and registered URLs",
+      "evidence": [
+        "web\\src\\api\\hooks\\useFeedback.ts:35-44,63-69,136-143",
+        "internal\\api\\router.go:4719,4726-4733",
+        "web\\src\\api\\client.ts:73-94"
+      ],
+      "detail": "GET /admin/feedback and single/per-ID bulk PATCH /admin/feedback/{id} match mounted routes without the client-added /api/v1. Unused submit hook POST /feedback also matches; none was invoked."
+    },
+    {
+      "id": "P04",
+      "status": "PASS",
+      "name": "Filters, server total and page bounds contract",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:67-73,82-87,400-421,490-508",
+        "web\\src\\api\\hooks\\useFeedback.ts:35-45",
+        "internal\\api\\adminfeedback\\handler.go:113-150",
+        "internal\\database\\user\\feedback_repo.go:289-356"
+      ],
+      "detail": "status/category/limit/offset match backend names and enums. Main limit25 and offset=page*25, six independent limit1 counts, filter reset to page0 and Previous/Next pending guards remain. Server total counts the full filtered set, not loaded rows; shrinking-total recovery fails separately FQ001."
+    },
+    {
+      "id": "P05",
+      "status": "PASS",
+      "name": "Ordinary initial loading and fatal-only list replacement",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:75,424-430",
+        "web\\src\\api\\dataState.ts:197-222"
+      ],
+      "detail": "Fetching first load uses six-line skeleton; only fatalError with no retained payload shows QueryError/list retry. This excludes the initial-paused case FQ002."
+    },
+    {
+      "id": "P06",
+      "status": "PASS",
+      "name": "Retained list refresh failures preserve rows",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:424-430,451-482",
+        "web\\src\\api\\dataState.ts:224-248",
+        "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:58-109"
+      ],
+      "detail": "Retained payload remains mounted with nonblocking warning. Paused retained data is stale with isRefreshBlocked, not fabricated server error. Global Refresh remains the list's recovery because hideRetry is intentional. Exact paused wording/freshness is not native-certified."
+    },
+    {
+      "id": "P07",
+      "status": "PASS",
+      "name": "Independent facets preserve unknown numbers and denominators",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:95-105,160-173,349-391",
+        "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackFacetPanel.tsx:29-65"
+      ],
+      "detail": "Total exists only when all three status counts are finite. Incomplete facets show known counts and em-dashes rather than fabricated proportions; complete zero facets have explanatory refreshable empty states. Status/category retries target their own source queries."
+    },
+    {
+      "id": "P08",
+      "status": "PASS",
+      "name": "Whole-page refresh and explicit source scope",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:110-155,334-342"
+      ],
+      "detail": "Refresh calls the table and all six facet refetches. Summary explains independent queue snapshots, no shared observation time/date bounds and no dependence on list filters. This is not a claim of transactional snapshot consistency."
+    },
+    {
+      "id": "P09",
+      "status": "PASS",
+      "name": "Filtered no-match differs from whole-queue empty",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:430-447"
+      ],
+      "detail": "Filtered no-match title and Clear filters reset both fields/page; unfiltered authoritative empty retains submission guidance. Out-of-range nonempty totals and unresolved paused data are excluded by FQ001/FQ002."
+    },
+    {
+      "id": "P10",
+      "status": "PASS",
+      "name": "Manual placeholder interlock and selection retention",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:254,281,292,303,395,425,479"
+      ],
+      "detail": "Prior-scope placeholder rows remain while manual single/bulk persistence is disabled and a loading status is announced. Bulk handler also guards placeholder entry. Generic loading lacks precise previous-scope explanation, C03; AI is not included in this interlock, FQ005."
+    },
+    {
+      "id": "P11",
+      "status": "PASS",
+      "name": "Bulk success/error lifecycle and actual scope",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:252-269",
+        "web\\src\\api\\hooks\\useFeedback.ts:96-133",
+        "web\\src\\components\\ui\\DataTable.tsx:867-870"
+      ],
+      "detail": "Bulk receives selected rows from current loaded data only, validates/deduplicates IDs, awaits all PATCH settlements and invalidates all feedback queries on settlement. Success alone clears selection; failure retains it and uses mutation toast. Cross-hook pending exclusion fails FQ003."
+    },
+    {
+      "id": "P12",
+      "status": "PASS",
+      "name": "Null-safe consumed row/list fields and retained URL draft",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:155-159,200-221",
+        "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx:22-38,52-98"
+      ],
+      "detail": "items null/undefined falls back to []; title/body/route/reporter/URL metadata use guarded fallbacks; diagnostics stringify unknown JSON only when present. Persisted URL changes update the draft without clobbering unrelated rerenders. This does not validate malformed array elements or arbitrary payload shapes; FQ007 documents type overpromises."
+    },
+    {
+      "id": "P13",
+      "status": "PASS",
+      "name": "AI is opt-in, entity-scoped and propose-only",
+      "evidence": [
+        "web\\src\\components\\ai\\withAiFeature.tsx:46-59",
+        "web\\src\\hooks\\useAiEnabled.ts:32-41",
+        "web\\src\\components\\ai\\AIFeedbackQueueTriage.tsx:100-146",
+        "web\\src\\hooks\\useAiStream.ts:294-325",
+        "internal\\api\\ai_routes.go:468-472",
+        "internal\\api\\router.go:5091"
+      ],
+      "detail": "Feature flags fail closed; valid row ID scopes the draft and scope changes abort/clear prior output. POST /ai/feedback/triage/draft matches /ai mounted route. Advisor does not persist status; manual PATCH remains the write path. No stream or backend privacy behavior was exercised; prior-scope availability fails FQ005."
+    },
+    {
+      "id": "P14",
+      "status": "PASS",
+      "name": "Static canonical English translation-key presence",
+      "evidence": [
+        "web\\logs\\phase6-qa-admin-feedback-queue.log"
+      ],
+      "detail": "Executed exact twelve-production-file static t-key lookup:78 unique keys,0 missing in en.json. It does not cover dynamic keys, every locale, cold namespaces, pluralization or RTL. The example URI is a literal URL, not copied user data."
+    },
+    {
+      "id": "P15",
+      "status": "PASS",
+      "name": "Inspected accessibility associations and non-color alternatives",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:234-242,398-422,462-468",
+        "web\\src\\features\\admin\\components\\feedback-queue\\BridgeStatus.tsx:20-24",
+        "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx:80-98,104-136",
+        "web\\src\\features\\admin\\components\\feedback-queue\\StatusDistribution.tsx:35-55"
+      ],
+      "detail": "Filters/manual fields have labels; selection uses category/title rowLabel; bridge has named status/aria-busy; diagnostics retain native details/summary; legends contain counts/text. External link has safe new-tab rel and mobile min-height. Contextual disclosure names fail FQ006; no keyboard/screen-reader/contrast acceptance inferred."
+    },
+    {
+      "id": "P16",
+      "status": "PASS",
+      "name": "All original row columns/actions remain source-reachable",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:198-248,451-482",
+        "web\\src\\components\\ui\\DataTable.tsx:238-246,1198-1204,1441-1447"
+      ],
+      "detail": "Seven columns remain; no mobileColumns exclusion or mobile adapter deletes category/route/reporter/issue link. Shared table owns contained horizontal overflow. This resolves the old hidden-column source concern, but no mounted mobile overflow/keyboard scrolling proof exists."
+    },
+    {
+      "id": "P17",
+      "status": "PASS",
+      "name": "Measured line/section preservation against recorded original",
+      "evidence": [
+        "docs\\frontend-audits\\audit-page-012.json:280-384",
+        "web\\logs\\phase6-qa-admin-feedback-queue.log"
+      ],
+      "detail": "Get-Content measured page517 versus recorded500, composed page+eight listed domain components1016 versus997, minimum70%=698. Page openings:GlassPanel1,ChartContainer0,FeedbackFacetPanel2,AdminSummary1,DataTable1,BridgeStatus1. Three original bands and expanded report/manual/AI capabilities persist. Historical predecessor log's518-line receipt is not substituted for the fresh517 physical-line count."
+    },
+    {
+      "id": "P18",
+      "status": "PASS",
+      "name": "Bounded prohibited-pattern scans only",
+      "evidence": [
+        "web\\logs\\phase6-qa-admin-feedback-queue.log"
+      ],
+      "detail": "Actual functions.rg returned No matches found for scoped raw controls/static-var inline/vendor+old API imports/double-prefix+camelCase literals. Supplemental case-sensitive Select-String across twelve exact production files:static-inline0,raw-controls0,vendor0,old-API0,double-prefix0,camelCase0,any0,neon/glow0. These do not certify every styling rule, palette, runtime URL or whole repository."
+    },
+    {
+      "id": "P19",
+      "status": "PASS",
+      "name": "SI and page observability boundaries",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:24-27,160-173,202",
+        "web\\src\\hooks\\useDateFormat.ts:74-96",
+        "web\\src\\features\\admin\\components\\feedback-queue\\CategoryMix.tsx:23-40"
+      ],
+      "detail": "Metrics are dimensionless counts/percentages and created-at timestamps. Existing preference-aware date/number formatters are used; no measurement conversion/legacy SI helper/new RUM bootstrap or page console logging is present in the inspected page. Backend telemetry/span/SLO runtime compliance is not certified."
+    },
+    {
+      "id": "F01",
+      "status": "FAIL",
+      "name": "Shrinking-result pagination recovery",
+      "finding": "FQ001"
+    },
+    {
+      "id": "F02",
+      "status": "FAIL",
+      "name": "Initial paused query is not authoritative empty",
+      "finding": "FQ002"
+    },
+    {
+      "id": "F03",
+      "status": "FAIL",
+      "name": "Single/bulk mutation pending exclusion",
+      "finding": "FQ003"
+    },
+    {
+      "id": "F04",
+      "status": "FAIL",
+      "name": "Live-only manual operation boundary",
+      "finding": "FQ004"
+    },
+    {
+      "id": "F05",
+      "status": "FAIL",
+      "name": "Placeholder action guard includes opt-in AI",
+      "finding": "FQ005"
+    },
+    {
+      "id": "F06",
+      "status": "FAIL",
+      "name": "Contextual disclosure accessible names",
+      "finding": "FQ006"
+    },
+    {
+      "id": "F07",
+      "status": "FAIL",
+      "name": "Response type matches omitted optional JSON fields",
+      "finding": "FQ007"
+    },
+    {
+      "id": "N01",
+      "status": "NOTRUN",
+      "name": "Native mounted functional/state QA",
+      "reason": "Browser/API calls prohibited; no mount, real queue content, send, forward, delete, mutation or provider request."
+    },
+    {
+      "id": "N02",
+      "status": "NOTRUN",
+      "name": "Mobile/container/zoom layout",
+      "widths": [
+        320,
+        375,
+        390,
+        430,
+        768,
+        1024,
+        1280,
+        1440,
+        1920,
+        2560
+      ],
+      "reason": "No screenshots, hit rectangles, clipping or scroll measurements; source reflow alone is not native acceptance."
+    },
+    {
+      "id": "N03",
+      "status": "NOTRUN",
+      "name": "Themes/forced colors/composed contrast",
+      "reason": "No rendered dark/light/custom/OS forced-colors or4.5:1 text/3:1 control measurements."
+    },
+    {
+      "id": "N04",
+      "status": "NOTRUN",
+      "name": "Keyboard/focus/screen-reader/touch acceptance",
+      "reason": "Only static associations and disclosure names reviewed; no actual focus/order/restoration/announcements/44px hit proof."
+    },
+    {
+      "id": "N05",
+      "status": "NOTRUN",
+      "name": "Cold i18n/non-English/RTL/long-label/200% text",
+      "reason": "Canonical static key lookup is not runtime namespace or layout evidence."
+    },
+    {
+      "id": "N06",
+      "status": "NOTRUN",
+      "name": "TypeScript/lint/build/test gates",
+      "reason": "Report-only/no application changes; parent owns serialized gates. No unchanged passing tests or full suites rerun. Historical page startup failed before discovery, not a pass."
+    },
+    {
+      "id": "N07",
+      "status": "NOTRUN",
+      "name": "Audit/API verification helper scripts",
+      "reason": "User prohibits helpers and full suites. audit.sh includes whole TypeScript compilation. Direct source scans/routes are narrower evidence, not script exits."
+    },
+    {
+      "id": "N08",
+      "status": "NOTRUN",
+      "name": "Transport/auth/bridge privacy/AI redaction/server observability",
+      "reason": "No API or upstream request, real identity, response, audit log or telemetry was collected. Backend source review is not fresh auth/PII/trace/SLO acceptance."
+    },
+    {
+      "id": "N09",
+      "status": "NOTRUN",
+      "name": "Reduced-motion/low-bandwidth/performance",
+      "reason": "No OS/browser profile or performance measurement."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "FQ001",
+      "status": "FAIL",
+      "priority": "high",
+      "file": "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+      "line": 430,
+      "rule": "MDC-026/MDC-043 pagination and accurate empty recovery",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:61,67-73,155-159,254-267,430-450,483-510",
+        "web\\src\\api\\hooks\\useFeedback.ts:80,131-133",
+        "internal\\database\\user\\feedback_repo.go:329-356"
+      ],
+      "mechanism": "page is not clamped when total shrinks. Both pagination buttons are inside the nonempty-items branch. Invalidating after a filtered status update can leave offset beyond the last result, producing items=[] with a positive total and hiding Previous/page metadata.",
+      "syntheticRepro": [
+        "Use status=new with26 matching rows; go to page2/offset25 containing one row.",
+        "Mark that row triaged, or deliver the equivalent synthetic refreshed response with total25/items=[]/offset25.",
+        "page remains1; no Previous control is rendered; No results replaces a still-nonempty filtered queue. Refresh repeats the invalid offset; Clear filters loses the intended filter."
+      ],
+      "execution": "SOURCE-DERIVED; no mutation or native reproduction executed",
+      "narrowFix": "One page-owner followup should preserve filters, clamp/recover out-of-range pages after settled totals and keep paging recovery reachable on an empty loaded page; add focused shrinking-total coverage only under a new source/test claim.",
+      "owner": "page"
+    },
+    {
+      "id": "FQ002",
+      "status": "FAIL",
+      "priority": "high",
+      "file": "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+      "line": 426,
+      "rule": "MDC-026 unresolved/paused is not authoritative empty",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:74-75,155-157,424-436",
+        "web\\src\\api\\dataState.ts:197-222",
+        "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:60-61"
+      ],
+      "mechanism": "Initial paused query has no data/error, isPending=true, fetchStatus=paused and isLoading=false. DataState says initial/isRefreshBlocked, but table branching checks only isLoading then fatalError then empty items. StaleRefreshWarning renders nothing without data, so the queue claims No feedback yet/No results before a successful response.",
+      "syntheticRepro": [
+        "Supply data=undefined,error=null,isLoading=false,isFetching=false,isPending=true,fetchStatus=paused.",
+        "Page derives no retained payload and falls through to the empty-items branch rather than explaining paused/unresolved loading.",
+        "Bridge correctly remains Unknown; independent facet panels stay mounted. No server failure or actual device-offline conclusion is justified."
+      ],
+      "execution": "SOURCE-DERIVED; no paused browser/API test executed",
+      "narrowFix": "One page-owner followup should branch on unresolved DataState and distinguish isRefreshBlocked from fetching/error/authoritative empty, retaining all neighboring sections.",
+      "owner": "page"
+    },
+    {
+      "id": "FQ003",
+      "status": "FAIL",
+      "priority": "medium",
+      "file": "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+      "line": 479,
+      "rule": "MDC-046 coherent pending/action lifecycle",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:76-77,281,292,303,479",
+        "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx:104-136",
+        "internal\\database\\user\\feedback_repo.go:427-467"
+      ],
+      "mechanism": "Row controls observe only update.isPending; bulk buttons observe only bulkUpdate.isPending. The two independent hooks permit simultaneous conflicting PATCHes for the same selected/expanded row. Backend status UPDATE matches only id, so final status follows request settlement order rather than the later operator intent.",
+      "syntheticRepro": [
+        "Expand/select a new synthetic row; start a deferred bulk Close selected operation.",
+        "While bulkUpdate.isPending=true and update.isPending=false, the row Status control remains enabled and can issue Mark triaged.",
+        "Resolve the requests in opposite order. Reciprocal case: a pending row update leaves bulk buttons enabled."
+      ],
+      "execution": "SOURCE-DERIVED; no competing PATCHes issued",
+      "narrowFix": "One page-owner followup should share the two pending states in manual action availability/handler guards, preserving existing hook API, success-only selection clearing and errors.",
+      "owner": "page"
+    },
+    {
+      "id": "FQ004",
+      "status": "FAIL",
+      "priority": "medium",
+      "file": "web\\src\\api\\hooks\\useFeedback.ts",
+      "line": 137,
+      "rule": "MDC-046 operational mutations remain live-only",
+      "evidence": [
+        "web\\src\\api\\hooks\\useFeedback.ts:136-143",
+        "web\\src\\api\\client.ts:373-392",
+        "web\\src\\lib\\operationalMode.ts:21-35,66-77",
+        "web\\src\\api\\offlineCache.ts:50-74",
+        "web\\src\\api\\queryClient.ts:69-76"
+      ],
+      "mechanism": "Manual single/bulk PATCH does not set requiresLiveMode; client defaults it false and operational guard returns early. feedback is not in the path-specific offline-unsafe list. Page controls also do not consult operational read-only mode. A valid ?as_of= context therefore does not reject this write before transport.",
+      "syntheticRepro": [
+        "Specify online=true and a valid ?as_of= timestamp with a populated synthetic queue.",
+        "Invoke the existing row status/URL/forward callback or selected-row bulk callback in a future hermetic test.",
+        "PATCH options lack requiresLiveMode; assertOperationalWriteAllowed returns without checking read-only snapshot. No successful request/authorization bypass is alleged."
+      ],
+      "execution": "SOURCE-DERIVED; no historical-mode write or network call executed",
+      "narrowFix": "An exclusively assigned feedback hook/page followup should reuse existing live-mode request protection and explanatory disabled UX for operational actions. Preserve deliberate source semantics; do not change shared policy or auth architecture opportunistically.",
+      "importantLimit": "Shared mutation defaults retry0/networkMode=always already prevent paused replay; this finding is not a claim that offline writes are queued or that auth checks are absent.",
+      "owner": "integration"
+    },
+    {
+      "id": "FQ005",
+      "status": "FAIL",
+      "priority": "medium",
+      "file": "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx",
+      "line": 147,
+      "rule": "MDC-026/MDC-046 explicit previous-scope action availability",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:425,479",
+        "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx:147",
+        "web\\src\\components\\ai\\AIFeedbackQueueTriage.tsx:100-104,123-128,145",
+        "web\\src\\components\\ai\\AIFeatureCard.tsx:260-262,296-300",
+        "web\\src\\hooks\\useAiStream.ts:343-362"
+      ],
+      "mechanism": "Placeholder interlock is passed as updating and disables manual controls, but the expansion forwards only feedbackId to the opt-in AI advisor. For a valid old row ID, canStart is true independent of placeholder/updating state, so a new draft POST can still start for a row retained from previous filters/page.",
+      "syntheticRepro": [
+        "Enable AI mode and feedback-queue-triage in a synthetic fixture, with idle stream and a valid retained row ID.",
+        "Change filter/page and supply isPlaceholderData=true while retaining the expanded row.",
+        "Manual controls disable but Ask Helix/Suggest triage remains enabled and its callback starts the previous row's draft. Current page tests set AI off and do not establish this interlock."
+      ],
+      "execution": "SOURCE-DERIVED; no AI draft/provider/paid action executed",
+      "narrowFix": "Assign the existing expansion and AI advisor owner to propagate explicit current-scope action eligibility through the existing canStart surface without suppressing retained evidence or weakening feature flags.",
+      "importantLimit": "The draft remains entity-scoped and propose-only; this is not automatic feedback persistence or a demonstrated PII leak.",
+      "owner": "feature/shared"
+    },
+    {
+      "id": "FQ006",
+      "status": "FAIL",
+      "priority": "medium",
+      "file": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 1137,
+      "rule": "MDC-040 contextual action accessible names",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:462-468",
+        "web\\src\\components\\ui\\DataTable.tsx:1135-1141"
+      ],
+      "mechanism": "Feedback supplies distinct category/title rowLabel, but each disclosure's aria-label remains the same Expand row/Collapse row. The contextual title attribute does not replace the explicit generic accessible name. A screen-reader button list cannot distinguish actionable feedback drawers.",
+      "syntheticRepro": [
+        "Use two differently titled synthetic feedback rows.",
+        "Inspect each expansion button's accessible-name computation: explicit aria-label wins over title, producing identical names.",
+        "Selection checkboxes remain contextual; this is the inherited shared disclosure gap, not a selection-label regression."
+      ],
+      "execution": "SOURCE-DERIVED accessible-name contract; no screen-reader/browser run",
+      "narrowFix": "One shared DataTable owner should compose existing rowLabel into localized expand/collapse names with generic fallback; preserve aria-expanded, keyboard behavior, focus and all other callers.",
+      "owner": "shared"
+    },
+    {
+      "id": "FQ007",
+      "status": "FAIL",
+      "priority": "low",
+      "file": "web\\src\\api\\types.ts",
+      "line": 3235,
+      "rule": "Frontend/API optional-field shape agreement",
+      "evidence": [
+        "web\\src\\api\\types.ts:3235-3252",
+        "internal\\database\\user\\feedback_repo.go:69-87"
+      ],
+      "mechanism": "Go UserFeedback uses omitempty for page_route,user_agent,app_version,user_email,recent_errors,console_tail,github_issue_url,submitter_subject,submitter_ip,triaged_at,triaged_by. TypeScript declares these required, including triaged_at:string|null although nil is omitted rather than serialized null.",
+      "syntheticRepro": [
+        "Serialize a synthetic otherwise valid Go row with empty optional strings and nil TriagedAt/RecentErrors.",
+        "Those keys are absent on wire, while FeedbackEntry requires them. Current page/expansion mostly guard absence, so no visible crash is claimed."
+      ],
+      "execution": "SOURCE-PROVEN JSON-tag/type mismatch; no serialization runner or API call executed",
+      "narrowFix": "An exclusively assigned existing shared-type owner should align omitted properties with actual backend JSON, preserving page null safety and wire names; no backend or compatibility adapter rewrite needed.",
+      "owner": "integration"
+    }
+  ],
+  "candidatesNotNativeFailures": [
+    {
+      "id": "C01",
+      "status": "NOTRUN",
+      "name": "Narrow expanded URL/long report body overflow",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx:52,112",
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:395"
+      ],
+      "mechanism": "min-width260 URL field inside nested padding and pre-wrap body without explicit long-token wrapping are plausible narrow-container pressures.",
+      "nextEvidence": "Synthetic long text/URL,320px/allocated-container bounds and owned scroll measurement. No measured clipping/overflow claim."
+    },
+    {
+      "id": "C02",
+      "status": "NOTRUN",
+      "name": "Retained facet refresh/paused reason and age granularity",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackFacetPanel.tsx:29-41",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:54-69",
+        "web\\src\\api\\dataState.ts:337-344"
+      ],
+      "mechanism": "Facet converts combined DataState to a coarse SourceContent enum; refreshError/isRefreshBlocked/updatedAt are not forwarded, and mixed initial+retained sources may show only Partial data.",
+      "nextEvidence": "Scoped synthetic paused/mixed/refreshing facet cases and semantic review; generic retained notice/retry already exists, so this is not a proven blank-content or invented-error defect."
+    },
+    {
+      "id": "C03",
+      "status": "NOTRUN",
+      "name": "Precise previous-scope disclosure remains unresolved",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:425",
+        "logs\\phase5-page-admin-feedback-queue.log:104-110"
+      ],
+      "mechanism": "Placeholder notice says only Loading..., not that rows/count/page details come from previous filters/page. Historical worker explicitly requested a scopePlaceholder catalog leaf.",
+      "nextEvidence": "Parent-owned copy/catalog integration with a specific assigned page adoption; no new key or catalog edit authorized here."
+    },
+    {
+      "id": "C04",
+      "status": "NOTRUN",
+      "name": "Theme-aware distribution palette adoption",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\feedback-queue\\constants.ts:9-25",
+        "web\\src\\features\\admin\\components\\feedback-queue\\CategoryMix.tsx:36-41",
+        "web\\src\\components\\data-display\\MetricBar.tsx:27,45,89"
+      ],
+      "mechanism": "Fixed hex category/status palette and omitted fill retain gradient even though MetricBar now supports solid CSS-variable fill. This inherited source adoption gap is not covered by zero neon-class regex matches.",
+      "nextEvidence": "Existing semantic-token mapping and rendered light/dark/custom/forced-color contrast/visual review; no invented contrast ratios or blanket visual pass."
+    },
+    {
+      "id": "C05",
+      "status": "NOTRUN",
+      "name": "Unknown runtime category presentation",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\feedback-queue\\CategoryBadge.tsx:28-31",
+        "web\\src\\features\\admin\\components\\feedback-queue\\StatusBadge.tsx:32-35",
+        "internal\\database\\user\\feedback_repo.go:24-35,134-159"
+      ],
+      "mechanism": "Out-of-union category falls back to Other/question rather than Unknown, unlike status. Current backend validates only the three expected categories.",
+      "nextEvidence": "An explicitly supported future/malformed payload contract; no assertion that current valid API emits an unknown enum."
+    },
+    {
+      "id": "C06",
+      "status": "NOTRUN",
+      "name": "Loaded selection retention across filter/page changes",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:65-66,400-420",
+        "web\\src\\components\\ui\\DataTable.tsx:757-759,867-870"
+      ],
+      "mechanism": "Selected keys remain across scope changes, but bulk actions intersect only loaded rows. This may surprise operators selecting across pages, yet no hidden-row bulk mutation occurs.",
+      "nextEvidence": "Confirm intended selection scope and mounted announcements, then only a specifically authorized scope-clarity fix if needed."
+    },
+    {
+      "id": "C07",
+      "status": "NOTRUN",
+      "name": "Sortable declarations without sort ownership",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx:205,211,217,235,451-482",
+        "web\\src\\components\\ui\\DataTable.tsx:1558-1578",
+        "internal\\database\\user\\feedback_repo.go:345"
+      ],
+      "mechanism": "Several columns declare sortable, but page does not supply onSort/sortKey. Shared table requires onSort for sort buttons; server stays created_at DESC.",
+      "nextEvidence": "Confirm intended preexisting queue-sort capability before treating as a regression or inventing backend sort support. No source change authorized."
+    }
+  ],
+  "preservation": {
+    "pageSha256": "8240F7C2F363118E0AEA2CE597036DE8AB14E9C0145F4C92191A302E2BA96527",
+    "pageCurrentPhysicalLines": 517,
+    "pageRecordedOriginalLines": 500,
+    "composedCurrentLines": 1016,
+    "composedRecordedOriginalLines": 997,
+    "composedMinimum70Percent": 698,
+    "composedScope": "Page plus BridgeStatus,CategoryBadge,StatusBadge,StatusDistribution,CategoryMix,FeedbackExpansion,FeedbackFacetPanel,AdminSummary; unused FeedbackStatTile excluded from both original/current totals.",
+    "bands": [
+      "Six whole-queue KPI metrics and reviewable OperationalBrief",
+      "Triage progress distribution, category mix, independent count states/retries and visible bridge footer",
+      "Seven-column status/category-filtered paged selectable expandable queue and bulk controls"
+    ],
+    "expandedCapabilities": [
+      "Report body",
+      "App version",
+      "User agent",
+      "Submitter",
+      "Audited masked email",
+      "Recent errors disclosure",
+      "Console tail disclosure",
+      "Status update",
+      "URL draft/save",
+      "Optional GitHub forwarding",
+      "Opt-in propose-only AI"
+    ],
+    "sectionOpeningCounts": {
+      "GlassPanel": 1,
+      "ChartContainer": 0,
+      "FeedbackFacetPanel": 2,
+      "AdminSummary": 1,
+      "DataTable": 1,
+      "BridgeStatus": 1
+    },
+    "historicalSectionComparison": "Original/predecessor source inventory records the same three bands, six metrics, two facets, one bridge, one table/seven columns, one expansion and one page GlassPanel/no ChartContainer. No Git baseline regenerated.",
+    "originalTests": "Historical original16 cases/74 assertions, accepted-source19 authored cases/96 assertions from retained receipt. No test body changed or run here; source-authored cases are not discovered/executed cases.",
+    "finalHashVerification": {
+      "limitation": "Exact twelve scoped production snapshots only; no Git/full-working-tree claim.",
+      "verifiedProductionFiles": 12,
+      "status": "PASS",
+      "timestamp": "2026-10-13T09:34:22.9490501-07:00",
+      "changedDuringReview": 0
+    }
+  },
+  "validation": {
+    "rawLog": "web\\logs\\phase6-qa-admin-feedback-queue.log",
+    "initialFailedCommand": {
+      "shellId": "4592",
+      "exit": 1,
+      "result": "rg executable unavailable on PowerShell PATH; no validation pass inferred. No install. Continued with available functions.rg and native Select-String."
+    },
+    "executedScanCommand": {
+      "shellId": "4619",
+      "exit": 0,
+      "result": "Eight scoped pattern counts0;78 canonical t keys/0 missing;517 page lines;1016 composed current/997 recorded original."
+    },
+    "evidenceCommands": [
+      {
+        "shellId": "4645",
+        "exit": 0
+      },
+      {
+        "shellId": "4657",
+        "exit": 0
+      }
+    ],
+    "rawSourceToolOutput": "functions.rg returned No matches found for the four explicit prohibited-pattern searches; tool numeric exits were not exposed.",
+    "typescript": {
+      "status": "NOTRUN",
+      "command": "npx tsc --noEmit",
+      "reason": "No changed application code; report-only worker does not repeat the parent's serialized passing gate."
+    },
+    "tests": {
+      "status": "NOTRUN",
+      "discovered": null,
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "reason": "No test changes. Historical predecessor page run exited1 before discovery/zero cases; no stale passing receipt claimed."
+    },
+    "lintBuildFullSuites": "NOTRUN",
+    "documentValidation": {
+      "exit": 0,
+      "status": "PASS",
+      "command": "PowerShell ConvertFrom-Json, individual-status/finding-link checks and Get-FileHash against scoped recorded hashes",
+      "reportReadable": true,
+      "sourceDrift": 0,
+      "productionHashesVerified": 12
+    },
+    "helperScripts": "NOTRUN; no audit/verify/helper execution under user constraint",
+    "note": "No blanket all-checks-pass, zero-total-violations, native acceptance, supported-runtime gate or repaired-baseline assertion."
+  },
+  "needs": [
+    "Queue one narrow pagination recovery followup at FeedbackQueuePage.tsx for FQ001.",
+    "Queue one narrow initial-paused state followup at FeedbackQueuePage.tsx for FQ002.",
+    "Queue one narrow single/bulk pending interlock followup at FeedbackQueuePage.tsx for FQ003.",
+    "Assign exact feedback hook/page live-mode protection owners for FQ004; no shared-policy rewrite.",
+    "Assign exact FeedbackExpansion/AIFeedbackQueueTriage action-eligibility owners for FQ005.",
+    "Assign existing shared DataTable disclosure-name owner for FQ006.",
+    "Assign existing shared FeedbackEntry type owner for FQ007.",
+    "Preserve predecessor unresolved copy/palette/geometry/native needs; candidates require targeted evidence, not automatic repair campaigns.",
+    "Parent retains serialized TypeScript/build/test gate and future synthetic read-only native QA authority."
+  ],
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-audits\\audit-page-012.json",
+    "docs\\frontend-audits\\phase6-qa-admin-api-playground.json",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    ".gitignore",
+    "logs\\phase5-page-admin-feedback-queue.log",
+    "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+    "web\\src\\features\\admin\\pages\\FeedbackQueuePage.test.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\index.ts",
+    "web\\src\\features\\admin\\components\\feedback-queue\\constants.ts",
+    "web\\src\\features\\admin\\components\\feedback-queue\\BridgeStatus.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\CategoryBadge.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\StatusBadge.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\CategoryMix.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\StatusDistribution.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackFacetPanel.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\api\\hooks\\useFeedback.ts",
+    "web\\src\\api\\types.ts:3232-3280",
+    "web\\src\\api\\dataState.ts:1-350",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useDateFormat.ts:1-145",
+    "web\\src\\hooks\\useAiEnabled.ts",
+    "web\\src\\hooks\\useAiStream.ts:285-420",
+    "web\\src\\components\\ai\\AIFeedbackQueueTriage.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx:1-210,238-306",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx:1-280,750-875,1125-1225,1290-1455",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\feedback\\DataStateNotice.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\UserCell.tsx",
+    "web\\src\\api\\client.ts:40-180,350-415",
+    "web\\src\\api\\queryClient.ts",
+    "web\\src\\lib\\operationalMode.ts",
+    "web\\src\\api\\offlineCache.ts:39-76,144-148",
+    "web\\src\\App.tsx:706",
+    "web\\src\\lib\\routeLoaders.ts:105",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\i18n\\en.json:scoped static-key lookups",
+    "internal\\api\\router.go:2559-2625,4709-4733,5091",
+    "internal\\api\\ai_routes.go:468-472",
+    "internal\\api\\adminfeedback\\handler.go:1-350",
+    "internal\\database\\user\\feedback_repo.go:1-235,285-370,420-488",
+    "slo\\catalog.yaml:feedback-route search only"
+  ],
+  "release": {
+    "allOwnershipReleased": true,
+    "sourceWriteOwnership": "None acquired",
+    "browserOwnership": "None acquired",
+    "commandsRunning": 0,
+    "reportAndLogReleasedAt": "2026-10-13T09:34:22.9490501-07:00",
+    "noPostReturnWrites": true
+  }
+}

@@ -1,0 +1,1827 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-system-activity-timeline",
+  "attempt": 1,
+  "phase": 6,
+  "status": "PARTIAL_SOURCE_QA_REPORT",
+  "auditMode": "Read-only finished-page QA; source/declarations only",
+  "page": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+  "purpose": "Unified vehicle domain timeline; not personal audit /me/activity or FSM /timeline",
+  "primaryGoal": "Filter/browse selected-vehicle workspace history and export loaded50-row page",
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-system-activity-timeline.json",
+    "web/logs/phase6-qa-system-activity-timeline.log"
+  ],
+  "objectiveCheck": {
+    "reportInitially": "ABSENT (view failure, no numeric exit)",
+    "logInitially": "ABSENT",
+    "queue": "Existing attempt1; Phase5 dependency [x]; no duplicate completed individual QA found",
+    "decision": "Create missing report only; no accepted-source remigration"
+  },
+  "clock": {
+    "originalReservation": "2026-10-14T02:29:12.925Z",
+    "firstObserved": "2026-10-14T02:35:31.0372765Z",
+    "returnBy": "2026-10-14T02:49:12.925Z",
+    "hardBy": "2026-10-14T02:54:12.925Z",
+    "earlierCreationRule": "Actual creation+20/25 wins if earlier; actual creation unavailable, no renewal",
+    "writtenAt": "2026-10-14T02:50:28.455552+00:00"
+  },
+  "instructionsRead": {
+    "rootLoop": "FULL",
+    "designContract": "FULL1-EOF via focused completion of truncated ranges",
+    "mission": "Relevant0-37,43-46 and successive remaining ranges",
+    "inventory": "ActivityTimeline/G033/G179/G180 and competing-source entries only",
+    "handoff": "Current phase, relevant source/native receipts and2219-2356 conventions/acceptance",
+    "applicable": "frontend-worker-conventions; docs CONTRIBUTING; copilot instructions; react-frontend/frontend-si-cutover/unit-conversion/go-backend/data-modeling/observability; no AGENTS found in checked assigned paths",
+    "limits": "User only two artifacts/no runtime/no Git supersedes old heartbeat and gate instructions"
+  },
+  "routes": [
+    {
+      "path": "/activity",
+      "mount": "web/src/App.tsx:665",
+      "lazy": "App167 -> lib/routeLoaders.ts:58",
+      "registry": "lib/routeRegistry.ts:28",
+      "prefetch": "lib/routePrefetch.ts:38",
+      "workspace": "lib/workspaceScope.ts:23-24; header range+vehicle",
+      "runtime": "NOTRUN"
+    }
+  ],
+  "dataSources": [
+    {
+      "hook": "useActivity",
+      "file": "web/src/api/hooks/useActivity.ts:71-84",
+      "endpoint": "GET /api/v1/activity",
+      "router": "internal/api/router.go:4215",
+      "params": [
+        "vehicle_id",
+        "start",
+        "end",
+        "repeatable kind",
+        "limit",
+        "offset"
+      ],
+      "policy": "Scoped query key includes sorted kinds/instants/offset; cancellation signal; standard stale time; envelope validation",
+      "backend": "Static5-table UNION ALL drives/charging/notification_logs/software_updates/chart_annotations; newest occurred_at DESC/source_table ASC/source_id DESC",
+      "limits": "Declarations only, no DB/API/telemetry actions; no service history source invented"
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "endpoint": "GET /api/v1/vehicles",
+      "policy": "URL/store/known first vehicle precedence; underlying prerequisite query trust not exposed"
+    },
+    {
+      "hook": "useRangeState/useTimezone/useOperationalMode/useUnits/useNumberFormatting",
+      "source": "Existing workspace URL/shared settings and selected vehicle; no new backend capability"
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "ATL01",
+      "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+      "line": 112,
+      "rule": "MDC-026/prerequisite-trust",
+      "priority": "P1",
+      "ownerNeed": "N01",
+      "detail": "Unresolved/failed fleet equals confirmed empty setup.",
+      "walkthrough": "useSelectedVehicle reads only useVehicles.data at50 and returns vehicles ?? [] at171. Page disables activity at102 and returns NoVehicleSelected at112 when that array is empty. Initial/fatal fleet therefore loses all normal sections and gets setup guidance rather than loading/error/retry. Confirmed resolved empty is an acceptable exception.",
+      "fix": "Expose existing prerequisite query trust/retry while preserving selection precedence and retained fleet.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+          "startLine": 98,
+          "endLine": 119,
+          "excerpt": "    end: activityWindow.end,\n    kind: kinds.length > 0 ? kinds : undefined,\n    limit: PAGE_LIMIT,\n    offset,\n    enabled: vehicles.length > 0,\n  });\n  const { data, refetch } = query;\n  const state = useDataState(query, { provenance: 'historical' });\n  const isLoading = state.status === 'initial';\n  const error = state.fatalError;\n  const isError = !!error;\n  const items = data?.items ?? [];\n  const total = data?.total ?? 0;\n\n  if (vehicles.length === 0) {\n    return (\n      <NoVehicleSelected\n        pageTitle={t('activity.timeline.title', 'Activity timeline')}\n      />\n    );\n  }\n"
+        },
+        {
+          "file": "web/src/hooks/useSelectedVehicle.ts",
+          "startLine": 48,
+          "endLine": 51,
+          "excerpt": "export function useSelectedVehicle(): SelectedVehicleResult {\n  const { vehicleId: stored, setVehicleId: setStoredVehicleId } = useSelectedVehicleStore();\n  const { data: vehicles } = useVehicles();\n  const navigate = useNavigate();"
+        },
+        {
+          "file": "web/src/hooks/useSelectedVehicle.ts",
+          "startLine": 168,
+          "endLine": 173,
+          "excerpt": "  return {\n    vehicleId: effectiveId,\n    vehicle,\n    vehicles: vehicles ?? [],\n    setVehicleId,\n  };"
+        },
+        {
+          "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+          "startLine": 53,
+          "endLine": 70,
+          "excerpt": "    <PageContainer title={pageTitle}>\n      <GlassPanel className=\"p-8\">\n        <EmptyState\n          icon={<Car className=\"h-12 w-12\" aria-hidden=\"true\" />}\n          title={title ?? t('common.noVehicleSelected.title', 'No vehicle selected')}\n          message={\n            description ??\n            t(\n              'common.noVehicleSelected.desc',\n              'Add a vehicle to your fleet to see data on this page.',\n            )\n          }\n          actionTo={{\n            label: t('common.noVehicleSelected.action', 'Set up TeslaSync'),\n            // Kept in lock-step with the governed action for this surface.\n            to: guidance?.action.to ?? '/onboarding',\n          }}\n        />"
+        }
+      ]
+    },
+    {
+      "id": "ATL02",
+      "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+      "line": 79,
+      "rule": "MDC-032/calendar-timezone",
+      "priority": "P1",
+      "ownerNeed": "N02",
+      "detail": "Request calendar zone differs from event group/display zone.",
+      "walkthrough": "Page uses useTimezone(vehicle) at78 for overview/feed, but useRangeState at79 receives persistKey only. Hook325-331 defaults to browser zone;665-670 converts calendar bounds with that zone. A UTC browser and Los_Angeles vehicle describe different midnight windows. Rolling live/24h are elapsed windows, not this calendar case.",
+      "fix": "Coordinate existing header/range timezone authority; preserve DST/custom/shared preference semantics.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+          "startLine": 77,
+          "endLine": 87,
+          "excerpt": "  const operationalMode = useOperationalMode();\n  const tz = useTimezone('vehicle');\n  const { start, end, startInstant, endInstantExclusive } = useRangeState({\n    persistKey: 'activity.timeline.range',\n  });\n  const [kinds, setKinds] = useState<ActivityKind[]>([]);\n  const [offset, setOffset] = useState(0);\n  const activityWindow = resolveActivityWindow(\n    startInstant,\n    endInstantExclusive,\n    operationalMode.asOf,"
+        },
+        {
+          "file": "web/src/hooks/useRangeState.ts",
+          "startLine": 325,
+          "endLine": 331,
+          "excerpt": "    if (timezone && timezone.trim()) return timezone;\n    try {\n      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';\n    } catch {\n      return 'UTC';\n    }\n  }, [timezone]);"
+        },
+        {
+          "file": "web/src/hooks/useRangeState.ts",
+          "startLine": 665,
+          "endLine": 670,
+          "excerpt": "    return calendarRangeToInstants({\n        startDate: effective.start,\n        endDate: effective.end,\n        timezone: resolvedTimezone,\n      });\n  }, ["
+        }
+      ]
+    },
+    {
+      "id": "ATL03",
+      "file": "internal/database/activity/repo.go",
+      "line": 78,
+      "rule": "MDC-032/exclusive-end",
+      "priority": "P1",
+      "ownerNeed": "N03",
+      "detail": "Exclusive page end is applied inclusively in five SQL branches.",
+      "walkthrough": "Page takes endInstantExclusive at79 and sends effective end at98. Hook38 serializes unchanged. SQL <= $3 at78,105,141,167,192 includes an event exactly at the next window start. This is a comparison mismatch, not a DB reproduction.",
+      "fix": "Resolve half-open workspace versus inclusive API at existing backend owner; no page epsilon workaround.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+          "startLine": 79,
+          "endLine": 100,
+          "excerpt": "  const { start, end, startInstant, endInstantExclusive } = useRangeState({\n    persistKey: 'activity.timeline.range',\n  });\n  const [kinds, setKinds] = useState<ActivityKind[]>([]);\n  const [offset, setOffset] = useState(0);\n  const activityWindow = resolveActivityWindow(\n    startInstant,\n    endInstantExclusive,\n    operationalMode.asOf,\n  );\n\n  // Any scope change invalidates the current page position.\n  useEffect(() => {\n    setOffset(0);\n  }, [vehicleId, activityWindow.start, activityWindow.end, kinds]);\n\n  const query = useActivity({\n    vehicle_id: vehicleId ?? undefined,\n    start: activityWindow.start,\n    end: activityWindow.end,\n    kind: kinds.length > 0 ? kinds : undefined,\n    limit: PAGE_LIMIT,"
+        },
+        {
+          "file": "web/src/api/hooks/useActivity.ts",
+          "startLine": 34,
+          "endLine": 42,
+          "excerpt": "function buildActivityQuery(params: ActivityListParams): string {\n  const usp = new URLSearchParams();\n  if (params.vehicle_id != null) usp.set('vehicle_id', String(params.vehicle_id));\n  if (params.start) usp.set('start', params.start);\n  if (params.end) usp.set('end', params.end);\n  for (const kind of params.kind ?? []) usp.append('kind', kind);\n  if (params.limit != null) usp.set('limit', String(params.limit));\n  if (params.offset != null) usp.set('offset', String(params.offset));\n  return usp.toString();"
+        },
+        {
+          "file": "internal/database/activity/repo.go",
+          "startLine": 76,
+          "endLine": 78,
+          "excerpt": "WHERE ($1::bigint IS NULL OR d.vehicle_id = $1::bigint)\n  AND ($2::timestamptz IS NULL OR d.started_at >= $2::timestamptz)\n  AND ($3::timestamptz IS NULL OR d.started_at <= $3::timestamptz)`,"
+        },
+        {
+          "file": "internal/database/activity/repo.go",
+          "startLine": 103,
+          "endLine": 105,
+          "excerpt": "  AND ($3::timestamptz IS NULL OR c.started_at <= $3::timestamptz)`,\n\n\t// Vehicle scoping mirrors buildNotificationLogWhere in"
+        },
+        {
+          "file": "internal/database/activity/repo.go",
+          "startLine": 139,
+          "endLine": 141,
+          "excerpt": "LEFT JOIN alert_rules ar ON ar.id = nl.alert_id\nWHERE ($2::timestamptz IS NULL OR nl.created_at >= $2::timestamptz)\n  AND ($3::timestamptz IS NULL OR nl.created_at <= $3::timestamptz)"
+        },
+        {
+          "file": "internal/database/activity/repo.go",
+          "startLine": 165,
+          "endLine": 167,
+          "excerpt": "WHERE ($1::bigint IS NULL OR su.vehicle_id = $1::bigint)\n  AND ($2::timestamptz IS NULL OR COALESCE(su.installed_at, su.scheduled_at, su.created_at) >= $2::timestamptz)\n  AND ($3::timestamptz IS NULL OR COALESCE(su.installed_at, su.scheduled_at, su.created_at) <= $3::timestamptz)`,"
+        },
+        {
+          "file": "internal/database/activity/repo.go",
+          "startLine": 190,
+          "endLine": 192,
+          "excerpt": "WHERE ($1::bigint IS NULL OR ca.vehicle_id = $1::bigint OR ca.vehicle_id IS NULL)\n  AND ($2::timestamptz IS NULL OR ca.occurred_at >= $2::timestamptz)\n  AND ($3::timestamptz IS NULL OR ca.occurred_at <= $3::timestamptz)`,"
+        }
+      ]
+    },
+    {
+      "id": "ATL04",
+      "file": "internal/database/activity/repo.go",
+      "line": 267,
+      "rule": "MDC-026/empty-offset-count",
+      "priority": "P1",
+      "ownerNeed": "N03",
+      "detail": "Empty nonzero-offset page returns total0 even with earlier matching events.",
+      "walkthrough": "count(*) OVER is carried only by returned rows, then LIMIT/OFFSET at243-248. List initializes total0 at267 and changes it only inside rows.Scan. No returned rows means total remains0. Handler serializes it; page110/120 and overview40 treat it as selected-range count. Newer remains reachable.",
+      "fix": "Return authoritative pre-pagination count on empty offsets or explicitly scoped recovery; never invent frontend totals.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "internal/database/activity/repo.go",
+          "startLine": 241,
+          "endLine": 250,
+          "excerpt": "\tquery := \"WITH activity AS (\" + strings.Join(branches, \"\\nUNION ALL\\n\") + `\n)\nSELECT source_table, source_id, kind, occurred_at, vehicle_id, title, summary, severity, status, path,\n       duration_s, start_soc_pct, end_soc_pct, energy_added_wh, version,\n       count(*) OVER() AS total_count\nFROM activity\nORDER BY occurred_at DESC, source_table ASC, source_id DESC\nLIMIT $4 OFFSET $5`\n\n\treturn query, []any{vehicleIDArg, startArg, endArg, limit, offset}"
+        },
+        {
+          "file": "internal/database/activity/repo.go",
+          "startLine": 266,
+          "endLine": 287,
+          "excerpt": "\tvar total int64\n\tfor rows.Next() {\n\t\tvar it activitymodel.Item\n\t\tvar severity, path *string\n\t\tif err := rows.Scan(\n\t\t\t&it.SourceTable, &it.SourceID, &it.Kind, &it.OccurredAt, &it.VehicleID,\n\t\t\t&it.Title, &it.Summary, &severity, &it.Status, &path,\n\t\t\t&it.DurationS, &it.StartSocPct, &it.EndSocPct, &it.EnergyAddedWh, &it.Version,\n\t\t\t&total,\n\t\t); err != nil {\n\t\t\treturn nil, 0, fmt.Errorf(\"scan activity row: %w\", err)\n\t\t}\n\t\tit.Severity = severity\n\t\tit.Path = path\n\t\tit.ID = it.SourceTable + \":\" + fmt.Sprint(it.SourceID)\n\t\titems = append(items, it)\n\t}\n\tif err := rows.Err(); err != nil {\n\t\treturn nil, 0, fmt.Errorf(\"iterate activity rows: %w\", err)\n\t}\n\treturn items, total, nil\n}"
+        },
+        {
+          "file": "internal/api/activity/handler.go",
+          "startLine": 128,
+          "endLine": 134,
+          "excerpt": "\twriteJSON(w, http.StatusOK, activitymodel.ListResponse{\n\t\tItems:       items,\n\t\tTotal:       total,\n\t\tLimit:       limit,\n\t\tOffset:      offset,\n\t\tGeneratedAt: time.Now().UTC(),\n\t})"
+        },
+        {
+          "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+          "startLine": 109,
+          "endLine": 121,
+          "excerpt": "  const items = data?.items ?? [];\n  const total = data?.total ?? 0;\n\n  if (vehicles.length === 0) {\n    return (\n      <NoVehicleSelected\n        pageTitle={t('activity.timeline.title', 'Activity timeline')}\n      />\n    );\n  }\n\n  const hasOlder = offset + items.length < total;\n  const hasNewer = offset > 0;"
+        }
+      ]
+    },
+    {
+      "id": "ATL05",
+      "file": "web/src/features/system/components/activity-timeline/KindFilterBar.tsx",
+      "line": 38,
+      "rule": "MDC-040/mobile-filter-target",
+      "priority": "P2",
+      "ownerNeed": "N04",
+      "detail": "All six filters lack mobile44 and label wrapping adoption.",
+      "walkthrough": "All and five repeated kind controls use size=sm with neither wrapLabel nor mobile minimum. Shared Button.sm is h-9 (36px at16px root); wrapLabel defaults false. flex-wrap wraps controls, not their label contents. Source contract deficiency, not measured overlap/WCAG failure.",
+      "fix": "Use existing wrapLabel/mobile min-h-11/min-w-11 with md restoration; preserve multi-select and All reset.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/activity-timeline/KindFilterBar.tsx",
+          "startLine": 32,
+          "endLine": 61,
+          "excerpt": "  return (\n    <div\n      role=\"group\"\n      aria-label={t('activity.timeline.kindFilter.aria', 'Filter by activity kind')}\n      className={cn('flex flex-wrap items-center gap-1.5', className)}\n    >\n      <Button\n        type=\"button\"\n        size=\"sm\"\n        variant={allSelected ? 'primary' : 'secondary'}\n        aria-pressed={allSelected}\n        onClick={() => onChange([])}\n      >\n        {t('activity.timeline.kindFilter.all', 'All')}\n      </Button>\n      {ACTIVITY_KINDS.map((kind) => {\n        const Icon = KIND_ICON[kind];\n        const active = activeKinds.includes(kind);\n        return (\n          <Button\n            key={kind}\n            type=\"button\"\n            size=\"sm\"\n            variant={active ? 'primary' : 'secondary'}\n            aria-pressed={active}\n            icon={<Icon className=\"h-3.5 w-3.5\" aria-hidden=\"true\" />}\n            onClick={() => toggle(kind)}\n          >\n            {t(`activity.timeline.kindFilter.${kind}`, ACTIVITY_KIND_LABELS[kind])}\n          </Button>"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "startLine": 35,
+          "endLine": 47,
+          "excerpt": "const sizes = {\n  sm: 'h-9 px-3 text-sm',\n  md: 'h-10 px-4 text-sm',\n  lg: 'h-12 px-6 text-base',\n  // Density-aware sizing follows the user's `ui_density` setting via the\n  // density Tailwind utilities (`min-h-d-row px-d-pad-x text-d-base`).\n  auto: 'min-h-d-row px-d-pad-x text-d-base',\n} as const;\n\nconst wrappingSizes = {\n  sm: 'h-auto min-h-9 py-1.5',\n  md: 'h-auto min-h-10 py-2',\n  lg: 'h-auto min-h-12 py-2.5',"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "startLine": 60,
+          "endLine": 73,
+          "excerpt": "export const Button = forwardRef<HTMLButtonElement, ButtonProps>(\n  ({ variant = 'primary', size = 'md', loading, icon, wrapLabel = false, className, children, disabled, ...props }, ref) => {\n    const { reduce } = useMotionPreference();\n    return (\n    <button\n      ref={ref}\n      className={cn(\n        BUTTON_BASE,\n        reduce && 'transition-none',\n        variants[variant],\n        sizes[size],\n        wrapLabel && 'min-w-0 max-w-full whitespace-normal',\n        wrapLabel && wrappingSizes[size],\n        className,"
+        }
+      ]
+    },
+    {
+      "id": "ATL06",
+      "file": "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+      "line": 168,
+      "rule": "MDC-031/full-title",
+      "priority": "P2",
+      "ownerNeed": "N05",
+      "detail": "Feed does not enable existing full-title wrapping.",
+      "walkthrough": "Feed passes title/href but no wrap. TimelineItem defaults wrap=false at37 and chooses truncate at49. Long authentic alert/annotation titles therefore receive single-line truncation.",
+      "fix": "Enable existing wrap; retain original source text/order/details and native links.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+          "startLine": 168,
+          "endLine": 176,
+          "excerpt": "                <TimelineItem\n                  key={item.id}\n                  icon={<Icon className=\"h-4 w-4\" aria-hidden=\"true\" />}\n                  color={KIND_ACCENT[item.kind]}\n                  title={title}\n                  subtitle={summary || undefined}\n                  time={formatTime(item.occurred_at, { tz: timezone })}\n                  href={item.path ?? undefined}\n                  isLast={i === group.items.length - 1}"
+        },
+        {
+          "file": "web/src/components/data-display/TimelineItem.tsx",
+          "startLine": 35,
+          "endLine": 50,
+          "excerpt": "/** Timeline presentation only; ordering, timestamps and actions belong to callers. */\nexport function TimelineItem({\n  icon, title, subtitle, time, color, isLast, href, badges, metadata, actions, wrap = false,\n}: TimelineItemProps) {\n  // Guard the accent so a missing/blank colour cannot produce an invalid\n  // `undefined15` inline value — fall back to a neutral theme surface instead.\n  const hasColor = typeof color === 'string' && color.trim().length > 0\n  const swatchStyle: CSSProperties | undefined = hasColor\n    ? { backgroundColor: `${color}15`, color }\n    : undefined\n\n  const hasRichSlots = metadata != null || actions != null\n  const linkClassName = 'rounded-shape-sm hover:bg-[var(--control-bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] transition-colors duration-fast ease-standard motion-reduce:transition-none'\n  const titleContent = (\n    <Text as=\"p\" size=\"sm\" weight=\"medium\" color=\"primary\" className={cn(wrap ? 'whitespace-normal break-words [overflow-wrap:anywhere]' : 'truncate')}>\n      {title || '—'}"
+        }
+      ]
+    },
+    {
+      "id": "ATL07",
+      "file": "web/src/features/system/components/activity-timeline/constants.ts",
+      "line": 16,
+      "rule": "MDC-010/fixed-domain-chrome",
+      "priority": "P2",
+      "ownerNeed": "N05",
+      "detail": "Five fixed bright swatch colors bypass semantic/theme roles.",
+      "walkthrough": "KIND_ACCENT fixes five hexes at16-21; feed171 forwards them; TimelineItem41-44 computes inline foreground and hex+15 background. These are UI swatches, not authentic vehicle paint. Dynamic shared inline style itself is excepted; measured contrast/intensity NOTRUN.",
+      "fix": "Prefer existing neutral color omission and icon/text identity. CSS-var+15 is invalid; any themed renderer extension needs a separate parent claim, not a new palette.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/activity-timeline/constants.ts",
+          "startLine": 16,
+          "endLine": 22,
+          "excerpt": "export const KIND_ACCENT: Record<ActivityKind, string> = {\n  drive: '#22d3ee',\n  charging: '#34d399',\n  alert: '#f59e0b',\n  software_update: '#818cf8',\n  annotation: '#c084fc',\n};"
+        },
+        {
+          "file": "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+          "startLine": 168,
+          "endLine": 172,
+          "excerpt": "                <TimelineItem\n                  key={item.id}\n                  icon={<Icon className=\"h-4 w-4\" aria-hidden=\"true\" />}\n                  color={KIND_ACCENT[item.kind]}\n                  title={title}"
+        },
+        {
+          "file": "web/src/components/data-display/TimelineItem.tsx",
+          "startLine": 41,
+          "endLine": 44,
+          "excerpt": "  const hasColor = typeof color === 'string' && color.trim().length > 0\n  const swatchStyle: CSSProperties | undefined = hasColor\n    ? { backgroundColor: `${color}15`, color }\n    : undefined"
+        }
+      ]
+    },
+    {
+      "id": "ATL08",
+      "file": "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+      "line": 189,
+      "rule": "MDC-040/non-hover-provenance",
+      "priority": "P2",
+      "ownerNeed": "N05",
+      "detail": "In-feed source record ID appears only in native title tooltip.",
+      "walkthrough": "Span title189-196 includes source_id; visible Source caption198-200 omits it. No metadata/actions are passed, so linked row includes a nonfocusable span. CSV/JSON retaining IDs does not supply deliberate in-feed keyboard/touch access. Native tooltip behavior NOTRUN.",
+      "fix": "Expose existing visible metadata or accessible detail, avoiding nested controls in whole-row link.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+          "startLine": 187,
+          "endLine": 201,
+          "excerpt": "                      <span\n                        className=\"text-2xs text-[var(--text-muted)]\"\n                        title={t(\n                          'activity.timeline.sourceRecord',\n                          '{{source}} record {{id}}',\n                          {\n                            source,\n                            id: item.source_id,\n                          },\n                        )}\n                      >\n                        {t('activity.timeline.provenance', 'Source: {{source}}', {\n                          source,\n                        })}\n                      </span>"
+        },
+        {
+          "file": "web/src/components/data-display/TimelineItem.tsx",
+          "startLine": 83,
+          "endLine": 91,
+          "excerpt": "  if (href && !hasRichSlots) {\n    return (\n      <Link\n        to={href}\n        className={cn('flex gap-3 -mx-1 px-1', linkClassName)}\n      >\n        {body}\n      </Link>\n    )"
+        }
+      ]
+    },
+    {
+      "id": "ATL09",
+      "file": "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+      "line": 174,
+      "rule": "MDC-044/date-locale-preference",
+      "priority": "P2",
+      "ownerNeed": "N05",
+      "detail": "Time/day headings use browser locale rather than selected locale.",
+      "walkthrough": "Feed formatTime174 supplies tz only; helpers34 formatDayKey supplies style only. dateFormat44-51 returns undefined locale when absent and day-key297 reads opts.locale. Existing useDateFormat75-87 reads selected settings locale. Explicit vehicle-zone grouping is intentional, not itself a violation.",
+      "fix": "Thread selected locale through existing date APIs, preserving vehicle day keys; no new formatter or invented12/24h setting.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+          "startLine": 168,
+          "endLine": 175,
+          "excerpt": "                <TimelineItem\n                  key={item.id}\n                  icon={<Icon className=\"h-4 w-4\" aria-hidden=\"true\" />}\n                  color={KIND_ACCENT[item.kind]}\n                  title={title}\n                  subtitle={summary || undefined}\n                  time={formatTime(item.occurred_at, { tz: timezone })}\n                  href={item.path ?? undefined}"
+        },
+        {
+          "file": "web/src/features/system/components/activity-timeline/helpers.ts",
+          "startLine": 32,
+          "endLine": 36,
+          "excerpt": "  return order.map((dayKey) => ({\n    dayKey,\n    label: dayKey === 'unknown' ? '—' : formatDayKey(dayKey, { style: 'long' }),\n    items: buckets.get(dayKey) ?? [],\n  }));"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "startLine": 44,
+          "endLine": 51,
+          "excerpt": "function intlLocale(opts?: FormatOptions): string | undefined {\n  const raw = opts?.locale\n  // Empty / whitespace-only strings would throw RangeError if handed to\n  // `Intl.*`. Treat them as \"no override\" so the runtime falls back to\n  // the browser's default locale.\n  if (typeof raw === 'string' && raw.trim().length > 0) return raw\n  return undefined\n}"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "startLine": 277,
+          "endLine": 298,
+          "excerpt": "  opts?: FormatOptions & { style?: 'short' | 'long' },\n): string {\n  const m = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(key)\n  if (!m) return FALLBACK\n  const [, ys, ms, ds] = m\n  const year = Number(ys)\n  const month = Number(ms)\n  const day = Number(ds)\n  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return FALLBACK\n  // Anchor at UTC noon of the requested calendar day, then format in UTC\n  // so the formatter doesn't shift the wall-clock back into a previous\n  // day in negative-offset zones. Noon-anchoring also avoids the\n  // `new Date('2026-04-24')` UTC-midnight pitfall.\n  const noon = new Date(Date.UTC(year, month - 1, day, 12))\n  const style = opts?.style ?? 'long'\n  const fmtOpts: Intl.DateTimeFormatOptions = style === 'short'\n    ? { timeZone: 'UTC', month: 'short', day: 'numeric' }\n    : { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }\n  return getFormatter(fmtOpts, opts?.locale).format(noon)\n}\n\n/**"
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "startLine": 75,
+          "endLine": 87,
+          "excerpt": "  // `??` only substitutes null/undefined, so an empty string or a legacy\n  // out-of-union value persisted in `tz_display_default` would slip through\n  // and defeat the previous `as TzMode` cast (yielding an invalid mode).\n  // Validate against the known set and fall back to the 'vehicle' default —\n  // the same normalisation posture useSettings already applies to a blank\n  // `locale`.\n  const requestedMode = mode ?? settings.tz_display_default\n  const effectiveMode: TzMode = isTzMode(requestedMode) ? requestedMode : 'vehicle'\n  const tz = useTimezone(effectiveMode)\n\n  const opts = useMemo<FormatOptions>(() => ({ locale, tz }), [locale, tz])\n\n  const formatDate = useCallback<DateFormatter>("
+        }
+      ]
+    },
+    {
+      "id": "ATL10",
+      "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+      "line": 188,
+      "rule": "MDC-044/count-interpolation",
+      "priority": "P2",
+      "ownerNeed": "N02",
+      "detail": "Ordinal count labels bypass selected numeric formatting.",
+      "walkthrough": "Page188-192 interpolates raw offset/items/total. Overview27-28 also interpolates raw start/end while29 uses fmtInt(total). Catalog plain placeholders17038/17047 contain no number-format directive, so these count labels do not consume the same numeric preferences.",
+      "fix": "Use existing reactive number formatter at presentation boundary; support overview adoption belongs N05. Preserve raw numeric source/plural count.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+          "startLine": 187,
+          "endLine": 193,
+          "excerpt": "            {t('activity.timeline.pagePosition', 'Showing {{start}}–{{end}} of {{total}} events in the selected range', {\n              start: items.length ? offset + 1 : 0,\n              end: items.length ? offset + items.length : 0,\n              total,\n            })}\n          </Text>\n        )}"
+        },
+        {
+          "file": "web/src/features/system/components/activity-timeline/ActivityOverview.tsx",
+          "startLine": 26,
+          "endLine": 30,
+          "excerpt": "  const pageCoverage = t('activity.timeline.overview.scope', 'Counts below describe only the loaded page (events {{start}}–{{end}} of {{total}}), not the entire selected range.', {\n    start: items.length ? offset + 1 : 0,\n    end: items.length ? offset + items.length : 0,\n    total: error ? '—' : fmtInt(total),\n  });"
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "startLine": 17038,
+          "endLine": 17049,
+          "excerpt": "      \"automationUpdate\": \"Automation updated\",\n      \"automationDelete\": \"Automation deleted\",\n      \"dashboard\": \"Dashboard change\",\n      \"dashboardLayoutSave\": \"Dashboard layout saved\",\n      \"dataExport\": \"Data export\",\n      \"dataExportCreate\": \"Data export requested\",\n      \"apiKey\": \"API key change\",\n      \"apiKeyCreate\": \"API key created\",\n      \"apiKeyUpdate\": \"API key updated\",\n      \"apiKeyDelete\": \"API key revoked\",\n      \"auth\": \"Authentication\",\n      \"authLogin\": \"Signed in\","
+        }
+      ]
+    },
+    {
+      "id": "ATL11",
+      "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+      "line": 122,
+      "rule": "MDC-032/export-window-identity",
+      "priority": "P2",
+      "ownerNeed": "N02",
+      "detail": "Historical exports can be named with original dates rather than queried window.",
+      "walkthrough": "resolveActivityWindow51-55 shifts start/end if anchor predates selected start. Query84-100 uses effective instants; filename122 uses original start/end. Authored test209-218 uses Jan2026 workspace/asOfDec15 but expects Nov14-Dec15 query. No download executed.",
+      "fix": "Name/qualify exports with effective historical window while preserving loaded-only scope/page number.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+          "startLine": 51,
+          "endLine": 55,
+          "excerpt": "  const durationMs = Math.max(endMs - startMs, 24 * 60 * 60 * 1000);\n  return {\n    start: new Date(effectiveEndMs - durationMs).toISOString(),\n    end: new Date(effectiveEndMs).toISOString(),\n  };"
+        },
+        {
+          "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+          "startLine": 84,
+          "endLine": 100,
+          "excerpt": "  const activityWindow = resolveActivityWindow(\n    startInstant,\n    endInstantExclusive,\n    operationalMode.asOf,\n  );\n\n  // Any scope change invalidates the current page position.\n  useEffect(() => {\n    setOffset(0);\n  }, [vehicleId, activityWindow.start, activityWindow.end, kinds]);\n\n  const query = useActivity({\n    vehicle_id: vehicleId ?? undefined,\n    start: activityWindow.start,\n    end: activityWindow.end,\n    kind: kinds.length > 0 ? kinds : undefined,\n    limit: PAGE_LIMIT,"
+        },
+        {
+          "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+          "startLine": 120,
+          "endLine": 123,
+          "excerpt": "  const hasOlder = offset + items.length < total;\n  const hasNewer = offset > 0;\n  const exportName = `activity-${start}-${end}-page-${Math.floor(offset / PAGE_LIMIT) + 1}`;\n"
+        },
+        {
+          "file": "web/src/features/system/pages/ActivityTimelinePage.test.tsx",
+          "startLine": 209,
+          "endLine": 218,
+          "excerpt": "    h.asOf = '2025-12-15T12:00:00.000Z';\n    renderPage();\n    expect(h.useActivityMock).toHaveBeenCalledWith(\n      expect.objectContaining({\n        start: '2025-11-14T12:00:00.000Z',\n        end: '2025-12-15T12:00:00.000Z',\n      }),\n    );\n  });\n"
+        }
+      ]
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "classification": "conditional-malformed-payload",
+      "file": "web/src/api/hooks/useActivity.ts",
+      "line": 49,
+      "detail": "Envelope checks no per-row kind/status/path/timestamp validation. Malformed status can throw replace, unknown kind can lack icon; overview24 counts null day key as1 Set member. Backend model normally supplies typed rows; no corrupt payload observed. Requires authorized malformed-row policy/coverage, not a claimed live defect."
+    },
+    {
+      "id": "C02",
+      "classification": "conditional-asOf-meaning",
+      "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+      "line": 84,
+      "detail": "asOf caps event selection, not past row-state reconstruction. Repository68 derives completed from current ended_at, while operational-mode description61 says historical state reconstructed. A drive ended after anchor can look completed. Needs exact product/source interpretation before claiming page/native failure."
+    },
+    {
+      "id": "C03",
+      "classification": "conditional-request-order",
+      "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+      "line": 91,
+      "detail": "Effect resets offset after changed-scope render, while same render declares new scope with old offset101. Actual query request order/cancellation NOTRUN; no race asserted."
+    },
+    {
+      "id": "C04",
+      "classification": "conditional-empty-guidance",
+      "file": "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+      "line": 96,
+      "detail": "Successful empty and filtered no-match share No activity in this window; group filters remain usable. Precise why/next guidance needs product review; no lost action asserted."
+    }
+  ],
+  "requiredOwnerNeeds": [
+    {
+      "id": "N01",
+      "owner": "shared selection root then separate page adoption",
+      "files": [
+        "web/src/hooks/useSelectedVehicle.ts",
+        "web/src/features/system/pages/ActivityTimelinePage.tsx"
+      ],
+      "findingIds": [
+        "ATL01"
+      ],
+      "needs": "Expose/compose actual useVehicles prerequisite loading/fatal/retained/retry; preserve selected-ID persistence. Matching selected-hook test scope must be identified/claimed by parent.",
+      "queueDisposition": "UNREPRESENTED_CONFIRMED: ATL01 is retained evidence, not a completed fix. audit-page-180 [x] closes the audit only; phase5-page-system-activity-timeline [x] explicitly retains shared findings. Parent needs one new exclusive selection-trust root owning useSelectedVehicle.ts plus its existing __tests__/useSelectedVehicle.test.tsx. Serialize ActivityTimelinePage.tsx adoption under N02, not a second overlapping page owner. No queue/source changes or tests performed here."
+    },
+    {
+      "id": "N02",
+      "owner": "new narrow page/integration lease",
+      "files": [
+        "web/src/features/system/pages/ActivityTimelinePage.tsx",
+        "web/src/features/system/pages/ActivityTimelinePage.test.tsx"
+      ],
+      "findingIds": [
+        "ATL02",
+        "ATL10",
+        "ATL11"
+      ],
+      "needs": "Consistent calendar zone, effective export-window identity, localized ordinal labels; no duplicate workspace picker.",
+      "queueDisposition": "UNREPRESENTED_CONFIRMED: ATL02/ATL10(page)/ATL11 have no matching actionable source-fix row in the inspected queue. Parent needs one new ActivityTimelinePage.tsx + ActivityTimelinePage.test.tsx owner, including ATL01 page adoption after N01 if the shared selection API changes. Completed original migration is not redispatched. Shared header/range changes remain conditional separate integration, not silently granted to this page owner; ATL10 overview adoption belongs N05."
+    },
+    {
+      "id": "N03",
+      "owner": "existing activity backend repository integration",
+      "files": [
+        "internal/database/activity/repo.go",
+        "internal/database/activity/repo_test.go"
+      ],
+      "conditionalFiles": [
+        "internal/api/activity/handler.go",
+        "internal/api/activity/handler_test.go"
+      ],
+      "findingIds": [
+        "ATL03",
+        "ATL04"
+      ],
+      "needs": "One serialized repository owner handles half-open contract and correct empty-offset count; handler only if actual contract changes.",
+      "queueDisposition": "UNREPRESENTED_CONFIRMED: ATL03/ATL04 remain retained backend mechanisms without a matching source-fix row. Parent needs a single repo.go + repo_test.go owner for all five end comparisons and authoritative pre-pagination totals, with exact boundary/empty-offset regression coverage. Existing audit completion and page source acceptance do not close either mechanism. handler.go + handler_test.go are conditional contract/documentation integration files requiring an explicit parent claim; no frontend epsilon or fabricated total."
+    },
+    {
+      "id": "N04",
+      "owner": "feature filter support",
+      "files": [
+        "web/src/features/system/components/activity-timeline/KindFilterBar.tsx",
+        "web/src/features/system/components/activity-timeline/KindFilterBar.test.tsx"
+      ],
+      "findingIds": [
+        "ATL05"
+      ],
+      "needs": "Existing Button caller adoption, not global Button rewrite.",
+      "queueDisposition": "UNREPRESENTED_CONFIRMED: ATL05 concerns this feature's six Button callers, not the already-fixed page pagination or another route's touch controls. Parent needs one new KindFilterBar.tsx + KindFilterBar.test.tsx owner for existing wrapLabel/mobile minimum adoption and preserved All/multi-select behavior. Shared Button and completed migration rows stay read-only; source assertions are not measured mobile acceptance."
+    },
+    {
+      "id": "N05",
+      "owner": "feature feed/overview supports; exact parent file leases",
+      "files": [
+        "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+        "web/src/features/system/components/activity-timeline/helpers.ts",
+        "web/src/features/system/components/activity-timeline/constants.ts",
+        "web/src/features/system/components/activity-timeline/ActivityOverview.tsx",
+        "web/src/features/system/components/activity-timeline/ActivityFeed.test.tsx",
+        "web/src/features/system/components/activity-timeline/helpers.test.ts"
+      ],
+      "findingIds": [
+        "ATL06",
+        "ATL07",
+        "ATL08",
+        "ATL09",
+        "ATL10"
+      ],
+      "needs": "Full titles/provenance, neutral/theme-safe swatches, existing selected date/number formatter adoption; no new shared API needed for neutral omission.",
+      "queueDisposition": "UNREPRESENTED_CONFIRMED: ATL06/ATL07/ATL08/ATL09/ATL10(overview) lack a matching feature-support source-fix row. Parent needs one exclusive feed/helper/constants/overview owner with existing ActivityFeed.test.tsx and helpers.test.ts plus an explicitly proposed new ActivityOverview.test.tsx. phase3-timeline-item [x] supplies existing wrapping/neutral/rich-slot APIs; it does not implement caller adoption. phase3-activity-icon-accents owns a different lib file, not KIND_ACCENT. ATL10 is one finding with separate page/overview callsites, not two findings. Shared renderer/catalog changes are conditional parent integration only."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "V1",
+      "status": "NOTRUN",
+      "scope": "All10mission widths320/375/390/430/768/1024/1280/1440/1920/2560,narrow containers,RTL,200%text,long labels,no overflow"
+    },
+    {
+      "id": "V2",
+      "status": "NOTRUN",
+      "scope": "Real export Popover arrows/Home/End/Tab/Escape/focus restoration/touch/nested placement and downloads"
+    },
+    {
+      "id": "V3",
+      "status": "NOTRUN",
+      "scope": "Screen reader/headings/link names/provenance/announcements/retry/filter/pagination focus"
+    },
+    {
+      "id": "V4",
+      "status": "NOTRUN",
+      "scope": "Dark/light/custom/forced-colors composed4.5/3contrast,reduced-motion/low-bandwidth and hierarchy"
+    },
+    {
+      "id": "V5",
+      "status": "NOTRUN",
+      "scope": "Initial/paused/fatal/empty/retained/error recovery,differing zones/DST/scope/asOf interpretation"
+    },
+    {
+      "id": "V6",
+      "status": "NOTRUN",
+      "scope": "Authorized synthetic zero/huge/null/negative-valid data,SI/locale/precision and12CSV/fullJSON export"
+    }
+  ],
+  "components": [
+    "PageLayout -> PageContainer",
+    "ActivityOverview ->2 SystemSummaryBrief -> OperationalBrief",
+    "KindFilterBar ->Button",
+    "ActivityFeed ->TimelineItem/GlassPanel/Badge",
+    "ListExportMenu ->Popover/Button",
+    "StaleRefreshWarning ->DataStateNotice",
+    "NoVehicleSelected ->PageContainer/EmptyState",
+    "FadeIn ->motion preference"
+  ],
+  "preservation": {
+    "normalSectionCount": 7,
+    "normalSections": [
+      "header/export rail",
+      "overview",
+      "kind filters",
+      "grouped feed",
+      "pagination/page position",
+      "export scope note",
+      "service-history limitation"
+    ],
+    "sectionCountLimit": "Declaration walkthrough only; day panels scale with data; conditional trust notice is additional",
+    "presentationLines": 578,
+    "fileLines": {
+      "web/src/features/system/pages/ActivityTimelinePage.tsx": 237,
+      "web/src/features/system/components/activity-timeline/ActivityFeed.tsx": 212,
+      "web/src/features/system/components/activity-timeline/ActivityOverview.tsx": 63,
+      "web/src/features/system/components/activity-timeline/KindFilterBar.tsx": 66
+    },
+    "originalBaseline": "Immutable original not supplied; historical queue578/573 is context, no70% certification",
+    "metrics": 9,
+    "metricScope": "4range/page totals+5loaded-kind counts; never full-range mix inferred",
+    "filterControls": 6,
+    "filterActions": "All clears and5independent toggles; empty means all",
+    "otherActions": [
+      "Older+50/Newer max0-offset50",
+      "Scope-change reset0",
+      "fatal Retry/retained Refresh same source",
+      "real source links,annotation unlinked",
+      "CSV12 raw columns/JSON full loaded items",
+      "existing summary details",
+      "confirmed-empty fleet setup/onboarding",
+      "header-owned vehicle/range/View settings; no duplicate controls"
+    ],
+    "csvFields": [
+      "occurred_at",
+      "kind",
+      "vehicle_id",
+      "title",
+      "summary",
+      "severity",
+      "status",
+      "source_table",
+      "source_id",
+      "duration_s",
+      "energy_added_wh",
+      "path"
+    ],
+    "rawData": "SI seconds/Wh/% stay wire/cache/export; useUnits at display only; null duration/energy omitted,bothSOC endpoints required; no signed raw value rewrite. CSV formula-like strings escaped by pure source; no export executed.",
+    "states": {
+      "initial": "DataState no data->initial; skeleton6lines, overview loading/null, export disabled, pagination count suppressed,filters/notes retained",
+      "pausedFirst": "No data+paused remains initial,isRefreshBlocked; no fake empty. Warning returns null without data; dedicated paused disclosure unverified",
+      "fatal": "Only fatalError erases feed into QueryError/refetch; overview shell remains unavailable/raw null",
+      "empty": "Valid items[] is authoritative empty envelope,overview real0,EmptyState+filters/notes retained; export disabled",
+      "retainedError": "hasData+error->stale,fatalError null; records/counts/links/exports/pagination stay;warning/retry; source observation time not supplied",
+      "retainedPaused": "stale/isRefreshBlocked without fabricated error/offline; retained labels and cause-neutral warning; recovery source available",
+      "nullUnknown": "Malformed/missing envelope rejected,not successful empty. Invalid time emdash/unknown bucket; row-level C01 separate",
+      "vehicleTrust": "Retained known fleet stays; initial/fatal prerequisite ambiguity ATL01"
+    },
+    "sourcePins": [
+      {
+        "file": "web/src/features/system/pages/ActivityTimelinePage.tsx",
+        "beforeSha256": "6AFFAB251C694CF0BDC8A26E04F1183BFC0E7E5981B127099C598BB8B54018A4",
+        "afterSha256": "6AFFAB251C694CF0BDC8A26E04F1183BFC0E7E5981B127099C598BB8B54018A4",
+        "beforeLineCount": 237,
+        "afterLineCount": 237,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/system/pages/ActivityTimelinePage.test.tsx",
+        "beforeSha256": "540178D168E2FF424C658B7229F7AD040827E901AEEF60E559274B1BECEC2CFB",
+        "afterSha256": "540178D168E2FF424C658B7229F7AD040827E901AEEF60E559274B1BECEC2CFB",
+        "beforeLineCount": 439,
+        "afterLineCount": 439,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+        "beforeSha256": "C47CC12D3CA5552A989975DCEE111FC6237AF22CB6E3E7568E0184279F464715",
+        "afterSha256": "C47CC12D3CA5552A989975DCEE111FC6237AF22CB6E3E7568E0184279F464715",
+        "beforeLineCount": 212,
+        "afterLineCount": 212,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/ActivityFeed.test.tsx",
+        "beforeSha256": "D4C0B8CBF46E031C38ACE59FC228EF52B8EE7D2CD0C9A632CBC96C3EF65BAF45",
+        "afterSha256": "D4C0B8CBF46E031C38ACE59FC228EF52B8EE7D2CD0C9A632CBC96C3EF65BAF45",
+        "beforeLineCount": 158,
+        "afterLineCount": 158,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/ActivityOverview.tsx",
+        "beforeSha256": "EBE54922CBF011599A4FA79AFB5FB190FA590A262B4E72D15A664F04F9C62B2B",
+        "afterSha256": "EBE54922CBF011599A4FA79AFB5FB190FA590A262B4E72D15A664F04F9C62B2B",
+        "beforeLineCount": 63,
+        "afterLineCount": 63,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/KindFilterBar.tsx",
+        "beforeSha256": "54DAF4D1FA8D9256DD834F276B8FC6AFF2D507435E15E5DB5473A0C282B5C39A",
+        "afterSha256": "54DAF4D1FA8D9256DD834F276B8FC6AFF2D507435E15E5DB5473A0C282B5C39A",
+        "beforeLineCount": 66,
+        "afterLineCount": 66,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/KindFilterBar.test.tsx",
+        "beforeSha256": "BF3046EF2CB0F60178A9D24D75217A0A4EE4D0A81D17E604AD47C4C3F0F32D28",
+        "afterSha256": "BF3046EF2CB0F60178A9D24D75217A0A4EE4D0A81D17E604AD47C4C3F0F32D28",
+        "beforeLineCount": 45,
+        "afterLineCount": 45,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/helpers.ts",
+        "beforeSha256": "B65D6ACCC62B3415BDE21ECCC5C78507E830B7022515C117F4779E901BF4D5F2",
+        "afterSha256": "B65D6ACCC62B3415BDE21ECCC5C78507E830B7022515C117F4779E901BF4D5F2",
+        "beforeLineCount": 37,
+        "afterLineCount": 37,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/helpers.test.ts",
+        "beforeSha256": "5A523A196CEB1D8925FBB1F8B480F7944F719790DC812F4208985DB60FF75433",
+        "afterSha256": "5A523A196CEB1D8925FBB1F8B480F7944F719790DC812F4208985DB60FF75433",
+        "beforeLineCount": 73,
+        "afterLineCount": 73,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/constants.ts",
+        "beforeSha256": "5A832742AB83F104CCB11ADF91F134E15B51314569D0CD9D31826E89239022F8",
+        "afterSha256": "5A832742AB83F104CCB11ADF91F134E15B51314569D0CD9D31826E89239022F8",
+        "beforeLineCount": 58,
+        "afterLineCount": 58,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/api/hooks/useActivity.ts",
+        "beforeSha256": "98FF331573C714901C5434B6E50683C7405FBD0A06B67AF68FCF0E9C3E42C140",
+        "afterSha256": "98FF331573C714901C5434B6E50683C7405FBD0A06B67AF68FCF0E9C3E42C140",
+        "beforeLineCount": 87,
+        "afterLineCount": 87,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/types/activity.ts",
+        "beforeSha256": "FFAAB7CF9B1481C71C502FC2D5C7195D3301026EF58AAE084155D2C7E9EB4A70",
+        "afterSha256": "FFAAB7CF9B1481C71C502FC2D5C7195D3301026EF58AAE084155D2C7E9EB4A70",
+        "beforeLineCount": 89,
+        "afterLineCount": 89,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "beforeSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "afterSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "beforeLineCount": 174,
+        "afterLineCount": 174,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useRangeState.ts",
+        "beforeSha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+        "afterSha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+        "beforeLineCount": 694,
+        "afterLineCount": 694,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useOperationalMode.tsx",
+        "beforeSha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+        "afterSha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+        "beforeLineCount": 116,
+        "afterLineCount": 116,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "beforeLineCount": 434,
+        "afterLineCount": 434,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "beforeLineCount": 65,
+        "afterLineCount": 65,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/api/hooks/useVehicles.ts",
+        "beforeSha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+        "afterSha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+        "beforeLineCount": 1898,
+        "afterLineCount": 1898,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "beforeLineCount": 168,
+        "afterLineCount": 168,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "beforeSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "afterSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "beforeLineCount": 462,
+        "afterLineCount": 462,
+        "beforeAt": "2026-10-14T02:36:16.2975775Z initial checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/lib/timezone.ts",
+        "beforeSha256": "4DE9F4981D65173697E16DB705CA06B279E9CCB700AC6C98D0D27439F25D5F02",
+        "afterSha256": "4DE9F4981D65173697E16DB705CA06B279E9CCB700AC6C98D0D27439F25D5F02",
+        "beforeLineCount": 51,
+        "afterLineCount": 51,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/components/data-display/TimelineItem.tsx",
+        "beforeSha256": "D6EC468F08B7C28B2FC0B1F3B88511B4D8EF99167ACAAAED6BE0D48D26D73FAB",
+        "afterSha256": "D6EC468F08B7C28B2FC0B1F3B88511B4D8EF99167ACAAAED6BE0D48D26D73FAB",
+        "beforeLineCount": 94,
+        "afterLineCount": 94,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/components/forms/ListExportMenu.tsx",
+        "beforeSha256": "513436ABEEF456320DF0353879B60BBBD95B360D2EB3D990B177B8298F880605",
+        "afterSha256": "513436ABEEF456320DF0353879B60BBBD95B360D2EB3D990B177B8298F880605",
+        "beforeLineCount": 307,
+        "afterLineCount": 307,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+        "beforeSha256": "161AA955CB0E2AB4BE36351242EA88041026174968ECBD5E59AE9F4BF1958891",
+        "afterSha256": "161AA955CB0E2AB4BE36351242EA88041026174968ECBD5E59AE9F4BF1958891",
+        "beforeLineCount": 63,
+        "afterLineCount": 63,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "beforeSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+        "afterSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+        "beforeLineCount": 115,
+        "afterLineCount": 115,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "beforeSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+        "afterSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+        "beforeLineCount": 93,
+        "afterLineCount": 93,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "beforeSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "afterSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "beforeLineCount": 259,
+        "afterLineCount": 259,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "beforeSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "afterSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "beforeLineCount": 39,
+        "afterLineCount": 39,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+        "beforeSha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+        "afterSha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+        "beforeLineCount": 77,
+        "afterLineCount": 77,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useUnits.ts",
+        "beforeSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+        "afterSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+        "beforeLineCount": 194,
+        "afterLineCount": 194,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "beforeSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "afterSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "beforeLineCount": 47,
+        "afterLineCount": 47,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/lib/csvExport.ts",
+        "beforeSha256": "4DBB7EC4728F6E34365DB08CB64C3C3855F4E17EA19DC2C6EB98BC4705F56396",
+        "afterSha256": "4DBB7EC4728F6E34365DB08CB64C3C3855F4E17EA19DC2C6EB98BC4705F56396",
+        "beforeLineCount": 165,
+        "afterLineCount": 165,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/App.tsx",
+        "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "beforeLineCount": 919,
+        "afterLineCount": 919,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "beforeSha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+        "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+        "beforeLineCount": 39002,
+        "afterLineCount": 39035,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": false
+      },
+      {
+        "file": "internal/api/activity/handler.go",
+        "beforeSha256": "941A208F9BF8B0779436FFA1DAD0C49AA502319E9D2987E58CFE22B9C5E9DF75",
+        "afterSha256": "941A208F9BF8B0779436FFA1DAD0C49AA502319E9D2987E58CFE22B9C5E9DF75",
+        "beforeLineCount": 200,
+        "afterLineCount": 200,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "internal/database/activity/repo.go",
+        "beforeSha256": "8A7E4558AD54A33B42721C950E91C5C43A314FFA84EB4AD8082C61658C43B7F0",
+        "afterSha256": "8A7E4558AD54A33B42721C950E91C5C43A314FFA84EB4AD8082C61658C43B7F0",
+        "beforeLineCount": 287,
+        "afterLineCount": 287,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "internal/models/activity/activity.go",
+        "beforeSha256": "437480D8E18C873F3C0A4102CB5E00E3C25118356920FBA21F198F6DF7BE3819",
+        "afterSha256": "437480D8E18C873F3C0A4102CB5E00E3C25118356920FBA21F198F6DF7BE3819",
+        "beforeLineCount": 92,
+        "afterLineCount": 92,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/api/hooks/useActivity.test.tsx",
+        "beforeSha256": "468654E445D4DF0F8B97AE832986D42A95709A95C8710F6F8C56B8CCC20478F6",
+        "afterSha256": "468654E445D4DF0F8B97AE832986D42A95709A95C8710F6F8C56B8CCC20478F6",
+        "beforeLineCount": 161,
+        "afterLineCount": 161,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "web/src/hooks/useDateFormat.ts",
+        "beforeSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "afterSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "beforeLineCount": 148,
+        "afterLineCount": 148,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "internal/api/router.go",
+        "beforeSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+        "afterSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+        "beforeLineCount": 5363,
+        "afterLineCount": 5363,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "internal/database/activity/repo_test.go",
+        "beforeSha256": "A590FB38E6DAF9D9DBB917AE491160D9FD5B6213DFAEEE3FA1C051E80FCC5285",
+        "afterSha256": "A590FB38E6DAF9D9DBB917AE491160D9FD5B6213DFAEEE3FA1C051E80FCC5285",
+        "beforeLineCount": 194,
+        "afterLineCount": 194,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      },
+      {
+        "file": "internal/api/activity/handler_test.go",
+        "beforeSha256": "52C885C4963F434C794B43C2CFD872A9BA3F902237FE703FE6BBC58751871552",
+        "afterSha256": "52C885C4963F434C794B43C2CFD872A9BA3F902237FE703FE6BBC58751871552",
+        "beforeLineCount": 253,
+        "afterLineCount": 253,
+        "beforeAt": "Extended baseline UTC in preceding raw receipt; some traces already read before this checkpoint",
+        "afterAt": "2026-10-14T02:51:24.908689+00:00",
+        "matches": true
+      }
+    ],
+    "pinLimits": "Sampled byte equality, not original-source provenance, transient-change proof, Git cleanliness or runtime acceptance. Core first checkpoint02:36:16; extended pins later and some follow first inspection. Missing hooks/useTimezone.ts corrected to lib/timezone.ts. Sources/routes/catalog READONLY; unrelated concurrent writes not attributed."
+  },
+  "tests": {
+    "status": "NOTRUN",
+    "frontendAuthored": 48,
+    "files": [
+      {
+        "file": "web/src/features/system/pages/ActivityTimelinePage.test.tsx",
+        "authoredCount": 18,
+        "declarations": [
+          {
+            "line": 186,
+            "name": "renders NoVehicleSelected instead of the feed when the fleet is empty"
+          },
+          {
+            "line": 195,
+            "name": "calls useActivity with the inherited vehicle id and range instants"
+          },
+          {
+            "line": 208,
+            "name": "never queries activity after the historical anchor"
+          },
+          {
+            "line": 219,
+            "name": "documents the verified service-history limitation without a blocking warning panel"
+          },
+          {
+            "line": 224,
+            "name": "shows the empty state when there are no items"
+          },
+          {
+            "line": 229,
+            "name": "renders the error state and Retry calls refetch"
+          },
+          {
+            "line": 239,
+            "name": "renders feed items grouped by day when loaded"
+          },
+          {
+            "line": 249,
+            "name": "toggles a kind filter and re-issues the query scoped to it"
+          },
+          {
+            "line": 257,
+            "name": "hides pagination controls when there is only one page"
+          },
+          {
+            "line": 263,
+            "name": "shows Older (not Newer) on the first page when more results exist, and steps offset forward"
+          },
+          {
+            "line": 275,
+            "name": "does not claim to show an event when a page becomes empty after the range changes"
+          },
+          {
+            "line": 296,
+            "name": "shows range total but limits event-type and alert counts to the loaded page"
+          },
+          {
+            "line": 310,
+            "name": "exports only loaded records and preserves raw SI fields"
+          },
+          {
+            "line": 325,
+            "name": "does not present unknown totals or an available export when the initial request fails"
+          },
+          {
+            "line": 332,
+            "name": "retains loaded totals, records and raw-SI exports when a background refresh fails"
+          },
+          {
+            "line": 364,
+            "name": "keeps initial and paused first loads distinct from a successful empty timeline"
+          },
+          {
+            "line": 393,
+            "name": "labels paused cached history as retained while preserving records exports and recovery"
+          },
+          {
+            "line": 421,
+            "name": "keeps mobile pagination wrapping and both directions reachable with desktop density restored"
+          }
+        ],
+        "discovered": "NOTRUN",
+        "executed": "NOTRUN",
+        "passed": "NOTRUN",
+        "failed": "NOTRUN",
+        "skipped": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/ActivityFeed.test.tsx",
+        "authoredCount": 9,
+        "declarations": [
+          {
+            "line": 64,
+            "name": "renders a skeleton while loading, not the empty/error states"
+          },
+          {
+            "line": 69,
+            "name": "renders the error state and wires the retry callback"
+          },
+          {
+            "line": 76,
+            "name": "renders the empty state when there are no items"
+          },
+          {
+            "line": 81,
+            "name": "groups items by day, showing a day header per calendar day"
+          },
+          {
+            "line": 92,
+            "name": "localizes a typed SI drive summary and semantic provenance"
+          },
+          {
+            "line": 112,
+            "name": "formats charging energy from canonical watt-hours at the render boundary"
+          },
+          {
+            "line": 126,
+            "name": "renders a severity badge only for items that carry one (alerts)"
+          },
+          {
+            "line": 147,
+            "name": "makes the row a navigable link when the item carries a safe path"
+          },
+          {
+            "line": 153,
+            "name": "renders a plain (non-link) row when the item has no path"
+          }
+        ],
+        "discovered": "NOTRUN",
+        "executed": "NOTRUN",
+        "passed": "NOTRUN",
+        "failed": "NOTRUN",
+        "skipped": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/KindFilterBar.test.tsx",
+        "authoredCount": 6,
+        "declarations": [
+          {
+            "line": 7,
+            "name": "marks \"All\" pressed when no kinds are active"
+          },
+          {
+            "line": 12,
+            "name": "marks a kind chip pressed when it is in activeKinds"
+          },
+          {
+            "line": 18,
+            "name": "adds a kind to the active set when an inactive chip is clicked"
+          },
+          {
+            "line": 25,
+            "name": "removes a kind from the active set when an active chip is clicked again"
+          },
+          {
+            "line": 32,
+            "name": "clears the filter back to \"all\" when the All chip is clicked"
+          },
+          {
+            "line": 39,
+            "name": "renders one chip per known activity kind plus the All chip"
+          }
+        ],
+        "discovered": "NOTRUN",
+        "executed": "NOTRUN",
+        "passed": "NOTRUN",
+        "failed": "NOTRUN",
+        "skipped": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/system/components/activity-timeline/helpers.test.ts",
+        "authoredCount": 6,
+        "declarations": [
+          {
+            "line": 20,
+            "name": "buckets items sharing a UTC calendar day together"
+          },
+          {
+            "line": 36,
+            "name": "preserves within-day and across-day order from the input list"
+          },
+          {
+            "line": 49,
+            "name": "produces a friendly long-form label for each day key"
+          },
+          {
+            "line": 54,
+            "name": "returns an empty array for an empty item list"
+          },
+          {
+            "line": 58,
+            "name": "falls back to a placeholder bucket for an unparsable occurred_at"
+          },
+          {
+            "line": 65,
+            "name": "groups by the requested IANA timezone rather than always UTC"
+          }
+        ],
+        "discovered": "NOTRUN",
+        "executed": "NOTRUN",
+        "passed": "NOTRUN",
+        "failed": "NOTRUN",
+        "skipped": "NOTRUN"
+      },
+      {
+        "file": "web/src/api/hooks/useActivity.test.tsx",
+        "authoredCount": 9,
+        "declarations": [
+          {
+            "line": 66,
+            "name": "exposes a stable root key that list keys are prefixed with"
+          },
+          {
+            "line": 71,
+            "name": "collapses an unset vehicle_id / start / end / kind to 'all' / '' sentinels"
+          },
+          {
+            "line": 75,
+            "name": "folds explicit params into the positional key, sorting kinds for stable cache keys"
+          },
+          {
+            "line": 90,
+            "name": "GETs /activity with no query string and threads the abort signal"
+          },
+          {
+            "line": 102,
+            "name": "encodes vehicle_id, start, end, repeated kind, limit and offset (snake_case)"
+          },
+          {
+            "line": 129,
+            "name": "omits vehicle_id when unset but does not omit an explicit zero limit/offset param"
+          },
+          {
+            "line": 139,
+            "name": "surfaces a missing or malformed envelope as an error"
+          },
+          {
+            "line": 147,
+            "name": "does not fetch when enabled is false"
+          },
+          {
+            "line": 154,
+            "name": "surfaces a rejected request as an error state"
+          }
+        ],
+        "discovered": "NOTRUN",
+        "executed": "NOTRUN",
+        "passed": "NOTRUN",
+        "failed": "NOTRUN",
+        "skipped": "NOTRUN"
+      }
+    ],
+    "backend": "8repo and11handler top-level Test declarations inspected; table expansion/discovery/execution NOTRUN"
+  },
+  "resolvedHistoricalCandidates": [
+    "Current ListExportMenu has Popover/focus effect/arrows/HomeEnd/mobile44/wrap; old missing-menu/32px findings not re-counted; native acceptance open",
+    "TimelineItem uses control hover/focus/forcedcolors tokens; old fixed-white/cyan finding not re-counted",
+    "Page pagination already mobile44/wrap/md restoration/RTL icons",
+    "Current stale warning does not infer offline from paused"
+  ],
+  "summary": {
+    "confirmed": 11,
+    "conditional": 4,
+    "native": 6,
+    "deduplicatedOwnerNeeds": 5,
+    "priorityCounts": {
+      "P1": 4,
+      "P2": 7
+    },
+    "byRule": {
+      "MDC-026/prerequisite-trust": 1,
+      "MDC-032/calendar-timezone": 1,
+      "MDC-032/exclusive-end": 1,
+      "MDC-026/empty-offset-count": 1,
+      "MDC-040/mobile-filter-target": 1,
+      "MDC-031/full-title": 1,
+      "MDC-010/fixed-domain-chrome": 1,
+      "MDC-040/non-hover-provenance": 1,
+      "MDC-044/date-locale-preference": 1,
+      "MDC-044/count-interpolation": 1,
+      "MDC-032/export-window-identity": 1
+    },
+    "filesWithMostIssues": {
+      "web/src/features/system/pages/ActivityTimelinePage.tsx": 4,
+      "internal/database/activity/repo.go": 2,
+      "web/src/features/system/components/activity-timeline/constants.ts": 1,
+      "web/src/features/system/components/activity-timeline/KindFilterBar.tsx": 1,
+      "web/src/features/system/components/activity-timeline/ActivityFeed.tsx": 3
+    },
+    "priorityFixes": [
+      "prerequisite trust",
+      "coherent calendar/exclusive bounds",
+      "empty-offset truthful totals",
+      "local mobile/title/provenance/locale/export identity"
+    ],
+    "countLimit": "Candidates are not added to11confirmed mechanisms; report is not page/native acceptance"
+  },
+  "evidenceLimits": {
+    "tests": "NOTRUN",
+    "runtime": "NOTRUN",
+    "tsc": "NOTRUN; npx tsc --noEmit not run, no pass claimed",
+    "lintBuild": "NOTRUN",
+    "browserNetworkAPIIdentityEventTelemetry": "NOTRUN",
+    "visualKeyboardContrastMobile": "NOTRUN",
+    "git": "NOTRUN; no tree cleanliness assertion",
+    "failures": "shell3167 oversized command launch failed with os error206/exit1; no report from failed call, recovered using smaller authorized serialization. Initial missing view has no numeric process exit. Earlier camelcase grep6 was invalid case-insensitive; corrected case-sensitive0. Oversized output followed with focused reads; raw receipts kept."
+  },
+  "artifactValidation": {
+    "jsonParse": "PASS final post-write reparse below",
+    "citationRangeAndExcerptCount": 40,
+    "citationErrors": [],
+    "countValidation": "PASS11/4/6/5;48authored;12CSV;578lines",
+    "pins": 42,
+    "pinMatches": 41,
+    "pinDrift": [
+      "web/src/i18n/en.json"
+    ],
+    "validatedAt": "2026-10-14T02:51:24.908689+00:00",
+    "numericExit": 1
+  },
+  "release": {
+    "artifactWriteClaim": "RELEASED at 2026-10-14T02:51:24.908689+00:00 for exact JSON/log only; no further writes after final verification command",
+    "commandClaim": "RELEASED at return; bounded synchronous inspections complete; no background process/server/helper",
+    "sourceWriteClaim": "Never acquired; all source/test/catalog/routes/queue READONLY"
+  },
+  "pageAcceptance": false,
+  "nativeAcceptance": false,
+  "sourceChanges": false,
+  "engineeringRuleChecks": [
+    {
+      "rule": "static-inline-style",
+      "rawMatchLines": 0,
+      "review": "Exact production page/support/hook/type grep0; shared dynamic computed swatch excepted",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "raw-html",
+      "rawMatchLines": 0,
+      "review": "Exact feature scope0; shared Button native expected",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "direct-library-import",
+      "rawMatchLines": 0,
+      "review": "Feature scope0; shared FadeIn vendor boundary expected",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "old-api-import",
+      "rawMatchLines": 0,
+      "review": "Exact old API imports0; ../client correct",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "double-prefix",
+      "rawMatchLines": 5,
+      "review": "All5 comments/types; executable hook /activity correct",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "camelcase-param",
+      "rawMatchLines": 0,
+      "review": "Corrected CaseSensitive0; initial6 default-case-insensitive false positives recorded",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "hidden-section",
+      "rawMatchLines": 0,
+      "review": "Pattern0; prerequisite gating separately ATL01, pagination capability gating acceptable",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "hardcoded-string",
+      "rawMatchLines": 0,
+      "review": "Literal JSX heuristic0, not whole localization certification; source titles/summaries/technical IDs excepted",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "missing-page-container",
+      "rawMatchLines": 2,
+      "review": "Positive wrapper matches2, not violations; both compose PageContainer",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "fetch-useeffect",
+      "rawMatchLines": 1,
+      "review": "Only offset-reset effect; no data loading",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "sql-interpolation",
+      "rawMatchLines": 11,
+      "review": "Broad SQL candidates11; trusted static branch join and $1-$5 binds, not user interpolation",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "fmt-println",
+      "rawMatchLines": 0,
+      "review": "3backend source grep0",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "bare-panic",
+      "rawMatchLines": 0,
+      "review": "3backend source grep0",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    },
+    {
+      "rule": "missing-context",
+      "rawMatchLines": 1,
+      "review": "One Pool.Query passes ctx, no missing context established",
+      "limits": "Source grep declarations only; no lint/compiler or runtime acceptance"
+    }
+  ],
+  "queueSnapshot": {
+    "observedAt": "2026-10-14T02:51:24.908689+00:00",
+    "rows": [
+      {
+        "line": 275,
+        "row": "| [~] | 6 | phase6-qa-system-activity-timeline | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-activity-timeline.json; web\\logs\\phase6-qa-system-activity-timeline.log | phase5-page-system-activity-timeline | 1 | reserved02:29:12.925Z; actor pending | - | ActivityTimelinePage; no actual events/identities/telemetry/network access. |"
+      },
+      {
+        "line": 1674,
+        "row": "| [x] | 3 | phase3-list-export-menu | shared | web\\src\\components\\forms\\ListExportMenu.tsx; web\\src\\components\\forms\\__tests__\\ListExportMenu.test.tsx | primitive-button | 2 | 2026-10-08T17:51:34.593Z | c8472cb5c6 | primitive-button / 2 / 2026-10-08T17:51:34.593Z / Verified real-owner plan=phase3-list-export-menu in session frontend-phase3-owner-plan.json; category=composite-form; sources=web\\src\\components\\forms\\ListExportMenu.tsx; tests=web\\src\\components\\forms\\__tests__\\ListExportMenu.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; failure=First delivered attempt has required post-change normal tests blocked by generated-catalog startup; current generator repair accepted; scoped deltas and receipt preserved, NOT an inherited pre-modernization defect; retry only after prior context releases and refreshed same-item baseline verified; actor context idle verified 2026-10-08T07:21:42.050Z: Exact RELEASED acknowledgement no further writes; Read-only post-root review of preserved delivery; no source writes or implementation attempt increment; current frozen scope and original dispatch provenance required; actor context idle verified 2026-10-08T17:50:30.204Z: Actual delivered idle full report read; owned source/test preserved and released; raw failures/shared prerequisites retained, no source acceptance inferred; failure=Read-only16/16 lint/scan0; actual36 TS2322 broad vi.fn fixture diagnostics20-21, final test-only type correction required; original intent/current bytes preserved; frozen preserved-delta retry baseline=phase3-list-export-menu-retry-dispatch-baseline.json; distinct attempt2 heartbeat/receipt required; original manifest/proofs/tests remain authoritative; actor=c754d1f5-db39-4735-a9a6-04a9c9ac7d6b; actor context idle verified 2026-10-08T18:03:48.628Z: Actual delivered idle full report read; regular source leases released; source acceptance remains separate from preserved receipts and exact failures; Verified scoped delivery acceptance commit=c8472cb5c6; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=16/16 normal exact; only assigned broad vi.fn fixtures receive actual typed signatures, original source unchanged and all assertions/async flow preserved; strict lint/source scan/ALL reached fixture diagnostics0/preservation0; initial36 TS2322 retained. Acceptance stages cumulative original migration plus bounded final fixture correction, not falsely oracle-only, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "line": 1982,
+        "row": "| [x] | 3 | phase3-timeline-item | shared | web\\src\\components\\data-display\\TimelineItem.tsx; web\\src\\components\\data-display\\TimelineItem.test.tsx | primitive-typography | 1 | 2026-10-08T13:16:00.164Z | 40051019b0 | primitive-typography / 1 / 2026-10-08T13:16:00.164Z / Verified real-owner plan=phase3-timeline-item in session frontend-phase3-owner-plan.json; category=composite-data; sources=web\\src\\components\\data-display\\TimelineItem.tsx; tests=web\\src\\components\\data-display\\TimelineItem.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; crash recovery 2026-10-08T13:10:44.944Z: actual no-live-context observation, delivery receipts/source preserved; acceptance reconciliation required before any new worker or attempt increment; Crash acceptance review READ-ONLY, no implementation retry/attempt increment; validate preserved original/delivered scopes; tests deferred while catalog root unaccepted; parent owns final acceptance and commits.; actor=06c24da0-ba09-470b-9bf6-59636ded634a; actor context idle verified 2026-10-08T13:55:19.948Z: Ready read-only review; normal test acceptance pending; idle release confirmed; no further writes; Verified scoped delivery acceptance commit=40051019b0; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=21/21 independent normal parent window158/158, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "line": 2280,
+        "row": "| [x] | 5 | phase5-page-system-activity-timeline | original-page-migration | web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx; web\\src\\features\\system\\pages\\ActivityTimelinePage.test.tsx | - | 1 | 2026-10-12T12:23:58.9737776Z | e62a7fd6a6592dd8bb492cb7cc3051ec25c4b521 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/activity; audit=docs\\frontend-audits\\audit-page-180.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. First real original Phase5 source worker reserved; explicit exclusive page+namedcolocatedtest, shared-owner changes require parent claim. Read session phase5-page-worker-instructions.txt. Actual worker=56b8b046-d197-4310-aa9f-9de2bb45eb10; lifecycle=awaitingterminalnotification;doNOTpoll/duplicate/rereadownedsource. INTAKEN source only; exact two files committed/pushed.18 scoped testsPASS, ESLint/style0;578/573 presentation; all7 normal blocks,6 filters,9 metrics,12 CSV fields/JSON retained. CLI2 external mobile/resource limits, supplemental375dark/1440light exit0 not full QA. Exact shared feed/filter/count/timezone/boundary findings retained. |"
+      }
+    ],
+    "limits": "Concurrent queue updated initial objective line185->231; no queue edits; accepted original rows are not live source writer proof."
+  },
+  "queueDispositionCompletion": {
+    "status": "COMPLETE_REPORT_ONLY",
+    "scope": "Complete only missing dispositions of original ATL01-ATL11; no new source audit, implementation, test execution or acceptance pass",
+    "alreadyDoneCheck": "Original report, 11 findings, 4 conditional candidates, 6 native candidates and source evidence already exist. No repeat audit needed. Only five identical generic owner dispositions were incomplete: historical audit/migration retention is not an actionable fix owner.",
+    "historicalQueueDisposition": "Fresh exact queue source-file search matched accepted original page/shared rows only; no direct activity source-fix row. Existing audit-page-180 and Phase5 note already retain these mechanisms. Deduplicate there; parent may reserve narrow fixes, do not redispatch [x] or edit queue here.",
+    "clock": {
+      "queueStarted": "2026-10-14T05:06:00Z",
+      "assignmentTimestamp": "2026-10-14T05:08:17.967Z",
+      "conservativeReturnBy": "2026-10-14T05:26:00Z",
+      "hardBy": "2026-10-14T05:31:00Z",
+      "rule": "Current continuation deadlines from exact queue row; original attempt clock, timestamps and release remain unchanged historical receipts, not renewed source-audit budgets"
+    },
+    "queueEvidence": {
+      "observedAt": "2026-10-14T05:11:19.5831559Z",
+      "authority": "migration-queue.md, read-only; trimmed item columns and exact source-claim files inspected",
+      "exactItemRow": "| [~] | 6 | phase6-qa-system-activity-timeline | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-activity-timeline.json; web\\logs\\phase6-qa-system-activity-timeline.log | phase5-page-system-activity-timeline | 1 | 2026-10-14T05:06:00Z | - | ActivityTimelinePage; no actual events/identities/telemetry/network access.; Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot.; Actually running actor 84c28b9b-2679-427d-8e2a-95086ba0480f; no idle/completed counted; conservative return05:26/hard05:31 for new30, Docker original+20/25 unchanged. |",
+      "historicalOwners": [
+        {
+          "item": "audit-page-180",
+          "status": "[x]",
+          "commit": "a464a263f0",
+          "disposition": "Completed read-only original audit; repeated mechanism evidence is deduplicated, but this row is not a source-fix claim or proof that findings were repaired"
+        },
+        {
+          "item": "phase5-page-system-activity-timeline",
+          "status": "[x]",
+          "commit": "e62a7fd6a6592dd8bb492cb7cc3051ec25c4b521",
+          "disposition": "Completed original page migration; note explicitly retains feed/filter/count/timezone/boundary findings. Preserve historical 18 scoped tests and supplemental captures without treating them as current or full native acceptance"
+        },
+        {
+          "item": "phase3-timeline-item",
+          "status": "[x]",
+          "commit": "40051019b0",
+          "disposition": "Existing shared capability/chrome owner stays complete; caller wrapping, color omission and visible provenance adoption are separate outstanding mechanisms"
+        },
+        {
+          "item": "phase3-list-export-menu",
+          "status": "[x]",
+          "commit": "c8472cb5c6",
+          "disposition": "Existing menu source closeout stays complete; no repeated shared-menu fix. Export filename identity ATL11 is a page caller issue"
+        },
+        {
+          "item": "phase3-activity-icon-accents",
+          "status": "[x]",
+          "files": ["web\\src\\lib\\activityIcons.ts"],
+          "disposition": "Different owner/file; does not close the feature constants.ts KIND_ACCENT finding"
+        }
+      ],
+      "unrelatedFixesNotUsedAsClosure": [
+        "phase6-fix-settings-timezone-label: accessible settings input label, not activity calendar-bound authority",
+        "phase6-fix-action-center-history-pagination: recommendation history owner, not activity repository empty-offset count",
+        "phase6-fix-table-filtered-empty-copy: DataTable owner, not ActivityFeed's conditional empty guidance",
+        "phase6-fix-fleet-api-resume-mobile-target: FleetAPIPolling owner, not KindFilterBar callers",
+        "Catalog projection/namespace fixes: no authority to close activity date/number preference callsites"
+      ],
+      "limits": "Queue membership/notes only, not actor lifecycle verification, fresh source state or permission to claim proposed files. Early item-prefix filtering omitted leading-space columns; corrected trimmed lookup is the basis of this disposition. Oversized queue output was narrowed without reading tool-generated temporary files."
+    },
+    "findingDispositions": [
+      {"finding": "ATL01", "classification": "unrepresented-confirmed", "ownerNeeds": ["N01", "N02"], "reason": "Shared prerequisite trust plus serialized page adoption; no completed-fix evidence"},
+      {"finding": "ATL02", "classification": "unrepresented-confirmed", "ownerNeeds": ["N02"], "reason": "Calendar-bound/grouping authority mismatch retained; shared authority edits only if separately claimed"},
+      {"finding": "ATL03", "classification": "unrepresented-confirmed", "ownerNeeds": ["N03"], "reason": "Five inclusive SQL end predicates conflict with exclusive window; boundary contract unresolved"},
+      {"finding": "ATL04", "classification": "unrepresented-confirmed", "ownerNeeds": ["N03"], "reason": "Empty-offset count must remain authoritative; other-domain paging fixes do not apply"},
+      {"finding": "ATL05", "classification": "unrepresented-confirmed", "ownerNeeds": ["N04"], "reason": "Six feature filters have distinct caller-adoption work; pagination is already done"},
+      {"finding": "ATL06", "classification": "unrepresented-confirmed", "ownerNeeds": ["N05"], "reason": "Shared wrap API is available but feed caller adoption is not represented"},
+      {"finding": "ATL07", "classification": "unrepresented-confirmed", "ownerNeeds": ["N05"], "reason": "Local fixed swatches differ from the completed library accent owner"},
+      {"finding": "ATL08", "classification": "unrepresented-confirmed", "ownerNeeds": ["N05"], "reason": "In-feed record identity needs deliberate visible access without nested links"},
+      {"finding": "ATL09", "classification": "unrepresented-confirmed", "ownerNeeds": ["N05"], "reason": "Selected locale adoption belongs to feed/day-label callsites, not formatter remigration"},
+      {"finding": "ATL10", "classification": "unrepresented-confirmed", "ownerNeeds": ["N02", "N05"], "reason": "One original finding spanning page and overview ordinal labels; raw/plural numeric values stay preserved"},
+      {"finding": "ATL11", "classification": "unrepresented-confirmed", "ownerNeeds": ["N02"], "reason": "Effective historical query window identity belongs to page export naming, not shared menu"}
+    ],
+    "proposedSourceTestOwners": [
+      {
+        "need": "N01",
+        "existingFixItem": null,
+        "state": "NEEDS_PARENT_QUEUE_AND_EXCLUSIVE_CLAIM",
+        "files": [
+          "web\\src\\hooks\\useSelectedVehicle.ts",
+          "web\\src\\hooks\\__tests__\\useSelectedVehicle.test.tsx"
+        ],
+        "testOwnerEvidence": "Existing matching hook test path found by filename glob only; contents and execution not inspected",
+        "coverageNeeded": [
+          "Unresolved/failed fleet is distinct from confirmed empty",
+          "Retained fleet data and retry remain usable",
+          "URL/store/known-first-vehicle selection precedence is unchanged"
+        ],
+        "pageAdoption": "N02 owns page/test after root contract is available; N01 does not concurrently claim those files",
+        "verification": "NOTRUN"
+      },
+      {
+        "need": "N02",
+        "existingFixItem": null,
+        "state": "NEEDS_PARENT_QUEUE_AND_EXCLUSIVE_CLAIM",
+        "files": [
+          "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx",
+          "web\\src\\features\\system\\pages\\ActivityTimelinePage.test.tsx"
+        ],
+        "coverageNeeded": [
+          "ATL01 prerequisite loading/fatal/retry/retained versus confirmed empty adoption",
+          "ATL02 differing browser/vehicle zones, DST and custom/calendar windows; rolling elapsed windows preserved",
+          "ATL10 selected number-format preferences on page ordinals without rewriting numeric/plural source",
+          "ATL11 historical effective-window export identity with loaded-page/page-number semantics retained"
+        ],
+        "dependency": "N01 only for the ATL01 shared selection contract; unrelated page fixes do not acquire an artificial whole-area dependency",
+        "conditionalIntegration": "If existing header/range authority cannot be coordinated through current APIs, parent must identify and claim the actual shared hook/header tests separately. No guessed header file, parallel range authority or page-local picker is authorized.",
+        "verification": "NOTRUN"
+      },
+      {
+        "need": "N03",
+        "existingFixItem": null,
+        "state": "NEEDS_PARENT_QUEUE_AND_EXCLUSIVE_CLAIM",
+        "files": [
+          "internal\\database\\activity\\repo.go",
+          "internal\\database\\activity\\repo_test.go"
+        ],
+        "conditionalFiles": [
+          "internal\\api\\activity\\handler.go",
+          "internal\\api\\activity\\handler_test.go"
+        ],
+        "coverageNeeded": [
+          "Inclusive start and exclusive end for drives, charging, alerts, software updates and annotations",
+          "An event exactly at the adjacent window boundary belongs to only one half-open window",
+          "Out-of-range or newly emptied nonzero-offset page preserves real pre-pagination total",
+          "True zero-match range returns total zero; chronological order, kind/vehicle scope and limit/offset stay unchanged"
+        ],
+        "conditionalIntegration": "Explicit handler claim only if bound contract parsing/documentation/response behavior needs reconciliation; original inclusive-contract evidence remains retained, not silently waived",
+        "verification": "NOTRUN; no DB or backend reproduction"
+      },
+      {
+        "need": "N04",
+        "existingFixItem": null,
+        "state": "NEEDS_PARENT_QUEUE_AND_EXCLUSIVE_CLAIM",
+        "files": [
+          "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.tsx",
+          "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.test.tsx"
+        ],
+        "coverageNeeded": [
+          "All plus five kind buttons adopt existing label wrapping and mobile 44px minimums with desktop density restored",
+          "All reset, independent multi-select toggles and localized aria-pressed/group semantics remain"
+        ],
+        "verification": "NOTRUN; source coverage is not measured target geometry or WCAG/native acceptance"
+      },
+      {
+        "need": "N05",
+        "existingFixItem": null,
+        "state": "NEEDS_PARENT_QUEUE_AND_EXCLUSIVE_CLAIM",
+        "files": [
+          "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx",
+          "web\\src\\features\\system\\components\\activity-timeline\\helpers.ts",
+          "web\\src\\features\\system\\components\\activity-timeline\\constants.ts",
+          "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.tsx",
+          "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx",
+          "web\\src\\features\\system\\components\\activity-timeline\\helpers.test.ts",
+          "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx"
+        ],
+        "newTestFile": "ActivityOverview.test.tsx is proposed, not an existing test: exact filename glob found no match. Parent must explicitly authorize creation; this worker creates no source/test file.",
+        "coverageNeeded": [
+          "ATL06 real long source titles use existing wrap capability without changing text/order/navigation",
+          "ATL07 neutral existing icon treatment replaces fixed swatches without a new palette or CSS-var-plus-hex suffix",
+          "ATL08 source and record ID are deliberately visible/accessibly reachable, preserving linked/unlinked rows and avoiding nested controls",
+          "ATL09 selected locale changes time/day labels while vehicle-local grouping/order remain stable",
+          "ATL10 overview ordinals consume selected number formatting while total/loaded-page counts and unknown/loading/error states remain truthful",
+          "Raw SI duration/energy/SOC, typed summaries, source status/severity and all existing feed/helper behavior remain"
+        ],
+        "exclusions": "N02 page/test are a separate exclusive owner. No shared TimelineItem/date formatter/catalog rewrite is needed for existing-API adoption; any demonstrated shared deficiency requires a separate parent claim.",
+        "verification": "NOTRUN"
+      }
+    ],
+    "conditionalDispositions": [
+      {"candidate": "C01", "disposition": "CONDITIONAL_NOT_A_CONFIRMED_FIX", "reason": "Malformed-row policy/coverage lacks observed corrupt payload or authorized behavior; do not silently turn it into a live defect"},
+      {"candidate": "C02", "disposition": "CONDITIONAL_NOT_A_CONFIRMED_FIX", "reason": "Historical row-state reconstruction versus event-selection meaning needs product/integration authority; no new backend capability invented"},
+      {"candidate": "C03", "disposition": "CONDITIONAL_NOT_A_CONFIRMED_FIX", "reason": "Changed-scope/old-offset request order and cancellation were not exercised; no race claimed"},
+      {"candidate": "C04", "disposition": "CONDITIONAL_NOT_A_CONFIRMED_FIX", "reason": "Empty guidance remains a product-review candidate; unrelated DataTable fix does not close or confirm it"}
+    ],
+    "alreadyDoneNoChange": [
+      {"evidence": "resolvedHistoricalCandidates[0]; phase3-list-export-menu [x]", "disposition": "JUSTIFIED_NO_CHANGE", "reason": "Original source review already found shared Popover/keyboard/mobile/wrap capability; no repeat menu fix or native acceptance claim"},
+      {"evidence": "resolvedHistoricalCandidates[1]; phase3-timeline-item [x]", "disposition": "JUSTIFIED_NO_CHANGE", "reason": "Shared hover/focus/forced-colors chrome already changed; outstanding feature callers are not a reason to redo that owner"},
+      {"evidence": "resolvedHistoricalCandidates[2]; phase5-page-system-activity-timeline [x]", "disposition": "JUSTIFIED_NO_CHANGE", "reason": "Page pagination already adopts mobile minimum/wrapping/RTL behavior in original evidence; KindFilterBar is a distinct unrepresented caller need"},
+      {"evidence": "resolvedHistoricalCandidates[3]", "disposition": "JUSTIFIED_NO_CHANGE", "reason": "Original source review already found no paused-to-offline inference in stale warning; no separate completed queue row or fresh source proof asserted"}
+    ],
+    "nativeDisposition": "V1-V6 remain NOTRUN original acceptance needs. No new native/browser campaign, locks, captures, network requests, test/lint/compiler runs, source-audit pass or approval was performed.",
+    "preservedEvidence": {
+      "originalReportSha256": "BB03EC91A2799B84AE9D484C66623407F8DECC93855E0EBF9A5D2DA2D95402C0",
+      "originalImmutableFieldsSha256": "CF0346084642811A45D669E161E35E18F717693D3317EEAE522AE601226B2064",
+      "digestScope": "Original top-level properties except requiredOwnerNeeds, ordered name/value pairs serialized as compressed JSON; completion field excluded from post-edit comparison",
+      "originalLogLengthBytes": 2785254,
+      "originalLogSha256": "1DA5852561C490D74A96C29ED7AEF865E5CD1AFCEE34091F9F5162D035C683B9",
+      "preservation": "Original findings, citations/excerpts, conditional/native candidates, historical source pins/drift, authored test declarations, numeric exits, NOTRUN flags, clock/release and acceptance=false remain unchanged. The log patch adds continuation receipt lines without replacing original logical content, but apply_patch normalized 210 existing CRLF endings to LF; original log byte equality is NOT certified and the failed prefix check is retained below.",
+      "needsChangeScope": "Only requiredOwnerNeeds.queueDisposition values corrected; original owner/file/finding/needs fields preserved"
+    },
+    "artifactValidation": {
+      "validatedAt": "2026-10-14T05:14:04.1686460Z",
+      "jsonParse": "PASS",
+      "originalImmutableEvidenceDigestMatches": true,
+      "originalFindingDispositions": "11/11",
+      "proposedSourceTestOwners": 5,
+      "conditionalCandidatesPreserved": 4,
+      "nativeCandidatesPreservedNotRun": 6,
+      "justifiedHistoricalNoChangeDispositions": 4,
+      "numericExit": 0,
+      "limits": "Owned-report JSON parse/count/digest check only; original artifactValidation numeric exit1 and catalog drift remain unchanged. Not a source audit, native test, compiler, lint, browser or application approval."
+    },
+    "logPreservationLimitation": {
+      "observedAt": "2026-10-14T05:17:49.922652+00:00",
+      "cause": "Owned-log additive apply_patch normalized mixed line endings; this is an artifact-only side effect, not code/source or original receipt-content rewriting",
+      "failedCheckShell": "4341",
+      "failedCheckExit": 1,
+      "failedCheck": "Original-log 2785254-byte prefix SHA256 expected 1DA5852561C490D74A96C29ED7AEF865E5CD1AFCEE34091F9F5162D035C683B9, got 765F079822B2DA2F2566E01731E8D4B9447DB2E2473D9C100E4C4C5F97FD52BE after newline normalization shifted the continuation boundary",
+      "normalizedOriginalPrefixBytes": 2785044,
+      "normalizedOriginalPrefixSha256": "82B07CAF0FDA428C58C86D6B93C5F05229410CDA4381DF0E7A43915A6507A8A7",
+      "originalLogicalLineCount": 6281,
+      "lineEndingNormalizationDeltaBytes": 210,
+      "boundedRestoration": "First/last and contiguous-210-CRLF placement candidates did not match preserved original hash; no restoration write performed. Shell4362 exit0 means candidate search completed, NOT byte-preservation success.",
+      "disposition": "Original logical receipt lines are retained by the additive patch; retain original hash/length and failed check honestly. Byte-identical historical-log restoration would require an original retained byte copy; no Git, hidden backup, temporary file or source operation used. No original numeric exit/NOTRUN evidence is relabeled."
+    },
+    "release": {
+      "artifactWriteClaim": "Exact JSON and ignored log only; RELEASED on delivery after artifact-only parse/preservation check",
+      "sourceWriteClaim": "NEVER ACQUIRED; no code/catalog/queue/Git/helper/server/install/Docker/nested-agent writes or operations",
+      "pageAcceptance": false,
+      "nativeAcceptance": false
+    }
+  },
+  "filesRead": [
+    "docs/CONTRIBUTING.md",
+    "docs/frontend-audits/audit-page-180.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "internal/api/activity/handler.go",
+    "internal/api/activity/handler_test.go",
+    "internal/api/router.go",
+    "internal/database/activity/repo.go",
+    "internal/database/activity/repo_test.go",
+    "internal/models/activity/activity.go",
+    "migration-queue.md",
+    "web/src/App.tsx",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useActivity.test.tsx",
+    "web/src/api/hooks/useActivity.ts",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/components/data-display/TimelineItem.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/forms/ListExportMenu.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+    "web/src/features/system/components/activity-timeline/ActivityFeed.test.tsx",
+    "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+    "web/src/features/system/components/activity-timeline/ActivityOverview.tsx",
+    "web/src/features/system/components/activity-timeline/KindFilterBar.test.tsx",
+    "web/src/features/system/components/activity-timeline/KindFilterBar.tsx",
+    "web/src/features/system/components/activity-timeline/constants.ts",
+    "web/src/features/system/components/activity-timeline/helpers.test.ts",
+    "web/src/features/system/components/activity-timeline/helpers.ts",
+    "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+    "web/src/features/system/pages/ActivityTimelinePage.test.tsx",
+    "web/src/features/system/pages/ActivityTimelinePage.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMode.tsx",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useSettings.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-detail-activity.json",
+    "web/src/i18n/en/locale-system.json",
+    "web/src/lib/csvExport.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/routeMeta.ts",
+    "web/src/lib/routePrefetch.ts",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/lib/timezone.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/types/activity.ts"
+  ]
+}

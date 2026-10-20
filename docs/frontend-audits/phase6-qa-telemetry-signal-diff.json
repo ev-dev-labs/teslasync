@@ -1,0 +1,1567 @@
+{
+  "item": "phase6-qa-telemetry-signal-diff",
+  "attempt": 1,
+  "status": "DONE",
+  "acceptance": "SOURCE QA ONLY; runtime/native/application approval NONE",
+  "createdAtUtc": "2026-10-14T03:08:07.963899Z",
+  "page": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+  "routes": [
+    "/signal-diff"
+  ],
+  "artifacts": [
+    "docs/frontend-audits/phase6-qa-telemetry-signal-diff.json",
+    "web/logs/phase6-qa-telemetry-signal-diff.log"
+  ],
+  "clock": {
+    "reset": false,
+    "returnBy": "2026-10-14T03:13:30.443Z",
+    "reservation": "2026-10-14T02:53:30.443Z",
+    "hardStop": "2026-10-14T03:18:30.443Z",
+    "creationClock": "Host creation timestamp unavailable; no later clock extension assumed"
+  },
+  "objectiveCheck": {
+    "alreadyMet": false,
+    "duplicate": false,
+    "prior": "Phase0 audit-page-205, completed Phase5 migration and completed StatusBar mobile target are distinct objectives, not duplicate Phase6 page QA",
+    "firstProbe": "Both assigned artifacts absent; exact queue row188 held attempt1",
+    "alreadyFixed": [
+      "Table383-385 guards unresolved/no vehicle/invalid dates before noChanges",
+      "Diff retained/fatal metrics and warning already implemented",
+      "Raw A/B and delta numeric preference bridge works from source; old audit formatter mismatch is obsolete",
+      "Persisted saved view key differs intentionally from mounted route; do not rename blindly"
+    ]
+  },
+  "confirmedIssues": [
+    {
+      "need": "N01",
+      "rule": "source-trust",
+      "repro": "UNEXECUTED: synthetic valid A/B with no vehicles/no response or initial-paused query; inspect Unknown table versus empty analysis.",
+      "mechanism": "Table protects unknown at383, but breakdown receives filteredRows derived from missing diff data as[], initialLoading and fatalError only. Idle/disabled/initial-paused response has neither loading nor error; category/source panels render empty without a comparison.",
+      "fix": "Wire prerequisite/source trust into existing breakdown, keep all three shells and distinguish unknown/paused from resolved empty.",
+      "contract": "MDC-026",
+      "line": 342,
+      "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+      "id": "SD-01",
+      "priority": "P1",
+      "citations": [
+        {
+          "line": 147,
+          "anchor": "diffResp?.data ?? []",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 344,
+          "anchor": "loading={initialLoading}",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 130,
+          "anchor": "categoryRows.length === 0",
+          "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N01",
+      "rule": "source-trust",
+      "repro": "UNEXECUTED: synthetic vehicle/catalog initial failure, authoritative empty and retained refresh failure independently; inspect recovery without blanking healthy neighbors.",
+      "mechanism": "Vehicle and available-signal query objects are reduced to data only; no independent loading/error/retained warning/retry. Missing catalog becomes empty CSV, while diff enablement requires only vehicle/A/B. Hook omits signals when CSV empty; backend omission meaning remains unknown.",
+      "fix": "Keep full query objects/useDataState and source-local retry; explain catalog narrowing availability without guessing server semantics.",
+      "contract": "MDC-026",
+      "line": 80,
+      "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+      "id": "SD-02",
+      "priority": "P1",
+      "citations": [
+        {
+          "line": 80,
+          "anchor": "const { data: vehicles }",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 128,
+          "anchor": "const { data: availableSignals }",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 393,
+          "anchor": "if (signalsCsv)",
+          "file": "web/src/api/hooks/useTelemetry.ts"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N01",
+      "rule": "source-trust",
+      "repro": "UNEXECUTED: synthetic missing/paused/fatal pin query and retained pins+refresh error; inspect panel and intercepted bulk callbacks, never real mutations.",
+      "mechanism": "Undefined pins default to[], resulting Set is the only breakdown pin input. Empty panel calls this No pinned signals without pin loading/fatal/paused/retry or retained trust. Bulk pin assumes none; bulk unpin skips all. KPI alone correctly keeps missing count null. Row PinButton unknown guard does not guard bulk actions.",
+      "fix": "Pass independent pin trust/retry to existing breakdown and gate bulk decisions with a localized source-state reason; retain usable pins.",
+      "contract": "MDC-026/MDC-046",
+      "line": 114,
+      "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+      "id": "SD-03",
+      "priority": "P1",
+      "citations": [
+        {
+          "line": 114,
+          "anchor": "pinnedItems = []",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 198,
+          "anchor": "pinned.length === 0",
+          "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx"
+        },
+        {
+          "line": 213,
+          "anchor": "!pinnedSignals.has(name)",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N02",
+      "rule": "selection-scope",
+      "repro": "UNEXECUTED: synthetic select on vehicle7 then change to9 or A/B and hide one name with filter; inspect selection/current pin context/export operands only.",
+      "mechanism": "Selection changes only explicitly/by table; no vehicle/A/B reconciliation. Bulk pin/unpin uses all selected names with current vehicle context, while CSV intersects current filteredRows. Carried or filter-hidden names have inconsistent action/export scope.",
+      "fix": "Define snapshot/vehicle selection identity, reconcile on scope changes, and explicitly align selected versus visible export/action semantics.",
+      "contract": "MDC-023/MDC-046",
+      "line": 109,
+      "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+      "id": "SD-04",
+      "priority": "P1",
+      "citations": [
+        {
+          "line": 109,
+          "anchor": "const [selectedSignals",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 202,
+          "anchor": "context: pinContext",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 223,
+          "anchor": "filteredRows.filter",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N03",
+      "rule": "non-atomic-url-update",
+      "repro": "UNEXECUTED: real MemoryRouter synthetic URL with a,b,q,cat; preset must update both instants and Clear filters must remove q and cat together.",
+      "mechanism": "Separate A/B useUrlString callbacks are invoked synchronously by presets, and q/cat setters synchronously by Clear filters. Existing useUrlState explicitly documents shared snapshot/second navigation discards first; existing useUrlBatch solves it. Pure controls tests only assert callback invocations, not real final URL.",
+      "fix": "Use existing atomic useUrlBatch at integration boundary. Preserve pure controls and coordinate other real consumer before optional paired callback API change.",
+      "contract": "MDC-032/MDC-046",
+      "line": 349,
+      "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+      "id": "SD-05",
+      "priority": "P1",
+      "citations": [
+        {
+          "line": 349,
+          "anchor": "setSignalFilter('')",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 102,
+          "anchor": "onChangeA(",
+          "file": "web/src/features/telemetry/components/SignalCompareControls.tsx"
+        },
+        {
+          "line": 103,
+          "anchor": "onChangeB(",
+          "file": "web/src/features/telemetry/components/SignalCompareControls.tsx"
+        },
+        {
+          "line": 60,
+          "anchor": "the second",
+          "file": "web/src/hooks/useUrlState.ts"
+        },
+        {
+          "line": 266,
+          "anchor": "export function useUrlBatch",
+          "file": "web/src/hooks/useUrlState.ts"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N04",
+      "rule": "invented-event-label",
+      "repro": "UNEXECUTED: fixed-clock synthetic scenario with no/unrelated charge or drive; compare deterministic offsets with label claims.",
+      "mechanism": "Before/after last charge is fixed now-4h/now. Last drive start/end is now-90m/now-5m. Pure controls have no event source, yet source and canonical English claim last actual events.",
+      "fix": "Keep IDs/offsets and truthfully relabel existing keys, or separately authorize verified event integration; never fabricate event timestamps.",
+      "contract": "MDC-044/MDC-045",
+      "line": 49,
+      "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",
+      "id": "SD-06",
+      "priority": "P1",
+      "citations": [
+        {
+          "line": 49,
+          "anchor": "Before vs after last charge",
+          "file": "web/src/features/telemetry/components/SignalCompareControls.tsx"
+        },
+        {
+          "line": 50,
+          "anchor": "Last drive start vs end",
+          "file": "web/src/features/telemetry/components/SignalCompareControls.tsx"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N05",
+      "rule": "action-label-mismatch",
+      "repro": "UNEXECUTED: intercept download/clipboard in synthetic harness and compare action label with invoked API.",
+      "mechanism": "Copy CSV label calls downloadCSV, not clipboard. Existing page declarations expect download, confirming intended existing operation, not a fresh executed action.",
+      "fix": "Align signalDiff.bulk.csv source/canonical copy with Download CSV, preserving action ID/filename/schema.",
+      "contract": "MDC-044",
+      "line": 220,
+      "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+      "id": "SD-07",
+      "priority": "P2",
+      "citations": [
+        {
+          "line": 220,
+          "anchor": "Copy CSV",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 233,
+          "anchor": "downloadCSV(",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N05",
+      "rule": "export-value-loss",
+      "repro": "UNEXECUTED: selected synthetic A={mode:Off},B={mode:On},arrays; inspect serializer operands without downloading.",
+      "mechanism": "Unknown A/B objects are JSON-rendered by table but String(value) before objectsToCSV turns objects into[object Object] and arrays into lossy comma text. Existing CSV utility supports JSON objects; page strips structure first.",
+      "fix": "Pass structured CsvCellValue through existing serializer, retain null/false/zero/signed values, source columns and formula-injection protection.",
+      "contract": "MDC-045/MDC-046",
+      "line": 227,
+      "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+      "id": "SD-08",
+      "priority": "P1",
+      "citations": [
+        {
+          "line": 227,
+          "anchor": "String(r.value_a",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 228,
+          "anchor": "String(r.value_b",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 54,
+          "anchor": "JSON.stringify(v)",
+          "file": "web/src/features/telemetry/components/SignalDiffTable.tsx"
+        },
+        {
+          "line": 36,
+          "anchor": "JSON.stringify(value)",
+          "file": "web/src/lib/csvExport.ts"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N06",
+      "rule": "mobile-evidence-loss",
+      "repro": "UNEXECUTED: later authorized synthetic under768px fixture, require both raw values/provenance ages/pin reachable without switching to desktop. No measured clipping/WCAG claim.",
+      "mechanism": "Allowlist name/delta/value_b adds hidden md:table-cell to A, sourceA/sourceB (including ages) and pin. Caller has no mobilePresentation or expandable/renderExpanded/full-detail alternative. Desktop selection/virtualization remain.",
+      "fix": "Adopt existing DataTable mobile details or contained complete table; preserve seven columns/keys/tableId/desktop virtualization and selection.",
+      "contract": "MDC-023/MDC-043",
+      "line": 240,
+      "file": "web/src/features/telemetry/components/SignalDiffTable.tsx",
+      "id": "SD-09",
+      "priority": "P1",
+      "citations": [
+        {
+          "line": 240,
+          "anchor": "mobileColumns=",
+          "file": "web/src/features/telemetry/components/SignalDiffTable.tsx"
+        },
+        {
+          "line": 743,
+          "anchor": "hidden md:table-cell",
+          "file": "web/src/components/ui/DataTable.tsx"
+        },
+        {
+          "line": 1404,
+          "anchor": "mobileActive && mobilePresentation",
+          "file": "web/src/components/ui/DataTable.tsx"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N07",
+      "rule": "keyboard-unreachable-detail",
+      "repro": "UNEXECUTED: later keyboard/touch synthetic row with age_ms_a/b, require full individual provenance/age access without pointer hover. Native/AT behavior not exercised.",
+      "mechanism": "Badge is plain span inside Tooltip, neither supplies tabIndex/interactive descendant. Tooltip clones aria-describedby only and reveals on hover/focus-within. Per-row source age exists only in tooltip, not the separately focusable generic legend.",
+      "fix": "Named focusable/touch-accessible source details at existing badge owner or domain detail adapter; reuse Tooltip, no new overlay engine.",
+      "contract": "MDC-022/MDC-040/MDC-043",
+      "line": 90,
+      "file": "web/src/components/data-display/SourceLayerBadge.tsx",
+      "id": "SD-10",
+      "priority": "P1",
+      "citations": [
+        {
+          "line": 83,
+          "anchor": "formatAge(ageMs",
+          "file": "web/src/components/data-display/SourceLayerBadge.tsx"
+        },
+        {
+          "line": 90,
+          "anchor": "<span",
+          "file": "web/src/components/data-display/SourceLayerBadge.tsx"
+        },
+        {
+          "line": 233,
+          "anchor": "cloneElement",
+          "file": "web/src/components/ui/Tooltip.tsx"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N08",
+      "rule": "local-source-palette",
+      "repro": "UNEXECUTED: later saved palette/theme fixture preserving layer identities/order/counts. Hex strings alone do not prove composed contrast/neon failure.",
+      "mechanism": "Five literal SOURCE_META hex colors bypass shared palette/semantic ownership; source bars use s.color. Category bars use chartTokens.series. This is palette ownership, NOT static-inline-style; computed MetricBar style is permitted.",
+      "fix": "Adopt existing restrained source/semantic/chart palette; preserve saved preferences, no new theme engine.",
+      "contract": "MDC-010/MDC-034",
+      "line": 32,
+      "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx",
+      "id": "SD-11",
+      "priority": "P2",
+      "citations": [
+        {
+          "line": 32,
+          "anchor": "color: '#10b981'",
+          "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx"
+        },
+        {
+          "line": 36,
+          "anchor": "color: '#64748b'",
+          "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx"
+        },
+        {
+          "line": 184,
+          "anchor": "color={s.color}",
+          "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N09",
+      "rule": "locale-formatting-bypass",
+      "repro": "UNEXECUTED: synthetic non-Latin numbering locale, compare identical counts/span with effective locale; do not rewrite raw values.",
+      "mechanism": "formatSpan interpolates plain JS digits/compact fragments; custom formatter ignores effective preferences. Breakdown count/pct sublabels are raw interpolation, which MetricBar renders verbatim instead of preference formatter. Raw A/B/delta already honor shared number bridge and table subscription, so obsolete Phase0 mismatch is not repeated.",
+      "fix": "Use preference-aware numeric substrings and current localized duration helper only with compact rounding/output parity; preserve counts/denominators/missing values.",
+      "contract": "MDC-033/MDC-044",
+      "line": 61,
+      "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+      "id": "SD-12",
+      "priority": "P2",
+      "citations": [
+        {
+          "line": 61,
+          "anchor": "`${s}s`",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 282,
+          "anchor": "formatter:",
+          "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx"
+        },
+        {
+          "line": 149,
+          "anchor": "sublabel=",
+          "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx"
+        },
+        {
+          "line": 185,
+          "anchor": "sublabel=",
+          "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx"
+        },
+        {
+          "line": 70,
+          "anchor": "sublabel ??",
+          "file": "web/src/components/data-display/MetricBar.tsx"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    },
+    {
+      "need": "N10",
+      "rule": "source-trust",
+      "repro": "UNEXECUTED: retained synthetic saved choices+isError true, open popover in future harness and inspect choices/local retry; no real saved-view operation.",
+      "mechanism": "viewsRaw remains retained in views, but isError branch precedes nonempty list, replacing popover choices with Unable to load saved views and no retry. Separate manage dialog may still have views: finding is bounded to popover branch, not destruction of cache/all page.",
+      "fix": "Separate fatal/refresh trust and preserve retained choices with independent retry, existing dialogs/success lifecycle and persistence key.",
+      "contract": "MDC-026",
+      "line": 227,
+      "file": "web/src/components/data-display/SavedViewMenu.tsx",
+      "id": "SD-13",
+      "priority": "P1",
+      "citations": [
+        {
+          "line": 90,
+          "anchor": "isLoading, isError",
+          "file": "web/src/components/data-display/SavedViewMenu.tsx"
+        },
+        {
+          "line": 96,
+          "anchor": "viewsRaw ?? []",
+          "file": "web/src/components/data-display/SavedViewMenu.tsx"
+        },
+        {
+          "line": 227,
+          "anchor": "{isError ? (",
+          "file": "web/src/components/data-display/SavedViewMenu.tsx"
+        }
+      ],
+      "confidence": "high-source-mechanism",
+      "reproExecuted": false
+    }
+  ],
+  "validation": {
+    "finalReparse": "Final independent JSON/42anchors/37protectedpins/count checks executed by bounded final command; raw terminal receipt and final JSON retained in log",
+    "json": "PARSED successfully from disk",
+    "citations": "42 exact source anchors validated; initial line69 mismatch retained, corrected70 and final rerun exit0",
+    "pins": "37 protected source/test/route/catalog hashes unchanged before/after; queue drift is concurrent orchestrator-only observation",
+    "lastValidationUtc": "2026-10-14T03:10:41.2196908Z",
+    "counts": "13 confirmed,6 conditional/native,10 deduplicated needs;83 declaration sites/85 declared cases ONLY, executed0",
+    "lastValidationExit": 0
+  },
+  "evidenceLimits": [
+    "No tests/lint/build/compiler/server/browser/network/API/actual signal or vehicle actions. No agents/installs/helpers. No runtime approval.",
+    "Only report/log writable. No source/test/catalog/queue/Git edits. Initial read-only Git status preceded worker conventions and was not repeated; no Git mutation.",
+    "Initial source reads preceded first pin snapshot; before pins mean before detailed QA, not before every exploratory read.",
+    "Initial combined search output exceeded tool display; initial outputs not all duplicated in log. Subsequent bounded checks raw stdout/exits retained.",
+    "First case-insensitive raw HTML/camelcase grep produced false candidates, corrected explicitly to case-sensitive0. Not counted as violations.",
+    "Initial monolithic serialization failed OS206/exit1 before process start; bounded native serialization recovers without helper file.",
+    "Backend mounts only inspected, not handler producer data/authorization/coverage. Unknown generic signal dimensions not guessed.",
+    "No native viewport/contrast/keyboard/AT/touch/forced-colors/RTL/reduced-motion acceptance; source mechanisms/repros are unexecuted."
+  ],
+  "release": {
+    "sourceTestCatalogQueueWriteClaim": "Never held or modified",
+    "runtimeApproval": false,
+    "commandClaim": "RELEASED: no audit-owned active/async command; all own synchronous invocations terminal. Unrelated parent/global shells untouched.",
+    "artifactClaim": "RELEASED: docs/frontend-audits/phase6-qa-telemetry-signal-diff.json and web/logs/phase6-qa-telemetry-signal-diff.log; no further writes after final raw receipt",
+    "releasedAtUtc": "2026-10-14T03:12:02.4071766Z"
+  },
+  "conditionalNativeCandidates": [
+    {
+      "condition": "sm presets/dense help/share/table rowHeight36 require real target/spacing/focus measurements; row height alone is not a WCAG failure",
+      "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",
+      "classification": "native-measurement-required",
+      "id": "C01",
+      "unexecutedCheck": "320/375/390/430/768/1024/1280/1440/1920/2560 plus narrow allocations/long labels/RTL/200% text; actual hitboxes/clipping/contained scroll/open actions",
+      "line": 157
+    },
+    {
+      "condition": "Unknown A/B row has no unit-kind metadata; names-only catalog discards descriptors. Rich useAvailableSignals exists but generic unit_kind may not distinguish every physical dimension. Unitless raw evidence is not proof of wrong conversion",
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "classification": "SI-integration-contract-required",
+      "id": "C02",
+      "unexecutedCheck": "Verify exact canonical SI descriptor mapping; use existing useUnits/useFormatting display only for known dimensions; keep raw payload/export, no unit guessing or source-unit compatibility engine",
+      "line": 330
+    },
+    {
+      "condition": "Date getters and new Date(local) use browser zone. Saved timezone/12h/DST and frozen-versus-relative default permalink intent need evidence",
+      "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",
+      "classification": "timezone/native-contract-required",
+      "id": "C03",
+      "unexecutedCheck": "Synthetic mismatched user/browser zones across DST gap/fold; reopen URL without explicit a/b. No real route or window actions performed",
+      "line": 54
+    },
+    {
+      "condition": "Unexpected nonnull source token is absent from SOURCE_META and omitted from histogram; declared layer union allows only known tokens, producer violation unverified",
+      "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx",
+      "classification": "wire-shape-condition",
+      "id": "C04",
+      "unexecutedCheck": "Synthetic unexpected token versus table unknown badge/denominator; reconcile producer contract before calling production defect",
+      "line": 107
+    },
+    {
+      "condition": "Finite inputs guarded before arithmetic, not derived delta/pct. Extreme finite pair/tiny baseline can overflow, numberFormat.safeNumber formats nonfinite as0. No such telemetry observed",
+      "file": "web/src/features/telemetry/components/SignalDiffTable.tsx",
+      "classification": "extreme-number-condition",
+      "id": "C05",
+      "unexecutedCheck": "Synthetic maximum finite magnitudes/tiny baseline; require explicit overflow unknown, preserving valid negative/zero and absent percent for A=0",
+      "line": 66
+    },
+    {
+      "condition": "Default view only auto-applies with empty URL; page inserts default vehicle after roster load. Resolution order may bypass saved default; page tests stub menu",
+      "file": "web/src/components/data-display/SavedViewMenu.tsx",
+      "classification": "timing-condition",
+      "id": "C06",
+      "unexecutedCheck": "Synthetic controlled roster/default-view loading order, no saved-view mutations",
+      "line": 115
+    }
+  ],
+  "ownerNeeds": [
+    {
+      "findingIds": [
+        "SD-01",
+        "SD-02",
+        "SD-03"
+      ],
+      "owner": "page/domain breakdown",
+      "files": [
+        "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+        "web/src/features/telemetry/pages/SignalDiffPage.test.tsx",
+        "web/src/features/telemetry/components/SignalDiffBreakdown.tsx",
+        "web/src/features/telemetry/components/SignalDiffBreakdown.test.tsx"
+      ],
+      "queueDedup": "No domain breakdown source repair row. Completed phase3-full-test-telemetry-loading-fixtures is test-only skeleton reconciliation; completed Phase5 detail unknown guard does not cover these gaps",
+      "need": "Independent vehicle/catalog/diff/pin trust/retry, unknown/paused distinction and bulk pin source guard",
+      "id": "N01"
+    },
+    {
+      "findingIds": [
+        "SD-04"
+      ],
+      "owner": "page",
+      "files": [
+        "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+        "web/src/features/telemetry/pages/SignalDiffPage.test.tsx"
+      ],
+      "queueDedup": "Only accepted original migration/current QA report found, no targeted selection repair",
+      "need": "Selection identity across vehicle/snapshots and consistent selected/visible action/export scope",
+      "id": "N02"
+    },
+    {
+      "findingIds": [
+        "SD-05"
+      ],
+      "owner": "page/controls integration",
+      "files": [
+        "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+        "web/src/features/telemetry/pages/SignalDiffPage.test.tsx",
+        "web/src/features/telemetry/components/SignalCompareControls.tsx",
+        "web/src/features/telemetry/components/SignalCompareControls.test.tsx"
+      ],
+      "queueDedup": "No SignalCompareControls repair row; existing URL hook supports atomic updates, no hook rewrite needed",
+      "need": "Atomic a/b and q/cat via existing useUrlBatch; verify other real controls consumer before paired API change",
+      "id": "N03"
+    },
+    {
+      "findingIds": [
+        "SD-06"
+      ],
+      "owner": "controls plus serialized canonical English owner",
+      "files": [
+        "web/src/features/telemetry/components/SignalCompareControls.tsx",
+        "web/src/features/telemetry/components/SignalCompareControls.test.tsx",
+        "web/src/i18n/en.json"
+      ],
+      "queueDedup": "Completed namespace-signal-diff/namespace-catalog-finalization are namespace/fallback objectives, not event-truth fixes",
+      "need": "Truthful relative labels for existing signalDiff.preset.beforeAfterCharge and signalDiff.preset.lastDrive; keep IDs/offsets and normal split integration",
+      "id": "N04"
+    },
+    {
+      "findingIds": [
+        "SD-07",
+        "SD-08"
+      ],
+      "owner": "page plus serialized canonical English owner",
+      "files": [
+        "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+        "web/src/features/telemetry/pages/SignalDiffPage.test.tsx",
+        "web/src/i18n/en.json"
+      ],
+      "queueDedup": "No specific export repair; CSV utility already supports structured cells, no shared serializer rewrite requested",
+      "need": "Download CSV copy at existing signalDiff.bulk.csv and structured CsvCellValue pass-through with existing schema/filename/safety",
+      "id": "N05"
+    },
+    {
+      "findingIds": [
+        "SD-09"
+      ],
+      "owner": "SignalDiffTable caller adapter",
+      "files": [
+        "web/src/features/telemetry/components/SignalDiffTable.tsx",
+        "web/src/features/telemetry/components/SignalDiffTable.test.tsx"
+      ],
+      "queueDedup": "No table repair row; completed native-live-telemetry-mobile-target changes StatusBar link only, not this table",
+      "need": "Complete mobile A/B/source ages/pin access using existing DataTable capabilities, desktop virtualization preserved",
+      "id": "N06"
+    },
+    {
+      "findingIds": [
+        "SD-10"
+      ],
+      "owner": "SourceLayerBadge or domain complete-detail adapter",
+      "files": [
+        "web/src/components/data-display/SourceLayerBadge.tsx",
+        "web/src/features/telemetry/components/SignalDiffTable.tsx",
+        "web/src/features/telemetry/components/SignalDiffTable.test.tsx"
+      ],
+      "queueDedup": "No badge targeted row. Completed primitive-tooltip/overlay-tooltip-adoption implement Tooltip; caller lacks focusable trigger, not reason to remigrate Tooltip",
+      "need": "Named focusable/touch-accessible per-row age/source detail; locate existing shared covering test before any lease, no invented test path",
+      "id": "N07"
+    },
+    {
+      "findingIds": [
+        "SD-11"
+      ],
+      "owner": "domain palette adoption",
+      "files": [
+        "web/src/features/telemetry/components/SignalDiffBreakdown.tsx",
+        "web/src/features/telemetry/components/SignalDiffBreakdown.test.tsx"
+      ],
+      "queueDedup": "No breakdown palette repair; completed signal-chart-panel/history-table/stats-panel are different callers, not duplicated source repair",
+      "need": "Existing restrained source/semantic/chart palette instead of five local colors",
+      "id": "N08"
+    },
+    {
+      "findingIds": [
+        "SD-12"
+      ],
+      "owner": "page/domain formatting",
+      "files": [
+        "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+        "web/src/features/telemetry/pages/SignalDiffPage.test.tsx",
+        "web/src/features/telemetry/components/SignalDiffBreakdown.tsx",
+        "web/src/features/telemetry/components/SignalDiffBreakdown.test.tsx"
+      ],
+      "queueDedup": "No targeted compact-span/bar-locale repair; shared number formatter bridge already exists; obsolete Phase0 raw A/B mismatch rejected",
+      "need": "Preference-aware compact duration/count/percentage with existing rounding parity",
+      "id": "N09"
+    },
+    {
+      "findingIds": [
+        "SD-13"
+      ],
+      "owner": "shared SavedViewMenu",
+      "files": [
+        "web/src/components/data-display/SavedViewMenu.tsx",
+        "web/src/components/data-display/SavedViewMenu.test.tsx"
+      ],
+      "queueDedup": "Completed phase3-full-test-saved-view-native-focus-fixture is focus fixture repair, not source retained trust",
+      "need": "Retained popover choices and source-specific retry; preserve CRUD/default/pin/route key/success closing/delete rollback",
+      "id": "N10"
+    }
+  ],
+  "ownerNeedsPolicy": "Needs are deduplicated requirements, not queue entries/claims/approval. Exact file-owner and note keyword searches rerun during review. Recheck current queue before dispatch. Overlapping page/domain/catalog files must use serialized exclusive leases. No completed item redispatched; catalog remains parent-owned. Conditional candidates excluded from confirmed needs/counts.",
+  "instructionsRead": [
+    "docs/orchestrator-loop.md fully1-EOF",
+    "docs/frontend-design-contract.md base1-284 and419-654; relevant state/SI/mobile/a11y/preservation rules, not unrelated addenda",
+    "docs/frontend-mission.md overview0-4 and relevant15-26/29-33/42-45",
+    "docs/frontend-inventory.md authority/preservation intro/current SignalDiff route256/proposals1392-1394, not whole1.7MB",
+    "docs/session-handoff.md current recovery/lifecycle conventions1-250",
+    "migration-queue.md exact objective/prior rows and deduplicated source-owner/needs searches, reread concurrently",
+    "docs/frontend-worker-conventions.md fully",
+    ".github/copilot-instructions.md relevant1-480",
+    ".github/instructions/frontend-si-cutover.instructions.md fully",
+    ".github/instructions/react-frontend.instructions.md fully",
+    ".github/instructions/unit-conversion.instructions.md fully, obsolete examples superseded",
+    "docs/I18N_GUIDELINES.md1-200",
+    "docs/TABLE_GUIDELINES.md1-158",
+    "docs/MOBILE_GUIDELINES.md1-150, current contract supersedes older deletion/breakpoint examples",
+    "docs/A11Y_GUIDELINES.md1-165",
+    "Applicable AGENTS probes found no files"
+  ],
+  "siAuthority": "Raw canonical SI wire/cache/hooks, conversion only at display via useUnits/useFormatting/current unitConversion; no deprecated useSettings converter or source-unit dual-shape engine. Unknown dimensions remain integration unknowns.",
+  "dataSources": [
+    {
+      "endpoint": "GET /vehicles",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 73,
+      "hook": "useVehicles",
+      "preserve": "vehicleKeys.all/FAST/safeArray/cancellation"
+    },
+    {
+      "endpoint": "GET /signals/{vehicleID}/available",
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "line": 98,
+      "hook": "useSignals",
+      "preserve": "positive vehicle/STANDARD/cancellation/names-only normalization"
+    },
+    {
+      "endpoint": "GET /signals/{vehicleID}/diff?at_a=...&at_b=...&signals=...",
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "line": 379,
+      "hook": "useSignalDiffServer",
+      "preserve": "vehicle/A/B/CSV key, enablement/STANDARD/cancellation/snake_case/no polling, raw unknown payload"
+    },
+    {
+      "endpoint": "GET /pinned?type=widget&context=...; POST /pinned; DELETE /pinned/{id}",
+      "file": "web/src/api/hooks/usePinned.ts",
+      "line": 61,
+      "hook": "usePinned/useTogglePin/PinButton",
+      "preserve": "signal-diff:vehicle:N and signal:name, SLOW/invalidate/broadcast/toast, no mutation executed"
+    },
+    {
+      "endpoint": "GET /saved-views?route=...; POST /saved-views; PUT /saved-views/{id}; DELETE /saved-views/{id}",
+      "file": "web/src/api/hooks/useSavedViews.ts",
+      "line": 45,
+      "hook": "useSavedViews/CRUD/default",
+      "preserve": "route key/normal cancellation/broadcast/success-only closing/delete optimistic rollback"
+    }
+  ],
+  "routeAndWorkspace": {
+    "backend": "internal/api/router.go531-558/4929-4931 mount declarations inspected only; no API/handler execution",
+    "range": "No RANGE_ENABLED_PATHS membership; independent A/B instants, not header analysis window. Do not add duplicate header range",
+    "vehicle": "Explicit disabled header vehicle entry; local page selector required and acceptable",
+    "savedViewKey": "/telemetry/signal-diff",
+    "alert": "/alert-studio?signals={encoded}&from=signal-diff",
+    "app": "web/src/App.tsx",
+    "mounted": "/signal-diff",
+    "owner": "web/src/lib/workspaceScope.ts"
+  },
+  "preservation": {
+    "rootLines": 406,
+    "glassPanels": 5,
+    "rootPlusThreePresentationLines": 1080,
+    "actions": [
+      "Vehicle/A/B",
+      "5 presets",
+      "Name/category filters",
+      "Clear category/filters",
+      "Fatal Retry/retained Refresh",
+      "Row/all selection/Clear/Escape",
+      "Row pin/unpin/retry",
+      "Bulk pin/unpin/CSV/Alert navigation",
+      "Share",
+      "Saved view apply/clear/save/rename/delete/pin/default/manage"
+    ],
+    "exports": "Keep five fields signal/window_a/window_b/source_a/source_b and vehicle filename/formula safety; structure lossSD08 flagged",
+    "sectionCount": 5,
+    "columnCount": 7,
+    "categories": 8,
+    "columns": [
+      "pin",
+      "name",
+      "value_a",
+      "value_b",
+      "delta",
+      "source_a",
+      "source_b"
+    ],
+    "analysisPanels": 3,
+    "preferences": "No theme/font/density/chart/table/pin/route ID reset. Raw A/B global formatter plus table subscription respects locale/precision from source. Physical display mapping conditionalC02",
+    "sections": [
+      {
+        "name": "Compare controls",
+        "line": 301
+      },
+      {
+        "name": "Diff summary",
+        "line": 327
+      },
+      {
+        "children": [
+          "Change by category",
+          "Source layers",
+          "Pinned signals"
+        ],
+        "line": 339,
+        "name": "Change analysis"
+      },
+      {
+        "name": "Bulk actions",
+        "line": 356
+      },
+      {
+        "name": "Signal differences",
+        "line": 365
+      }
+    ],
+    "presets": 5,
+    "metrics": [
+      "Changed signals",
+      "Visible after filter",
+      "Numeric changes",
+      "Categories affected",
+      "Pinned",
+      "Window span"
+    ],
+    "signsNulls": "Finite number/string/boolean1/0 coercion unchanged; signed B-A and percent over abs(A), zero baseline omits percent; null/nonfinite display dash; no physical abs/clamp. Absolute input-window span is intentional, not coverage",
+    "chartContainers": 0,
+    "metricCount": 6
+  },
+  "stateReview": {
+    "fatal": "Diff fatal retry local, KPI null. Vehicle/catalog/pin gapsSD02/03; saved menuSD13",
+    "mutation": "Existing pin toast/broadcast; toolbar awaits promises/retains selection on failure; saved closing success-only/delete rollback. No operation executed",
+    "shells": "Five main regions and three analysis shells remain; selection-only bulk toolbar absence acceptable",
+    "loading": "Null diff KPIs, two analysis skeletons and six table skeletons; independent pins/span remain",
+    "empty": "Valid response empty noChanges versus filtered noMatch; analysis unknown gapSD01",
+    "paused": "deriveDataState retained paused marks stale/isRefreshBlocked and keeps data; initial paused table/summary unknown but analysis emptySD01; no fabricated offline/server error",
+    "retained": "Diff useDataState historical, fatal/refresh separation keeps metrics/table/analysis; StaleRefreshWarning retry beside data"
+  },
+  "tests": {
+    "executed": 0,
+    "runnerDiscovered": null,
+    "totalDeclaredCases": 85,
+    "meaning": "Not runner discovery/passes. Historical Phase5 parent24passes only historical, no rerun.",
+    "passed": 0,
+    "skipped": 0,
+    "totalSites": 83,
+    "failed": 0,
+    "files": [
+      {
+        "limits": "Domain bands/SavedViewMenu mocked; vehicle/catalog/pin mocks data-only; no paused fetchStatus, real URL paired assertion or native proof",
+        "file": "web/src/features/telemetry/pages/SignalDiffPage.test.tsx",
+        "sites": 22,
+        "coverage": "21 plain it plus one it.each with3rows; states/helpers/filter/bulk/vehicle/raw/null/retained/help/unknown",
+        "declaredCases": 24
+      },
+      {
+        "limits": "Calls callbacks, not real page URL/event evidence",
+        "file": "web/src/features/telemetry/components/SignalCompareControls.test.tsx",
+        "sites": 20,
+        "coverage": "helpers/categories/offsets/labels/callbacks/chips/topSlot",
+        "declaredCases": 20
+      },
+      {
+        "limits": "No independent pin/unknown/paused state prop",
+        "file": "web/src/features/telemetry/components/SignalDiffBreakdown.test.tsx",
+        "sites": 10,
+        "coverage": "shells/distributions/pins/loading/empty/error/null/a11y",
+        "declaredCases": 10
+      },
+      {
+        "limits": "Virtualizer full-window/pin stubs, not mobile/native/keyboard/unit proof",
+        "file": "web/src/features/telemetry/components/SignalDiffTable.test.tsx",
+        "sites": 29,
+        "coverage": "coercion/raw/null/signs/zero-baseline/headers/provenance/pins/selection/long values",
+        "declaredCases": 29
+      },
+      {
+        "file": "web/src/api/hooks/__tests__/useTelemetry.test.tsx",
+        "range": [
+          598,
+          620
+        ],
+        "sites": 2,
+        "coverage": "server diff URL/enablement; unrelated hook declarations not counted",
+        "declaredCases": 2
+      }
+    ],
+    "mode": "DECLARATIONS ONLY"
+  },
+  "ruleChecks": {
+    "scope": "Five production presentation modules and relevant hook paths; NOT repository-wide",
+    "patternMatchingLines": {
+      "raw-jsx-English-candidate": 0,
+      "camelcase-param-case-sensitive": 0,
+      "PageLayout-positive-match": 1,
+      "old-api-import": 0,
+      "static-inline-style": 0,
+      "raw-html-case-sensitive": 0,
+      "double-prefix": 0,
+      "direct-library-import": 0,
+      "hidden-section": 0,
+      "useEffect-candidate": 1
+    },
+    "catalog": {
+      "extraDynamicMetricKeys": 4,
+      "missingOrNonString": 0,
+      "uniqueLiteralKeys": 84,
+      "runtimeOrGenerator": "NOTRUN; presence only. Locale telemetry/sourceLayer files located read-only."
+    },
+    "backendRules": "Go backend four rules not applicable to frontend source QA; router declarations only read, no backend audit",
+    "exceptions": [
+      "PageLayout wraps PageContainer, not missing wrapper",
+      "Page useEffect URL default sync, not data loading",
+      "Shared FadeIn vendor import/computed MetricBar and Tooltip styles allowed",
+      "Test button stubs/vendor mocks declarations only",
+      "Identifiers/signal names/CSV field names/booleans and route keys not translated labels"
+    ]
+  },
+  "pins": {
+    "scope": "Before detailed QA after initial reads; after document serialization. Queue may change concurrently, not owned by this audit.",
+    "algorithm": "SHA256 exact bytes",
+    "records": [
+      {
+        "concurrentAuthority": true,
+        "file": "migration-queue.md",
+        "after": {
+          "lines": 2428,
+          "sha256": "646CD9636C62DB8306087EDA590A968F1BC87DDECE32BC22AED738558002742E"
+        },
+        "unchanged": false,
+        "before": {
+          "sha256": "01B3676F9D5B25B6DDD31F246B5A59DEB053DCB0055EAD33AB6F825BEFE7B9C7",
+          "lines": 2418
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/api/dataState.ts",
+        "after": {
+          "lines": 434,
+          "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+          "lines": 434
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/api/hooks/__tests__/useTelemetry.test.tsx",
+        "after": {
+          "lines": 925,
+          "sha256": "9634776C9BF2FCF50D1CB876B168C8FB5426A88E4C3F3EBAA823F02AA2137D58"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "9634776C9BF2FCF50D1CB876B168C8FB5426A88E4C3F3EBAA823F02AA2137D58",
+          "lines": 925
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/api/hooks/usePinned.ts",
+        "after": {
+          "lines": 168,
+          "sha256": "09A532A2FE26FCB0564DD63929B9436FFFBF63A30B8E075D1EEF588350E9D68B"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "09A532A2FE26FCB0564DD63929B9436FFFBF63A30B8E075D1EEF588350E9D68B",
+          "lines": 168
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/api/hooks/useSavedViews.ts",
+        "after": {
+          "lines": 177,
+          "sha256": "6217A4E7D6ADBF9F724BCA6593B1AD9786903B59C8DC2DB24C938DC10EBBA97C"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "6217A4E7D6ADBF9F724BCA6593B1AD9786903B59C8DC2DB24C938DC10EBBA97C",
+          "lines": 177
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/api/hooks/useSignals.ts",
+        "after": {
+          "lines": 442,
+          "sha256": "ACCD8580C7144C90F7B6D1AFF14E3A43510C9AA2DD59B5FD85330C9D91ED1966"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "ACCD8580C7144C90F7B6D1AFF14E3A43510C9AA2DD59B5FD85330C9D91ED1966",
+          "lines": 442
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/api/hooks/useTelemetry.ts",
+        "after": {
+          "lines": 683,
+          "sha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+          "lines": 683
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/api/hooks/useVehicles.ts",
+        "after": {
+          "lines": 1898,
+          "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+          "lines": 1898
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/App.tsx",
+        "after": {
+          "lines": 919,
+          "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+          "lines": 919
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/data-display/BulkActionsToolbar.tsx",
+        "after": {
+          "lines": 267,
+          "sha256": "6C2C0B26451784B4AAF0974A1BFE519E7A176B7D1AAE73901A4BF339C64CE802"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "6C2C0B26451784B4AAF0974A1BFE519E7A176B7D1AAE73901A4BF339C64CE802",
+          "lines": 267
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/data-display/MetricBar.tsx",
+        "after": {
+          "lines": 93,
+          "sha256": "A7681D29402E9C208E21C01F2D87D7BD5E4CEC18A59CC5C994511E6CF6E1F5FC"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "A7681D29402E9C208E21C01F2D87D7BD5E4CEC18A59CC5C994511E6CF6E1F5FC",
+          "lines": 93
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/data-display/SavedViewMenu.tsx",
+        "after": {
+          "lines": 687,
+          "sha256": "95CE705EE657F4AAD8346072FC963930140FC144AE911A01DA286297F71A0FC3"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "95CE705EE657F4AAD8346072FC963930140FC144AE911A01DA286297F71A0FC3",
+          "lines": 687
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/data-display/SourceLayerBadge.tsx",
+        "after": {
+          "lines": 105,
+          "sha256": "5E161C904B68D9C5B7956CBFDE2374B78D12764072566161BE4CD8CB8E56A1EE"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "5E161C904B68D9C5B7956CBFDE2374B78D12764072566161BE4CD8CB8E56A1EE",
+          "lines": 105
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "after": {
+          "lines": 115,
+          "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+          "lines": 115
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "after": {
+          "lines": 17,
+          "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+          "lines": 17
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "after": {
+          "lines": 259,
+          "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+          "lines": 259
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "after": {
+          "lines": 39,
+          "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+          "lines": 39
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/ui/DataTable.tsx",
+        "after": {
+          "lines": 1707,
+          "sha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+          "lines": 1707
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/ui/PinButton.tsx",
+        "after": {
+          "lines": 135,
+          "sha256": "DC796F0F5FDA1730E6DE2C94D7CB85DF2E05664F1B1F0D0A46633A946CD96B10"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "DC796F0F5FDA1730E6DE2C94D7CB85DF2E05664F1B1F0D0A46633A946CD96B10",
+          "lines": 135
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/components/ui/Tooltip.tsx",
+        "after": {
+          "lines": 294,
+          "sha256": "6BA505E91C416498CBA46F67BE1E88770701664A3DF6E942FF35E6DD0617D0E7"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "6BA505E91C416498CBA46F67BE1E88770701664A3DF6E942FF35E6DD0617D0E7",
+          "lines": 294
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+        "after": {
+          "lines": 54,
+          "sha256": "09A9FB9B7ED9B9A0FA220A8D648F1613A20B99BB43D3FA9BB221494D93272AAD"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "09A9FB9B7ED9B9A0FA220A8D648F1613A20B99BB43D3FA9BB221494D93272AAD",
+          "lines": 54
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/features/telemetry/components/SignalCompareControls.test.tsx",
+        "after": {
+          "lines": 323,
+          "sha256": "D8066B0F44BE53C159179EA5D34264896565B8AD726E732BB5EC9E2DAD4AD00D"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "D8066B0F44BE53C159179EA5D34264896565B8AD726E732BB5EC9E2DAD4AD00D",
+          "lines": 323
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",
+        "after": {
+          "lines": 194,
+          "sha256": "E8A0D3627917C45891A9E561D7AB6CC1FD448F597B1E8AD99553DCA37F5F9062"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "E8A0D3627917C45891A9E561D7AB6CC1FD448F597B1E8AD99553DCA37F5F9062",
+          "lines": 194
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/features/telemetry/components/SignalDiffBreakdown.test.tsx",
+        "after": {
+          "lines": 251,
+          "sha256": "0893D15CB0D63FB39D594289DB951DAB9D3D9B3CB645174230126DE109309328"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "0893D15CB0D63FB39D594289DB951DAB9D3D9B3CB645174230126DE109309328",
+          "lines": 251
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx",
+        "after": {
+          "lines": 221,
+          "sha256": "205A10B7D23ABFDD22121A5D1317D3297A25A900D329F33C4D56B2B5E1107F30"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "205A10B7D23ABFDD22121A5D1317D3297A25A900D329F33C4D56B2B5E1107F30",
+          "lines": 221
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/features/telemetry/components/SignalDiffTable.test.tsx",
+        "after": {
+          "lines": 374,
+          "sha256": "14CF8BFAAE90D5D18326A60183E75FEB40078DE1054EA3636D66F010D25C187F"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "14CF8BFAAE90D5D18326A60183E75FEB40078DE1054EA3636D66F010D25C187F",
+          "lines": 374
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/features/telemetry/components/SignalDiffTable.tsx",
+        "after": {
+          "lines": 259,
+          "sha256": "BFE77A2E9D9246CDD3B0A80D68B1E169FACBDA467822AA93D70F60162889E119"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "BFE77A2E9D9246CDD3B0A80D68B1E169FACBDA467822AA93D70F60162889E119",
+          "lines": 259
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/features/telemetry/pages/SignalDiffPage.test.tsx",
+        "after": {
+          "lines": 623,
+          "sha256": "6E0551912AFB2DA761FAC4FF96743FABF4D603C6A458C030D123C3F0A61843DB"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "6E0551912AFB2DA761FAC4FF96743FABF4D603C6A458C030D123C3F0A61843DB",
+          "lines": 623
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+        "after": {
+          "lines": 406,
+          "sha256": "1B24C8C087BC593A27BBD7A29CF730BEE1F4A019873C22E63F169E34886F8FF9"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "1B24C8C087BC593A27BBD7A29CF730BEE1F4A019873C22E63F169E34886F8FF9",
+          "lines": 406
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "after": {
+          "lines": 47,
+          "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+          "lines": 47
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/hooks/useSavedViewUrl.ts",
+        "after": {
+          "lines": 51,
+          "sha256": "50640771B85C0CCEDB524ADF2DF98F07A306576E914736A71BA72792AB60F644"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "50640771B85C0CCEDB524ADF2DF98F07A306576E914736A71BA72792AB60F644",
+          "lines": 51
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/hooks/useUrlState.ts",
+        "after": {
+          "lines": 291,
+          "sha256": "1B8FD7F191489F94E58BFC7960115E8BD56BB2721AD04B7B28F6EE159A46AA53"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "1B8FD7F191489F94E58BFC7960115E8BD56BB2721AD04B7B28F6EE159A46AA53",
+          "lines": 291
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/i18n/en.json",
+        "after": {
+          "lines": 39035,
+          "sha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+          "lines": 39035
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/i18n/en/locale-detail-sourceLayer.json",
+        "after": {
+          "lines": 22,
+          "sha256": "3416B8F1BECF4473837E5F3AD199D2A9C9D15D3482D61E47D13C2C59C98432AC"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "3416B8F1BECF4473837E5F3AD199D2A9C9D15D3482D61E47D13C2C59C98432AC",
+          "lines": 22
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/i18n/en/locale-telemetry.json",
+        "after": {
+          "lines": 2730,
+          "sha256": "C5AAEE5AB0B68C1FDF9C1B7CE310A0358D3AA011DF8B11CE09C033CAFABD83DD"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "C5AAEE5AB0B68C1FDF9C1B7CE310A0358D3AA011DF8B11CE09C033CAFABD83DD",
+          "lines": 2730
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/lib/csvExport.ts",
+        "after": {
+          "lines": 165,
+          "sha256": "4DBB7EC4728F6E34365DB08CB64C3C3855F4E17EA19DC2C6EB98BC4705F56396"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "4DBB7EC4728F6E34365DB08CB64C3C3855F4E17EA19DC2C6EB98BC4705F56396",
+          "lines": 165
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/lib/numberFormat.ts",
+        "after": {
+          "lines": 172,
+          "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+          "lines": 172
+        }
+      },
+      {
+        "concurrentAuthority": false,
+        "file": "web/src/lib/workspaceScope.ts",
+        "after": {
+          "lines": 168,
+          "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+        },
+        "unchanged": true,
+        "before": {
+          "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+          "lines": 168
+        }
+      }
+    ],
+    "concurrentDrift": [
+      "migration-queue.md"
+    ]
+  },
+  "summary": {
+    "confirmedIssueCount": 13,
+    "filesWithMostIssues": [
+      {
+        "file": "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+        "count": 8
+      },
+      {
+        "file": "web/src/components/data-display/SavedViewMenu.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/components/data-display/SourceLayerBadge.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/telemetry/components/SignalDiffBreakdown.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/telemetry/components/SignalDiffTable.tsx",
+        "count": 1
+      }
+    ],
+    "priority": "Trust/selection/atomic URL/mobile keyboard evidence first; truthful labels/structured export, then locale/palette",
+    "runtimeApproval": false,
+    "conditionalCandidateCount": 6,
+    "violationsByRule": [
+      {
+        "rule": "action-label-mismatch",
+        "count": 1
+      },
+      {
+        "rule": "export-value-loss",
+        "count": 1
+      },
+      {
+        "rule": "invented-event-label",
+        "count": 1
+      },
+      {
+        "rule": "keyboard-unreachable-detail",
+        "count": 1
+      },
+      {
+        "rule": "local-source-palette",
+        "count": 1
+      },
+      {
+        "rule": "locale-formatting-bypass",
+        "count": 1
+      },
+      {
+        "rule": "mobile-evidence-loss",
+        "count": 1
+      },
+      {
+        "rule": "non-atomic-url-update",
+        "count": 1
+      },
+      {
+        "rule": "selection-scope",
+        "count": 1
+      },
+      {
+        "rule": "source-trust",
+        "count": 4
+      }
+    ],
+    "sourceChanged": false,
+    "ownerNeedCount": 10
+  },
+  "commandFailures": [
+    {
+      "command": "initial monolithic document serialization",
+      "error": "Windows OS206 filename/extension too long (argument limit), process did not start",
+      "exit": 1,
+      "recovery": "Bounded native document serialization, no helper files",
+      "shell": "3409"
+    },
+    {
+      "command": "first artifact citation/count/pin validation",
+      "error": "SD-12 MetricBar exact anchor is line70, not69",
+      "exit": 1,
+      "recovery": "Only authorized JSON citation corrected to70; failed raw output retained",
+      "shell": "3427"
+    },
+    {
+      "exit": 1,
+      "command": "final serialized boolean metadata assertion",
+      "shell": "3437",
+      "error": "runtimeApproval serialized null instead of explicit boolean false",
+      "recovery": "Explicit native PowerShell boolean fields corrected in JSON only; failure raw output retained"
+    }
+  ],
+  "commandInventory": {
+    "release": "Audit started no server/helper/async service. Every own synchronous command has a terminal exit receipt; no retained audit command handle.",
+    "globalInventory": "list_powershell returned large shared/global inventory, tool display truncated12.9MB; unrelated parent preview/commands not claimed or stopped",
+    "ownOutstandingCommands": 0,
+    "ownAsyncCommands": 0
+  },
+  "filesRead": [
+    "migration-queue.md",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/__tests__/useTelemetry.test.tsx",
+    "web/src/api/hooks/usePinned.ts",
+    "web/src/api/hooks/useSavedViews.ts",
+    "web/src/api/hooks/useSignals.ts",
+    "web/src/api/hooks/useTelemetry.ts",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/App.tsx",
+    "web/src/components/data-display/BulkActionsToolbar.tsx",
+    "web/src/components/data-display/MetricBar.tsx",
+    "web/src/components/data-display/SavedViewMenu.tsx",
+    "web/src/components/data-display/SourceLayerBadge.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/ui/PinButton.tsx",
+    "web/src/components/ui/Tooltip.tsx",
+    "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+    "web/src/features/telemetry/components/SignalCompareControls.test.tsx",
+    "web/src/features/telemetry/components/SignalCompareControls.tsx",
+    "web/src/features/telemetry/components/SignalDiffBreakdown.test.tsx",
+    "web/src/features/telemetry/components/SignalDiffBreakdown.tsx",
+    "web/src/features/telemetry/components/SignalDiffTable.test.tsx",
+    "web/src/features/telemetry/components/SignalDiffTable.tsx",
+    "web/src/features/telemetry/pages/SignalDiffPage.test.tsx",
+    "web/src/features/telemetry/pages/SignalDiffPage.tsx",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useSavedViewUrl.ts",
+    "web/src/hooks/useUrlState.ts",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-detail-sourceLayer.json",
+    "web/src/i18n/en/locale-telemetry.json",
+    "web/src/lib/csvExport.ts",
+    "web/src/lib/numberFormat.ts",
+    "web/src/lib/workspaceScope.ts",
+    "internal/api/router.go",
+    "web/src/hooks/useUnits.ts",
+    "web/src/types/signals.ts",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/I18N_GUIDELINES.md",
+    "docs/TABLE_GUIDELINES.md",
+    "docs/MOBILE_GUIDELINES.md",
+    "docs/A11Y_GUIDELINES.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md"
+  ],
+  "completedAtUtc": "2026-10-14T03:12:02.4071766Z"
+}

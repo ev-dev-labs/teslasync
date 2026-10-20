@@ -48,7 +48,7 @@ echo ""
 # --- 2. Raw HTML elements ---
 echo "▸ [2/7] Raw HTML elements..."
 # Exclude components/ directories (they ARE the shared components)
-MATCHES=$(grep -rnP '<button\b|<input\b|<textarea\b|<select\b|<table\b' "$TARGET" --include="*.tsx" "${GREP_EXCLUDES[@]}" 2>/dev/null | grep -v 'components/ui/' | grep -v 'components/charts/' | grep -v 'components/maps/' | grep -v 'components/forms/' | grep -vP ':[0-9]+:\s*(//|/\*|\*)' || true)
+MATCHES=$(grep -rHnP '<button\b|<input\b|<textarea\b|<select\b|<table\b' "$TARGET" --include="*.tsx" "${GREP_EXCLUDES[@]}" 2>/dev/null | grep -vE 'components[/\\](ui|charts|maps|forms)[/\\]' | grep -vP ':[0-9]+:\s*(//|/\*|\*)' || true)
 COUNT=$(printf '%s\n' "$MATCHES" | grep -c . || true)
 if [ "$COUNT" -gt 0 ]; then
   echo "  ❌ $COUNT violation(s):"
@@ -61,7 +61,7 @@ echo ""
 
 # --- 3. Direct library imports ---
 echo "▸ [3/7] Direct library imports..."
-MATCHES=$(grep -rn "from 'recharts'\|from 'react-leaflet'\|from 'framer-motion'" "$TARGET" --include="*.tsx" --include="*.ts" "${GREP_EXCLUDES[@]}" 2>/dev/null | grep -v 'components/charts/index' | grep -v 'components/maps/index' | grep -v 'components/motion/' || true)
+MATCHES=$(grep -rHn "from 'recharts'\|from 'react-leaflet'\|from 'framer-motion'" "$TARGET" --include="*.tsx" --include="*.ts" "${GREP_EXCLUDES[@]}" 2>/dev/null | grep -vE 'components[/\\](charts|maps|motion)[/\\]' || true)
 COUNT=$(printf '%s\n' "$MATCHES" | grep -c . || true)
 if [ "$COUNT" -gt 0 ]; then
   echo "  ❌ $COUNT violation(s):"
@@ -136,3 +136,6 @@ else
   echo "  ❌ AUDIT FAILED — $TOTAL total violation(s)"
 fi
 echo "═══════════════════════════════════════════════════════════"
+if [ "$TOTAL" -gt 0 ]; then
+  exit 1
+fi

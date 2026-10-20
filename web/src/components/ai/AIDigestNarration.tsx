@@ -40,48 +40,58 @@ interface InnerSectionProps {
    * `vehicle_id <= 0` with HTTP 400 (see internal/api/aidigest/handler.go).
    */
   vehicleId?: number
+  weekOffsetWeeks?: number
+  weekStart?: string
+  weekLabel?: string
 }
 
-function InnerSection({ vehicleId }: InnerSectionProps) {
+function InnerSection({ vehicleId, weekOffsetWeeks = 0, weekStart, weekLabel }: InnerSectionProps) {
   const { t } = useTranslation()
   // Mirror the handler-side parser (vehicle_id must be > 0). A missing,
   // non-finite (NaN), zero, or negative id keeps the button disabled so
   // the SPA never fires a request the backend would immediately 400.
   const numericVehicleId =
     typeof vehicleId === 'number' && Number.isFinite(vehicleId) ? vehicleId : 0
-  const canStart = numericVehicleId > 0
+  const validVehicle = Number.isSafeInteger(numericVehicleId) && numericVehicleId > 0
+  const supportedWeek = Number.isInteger(weekOffsetWeeks) && weekOffsetWeeks >= -12 && weekOffsetWeeks <= 0
+  const canStart = validVehicle && supportedWeek
   const body = useMemo(
-    () => ({ vehicle_id: numericVehicleId, week_offset_weeks: 0 }),
-    [numericVehicleId],
+    () => ({ vehicle_id: numericVehicleId, week_offset_weeks: weekOffsetWeeks }),
+    [numericVehicleId, weekOffsetWeeks],
   )
   const stream = useAiStream({
     url: '/ai/digests/weekly/narrate',
     body,
     onEvent: noop,
-    // AI-01: vehicle scope is part of stream identity — switching the
-    // active vehicle aborts any in-flight narration and clears the
-    // previous vehicle's recap before the new scope streams in.
-    scopeKey: canStart ? numericVehicleId : null,
+    scopeKey: `${numericVehicleId}:${weekStart ?? ''}:${weekOffsetWeeks}`,
   })
   return (
     <AIFeatureCard
       title={t('analytics.weeklyDigest.aiNarration.title', 'Helix narration')}
-      description={t(
+      description={`${t(
         'analytics.weeklyDigest.aiNarration.description',
         'Get a short, Helix-written recap of your week from the digest data above.',
-      )}
+      )} ${weekLabel ?? ''} ${t(
+        'analytics.weeklyDigest.aiNarration.utcScope',
+        'Narration uses Monday-to-Monday UTC weeks, which may differ from the local-time totals above.',
+      )}`}
       buttonLabel={t(
         'analytics.weeklyDigest.aiNarration.generateButton',
         'Generate narration',
       )}
       badgeLabel={t('analytics.weeklyDigest.aiNarration.badge', 'Helix')}
       emptyHint={
-        canStart
-          ? undefined
-          : t(
+        !validVehicle
+          ? t(
               'analytics.weeklyDigest.aiNarration.noVehicleHint',
               'Pick a vehicle to enable Helix narration.',
             )
+          : !supportedWeek
+            ? t(
+                'analytics.weeklyDigest.aiNarration.weekLimit',
+                'Narration is available only for the current UTC week and the previous 12 weeks. Select a supported week to generate its recap.',
+              )
+            : undefined
       }
       canStart={canStart}
       stream={stream}

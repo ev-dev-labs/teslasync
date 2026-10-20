@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { AiSpendInsights } from '@/api/hooks/useAiUsage';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
 const mock = vi.hoisted(() => ({
   settings: { ai_mode: 'cloud', ai_cost_cap_cents: 50 } as { ai_mode: string; ai_cost_cap_cents: number },
@@ -68,11 +69,12 @@ describe('AiSpendWatch', () => {
 
   it('shows unusual pace, actual model contributor, and cap risk from audited spend', () => {
     setQuery(data);
-    render(<AiSpendWatch />);
+    const { container } = render(<AiSpendWatch />);
     expect(screen.getByText(/pacing at least twice/)).toBeInTheDocument();
     expect(screen.getByText(/chatbot-llm via azure \/ large/)).toBeInTheDocument();
     expect(screen.getByText(/may reach the global daily cap/)).toBeInTheDocument();
-    expect(screen.getByText(/Delayed or missing audit records can undercount/)).toBeInTheDocument();
+    // The audit caveat is the brief description: disclosed in the drawer header.
+    assertOperationalBriefDisclosure(container, 'Delayed or missing audit records can undercount', { contains: true });
     expect(mock.query).toHaveBeenCalledWith(true);
   });
 

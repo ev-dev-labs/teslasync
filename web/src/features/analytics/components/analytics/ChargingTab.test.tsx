@@ -53,8 +53,9 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) =>
-        typeof fallback === 'string' ? fallback : key,
+      t: (key: string, fallback?: unknown, opts?: Record<string, unknown>) =>
+        (typeof fallback === 'string' ? fallback : key).replace(/{{(\w+)}}/g,
+          (_m, name: string) => String(opts?.[name] ?? `{{${name}}}`)),
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -108,13 +109,13 @@ import type { FleetAnalyticsQuery } from './constants';
 const SUMMARY_REGION = 'Charging summary metrics';
 const CHARTS_REGION = 'Charging';
 const PANEL_TITLES = [
-  'Charger Types',
-  'Start Battery Distribution',
-  'Hourly Charging Pattern',
+  'Charging sessions by charger type',
+  'Start battery distribution',
+  'Hourly charging pattern',
 ] as const;
 
 function makeStats(overrides: Partial<StatsSummary> = {}): StatsSummary {
-  return { min: 0, max: 0, avg: 0, median: 0, p95: 0, count: 0, ...overrides };
+  return { min: 0, max: 0, avg: 0, median: 0, p95: 0, count: 3, ...overrides };
 }
 
 type ChargingAnalytics = FleetAnalytics['charging_analytics'];
@@ -183,35 +184,70 @@ function renderTab(query: FleetAnalyticsQuery) {
 
 describe('ChargingTab — loading', () => {
   it('renders skeletons for the KPI band and every chart panel, with no KPI labels or state leakage', () => {
-    const { container } = renderTab(makeQuery({ isLoading: true }));
+    const { container } = renderTab(makeQuery({
+      isLoading: true,
+      isError: true,
+      error: new Error('pending charging analytics'),
+    }));
 
-    // Skeletons paint while the first payload loads.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // The pending KPI band keeps six static value slots, not pulse classes.
+    const region = screen.getByRole('region', { name: SUMMARY_REGION });
+    expect(region.querySelectorAll('[data-operational-metric] [aria-hidden="true"].h-5.w-20').length).toBeGreaterThanOrEqual(6);
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
 
     // Panel shells (titles) are always present, even mid-load.
     for (const title of PANEL_TITLES) {
-      expect(screen.getByText(title)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
     }
 
-    // The KPI band is a skeleton — no metric labels, and no empty/error UI.
-    expect(screen.queryByText('Sessions')).toBeNull();
+    const brief = container.querySelector('[data-operational-brief]');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief?.querySelector('[data-operational-value]')).toBeNull();
+    expect(within(screen.getByRole('region', { name: SUMMARY_REGION })).getByText('Sessions')).toBeInTheDocument();
     expect(screen.getAllByRole('status')).toHaveLength(3);
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(region.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(within(region).queryByText('128')).toBeNull();
+    expect(within(region).queryByText('543.20 kWh')).toBeNull();
+    expect(within(region).queryByText('$87.50')).toBeNull();
+    expect(screen.queryByText('No charger type data')).toBeNull();
+    expect(screen.queryByText('No battery distribution data')).toBeNull();
+    expect(screen.queryByText('No hourly data')).toBeNull();
+    expect(screen.queryByText('Supercharger')).toBeNull();
+    expect(screen.queryByText('Home')).toBeNull();
+    expect(container.querySelector('[data-chart-state="ready"]')).toBeNull();
+    expect(container.querySelectorAll('[data-chart-state="loading"]')).toHaveLength(3);
+    for (const status of screen.getAllByRole('status')) {
+      expect(status).toHaveAttribute('aria-busy', 'true');
+      expect(status).toHaveAttribute('aria-label', 'Loading chart…');
+      expect(status.querySelectorAll('[aria-hidden="true"]')).toHaveLength(7);
+      expect(status.querySelector('[aria-hidden="true"]')).toHaveStyle({ height: '50%' });
+      expect(status.closest('[data-chart-state="loading"]')).toHaveAttribute('aria-busy', 'true');
+    }
+    expect(screen.getByTestId('charging-detail')).toHaveTextContent('detail:loading');
   });
 });
 
 describe('ChargingTab — loaded', () => {
+  it('identifies the charger-type chart as a session breakdown while preserving actual total cost', () => {
+    const { container } = renderTab(makeQuery({ data: makeFleet() }));
+    expect(screen.getByRole('heading', { name: 'Charging sessions by charger type' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /cost by charger type/i })).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-chart-state="ready"]')).toHaveLength(3);
+    expect(within(screen.getByRole('region', { name: SUMMARY_REGION })).getByText('$87.50')).toBeInTheDocument();
+  });
+
   it('renders the formatted top-level and stat KPIs inside the labelled summary region', () => {
     renderTab(makeQuery({ data: makeFleet() }));
 
-    const region = screen.getByRole('region', { name: SUMMARY_REGION });
+    const region = screen.getAllByRole('region', { name: SUMMARY_REGION })[0];
     // Top-level totals (sessions / energy / cost via the '$' currency stub).
     expect(within(region).getByText('128')).toBeInTheDocument();
-    expect(within(region).getByText('543.2')).toBeInTheDocument();
+    expect(within(region).getByText('543.20 kWh')).toBeInTheDocument();
     expect(within(region).getByText('$87.50')).toBeInTheDocument();
     // Stat-derived KPIs (avg power / charge efficiency).
-    expect(within(region).getByText('48.6')).toBeInTheDocument();
-    expect(within(region).getByText('92.4')).toBeInTheDocument();
+    expect(within(region).getByText('48.60 kW')).toBeInTheDocument();
+    expect(within(region).getByText('92.40%')).toBeInTheDocument();
 
     // Loaded, non-empty ⇒ no skeletons, no empty states, no errors.
     expect(screen.queryByRole('status')).toBeNull();
@@ -299,10 +335,13 @@ describe('ChargingTab — error', () => {
     // Regression guard: pre-hardening these rendered "0" / "0.0" / "$0.00",
     // which reads as "actually zero" rather than "unknown".
     expect(screen.queryByText('$0.00')).toBeNull();
-    expect(screen.queryByText('0.0')).toBeNull();
+    expect(screen.queryByText('0.00')).toBeNull();
 
-    // Every KPI collapses to the unknown placeholder when there is no data.
-    expect(within(region).getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    // Every KPI is omitted from the face and counted in the drawer when there is no data.
+    expect(within(region).getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(within(region).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('6 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   });
 });
 
@@ -325,6 +364,85 @@ describe('ChargingTab — a11y', () => {
 });
 
 describe('ChargingTab — null-safety', () => {
+  it.each([0, -1, 0.5, Number.NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, undefined, null])(
+    'keeps aggregate sessions independent of ineligible statistics with count %s',
+    (count) => {
+      const stats = { ...makeStats(), count } as unknown as StatsSummary;
+      const { container } = renderTab(makeQuery({ data: makeFleet({
+        charging_analytics: makeChargingAnalytics({
+          energy_stats: stats, cost_stats: stats, power_stats: stats,
+          duration_stats: stats, efficiency_stats: stats,
+        }),
+      }) }));
+      expect(container.querySelector('[data-operational-metric="charging-sessions"] [data-operational-value]')).toHaveTextContent('128');
+      expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const sessionsDialog = screen.getByRole('dialog');
+      for (const label of ['Total energy', 'Total cost', 'Avg power', 'Avg duration', 'Charge efficiency']) {
+        expect(within(sessionsDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+      }
+      expect(within(sessionsDialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+      fireEvent.keyDown(sessionsDialog, { key: 'Escape' });
+    },
+  );
+
+  it('uses each statistic population independently and preserves signed fractional cost', () => {
+    const { container } = renderTab(makeQuery({ data: makeFleet({
+      total_cost: -0.25,
+      charging_analytics: makeChargingAnalytics({
+        energy_stats: makeStats({ count: 0 }),
+        power_stats: makeStats({ count: 0 }),
+        duration_stats: makeStats({ avg: 0 }),
+        efficiency_stats: makeStats({ avg: 0.5 }),
+      }),
+    }) }));
+    expect(container.querySelector('[data-operational-metric="charging-total-energy"]')).toBeNull();
+    expect(container.querySelector('[data-operational-metric="charging-average-power"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const splitDialog = screen.getByRole('dialog');
+    expect(within(splitDialog).queryByRole('group', { name: 'Total energy' })).not.toBeInTheDocument();
+    expect(within(splitDialog).queryByRole('group', { name: 'Avg power' })).not.toBeInTheDocument();
+    expect(within(splitDialog).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(splitDialog, { key: 'Escape' });
+    expect(container.querySelector('[data-operational-metric="charging-total-cost"] [data-operational-value]')).toHaveTextContent('$-0.25');
+    expect(container.querySelector('[data-operational-metric="charging-average-duration"] [data-operational-value]')).toHaveTextContent('0.00 min');
+    expect(container.querySelector('[data-operational-metric="charging-efficiency"] [data-operational-value]')).toHaveTextContent('0.50%');
+  });
+
+  it('does not substitute zeros for missing or invalid readings with eligible samples', () => {
+    const { container } = renderTab(makeQuery({ data: makeFleet({
+      total_energy_kwh: Number.NaN,
+      total_cost: undefined,
+      charging_analytics: makeChargingAnalytics({
+        power_stats: makeStats({ avg: Infinity }),
+        duration_stats: { count: 2 } as StatsSummary,
+        efficiency_stats: makeStats({ avg: Number.NaN }),
+      }),
+    }) }));
+    for (const id of ['charging-total-energy', 'charging-average-power', 'charging-efficiency', 'charging-total-cost', 'charging-average-duration']) {
+      expect(container.querySelector(`[data-operational-metric="${id}"]`)).toBeNull();
+    }
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const unknownDialog = screen.getByRole('dialog');
+    for (const label of ['Total energy', 'Avg power', 'Charge efficiency', 'Total cost', 'Avg duration']) {
+      expect(within(unknownDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+    }
+    expect(within(unknownDialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(unknownDialog, { key: 'Escape' });
+  });
+
+  it('preserves real zero totals and exposes source limitations through the real drawer', () => {
+    const { container } = renderTab(makeQuery({ data: makeFleet({
+      total_charging_sessions: 0, total_energy_kwh: 0, total_cost: 0,
+    }) }));
+    expect(container.querySelector('[data-operational-metric="charging-sessions"] [data-operational-value]')).toHaveTextContent('0');
+    expect(container.querySelector('[data-operational-metric="charging-total-energy"] [data-operational-value]')).toHaveTextContent('0.00 kWh');
+    expect(container.querySelector('[data-operational-metric="charging-total-cost"] [data-operational-value]')).toHaveTextContent('$0.00');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('The fleet response does not supply an observation timestamp for these aggregates.')).toBeInTheDocument();
+  });
+
   it('treats an absent charging_analytics block as empty without crashing', () => {
     renderTab(
       makeQuery({
@@ -338,10 +456,16 @@ describe('ChargingTab — null-safety', () => {
     expect(screen.getAllByRole('status')).toHaveLength(3);
     expect(screen.getByText('No charger type data')).toBeInTheDocument();
 
-    // Stat KPIs (power / duration / efficiency) fall back to "—" when the
+    // Stat KPIs (power / duration / efficiency) are omitted from the face when the
     // stat objects are absent, while the top-level totals still render.
     const region = screen.getByRole('region', { name: SUMMARY_REGION });
     expect(within(region).getByText('128')).toBeInTheDocument();
-    expect(within(region).getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    fireEvent.click(within(region).getByRole('button', { name: 'Review details' }));
+    const absentDialog = screen.getByRole('dialog');
+    for (const label of ['Total energy', 'Total cost', 'Avg power', 'Avg duration', 'Charge efficiency']) {
+      expect(within(absentDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+    }
+    expect(within(absentDialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(absentDialog, { key: 'Escape' });
   });
 });

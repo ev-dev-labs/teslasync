@@ -53,6 +53,11 @@ import {
 } from '@testing-library/react';
 
 import type { AppSettings } from '@/api/types';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import enCatalog from '@/i18n/en.json';
+
+vi.unmock('react-i18next');
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -118,7 +123,22 @@ function sseFrame(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.use(initReactI18next).init({
+    lng: 'en',
+    fallbackLng: 'en',
+    resources: {
+      en: { translation: enCatalog },
+      de: {
+        translation: {
+          quietHours: {
+            severity: { critical: 'Kritisch', warn: 'Warnung', info: 'Information' },
+          },
+        },
+      },
+    },
+    interpolation: { escapeValue: false },
+  });
   mockUseSettings.mockReset();
   globalThis.fetch = vi.fn(async () => {
     throw new Error('fetch not mocked');
@@ -337,6 +357,9 @@ describe('TestQuietHoursSuggestionAIOnWiredCallsRoute (quiet-hours-suggestion on
     );
     expect(applyButton).toBeInTheDocument();
     expect(applyButton).not.toBeDisabled();
+    expect(applyButton).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+    expect(applyButton).toHaveClass('h-auto', 'whitespace-normal');
+    expect(onApplyDraft).not.toHaveBeenCalled();
 
     // Click "Apply to form" — must invoke onApplyDraft with the
     // typed scalars verbatim PLUS enabled:true to prime the
@@ -354,5 +377,86 @@ describe('TestQuietHoursSuggestionAIOnWiredCallsRoute (quiet-hours-suggestion on
       weekdays: 127,
       bypass_severities: ['critical'],
     });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /^Save$/i })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      bypass: ['critical', 'warn', 'info'],
+      preview: 'Kritisch, Warnung, Information',
+    },
+    {
+      bypass: ['critical', 'vendor_custom', '__proto__', 'warn'],
+      preview: 'Kritisch, vendor_custom, __proto__, Warnung',
+    },
+    { bypass: [], preview: '' },
+  ])('localizes known severity IDs without changing the proposal: $bypass', async ({ bypass, preview }) => {
+    await i18n.changeLanguage('de');
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'cloud',
+        ai_features: { 'quiet-hours-suggestion': true },
+      }),
+    );
+    const proposal = {
+      start_local: '23:30',
+      end_local: '06:15',
+      timezone: 'Europe/Berlin',
+      weekdays: 62,
+      bypass_severities: bypass,
+      status: 'ok',
+      existing_windows_count: 0,
+    };
+    const sseBody =
+      sseFrame('tool_result', {
+        id: 'c1',
+        name: 'draft_quiet_hours_window',
+        ok: true,
+        data: proposal,
+      }) +
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 90, out: 30 } });
+    const fetchMock = vi.fn(async () => new Response(makeReadableStream([sseBody]), {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    }));
+    globalThis.fetch = fetchMock;
+    const onApplyDraft = vi.fn();
+    render(<AIQuietHoursSuggestion onApplyDraft={onApplyDraft} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Suggest quiet hours/i }));
+    });
+    const applyButton = await screen.findByRole('button', { name: 'Apply to form' });
+    expect(screen.getByText(`Bypass severities: ${preview}`.trimEnd(), { exact: true })).toBeInTheDocument();
+    expect(screen.getByText('Proposed window (review before saving):')).toBeInTheDocument();
+    expect(onApplyDraft).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.click(applyButton);
+    });
+    expect(onApplyDraft).toHaveBeenCalledTimes(1);
+    expect(onApplyDraft).toHaveBeenCalledWith({
+      enabled: true,
+      start_local: proposal.start_local,
+      end_local: proposal.end_local,
+      timezone: proposal.timezone,
+      weekdays: proposal.weekdays,
+      bypass_severities: bypass,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { ai_mode: 'off' as const, ai_features: { 'quiet-hours-suggestion': true } },
+    { ai_mode: 'cloud' as const, ai_features: { 'quiet-hours-suggestion': false } },
+  ])('remains opt-in for $ai_mode with feature settings $ai_features', (settings) => {
+    mockUseSettings.mockReturnValue(settingsPayload(settings));
+    const onApplyDraft = vi.fn();
+    render(<AIQuietHoursSuggestion onApplyDraft={onApplyDraft} />);
+    expect(screen.queryByTestId('ai-feature-quiet-hours-suggestion-root')).not.toBeInTheDocument();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(onApplyDraft).not.toHaveBeenCalled();
   });
 });

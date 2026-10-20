@@ -3,6 +3,7 @@ import {
   render,
   screen,
 } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import '@/i18n';
@@ -48,6 +49,47 @@ function Harness({ initial = [], maxItems, onChange, disabled }: HarnessProps) {
 }
 
 describe('ComboboxMulti', () => {
+  it('keeps native focus and selection with semantic rings at the existing geometry', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Harness initial={[ITEMS[0]]} onChange={onChange} />);
+    const input = screen.getByRole('combobox', { name: /fruits/i });
+    const field = input.parentElement;
+
+    await user.tab();
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(field).toHaveClass(
+      'focus-within:ring-2',
+      'focus-within:ring-[var(--focus-ring)]',
+      'focus-within:ring-offset-1',
+      'focus-within:ring-offset-[var(--bg)]',
+    );
+    expect(field).not.toHaveClass('focus-within:ring-blue-500');
+    for (const button of screen.getAllByRole('button')) {
+      expect(button).toHaveClass(
+        'focus:outline-none',
+        'focus:ring-2',
+        'focus:ring-[var(--focus-ring)]',
+      );
+      expect(button).not.toHaveClass('focus:ring-blue-500');
+      expect(button).toHaveAttribute('tabindex', '-1');
+    }
+
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith([ITEMS[0], ITEMS[1]]);
+    expect(input).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: /remove apple/i }));
+    expect(onChange).toHaveBeenLastCalledWith([ITEMS[1]]);
+    expect(input).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: /hide options/i }));
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(input).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: /show options/i }));
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(input).toHaveFocus();
+  });
+
   it('renders combobox role with aria-multiselectable on listbox', () => {
     render(<Harness />);
     const input = screen.getByRole('combobox', { name: /fruits/i });

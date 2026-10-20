@@ -43,22 +43,22 @@ import {
   GlassPanel,
   Modal,
   Pagination,
+  Select,
   Text,
   useContextMenu,
   type ContextMenuItem,
 } from '@/components/ui';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { useToast } from '@/components/feedback/Toast';
+import { EmptyState, InlineCallout, QueryError, Skeleton, StaleRefreshWarning, useToast } from '@/components/feedback';
 import { ListExportMenu, type ExportScope } from '@/components/forms';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { FadeIn } from '@/components/motion';
+import { useDataState } from '@/hooks/useDataState';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
-import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch } from '@/hooks/useUrlState';
+import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch, useUrlNumber } from '@/hooks/useUrlState';
 import {
   useNotificationLogs,
   useNotificationLogCount,
@@ -76,13 +76,14 @@ import {
 } from '@/api/hooks/useNotifications';
 import type { NotificationLog, AlertRule, Vehicle, Alert } from '@/api/types';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
-import { NotificationFilterBar } from './NotificationFilterBar';
-import { AIInboxAutoCategorization } from '@/components/ai/AIInboxAutoCategorization';
+import { NotificationFilterBar, presentationSeverity } from './NotificationFilterBar';
+import { AIInboxAutoCategorization } from '@/components/ai';
 import { NotificationGroupRow } from './NotificationGroupRow';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
 import { PullToRefresh } from '@/components/mobile';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { NotificationInboxTable } from './NotificationInboxTable';
+import { NotificationInboxDetails } from './NotificationInboxDetails';
 
 const SEVERITY_VALUES = ['info', 'warn', 'critical'] as const;
 type SeverityValue = (typeof SEVERITY_VALUES)[number];
@@ -95,6 +96,15 @@ const VIEW_VALUES = ['grouped', 'flat'] as const;
 type ViewValue = (typeof VIEW_VALUES)[number];
 const INBOX_PAGE_SIZE = 50;
 
+function parseFilterIds(values: string[]): number[] {
+  // Ignore malformed URL entries without coercing hex/exponents or rounding
+  // unsafe IDs into another record. Keep valid IDs even if not in loaded options.
+  return values
+    .filter(value => /^\d+$/.test(value))
+    .map(Number)
+    .filter(id => Number.isSafeInteger(id) && id > 0);
+}
+
 function notificationExportRow(log: NotificationLog): Record<string, unknown> {
   return {
     id: log.id,
@@ -104,6 +114,7 @@ function notificationExportRow(log: NotificationLog): Record<string, unknown> {
     title: log.title,
     message: log.message,
     severity: log.severity ?? '',
+    event_type: log.event_type ?? '',
     status: log.status,
     read_at: log.read_at ?? '',
     archived_at: log.archived_at ?? '',
@@ -157,25 +168,25 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   // express "Inbox, grouped" vs "Inbox, flat" independent of filter state.
   const [view, setView] = useUrlEnum<ViewValue>('view', VIEW_VALUES, 'flat');
   const [page, setPage] = useState(1);
+  const [requestedSize] = useUrlNumber('size', INBOX_PAGE_SIZE);
+  const pageSize = [25, 50, 100].includes(requestedSize) ? requestedSize : INBOX_PAGE_SIZE;
   const setFiltersBatch = useUrlBatch();
   const isGrouped = view === 'grouped' && !archived;
 
   // Sanitize unknown severity values so a hand-edited URL can't corrupt the
   // request payload.
   const severity = useMemo<SeverityValue[]>(
-    () => severityRaw.filter((s): s is SeverityValue => SEVERITY_VALUES.includes(s as SeverityValue)),
+    () => severityRaw.filter((s): s is SeverityValue => SEVERITY_VALUES.some(value => value === s)),
     [severityRaw],
   );
-  const vehicleIds = useMemo<number[]>(() => {
-    return vehicleIdsRaw
-      .map(v => Number(v))
-      .filter(n => Number.isFinite(n) && n > 0);
-  }, [vehicleIdsRaw]);
-  const ruleIds = useMemo<number[]>(() => {
-    return ruleIdsRaw
-      .map(v => Number(v))
-      .filter(n => Number.isFinite(n) && n > 0);
-  }, [ruleIdsRaw]);
+  const presentationSeverities = useMemo<SeverityValue[]>(
+    () => severityRaw
+      .map(presentationSeverity)
+      .filter((value): value is SeverityValue => SEVERITY_VALUES.some(severity => severity === value)),
+    [severityRaw],
+  );
+  const vehicleIds = useMemo(() => parseFilterIds(vehicleIdsRaw), [vehicleIdsRaw]);
+  const ruleIds = useMemo(() => parseFilterIds(ruleIdsRaw), [ruleIdsRaw]);
 
   const filters = useMemo<NotificationFilters>(() => ({
     archived,
@@ -187,25 +198,44 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     from: startInstant,
     to_exclusive: endInstantExclusive,
     read: readState === 'all' ? undefined : readState === 'read',
-    limit: INBOX_PAGE_SIZE,
-    offset: (page - 1) * INBOX_PAGE_SIZE,
-  }), [archived, severity, vehicleIds, ruleIds, source, search, startInstant, endInstantExclusive, readState, page]);
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  }), [archived, severity, vehicleIds, ruleIds, source, search, startInstant, endInstantExclusive, readState, page, pageSize]);
+
+  const presentationFilters = useMemo<NotificationFilters>(() => ({
+    ...filters,
+    severity: presentationSeverities.length ? presentationSeverities : undefined,
+  }), [filters, presentationSeverities]);
 
   const severityKey = severityRaw.join(',');
   const vehicleKey = vehicleIdsRaw.join(',');
   const ruleKey = ruleIdsRaw.join(',');
-  useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, source, search, startInstant, endInstantExclusive, readState, view]);
+  useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, source, search, startInstant, endInstantExclusive, readState, view, pageSize]);
 
   const handleFiltersChange = useCallback((next: NotificationFilters) => {
     // Bridge the existing controlled-component contract back into the
-    // discrete URL params so the FilterBar UI stays untouched. All seven
-    // keys are written atomically via useUrlBatch — without this, the
+    // discrete URL params shared by grouped controls and table headers.
+    // Filter keys are written atomically via useUrlBatch — without this, the
     // react-router-dom v6 setSearchParams race would discard 6 of 7
     // updates whenever a saved view applied multi-key filters.
     const readValue =
       next.read === undefined ? null : next.read ? 'read' : 'unread';
+    // Presentation aliases must not rewrite source spellings or unrelated
+    // unknown URL members when another filter is edited.
+    const nextSeverity = next.severity === presentationFilters.severity
+      ? severityRaw
+      : next.severity === undefined
+        ? []
+        : [
+            ...severityRaw.filter(value => {
+              const displayValue = presentationSeverity(value);
+              return !SEVERITY_VALUES.some(severity => severity === displayValue)
+                || next.severity?.some(severity => severity === displayValue);
+            }),
+            ...next.severity.filter(value => !presentationSeverities.includes(value)),
+          ];
     const urlUpdates = {
-      severity: (next.severity ?? []).join(',') || null,
+      severity: nextSeverity.join(',') || null,
       vehicle_id: (next.vehicle_id ?? []).map(String).join(',') || null,
       rule_id: (next.rule_id ?? []).map(String).join(',') || null,
       source: next.source ?? null,
@@ -213,7 +243,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       read: readValue,
     };
     setFiltersBatch(urlUpdates);
-  }, [setFiltersBatch]);
+  }, [setFiltersBatch, presentationFilters.severity, severityRaw, presentationSeverities]);
 
   // Inbox auto-categorization apply callback.
   // The AI panel's "Apply categories as filter" button passes a
@@ -229,8 +259,12 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     });
   }, [setFiltersBatch]);
 
-  const { data: rawRows, isLoading, error, refetch } = useNotificationLogs(filters, { enabled: !isGrouped });
-  const { data: countData, error: countError } = useNotificationLogCount(filters, { grouped: isGrouped });
+  const logsQuery = useNotificationLogs(filters, { enabled: !isGrouped });
+  const { data: rawRows, isLoading, refetch } = logsQuery;
+  const logsState = useDataState(logsQuery);
+  const countQuery = useNotificationLogCount(filters, { grouped: isGrouped });
+  const { data: countData } = countQuery;
+  const countState = useDataState(countQuery);
   const rows = useMemo<NotificationLog[]>(() => rawRows ?? [], [rawRows]);
   const [openedLog, setOpenedLog] = useState<NotificationLog | null>(null);
   const alertDetail = useAlertDetail(openedLog?.alert_id != null ? openedLog.id : null);
@@ -240,12 +274,16 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   // Grouped/threaded fetch. Only enabled in
   // grouped mode AND on the inbox tab (archived doesn't group; the
   // archive workflow is row-by-row triage).
+  const groupsQuery = useNotificationGroups(filters, { enabled: isGrouped });
   const {
     data: rawGroups,
-    isLoading: groupsLoading,
-    error: groupsError,
     refetch: groupsRefetch,
-  } = useNotificationGroups(filters, { enabled: isGrouped });
+  } = groupsQuery;
+  const groupsState = useDataState(groupsQuery);
+  const listState = isGrouped ? groupsState : logsState;
+  const listQuery = isGrouped ? groupsQuery : logsQuery;
+  const initialLoading = !listState.hasData && !listState.fatalError && listQuery.fetchStatus === 'fetching';
+  const unresolvedList = !listState.hasData && !listState.fatalError && !initialLoading;
   const groups = useMemo(() => rawGroups ?? [], [rawGroups]);
   const groupedNotificationCount = useMemo(
     () => groups.reduce((total, group) => total + Math.max(0, group.count), 0),
@@ -506,15 +544,19 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     id: openedLog.id,
     vehicle_id: openedVehicle?.id ?? openedRule?.vehicle_id ?? 0,
     type: openedRule?.name ?? openedLog.event_type ?? openedLog.title,
-    severity: (openedRule?.severity ?? openedLog.severity ?? 'info') as Alert['severity'],
+    severity: openedLog.severity ?? '',
     title: openedLog.title,
     message: openedLog.message,
     is_read: !!openedLog.read_at,
     created_at: openedLog.created_at,
     rule_id: openedRule?.id,
     rule_signal: openedRule?.signal_name,
-    acknowledged_at: alertDetail.data?.acknowledged_at ?? null,
   } : null;
+  const canWriteAlert = openedAlert !== null &&
+    alertDetail.data?.id === openedAlert.id &&
+    (alertDetail.data.acknowledged_at === null || Boolean(alertDetail.data.acknowledged_at?.trim())) &&
+    !alertDetail.isFetching && !alertDetail.error &&
+    !acknowledgeAlert.isPending && !reopenAlert.isPending;
 
   const navigate = useNavigate();
   const { openMenu: openRowContextMenu } = useContextMenu();
@@ -562,7 +604,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           id: log.id,
           vehicle_id: vehicle?.id ?? rule.vehicle_id ?? 0,
           type: rule.name ?? log.title,
-          severity: (rule.severity ?? 'info') as Alert['severity'],
+          severity: log.severity ?? '',
           title: log.title,
           message: log.message,
           is_read: isRead,
@@ -595,8 +637,8 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const handleRowContextMenu = useCallback(
     (log: NotificationLog) =>
       (e: ReactMouseEvent<HTMLDivElement>) => {
-        const target = e.target as HTMLElement;
-        if (target.closest('input, textarea, select, a, button')) return;
+        const target = e.target;
+        if (target instanceof Element && target.closest('input, textarea, select, a, button')) return;
         const items = buildRowContextMenu(log);
         if (items.length === 0) return;
         e.preventDefault();
@@ -605,17 +647,99 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     [buildRowContextMenu, openRowContextMenu],
   );
 
+  const listHeading = (
+    <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+      <Text variant="bodySm" className="font-semibold text-[var(--text-primary)]">
+        {t('notifications.inbox.evidence.title', 'Notification evidence')}
+      </Text>
+      <span className="text-xs text-[var(--text-muted)]" data-testid="inbox-result-count">
+        {countData?.total != null
+          ? isGrouped
+            ? t('notifications.inbox.threadCountLabel', '{{count}} threads', { count: countData.total })
+            : t('notifications.inbox.countLabel', '{{count}} notifications', { count: countData.total })
+          : listState.hasData
+            ? t('notifications.inbox.loadedCount', '{{count}} loaded · total unavailable', { count: isGrouped ? groups.length : rows.length })
+            : t('common.unknown', 'Unknown')}
+        {isGrouped && listState.hasData && <>
+          <span aria-hidden="true"> · </span>
+          {t('notifications.inbox.loadedPageMembership', '{{count}} notifications in loaded threads on this page', { count: groupedNotificationCount })}
+        </>}
+      </span>
+    </div>
+  );
+  const listActions = (
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+      {isGrouped && <Select
+        size="sm"
+        value={readState}
+        onChange={event => {
+          const value = event.target.value;
+          if (value === 'all' || value === 'read' || value === 'unread') {
+            handleFiltersChange({ ...presentationFilters, read: value === 'all' ? undefined : value === 'read' });
+          }
+        }}
+        aria-label={t('notifications.inbox.filter.readState', 'Filter by read state')}
+        options={[
+          { value: 'all', label: t('notifications.inbox.filter.allReadStates', 'All read states') },
+          { value: 'read', label: t('notifications.inbox.columns.read', 'Read') },
+          { value: 'unread', label: t('notifications.inbox.columns.unread', 'Unread') },
+        ]}
+      />}
+      {isGrouped && <ListExportMenu
+        onExportCsv={handleExportCsv}
+        onExportJson={handleExportJson}
+        selectedCount={isGrouped ? 0 : selected.size}
+        visibleCount={visibleExportRows.length}
+        disabled={visibleExportRows.length === 0 || initialLoading}
+        testId="notification-export"
+      />}
+      {!archived && (
+        <div className="flex items-center gap-1 rounded-md border border-[var(--border-subtle)] p-0.5"
+          role="group" aria-label={t('notifications.view.label', 'View')}>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setView('grouped')}
+            aria-pressed={view === 'grouped'} aria-label={t('notifications.view.grouped', 'Grouped')}
+            className={cn(view === 'grouped' && 'bg-[var(--surface-2)] text-[var(--text-primary)]')}
+            data-testid="view-toggle-grouped">
+            <Layers className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">{t('notifications.view.grouped', 'Grouped')}</span>
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setView('flat')}
+            aria-pressed={view === 'flat'} aria-label={t('notifications.view.flat', 'Flat')}
+            className={cn(view === 'flat' && 'bg-[var(--surface-2)] text-[var(--text-primary)]')}
+            data-testid="view-toggle-flat">
+            <List className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">{t('notifications.view.flat', 'Flat')}</span>
+          </Button>
+        </div>
+      )}
+      {!archived && !isGrouped && unreadCount > 0 && (
+        <Button variant="ghost" size="sm" onClick={handleMarkAllRead} disabled={bulkMarkReadMut.isPending}
+          icon={<CheckCheck className="h-3.5 w-3.5" aria-hidden="true" />}
+          aria-label={t('notifications.markAllRead.action', 'Mark all read')}>
+          {t('notifications.markAllRead.action', 'Mark all read')}
+        </Button>
+      )}
+    </div>
+  );
+  const hasOptionalFilters = severity.length > 0 || vehicleIds.length > 0 ||
+    ruleIds.length > 0 || source !== 'all' || search !== '' || readState !== 'all';
+  const clearOptionalFilters = () => handleFiltersChange({ archived });
+
   return (
     <>
     <AlertDetailDrawer
       alert={openedAlert}
       detail={alertDetail.data}
-      isLoading={alertDetail.isLoading}
+      isLoading={alertDetail.isFetching || alertDetail.isLoading || acknowledgeAlert.isPending || reopenAlert.isPending}
       error={alertDetail.error}
       vehicleName={openedVehicle?.display_name}
       onClose={() => setOpenedLog(null)}
-      onAcknowledge={id => acknowledgeAlert.mutate({ id })}
-      onReopen={id => reopenAlert.mutate(id)}
+      onAcknowledge={id => {
+        if (canWriteAlert && id === openedAlert?.id && alertDetail.data?.acknowledged_at === null) acknowledgeAlert.mutate({ id });
+      }}
+      onReopen={id => {
+        if (canWriteAlert && id === openedAlert?.id && alertDetail.data?.acknowledged_at) reopenAlert.mutate(id);
+      }}
       onRetry={() => { void alertDetail.refetch(); }}
     />
     <Modal
@@ -623,41 +747,39 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       onClose={() => setOpenedLog(null)}
       title={openedLog?.title || t('notifications.inbox.detail.title', 'Notification details')}
     >
-      <div className="space-y-3">
-        <Text variant="body" className="whitespace-pre-wrap break-words">{openedLog?.message ?? ''}</Text>
-        <Text variant="caption">{openedLog?.event_type ?? t('notifications.inbox.legacyDelivery', 'Legacy channel delivery (original source not recorded)')}</Text>
-        <Text variant="caption">{openedLog?.created_at ? new Date(openedLog.created_at).toLocaleString() : ''}</Text>
-      </div>
+      {openedLog ? <NotificationInboxDetails log={openedLog} rule={openedRule} vehicle={openedVehicle} actions={buildRowContextMenu(openedLog)} />
+        : (
+          // no-action: The inspection modal closes when its selected notification is cleared.
+          <EmptyState message={t('notifications.inbox.detail.empty', 'Select a notification to inspect its details.')} />
+        )}
     </Modal>
-    <PullToRefresh onRefresh={async () => { await (isGrouped ? groupsRefetch() : refetch()); }}>
-    <div className="space-y-4">
-      <FadeIn>
-        <div data-tour="alerts-filters">
+    <PullToRefresh onRefresh={async () => { await Promise.all([(isGrouped ? groupsRefetch() : refetch()), countQuery.refetch()]); }}>
+    <div className="min-w-0 w-full max-w-full space-y-4">
+      <GlassPanel className="min-w-0 w-full max-w-full p-3 sm:p-4" data-tour="alerts-list">
+      {isGrouped && <FadeIn>
+        <div data-tour="alerts-filters" className="mb-3 min-w-0 w-full max-w-full border-b border-[var(--border-subtle)] pb-3">
         <NotificationFilterBar
-          filters={filters}
+          filters={presentationFilters}
           onChange={handleFiltersChange}
           vehicles={vehicles}
           rules={rules}
         />
         </div>
-      </FadeIn>
-
-      {/* Inbox auto-categorization. The
-        component is wrapped with withAiFeature, so it is ABSENT
-        when ai_mode='off' OR the per-feature toggle is off
-        (ADR-015 §I5). The "Apply categories as filter" callback
-        narrows the existing URL-backed rule_id filter — the AI
-        never persists state directly. */}
-      <AIInboxAutoCategorization
-        vehicleId={vehicleIds.length === 1 ? vehicleIds[0] : null}
-        severities={severity}
-        ruleIds={ruleIds}
-        onApplyCategories={handleApplyAICategories}
-      />
+      </FadeIn>}
 
       <BulkActionsToolbar
         selectedIds={Array.from(selected)}
-        total={rows.length}
+        total={isGrouped ? null : countData?.total ?? null}
+        selectionScope={isGrouped ? 'selected' : 'loaded'}
+        selectionSummary={isGrouped
+          ? t('notifications.inbox.bulk.memberSelection', '{{count}} selected notification members', { count: selected.size })
+          : countData?.total != null
+            ? t('notifications.inbox.bulk.loadedSelection', '{{count}} selected · {{loaded}} loaded notifications · {{total}} matching', {
+                count: selected.size, loaded: rows.length, total: countData.total,
+              })
+            : t('notifications.inbox.bulk.unknownSelection', '{{count}} selected · {{loaded}} loaded notifications · total unavailable', {
+                count: selected.size, loaded: rows.length,
+              })}
         onClear={clearSelection}
         actions={bulkActions}
         itemNoun={{
@@ -666,165 +788,12 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         }}
       />
 
-      <GlassPanel className="p-3 sm:p-4" data-tour="alerts-list">
-        <div className="mb-2 flex items-center gap-3 px-1 pb-2 border-b border-white/[0.04]">
-          <span
-            className="text-xs text-[var(--text-muted)]"
-            data-testid="inbox-result-count"
-          >
-            {isGrouped ? (
-              <>
-                {t('notifications.inbox.threadCountLabel', '{{count}} threads', {
-                  count: countData?.total ?? groups.length,
-                })}
-                <span aria-hidden="true"> · </span>
-                {t('notifications.inbox.notificationCountLabel', '{{count}} notifications', {
-                  count: groupedNotificationCount,
-                })}
-              </>
-            ) : (
-              t('notifications.inbox.countLabel', '{{count}} notifications', { count: countData?.total ?? rows.length })
-            )}
-          </span>
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            <ListExportMenu
-              onExportCsv={handleExportCsv}
-              onExportJson={handleExportJson}
-              selectedCount={isGrouped ? 0 : selected.size}
-              visibleCount={visibleExportRows.length}
-              disabled={
-                visibleExportRows.length === 0 ||
-                (isGrouped ? groupsLoading : isLoading)
-              }
-              testId="notification-export"
-            />
-            {!archived && (
-              <div
-                className="flex items-center gap-1 rounded-full border border-white/[0.06] bg-white/[0.02] p-0.5"
-                role="group"
-                aria-label={t('notifications.view.label', 'View')}
-              >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setView('grouped')}
-                  aria-pressed={view === 'grouped'}
-                  aria-label={t('notifications.view.grouped', 'Grouped')}
-                  className={cn(
-                    'h-auto rounded-full px-2 py-1',
-                    view === 'grouped'
-                      ? 'bg-cyan-400/15 text-cyan-200'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                  )}
-                  data-testid="view-toggle-grouped"
-                >
-                  <Layers className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span className="hidden sm:inline">
-                    {t('notifications.view.grouped', 'Grouped')}
-                  </span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setView('flat')}
-                  aria-pressed={view === 'flat'}
-                  aria-label={t('notifications.view.flat', 'Flat')}
-                  className={cn(
-                    'h-auto rounded-full px-2 py-1',
-                    view === 'flat'
-                      ? 'bg-cyan-400/15 text-cyan-200'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                  )}
-                  data-testid="view-toggle-flat"
-                >
-                  <List className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span className="hidden sm:inline">
-                    {t('notifications.view.flat', 'Flat')}
-                  </span>
-                </Button>
-              </div>
-            )}
-            {!archived && !isGrouped && unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleMarkAllRead}
-                disabled={bulkMarkReadMut.isPending}
-                icon={<CheckCheck className="h-3.5 w-3.5" />}
-                className="text-xs"
-                aria-label={t('notifications.markAllRead.action', 'Mark all read')}
-              >
-                {t('notifications.markAllRead.action', 'Mark all read')}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {((isGrouped && groupsLoading) || (!isGrouped && isLoading)) && (
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-14" />)}
-          </div>
+        {isGrouped && (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">{listHeading}{listActions}</div>
         )}
-
-        {!isGrouped && !isLoading && error && (
-          <EmptyState
-            icon={<Bell className="h-8 w-8" />}
-            title={t('notifications.inbox.error.title', 'Could not load notifications')}
-            message={String(error)}
-            action={{
-              label: t('common.retry', 'Retry'),
-              onClick: () => { void refetch(); },
-            }}
-          />
-        )}
-
-        {isGrouped && !groupsLoading && groupsError && (
-          <EmptyState
-            icon={<Bell className="h-8 w-8" />}
-            title={t('notifications.inbox.error.title', 'Could not load notifications')}
-            message={String(groupsError)}
-            action={{
-              label: t('common.retry', 'Retry'),
-              onClick: () => { void groupsRefetch(); },
-            }}
-          />
-        )}
-
-        {!isGrouped && !isLoading && !error && rows.length === 0 && (
-          <EmptyState
-            icon={<Bell className="h-8 w-8" />}
-            title={archived
-              ? t('notifications.inbox.empty.archivedTitle', 'No archived notifications')
-              : t('notifications.inbox.empty.title', 'No notifications')}
-            message={archived
-              ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')
-              : source === 'rule'
-                ? t('notifications.inbox.empty.ruleTriggers', 'No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert Studio.')
-                : t('notifications.inbox.empty.message', 'System events, alerts, automation, and scheduled notifications appear here when triggered.')}
-            actionTo={archived ? undefined : {
-              label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
-              to: '/notifications/studio',
-            }}
-          />
-        )}
-
-        {isGrouped && !groupsLoading && !groupsError && groups.length === 0 && (
-          <EmptyState
-            icon={<Bell className="h-8 w-8" />}
-            title={t('notifications.group.emptyTitle', 'No notification threads')}
-            message={t('notifications.group.emptyMessage', 'Related notifications are grouped here when they occur repeatedly.')}
-            actionTo={{
-              label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
-              to: '/notifications/studio',
-            }}
-          />
-        )}
-
-        {!isGrouped && !isLoading && !error && rows.length > 0 && (
+        {!isGrouped && (
           <NotificationInboxTable
-            rows={rows}
+            rows={initialLoading || listState.fatalError ? [] : rows}
             selectedIds={Array.from(selected)}
             onSelectionChange={setTableSelection}
             onActivate={handleRowActivate}
@@ -832,10 +801,106 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             ruleMap={ruleMap}
             vehicleMap={vehicleMap}
             archived={archived}
+            toolbarHeading={listHeading}
+            toolbarActions={listActions}
+            controls={{
+              search: {
+                value: search,
+                onChange: (q) => handleFiltersChange({ ...presentationFilters, q: q || undefined }),
+                placeholder: t('notifications.inbox.filter.searchPlaceholder', 'Search messages…'),
+                historyScope: archived ? 'notifications:archived' : 'notifications:inbox',
+              },
+              exports: {
+                onExportCsv: handleExportCsv,
+                onExportJson: handleExportJson,
+                selectedCount: selected.size,
+                visibleCount: visibleExportRows.length,
+                disabled: visibleExportRows.length === 0 || initialLoading,
+                testId: 'notification-export',
+              },
+            }}
+            filters={presentationFilters}
+            onFiltersChange={handleFiltersChange}
+            paginationControls={countData ? {
+              page,
+              pageSize,
+              total: countData.total,
+              onPageChange: setPage,
+              onPageSizeChange: (size) => { setPage(1); setFiltersBatch({ size: String(size) }); },
+            } : undefined}
+          />
+        )}
+        <StaleRefreshWarning state={listState} label={t('notifications.inbox.evidence.title', 'Notification evidence')} />
+        <StaleRefreshWarning state={countState} label={t('notifications.inbox.evidence.count', 'Notification count')} />
+
+        {initialLoading && (
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-14" />)}
+          </div>
+        )}
+        {unresolvedList && (
+          <InlineCallout variant="info" action={listState.retry ? { label: t('common.retry', 'Retry'), onClick: listState.retry } : undefined}>
+            {listState.isRefreshBlocked
+              ? t('dataSources.status.paused', 'Refresh paused')
+              : t('dataSources.status.pending', 'Pending')}
+            {' · '}
+            {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+          </InlineCallout>
+        )}
+
+        {listState.fatalError && (
+          <EmptyState
+            icon={<Bell className="h-8 w-8" />}
+            title={t('notifications.inbox.error.title', 'Could not load notifications')}
+            message={String(listState.fatalError)}
+            action={{
+              label: t('common.retry', 'Retry'),
+              onClick: () => { void (isGrouped ? groupsRefetch() : refetch()); },
+            }}
           />
         )}
 
-        {isGrouped && !groupsLoading && !groupsError && groups.length > 0 && (
+        {!isGrouped && listState.hasData && !listState.fatalError && rows.length === 0 && (
+          <EmptyState
+            icon={<Bell className="h-8 w-8" />}
+            title={hasOptionalFilters
+              ? t('notifications.inbox.empty.noMatches', 'No notifications match these filters')
+              : archived
+              ? t('notifications.inbox.empty.archivedTitle', 'No archived notifications')
+              : t('notifications.inbox.empty.title', 'No notifications')}
+            message={hasOptionalFilters
+              ? !archived && source === 'rule'
+                ? t('notifications.inbox.empty.ruleTriggers', "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert studio.")
+                : t('notifications.inbox.empty.noMatchesMessage', 'Clear the notification filters or adjust the workspace date range to see other records.')
+              : archived
+              ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')
+              : t('notifications.inbox.empty.message', 'System events, alerts, automation, and scheduled notifications appear here when triggered.')}
+            secondaryAction={hasOptionalFilters ? { label: t('common.clearFilters', 'Clear filters'), onClick: clearOptionalFilters } : undefined}
+            actionTo={archived ? undefined : {
+              label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
+              to: '/notifications/studio',
+            }}
+          />
+        )}
+
+        {isGrouped && listState.hasData && !listState.fatalError && groups.length === 0 && (
+          <EmptyState
+            icon={<Bell className="h-8 w-8" />}
+            title={hasOptionalFilters
+              ? t('notifications.inbox.empty.noMatches', 'No notifications match these filters')
+              : t('notifications.group.emptyTitle', 'No notification threads')}
+            message={hasOptionalFilters
+              ? t('notifications.inbox.empty.noMatchesMessage', 'Clear the notification filters or adjust the workspace date range to see other records.')
+              : t('notifications.group.emptyMessage', 'Related notifications are grouped here when they occur repeatedly.')}
+            secondaryAction={hasOptionalFilters ? { label: t('common.clearFilters', 'Clear filters'), onClick: clearOptionalFilters } : undefined}
+            actionTo={{
+              label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
+              to: '/notifications/studio',
+            }}
+          />
+        )}
+
+        {isGrouped && !initialLoading && !listState.fatalError && groups.length > 0 && (
           <div className="space-y-2" data-testid="notification-groups">
             {groups.map((g, idx) => (
               <div
@@ -860,11 +925,35 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             ))}
           </div>
         )}
-      </GlassPanel>
-      {countError && <Text variant="bodySm">{t('notifications.inbox.countError', 'Could not load the notification count: {{error}}', { error: String(countError) })}</Text>}
-      {countData && countData.total > 0 && (
-        <Pagination page={page} pageSize={INBOX_PAGE_SIZE} total={countData.total} onPageChange={setPage} />
+      {countState.fatalError && <QueryError
+        error={countState.fatalError}
+        onRetry={countState.retry ?? undefined}
+        resourceName={t('notifications.inbox.evidence.count', 'Notification count')}
+      />}
+      {!countState.hasData && !countState.fatalError && countQuery.fetchStatus !== 'fetching' && (
+        <InlineCallout variant="info" action={countState.retry ? { label: t('common.retry', 'Retry'), onClick: countState.retry } : undefined}>
+          {t('notifications.inbox.evidence.count', 'Notification count')}
+          {' · '}
+          {countState.isRefreshBlocked ? t('dataSources.status.paused', 'Refresh paused') : t('dataSources.status.pending', 'Pending')}
+        </InlineCallout>
       )}
+      {!countState.hasData && listState.hasData && (
+        <Pagination page={page} pageSize={pageSize} total={Number.NaN} totalKind="unknown"
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPage(1); setFiltersBatch({ size: String(size) }); }} />
+      )}
+      {isGrouped && countData && countData.total > 0 && (
+        <Pagination page={page} pageSize={pageSize} total={countData.total} onPageChange={setPage}
+          onPageSizeChange={(size) => { setPage(1); setFiltersBatch({ size: String(size) }); }} />
+      )}
+      </GlassPanel>
+      {/* The propose-only assistant remains available below the primary evidence surface. */}
+      <AIInboxAutoCategorization
+        vehicleId={vehicleIds.length === 1 ? vehicleIds[0] : null}
+        severities={severity}
+        ruleIds={ruleIds}
+        onApplyCategories={handleApplyAICategories}
+      />
     </div>
     </PullToRefresh>
       {deleteDialogProps && <ConfirmDialog {...deleteDialogProps} />}

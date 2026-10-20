@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"time"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -73,13 +75,10 @@ func (e *Engine) evaluateTypedCondition(index int, item any, a *models.Automatio
 }
 
 func evaluateTimeWindowCondition(index int, c *models.AutomationStepConditionTimeWindow, now time.Time) conditionResult {
-	cfg := &condition.TimeWindowConfig{
-		Type:      "time_window",
-		StartTime: c.StartTime.Format("15:04"),
-		EndTime:   c.EndTime.Format("15:04"),
-		Timezone:  c.Timezone,
+	if c == nil {
+		return conditionResult{Index: index, Type: models.AutomationStepKindConditionTimeWindow, Result: "unknown", Reason: "time_window condition is nil"}
 	}
-	res, _, err := condition.EvaluateTimeWindow(cfg, now)
+	res, _, err := condition.EvaluateTypedTimeWindow(c.StartTime, c.EndTime, c.Timezone, c.DaysOfWeek, now)
 	if err != nil {
 		return conditionResult{Index: index, Type: models.AutomationStepKindConditionTimeWindow, Result: "unknown", Reason: "evaluation error: " + err.Error()}
 	}
@@ -280,6 +279,29 @@ func vehicleStateSignalValue(state *vehiclemodel.VehicleState, signal string) (a
 }
 
 func compareConditionSignal(actual any, c *models.AutomationStepConditionSignal) (bool, string) {
+	if c.Op == "in" {
+		if c.ValueText == nil || strings.TrimSpace(*c.ValueText) == "" {
+			return false, fmt.Sprintf("%s in requires a nonempty value list", c.Signal)
+		}
+		actualNum, numeric := numberValue(actual)
+		matched := false
+		for _, part := range strings.Split(*c.ValueText, ",") {
+			item := strings.TrimSpace(part)
+			if item == "" {
+				return false, fmt.Sprintf("%s in contains an empty value", c.Signal)
+			}
+			if numeric {
+				expected, err := strconv.ParseFloat(item, 64)
+				if err != nil || math.IsNaN(expected) || math.IsInf(expected, 0) {
+					return false, fmt.Sprintf("%s in contains an invalid numeric value", c.Signal)
+				}
+				matched = matched || actualNum == expected
+			} else {
+				matched = matched || fmt.Sprint(actual) == item
+			}
+		}
+		return matched, fmt.Sprintf("%s=%v in %s", c.Signal, actual, *c.ValueText)
+	}
 	if c.Op == "between" {
 		actualNum, ok := numberValue(actual)
 		if !ok || c.ValueMin == nil || c.ValueMax == nil {

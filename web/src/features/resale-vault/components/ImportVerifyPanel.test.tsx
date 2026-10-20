@@ -3,7 +3,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ImportVerifyPanel } from './ImportVerifyPanel';
 import { signReport } from '../lib/reportSigner';
 import { makeMinimalReport } from '../lib/testFixtures';
-import { __resetKeyRepositoryForTests } from '../lib/signingKeyRepository';
+import {
+  __resetKeyRepositoryForTests,
+  generateSigningKey,
+  revokeSigningKey,
+} from '../lib/signingKeyRepository';
+import { verifyReport } from '../lib/reportVerifier';
 import { __resetAuditTrailForTests } from '../lib/auditTrail';
 import type { SignedVaultReport } from '../lib/types';
 
@@ -49,6 +54,79 @@ describe('ImportVerifyPanel', () => {
 
     expect(await screen.findByText(/some checks failed/i)).toBeInTheDocument();
     expect(screen.getByText('Digest mismatch')).toBeInTheDocument();
+  });
+
+  it.each([false, true])('keeps an external signature valid and unknown despite a local key ID collision (revoked: %s)', async (revoked) => {
+    const external = await signReport(makeMinimalReport());
+    __resetKeyRepositoryForTests();
+    const local = await generateSigningKey();
+    if (revoked) await revokeSigningKey(local.key_id, 'Regression test');
+    const imported: SignedVaultReport = {
+      ...external,
+      signature: { ...external.signature, key_id: local.key_id },
+    };
+
+    expect(await verifyReport(imported)).toMatchObject({
+      valid: true,
+      signatureValid: true,
+      isKnownLocalKey: false,
+      localKeyRevoked: null,
+      errors: [],
+    });
+    render(<ImportVerifyPanel />);
+    fireEvent.change(screen.getByLabelText(/choose report file/i), {
+      target: { files: [jsonFile(imported)] },
+    });
+
+    expect(await screen.findByText(/all checks passed/i)).toBeInTheDocument();
+    expect(screen.getByText('Signature valid')).toBeInTheDocument();
+    expect(screen.queryByText(/known to this browser|locally-known, revoked/i)).not.toBeInTheDocument();
+  });
+
+  it.each([false, true])('recognizes the same public key despite a changed ID and optional JWK metadata (revoked: %s)', async (revoked) => {
+    const signed = await signReport(makeMinimalReport());
+    if (revoked) await revokeSigningKey(signed.signature.key_id, 'Regression test');
+    const { kty, crv, x, y } = signed.signature.public_key_jwk;
+    const imported: SignedVaultReport = {
+      ...signed,
+      signature: {
+        ...signed.signature,
+        key_id: 'external-key-alias',
+        public_key_jwk: { y, x, crv, kty },
+      },
+    };
+
+    expect(await verifyReport(imported)).toMatchObject({
+      valid: true,
+      signatureValid: true,
+      isKnownLocalKey: true,
+      localKeyRevoked: revoked,
+    });
+    render(<ImportVerifyPanel />);
+    fireEvent.change(screen.getByLabelText(/choose report file/i), {
+      target: { files: [jsonFile(imported)] },
+    });
+
+    expect(await screen.findByText(/all checks passed/i)).toBeInTheDocument();
+    expect(screen.getByText(revoked
+      ? 'Signed with a locally-known, revoked key'
+      : 'Signed with a key known to this browser')).toBeInTheDocument();
+  });
+
+  it('does not label a failed signature as signed by a recognized local key', async () => {
+    const signed = await signReport(makeMinimalReport());
+    const tampered: SignedVaultReport = {
+      ...signed,
+      report: { ...signed.report, report_id: 'tampered-local-report' },
+    };
+    render(<ImportVerifyPanel />);
+    fireEvent.change(screen.getByLabelText(/choose report file/i), {
+      target: { files: [jsonFile(tampered)] },
+    });
+
+    expect(await screen.findByText(/some checks failed/i)).toBeInTheDocument();
+    expect(screen.getByText('Signature invalid')).toBeInTheDocument();
+    expect(screen.queryByText(/known to this browser/i)).not.toBeInTheDocument();
   });
 
   it('rejects a file that is not valid JSON', async () => {

@@ -150,6 +150,28 @@ describe('settings endpoints', () => {
     expect(result).toBe(payload)
   })
 
+  it('getSettings forwards the exact optional AbortSignal and preserves result identity', async () => {
+    const controller = new AbortController()
+    mockedRequest.mockResolvedValueOnce(appSettings)
+
+    const result = await api.getSettings(controller.signal)
+
+    expect(mockedRequest).toHaveBeenCalledExactlyOnceWith('/settings', { signal: controller.signal })
+    expect(result).toBe(appSettings)
+  })
+
+  it('getSettings preserves an already-aborted signal and propagates the original cancellation', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const cancellation = new DOMException('Settings read cancelled', 'AbortError')
+    mockedRequest.mockRejectedValueOnce(cancellation)
+
+    await expect(api.getSettings(controller.signal)).rejects.toBe(cancellation)
+
+    expect(mockedRequest).toHaveBeenCalledExactlyOnceWith('/settings', { signal: controller.signal })
+    expect(controller.signal.aborted).toBe(true)
+  })
+
   it('updateSettings PUTs /settings with the full settings object serialized', async () => {
     await api.updateSettings(appSettings)
 

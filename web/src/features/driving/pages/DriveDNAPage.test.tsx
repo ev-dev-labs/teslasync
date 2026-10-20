@@ -6,12 +6,15 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { cloneElement, type ReactElement, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { Drive, DriveTelemetryPoint } from '@/types/driving';
+import { resolveChartPalette } from '@/hooks/useChartPalette';
+import { fmtNumber } from '@/lib/numberFormat';
 
 const h = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
@@ -19,10 +22,41 @@ const h = vi.hoisted(() => ({
   telemetry: undefined as unknown,
   historyHook: vi.fn(),
   telemetryHook: vi.fn(),
+  locale: 'en-US',
+  timeZone: 'America/Los_Angeles',
+  timezoneHook: vi.fn(),
+  chartPalette: 'cb_safe',
+  measureCharts: false,
 }));
 
 const historyRefetch = vi.fn();
 const telemetryRefetch = vi.fn();
+
+vi.mock('@/hooks/useChartPalette', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useChartPalette')>();
+  return {
+    ...actual,
+    useChartPalette: () => actual.resolveChartPalette(h.chartPalette),
+  };
+});
+
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({
+      children,
+      width,
+      height,
+    }: {
+      children: ReactElement<{ width: number; height: number }>;
+      width: string | number;
+      height: string | number;
+    }) => h.measureCharts
+      ? cloneElement(children, { width: 800, height: 320 })
+      : <actual.ResponsiveContainer width={width} height={height}>{children}</actual.ResponsiveContainer>,
+  };
+});
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>(
@@ -75,7 +109,25 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 
 vi.mock('@/lib/timezone', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/timezone')>();
-  return { ...actual, useTimezone: () => 'America/Los_Angeles' };
+  return { ...actual, useTimezone: (mode: string) => {
+    h.timezoneHook(mode);
+    return h.timeZone;
+  } };
+});
+
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return {
+    ...actual,
+    useSettings: () => {
+      const result = actual.useSettings();
+      return {
+        ...result,
+        locale: h.locale,
+        settings: { ...result.settings, locale: h.locale, tz_display_default: 'utc' },
+      };
+    },
+  };
 });
 
 const unitPrefs = {
@@ -164,7 +216,8 @@ function telemetryPoint(
     createdAt,
     speed: 10 + seconds / 10,
     // Endpoint response semantics are kW; the model lifts this to W.
-    power: seconds % 20 === 0 ? -5 : 12,
+    // Telemetry power is watts (pack voltage × current).
+    power: seconds % 20 === 0 ? -5_000 : 12_000,
     batteryLevel: null,
     outsideTemp: 10,
     insideTemp: 21,
@@ -196,6 +249,11 @@ interface QueryStub {
   isError: boolean;
   error: unknown;
   refetch: () => void;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
+  isPending?: boolean;
+  isFetching?: boolean;
+  isStale?: boolean;
+  dataUpdatedAt?: number;
 }
 
 function query(
@@ -260,6 +318,10 @@ function expectEverySection(): void {
 beforeEach(() => {
   vi.clearAllMocks();
   h.vehicleId = 7;
+  h.locale = 'en-US';
+  h.timeZone = 'America/Los_Angeles';
+  h.chartPalette = 'cb_safe';
+  h.measureCharts = false;
   h.history = query({
     data: [
       drive(),
@@ -296,6 +358,349 @@ beforeEach(() => {
 });
 
 describe('DriveDNAPage', () => {
+  it('omits header freshness and refresh when no vehicle is selected, even with cached query errors', () => {
+    h.vehicleId = null;
+    h.history = query({ data: [drive()], isError: true, error: new Error('inactive history') });
+    h.telemetry = query({ isError: true, error: new Error('inactive telemetry') }, telemetryRefetch);
+    renderPage();
+
+    expect(screen.queryByRole('button', { name: /Refresh data/ })).not.toBeInTheDocument();
+    expect(h.historyHook).toHaveBeenLastCalledWith(undefined, 1_000);
+    expect(h.telemetryHook).toHaveBeenLastCalledWith('');
+    expect(historyRefetch).not.toHaveBeenCalled();
+    expect(telemetryRefetch).not.toHaveBeenCalled();
+    expectEverySection();
+  });
+
+  it('refreshes scoped history and adds telemetry only after a drive is selected', () => {
+    h.history = query({ data: [], dataUpdatedAt: Date.now() });
+    h.telemetry = query({ isError: true, error: new Error('inactive telemetry') }, telemetryRefetch);
+    const view = renderPage();
+
+    const refresh = screen.getByRole('button', { name: /Refresh data/ });
+    expect(refresh).not.toHaveAccessibleName(/Error/i);
+    fireEvent.click(refresh);
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+    expect(telemetryRefetch).not.toHaveBeenCalled();
+    expect(h.telemetryHook).toHaveBeenLastCalledWith('');
+    expectEverySection();
+
+    h.history = query({ data: [drive()], dataUpdatedAt: Date.now() });
+    h.telemetry = query({
+      data: [telemetryPoint(0), telemetryPoint(10)],
+      isStale: true,
+      dataUpdatedAt: Date.now() - 60_000,
+    }, telemetryRefetch);
+    view.rerenderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data.*Stale/i }));
+    expect(telemetryRefetch).toHaveBeenCalledTimes(1);
+    expect(historyRefetch).toHaveBeenCalledTimes(2);
+    expect(h.telemetryHook).toHaveBeenLastCalledWith('1');
+    expect(screen.getByLabelText(/Drive DNA deterministic emission artwork/)).toBeInTheDocument();
+    expectEverySection();
+  });
+
+  it('uses neutral theme roles for encoding chrome without changing populated evidence or availability', () => {
+    const view = renderPage();
+    const section = screen.getByTestId('drive-dna-encoding');
+    const title = within(section).getByText('Encoding legend & evidence');
+    expect(title.querySelector('svg')).toHaveClass(
+      'h-4', 'w-4', 'text-[var(--text-secondary)]',
+    );
+
+    for (const name of ['Journey progress', 'Speed', 'Pack power', 'State of charge', 'Elevation']) {
+      const card = within(section).getByText(name).parentElement!;
+      expect(card).toHaveClass(
+        'rounded-xl', 'border', 'border-[var(--border-subtle)]',
+        'bg-[var(--surface-2)]', 'p-3',
+      );
+      expect(card.querySelector('svg')?.parentElement).toHaveClass(
+        'text-[var(--text-secondary)]',
+      );
+      expect(within(card).getByText('Available')).toHaveClass(
+        'text-[var(--semantic-success)]',
+      );
+    }
+    expect(within(section).getByText('4 valid timestamp rows')).toBeInTheDocument();
+    expect(within(section).getByText('36 km/h to 50.4 km/h')).toBeInTheDocument();
+    expect(within(section).getByText('-5 kW to 12 kW')).toBeInTheDocument();
+    expect(within(section).getByText(`${fmtNumber(78)}% to ${fmtNumber(80)}%`)).toBeInTheDocument();
+    expect(within(section).getByText(`${fmtNumber(100)} m to ${fmtNumber(140)} m`)).toBeInTheDocument();
+    expect(section.querySelector('[class*="text-cyan-"], [class*="border-white/"], [class*="bg-white/"]'))
+      .not.toBeInTheDocument();
+
+    h.telemetry = query({
+      data: [
+        telemetryPoint(0, { speed: null, elevation: null }),
+        telemetryPoint(10, { elevation: null }),
+      ],
+    }, telemetryRefetch);
+    view.rerenderPage();
+    const speed = within(section).getByText('Speed').parentElement!;
+    const elevation = within(section).getByText('Elevation').parentElement!;
+    expect(within(speed).getByText('Partial')).toHaveClass(
+      'text-[var(--semantic-warning)]',
+    );
+    expect(within(elevation).getByText('Unavailable')).toHaveClass(
+      'text-[var(--text-secondary)]',
+    );
+    expect(within(elevation).getByText('No available range')).toBeInTheDocument();
+    expectEverySection();
+  });
+
+  it('reactively recolors speed, power, zero reference, and legend without changing the trace or DNA art', async () => {
+    h.measureCharts = true;
+    const view = renderPage();
+    const section = screen.getByTestId('drive-dna-speed-power');
+    const art = screen.getByTestId('drive-dna-genome').querySelector('svg')?.outerHTML;
+    const fingerprint = screen.getByTestId('drive-dna-fingerprint').innerHTML;
+    const traceGeometry = () =>
+      Array.from(section.querySelectorAll('.recharts-line-curve')).map(
+        (curve) => curve.getAttribute('d'),
+      );
+    const expectPalette = async (preference: string) => {
+      const palette = resolveChartPalette(preference);
+      await waitFor(() => {
+        const curves = section.querySelectorAll('.recharts-line-curve');
+        expect(curves).toHaveLength(2);
+        expect(curves[0]).toHaveAttribute('stroke', palette[0]);
+        expect(curves[1]).toHaveAttribute('stroke', palette[3]);
+        expect(section.querySelector('.recharts-reference-line-line'))
+          .toHaveAttribute('stroke', palette[4]);
+      });
+      const legend = within(section).getByRole('list');
+      expect(within(legend).getByRole('button', { name: /Speed/ })).toBeInTheDocument();
+      expect(within(legend).getByRole('button', { name: /power/i })).toBeInTheDocument();
+      // Recharts 3 renders the legend icon itself as the path.
+      const swatches = legend.querySelectorAll('path.recharts-legend-icon, .recharts-legend-icon path');
+      expect(swatches).toHaveLength(2);
+      expect(swatches[0]).toHaveAttribute('stroke', palette[0]);
+      expect(swatches[1]).toHaveAttribute('stroke', palette[3]);
+    };
+
+    await expectPalette('cb_safe');
+    const geometry = traceGeometry();
+    expect(geometry.every(Boolean)).toBe(true);
+    h.chartPalette = 'neon';
+    view.rerenderPage();
+    await expectPalette('neon');
+    expect(traceGeometry()).toEqual(geometry);
+    expect(screen.getByTestId('drive-dna-genome').querySelector('svg')?.outerHTML).toBe(art);
+    expect(screen.getByTestId('drive-dna-fingerprint').innerHTML).toBe(fingerprint);
+    expectEverySection();
+  });
+
+  it('gives genome export a wrapping mobile target while retaining desktop density, focus, and export behavior', () => {
+    const view = renderPage();
+    const button = within(screen.getByTestId('drive-dna-genome')).getByRole(
+      'button', { name: 'Download safe SVG' },
+    );
+
+    expect(button).toHaveClass(
+      'min-h-11', 'md:min-h-10', 'w-full', 'h-auto', 'whitespace-normal',
+      'focus-visible:outline', 'focus-visible:outline-2',
+    );
+    expect(button).not.toHaveClass('h-10');
+    expect(within(button).getByText('Download safe SVG')).toHaveClass(
+      'min-w-0', 'break-words',
+    );
+    expect(button.querySelector('svg')?.parentElement).toHaveClass('shrink-0');
+    expect(button).toBeEnabled();
+    button.focus();
+    expect(button).toHaveFocus();
+    fireEvent.click(button);
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+    expect(button).toHaveFocus();
+
+    h.telemetry = query({ data: [] }, telemetryRefetch);
+    view.rerenderPage();
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expectEverySection();
+  });
+
+  it.each([
+    ['de-DE', 'Europe/Berlin'],
+    ['en-GB', 'America/Los_Angeles'],
+  ])('formats brief dates with saved locale %s and vehicle zone %s without changing raw dates', (locale, timeZone) => {
+    h.locale = locale;
+    h.timeZone = timeZone;
+    const selectedDrive = drive({
+      startTs: '2026-02-02T00:15:00Z',
+      endTs: '2026-02-02T00:45:00Z',
+    });
+    h.history = query({ data: [selectedDrive] });
+    const view = renderPage();
+    const formatted = (value: string) => new Date(value).toLocaleString(h.locale, {
+      timeZone: h.timeZone,
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const expectScope = () => {
+      assertOperationalBriefDisclosure(screen.getByTestId('drive-dna-kpis'),
+        `Drive 1 · ${formatted(selectedDrive.startTs)}–${formatted(selectedDrive.endTs!)}; sampled coverage may be incomplete`,
+        { contains: true });
+      expectEverySection();
+    };
+    expectScope();
+    // The brief scope above is formatted in the vehicle zone; shared shell badges may
+    // still follow the user's default display zone ('utc' in this fixture).
+    expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
+
+    h.locale = 'fr-FR';
+    h.timeZone = 'Asia/Tokyo';
+    view.rerenderPage();
+    expectScope();
+    expect(selectedDrive.startTs).toBe('2026-02-02T00:15:00Z');
+    expect(selectedDrive.endTs).toBe('2026-02-02T00:45:00Z');
+  });
+
+  it('keeps an ongoing end null while formatting the brief start date', () => {
+    h.locale = 'de-DE';
+    h.timeZone = 'Europe/Berlin';
+    const selectedDrive = drive({ endTs: null, endedStatus: 'ongoing' });
+    h.history = query({ data: [selectedDrive] });
+    renderPage();
+
+    const start = new Date(selectedDrive.startTs).toLocaleString(h.locale, {
+      timeZone: h.timeZone,
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    assertOperationalBriefDisclosure(screen.getByTestId('drive-dna-kpis'),
+      `Drive 1 · ${start}–ongoing; sampled coverage may be incomplete`,
+      { contains: true });
+    expect(selectedDrive.endTs).toBeNull();
+    expectEverySection();
+  });
+
+  it('associates a visible drive label and history hint with the native selector', () => {
+    renderPage();
+
+    const picker = screen.getByRole('combobox', { name: 'Choose a drive' });
+    const label = screen.getByText('Choose a drive', { selector: 'label' });
+    expect(label).toHaveAttribute('for', picker.id);
+    expect(screen.getByLabelText('Choose a drive')).toBe(picker);
+    expect(picker).toHaveAccessibleDescription(
+      'Selection history is capped at 1,000 recent drives.',
+    );
+    picker.focus();
+    expect(picker).toHaveFocus();
+    expect(picker).toHaveValue('1');
+    expectEverySection();
+  });
+
+  it('keeps the selected fingerprint during a paused list refresh without retrying telemetry', () => {
+    h.history = { ...query({ data: [drive()] }), fetchStatus: 'paused' };
+    renderPage();
+    expectEverySection();
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveTextContent(
+      'The latest values are temporarily unavailable. Previously loaded data remains visible.',
+    );
+    expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(notice).not.toHaveTextContent('offline');
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+    expect(telemetryRefetch).not.toHaveBeenCalled();
+    expect(h.telemetryHook).toHaveBeenLastCalledWith('1');
+  });
+
+  it.each(['history', 'telemetry'] as const)(
+    'keeps initial paused %s unknown, retries it independently, and recovers',
+    (source) => {
+      const paused = query({
+        isSuccess: false,
+        isPending: true,
+        isFetching: false,
+        fetchStatus: 'paused',
+      }, source === 'history' ? historyRefetch : telemetryRefetch);
+      if (source === 'history') {
+        h.history = paused;
+      } else {
+        h.telemetry = paused;
+      }
+      const view = renderPage();
+
+      expectEverySection();
+      const notice = screen.getByRole('status');
+      expect(notice).toHaveAttribute('data-refresh-blocked');
+      expect(notice).toHaveTextContent(
+        'The initial evidence query is paused; no empty result is inferred.',
+      );
+      expect(notice).not.toHaveTextContent(/offline|can't reach server/i);
+      expect(screen.queryByTestId('drive-dna-list-loading')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('drive-dna-telemetry-loading')).not.toBeInTheDocument();
+      expect(screen.queryByText('No drives were returned for this vehicle.')).not.toBeInTheDocument();
+      expect(screen.queryByText('This drive returned no telemetry emissions.')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      if (source === 'history') {
+        expect(h.telemetryHook).toHaveBeenLastCalledWith('');
+        expect(screen.getByRole('combobox', { name: 'Choose a drive' })).toHaveTextContent('Refresh paused');
+      } else {
+        expect(screen.getByText('25 km')).toBeInTheDocument();
+      }
+      fireEvent.click(within(notice).getByRole('button', { name: 'Retry' }));
+      expect(source === 'history' ? historyRefetch : telemetryRefetch).toHaveBeenCalledTimes(1);
+      expect(source === 'history' ? telemetryRefetch : historyRefetch).not.toHaveBeenCalled();
+
+      if (source === 'history') {
+        h.history = query({ data: [drive()] });
+      } else {
+        h.telemetry = query({ data: [telemetryPoint(0), telemetryPoint(10)] }, telemetryRefetch);
+      }
+      view.rerenderPage();
+      expectEverySection();
+      expect(screen.queryByText(
+        'The initial evidence query is paused; no empty result is inferred.',
+      )).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/Drive DNA deterministic emission artwork/)).toBeInTheDocument();
+      expect(h.telemetryHook).toHaveBeenLastCalledWith('1');
+    },
+  );
+
+  it('ignores blocked queries whose vehicle or drive prerequisite is absent', () => {
+    h.vehicleId = null;
+    h.history = query({ isSuccess: false, fetchStatus: 'paused' });
+    h.telemetry = query({ isSuccess: false, fetchStatus: 'paused' }, telemetryRefetch);
+    renderPage();
+    expectEverySection();
+    expect(screen.queryByText(
+      'The initial evidence query is paused; no empty result is inferred.',
+    )).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('drive-dna-list-loading')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('drive-dna-telemetry-loading')).not.toBeInTheDocument();
+    expect(h.telemetryHook).toHaveBeenLastCalledWith('');
+  });
+
+  it('retains both sources through refresh failures and recovers each independently', () => {
+    const history = [drive()];
+    const telemetry = [telemetryPoint(0), telemetryPoint(10)];
+    h.history = query({ data: history, isError: true, error: new Error('history refresh failed') });
+    h.telemetry = query({ data: telemetry, isError: true, error: new Error('telemetry refresh failed') }, telemetryRefetch);
+    const view = renderPage();
+    expectEverySection();
+    expect(screen.getByLabelText(/Drive DNA deterministic emission artwork/)).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('drive-dna-list-refresh-error')).getByRole('button', { name: 'Retry' }));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+    expect(telemetryRefetch).not.toHaveBeenCalled();
+
+    h.history = query({ data: history });
+    view.rerenderPage();
+    expectEverySection();
+    expect(screen.queryByTestId('drive-dna-list-refresh-error')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('drive-dna-telemetry-refresh-error')).getByRole('button', { name: 'Retry' }));
+    expect(telemetryRefetch).toHaveBeenCalledTimes(1);
+    h.telemetry = query({ data: telemetry }, telemetryRefetch);
+    view.rerenderPage();
+    expectEverySection();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Drive DNA deterministic emission artwork/)).toBeInTheDocument();
+  });
+
   it('renders the ready state with all ten persistent evidence sections', () => {
     renderPage();
 
@@ -321,6 +726,40 @@ describe('DriveDNAPage', () => {
     expect(h.telemetryHook).toHaveBeenLastCalledWith('1');
   });
 
+  it('renders methodology cards once while preserving all scope and guardrail evidence', () => {
+    renderPage();
+
+    const methodology = within(screen.getByTestId('drive-dna-methodology'));
+    for (const title of [
+      'Coverage & methodology',
+      'Selection & telemetry scope',
+      'Interpretation guardrails',
+    ]) {
+      expect(methodology.getAllByRole('heading', { name: title })).toHaveLength(1);
+    }
+    const lists = methodology.getAllByRole('list');
+    expect(lists).toHaveLength(2);
+    for (const list of lists) {
+      expect(within(list).getAllByRole('listitem')).toHaveLength(4);
+    }
+    for (const evidence of [
+      'The 1,000-drive cap qualifies only which drives can appear in the selector.',
+      'The selected drive’s telemetry endpoint returns that drive’s full available emission feed and is not truncated by the selector cap.',
+      'Elevation and other optional channels may be unavailable; missing values remain unavailable, never measured zero.',
+      'Charts use at most 600 deterministic points while retaining the first and last; evidence metrics use all valid rows.',
+      'Rows are chronological change-feed emissions with values forward-folded by StateReader, not uniform-time samples.',
+      'Response power is already canonical watts (pack voltage × current) and is used without rescaling.',
+      'Power states, speed bands, and regen shares are emission-count evidence, never duration or time shares.',
+      'Traits are deterministic artistic heuristics—not a score, diagnosis, stable personality assessment, efficiency verdict, or causal claim.',
+      'Selector history resolved',
+      'Drive telemetry resolved',
+      'The selector requests up to 1,000 recent drives; 2 were returned for the current vehicle.',
+    ]) {
+      expect(methodology.getAllByText(evidence)).toHaveLength(1);
+    }
+    expectEverySection();
+  });
+
   it('keeps every shell visible and suppresses telemetry while the list loads', () => {
     h.history = query({ isLoading: true });
 
@@ -328,7 +767,11 @@ describe('DriveDNAPage', () => {
 
     expectEverySection();
     expect(h.telemetryHook).toHaveBeenLastCalledWith('');
-    expect(screen.getAllByText('Loading…').length).toBeGreaterThan(0);
+    expect(
+      screen
+        .getByTestId('drive-dna-fingerprint')
+        .querySelectorAll('[class*="--skeleton-bg"]').length,
+    ).toBeGreaterThan(0);
     expect(
       screen.getAllByLabelText('Loading drive history').length,
     ).toBeGreaterThan(0);
@@ -508,10 +951,23 @@ describe('DriveDNAPage', () => {
         'No telemetry rows were returned for cadence or channel coverage.',
       ),
     ).toBeInTheDocument();
-    expect(coverage.getAllByText('0 / 0')).toHaveLength(6);
     expect(
-      coverage.getAllByText('No valid-row denominator'),
-    ).toHaveLength(5);
+      coverage.getAllByText(/^0\s*\/\s*0$/, {
+        selector:
+          '[data-operational-brief] [role="list"] [data-operational-metric] [data-operational-value]',
+      }),
+    ).toHaveLength(6);
+    const coverageSection = screen.getByTestId('drive-dna-coverage');
+    const coverageCards = coverageSection.querySelectorAll('[data-operational-brief]');
+    expect(coverageCards.length).toBeGreaterThan(0);
+    let denominatorCount = 0;
+    for (const card of coverageCards) {
+      fireEvent.click(within(card).getByRole('button', { name: 'Review details' }));
+      const coverageDrawer = screen.getByRole('dialog');
+      denominatorCount += within(coverageDrawer).queryAllByText('No valid-row denominator').length;
+      fireEvent.keyDown(coverageDrawer, { key: 'Escape' });
+    }
+    expect(denominatorCount).toBe(5);
     expect(
       coverage.queryByText(
         'One chronological emission is available; at least two are needed for this profile.',
@@ -607,10 +1063,46 @@ describe('DriveDNAPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        'The selector reached its 1,000-drive history cap; this selected drive’s telemetry remains complete for that drive.',
+        'The selector reached its 1,000-drive history cap; it does not truncate the selected drive’s full available telemetry emission feed or establish complete drive observations.',
       ),
     ).toBeInTheDocument();
   });
+
+  it.each([
+    ['loading', { isLoading: true }],
+    ['failed', { isError: true, error: new Error('telemetry unavailable') }],
+    ['empty', { data: [] }],
+    ['sparse', { data: [telemetryPoint(0)] }],
+  ] satisfies [string, Partial<QueryStub>][])(
+    'qualifies selector-cap independence when telemetry is %s',
+    (_status, telemetry) => {
+      h.history = query({
+        data: Array.from({ length: 1_000 }, (_, index) =>
+          drive({ id: index + 1 }),
+        ),
+      });
+      h.telemetry = query(telemetry, telemetryRefetch);
+
+      renderPage();
+
+      expectEverySection();
+      expect(
+        within(screen.getByTestId('drive-dna-kpis')).getByText(
+          'The selector reached its 1,000-drive history cap; it does not truncate the selected drive’s full available telemetry emission feed or establish complete drive observations.',
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/telemetry remains complete for that drive/),
+      ).not.toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('drive-dna-methodology')).getByText(
+          'The selected drive’s telemetry endpoint returns that drive’s full available emission feed and is not truncated by the selector cap.',
+        ),
+      ).toBeInTheDocument();
+      expect(h.historyHook).toHaveBeenLastCalledWith('7', 1_000);
+      expect(h.telemetryHook).toHaveBeenLastCalledWith('1');
+    },
+  );
 
   it('requests telemetry for the drive selected with the shared Select', async () => {
     renderPage();

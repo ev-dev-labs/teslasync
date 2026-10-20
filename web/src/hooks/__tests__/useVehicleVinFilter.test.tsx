@@ -123,16 +123,19 @@ describe('useVehicleVinFilter', () => {
     expect(params.has('vin')).toBe(false);
   });
 
-  it('removes an unresolvable VIN instead of querying a different vehicle under a stale label', async () => {
+  it('retains an unresolvable VIN with scope not ready instead of querying a different vehicle under a stale label', async () => {
     const { result } = renderHook(useHarness, {
       wrapper: wrapper('/tesla/charging/history?vin=VIN-MISSING'),
     });
 
-    await waitFor(() =>
-      expect(new URLSearchParams(result.current.location.search).has('vin')).toBe(false),
-    );
-    expect(result.current.filter.selectedVin).toBe('VIN-ONE');
-    expect(result.current.filter.queryVin).toBe('VIN-ONE');
+    await waitFor(() => expect(result.current.selected.vehicleId).toBe(1));
+    // The bookmark is retained verbatim; VIN-backed consumers gate on scopeReady.
+    expect(new URLSearchParams(result.current.location.search).get('vin')).toBe('VIN-MISSING');
+    expect(result.current.filter.selectedVin).toBe('VIN-MISSING');
+    expect(result.current.filter.queryVin).toBeUndefined();
+    expect(result.current.filter.scopeReady).toBe(false);
+    // The global selection never falls through to a different vehicle.
+    expect(result.current.selected.vehicleId).toBe(1);
   });
 
   it('preserves fleet-wide VIN scope while repairing a stale numeric vehicle id', async () => {

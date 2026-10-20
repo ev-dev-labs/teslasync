@@ -46,7 +46,7 @@ export function CostPerKwhChart({ data, isLoading, error, onRetry }: CostPerKwhC
 
   // Stable currency tick formatter so the Y axis isn't handed a fresh closure
   // on every render.
-  const formatRate = useCallback((v: number) => formatCurrency(v, 2), [formatCurrency]);
+  const formatRate = useCallback((v: number) => formatCurrency(v), [formatCurrency]);
 
   if (error) {
     return (
@@ -63,8 +63,9 @@ export function CostPerKwhChart({ data, isLoading, error, onRetry }: CostPerKwhC
   return (
     <ChartContainer
       title={t('costAnalysis.charts.costPerKwh', 'Cost per kWh Trend')}
-      ariaLabel={t('costAnalysis.charts.costPerKwh.aria', 'Cost per kilowatt-hour trend line chart')}
+      ariaLabel={t('costAnalysis.charts.costPerKwhAria', 'Cost per kilowatt-hour trend line chart')}
       data={rows}
+      exportData={rows}
       dataColumns={[
         { key: 'date', label: t('costAnalysis.charts.col.date', 'Date') },
         { key: 'costPerKwh', label: t('costAnalysis.charts.rateLabel', '$/kWh') },

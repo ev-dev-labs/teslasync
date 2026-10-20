@@ -1,0 +1,537 @@
+{
+  "item": "phase6-qa-automations-automations-list",
+  "status": "DONE_SOURCE_ONLY_QA_REPORT",
+  "acceptance": {
+    "sourceOnlyReviewComplete": true,
+    "productionChanges": false,
+    "fullPagePassed": false,
+    "nativePassed": false,
+    "runtimePassed": false,
+    "allGuidelineChecksPassed": false,
+    "meaning": "Completed the assigned read-only review and recorded defects; not acceptance of the page, automation execution, or application."
+  },
+  "timebox": {
+    "taskCreationTimestampUtc": "2026-10-13T20:43:11.006Z",
+    "creationTimestampBasis": "Supplied task timestamp, used conservatively because a separate actor-creation timestamp was not provided.",
+    "firstCommandTimestampUtc": "2026-10-13T20:43:26.3230902Z",
+    "targetBoundaryUtc": "2026-10-13T21:03:11.006Z",
+    "hardBoundaryUtc": "2026-10-13T21:08:11.006Z",
+    "latestPreReportEvidenceUtc": "2026-10-13T20:52:17.4791451Z",
+    "clockReset": false
+  },
+  "authority": {
+    "queue": "migration-queue.md:321",
+    "initialQueueStatus": "[ ]",
+    "dependency": "phase5-page-automations-automations-list",
+    "dependencyStatus": "[x]",
+    "dependencyEvidence": "migration-queue.md:1714",
+    "reportAlreadyExistedAtStart": false,
+    "logAlreadyExistedAtStart": false,
+    "writeClaims": [
+      "docs\\frontend-audits\\phase6-qa-automations-automations-list.json",
+      "web\\logs\\phase6-qa-automations-automations-list.log"
+    ],
+    "parentOnlyResponsibilities": [
+      "Queue/status updates",
+      "Git commits and intake",
+      "Dispatch and orchestration"
+    ],
+    "nestedAgentsLaunched": 0,
+    "scheduledHealthWorkPerformed": false
+  },
+  "identity": {
+    "page": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx",
+    "export": "default function AutomationsListPage",
+    "definitionLine": 111,
+    "route": "/automations",
+    "mountedRouteEvidence": "web\\src\\App.tsx:189,616",
+    "loaderEvidence": "web\\src\\lib\\routeLoaders.ts:74",
+    "forwarder": false,
+    "identityExplanation": "This is the 541-line command center, not an alias or forwarder to the singular AutomationListPage. Its Manage rules action navigates to the separately mounted /automations/list.",
+    "differentPage": {
+      "page": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx",
+      "route": "/automations/list",
+      "evidence": "web\\src\\App.tsx:190,617; web\\src\\lib\\routeLoaders.ts:75",
+      "delegatedItem": "phase6-qa-automations-automation-list",
+      "sourceReviewedHere": false,
+      "boundary": "No singular-list bulk selection, routine wizard, pagination, or page implementation review was repeated."
+    },
+    "delegatedLogicReferences": [
+      {
+        "item": "phase6-qa-automations-automation-builder",
+        "report": "docs\\frontend-audits\\phase6-qa-automations-automation-builder.json",
+        "sha256AtRead": "F75C5F5578CC976BD358E398787477CDB419F989FC1F2D0F350E9B5FB9FA36D4",
+        "receiptRequestTimestampUtc": "2026-10-13T20:03:47.359Z",
+        "statusRead": "DONE_SOURCE_ONLY_QA_REPORT",
+        "referenceOnly": "Create and preset Install navigate to /automations/new. Builder validation, draft/review/confirmation, typed action configuration and actual installation remain with that owner; only receipt metadata was read."
+      },
+      {
+        "item": "phase6-qa-automations-automation-history",
+        "report": "docs\\frontend-audits\\phase6-qa-automations-automation-history.json",
+        "sha256AtRead": "1E2349E4945BA874BCFBA4E5F70409D97C9098556D3C730876D46E5CD1CD14AD",
+        "receiptTaskCreationTimestampUtc": "2026-10-13T20:03:47.55Z",
+        "referenceOnly": "Recent execution activity belongs to /automations/history. This command center does not call useAutomationHistory; its fixture also asserts that boundary. History queries, range filtering, trends and execution detail were not re-reviewed."
+      }
+    ]
+  },
+  "inspectedFiles": [
+    {"path": "migration-queue.md", "scope": "Only exact assigned/dependency rows and neighboring automation-owner identifiers; read-only"},
+    {"path": ".github\\instructions\\react-frontend.instructions.md", "scope": "Frontend constraints"},
+    {"path": ".github\\instructions\\frontend-si-cutover.instructions.md", "scope": "SI/read/write and preservation constraints"},
+    {"path": ".github\\instructions\\unit-conversion.instructions.md", "scope": "Display contract; current SI cutover takes precedence over older examples"},
+    {"path": ".github\\instructions\\observability.instructions.md", "scope": "Read-only instruction acquisition"},
+    {"path": ".github\\skills\\audit-violations\\audit.sh", "scope": "Read, NOTRUN because it invokes a forbidden compiler and helper"},
+    {"path": "docs\\frontend-audits\\audit-page-059.json", "scope": "Historical page baseline, findings and section inventory only"},
+    {"path": "docs\\frontend-audits\\phase6-qa-automations-automation-builder.json", "scope": "Metadata only; delegated implementation not duplicated"},
+    {"path": "docs\\frontend-audits\\phase6-qa-automations-automation-history.json", "scope": "Metadata only; delegated implementation not duplicated"},
+    {"path": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx", "scope": "Entire assigned page", "lines": 541, "sha256": "2997D2EAC61D3F7FA29996BDD03B22F036F77AEE1CD19BC9A4B80E7A1F290669"},
+    {"path": "web\\src\\features\\automations\\pages\\AutomationsListPage.test.tsx", "scope": "Existing mocked fixture and assertions read only; no test execution or discovery", "sha256": "35F8268569C2FBF1F593A28736DFDF881F3950B7597BC759E1D12BA542599E91"},
+    {"path": "web\\src\\features\\automations\\pages\\AutomationCard.tsx", "scope": "Command-center card integration", "lines": 135, "sha256": "6FA85068C4E8C3A26E17FF687868B061443EFC55E4590E0428C33529EA996234"},
+    {"path": "web\\src\\features\\automations\\pages\\PresetGallery.tsx", "scope": "Command-center gallery and navigation, not Builder logic", "lines": 282, "sha256": "6B32BFB995A8BB4B0212D3E08ED83DD345BD1F557C11ED19E86432925D337AF3"},
+    {"path": "web\\src\\features\\automations\\components\\ComfortPanel.tsx", "scope": "Embedded vehicle-specific editor, actuation and run presentation", "lines": 213, "sha256": "16E825BC974A8BA096D78F1274F7621CC47FE7148238C0808CC48FAEA0D69C0C"},
+    {"path": "web\\src\\features\\automations\\components\\operationalbrief-all\\AutomationRulesBrief.tsx", "scope": "Non-bulk command-center branch only", "lines": 66, "sha256": "AE5AC861CFC5120DF1FE962DFC2DBC1F02DE0A26D38FC5E066D99486DA135C21"},
+    {"path": "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardActions.tsx", "scope": "Actual card callbacks and menu guard", "lines": 120, "sha256": "E2E533975DC16FCE9AD5254A7434510172774557ED0920E96885725A76A4F16D"},
+    {"path": "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardStatistics.tsx", "scope": "Scope, counters and time formatting", "lines": 66, "sha256": "DA86D7906CA100DD89C7F95C3D8FB272A894ACA1426AAA7B5CF34ADAAFC6AB6C"},
+    {"path": "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardNotices.tsx", "scope": "Auto-disable and conflict presentation", "lines": 42, "sha256": "17D236A54189DBC2828148EECB5437504BF2E23BB12F00E9048F6439EED3BA0D"},
+    {"path": "web\\src\\api\\hooks\\useAutomations.ts", "scope": "Inventory, import, toggle, re-enable, delete, test-run and gallery presets only; shared-file history/builder/routine implementations excluded from conclusions", "sha256": "1E789DEB4B274C66041462C9D08A65E476F9DEFE4F8F4EE186AB5F54F36FD266"},
+    {"path": "web\\src\\api\\hooks\\useVehicles.ts", "scope": "useVehicles at lines 74-81 only"},
+    {"path": "web\\src\\api\\hooks\\usePinned.ts", "scope": "List selection and PinButton-consumed pin mutations", "sha256": "09A532A2FE26FCB0564DD63929B9436FFFBF63A30B8E075D1EEF588350E9D68B"},
+    {"path": "web\\src\\api\\hooks\\useComfort.ts", "scope": "Four embedded-panel hooks and wire types", "sha256": "2ACD824EB44E8008C241C9EC13E7C89A4F2624E6E205BA83CC59695001A6F3AD"},
+    {"path": "web\\src\\api\\hooks\\useOptimisticMutation.ts", "scope": "Existing toggle rollback/invalidation lifecycle only"},
+    {"path": "web\\src\\api\\types.ts", "scope": "Automation, preset, event and pinned shapes only", "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B"},
+    {"path": "web\\src\\types\\automations.ts", "scope": "Root Automation interface and technical discriminators"},
+    {"path": "web\\src\\api\\client.ts", "scope": "URL construction, JSON conversion and write-boundary excerpts", "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5"},
+    {"path": "web\\src\\api\\scope.ts", "scope": "Vehicle_id and additional-filter normalization"},
+    {"path": "web\\src\\api\\dataState.ts", "scope": "Initial/fatal/retained/paused derivation", "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"},
+    {"path": "web\\src\\api\\offlineCache.ts", "scope": "Unsafe-write patterns and rejection, not cache-system audit", "sha256": "EDE8370B47BC67BEFD688A6434D6696C1EFDAE22E77BFDCC56C2D11D2857E6CE"},
+    {"path": "web\\src\\api\\queryClient.ts", "scope": "Read/mutation defaults only"},
+    {"path": "web\\src\\hooks\\useDataState.ts", "scope": "Adapter"},
+    {"path": "web\\src\\hooks\\useOperationalMode.tsx", "scope": "Provider and canWrite derivation", "sha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C"},
+    {"path": "web\\src\\lib\\operationalMode.ts", "scope": "Environment-derived live-only assertion", "sha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D"},
+    {"path": "web\\src\\hooks\\useAutomationEvents.ts", "scope": "Current stream and firing indicator lifecycle", "sha256": "1DED9E3FEA5C723F4DD6EBFD33B2D9D8341DA3AC046293FC5D316EF92F94224C"},
+    {"path": "web\\src\\lib\\automationSSE.ts", "scope": "Dedicated direct stream path and reconnect lifecycle"},
+    {"path": "web\\src\\lib\\safeArray.ts", "scope": "Collection-shape coercion"},
+    {"path": "web\\src\\hooks\\useSelectedVehicle.ts", "scope": "Comfort identity precedence"},
+    {"path": "web\\src\\hooks\\useDateFormat.ts", "scope": "Locale/timezone preference binding"},
+    {"path": "web\\src\\hooks\\useUnits.ts", "scope": "Celsius display preference boundary"},
+    {"path": "web\\src\\hooks\\useNumberFormatting.ts", "scope": "fmtInt definition search only"},
+    {"path": "web\\src\\lib\\unitConversion.ts", "scope": "Temperature formatter signature and SI-input documentation search only"},
+    {"path": "web\\src\\lib\\timezone.ts", "scope": "Selected-vehicle timezone resolution search only"},
+    {"path": "web\\src\\App.tsx", "scope": "Automation route declarations only", "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C"},
+    {"path": "web\\src\\main.tsx", "scope": "OperationalModeProvider mounting search only"},
+    {"path": "web\\src\\lib\\routeLoaders.ts", "scope": "Automation loader identities only", "sha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58"},
+    {"path": "web\\src\\lib\\routePrefetch.ts", "scope": "Route-to-loader search only"},
+    {"path": "web\\src\\lib\\workspaceScope.ts", "scope": "Actual /automations range/vehicle policy", "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"},
+    {"path": "web\\src\\components\\layout\\Layout.tsx", "scope": "Route scope and mobile drawer context controls only"},
+    {"path": "web\\src\\components\\layout\\WorkspaceHeader.tsx", "scope": "Header control visibility only"},
+    {"path": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "scope": "Gallery state/retry semantics only"},
+    {"path": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "scope": "Retained/paused warning semantics only"},
+    {"path": "web\\src\\components\\ui\\Button.tsx", "scope": "Loading/disabled and target-size contract only"},
+    {"path": "web\\src\\components\\ui\\PinButton.tsx", "scope": "Actual card pin target, label and mutation behavior only"},
+    {"path": "web\\src\\i18n\\index.ts", "scope": "Deferred English resource resolution only; no i18n tooling or modifications"},
+    {"path": "web\\src\\i18n\\en.json", "scope": "Only keys referenced by inspected page/support; legacy catalog, not rendered locale proof", "sha256": "CA087F394590450A80752647120A73009E3A18DEDC799FDEA0E3AF7818EE5E6C"},
+    {"path": "web\\src\\i18n\\en\\runtime-manifest.json", "scope": "Only three unresolved status keys and /automations route lookup", "sha256": "F12336C510017FC79ED588E01D1DAA3C307F05D3FDC20A857FFCF6AA77FC9B0D"},
+    {"path": "internal\\api\\router.go", "scope": "Assigned direct-hook routes only", "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C"},
+    {"path": "internal\\api\\automation\\crud.go", "scope": "List serializer lines 13-39 only; no database query audit", "sha256": "7C69EDD1A9557CA64D79164876E33A9D9D0A26BF0C6A42F90EFEDAEBF4068340"},
+    {"path": "internal\\api\\automation\\dtos.go", "scope": "automationResponse and import wire-result DTOs only", "sha256": "50A2D1092F9C0CA955A1DE741DF3360B51C0949547AED373896B32B7ADE70D68"},
+    {"path": "internal\\api\\automation\\handler.go", "scope": "Import response status/result and export-version constant only", "sha256": "41D4FAC16F86797E5B444CE9B152F3153FFEFFA7AD7F88249EF7879BA4687F7F"},
+    {"path": "internal\\models\\automation.go", "scope": "Actual root JSON tags only", "sha256": "FEF037FB7AA7CF0A4CEC1A1EB4BC8BC972C639096770C8A2BF20D7EE4713D320"}
+  ],
+  "retainedSectionsAndLines": {
+    "historicalRevision": "7301e56e5df3220959b241bdf4397ae87460f2a8",
+    "historicalRevisionBasis": "Parent of accepted phase5 commit aa273b38c58d6982e78217a2f1f0a0dcba8ad4ba; git show read-only line counts actually performed.",
+    "rootLinesBefore": 509,
+    "rootLinesNow": 541,
+    "composedLinesBefore": 1433,
+    "composedLinesNow": 1465,
+    "composition": "Root plus AutomationCard, PresetGallery, ComfortPanel, AutomationRulesBrief and the three automation-helper-source-closure card components. No singular list, Builder or History files included.",
+    "atLeast70PercentOfOriginalBySourceLineCount": true,
+    "historicalLogicalSections": 8,
+    "currentLogicalSections": 8,
+    "rawOpeningCounts": {
+      "GlassPanelBefore": 5,
+      "GlassPanelNow": 5,
+      "ChartContainerBefore": 0,
+      "ChartContainerNow": 0,
+      "explicitSectionElementsBefore": 2,
+      "explicitSectionElementsNow": 3,
+      "numberedSectionCommentsNow": 6
+    },
+    "countMethod": "Logical header/notices/body regions, not runtime mounts. The third section tag is an auxiliary-source map; conditional warning and mutually exclusive workspace states are not additional logical sections.",
+    "sections": [
+      {"name": "Page header and Manage rules/Import/Create action slots", "lines": "272-324", "retained": true},
+      {"name": "Operational notice, inventory retained warning, independent vehicle/pin recovery", "lines": "325-347", "retained": true},
+      {"name": "Loaded unfiltered inventory brief", "lines": "349-360", "retained": true},
+      {"name": "Conditional auto-disabled attention warning", "lines": "362-377", "retained": true, "note": "Conditionally appropriate; not a missing-data panel"},
+      {"name": "Status/search toolbar and shown/loaded denominator", "lines": "379-409", "retained": true},
+      {"name": "Native collapsible quick-start template gallery", "lines": "411-445", "retained": true},
+      {"name": "Cabin comfort editor, upcoming-event and run support", "lines": "447-450", "retained": true, "note": "Embedded source trust defects remain; retained source inclusion is not all-state rendering acceptance"},
+      {"name": "Rule workspace, stream reconnect badge, cards, fatal retry, skeletons, opt-in empty guidance and no-match reset", "lines": "452-535", "retained": true}
+    ],
+    "limits": "No source was changed. Line/section preservation is a textual check, not visual equivalence, complete functionality, or native acceptance."
+  },
+  "sourceContracts": {
+    "routeAndScope": {
+      "range": false,
+      "vehicle": false,
+      "evidence": "workspaceScope.ts:23-76,95-107,159-177; /automations is absent from RANGE_ENABLED_PATHS and matches VEHICLE_DISABLED_PREFIXES.",
+      "inventory": "Intentionally fleet-wide current rule inventory. useAutomations sends no vehicle/date parameters; List serializes all ListFull rows unless enabled=true is explicitly supplied. This page does not supply that server filter.",
+      "localFilters": "Status all/active/disabled/auto-disabled and trimmed case-insensitive name/description search at page:195-218. Pinned positions reorder filtered rows only at page:225-236. No pagination or date picker is claimed.",
+      "denominators": "Brief total uses all loaded rules before local filters. Filter badge uses filteredItems.length / items.length. Workspace count uses sortedItems.length. These are rules, not executions or successes. Missing wire metadata and unavailable-count issues are findings F01/F04.",
+      "comfort": "Vehicle-specific child consumes URL/store/first-fleet vehicle through useSelectedVehicle; route hides desktop and mobile vehicle controls. See F06."
+    },
+    "trustAndRecovery": {
+      "inventory": "fatalError replaces only rule workspace; retained inventory survives refresh errors with StaleRefreshWarning. Brief receives hasData and displays null metrics before data. Cold-paused empty handling remains defective (F04).",
+      "vehiclesAndPins": "Independent source-specific loading/unknown/error/retry sections at page:333-347; retained warning and inventory remain visible. Unknown or blank scoped vehicle name becomes translated Unknown, not All vehicles (page:485-489).",
+      "presets": "Independent SourceContent loading/error/empty/retained/ready; retries and actual category/search filtering. Closed native disclosure does not stop mounting its child. Malformed preset payload validation and all-state rendering were not executed.",
+      "stream": "Only firingNow and connectionState are rendered. Reconnecting badge does not claim vehicle offline. Five-second triggered indicator expires or clears on terminal event; subscription cleanup removes timers. It is not durable replay or an execution history denominator.",
+      "comfort": "Next/config fatal error and skeleton exist; next retained trust and runs independent loading/error/empty/retained surfaces do not (F07).",
+      "replay": "OperationalModeProvider is actually mounted in main.tsx:154-163. as_of and offline disable inventory/import/create/preset controls. Current rule reads and automation SSE are not as_of reconstructed; candidate C03 documents the presentation-policy limit.",
+      "unknownVersusZero": "Brief hasData gating is correct for not-yet-loaded counts, but cannot repair metadata that the backend never sends; card Runs 0/Never run and Auto-disabled 0 are not established facts (F01)."
+    },
+    "actionGuards": [
+      {"action": "Typed import", "ui": "Input/button disabled by canWrite; button loading uses import pending", "request": "requiresLiveMode=true, networkMode=always", "evidence": "page:284-306; useAutomations.ts:157-175"},
+      {"action": "Create and preset Install", "ui": "canWrite disables navigation triggers; no creation/install mutation in command center", "request": "Delegated Builder owner; not re-reviewed", "evidence": "page:310-321,438-441; PresetGallery.tsx:75-77,120-135"},
+      {"action": "Toggle/re-enable/delete/test-run", "ui": "Card and menu actuation controls receive actionsDisabled=!canWrite; deletion uses ConfirmDialog and closes when read-only", "request": "All five relevant automation mutations require live mode and use always; existing optimistic toggle rollback and invalidation retained", "evidence": "page:245-270,490-495; AutomationCard.tsx:56-71,99-132; useAutomations.ts:177-257,299-314"},
+      {"action": "Manage rules, filters, disclosures and read retries", "ui": "Non-actuating navigation/read interactions remain available", "request": "No new automation/data mutation", "evidence": "page:277-280,379-445,470,527-532"},
+      {"action": "Pin/unpin", "ui": "Preference action, not vehicle actuation; PinButton guards source unknown and pending", "request": "Existing per-user POST/DELETE preference endpoints; no live-only actuation claim", "evidence": "AutomationCard.tsx:99; PinButton.tsx:57-94; usePinned.ts:98-149"},
+      {"action": "Comfort save/now", "ui": "Only pending-disabled; no operational-mode consumption", "request": "Now is guarded; config save lacks requiresLiveMode and is not covered by offline unsafe patterns", "evidence": "ComfortPanel.tsx:168-185; useComfort.ts:96-125; F02"},
+      {"action": "Duplicate/Export menu", "ui": "Present and enabled but callback only closes menu", "request": "None; not working duplicate/download functionality", "evidence": "AutomationCardActions.tsx:85-103; F08"}
+    ],
+    "importValidation": "Page accepts only an object with number version and array automations, catches invalid JSON/shallow envelope, alerts a translated reason and resets file input. It does not validate integer/supported version or CTI entry shape. The server validates version 1 and typed entries. Fixture version 2 and partial-result assumptions are not server acceptance proof (F03).",
+    "siPreferencesAndTimezone": {
+      "inventory": "Root displays rule counts and identifiers, not distance/speed/energy measurements. No legacy unit converter was introduced or used by the assigned page.",
+      "comfortTemperature": "target_temp_c stays Celsius in state and payload; Slider display delegates to useUnits.formatTemperature. useUnits reads locale/precision/unit_of_temp. No audit-only conversion or SI field rename performed.",
+      "comfortLead": "Existing lead_minutes wire field and 5-120 minute editor retained as observed legacy contract. This QA does not approve adding non-SI fields or reinterpret minutes as seconds.",
+      "timestamps": "Card and ComfortPanel use useDateFormat with configured locale/tz mode; useTimezone defaults to selected vehicle/user fallback. No hardcoded timezone math in the assigned root. Actual DST/relative-time output and per-rule vehicle timezone coherence remain unexecuted.",
+      "numericFormatting": "Card cumulative counts use fmtInt, but absent wire counts must be unknown rather than formatter-normalized zero (F01)."
+    },
+    "i18nAndSharedUi": {
+      "source": "Root chrome uses t(), shared UI/layout/feedback/motion barrels and typography roles. Data names/descriptions, calendar content, server reasons, technical discriminators, file extensions and example URLs are not automatically treated as untranslated English.",
+      "literalKeysChecked": 82,
+      "literalKeysMissingOrNonstringInLegacyEnJson": 0,
+      "knownDynamicKeysChecked": 11,
+      "knownDynamicKeysMissingInLegacyEnJson": 3,
+      "dynamicKeyConclusion": "Candidate C05 only. Deferred runtime resources were not mounted; no catalog fix or blanket translation pass claimed."
+    }
+  },
+  "apiContracts": [
+    {"hook": "useAutomations", "method": "GET", "path": "/automations", "parameters": "None", "hookEvidence": "useAutomations.ts:44-50", "routerEvidence": "router.go:3847-3848", "routeMatchedBySource": true, "wire": "Array of base automationResponse; F01"},
+    {"hook": "useToggleAutomation", "method": "PATCH", "path": "/automations/{id}/toggle", "parameters": "JSON enabled boolean", "hookEvidence": "useAutomations.ts:177-219", "routerEvidence": "router.go:3881,3887", "routeMatchedBySource": true},
+    {"hook": "useReEnableAutomation", "method": "PATCH", "path": "/automations/{id}/re-enable", "parameters": "Path id", "hookEvidence": "useAutomations.ts:222-236", "routerEvidence": "router.go:3881,3888", "routeMatchedBySource": true},
+    {"hook": "useDeleteAutomation", "method": "DELETE", "path": "/automations/{id}", "parameters": "Path id", "hookEvidence": "useAutomations.ts:240-256", "routerEvidence": "router.go:3881,3886", "routeMatchedBySource": true},
+    {"hook": "useTestRunAutomation", "method": "POST", "path": "/automations/{id}/test-run", "parameters": "Path id", "hookEvidence": "useAutomations.ts:299-314", "routerEvidence": "router.go:3881,3889", "routeMatchedBySource": true, "limit": "Execution response/physical command not exercised"},
+    {"hook": "useImportAutomations", "method": "POST", "path": "/automations/import", "parameters": "JSON version/exported_at/automations", "hookEvidence": "useAutomations.ts:138-175", "routerEvidence": "router.go:3861", "routeMatchedBySource": true, "wire": "Imported entry array plus per-entry Errors, not numeric imported/skipped; F03"},
+    {"hook": "useVehicles", "method": "GET", "path": "/vehicles", "parameters": "None", "hookEvidence": "useVehicles.ts:74-81", "routerEvidence": "router.go:3362-3363", "routeMatchedBySource": true, "limit": "Only vehicle-id/display-name lookup and selection support inspected"},
+    {"hook": "usePinned", "method": "GET", "path": "/pinned", "parameters": "type=automation; no context supplied by page", "hookEvidence": "usePinned.ts:30-35,62-75", "routerEvidence": "router.go:3761-3763", "routeMatchedBySource": true},
+    {"hook": "useTogglePin", "method": "POST", "path": "/pinned", "parameters": "JSON item_type/item_id; optional context", "hookEvidence": "usePinned.ts:98-116", "routerEvidence": "router.go:3764", "routeMatchedBySource": true},
+    {"hook": "useTogglePin", "method": "DELETE", "path": "/pinned/{id}", "parameters": "Pinned-row id, not rule id", "hookEvidence": "usePinned.ts:118-132", "routerEvidence": "router.go:3766", "routeMatchedBySource": true},
+    {"hook": "useAutomationPresets", "method": "GET", "path": "/automations/presets", "parameters": "No category query supplied by this page; optional category is URI encoded in hook", "hookEvidence": "useAutomations.ts:378-385", "routerEvidence": "router.go:3870-3871", "routeMatchedBySource": true},
+    {"hook": "useAutomationEvents / automationSSE", "method": "GET-SSE", "path": "/api/v1/automations/events", "parameters": "No date/vehicle/as_of", "hookEvidence": "automationSSE.ts:92; useAutomationEvents.ts:61-172", "routerEvidence": "router.go:3857", "routeMatchedBySource": true, "prefix": "Correct direct stream path; not passed to request(), therefore not a double-prefix violation"},
+    {"hook": "useComfortNext", "method": "GET", "path": "/comfort/next", "parameters": "vehicle_id via scopedPath", "hookEvidence": "useComfort.ts:70-77; scope.ts:130-141", "routerEvidence": "router.go:4017-4018", "routeMatchedBySource": true},
+    {"hook": "useComfortRuns", "method": "GET", "path": "/comfort/runs", "parameters": "vehicle_id and limit=10 via scopedPath; UI displays first 5", "hookEvidence": "useComfort.ts:81-91; ComfortPanel.tsx:196", "routerEvidence": "router.go:4021", "routeMatchedBySource": true},
+    {"hook": "useSaveComfortConfig", "method": "PUT", "path": "/comfort/config", "parameters": "JSON vehicle_id/enabled/target_temp_c/lead_minutes/ics_url", "hookEvidence": "useComfort.ts:96-111", "routerEvidence": "router.go:4019", "routeMatchedBySource": true, "limit": "Config handler body/storage not audited; front-end guard defect F02"},
+    {"hook": "usePreconditionNow", "method": "POST", "path": "/comfort/now", "parameters": "JSON vehicle_id", "hookEvidence": "useComfort.ts:115-135", "routerEvidence": "router.go:4020", "routeMatchedBySource": true, "guard": "requiresLiveMode=true and offline unsafe path"}
+  ],
+  "apiAgreementLimits": "16 consumed route shapes manually matched by method/group/child path, not by executing API requests or a verification helper. No claims about authentication, backend enforcement, data validity, actuation, SSE connectivity or persistence. request() retains snake_case keys and also creates camelCase aliases; it cannot synthesize absent fields.",
+  "deterministicFindings": [
+    {
+      "id": "F01",
+      "severity": "high",
+      "title": "Inventory wire shape omits status/history metadata that the page treats as established zero or Never run",
+      "locations": [
+        {"file": "internal\\api\\automation\\crud.go", "lines": "13-15,30-38"},
+        {"file": "internal\\api\\automation\\dtos.go", "lines": "16-21"},
+        {"file": "internal\\models\\automation.go", "lines": "32-40"},
+        {"file": "web\\src\\api\\types.ts", "lines": "2553-2569"},
+        {"file": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx", "lines": "70-85,199-203"},
+        {"file": "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardStatistics.tsx", "lines": "17,32-45"}
+      ],
+      "mechanism": "List creates automationResponse from the base Automation only; response adds optional next_fire_time/conflicts but supplies no auto_disabled, execution_count, failure_count or last_triggered_at. TypeScript declares these required, without runtime validation. Undefined auto_disabled is falsy, so auto-disabled count/filter/banner act as if measured zero; card counters use ??0 and undefined last_triggered_at renders Never run. Actual supplied metadata cannot establish those assertions.",
+      "sourceConfirmedEffect": "For the currently inspected serializer, every loaded row lacks the stated execution/auto-disable fields. Runs 0/Never run and auto-disabled total 0 are unsupported conclusions, even though base enabled-state counts remain derivable.",
+      "followUpScope": "Parent coordinate one shared list DTO/hook/type owner with the separately assigned singular-list owner. Define actually available metadata versus unknown and adapt this page/card presentation; do not add fabricated historical counters or inspect/rework the other page in this queue item.",
+      "runtimeLimit": "No live response or actual execution history observed."
+    },
+    {
+      "id": "F02",
+      "severity": "high",
+      "title": "Embedded comfort editor contradicts read-only mode and config save lacks the client live-only gate",
+      "locations": [
+        {"file": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx", "lines": "325-330,447-450"},
+        {"file": "web\\src\\features\\automations\\components\\ComfortPanel.tsx", "lines": "35-45,168-185"},
+        {"file": "web\\src\\api\\hooks\\useComfort.ts", "lines": "96-111,120-125"},
+        {"file": "web\\src\\api\\client.ts", "lines": "348-372"},
+        {"file": "web\\src\\lib\\operationalMode.ts", "lines": "66-77"},
+        {"file": "web\\src\\api\\offlineCache.ts", "lines": "50-74"}
+      ],
+      "mechanism": "Page displays an automation read-only notice, but ComfortPanel consumes no operational mode and disables Save/Precondition only while pending. PUT /comfort/config does not set requiresLiveMode; assertOperationalWriteAllowed returns early without that flag, and offline unsafe patterns include /comfort/now but not /comfort/config. Precondition now does retain its request-layer guard.",
+      "sourceConfirmedEffect": "In an online as_of session, the config-save request has no inspected client mode gate, despite read-only page chrome. Offline config save also lacks that explicit guard. The immediate-now UI looks enabled but its request is refused in non-live mode.",
+      "followUpScope": "ComfortPanel/useComfort owner align editor/Save/Now enabled and reason states with existing operational mode and explicitly decide the config-write policy. Preserve existing immediate actuation guard and selected vehicle; no global write-policy weakening.",
+      "runtimeLimit": "No backend write, Tesla command, or guard bypass executed. Global mutation defaults are always/retry0, so this finding is not a claim of delayed replay."
+    },
+    {
+      "id": "F03",
+      "severity": "medium",
+      "title": "Typed import reports success without exposing per-entry failures and declares the wrong response shape",
+      "locations": [
+        {"file": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx", "lines": "142-170"},
+        {"file": "web\\src\\api\\hooks\\useAutomations.ts", "lines": "145-147,157-175"},
+        {"file": "internal\\api\\automation\\dtos.go", "lines": "268-285"},
+        {"file": "internal\\api\\automation\\handler.go", "lines": "1336-1356"}
+      ],
+      "mechanism": "Server importResult is imported: importedAutomation[] and optional errors: importError[]. It returns 201 when at least one import succeeds, even if other entries fail. Hook declares imported?:number/skipped?:number and ignores the onSuccess payload, emitting only Automations imported. Page delegates network outcome to that toast and offers no partial-result detail.",
+      "sourceConfirmedEffect": "The inspected mixed-result path is classified as success and its entry-specific failures are discarded by the client presentation.",
+      "followUpScope": "Assigned page import/hook DTO owner consume real imported/errors arrays and expose partial result with narrow retry guidance. Retain CTI rejection, file reset, and live-only guard. Fixture's accepted version 2 is only mocked client behavior; server exportVersion is 1.",
+      "runtimeLimit": "No file import, server creation, or actual malformed CTI request sent."
+    },
+    {
+      "id": "F04",
+      "severity": "medium",
+      "title": "A cold paused inventory is rendered as a successful empty list and unknown counts appear as zero",
+      "locations": [
+        {"file": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx", "lines": "120-125,179,399-404,457-460,467-518"},
+        {"file": "web\\src\\api\\dataState.ts", "lines": "194-230"},
+        {"file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "lines": "60-63"}
+      ],
+      "mechanism": "With no retained data, no fatal error and fetchStatus=paused, query.isLoading is false while DataState remains initial/isRefreshBlocked. Root items defaults to []; no error/loading branch applies, so workspace chooses No automations yet. StaleRefreshWarning suppresses no-data sources. Workspace always renders Showing 0 and an active filter badge can render 0 / 0 even during unresolved or fatal state.",
+      "sourceConfirmedEffect": "The source branch conflates unresolved inventory with measured empty inventory; brief correctly displays Rules unavailable, producing inconsistent trust on the same page.",
+      "followUpScope": "AutomationsListPage only: distinguish not-yet-resolved/paused from successful []; gate shown/total captions on established data and provide truthful source recovery. Preserve independent gallery/comfort and retained rules.",
+      "runtimeLimit": "No browser offline transition performed; conditional branch was read, not executed."
+    },
+    {
+      "id": "F05",
+      "severity": "medium",
+      "title": "Malformed successful collection responses are either masked as empty or crash list computation",
+      "locations": [
+        {"file": "web\\src\\api\\hooks\\useAutomations.ts", "lines": "44-50"},
+        {"file": "web\\src\\lib\\safeArray.ts", "lines": "9-14"},
+        {"file": "web\\src\\api\\hooks\\usePinned.ts", "lines": "50-52,66-70"},
+        {"file": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx", "lines": "75-82,186-192,223-228"}
+      ],
+      "mechanism": "safeArray converts null or non-array bodies to [] without a query error, making an invalid inventory look successfully empty; array elements are not validated, so [null] reaches computeStats and a.auto_disabled throws. selectPinned only applies nullish fallback, not Array.isArray, so an object body reaches automationPins.forEach. These selectors do not supply fail-closed source error/recovery.",
+      "sourceConfirmedEffect": "The stated invalid-input paths are visible directly in source; no claim that current backend emits them. Valid empty arrays retain their intended meaning.",
+      "followUpScope": "Coordinate a scoped automation-list/pin response validator with their existing hook owners; do not globally rewrite safeArray or loosen typed contracts. Preserve retained valid data and source-specific retry.",
+      "runtimeLimit": "No invalid payload injection or render test run."
+    },
+    {
+      "id": "F06",
+      "severity": "medium",
+      "title": "Comfort actuation has an implicit vehicle identity while this route hides both workspace selectors",
+      "locations": [
+        {"file": "web\\src\\features\\automations\\components\\ComfortPanel.tsx", "lines": "39,73-80,96-110,175-185"},
+        {"file": "web\\src\\hooks\\useSelectedVehicle.ts", "lines": "73-84"},
+        {"file": "web\\src\\lib\\workspaceScope.ts", "lines": "95-107,159-177"},
+        {"file": "web\\src\\components\\layout\\WorkspaceHeader.tsx", "lines": "35,63-69"},
+        {"file": "web\\src\\components\\layout\\Layout.tsx", "lines": "1413-1425"}
+      ],
+      "mechanism": "Comfort selects URL > persisted selection > first fleet vehicle, but displays neither that vehicle's name nor a local picker. /automations suppresses desktop and mobile header vehicle controls, correctly for fleet rules. The embedded vehicle-specific editor therefore relies on inherited/default identity without an explicit scope control here.",
+      "sourceConfirmedEffect": "No vehicle-specific context is supplied in the comfort panel's heading or its Save/Now controls; changing the intended vehicle requires leaving the route or manually changing URL context.",
+      "followUpScope": "ComfortPanel plus parent scope-policy coordination: retain fleet-wide rule inventory and provide explicit comfort-local selected identity/selection using existing UI. Do not enable a misleading fleet-global filter or remove comfort.",
+      "runtimeLimit": "No wrong-vehicle action or real vehicle data observed."
+    },
+    {
+      "id": "F07",
+      "severity": "medium",
+      "title": "Comfort's next/config refresh trust and independent recent-runs states are omitted",
+      "locations": [
+        {"file": "web\\src\\features\\automations\\components\\ComfortPanel.tsx", "lines": "41-43,69-70,108-132,190-209"},
+        {"file": "web\\src\\api\\hooks\\useComfort.ts", "lines": "81-91"}
+      ],
+      "mechanism": "Only nextState.fatalError is presented. Retained refreshError/isRefreshBlocked has no notice. runsQuery contributes data??[] only; Recent runs is omitted unless runs.length>0, making first-load/failed/empty indistinguishable and giving retained failures no retry. Five of ten loaded runs are displayed without a displayed limit/denominator.",
+      "sourceConfirmedEffect": "The separate runs source has no loading, error, empty or retained presentation, and a successful empty response removes the section instead of an explanatory shell.",
+      "followUpScope": "ComfortPanel only: adopt existing DataState/retained/retry contracts independently for next and runs, retain the recent-runs shell and existing five-of-ten limit with truthful context.",
+      "runtimeLimit": "No historical run retrieval, offline transition, or native section measurement."
+    },
+    {
+      "id": "F08",
+      "severity": "medium",
+      "title": "Duplicate and Export actions are visible no-ops",
+      "locations": [
+        {"file": "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardActions.tsx", "lines": "85-103"}
+      ],
+      "mechanism": "Both onClick handlers only call setMenuOpen(false); there is no callback, builder navigation, export request, clipboard operation or download.",
+      "sourceConfirmedEffect": "These affordances cannot perform their advertised operation in the inspected implementation. Historical audit recorded the same defect; no new regression attribution made.",
+      "followUpScope": "Existing card-action integration owner define duplicate/export behavior once using current typed contracts and guard policy. Refer any builder handoff to its delegated owner rather than repeating Builder QA.",
+      "runtimeLimit": "No menu click, duplicate creation or download performed."
+    },
+    {
+      "id": "F09",
+      "severity": "low",
+      "title": "Repeated card controls lack rule identity in their accessible names",
+      "locations": [
+        {"file": "web\\src\\features\\automations\\pages\\AutomationCard.tsx", "lines": "99-105"},
+        {"file": "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardActions.tsx", "lines": "45,56"},
+        {"file": "web\\src\\components\\ui\\PinButton.tsx", "lines": "110"}
+      ],
+      "mechanism": "Every switch is named Toggle automation, every menu Actions menu, and PinButton receives no supported ariaLabel override. No aria-labelledby/describedby links these controls to the rule heading.",
+      "sourceConfirmedEffect": "The supplied action names do not distinguish multiple rules when controls are navigated by name. Native focus/actual screen-reader grouping were not tested.",
+      "followUpScope": "AutomationCard and its action helper pass localized rule-name labels, using existing PinButton ariaLabel support; preserve checked/expanded states and confirmation.",
+      "runtimeLimit": "Source semantic issue only, not a native accessibility failure or pass."
+    },
+    {
+      "id": "F10",
+      "severity": "low",
+      "title": "Compact pin and template-details targets do not opt into the page's 44px mobile target policy",
+      "locations": [
+        {"file": "web\\src\\features\\automations\\pages\\AutomationCard.tsx", "lines": "99"},
+        {"file": "web\\src\\components\\ui\\PinButton.tsx", "lines": "39-44,117"},
+        {"file": "web\\src\\features\\automations\\pages\\PresetGallery.tsx", "lines": "109-110"}
+      ],
+      "mechanism": "Card passes size=sm with no minTargetSize=44, yielding h-7/w-7 (28px) from the shared consumer contract. Template details explicitly uses h-8/w-8 (32px). Root actions and menu targets otherwise opt into min-h-11/min-w-11.",
+      "sourceConfirmedEffect": "Declared target-size intent is below 44px for these two consumers; actual composed hit rectangles, spacing exceptions and WCAG compliance are not inferred.",
+      "followUpScope": "Page-specific card/gallery consumers use current minTargetSize/className support, then native owner measures target spacing and narrow layout. No shared sizing reset.",
+      "runtimeLimit": "No viewport/native target measurement."
+    }
+  ],
+  "unconfirmedCandidates": [
+    {
+      "id": "C01",
+      "kind": "Runtime form identity",
+      "location": "ComfortPanel.tsx:48-67,112-115,73-80",
+      "mechanism": "Vehicle change resets hydrated but not draft values. Until another stored config hydrates, prior vehicle's fields remain. Whether an unavailable/paused new config exposes those drafts depends on the actual query outcome.",
+      "narrowFollowUp": "Comfort owner with mocked vehicle-switch/config-unavailable states first; no real Save/Now. Determine per-vehicle dirty/default/reset policy before a production change.",
+      "notConfirmed": "No cross-vehicle save, persisted corruption or successful empty-config response observed."
+    },
+    {
+      "id": "C02",
+      "kind": "Pending action concurrency",
+      "location": "AutomationsListPage.tsx:245-270,490-495; AutomationCardActions.tsx:63-80; useOptimisticMutation.ts:123-150",
+      "mechanism": "Per-rule mutation pending is not passed to card controls; only canWrite disables them. Repeated test-run/re-enable requests and overlapping optimistic toggles remain possible at the UI callback level.",
+      "narrowFollowUp": "Existing action owner inspect pending/idempotency policy with mocked deferred mutations; then source-only server request deduplication review if authorized.",
+      "notConfirmed": "No duplicate Tesla command, race rollback outcome or server-side idempotency behavior tested."
+    },
+    {
+      "id": "C03",
+      "kind": "Historical/current presentation policy",
+      "location": "AutomationsListPage.tsx:117,129,325-330; useAutomations.ts:44-50; automationSSE.ts:92; useOperationalMode.tsx:52-68",
+      "mechanism": "Current rule inventory and current live firing stream remain active in an as_of URL while global operational mode describes historical reconstruction. Inventory itself is not a dated execution source.",
+      "narrowFollowUp": "Parent decide whether the command center explicitly communicates current configuration/read-only or suppresses live firing in historical mode; refer historical execution work to the existing History owner.",
+      "notConfirmed": "No replay UI rendered and no requirement to fabricate a nonexistent as_of rules endpoint inferred."
+    },
+    {
+      "id": "C04",
+      "kind": "Native/visual/accessibility and preference acceptance",
+      "location": "AutomationsListPage.tsx:277-321,383-445,474-479; AutomationCard.tsx:83-112; ComfortPanel.tsx:121,198; useDateFormat.ts:72-86",
+      "mechanism": "Source uses stacking/min-w-0/wrap labels, native details/summary focus styles, reduced-motion classes and semantic shared controls. Comfort event/run titles still truncate; default timezone follows selected vehicle rather than each rule's vehicle.",
+      "narrowFollowUp": "A separately authorized native owner reviews narrow/mobile/desktop, light/dark/custom themes, keyboard/overlay focus, screen reader, long labels/RTL, zoom, forced colors, reduced motion, temperature preferences and timezone/DST behavior using private deterministic data.",
+      "notConfirmed": "No geometry, contrast, touch exceptions, clipping, focus, locale output or per-rule timezone error established by this review."
+    },
+    {
+      "id": "C05",
+      "kind": "Deferred translation resolution",
+      "location": "AutomationCard.tsx:87; i18n\\index.ts:9-11,54-79,144-161",
+      "mechanism": "automations.status.active/disabled/auto-disabled were absent from the parsed legacy en.json subtree, but none is in the inspected runtime-manifest missing list. Current English resources are deferred shell/chunks, not a direct en.json import.",
+      "narrowFollowUp": "Existing locale owner resolve only these three status keys against actual mounted/deferred resources; no catalog regeneration campaign.",
+      "notConfirmed": "Missing runtime translation, hardcoded-English failure and catalog startup failure were not promoted to deterministic findings."
+    }
+  ],
+  "historicalProofs": [
+    {
+      "kind": "Historical phase5 acceptance",
+      "queueRecordedTimestampUtc": "2026-10-12T14:32:17.5558715Z",
+      "commit": "aa273b38c58d6982e78217a2f1f0a0dcba8ad4ba",
+      "actualCommitTimestampUtcFromGitShow": "2026-10-12T17:10:43Z",
+      "reportedEvidence": "Queue records lint0/style0, 509-to541 lines/8 sections; preservation1 with eleven deliberate lexical changes, final tests external catalog startup1/zero cases, native incomplete.",
+      "historicalOnly": true,
+      "freshPassed": false,
+      "limit": "Queue receipt timestamp and git commit timestamp are distinct recorded values. Historical tool/test output was not rerun; zero executed cases is not a test pass."
+    },
+    {
+      "kind": "Historical source audit receipt",
+      "path": "docs\\frontend-audits\\audit-page-059.json",
+      "receiptFileLastWriteUtc": "2026-10-12T05:46:57.5148294Z",
+      "receiptSha256AtRead": "F5C493CF834FA5A4671B89D68B3C73D08174CC82913C5D84A2816A24DC84DB28",
+      "historicalRootSourceSha256RecordedInReceipt": "11F871A8F876B8CA473B409697215C9B947588C0B627DEE6B3CEDC0CFF8CF03E",
+      "historicalRootLines": 509,
+      "historicalLogicalSections": 8,
+      "historicalOnly": true,
+      "freshPassed": false,
+      "limit": "File LastWriteTime is local filesystem metadata, not a certified execution timestamp. The receipt explicitly did not run TypeScript/native tests."
+    }
+  ],
+  "checksActuallyDone": [
+    {"check": "Already-completed queue/report check", "result": "Pending assigned row, completed dependency, no pre-existing assigned report/log; read only"},
+    {"check": "Actual route/loader/workspace/header/mobile source trace", "result": "Distinct /automations command center, not singular list forwarder; scope disabled for inventory"},
+    {"check": "Consumed-hook method/path and wire-shape review", "result": "16 source route matches; F01/F03 wire mismatch and F02 guard omission retained; no requests"},
+    {"check": "Get-FileHash SHA256", "result": "Current root, composition, fixture, critical contracts, routes and related receipt snapshots recorded; no source acceptance inferred from hash"},
+    {"check": "Get-Content and git show line/section counts", "result": "Root 509->541; composed 1433->1465; 8 logical sections; GlassPanel5/ChartContainer0"},
+    {"check": "Case-sensitive rg scan on root plus seven direct feature components", "pattern": "style=\\{\\{|<(button|input|textarea|select|table)\\b|direct-library/old-API imports|fetch\\(|text-neon-|any", "rawOutput": "No matches found.", "limit": "Scoped lexical patterns only, not full violations certification"},
+    {"check": "Case-sensitive hook URL lexical scan on useAutomations/usePinned/useComfort", "pattern": "request.*\\(['\"]\\/api\\/v1|[?&](vehicleId|driveId|sessionId|chargingId)=", "rawOutput": "No matches found.", "limit": "Manually checked multiline consumed requests and scopedPath separately; unrelated hook exports not audited"},
+    {"check": "Literal-key lookup without catalog changes", "rawOutput": "SCOPED_LITERAL_I18N_KEYS=82 MISSING_OR_NONSTRING=0; KNOWN_DYNAMIC_I18N_KEYS=11 MISSING_OR_NONSTRING=3", "limit": "Legacy en.json, not actual mounted deferred locale; unresolved status keys remain C05"},
+    {"check": "Assigned root source git status", "rawOutput": "CURRENT_ROOT_SOURCE_MODIFIED=", "limit": "Not a repository-wide clean-tree assertion"}
+  ],
+  "notRun": [
+    "TypeScript npx tsc --noEmit",
+    "Audit/verify shell scripts and contract helper execution",
+    "Lint, formatter, compiler, build, dependency install or full suite",
+    "Vitest/test-runner discovery, tests or fixture execution",
+    "Browser, Playwright, Chrome DevTools, screenshots or native UI interaction",
+    "API/vehicle/SSE connections, data retrieval or automation mutations",
+    "Docker, Discord, custom extensions/tools/helpers",
+    "Builder, History or singular-list production implementation QA",
+    "Runtime locales, unit/theme/OS modes or timezone/DST checks",
+    "Backend query/storage/authorization enforcement or live execution acceptance",
+    "Queue, status, handoff, catalog, production, test, shared or configuration edits"
+  ],
+  "toolLimitsAndCorrections": [
+    "audit-violations and verify-api-hooks guidance loaded; helper scripts NOTRUN under explicit source-only/no-helper/no-compiler limits. Scoped direct source reads/rg replaced executable scripts.",
+    "Initial broad queue-context output was oversized; corrected exact assigned/dependency row read used, without opening the tool-generated temporary output.",
+    "useOperationalMode.ts lookup failed; actual .tsx then read. offlineWritePolicy.ts search failed; actual client import points to offlineCache.ts, then read.",
+    "One out-of-range client read (570-680; file 459 lines) failed; relevant 226-275 and 348-430 excerpts inspected.",
+    "Initial PowerShell raw-control scan was case-insensitive and matched 15 shared uppercase controls; corrected case-sensitive Select-String and rg found zero raw lowercase controls. False positives were not reported as violations.",
+    "Initial ConvertFrom-Json legacy catalog lookup failed on casing-distinct keys; corrected -AsHashtable lookup preserved those keys. This is a PowerShell parser limitation, not a confirmed catalog defect.",
+    "A final combined quote-heavy metadata command exited 1 with no diagnostic output; smaller corrected hash command and direct rg searches supplied actual evidence.",
+    "Other actors can modify direct/shared source during this snapshot; final persistence verification checks recorded SHA256 fingerprints, not ownership of unrelated changes."
+  ],
+  "counts": {
+    "deterministicFindings": 10,
+    "high": 2,
+    "medium": 6,
+    "low": 2,
+    "unconfirmedCandidates": 5,
+    "logicalSections": 8,
+    "consumedRouteShapes": 16,
+    "sourceMatchedRouteShapes": 16,
+    "rootLines": 541,
+    "composedLines": 1465,
+    "scopedLexicalRawControls": 0,
+    "scopedLexicalInlineStyleSites": 0,
+    "scopedLexicalDirectLibraryImports": 0,
+    "scopedLexicalOldApiImports": 0,
+    "scopedLexicalDoublePrefixRequestSites": 0,
+    "scopedLexicalCamelCaseQueryLiterals": 0,
+    "runnerDiscovery": "NOTRUN",
+    "testsExecuted": 0,
+    "freshTestPass": false
+  },
+  "finalPersistenceValidation": {
+    "timestampUtc": "2026-10-13T20:58:06.5055384Z",
+    "method": "Read-only PowerShell ConvertFrom-Json -AsHashtable, artifact Get-Item, recorded source Get-FileHash comparisons and exact-path git status",
+    "rawOutput": [
+      "JSON_PARSE=OK",
+      "ITEM=phase6-qa-automations-automations-list STATUS=DONE_SOURCE_ONLY_QA_REPORT",
+      "FINDINGS=10 HIGH=2 MEDIUM=6 LOW=2 CANDIDATES=5",
+      "ROUTE_MATCHES=16",
+      "SOURCE_FINGERPRINTS_CHECKED=29 SOURCE_DRIFT=0",
+      "ARTIFACT_EXISTS=D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-automations-automations-list.json BYTES=53922",
+      "ARTIFACT_EXISTS=D:\\repos\\teslasync\\web\\logs\\phase6-qa-automations-automations-list.log BYTES=12084",
+      "CLAIMS=RELEASED POST_RETURN_WRITES=NONE",
+      "?? docs/frontend-audits/phase6-qa-automations-automations-list.json"
+    ],
+    "exitCode": 0,
+    "sourceFingerprintDriftCount": 0,
+    "limits": "29 recorded source fingerprints were checked, not every repository file. Artifact sizes above describe the pre-validation-receipt version; this receipt changes only claimed artifacts. Log exists on disk even though exact-path git status does not list the ignored logs path. No source/test path appeared in that bounded status output."
+  },
+  "needs": "Parent intake/report-only completion; prioritize real inventory DTO/unknown metadata and comfort operational guard/scope before narrower import/trust/action/accessibility follow-ups. Coordinate shared findings once with the separate list/Builder/History owners; do not dispatch duplicate production work from this worker.",
+  "release": {
+    "allClaims": "RELEASED",
+    "source": "READ_ONLY; NO WRITE CLAIMS",
+    "report": "RELEASED at final delivery",
+    "log": "RELEASED at final delivery",
+    "ongoingCommands": 0,
+    "ongoingAgentsOrServices": 0,
+    "postReturnWrites": "NONE",
+    "queueOrStatusEdited": false,
+    "commitsCreated": false
+  }
+}

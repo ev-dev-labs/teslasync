@@ -15,13 +15,14 @@ import {
   Text,
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { RegenEfficiencyData } from '@/types/driving';
 
 import type { RegenEfficiencyModel } from '../../lib/regenEfficiency';
 import { DetailScopeNotice } from './DetailScopeNotice';
 import { RegenMethodologyList } from './RegenMethodologyList';
 import type { RegenSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CoverageMethodologyProps {
   aggregate: RegenEfficiencyData | undefined;
@@ -36,6 +37,7 @@ export function CoverageMethodology({
   aggregateState,
   detailState,
 }: CoverageMethodologyProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
   const unavailableEnergyFields =
@@ -165,9 +167,7 @@ export function CoverageMethodology({
                 'regen.method.capacityProvenance',
                 'Pack basis: {{capacity}} · {{source}}.',
                 {
-                  capacity: formatEnergy(aggregate.batteryCapacityWh, {
-                    precision: 1,
-                  }),
+                  capacity: formatEnergy(aggregate.batteryCapacityWh),
                   source: capacityProvenance,
                 },
               )}

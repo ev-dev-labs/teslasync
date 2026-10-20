@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/components/ui';
+import { typography } from '@/lib/tokens';
 import type { FsdInsightsQuality } from '@/types/fsd';
 
 interface FsdMethodologyNotesProps {
@@ -98,7 +99,7 @@ export function FsdMethodologyNotes({ quality }: FsdMethodologyNotesProps) {
     <ul className="space-y-3" data-testid="fsd-methodology-notes">
       {notes.map((note) => (
         <li key={note.text} className="flex items-start gap-2">
-          <span className="mt-0.5 shrink-0 text-cyan-300">{note.icon}</span>
+          <span className={`mt-0.5 shrink-0 ${typography.color.muted}`}>{note.icon}</span>
           <Text as="span" variant="bodySm">
             {note.text}
           </Text>

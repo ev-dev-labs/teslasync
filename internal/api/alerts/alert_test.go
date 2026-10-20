@@ -262,6 +262,16 @@ func TestAlertTestContract(t *testing.T) {
 			body:       `{"message":"Test alert message","notify_channels":[1,2]}`,
 			wantStatus: http.StatusBadRequest,
 		},
+		{
+			name:       "accepts value_minimum range operands",
+			body:       `{"message":"Test alert message","signal_name":"BatteryLevel","op":"between","value_minimum":10,"value_max":20}`,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "rejects legacy value_min spelling",
+			body:       `{"message":"Test alert message","signal_name":"BatteryLevel","op":"between","value_min":10,"value_max":20}`,
+			wantStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tt := range tests {

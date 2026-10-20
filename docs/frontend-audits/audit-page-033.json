@@ -1,0 +1,692 @@
+{
+  "item": "audit-page-033",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+  "routes": [
+    "/intelligence/emergency-resilience"
+  ],
+  "purpose": "Combine a confirmed modeled energy-outage scenario with separately sourced Storm guardian weather assessment, configuration, and recent activity.",
+  "primaryGoal": "Model supported-energy survival and risk progression, inspect load priorities and evidence, and independently configure pre-storm charging protection for the selected vehicle.",
+  "dataSources": [
+    {
+      "hook": "useCreateResiliencePlan",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 192,
+      "endpoint": "POST /api/v1/advanced-intelligence/resilience/plans",
+      "ownership": "Advanced intelligence service; page submits explicit user scenario, not observed vehicle energy.",
+      "routeEvidence": [
+        "internal\\api\\router.go:3917",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:71",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:82"
+      ],
+      "behavior": "Mutation toast; confirmed:true; SI body; useRetainedMutation retains successful raw response and submitted inputs, rejecting old-vehicle publication.",
+      "verified": "Source path/method match only; server calculations and live response not exercised."
+    },
+    {
+      "hook": "useStormguardStatus",
+      "file": "web\\src\\api\\hooks\\useStormguard.ts",
+      "line": 70,
+      "endpoint": "GET /api/v1/stormguard/status?vehicle_id=<selected>",
+      "ownership": "Storm guardian; config, weather assessment and optional current_soc.",
+      "routeEvidence": [
+        "internal\\api\\router.go:3967",
+        "internal\\api\\router.go:3968"
+      ],
+      "behavior": "Operational query policy; vehicle-keyed cache; forwarded abort signal; selected vehicle required."
+    },
+    {
+      "hook": "useStormguardEvents",
+      "file": "web\\src\\api\\hooks\\useStormguard.ts",
+      "line": 81,
+      "endpoint": "GET /api/v1/stormguard/events?limit=10&vehicle_id=<selected>",
+      "ownership": "Storm guardian recent assessment/action log.",
+      "routeEvidence": [
+        "internal\\api\\router.go:3970"
+      ],
+      "behavior": "Operational query policy; safeArray response; activity renderer shows first five returned entries with independent source state."
+    },
+    {
+      "hook": "useSaveStormguardConfig",
+      "file": "web\\src\\api\\hooks\\useStormguard.ts",
+      "line": 98,
+      "endpoint": "PUT /api/v1/stormguard/config",
+      "ownership": "Storm guardian existing configuration mutation; not the modeled outage-plan mutation.",
+      "routeEvidence": [
+        "internal\\api\\router.go:3969"
+      ],
+      "behavior": "Saves enabled, lat, lng and target_soc for vehicle_id; invalidates/broadcasts that vehicle's status/events and publishes toast.",
+      "verified": "Source capability is configuration persistence. Actual automatic command execution and evaluator behavior were not audited."
+    },
+    {
+      "hook": "useSelectedVehicle / useUnits / useNumberFormatting",
+      "ownership": "Existing workspace selection and display preferences.",
+      "behavior": "Vehicle precedence is URL, persisted valid selection, then first vehicle. Workspace route scope enables vehicle and disables shared range here. Scenario duration is an independent modeled business duration, not a historical date filter.",
+      "evidence": [
+        "web\\src\\hooks\\useSelectedVehicle.ts:53",
+        "web\\src\\lib\\workspaceScope.ts:23",
+        "web\\src\\lib\\workspaceScope.ts:169",
+        "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx:30"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "PageContainer adapter; full-width min-w-0 container; shell retains selection/header ownership."
+    },
+    {
+      "name": "ChartCard / EmbeddedChart",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "contract": "One LayoutCard surface; forwards data, dataColumns, toolbar, exportable and semantic chart labels to canonical ChartContainer."
+    },
+    {
+      "name": "InsightPanel / SourceContent",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "contract": "Persistent LayoutCard shell; source-specific loading/error/empty/retained/ready rendering; query-driven recovery."
+    },
+    {
+      "name": "AnalysisBrief / OperationalBrief",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "contract": "Raw numeric StatMetric measurements; source quality, provenance, generatedAt, window, retained failures and submitted result scope."
+    },
+    {
+      "name": "EvidencePanel",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "contract": "Quality KVList, evidence source cards, limitations, explicit unsupported capabilities; null-safe collections."
+    },
+    {
+      "name": "StormGuardPanel / StormGuardActivity",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+      "contract": "Independent operational status and events; Toggle/Input/Slider/Button configuration controls."
+    },
+    {
+      "name": "SiNumberInput",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "contract": "Canonical SI number entry through shared Input, display-equivalent hint, min/max/required and null-capable change callback."
+    },
+    {
+      "name": "Badge / Button / Input / Text / AlertBanner / EmptyState / FadeIn",
+      "owner": "Existing category barrels",
+      "contract": "Already reused; no new primitive or animation engine required. Full primitive behavior not independently inspected."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "line": 95,
+      "rule": "MDC-002",
+      "detail": "Six SI scenario inputs repeat value-to-form updates and display-equivalent hints, but already share SiNumberInput. AnalysisBrief and EvidencePanel also intentionally repeat source provenance at summary/detail levels.",
+      "fix": "Reuse the current SI field and brief/evidence owners; optionally use local typed field metadata without removing validation or any hint. Do not introduce another form, metric, or evidence component family.",
+      "owner": "page",
+      "confidence": "high",
+      "severity": "informational"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "Scenario fields stack then become two/three columns at md/xl: EmergencyResiliencePage.tsx:94.",
+      "Priorities/recommendations stack then split at lg: EmergencyResiliencePage.tsx:250.",
+      "Evidence stacks then uses three lg columns: EvidencePanel.tsx:45.",
+      "Storm status header wraps; lat/lng remain two columns at every width: StormGuardPanel.tsx:80,138.",
+      "Chart inner ResponsiveContainer fixes 300px height despite the outer canonical chart sizing: EmergencyResiliencePage.tsx:224."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+        "line": 138,
+        "rule": "MDC-043",
+        "detail": "Home-coordinate controls are an unconditional two-column grid, unlike the page's responsive scenario fields. This leaves narrow columns for labels, decimal values and control chrome on small allocated widths.",
+        "fix": "Use an intentional small-container stacking strategy retaining both coordinates and all configuration actions; check 320px and long localized labels before choosing the breakpoint.",
+        "owner": "shared",
+        "confidence": "medium",
+        "severity": "P2"
+      }
+    ],
+    "verified": false,
+    "limits": "No viewport, touch, text-zoom, RTL, overflow, or visual behavior exercised. Fixed chart height is recorded as a sizing integration concern, not a proven overflow defect."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Decorative page icons are aria-hidden: EmergencyResiliencePage.tsx:79,177.",
+      "Scenario uses native form submit and shared labeled numeric controls: EmergencyResiliencePage.tsx:93,95,161.",
+      "Chart has ariaLabel and exported dataColumns including risk: EmergencyResiliencePage.tsx:212,220.",
+      "Evidence subsections and activity have localized aria-labels: EvidencePanel.tsx:46; StormGuardActivity.tsx:17."
+    ],
+    "findings": [],
+    "verified": false,
+    "limits": "Keyboard, focus visibility/order, generated Input associations, slider behavior, screen-reader announcements, effective contrast, reduced-motion, forced colors and accessible chart data interaction are unverified. No claim of AA compliance."
+  },
+  "states": {
+    "sourceEvidence": [
+      "No vehicle disables scenario submission; summary prompts selection. Storm config has its own selection prompt.",
+      "Mutation pending disables/spins submit; useRetainedMutation keeps prior success with scope and submitted-input identity.",
+      "AnalysisBrief distinguishes initial pending, retained failure, refresh, fatal failure, uncalculated result and missing quality.",
+      "Storm status has initial Skeleton, fatal QueryError, unavailable assessment and retained stale notice. Events have independent SourceContent.",
+      "Chart requires at least two points; action/evidence arrays are null-safe."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+        "line": 215,
+        "rule": "MDC-026",
+        "detail": "Timeline receives only empty/data; priorities at line 247 receive only empty=!result; EvidencePanel at line 270 receives no request state. During a first pending/failing/paused calculation these sections continue showing insufficient/no-generated/no-supporting-evidence copy while AnalysisBrief alone distinguishes the request state.",
+        "fix": "Derive per-result source state from publication.source and propagate pending/fatal/retained semantics through existing chart/panel contracts. Keep source sections mounted and retain usable previous outputs after refresh failure; never infer empty evidence from an unresolved request.",
+        "owner": "page",
+        "confidence": "high",
+        "severity": "P2"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+        "line": 252,
+        "rule": "MDC-026",
+        "detail": "With a successful result containing an empty load_priorities or recommendations array, the outer panel is ready because result exists but that column renders nothing; individual collection emptiness is not explained.",
+        "fix": "Add localized collection-specific empty messages while preserving nonempty neighboring recommendations/priorities.",
+        "owner": "page",
+        "confidence": "high",
+        "severity": "P2"
+      }
+    ],
+    "verified": "Source-only; no network/offline/error fixtures executed."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "line": 253,
+      "rule": "MDC-010 / MDC-015",
+      "detail": "Priority cards use a fixed white-opacity border. The related EvidencePanel source cards at line 83 use fixed white-opacity border and background, bypassing neutral theme surface tokens.",
+      "fix": "Use existing subtle-border/surface tokens on both card patterns, retaining evidence hierarchy and semantic warning badges; no neon/glow or new palette.",
+      "owner": "shared",
+      "confidence": "high",
+      "severity": "P2"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "line": 39,
+      "rule": "MDC-013",
+      "detail": "The SI suffix uses raw text-xs rather than the existing Caption/Text role. The text color already uses a theme variable.",
+      "fix": "Reuse Caption or Text as span with the correct compact role without changing Input suffix/hint associations or canonical units.",
+      "owner": "shared",
+      "confidence": "high",
+      "severity": "P3"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+      "line": 50,
+      "rule": "MDC-032 / MDC-046",
+      "detail": "stored config hydrates local form only once via hydrated. This state is never reset on vehicleId change. Switching from vehicle A to B preserves A's enabled/coordinates/target while handleSave at line 64 sends those values with B's vehicle_id.",
+      "fix": "Key configuration draft/hydration and mutation error publication to vehicle scope, hydrating B only from B's resolved config. Preserve edits during same-vehicle refetch; prevent late old-scope responses or save errors publishing in the new scope.",
+      "owner": "shared",
+      "confidence": "high",
+      "severity": "P1"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "line": 82,
+      "rule": "MDC-045 / preserve actual capabilities",
+      "detail": "Global 'Advisory plan only' copy says TeslaSync does not execute emergency commands, immediately followed by a separate Storm guardian configuration surface labeled 'Auto pre-charge before storms' (StormGuardPanel.tsx:134). The plan's advisory limitations and guardian's independent configuration capability are not clearly scoped.",
+      "fix": "Explicitly scope the no-dispatch/no-V2H disclaimer to the modeled outage plan and separately describe the existing guardian configuration. Do not infer additional commands, evaluator guarantees, charging authorization, or actual backend execution from frontend labels.",
+      "owner": "integration",
+      "confidence": "high",
+      "severity": "P1"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "line": 98,
+      "rule": "MDC-045 / unknown is not zero",
+      "detail": "Every SiNumberInput null from cleared/nonfinite input is immediately replaced with zero. Zero is valid for energy/reserve fields; uncertainty also converts empty string to zero at line 169. Clearing a required field therefore changes the scenario into a measured zero instead of retaining an incomplete draft.",
+      "fix": "Represent incomplete draft values separately and validate the complete typed SI request at submit. Preserve legitimate zero and all current minimum/maximum constraints and defaults.",
+      "owner": "page",
+      "confidence": "high",
+      "severity": "P2"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "line": 229,
+      "rule": "MDC-034 / MDC-044 / MDC-045",
+      "detail": "Bare Tooltip uses raw series key energy and default numeric formatting; data table/export column labels at lines 220-222 omit the selected duration/energy units even though values are already converted at lines 62-63. Exported time/energy can be ambiguous across unit preferences.",
+      "fix": "Use the existing localized chart tooltip/formatting conventions and include selected display-unit context in chart table/export headers. Preserve raw response SI and every risk point; do not create another conversion engine.",
+      "owner": "page",
+      "confidence": "high",
+      "severity": "P2"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+      "line": 122,
+      "rule": "MDC-045",
+      "detail": "Peak gust interpolates a number with hardcoded m/s display copy rather than useUnits speed display formatting. This bypasses the user's display speed unit preference; the API field peak_gust_ms is not renamed or reinterpreted by this audit.",
+      "fix": "First confirm the existing API field's unit contract, then apply the existing SI display formatter at the render boundary and localize unit-bearing output. Retain raw wire/cache field and values.",
+      "owner": "shared",
+      "confidence": "medium",
+      "severity": "P2"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "order": [
+      "Fix selected-vehicle guardian draft isolation",
+      "Clarify modeled-plan versus guardian capability boundaries",
+      "Propagate per-source trust states and preserve incomplete draft input",
+      "Normalize token surfaces and unit-bearing chart outputs"
+    ],
+    "rationale": "Cross-vehicle configuration submission risk outweighs cosmetic modernization."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "StormGuardPanel scope-safe configuration draft",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+      "propsVariantsStates": "Keep vehicleId?:number|null. Define draft identity/hydration for each selected vehicle; initial/unavailable/retained status; dirty same-scope draft; old-scope save/error suppression; narrow-width coordinate stacking.",
+      "usedBy": [
+        "EmergencyResiliencePage through ../components barrel"
+      ],
+      "dependsOn": [
+        "useSelectedVehicle",
+        "vehicle-keyed useStormguardStatus",
+        "useSaveStormguardConfig",
+        "existing Input/Toggle/Slider/Button"
+      ],
+      "acceptance": "Source-focused tests then authorized runtime A-to-B selection/save, late response, retained refetch and narrow-view checks. No backend feature additions."
+    },
+    {
+      "name": "EvidencePanel unresolved/result source presentation",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Retain quality/evidence/limitations/unsupported props; compose existing InsightPanel query or explicit sourceState for initial/loading/error/retained versus genuinely empty evidence. Neutral theme tokens for evidence cards.",
+      "usedBy": [
+        "EmergencyResiliencePage direct evidence section"
+      ],
+      "dependsOn": [
+        "InsightPanel",
+        "SourceContent",
+        "DataStateSource",
+        "existing theme surface/border tokens"
+      ],
+      "acceptance": "No response, pending, paused, fatal failure, retained failure, empty successful evidence and sibling independence. Other consumers must be inventoried by the assigned shared owner; none inferred here."
+    },
+    {
+      "name": "SiNumberInput typography reuse",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "propsVariantsStates": "Existing suffix display via Caption/Text; retain null callback, explicit ID, required/min/max/step and hint behavior.",
+      "usedBy": [
+        "Six EmergencyResiliencePage scenario inputs"
+      ],
+      "dependsOn": [
+        "Input suffix slot",
+        "existing UI typography category"
+      ],
+      "acceptance": "Suffix, units, label and hint stay visible and associated. Draft null preservation belongs to page, not a shared conversion change."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "finding": "No new theme, query client, workspace selector, metric formatter or chart engine found in this scoped source review.",
+      "evidence": "Existing PageLayout, AnalysisBrief, useOperationalMetrics, useSelectedVehicle, useUnits, SourceContent and category chart imports are reused."
+    },
+    {
+      "finding": "Presentation mixes GlassPanel-based guardian with LayoutCard-based intelligence panels; both are existing canonical owners, not proof of a competing library.",
+      "fix": "Unify spacing/hierarchy through existing layouts only if all guardian content/actions and source states survive."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "BC4C070000AE79E52E537A49704ADB072832C5CA36F7CF02F79BD2016A7C9F53",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 284,
+    "sourceInventory": [
+      {
+        "file": "docs\\frontend-design-contract.md",
+        "sourceHash": "17B542389CD4E98A0DFB7B4D2F2C4E2727F221AF0AC5ACB738DB5E987B282255",
+        "lineCount": 394,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "docs\\frontend-worker-conventions.md",
+        "sourceHash": "6CF8194644A7820926082FC065E9CBF87C1E1E2D8258C4D092DA8C962707ADC3",
+        "lineCount": 80,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "docs\\frontend-mission.md",
+        "sourceHash": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "lineCount": 1593,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": ".github\\skills\\audit-violations\\audit.sh",
+        "sourceHash": "3E5937AB2A4EA2F303A0152111794D5A3A45C24ABFE7B11400079BC4AC3DFE46",
+        "lineCount": 141,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+        "sourceHash": "BC4C070000AE79E52E537A49704ADB072832C5CA36F7CF02F79BD2016A7C9F53",
+        "lineCount": 284,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+        "sourceHash": "7377F85CB5D2F843920599D3EE2E9136CA7A58DB935F796849B106F706255C84",
+        "lineCount": 173,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardActivity.tsx",
+        "sourceHash": "29C99520C52402B8EB9956A772A4E08FD4CEC9A4464250F6F6F25626E4C48822",
+        "lineCount": 59,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\stormguardPresentation.ts",
+        "sourceHash": "3197AC288E26A328CCDD3A13EC32BC1FB80622B084872FC89DC939037C3BD683",
+        "lineCount": 23,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "sourceHash": "667BCE14E068B5C386E2E3F524295532E62F8D3033218808DB6E60D213E3898E",
+        "lineCount": 130,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "sourceHash": "7B774AE98C6BFED41D47605B36045A61A7C4AB0C6E41BF2D6770FEB59B52D8DD",
+        "lineCount": 72,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "sourceHash": "DCF18264E4554065E077786F16441F3D24FC6EF923EAA1CF2D29C4198FB67F24",
+        "lineCount": 46,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "sourceHash": "3846836C6AB28CEC6164A8C09539C97030167B14CE7ECC232FF2FB4FCB9014C5",
+        "lineCount": 21,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+        "sourceHash": "59128FF5C6963DD4E04B1A5370F8634197986893D79AD74FC3BA67FE48DACFC1",
+        "lineCount": 6,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+        "sourceHash": "37DFCED4700600EAAC3F094A7C56103C572392C8167F97E8A5CE04AE73544AF6",
+        "lineCount": 159,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+        "sourceHash": "DAC2B5A3C62F8E0B7D366A11BA11115818895D3A751B482C9361D6647D967067",
+        "lineCount": 251,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useStormguard.ts",
+        "sourceHash": "BA4E601FAE1BF1CD41CC71C0A0D39B8CD1AFC4003CFF55834051FE709C46C1EA",
+        "lineCount": 112,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\api\\scope.ts",
+        "sourceHash": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+        "lineCount": 372,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\types\\advancedIntelligence.ts",
+        "sourceHash": "CC6E80B16F9119E2D322D662A2EBE2718A195FFDA67738A1B0C59402CAEE8F13",
+        "lineCount": 431,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\hooks\\useRetainedMutation.ts",
+        "sourceHash": "97583A103B7BE4430178B1E541BC8384D1D96EB3F0314E7D5F30A034154689A9",
+        "lineCount": 96,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+        "sourceHash": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "lineCount": 174,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\lib\\workspaceScope.ts",
+        "sourceHash": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "lineCount": 168,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "sourceHash": "8DF73DE2D4B3FF7485019389F547D863FE8729AA0C95FA1F497487389D6B87F6",
+        "lineCount": 17,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+        "sourceHash": "504C70538B666ECCAC09537EF59BD5F1E3D3ED4D4930A8493D94B05C5C77FB0E",
+        "lineCount": 48,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+        "sourceHash": "283583E259342620CB0E24429E3F66FB6385F16498D869192F36CFFCFF9EEC43",
+        "lineCount": 72,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+        "sourceHash": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+        "lineCount": 42,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "web\\src\\App.tsx",
+        "sourceHash": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3",
+        "lineCount": 918,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "internal\\api\\router.go",
+        "sourceHash": "98B92853EBADE3DB74AD361D098BBA4472039884A407D61CE901DC3BF1FE3750",
+        "lineCount": 5366,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "internal\\handler\\v1\\advancedintelligence\\handler.go",
+        "sourceHash": "5717254A401F668DBB29F6B1A7826AEA19888C7789E2C20D9EBB6CD850BE4F66",
+        "lineCount": 460,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      },
+      {
+        "file": "internal\\handler\\v1\\advancedintelligence\\handler_test.go",
+        "sourceHash": "8222154058A9F37870129DF5EF9B27F09E79F5A474FE7E197C03E75813F732C6",
+        "lineCount": 305,
+        "evidenceScope": "See tool read ranges and citations; file hash is identity, not full semantic review"
+      }
+    ],
+    "sectionCount": 7,
+    "sections": [
+      {
+        "name": "Advisory plan warning",
+        "line": 77,
+        "count": 1
+      },
+      {
+        "name": "Storm guardian",
+        "line": 88,
+        "count": 1,
+        "subsections": [
+          "Live assessment / battery / peak gust",
+          "Arm and home-coordinate / target configuration",
+          "Independent recent activity"
+        ]
+      },
+      {
+        "name": "Outage plan scenario",
+        "line": 92,
+        "count": 1
+      },
+      {
+        "name": "Survival horizon AnalysisBrief",
+        "line": 187,
+        "count": 1
+      },
+      {
+        "name": "Outage risk timeline",
+        "line": 206,
+        "count": 1
+      },
+      {
+        "name": "Load priorities and recommendations",
+        "line": 245,
+        "count": 1
+      },
+      {
+        "name": "Evidence, quality and limitations",
+        "line": 269,
+        "count": 1,
+        "subsections": [
+          "Data quality",
+          "Evidence sources",
+          "Limitations and explicitly unsupported capabilities"
+        ]
+      }
+    ],
+    "componentCounts": {
+      "FadeIn": 6,
+      "InsightPanel": 2,
+      "AnalysisBrief": 1,
+      "ChartCard": 1,
+      "StormGuardPanel": 1,
+      "EvidencePanel": 1,
+      "SiNumberInput": 6
+    },
+    "actions": [
+      "Edit six SI inputs and restoration uncertainty, preserving current defaults and validation bounds.",
+      "Create confirmed outage plan with selected vehicle, pending disable/loading and success/error toast.",
+      "Edit guardian enabled/home latitude/home longitude/target_soc and Save guard.",
+      "Retry guardian status and independent recent activity through current query refetch.",
+      "Retain canonical timeline toolbar/data-table/export affordances and all risk column values."
+    ],
+    "defaults": {
+      "vehicle_energy_wh": 60000,
+      "stationary_storage_wh": 13500,
+      "expected_solar_wh": 12000,
+      "essential_load_w": 1200,
+      "outage_duration_s": 172800,
+      "evacuation_reserve_wh": 15000,
+      "restoration_uncertainty_pct": 25
+    },
+    "dataBehavior": [
+      "Canonical raw SI request/cache/response; display-only duration and energy conversion.",
+      "Simulation response retains vehicle_id, survival_horizon_s, every risk_timeline point, priority, recommendation, quality, evidence, limitation and generated_at.",
+      "Retained successful result belongs to submitted inputs and vehicle, not the currently edited form; old-vehicle results do not publish.",
+      "Storm status/events remain distinct from modeled scenario; preserve operational query policy, cancellation, query keys, limit=10 and existing first-five activity presentation.",
+      "Do not add date filtering unsupported by these current sources or another page vehicle picker; workspace owns selected vehicle.",
+      "Preserve advisory/no automatic load shedding/no assumed V2H messages while correctly scoping them.",
+      "Risk is preserved in chart data table/export even though only remaining energy is drawn as a line."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 scoped read-only source audit; only report and heartbeat written.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "responsive": "UNVERIFIED",
+    "accessibility": "UNVERIFIED",
+    "backendExecution": "UNVERIFIED; endpoint route registration only, no requests or mutations.",
+    "typescript": "NOT RUN: centralized project validation outside assignment.",
+    "tests": "NOT RUN: no validation baton; no historical receipts borrowed.",
+    "buildLintGit": "NOT RUN as instructed.",
+    "auditScript": "Inspected but not executed: audit.sh unconditionally invokes project-wide npx tsc --noEmit, contrary to bounded Phase 0 validation scope. Targeted read-only patterns used instead.",
+    "targetedChecks": [
+      {
+        "check": "staticInlineStyles",
+        "command": "Case-sensitive .NET regex on web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx : style\\s*=\\s*\\{\\{",
+        "exitCode": 0,
+        "output": "matches=0",
+        "scope": "assigned page only; not whole-app acceptance"
+      },
+      {
+        "check": "rawControls",
+        "command": "Case-sensitive .NET regex on web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx : <(button|input|textarea|select|table)\\b",
+        "exitCode": 0,
+        "output": "matches=0",
+        "scope": "assigned page only; not whole-app acceptance"
+      },
+      {
+        "check": "directChartMapMotionImports",
+        "command": "Case-sensitive .NET regex on web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx : from\\s+['\\\"](recharts|react-leaflet|framer-motion)['\\\"]",
+        "exitCode": 0,
+        "output": "matches=0",
+        "scope": "assigned page only; not whole-app acceptance"
+      },
+      {
+        "check": "legacyApiImports",
+        "command": "Case-sensitive .NET regex on web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx : from\\s+['\\\"]\\.\\./(\\.\\./)?api['\\\"]",
+        "exitCode": 0,
+        "output": "matches=0",
+        "scope": "assigned page only; not whole-app acceptance"
+      },
+      {
+        "check": "neonText",
+        "command": "Case-sensitive .NET regex on web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx : text-neon-",
+        "exitCode": 0,
+        "output": "matches=0",
+        "scope": "assigned page only; not whole-app acceptance"
+      },
+      {
+        "check": "fixedWhiteSurface",
+        "command": "Case-sensitive .NET regex on web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx : border-white|bg-white",
+        "exitCode": 0,
+        "output": "matches=1",
+        "scope": "assigned page only; not whole-app acceptance"
+      }
+    ],
+    "coverage": "Assigned mounted page, its directly relevant presentation/data contracts and narrow routing/workspace references; not a whole-feature or whole-app audit.",
+    "unknowns": [
+      "Actual guardian evaluator/charging execution and authorization",
+      "Live response field validity and calculation behavior",
+      "Query policy timing values and unseen provider defaults",
+      "Locale catalog completeness",
+      "Effective chart toolbar/export rendering and preserved source-context labeling"
+    ],
+    "ownedFiles": [
+      "docs\\frontend-audits\\audit-page-033.json",
+      ".agent-status\\audit-page-033.txt"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\StormGuardActivity.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\stormguardPresentation.ts",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\api\\hooks\\useStormguard.ts",
+    "web\\src\\api\\scope.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useRetainedMutation.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler_test.go"
+  ]
+}

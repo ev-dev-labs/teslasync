@@ -1,0 +1,1251 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-telemetry-mqttinspector",
+  "attempt": 1,
+  "status": "DONE",
+  "page": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+  "routes": [
+    "/mqtt-inspector"
+  ],
+  "completionMeaning": "Read-only source QA only, not repaired source, passing tests, native acceptance or completed Phase6.",
+  "queueDisposition": {
+    "continuationDecision": "Original read-only QA report contract already DONE; no re-audit needed. This continuation adds only missing dispositions for the original findings. Original findings, citations, clocks, pins, counts and NOTRUN evidence remain historical and unchanged.",
+    "canonicalQueue": "migration-queue.md, read-only: exact QA row324 pending attempt1 retains delivered evidence; Phase5 MQTT row2367 accepted; source correction row2567 accepted [x]; covering-proof row2579 pending [ ]. Line numbers are this continuation's inspected snapshot, not immutable row identities.",
+    "acceptedSourceIntake": "intake377d41e774",
+    "acceptanceAuthority": "Current assignment identifies intake377d41e774 as the actual accepted clock/throughput source intake. Canonical phase6-fix-mqtt-clock-and-throughput row independently marks Q02-Q03-Q04-Q05-Q06 source-only acceptance [x], but its commit cell remains '-'; no Git lookup or source revalidation performed.",
+    "historicalOwnerLists": "narrowFollowupOwners and objectiveAndDuplicates describe the original audit snapshot, not fresh dispatch needs. Use these dispositions for current queue reconciliation; do not duplicate accepted correction work.",
+    "findings": [
+      {
+        "id": "Q01",
+        "disposition": "unrepresented-original-integration-need",
+        "queueEvidence": "phase5-page-telemetry-mqttinspector retains source-normalizer integration need; phase6-fix-mqtt-clock-and-throughput explicitly excludes Q01 normalizer/partial missingness. No separate MQTT missingness/completeness correction row found in the inspected canonical queue.",
+        "need": "One integration owner for telemetry missingness/completeness and aggregate trust: web/src/types/telemetry.ts:119-122, existing useMQTTStatus boundary, MQTTInspectorPage.tsx:158-166 and mqttSummary.ts:25-48, as cited in original Q01. Establish absent counts/rates versus measured zero and partial aggregates while preserving original snake/camel and container shapes. C02 belongs to the same contract review, not a second payload campaign.",
+        "limit": "Original source finding retained, not a newly reproduced defect or actual malformed broker payload claim. Parent must assign exact exclusive files; this worker does not edit source, hooks, types or queue."
+      },
+      {
+        "id": "Q02",
+        "disposition": "accepted-source-separate-proof-pending",
+        "sourceItem": "phase6-fix-mqtt-clock-and-throughput",
+        "acceptedSourceIntake": "intake377d41e774",
+        "proofItem": "phase6-mqtt-clock-throughput-covering-proof",
+        "limit": "No duplicate clock fix. C01 missing-receipt policy remains a conditional contract question, not another Q02 finding or automatic behavior change."
+      },
+      {
+        "id": "Q03",
+        "disposition": "accepted-source-separate-proof-pending",
+        "sourceItem": "phase6-fix-mqtt-clock-and-throughput",
+        "acceptedSourceIntake": "intake377d41e774",
+        "proofItem": "phase6-mqtt-clock-throughput-covering-proof",
+        "limit": "No duplicate throughput correction or provenance campaign; no runtime sampling or rate acceptance claim."
+      },
+      {
+        "id": "Q04",
+        "disposition": "accepted-source-separate-proof-pending",
+        "sourceItem": "phase6-fix-mqtt-clock-and-throughput",
+        "acceptedSourceIntake": "intake377d41e774",
+        "proofItem": "phase6-mqtt-clock-throughput-covering-proof",
+        "limit": "Uptime rounding included in accepted correction scope; no new uptime writer."
+      },
+      {
+        "id": "Q05",
+        "disposition": "accepted-source-separate-proof-pending",
+        "sourceItem": "phase6-fix-mqtt-clock-and-throughput",
+        "acceptedSourceIntake": "intake377d41e774",
+        "proofItem": "phase6-mqtt-clock-throughput-covering-proof",
+        "limit": "Locale-aware uptime included in accepted correction scope; no duplicate formatter or catalog work."
+      },
+      {
+        "id": "Q06",
+        "disposition": "accepted-source-separate-proof-pending",
+        "sourceItem": "phase6-fix-mqtt-clock-and-throughput",
+        "acceptedSourceIntake": "intake377d41e774",
+        "proofItem": "phase6-mqtt-clock-throughput-covering-proof",
+        "limit": "Count-message interpolation included in accepted correction scope; no duplicate count fix or catalog edits."
+      }
+    ],
+    "coveringProofDebt": {
+      "item": "phase6-mqtt-clock-throughput-covering-proof",
+      "queueStatus": "[ ]",
+      "authoredCases": 39,
+      "execution": "NOTRUN",
+      "runnerDiscovered": 0,
+      "runnerExecuted": 0,
+      "externalGuard": "Existing correction log continuation137-167 records normal Vitest startup blocked by invalid generated locale-advanced-intelligence.json and usage-manifest.json, exit1 at2026-10-14T04:44:02.1116169Z. This is external startup failure, not own assertion failure, NOTPASS and no attempt charge.",
+      "sourceReleaseUtc": "2026-10-14T04:44:18.5764580Z",
+      "limit": "Existing separate proof row owns the first normal scoped39 execution after actual changed catalog inputs; no unchanged retry, guard bypass, compiler, lint or tests executed in this continuation."
+    },
+    "exactUnrepresentedGenuineNeeds": [
+      "Q01 telemetry missingness/completeness and aggregate trust, with conditional C02 contract review under the same integration owner."
+    ],
+    "conditionalCandidates": "Original C01-C05 remain conditional and NOTRUN. C03 is the historical Phase5 AI source/window authority need; C04 requires export-policy authority; C05 requires separate native authorization. None is promoted to a new confirmed finding or speculative repair campaign.",
+    "native": "NOTRUN",
+    "writes": "Only this report and matching ignored web/logs/phase6-qa-telemetry-mqttinspector.log; queue/source/catalog read-only. No browser/network/telemetry actions, Git, helper, server, install, Docker or nested agent."
+  },
+  "writableFiles": [
+    "docs/frontend-audits/phase6-qa-telemetry-mqttinspector.json",
+    "web/logs/phase6-qa-telemetry-mqttinspector.log"
+  ],
+  "clock": {
+    "reservationUtc": "2026-10-14T02:37:46.371Z",
+    "returnByUtc": "2026-10-14T02:57:46.371Z",
+    "hardByUtc": "2026-10-14T03:02:46.371Z",
+    "renewed": false,
+    "earlierActualCreationWins": true
+  },
+  "objectiveAndDuplicates": {
+    "queue": "migration-queue.md:195-218, exact214: existing attempt1 [~], accepted Phase5 dependency at2257, commit f2e34be391fd7a0510066f2c047bdfce0ce7c75a.",
+    "decision": "Execute unfinished Phase6 QA, not redo completed Phase0/3/5. Both assigned artifacts initially absent; no own Phase6 report alias before creation.",
+    "dedupEvidence": "CHECK-04/OWNER-08 literal searches: only this MQTT Phase6 QA row; no separate types-telemetry/mqttSummary/freshness-clock/throughput/uptime/count-interpolation fix row. Historical Phase5 source-normalizer/AI provenance needs remain, not a new remigration.",
+    "resolvedHistorical": "Current Unknown connectivity, invalid/future Unknown freshness, explicit fatal Refresh, named table/full7 mobile details, neutral icons/topic wrapping verified in source; do not redispatch those completed objectives.",
+    "queueEdited": false
+  },
+  "contractReads": {
+    "orchestrator": "Fully read docs/orchestrator-loop.md1-296; relevant root authority/worker restrictions.",
+    "design": "Relevant frontend-design-contract authority/architecture/foundation/layout/trust/numeric/SI/localization/responsive/a11y/preservation sections, principally1-654; unrelated additive contracts not claimed fully reviewed.",
+    "mission": "Relevant0-4,15-26,43-45; page/application runtime definition of done not satisfied by source QA.",
+    "inventory": "frontend-inventory1-49,252; linked audit-page-201 parsed for historical mechanisms, not current acceptance.",
+    "handoff": "session-handoff1-48:0-5 closed,6 unfinished,7 NOTRUN; no native lock.",
+    "instructions": [
+      "frontend-worker-conventions",
+      ".github/copilot-instructions relevant frontend/integrity",
+      "react-frontend",
+      "frontend-si-cutover",
+      "unit-conversion",
+      "I18N_GUIDELINES"
+    ],
+    "precedence": "Current design/SI rules override obsolete neon/legacy-unit examples. No unassigned heartbeat, generic gates or helpers."
+  },
+  "purpose": "Fleet-wide broker connectivity, returned counters/reported rates, locally accumulated count deltas, topic patterns and seven vehicle fields; optional informational AI explanation.",
+  "dataSources": [
+    {
+      "name": "Broker status",
+      "mechanism": "useMQTTStatus key ['mqtt-status']; request('/telemetry',{signal}); array/map and snake/camel normalizer; INTERVALS.REALTIME5000ms.",
+      "citations": [
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "start": 415,
+          "end": 431
+        },
+        {
+          "file": "web/src/types/telemetry.ts",
+          "start": 112,
+          "end": 159
+        },
+        {
+          "file": "internal/api/router.go",
+          "start": 4781,
+          "end": 4785
+        }
+      ],
+      "limit": "Route declarations only; no payload/authorization/completeness/ingestion validation."
+    },
+    {
+      "name": "Throughput",
+      "mechanism": "Local state/ref count-change effect, last60 points, not API history or per-second rate.",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 169,
+          "end": 185
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "mechanism": "Explicit opt-in POST/SSE /ai/system/streams/explain; mount-fixed30-minute Unix-seconds tuple, snake_case body, no mutation of broker/vehicle.",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 191,
+          "end": 199
+        },
+        {
+          "file": "web/src/components/ai/AIMqttSseInspectorExplanations.tsx",
+          "start": 105,
+          "end": 164
+        }
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "name": "Broker counters and reported rates",
+      "line": 246,
+      "preserved": "Four numeric metrics, snapshot/counter-versus-delta caveat, receipt freshness, details drawer; missing initial source=null, observed empty=zeros; partial trust Q01."
+    },
+    {
+      "name": "Signal throughput",
+      "line": 270,
+      "preserved": "Persistent chart panel, source-shaped loading/fatal/collecting<=2 points/retained history, one area series/shared restrained0.08 fill, accessible source rows; Q03."
+    },
+    {
+      "name": "Connection / broker / uptime / topic patterns",
+      "line": 320,
+      "preserved": "Persistent skeleton/error/no-status shell; broker/uptime unknown dash; wrapping raw topic chips and no-topics fallback, no subscriptions/edit actions; Q04/Q05."
+    },
+    {
+      "name": "Opt-in Helix stream explainer",
+      "line": 370,
+      "preserved": "Sanctioned preference/capability-off gate leaves deterministic inspector intact; invalid tuple disables; idle/pending/error/retained deltas/completed-empty shared output. No automatic start/visible cancel/broker mutation."
+    },
+    {
+      "name": "Vehicle breakdown",
+      "line": 378,
+      "preserved": "Named table,7 fields VIN/state/signals/batches/rate/receipt/freshness; ID telemetry:mqtt-inspector; initial/fatal-empty/ready-empty/retained states; full mobile quick-view details, loaded search/filter/export/pagination/density/column preferences; Q02/Q06."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Fatal Refresh",
+      "citation": {
+        "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+        "start": 230,
+        "end": 240
+      },
+      "mechanism": "state.retry; disabled without retry or isFetching; single explicit fatal recovery owner."
+    },
+    {
+      "name": "Retained Refresh",
+      "citation": {
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "start": 57,
+        "end": 110
+      },
+      "mechanism": "Nonblocking warning, retains payload, retry/disabled-busy while refreshing; paused is not device offline."
+    },
+    {
+      "name": "Review details / close",
+      "citation": {
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "start": 158,
+        "end": 169
+      },
+      "mechanism": "Existing drawer at246-249 keeps metrics/scope/caveat."
+    },
+    {
+      "name": "Loaded search / six value filters / clear",
+      "citation": {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "start": 525,
+        "end": 551
+      },
+      "mechanism": "Local loaded search and VIN/state/counts/rate/status filters; lastReceived lacks filterValue; no page sorting handler or selection mutations."
+    },
+    {
+      "name": "Density / column visibility-reorder-resize",
+      "citation": {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "start": 480,
+        "end": 500
+      },
+      "mechanism": "Existing tableId persisted layout/density; no new storage."
+    },
+    {
+      "name": "Page size / pagination / mobile Load more",
+      "citation": {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "start": 1418,
+        "end": 1450
+      },
+      "mechanism": "Default500 at page432; processed loaded rows before presentation, not whole backend totals."
+    },
+    {
+      "name": "CSV/JSON export",
+      "citation": {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "start": 890,
+        "end": 935
+      },
+      "mechanism": "Default matching-loaded/visible-column export, no exportAll handler. Format policy C04."
+    },
+    {
+      "name": "Mobile Quick view / Close",
+      "citation": {
+        "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+        "start": 127,
+        "end": 163
+      },
+      "mechanism": "Modal allColumns supplies7 original fields and visible Close; focus/geometry NOTRUN."
+    },
+    {
+      "name": "Ask Helix / Explain streams / restart",
+      "citation": {
+        "file": "web/src/components/ai/AIFeatureCard.tsx",
+        "start": 259,
+        "end": 309
+      },
+      "mechanism": "Visible Ask Helix/contextual accessible Explain streams, invalid/streaming disables; user start only, scope/unmount cancellation in hook239-320."
+    }
+  ],
+  "stateMatrix": {
+    "initialLoading": "Unknown connectivity/null metrics and initial chart/connection/table skeletons, section shells retained.",
+    "fatalWithoutRetained": "Top source banner plus per-section QueryErrors, null metrics, Unknown connectivity, one guarded retry; independent opt-in AI not broker replacement.",
+    "refreshFailureWithRetained": "DataState keeps payload/downgrades to cached; warning/retained summary and fields/history remain. Header connectivity is last reported fact, not new health evidence.",
+    "pausedWithRetained": "Blocked-refresh/cached warning retains fields, does not invent device-offline/disconnected state; no point from fetch-status alone.",
+    "pausedWithoutRetained": "Unknown/no authoritative source; isLoading versus pending native branches not exercised, no invented server failure.",
+    "observedEmpty": "Returned[] gives empty vehicle/topic states and zero returned-array totals; chart collecting remains separate local series.",
+    "nullPartialInvalid": "Simple array fallbacks are safe to iterate, but unknown can become0/observed-empty via Q01. Invalid row/topic types, duplicates,negative/nonfinite/unsafe numbers are conditional C02, not actual payload assertions.",
+    "freshness": "<=120s Live,>120s Stale; invalid/future Unknown, missing intentionally Stale under compatibility tests C01. Query receipt time differs from signal time; Q02 memo clock.",
+    "zeroResetSigns": "Authoritative0 is valid. Negative cumulative deltas omitted/rebase ref, not measured negative throughput. No physical power-direction telemetry rendered. Invalid uptime/count authority unknown.",
+    "topics": "Raw technical patterns preserved, wrapping max-width/break-all; no subscriptions. Missing-vs-empty authority/invalid entries unknown.",
+    "siPreferences": "Raw count/rate/uptime seconds remain in hook/cache; rate signals/sec independent of duration settings. Locale/precision subscription, timezone formatter, table IDs and saved choices preserved; uptime locale bypass Q05. No legacy converters.",
+    "scope": "Fleet live broker: workspaceScope123 vehicle disabled, absent range-enabled entry; no second picker or invented bounds. Local series and AI mount window independent, C03."
+  },
+  "preservation": {
+    "pageLines": 441,
+    "historicalAuditLines": 402,
+    "logicalSections": 5,
+    "pageGlassPanelOpenings": 3,
+    "embeddedCharts": 1,
+    "operationalBriefs": 1,
+    "aiSectionCalls": 1,
+    "vehicleTables": 1,
+    "vehicleColumnKeys": 7,
+    "sourceEdited": false,
+    "limit": "Historical and current source differ; no helper/baseline regeneration or original-byte equivalence claim."
+  },
+  "localizationChecks": {
+    "uniqueStaticKeys": 48,
+    "missingCanonicalKeys": 0,
+    "canonicalMqttMatchesSplit": true,
+    "canonicalAiMatchesSplit": true,
+    "limit": "Literal lookup/equality only; runtime loading/translation/generator/validator NOTRUN."
+  },
+  "engineeringRuleReview": {
+    "scope": "Page/mqttSummary/AI explainer runtime sources plus useMQTTStatus block, not whole-repo.",
+    "staticInline": "Regex0 matches; shared computed geometry/Recharts props excepted.",
+    "rawHtml": "Case-sensitive corrected grep0. Initial case-insensitive <Button> false-positive retained.",
+    "directVendorImports": "Scoped grep0; shared boundaries accepted.",
+    "oldApiImports": "Scoped grep0.",
+    "prefixParams": "Scoped/hook grep0 offending call/query lines; actual /telemetry no params; comments not calls; AI snake_case body.",
+    "hiddenSection": "Scoped grep0 data-null-gated panels; feature-off/idle AI gates permitted.",
+    "hardcodedString": "Four candidates: uptime templates45-46/count fragments386,393. Unit symbols not automatically English prose; no blanket zero-violations assertion. Q05/Q06 cover actual locale/interpolation.",
+    "pageContainer": "PageLayout9-15 wraps existing PageContainer, valid composition.",
+    "fetchUseEffect": "One local history effect177 not data loading; broker query typed TanStack. Dedicated opt-in SSE hook is not page fetch loading. Q03 is provenance, not forbidden fetch-useEffect.",
+    "backendRules": "N/A frontend scope; only route/comments read, no SQL/log/panic/context audit claim."
+  },
+  "tests": {
+    "execution": "NOTRUN",
+    "runnerDiscovered": null,
+    "runnerExecuted": 0,
+    "runnerPassed": null,
+    "runnerFailed": null,
+    "runnerSkipped": null,
+    "declarations": 46,
+    "literalExpandedCases": 52,
+    "mqttRelatedLiteralExpandedCases": 50,
+    "nonMqttSiblingCases": 2,
+    "pageDeclarations": 20,
+    "pagePlainCases": 18,
+    "pageEachGroups": 2,
+    "pageEachInputCounts": [
+      3,
+      5
+    ],
+    "pageLiteralExpandedCases": 26,
+    "limit": "Static starts/literal input rows only, not discovery or pass counts. Declared states/mobile7/retry/basic uptime/increasing chart/freshness reviewed; no aging/equal-poll/partial-normalizer/rollover/plural executed proof."
+  },
+  "evidenceLimits": {
+    "native": "NOTRUN",
+    "testsLintBuildCompiler": "NOTRUN by scope; no test/TypeScript/build pass claim.",
+    "networkApiMqttProviderVehicleSubscriptions": "NOTRUN; no runtime action attempted.",
+    "gitDeviation": "Initial read-only git status ran before worker No-Git restriction read; exit0, no edits/staging/commits/branch changes or later Git commands.",
+    "failures": "Initial JSON/log missing probes preserved; guessed app/routes.tsx absent, actual App/route files found/pinned. Overlong REPORT-10 tool command failed exit1/os206 before launch, bounded artifact-only recovery follows.",
+    "limits": "Auto-truncated outputs recovered by relevant ranges/raw log. Broad early queue search length-filtered; final exact owner searches unfiltered. Initial test grep omitted each, corrected46/52. Relevant design/mission/inventory/handoff sections only beyond fully read orchestrator.",
+    "pinTiming": "First pins after preliminary discovery/page read, before detailed checks; extra owners pinned before inspection. Equality cannot rule out transient external edits or certify whole working tree clean.",
+    "repros": "Unexecuted source recipes only; no imported/evaluated source/functions, synthetic production injection or real payload assertions.",
+    "concurrentDrift": "Full handoff/queue/canonical English catalog hashes changed by concurrent work. Current exact claim and all48 previously logged used-key values rechecked; no source/support drift. This does not certify other catalog keys or repository cleanliness."
+  },
+  "findings": [
+    {
+      "id": "Q01",
+      "rule": "unknown-as-zero",
+      "contract": "MDC-026/MDC-033",
+      "severity": "high",
+      "owner": "telemetry integration",
+      "citations": [
+        {
+          "file": "web/src/types/telemetry.ts",
+          "start": 119,
+          "end": 122
+        },
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 158,
+          "end": 166
+        },
+        {
+          "file": "web/src/features/telemetry/components/statstrip-signals-mqtt/mqttSummary.ts",
+          "start": 25,
+          "end": 48
+        }
+      ],
+      "mechanism": "Normalizer absent count pairs become0; page missing rate contributes0; available snapshot has no partial flag, so missing evidence becomes complete measured totals.",
+      "sourceReproNotExecuted": "One incomplete row, or complete+incomplete rows: missing counts/rate contribute0 while available=true. No actual payload asserted.",
+      "fix": "Continue existing source-normalizer integration need: establish completeness/missingness, preserve nullable/raw/partial aggregate trust, observed zeros and both casing/container shapes. No page-local compatibility engine.",
+      "history": "Carry-forward audit-page-201/Phase5 note, not new migration.",
+      "confidence": "high for mechanism; backend occurrence unverified"
+    },
+    {
+      "id": "Q02",
+      "rule": "time-dependent-memo",
+      "contract": "MDC-025/MDC-026",
+      "severity": "high",
+      "owner": "MQTTInspectorPage+named test",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 55,
+          "end": 64
+        },
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 187,
+          "end": 189
+        },
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 390,
+          "end": 394
+        },
+        {
+          "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+          "start": 147,
+          "end": 158
+        }
+      ],
+      "mechanism": "Header stale set memoized only by vehicles identity; row/filter/detail calls Date.now at render. Retained unchanged array crosses120s without invalidating header; newly opened details can show Stale while header counts0.",
+      "sourceReproNotExecuted": "Mount with valid receipt exactly120s old, retain identical array during pause, then open Quick view after crossing threshold. Detail computes new age, header retains memo. No clock/timer/UI executed.",
+      "fix": "One explicit clock/observation state for header/filter/row; existing bounded lifecycle, preserve120s boundary/invalid-future Unknown and retained trust, resolve C01 separately.",
+      "confidence": "high for dependency divergence; native timing NOTRUN"
+    },
+    {
+      "id": "Q03",
+      "rule": "throughput-sampling",
+      "contract": "MDC-026/MDC-034/MDC-045",
+      "severity": "high",
+      "owner": "MQTTInspectorPage+named test",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 177,
+          "end": 185
+        },
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 287,
+          "end": 293
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "start": 80,
+          "end": 99
+        }
+      ],
+      "mechanism": "Effect keys count and formatter identity, not successful snapshot. Equal-total polls omit zero intervals; initial nonzero creates unobserved0; formatter preference change can create point without receipt. Initial/static zero can collect indefinitely. No elapsed denominator; local deltas correctly separate from reported rate.",
+      "sourceReproNotExecuted": "Analyze100,100,100 stable formatter: only synthetic first0 recorded, changed successful receipt time ignored. Change formatter with same count: additional0 without broker poll. Reset100->110->105 omitted/rebased, not negative throughput. No function/test execution.",
+      "fix": "Separate narrow behavior authorization: trustworthy receipt identity/time, real zero intervals, explicit initialization/reset/gap/retained semantics, no preference-created samples; never relabel local deltas as signals/sec.",
+      "history": "Carry-forward audit-page-201; not forbidden fetch-useEffect.",
+      "confidence": "high"
+    },
+    {
+      "id": "Q04",
+      "rule": "duration-rounding",
+      "contract": "MDC-033/MDC-045",
+      "severity": "medium",
+      "owner": "Local uptime helper/page+test",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 44,
+          "end": 46
+        },
+        {
+          "file": "web/src/lib/numberFormat.ts",
+          "start": 125,
+          "end": 129
+        },
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 336,
+          "end": 341
+        }
+      ],
+      "mechanism": "Hours floor while fractional remainder minutes fmtInt-round, allowing1h60m.",
+      "sourceReproNotExecuted": "Source arithmetic7199s: floor hours1;3599/60 rounds60. Existing1800/3661 declarations do not cover rollover. No formatter invoked.",
+      "fix": "Reuse existing duration presentation/consistent carry-floor policy at display boundary, retain raw seconds/unknown/valid0.",
+      "confidence": "high"
+    },
+    {
+      "id": "Q05",
+      "rule": "locale-number-bypass",
+      "contract": "MDC-044/MDC-045",
+      "severity": "medium",
+      "owner": "Same uptime helper/page+test as Q04",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 44,
+          "end": 46
+        },
+        {
+          "file": "web/src/hooks/useNumberFormatting.ts",
+          "start": 17,
+          "end": 39
+        }
+      ],
+      "mechanism": "Sub-hour minutes and whole hours bare numeric templates; only remainder fmtInt follows locale. Non-Latin digit preference can produce mixed uptime numerals.",
+      "sourceReproNotExecuted": "Separately authorized Arabic-numbering fixture at1800/7200s: template numbers ASCII, fmtInt remainder locale-aware. No preference action/render performed.",
+      "fix": "Same locale-aware duration owner for every numeric part; preserve raw seconds/notation. Unit-symbol or duration-preference policy not inferred from English-only catalogs.",
+      "confidence": "high for numeric interpolation bypass"
+    },
+    {
+      "id": "Q06",
+      "rule": "i18n-count-interpolation",
+      "contract": "MDC-044; I18N Guidelines4-5",
+      "severity": "medium",
+      "owner": "Page+named test after parent-only canonical catalog integration",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 384,
+          "end": 393
+        },
+        {
+          "file": "docs/I18N_GUIDELINES.md",
+          "start": 85,
+          "end": 116
+        }
+      ],
+      "mechanism": "Two labels concatenate bare count with translated fragments, no count interpolation/plurals;1 vehicles and fixed translation word order.",
+      "sourceReproNotExecuted": "One-row/one-stale fixture source concatenates1 with mqtt.vehicles='vehicles' and mqtt.stale. Existing test expects1 vehicles. No render/test run.",
+      "fix": "Canonical full-message count interpolation/plurals plus numeric locale, exact catalogs serialized by parent; preserve counts/technical identifiers.",
+      "occurrenceLines": [
+        386,
+        393
+      ],
+      "confidence": "high"
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "category": "domain-contract",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 49,
+          "end": 64
+        },
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.test.tsx",
+          "start": 528,
+          "end": 536
+        }
+      ],
+      "detail": "Missing receipt intentionally Stale under compatibility tests, unlike invalid/future Unknown; absent fact is not necessarily never-reported evidence.",
+      "owner": "Telemetry integration+page freshness policy",
+      "next": "Establish meaning before change; do not weaken declaration or count another Q02.",
+      "execution": "NOTRUN"
+    },
+    {
+      "id": "C02",
+      "category": "payload-contract",
+      "citations": [
+        {
+          "file": "web/src/types/telemetry.ts",
+          "start": 138,
+          "end": 148
+        },
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 163,
+          "end": 167
+        },
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 347,
+          "end": 356
+        }
+      ],
+      "detail": "Missing/malformed arrays may appear authoritative-empty; duplicate VIN/topics, non-string topics, invalid/negative/nonfinite/unsafe measurements not validated. Actual backend schema/payload unknown.",
+      "owner": "Same Q01 integration scope, not another campaign",
+      "next": "Source contract validation before fixtures; no actual malformed broker assertion.",
+      "execution": "NOTRUN"
+    },
+    {
+      "id": "C03",
+      "category": "AI-grounding-scope",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 191,
+          "end": 199
+        },
+        {
+          "file": "web/src/components/ai/AIMqttSseInspectorExplanations.tsx",
+          "start": 143,
+          "end": 151
+        },
+        {
+          "file": "internal/api/router.go",
+          "start": 2657,
+          "end": 2666
+        }
+      ],
+      "detail": "Mount-fixed tuple while status polls; current broker/SSE/job/redaction copy versus router empty-envelope/admin-status comments and actual telemetry page. No actual adapter/grounding/provider privacy proof from comments.",
+      "owner": "Existing AI stream-source integration+page window disclosure, historical Phase5 need",
+      "next": "Reconcile actual adapter/copy/window authority, preserve gate/body/scope cancellation; no provider/MQTT action here.",
+      "execution": "NOTRUN"
+    },
+    {
+      "id": "C04",
+      "category": "export-format-contract",
+      "citations": [
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "start": 901,
+          "end": 918
+        },
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 97,
+          "end": 123
+        }
+      ],
+      "detail": "Default JSON display-key columns signals/batches/sigPerSec/status differ from raw fields; rendered locale/precision strings may replace canonical numeric facts without exportValue/exportRow. Intended raw-versus-presentation export policy unknown.",
+      "owner": "Page column mappings only if raw export required, not shared table redesign",
+      "next": "Contract/precision review; do not execute export or infer full-result completeness.",
+      "execution": "NOTRUN"
+    },
+    {
+      "id": "C05",
+      "category": "native-a11y-responsive-visual",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 211,
+          "end": 226
+        },
+        {
+          "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+          "start": 270,
+          "end": 277
+        },
+        {
+          "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+          "start": 86,
+          "end": 87
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "start": 866,
+          "end": 945
+        }
+      ],
+      "detail": "Source wrapping/stacking/naming/full detail/44px mobile button minima present; no measured defect or pass for10 widths,narrow containers,themes,RTL,200% text,long identifiers,keyboard/focus,44x44 targets,contrast,forced-colors,reduced motion/low bandwidth,large/retained data.",
+      "owner": "Later separately authorized native QA at existing owners",
+      "next": "Permission/lock required. Native NOTRUN, no speculative global fixes.",
+      "execution": "NOTRUN"
+    }
+  ],
+  "narrowFollowupOwners": [
+    {
+      "scope": "Telemetry missingness/completeness",
+      "findings": [
+        "Q01"
+      ],
+      "candidates": [
+        "C02"
+      ],
+      "owner": "Existing types/hook integration + aggregate contract",
+      "dedup": "Historical open need; no separate current Phase6 fix row; parent reconciles."
+    },
+    {
+      "scope": "One-clock freshness",
+      "findings": [
+        "Q02"
+      ],
+      "candidates": [
+        "C01"
+      ],
+      "owner": "MQTTInspectorPage+named test",
+      "dedup": "No matching Phase6 fix, not invalid-timestamp redo."
+    },
+    {
+      "scope": "Throughput observation identity",
+      "findings": [
+        "Q03"
+      ],
+      "owner": "MQTTInspectorPage+named test",
+      "dedup": "Historical behavior gap, separate authorization, no remigration."
+    },
+    {
+      "scope": "Uptime presentation",
+      "findings": [
+        "Q04",
+        "Q05"
+      ],
+      "owner": "Same local helper/page+test and existing formatter",
+      "dedup": "One correction scope, not two overlapping writers; no queued uptime fix."
+    },
+    {
+      "scope": "Count message localization",
+      "findings": [
+        "Q06"
+      ],
+      "owner": "Page+test after parent-only catalogs",
+      "dedup": "No queued count fix; catalogs READONLY."
+    }
+  ],
+  "createdAtUtc": "2026-10-14T02:53:35.1057771Z",
+  "inputPins": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "unchanged": true,
+      "sha256Before": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "linesBefore": 296,
+      "sha256After": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "bytesBefore": 16978
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "unchanged": true,
+      "sha256Before": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "linesBefore": 2539,
+      "sha256After": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "bytesBefore": 182554
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "unchanged": true,
+      "sha256Before": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "linesBefore": 1593,
+      "sha256After": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "bytesBefore": 31079
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "unchanged": true,
+      "sha256Before": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "linesBefore": 1460,
+      "sha256After": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "bytesBefore": 1743758
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "unchanged": false,
+      "sha256Before": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+      "linesBefore": 2460,
+      "sha256After": "09FA66582FCEACEB709073D64299B2CA24842837D7C8ED43EF6F3AF40C80BFEB",
+      "bytesBefore": 163930
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "unchanged": true,
+      "sha256Before": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "linesBefore": 152,
+      "sha256After": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "bytesBefore": 8608
+    },
+    {
+      "file": "migration-queue.md",
+      "unchanged": false,
+      "sha256Before": "B99617A253DBC607C066727A63DA9A4D09D03FFECF3CE8BD4476DEDEA6A90948",
+      "linesBefore": 2354,
+      "sha256After": "01B3676F9D5B25B6DDD31F246B5A59DEB053DCB0055EAD33AB6F825BEFE7B9C7",
+      "bytesBefore": 2607992
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "unchanged": true,
+      "sha256Before": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "linesBefore": 707,
+      "sha256After": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "bytesBefore": 37483
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "unchanged": true,
+      "sha256Before": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "linesBefore": 629,
+      "sha256After": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "bytesBefore": 22645
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "unchanged": true,
+      "sha256Before": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "linesBefore": 94,
+      "sha256After": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "bytesBefore": 3585
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "unchanged": true,
+      "sha256Before": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "linesBefore": 221,
+      "sha256After": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "bytesBefore": 6501
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-201.json",
+      "unchanged": true,
+      "sha256Before": "B3F1533558CE79CEA83F97873341778B733C5C616583DB5A48F559EA0F22C569",
+      "linesBefore": 224,
+      "sha256After": "B3F1533558CE79CEA83F97873341778B733C5C616583DB5A48F559EA0F22C569",
+      "bytesBefore": 32276
+    },
+    {
+      "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+      "unchanged": true,
+      "sha256Before": "F3B16FBAF2F5067435D01A5B4D111B34B480E22AE715D4CCB2890E9324252978",
+      "linesBefore": 441,
+      "sha256After": "F3B16FBAF2F5067435D01A5B4D111B34B480E22AE715D4CCB2890E9324252978",
+      "bytesBefore": 20402
+    },
+    {
+      "file": "web/src/features/telemetry/pages/MQTTInspectorPage.test.tsx",
+      "unchanged": true,
+      "sha256Before": "F4866BBBC14C956F9A26C77D573A17ECF8AAA64AC9515AC3E82E120A8934FBA9",
+      "linesBefore": 552,
+      "sha256After": "F4866BBBC14C956F9A26C77D573A17ECF8AAA64AC9515AC3E82E120A8934FBA9",
+      "bytesBefore": 22148
+    },
+    {
+      "file": "web/src/features/telemetry/components/statstrip-signals-mqtt/mqttSummary.ts",
+      "unchanged": true,
+      "sha256Before": "D1C2CE06E83D789EC765E1B840B8E21EC6BD5C3FAB76C4A314AF71BA01764A79",
+      "linesBefore": 52,
+      "sha256After": "D1C2CE06E83D789EC765E1B840B8E21EC6BD5C3FAB76C4A314AF71BA01764A79",
+      "bytesBefore": 1813
+    },
+    {
+      "file": "web/src/features/telemetry/components/statstrip-signals-mqtt/signalsMqttSummary.test.ts",
+      "unchanged": true,
+      "sha256Before": "CB5CDF2EE2A83DC4BCB6082AA5B69FC45D64E028EA24A71DAACFC4C3CF746D2D",
+      "linesBefore": 67,
+      "sha256After": "CB5CDF2EE2A83DC4BCB6082AA5B69FC45D64E028EA24A71DAACFC4C3CF746D2D",
+      "bytesBefore": 3877
+    },
+    {
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "unchanged": true,
+      "sha256Before": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+      "linesBefore": 683,
+      "sha256After": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+      "bytesBefore": 25746
+    },
+    {
+      "file": "web/src/types/telemetry.ts",
+      "unchanged": true,
+      "sha256Before": "15AF5C9C884E582B7B79C19C97E21583F38E48F2B69BFDBDA0F3BDAB74989CE4",
+      "linesBefore": 159,
+      "sha256After": "15AF5C9C884E582B7B79C19C97E21583F38E48F2B69BFDBDA0F3BDAB74989CE4",
+      "bytesBefore": 5083
+    },
+    {
+      "file": "web/src/components/ai/AIMqttSseInspectorExplanations.tsx",
+      "unchanged": true,
+      "sha256Before": "749F86CB8DA359E4BE9A8E72E477E6E4876020F6B6F5D4EC1BC7C0666BC418F1",
+      "linesBefore": 179,
+      "sha256After": "749F86CB8DA359E4BE9A8E72E477E6E4876020F6B6F5D4EC1BC7C0666BC418F1",
+      "bytesBefore": 7821
+    },
+    {
+      "file": "web/src/components/ai/AIMqttSseInspectorExplanations.test.tsx",
+      "unchanged": true,
+      "sha256Before": "4C009D2FB74ED17578A3057A9B0E7A6B0CE7DA6E1927235823EA4FB9113BEA03",
+      "linesBefore": 431,
+      "sha256After": "4C009D2FB74ED17578A3057A9B0E7A6B0CE7DA6E1927235823EA4FB9113BEA03",
+      "bytesBefore": 15472
+    },
+    {
+      "file": "web/src/features/telemetry/__tests__/TestMqttSseInspectorAIOffShowsRawInspectorOnly.test.tsx",
+      "unchanged": true,
+      "sha256Before": "99695821BD304BDB2077DA68B19974B5802C54034BE6CD7632B1F91AD463E0BC",
+      "linesBefore": 268,
+      "sha256After": "99695821BD304BDB2077DA68B19974B5802C54034BE6CD7632B1F91AD463E0BC",
+      "bytesBefore": 10261
+    },
+    {
+      "file": "web/src/features/telemetry/__tests__/TestMqttSseInspectorExplanationsAIOnWiredCallsRoute.test.tsx",
+      "unchanged": true,
+      "sha256Before": "7B61364B02F3CD12B538ACEE52621BE782190910103B4DADE45911701E0CD9E2",
+      "linesBefore": 307,
+      "sha256After": "7B61364B02F3CD12B538ACEE52621BE782190910103B4DADE45911701E0CD9E2",
+      "bytesBefore": 11240
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "unchanged": false,
+      "sha256Before": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "linesBefore": 39002,
+      "sha256After": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "bytesBefore": 1843667
+    },
+    {
+      "file": "web/src/i18n/en/locale-telemetry.json",
+      "unchanged": true,
+      "sha256Before": "C5AAEE5AB0B68C1FDF9C1B7CE310A0358D3AA011DF8B11CE09C033CAFABD83DD",
+      "linesBefore": 2730,
+      "sha256After": "C5AAEE5AB0B68C1FDF9C1B7CE310A0358D3AA011DF8B11CE09C033CAFABD83DD",
+      "bytesBefore": 120213
+    },
+    {
+      "file": "web/src/i18n/en/locale-detail-mqttSseInspector.json",
+      "unchanged": true,
+      "sha256Before": "0675E3D6FFCF281923EBC75D8BA53E3B1A6A2538AF581B520ADDE2AC9714EF27",
+      "linesBefore": 11,
+      "sha256After": "0675E3D6FFCF281923EBC75D8BA53E3B1A6A2538AF581B520ADDE2AC9714EF27",
+      "bytesBefore": 702
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "unchanged": true,
+      "sha256Before": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "linesBefore": 168,
+      "sha256After": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "bytesBefore": 4411
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "unchanged": true,
+      "sha256Before": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "linesBefore": 434,
+      "sha256After": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "bytesBefore": 15482
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "unchanged": true,
+      "sha256Before": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "linesBefore": 65,
+      "sha256After": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "bytesBefore": 2035
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "unchanged": true,
+      "sha256Before": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "linesBefore": 148,
+      "sha256After": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "bytesBefore": 5230
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "unchanged": true,
+      "sha256Before": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "linesBefore": 47,
+      "sha256After": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "bytesBefore": 2095
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "unchanged": true,
+      "sha256Before": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "linesBefore": 172,
+      "sha256After": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "bytesBefore": 6443
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "unchanged": true,
+      "sha256Before": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "linesBefore": 17,
+      "sha256After": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "bytesBefore": 658
+    },
+    {
+      "file": "web/src/App.tsx",
+      "unchanged": true,
+      "sha256Before": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "linesBefore": 919,
+      "sha256After": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "bytesBefore": 68125
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "unchanged": true,
+      "sha256Before": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "linesBefore": 289,
+      "sha256After": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "bytesBefore": 31836
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "unchanged": true,
+      "sha256Before": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "linesBefore": 127,
+      "sha256After": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "bytesBefore": 11392
+    },
+    {
+      "file": "web/src/lib/routePrefetch.ts",
+      "unchanged": true,
+      "sha256Before": "63CF77FE5B5687C3C7A8D7F0F188E38767C408B1B254DA31C44859D289DF82A2",
+      "linesBefore": 340,
+      "sha256After": "63CF77FE5B5687C3C7A8D7F0F188E38767C408B1B254DA31C44859D289DF82A2",
+      "bytesBefore": 14417
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "unchanged": true,
+      "sha256Before": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "linesBefore": 1707,
+      "sha256After": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "bytesBefore": 77157
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "unchanged": true,
+      "sha256Before": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "linesBefore": 165,
+      "sha256After": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "bytesBefore": 9039
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+      "unchanged": true,
+      "sha256Before": "A5EA6977C603A5AF95150B655B403D36F0970BBD704231703FB136AD9E447A5A",
+      "linesBefore": 30,
+      "sha256After": "A5EA6977C603A5AF95150B655B403D36F0970BBD704231703FB136AD9E447A5A",
+      "bytesBefore": 1157
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "unchanged": true,
+      "sha256Before": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "linesBefore": 42,
+      "sha256After": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "bytesBefore": 1225
+    },
+    {
+      "file": "web/src/components/ai/AIFeatureCard.tsx",
+      "unchanged": true,
+      "sha256Before": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+      "linesBefore": 352,
+      "sha256After": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+      "bytesBefore": 13277
+    },
+    {
+      "file": "web/src/components/ai/withAiFeature.tsx",
+      "unchanged": true,
+      "sha256Before": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+      "linesBefore": 60,
+      "sha256After": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+      "bytesBefore": 2255
+    },
+    {
+      "file": "web/src/hooks/useAiStream.ts",
+      "unchanged": true,
+      "sha256Before": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+      "linesBefore": 617,
+      "sha256After": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+      "bytesBefore": 23120
+    },
+    {
+      "file": "web/src/lib/constants.ts",
+      "unchanged": true,
+      "sha256Before": "76641391606B3616C45C2F0C1EA9BDA0B130F4E190D6218E771AE1AEB64501E3",
+      "linesBefore": 191,
+      "sha256After": "76641391606B3616C45C2F0C1EA9BDA0B130F4E190D6218E771AE1AEB64501E3",
+      "bytesBefore": 6343
+    },
+    {
+      "file": "docs/I18N_GUIDELINES.md",
+      "unchanged": true,
+      "sha256Before": "9DAFAA22475219A8DDB7E36905D428A6E0F7EF4A685006EE6D7F257878B8DE94",
+      "linesBefore": 216,
+      "sha256After": "9DAFAA22475219A8DDB7E36905D428A6E0F7EF4A685006EE6D7F257878B8DE94",
+      "bytesBefore": 8039
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "unchanged": true,
+      "sha256Before": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "linesBefore": 1006,
+      "sha256After": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "bytesBefore": 41517
+    },
+    {
+      "file": "web/src/components/ai/AiOutputPanel.tsx",
+      "unchanged": true,
+      "sha256Before": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+      "linesBefore": 120,
+      "sha256After": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+      "bytesBefore": 4830
+    },
+    {
+      "file": "web/src/hooks/useAiEnabled.ts",
+      "unchanged": true,
+      "sha256Before": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+      "linesBefore": 39,
+      "sha256After": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+      "bytesBefore": 1681
+    },
+    {
+      "file": "internal/api/router.go",
+      "unchanged": true,
+      "sha256Before": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "linesBefore": 5363,
+      "sha256After": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "bytesBefore": 260353
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "unchanged": true,
+      "sha256Before": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "linesBefore": 321,
+      "sha256After": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "bytesBefore": 11591
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "unchanged": true,
+      "sha256Before": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "linesBefore": 115,
+      "sha256After": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "bytesBefore": 4093
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "unchanged": true,
+      "sha256Before": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "linesBefore": 458,
+      "sha256After": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "bytesBefore": 17825
+    }
+  ],
+  "filesRead": [
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "docs/frontend-worker-conventions.md",
+    "migration-queue.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-audits/audit-page-201.json",
+    "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+    "web/src/features/telemetry/pages/MQTTInspectorPage.test.tsx",
+    "web/src/features/telemetry/components/statstrip-signals-mqtt/mqttSummary.ts",
+    "web/src/features/telemetry/components/statstrip-signals-mqtt/signalsMqttSummary.test.ts",
+    "web/src/api/hooks/useTelemetry.ts",
+    "web/src/types/telemetry.ts",
+    "web/src/components/ai/AIMqttSseInspectorExplanations.tsx",
+    "web/src/components/ai/AIMqttSseInspectorExplanations.test.tsx",
+    "web/src/features/telemetry/__tests__/TestMqttSseInspectorAIOffShowsRawInspectorOnly.test.tsx",
+    "web/src/features/telemetry/__tests__/TestMqttSseInspectorExplanationsAIOnWiredCallsRoute.test.tsx",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-telemetry.json",
+    "web/src/i18n/en/locale-detail-mqttSseInspector.json",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/lib/numberFormat.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/App.tsx",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/routePrefetch.ts",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/ui/MobileDataTableAdapter.tsx",
+    "web/src/components/ui/MobileDataTableAdapter.types.ts",
+    "web/src/components/charts/EmbeddedChart.tsx",
+    "web/src/components/ai/AIFeatureCard.tsx",
+    "web/src/components/ai/withAiFeature.tsx",
+    "web/src/hooks/useAiStream.ts",
+    "web/src/lib/constants.ts",
+    "docs/I18N_GUIDELINES.md",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/ai/AiOutputPanel.tsx",
+    "web/src/hooks/useAiEnabled.ts",
+    "internal/api/router.go",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/api/client.ts"
+  ],
+  "pinSummary": {
+    "queueClaimStable": true,
+    "sourceSupportDrift": 0,
+    "changed": 3,
+    "usedCatalogKeysChanged": 0,
+    "changedFiles": [
+      "docs/session-handoff.md",
+      "migration-queue.md",
+      "web/src/i18n/en.json"
+    ],
+    "usedCatalogKeysChecked": 48,
+    "pinned": 52,
+    "unchanged": 49
+  },
+  "counts": {
+    "confirmedSourceFindingGroups": 6,
+    "conditionalCandidateGroups": 5,
+    "narrowDeduplicatedFollowupScopes": 5,
+    "logicalSections": 5,
+    "actionGroups": 9,
+    "byRule": {
+      "unknown-as-zero": 1,
+      "time-dependent-memo": 1,
+      "throughput-sampling": 1,
+      "duration-rounding": 1,
+      "locale-number-bypass": 1,
+      "i18n-count-interpolation": 1
+    },
+    "countLabelOccurrences": 2,
+    "mostAffectedFiles": [
+      {
+        "file": "web/src/features/telemetry/pages/MQTTInspectorPage.tsx",
+        "findingGroups": 6
+      },
+      {
+        "file": "web/src/types/telemetry.ts",
+        "findingGroups": 1
+      }
+    ],
+    "priority": "Source completeness/one-clock freshness/observation identity first, then uptime/count polish. AI grounding/window and native acceptance separate."
+  },
+  "release": {
+    "commands": "RELEASE all own bounded commands; completed, no live owned helper/server/background process. No source/test/catalog/queue/Git write claim ever held.",
+    "releasedAtUtc": "2026-10-14T02:55:18.5557465Z",
+    "native": "NOTRUN",
+    "artifacts": "RELEASE docs/frontend-audits/phase6-qa-telemetry-mqttinspector.json; web/logs/phase6-qa-telemetry-mqttinspector.log"
+  },
+  "finalChecks": {
+    "jsonReparsed": true,
+    "countRuleSum": 6.0,
+    "citationProblems": [],
+    "checkedAtUtc": "2026-10-14T02:55:18.5529111Z",
+    "citationRangesChecked": 46,
+    "tests": "NOTRUN",
+    "compiler": "NOTRUN",
+    "native": "NOTRUN"
+  },
+  "commandEvidence": {
+    "exits": "All completed reads/checks0; REPORT-10 launcher failed1/os206 before execution; REPORT-11/12 recovery0. Missing-artifact errors/grep corrections retained. Tests/native NOTRUN.",
+    "completedCheckCommands": [
+      "E01",
+      "E02",
+      "E03",
+      "E04",
+      "E05",
+      "PIN-01",
+      "SOURCE-02",
+      "CHECK-03",
+      "CHECK-04",
+      "SOURCE-05",
+      "CITE-06",
+      "CONTRACT-07",
+      "OWNER-08",
+      "CHECK-09"
+    ],
+    "log": "web/logs/phase6-qa-telemetry-mqttinspector.log"
+  }
+}

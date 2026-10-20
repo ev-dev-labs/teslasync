@@ -148,7 +148,7 @@ describe('VehicleHeader — rendering', () => {
     expect(back).toHaveAttribute('href', '/vehicles')
 
     // Wake action is enabled for a real vehicle.
-    expect(screen.getByRole('button', { name: /Wake Up/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /Wake up/i })).toBeEnabled()
   })
 
   it('falls back to the VIN when the display name is blank', () => {
@@ -164,7 +164,7 @@ describe('VehicleHeader — rendering', () => {
     expect(screen.getByTestId('vehicle-header-subtitle')).toHaveTextContent(
       'Vehicle details unavailable',
     )
-    expect(screen.getByRole('button', { name: /Wake Up/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Wake up/i })).toBeDisabled()
   })
 })
 
@@ -201,7 +201,7 @@ describe('VehicleHeader — wake command', () => {
   it('sends a wake command with the vehicle id when Wake is clicked', () => {
     renderHeader({ vehicle: makeVehicle({ id: 99 }), state: makeState() })
 
-    fireEvent.click(screen.getByRole('button', { name: /Wake Up/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Wake up/i }))
 
     expect(mutate).toHaveBeenCalledTimes(1)
     expect(mutate).toHaveBeenCalledWith(99, expect.objectContaining({ onSuccess: expect.any(Function) }))
@@ -212,7 +212,7 @@ describe('VehicleHeader — wake command', () => {
     const onRefetchState = vi.fn()
     renderHeader({ vehicle: makeVehicle({ id: 5 }), state: makeState(), onRefetchState })
 
-    fireEvent.click(screen.getByRole('button', { name: /Wake Up/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Wake up/i }))
     expect(mutate).toHaveBeenCalledWith(5, expect.objectContaining({ onSuccess: expect.any(Function) }))
 
     // Simulate the mutation resolving — the refetch is deferred, not immediate.
@@ -236,7 +236,7 @@ describe('VehicleHeader — wake command', () => {
       onRefetchState,
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /Wake Up/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Wake up/i }))
     act(() => {
       capturedOnSuccess()()
     })
@@ -254,14 +254,14 @@ describe('VehicleHeader — loading + guards', () => {
     pending.value = true
     renderHeader({ vehicle: makeVehicle(), state: makeState() })
 
-    const btn = screen.getByRole('button', { name: /Wake Up/i })
+    const btn = screen.getByRole('button', { name: /Wake up/i })
     expect(btn).toBeDisabled()
     expect(btn).toHaveAttribute('aria-busy', 'true')
   })
 
   it('never dispatches a wake command from the disabled (no-vehicle) button', () => {
     renderHeader({ vehicle: undefined, state: undefined })
-    fireEvent.click(screen.getByRole('button', { name: /Wake Up/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Wake up/i }))
     expect(mutate).not.toHaveBeenCalled()
   })
 })

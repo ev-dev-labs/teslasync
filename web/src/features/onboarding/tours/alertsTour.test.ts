@@ -23,7 +23,7 @@ describe('ALERTS_TOUR definition', () => {
   it('exposes a stable id and i18n metadata with fallbacks', () => {
     expect(ALERTS_TOUR.id).toBe('alerts')
     expect(ALERTS_TOUR.titleKey).toBe('tour.tours.alerts.title')
-    expect(ALERTS_TOUR.titleFallback).toBe('Alerts & Alert Studio')
+    expect(ALERTS_TOUR.titleFallback).toBe('Alerts & alert studio');
     expect(ALERTS_TOUR.descriptionKey).toBe('tour.tours.alerts.description')
     expect(ALERTS_TOUR.descriptionFallback.length).toBeGreaterThan(0)
   })

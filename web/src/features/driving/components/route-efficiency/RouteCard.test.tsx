@@ -25,15 +25,20 @@
  * network data is fetched and no QueryClient/Router is required. The real
  * `makeUnitDisplay` helper is used (km and mi) so every assertion reads the
  * value straight back out of the DOM through the production conversion path.
- * Only `react-i18next` is mocked so `t(key, fallback)` renders the English
- * fallback deterministically.
+ * The concrete ThemeProvider supplies transitive theme consumers; only its
+ * settings request and i18n are mocked for deterministic presentation.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 
 import type { RouteSummary } from '@/types/driving';
 import { RouteCard, type RouteCardProps } from './RouteCard';
 import { makeUnitDisplay } from './helpers';
+
+const actualThemeProvider = await vi.importActual<
+  typeof import('@/components/ui/ThemeProvider')
+>('@/components/ui/ThemeProvider');
+const ActualThemeProvider = actualThemeProvider.ThemeProvider;
 
 // jsdom lacks matchMedia; the shared `@/components/ui` barrel can reach
 // framer-motion's useReducedMotion transitively. Install a benign stub before
@@ -92,14 +97,52 @@ function renderCard(over: Partial<RouteCardProps> = {}) {
     unit: makeUnitDisplay('km'),
     ...over,
   };
-  return { ...render(<RouteCard {...props} />), props };
+  return {
+    ...render(<ActualThemeProvider><RouteCard {...props} /></ActualThemeProvider>),
+    props,
+  };
 }
 
-/** The inner gradient bar carries the computed `background` inline style. */
+// jsdom rejects gradients containing light-dark(). Capture the actual React
+// style assignment without replacing the palette or bypassing the native setter.
+const assignedBackgrounds = new WeakMap<CSSStyleDeclaration, string>();
+
+beforeEach(() => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({})));
+  // jsdom places CSS property accessors on CSSStyleProperties, one level
+  // above CSSStyleDeclaration; use the prototype of an actual element style.
+  const stylePrototype: CSSStyleDeclaration = Object.getPrototypeOf(
+    document.createElement('div').style,
+  );
+  const setBackground = Object.getOwnPropertyDescriptor(
+    stylePrototype,
+    'background',
+  )?.set;
+  if (!setBackground) throw new Error('background setter not found');
+  vi.spyOn(stylePrototype, 'background', 'set').mockImplementation(
+    function (this: CSSStyleDeclaration, value: string) {
+      assignedBackgrounds.set(this, value);
+      setBackground.call(this, value);
+    },
+  );
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+/** Find the decorative range bar independently of jsdom's CSS support. */
 function gradientBar(container: HTMLElement): HTMLElement {
-  const bar = container.querySelector('div[style*="linear-gradient"]');
+  const bar = container.querySelector<HTMLDivElement>('div[aria-hidden="true"] > div.h-full.rounded-full');
   if (!bar) throw new Error('gradient bar not found');
-  return bar as HTMLElement;
+  return bar;
+}
+
+function gradientBackground(container: HTMLElement): string {
+  const background = assignedBackgrounds.get(gradientBar(container).style);
+  if (background === undefined) throw new Error('gradient background was not assigned');
+  return background;
 }
 
 describe('RouteCard — header (endpoints, caption, badge)', () => {
@@ -115,22 +158,22 @@ describe('RouteCard — header (endpoints, caption, badge)', () => {
   });
 
   it('shows the efficiency badge with the SI value + unit and the matching band tone', () => {
-    renderCard(); // avg 160 Wh/km → "info" band (140..180) → bg-blue-100
+    renderCard(); // avg 160 Wh/km → "info" band (140..180)
 
     const badge = screen.getByText('160 Wh/km');
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('bg-blue-100');
+    expect(badge.className).toContain('bg-[var(--semantic-info-bg)]');
   });
 
   it('maps the badge tone across the efficiency bands (success / danger)', () => {
     const good = renderCard({ route: makeRoute({ avgEfficiency: 100, bestEfficiency: 80, worstEfficiency: 130 }) });
     // 100 < 140 → success.
-    expect(within(good.container).getByText('100 Wh/km').className).toContain('bg-green-100');
+    expect(within(good.container).getByText('100 Wh/km').className).toContain('bg-[var(--semantic-success-bg)]');
     good.unmount();
 
     const bad = renderCard({ route: makeRoute({ avgEfficiency: 300, bestEfficiency: 200, worstEfficiency: 400 }) });
     // 300 >= 220 → danger.
-    expect(within(bad.container).getByText('300 Wh/km').className).toContain('bg-red-100');
+    expect(within(bad.container).getByText('300 Wh/km').className).toContain('bg-[var(--semantic-danger-bg)]');
   });
 });
 
@@ -175,15 +218,15 @@ describe('RouteCard — unit conversion (miles branch)', () => {
     // band were computed from the display number) — but the tone must stay
     // "info" because the raw SI figure is 160 Wh/km.
     renderCard({ unit: makeUnitDisplay('mi') });
-    expect(screen.getByText('257 Wh/mi').className).toContain('bg-blue-100');
-    expect(screen.getByText('257 Wh/mi').className).not.toContain('bg-red-100');
+    expect(screen.getByText('257 Wh/mi').className).toContain('bg-[var(--semantic-info-bg)]');
+    expect(screen.getByText('257 Wh/mi').className).not.toContain('bg-[var(--semantic-danger-bg)]');
   });
 });
 
 describe('RouteCard — gradient bar', () => {
   it('renders the three-stop gradient at the computed best/avg percentages', () => {
     const { container } = renderCard(); // best 120, avg 160, worst 200 → 60% / 80%
-    const bg = gradientBar(container).style.background;
+    const bg = gradientBackground(container);
 
     expect(bg).toContain('linear-gradient');
     expect(bg).toContain('60%');
@@ -196,7 +239,7 @@ describe('RouteCard — gradient bar', () => {
     const { container } = renderCard({
       route: makeRoute({ bestEfficiency: -30, avgEfficiency: 160, worstEfficiency: 200 }),
     });
-    const bg = gradientBar(container).style.background;
+    const bg = gradientBackground(container);
 
     expect(bg).toContain('linear-gradient');
     expect(bg).not.toMatch(/-\d/); // no "-15%" style out-of-range stop

@@ -6,11 +6,12 @@ import { BatteryCharging, ChevronRight } from 'lucide-react'
 import { GlassPanel, DataTable, PanelTitle, type Column } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { formatDateTime } from '@/lib/dateFormat'
-import { fmtNumber } from '@/lib/numberFormat'
+
 import { convertEnergyFromSI } from '@/lib/unitConversion'
 import { useFormatting } from '@/hooks/useFormatting'
 import type { ChargingSession } from '@/api/types'
 import { durationStr } from './helpers'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RecentChargesSectionProps {
   sessions: ChargingSession[] | undefined
@@ -43,6 +44,7 @@ export function chargeDurationMinutes(session: ChargingSession): number {
 }
 
 function useChargeColumns(): Column<ChargingSession>[] {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatCurrency } = useFormatting()
 
@@ -57,17 +59,20 @@ function useChargeColumns(): Column<ChargingSession>[] {
       },
       {
         key: 'energy',
+        align: 'right',
         header: t('common.energy', 'Energy'),
         render: (s) => `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh`,
         sortable: true,
       },
       {
         key: 'duration',
+        align: 'right',
         header: t('common.duration', 'Duration'),
         render: (s) => durationStr(chargeDurationMinutes(s)),
       },
       {
         key: 'cost',
+        align: 'right',
         header: t('common.cost', 'Cost'),
         // `cost_decimal` is the SI-canonical column; `cost` is the legacy alias.
         render: (s) => {
@@ -77,6 +82,7 @@ function useChargeColumns(): Column<ChargingSession>[] {
       },
       {
         key: 'battery',
+        align: 'right',
         header: t('common.battery', 'Battery'),
         render: (s) => {
           if (s.start_soc_pct == null) return '—'
@@ -86,7 +92,7 @@ function useChargeColumns(): Column<ChargingSession>[] {
         },
       },
     ],
-    [t, formatCurrency],
+    [t, formatCurrency, fmtNumber, displayPrecision, displayLocale],
   )
 }
 
@@ -99,7 +105,7 @@ export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
       <div className="mb-4 flex items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <BatteryCharging className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-          {t('common.recentCharges', 'Recent Charges')}
+          {t('common.recentCharges', 'Recent charges')}
         </PanelTitle>
         <Link
           to="/charging"

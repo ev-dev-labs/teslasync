@@ -56,7 +56,8 @@ export function createIndexedDbKvStore(dbName: string, storeName: string): KvSto
           new Promise<string | null>((resolve, reject) => {
             const tx = db.transaction(storeName, 'readonly');
             const req = tx.objectStore(storeName).get(key);
-            req.onsuccess = () => resolve((req.result as string | undefined) ?? null);
+            tx.oncomplete = () => resolve((req.result as string | undefined) ?? null);
+            tx.onabort = () => reject(tx.error ?? new Error('IndexedDB get aborted.'));
             req.onerror = () => reject(req.error ?? new Error('IndexedDB get failed.'));
           }),
       );
@@ -68,6 +69,7 @@ export function createIndexedDbKvStore(dbName: string, storeName: string): KvSto
             const tx = db.transaction(storeName, 'readwrite');
             tx.objectStore(storeName).put(value, key);
             tx.oncomplete = () => resolve();
+            tx.onabort = () => reject(tx.error ?? new Error('IndexedDB put aborted.'));
             tx.onerror = () => reject(tx.error ?? new Error('IndexedDB put failed.'));
           }),
       );
@@ -79,6 +81,7 @@ export function createIndexedDbKvStore(dbName: string, storeName: string): KvSto
             const tx = db.transaction(storeName, 'readwrite');
             tx.objectStore(storeName).delete(key);
             tx.oncomplete = () => resolve();
+            tx.onabort = () => reject(tx.error ?? new Error('IndexedDB delete aborted.'));
             tx.onerror = () => reject(tx.error ?? new Error('IndexedDB delete failed.'));
           }),
       );
@@ -86,29 +89,17 @@ export function createIndexedDbKvStore(dbName: string, storeName: string): KvSto
   };
 }
 
-/** `localStorage`-backed fallback. Swallows quota/private-mode write failures (matches `useMileageBudget.ts` precedent) rather than crashing the app. */
+/** Persistent localStorage fallback. Access, quota and private-mode failures reject; success always means the storage operation completed. */
 export function createLocalStorageKvStore(prefix: string): KvStore {
   return {
     async getItem(key) {
-      try {
-        return window.localStorage.getItem(prefix + key);
-      } catch {
-        return null;
-      }
+      return window.localStorage.getItem(prefix + key);
     },
     async setItem(key, value) {
-      try {
-        window.localStorage.setItem(prefix + key, value);
-      } catch {
-        /* quota exceeded / private mode — best effort, in-memory state for this tab still works */
-      }
+      window.localStorage.setItem(prefix + key, value);
     },
     async removeItem(key) {
-      try {
-        window.localStorage.removeItem(prefix + key);
-      } catch {
-        /* ignore */
-      }
+      window.localStorage.removeItem(prefix + key);
     },
   };
 }

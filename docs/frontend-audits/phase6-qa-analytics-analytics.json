@@ -1,0 +1,559 @@
+{
+  "item": "phase6-qa-analytics-analytics",
+  "phase": 6,
+  "page": "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx",
+  "routes": ["/analytics"],
+  "purpose": "Bounded, read-only QA of the accepted fleet Analytics page and its directly relevant presentation, hook and endpoint contracts.",
+  "primaryGoal": "Assess whether returned fleet evidence is presented with truthful states, scope, quantities and accessible source structure without changing the application.",
+  "sourceReportCompletion": "PASS",
+  "sourceQA": "FAIL",
+  "pageAcceptance": "NOTRUN",
+  "native": "NOTRUN",
+  "browser": "NOTRUN",
+  "liveAPI": "NOTRUN",
+  "clock": {
+    "requestAt": "2026-10-13T09:49:07.390-07:00",
+    "firstActualClock": "2026-10-13T09:49:22.0074964-07:00",
+    "sourceReviewFinishedAt": "2026-10-13T09:55:58.7568260-07:00",
+    "returnTarget": "2026-10-13T10:09:07.390-07:00",
+    "hardDeadline": "2026-10-13T10:14:07.390-07:00",
+    "finalValidationClock": "Recorded by the final bounded command in web\\logs\\phase6-qa-analytics-analytics.log.",
+    "commandsOverEightMinutes": 0
+  },
+  "authority": [
+    "migration-queue.md:151-161 rolling finished-page source QA contract; :189 exact existing item; :1561 accepted Phase5 source receipt",
+    "docs\\orchestrator-loop.md:103-132 worker contract; :240-259 no unchanged/full-suite reruns",
+    "docs\\frontend-design-contract.md:419-499 trust, numeric, SI, localization and scope; :500-605 native acceptance and bounded evidence",
+    "docs\\frontend-mission.md:529-579 responsive/mobile; :702-794 loading/empty/error/stale; :921-944 accessibility; :1416-1486 page acceptance",
+    "docs\\session-handoff.md:24-42 source-only rolling intake and this Analytics refill",
+    "docs\\frontend-worker-conventions.md:7-34 read-only scope and no-change test discipline",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md"
+  ],
+  "scope": {
+    "versionedWrites": ["docs\\frontend-audits\\phase6-qa-analytics-analytics.json"],
+    "ignoredWrites": ["web\\logs\\phase6-qa-analytics-analytics.log"],
+    "applicationFiles": "READ_ONLY",
+    "breadth": "Accepted page, its four tab renderers and immediate supporting presenters; narrow shared owners needed to establish state, scope, chart, unit and navigation contracts; only the consumed useFleetAnalytics hook and its registered Fleet endpoint.",
+    "excluded": [
+      "Other analytics pages or hook functions",
+      "Exhaustive source-graph or database/repository walk",
+      "Source, tests, configuration, catalog, queue and handoff edits",
+      "Git, subagents, installs, helpers, extensions, servers, Docker and full suites",
+      "Browser, native mounts, network/API requests and real identifiers"
+    ],
+    "fixturePolicy": "Reproduction descriptions below are synthetic thought experiments derived from the inspected source; no fixture was injected, saved, rendered or sent to an API."
+  },
+  "dataSources": [
+    {
+      "hook": "useFleetAnalytics",
+      "evidence": ["web\\src\\api\\hooks\\useAnalytics.ts:49-67", "internal\\api\\router.go:3895", "internal\\api\\analytics\\queries.go:23-65"],
+      "request": "GET /analytics/fleet with start/end or days",
+      "client": "web\\src\\api\\client.ts:73-94 adds /api/v1",
+      "cancellation": "TanStack query signal forwarded to request",
+      "cacheScope": "days/start/end; no selected vehicle",
+      "rawPayload": "Returned without a select-time unit conversion; current endpoint contains derived km/kWh/km/h/minute denominators, not uniformly canonical m/Wh/mps/s.",
+      "runtime": "NOTRUN"
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial-loading",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:38-61", "web\\src\\features\\analytics\\components\\analytics\\AnalyticsPanel.tsx:60-72", "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetOverviewBrief.tsx:44-49"],
+      "detail": "Page does not pass a whole-page loading gate; workspace and active domain remain mounted. Panels receive isLoading and brief loading suppresses absent readings. Actual skeleton geometry and initial paused/loading presentation are not mounted evidence."
+    },
+    {
+      "id": "initial-error-recovery",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "evidence": ["web\\src\\features\\analytics\\components\\overview-modernization\\retainFleetContent.ts:10-11", "web\\src\\features\\analytics\\components\\analytics\\AnalyticsPanel.tsx:61-68", "web\\src\\components\\feedback\\DataSourceNotice.tsx:259-287"],
+      "detail": "Without returned data the adapter preserves the failure, panel shells remain present and refetch recovery is wired. No network recovery was exercised."
+    },
+    {
+      "id": "empty-versus-measured-zero",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": ["F04"],
+      "evidence": ["internal\\api\\analytics\\queries.go:519-522", "web\\src\\features\\analytics\\components\\analytics\\DrivingPerformanceCards.tsx:32-47", "web\\src\\features\\analytics\\components\\analytics\\DrivingTemperatureStats.tsx:30-39"],
+      "detail": "Temperature correctly honors independent positive sample counts. Several speed/distance/charging/cost metrics instead treat empty-population zeroed StatsSummary values as measured readings."
+    },
+    {
+      "id": "retained-content",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:27-28", "web\\src\\features\\analytics\\components\\overview-modernization\\retainFleetContent.ts:10-22", "web\\src\\components\\layout\\PageContainer.tsx:253-254"],
+      "detail": "Returned content survives refresh failure; the original query remains with the page-level warning/freshness owner. This pass does not clear the contradictory section status in F03."
+    },
+    {
+      "id": "retained-and-partial-trust-labels",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": ["F02", "F03"],
+      "evidence": ["internal\\api\\analytics\\queries.go:620-626", "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetSectionBrief.tsx:19-33"],
+      "detail": "Partial-result metadata is not consumed and the content adapter removes the refresh-error predicate required by section brief retained labels."
+    },
+    {
+      "id": "paused-is-not-proven-offline",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": ["F13"],
+      "evidence": ["web\\src\\components\\feedback\\DataSourceNotice.tsx:78-84", "web\\src\\components\\feedback\\DataSourceNotice.tsx:172-175"],
+      "detail": "Paused refresh retains payload and retry ownership, but its shared status copy asserts offline from fetchStatus alone."
+    },
+    {
+      "id": "workspace-selection-and-range",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": ["F01", "F05"],
+      "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:22-27", "web\\src\\lib\\workspaceScope.ts:23-24", "web\\src\\lib\\workspaceScope.ts:157-168"],
+      "detail": "No duplicate page picker. Header-owned range is inherited, but precise instants are discarded; available header vehicle scope is not consumed by this fleet query."
+    },
+    {
+      "id": "display-conversion-and-wire-SI",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": ["F12"],
+      "evidence": ["web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx:45-71", "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx:59-68", "internal\\api\\analytics\\queries.go:183-199", "internal\\api\\analytics\\queries.go:628-634"],
+      "detail": "Existing declared km/kWh/km/h denominators are restored to base SI before current display converters, so those caller conversions match current endpoint magnitudes. The endpoint itself violates the canonical wire contract. No legacy converter calls were found in the 17-file scan."
+    },
+    {
+      "id": "signed-values",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": ["F10"],
+      "evidence": ["web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetOverviewBrief.tsx:19-20", "internal\\api\\analytics\\queries.go:496", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:153"],
+      "detail": "Monthly savings retains a signed series; the hero estimate clamps negative savings to zero. The backend daily efficiency omission is separately covered by F07, not assumed to prove a signed chart input contract."
+    },
+    {
+      "id": "battery-fact-versus-estimate",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": ["F06"],
+      "evidence": ["internal\\api\\analytics\\queries.go:161-169", "internal\\api\\analytics\\queries.go:354-365", "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx:38-55"],
+      "detail": "SOC and fixed nominal estimates are labeled as battery health/capacity/degradation; cycles defaults to a fabricated measured zero."
+    },
+    {
+      "id": "chart-and-table-data-contracts",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": ["F07", "F08", "F09"],
+      "evidence": ["web\\src\\features\\analytics\\components\\analytics\\AnalyticsChartPanel.tsx:33-45", "web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx:77-83", "web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx:85-88"],
+      "detail": "Fullscreen/export and accessible data-column inputs remain wired. Missing efficiency field, mislabeled cost breakdown and name-based radar identities invalidate particular outputs."
+    },
+    {
+      "id": "literal-localization-catalog",
+      "status": "PASS",
+      "basis": "EXECUTED_STATIC_CHECK",
+      "evidence": ["web\\logs\\phase6-qa-analytics-analytics.log", "web\\src\\i18n\\en.json:12869-13049", "web\\src\\i18n\\en.json:13146-13162"],
+      "detail": "172 unique literal t() keys checked against canonical English; zero missing occurrences. Five dynamic quick-link label keys exist. This does not establish translated locale, split-projection or browser RTL behavior."
+    },
+    {
+      "id": "data-localization",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": ["F11"],
+      "evidence": ["internal\\api\\analytics\\queries.go:429-438", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:98-110"],
+      "detail": "Server weekday labels bypass localization even though surrounding chart labels use t()."
+    },
+    {
+      "id": "navigation-and-accessibility-source",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "evidence": ["web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx:53-63", "web\\src\\components\\ui\\TabNav.tsx:27-58", "web\\src\\features\\analytics\\components\\analytics\\constants.tsx:37-43"],
+      "detail": "Labeled nav/group, type=button, aria-pressed, focus utilities, decorative icons and normal Links remain. Chart descriptions/data columns are present. Source presence is not keyboard, focus, screen-reader or contrast acceptance."
+    },
+    {
+      "id": "mobile-source-structure",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "evidence": ["web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsPlacedContent.tsx:14-20", "web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx:54-61", "web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx:90-92", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:166-184"],
+      "detail": "Full-width/min-w-0 allocation, single-column base chart grids, responsive expansion, scrollable tab navigation and 44px minimum tab targets exist. Overflow, wrapping, fixed chart sizing, pointer reachability and shell-safe-area behavior are unverified."
+    },
+    {
+      "id": "guideline-scan",
+      "status": "PASS",
+      "basis": "EXECUTED_STATIC_CHECK",
+      "evidence": ["web\\logs\\phase6-qa-analytics-analytics.log"],
+      "detail": "17 explicitly named files: static inline var styles=0; raw controls=0; direct recharts/react-leaflet/framer-motion=0; old API imports=0; legacy unit helper calls=0; direct fetch/EventSource=0; neon body text=0. Root-import initial matcher found 29 category barrels, corrected forbidden-root count=0. One glow prop is a restrained hover border at its inspected owner, not a proven decorative glow."
+    },
+    {
+      "id": "consumed-hook-route-contract",
+      "status": "PASS",
+      "basis": "EXECUTED_STATIC_CHECK_AND_SOURCE",
+      "evidence": ["web\\src\\api\\hooks\\useAnalytics.ts:49-67", "internal\\api\\router.go:3895", "web\\logs\\phase6-qa-analytics-analytics.log"],
+      "detail": "Consumed hook uses registered GET /analytics/fleet, start/end/days query keys, cancellation signal and range-dependent key; double-prefix=0 and camelCase query=0 in this hook slice. Other hook functions were not audited."
+    },
+    {
+      "id": "typescript",
+      "status": "NOTRUN",
+      "command": "npx tsc --noEmit",
+      "detail": "Report-only item changes no TypeScript and has no global gate grant. Queue records a historical successful production typecheck at cadence1841; it is not a fresh result from this worker."
+    },
+    {
+      "id": "tests-lint-build",
+      "status": "NOTRUN",
+      "detail": "No application/test changes. Accepted Phase5 row records nine historical scoped passing tests and lint/style checks. No unchanged passing tests, full suites or global builds were rerun; test discovery/executed/passed/failed/skipped counts for this item are null."
+    },
+    {
+      "id": "native-accessibility-responsive-visual",
+      "status": "NOTRUN",
+      "detail": "No browser grant/use. All ten mission widths, narrow allocated containers, dark/light/custom themes, 200% text, RTL, keyboard/focus, touch targets, forced colors, reduced motion, contrast, exports/fullscreen and network recovery remain unaccepted."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "HIGH",
+      "owner": "page",
+      "rule": "MDC-032 precise workspace range",
+      "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:22-27", "web\\src\\hooks\\useRangeState.ts:656-683", "web\\src\\api\\hooks\\useAnalytics.ts:57-66", "internal\\api\\apiparams\\params.go:95-104", "internal\\api\\analytics\\queries.go:23-30"],
+      "mechanism": "The hook supplies precise rolling and timezone-aware calendar instants, but the page sends only YYYY-MM-DD start/end. The endpoint interprets date-only bounds as full UTC days, losing the selected rolling window and local-day boundaries.",
+      "repro": "Synthetic review: select 24h at 09:49 America/Los_Angeles, or a custom local day. Follow page arguments into URLSearchParams: the request has calendar dates, not the rolling or local-midnight RFC3339 instants. No browser/API reproduction was executed.",
+      "needs": "One bounded page-range adoption using startInstant/endInstantExclusive through the already capable start/end hook; keep header ownership and range context accurate."
+    },
+    {
+      "id": "F02",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "HIGH",
+      "owner": "integration",
+      "rule": "MDC-026 partial evidence must remain partial",
+      "evidence": ["internal\\api\\analytics\\queries.go:122-140", "internal\\api\\analytics\\queries.go:620-626", "web\\src\\api\\types.ts:1003-1062", "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:43-47", "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetOverviewBrief.tsx:47-52"],
+      "mechanism": "HTTP200 explicitly supplies partial_result for per-vehicle query failure or a record cap. FleetAnalytics omits it, useFleetAnalytics returns a successful query, and page/brief trust only sees transport status. Incomplete totals appear as ordinary returned evidence without the known missing-source/cap reason.",
+      "repro": "Synthetic endpoint scenario: one drive fetch fails, or one vehicle reaches1000 records. Endpoint marks is_partial=true and returns200; inspect existing page consumers: none consume the marker.",
+      "needs": "One typed fleet partial-metadata adoption with existing nonblocking trust/retry presentation; do not discard retained totals or reinterpret HTTP200 as complete."
+    },
+    {
+      "id": "F03",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "MEDIUM",
+      "owner": "page/domain",
+      "rule": "MDC-026 retained content and trust are orthogonal",
+      "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:27-28", "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:56-61", "web\\src\\features\\analytics\\components\\overview-modernization\\retainFleetContent.ts:14-21", "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetSectionBrief.tsx:19-33"],
+      "mechanism": "The content adapter correctly preserves renderers but sets isError=false. Section briefs receive that adapted query and test isError to distinguish retained evidence. After an idle failed refresh they label the cached metrics Returned evidence, while the page/top brief reports retention.",
+      "repro": "Synthetic query: data present, isError=true, fetchStatus=idle, isFetching=false. Apply retainFleetContent then the FleetSectionBrief predicates; retained becomes false and Returned evidence wins.",
+      "needs": "One narrow retained-state handoff to domain briefs without restoring destructive panel error gating."
+    },
+    {
+      "id": "F04",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "MEDIUM",
+      "owner": "domain",
+      "rule": "MDC-033 missing population is not a measured zero",
+      "evidence": ["internal\\api\\analytics\\queries.go:519-522", "internal\\api\\analytics\\queries.go:643-661", "web\\src\\features\\analytics\\components\\analytics\\DrivingPerformanceCards.tsx:32-47", "web\\src\\features\\analytics\\components\\analytics\\ChargingTab.tsx:47-51", "web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx:44-47", "web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx:139"],
+      "mechanism": "computeStats([]) returns an object with count=0 and numeric zeros. Speed/distance and charging power/duration/cost consumers use non-null values or object existence rather than sample count, so unavailable measurements display zero. All missing session prices produce cost stats count0, but the cost panel still renders free-looking values.",
+      "repro": "Synthetic empty drive/session range, or sessions all lacking price: follow empty statistic arrays into count0 summaries and the corresponding rawValue expressions. Contrast temperature's correct independent count checks.",
+      "needs": "One bounded sample-count-aware stats projection preserving genuinely sampled zero and valid negative temperatures/currency; do not blanket-hide measured aggregate counts."
+    },
+    {
+      "id": "F05",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "MEDIUM",
+      "owner": "workspace integration",
+      "rule": "MDC-032 meaningful vehicle scope",
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:23-24", "web\\src\\lib\\workspaceScope.ts:105-133", "web\\src\\lib\\workspaceScope.ts:164-166", "web\\src\\components\\layout\\WorkspaceHeader.tsx:33-35", "web\\src\\components\\layout\\WorkspaceHeader.tsx:63-65", "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:22-27", "web\\src\\api\\hooks\\useAnalytics.ts:16-17", "internal\\api\\analytics\\queries.go:59-65"],
+      "mechanism": "/analytics enables range and is not excluded from vehicle scope. Its header can show a vehicle picker, but the page/query key/request consume no selected vehicle and the endpoint gets the entire fleet.",
+      "repro": "Synthetic selection A versus B with identical range: page hook arguments and query key are identical; Fleet still enumerates all vehicles.",
+      "needs": "One route-scope decision: intentionally fleet-wide Analytics should disable the misleading global vehicle control, or explicitly extend the endpoint and typed hook if scoped analytics is the intended product behavior. Do not pretend adding an unsupported parameter filters data."
+    },
+    {
+      "id": "F06",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "HIGH",
+      "owner": "endpoint integration",
+      "rule": "MDC-026/033 measurement meaning and unknown cycles",
+      "evidence": ["internal\\api\\analytics\\queries.go:107-114", "internal\\api\\analytics\\queries.go:161-169", "internal\\api\\analytics\\queries.go:324-365", "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx:38-55", "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx:89-111"],
+      "mechanism": "Fleet writes current BatteryLevel or historical end_soc directly as health_score, computes capacity from fixed75000Wh and degradation as100-SOC, and never sets CycleCount, so JSON reports0. BatteryTab labels those fields health/capacity/degradation/cycles as measurements. Current-state rows are also appended at now regardless of the requested historical range. This is endpoint semantic debt, not a display-unit conversion defect.",
+      "repro": "Synthetic healthy vehicle with SOC50: endpoint produces health50, capacity37500Wh, degradation50 and cycles0 without health/cycle observations. A past-date request can still append the now-dated SOC row, which latest-row selection can choose.",
+      "needs": "One bounded battery response/consumer truthfulness correction: authentic observations or explicit unknown/estimated SOC-derived values, no fixed nominal health claims, no fabricated cycles, and declared time coverage. Keep all battery sections present."
+    },
+    {
+      "id": "F07",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "MEDIUM",
+      "owner": "endpoint integration",
+      "rule": "Preserve meaningful efficiency chart contract",
+      "evidence": ["internal\\api\\analytics\\queries.go:505-515", "web\\src\\api\\types.ts:1029", "web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx:77-83", "web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx:288-299", "web\\src\\components\\charts\\chartUtils.tsx:12"],
+      "mechanism": "daily_trend is built with date/drives/distance only. DrivingTab requires daily efficiency>0; safe(undefined)=0, so every row from the inspected endpoint is filtered out and Efficiency trend is always empty.",
+      "repro": "Synthetic normal nonempty Fleet daily_trend from this builder: apply the filter; no row survives, regardless of real drive efficiency statistics elsewhere in the response.",
+      "needs": "One explicit daily efficiency response contract and matching display projection, or truthful unavailable-capability explanation while retaining the section. Do not fabricate efficiency from unrelated charging totals."
+    },
+    {
+      "id": "F08",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "MEDIUM",
+      "owner": "domain",
+      "rule": "Chart title must describe its actual quantity",
+      "evidence": ["web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx:59", "web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx:98-121", "internal\\api\\analytics\\queries.go:466-475"],
+      "mechanism": "Cost by charger type actually calculates count/sum(count), plots count proportions and formats counts. The endpoint type breakdown has no cost field.",
+      "repro": "Synthetic two charger types with equal sessions but different monetary costs: this panel produces equal bars and numeric session counts under a cost title.",
+      "needs": "One truthful existing session-share label or an explicitly supported monetary-by-type endpoint extension. No invented costs."
+    },
+    {
+      "id": "F09",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN_CONDITIONAL",
+      "priority": "MEDIUM",
+      "owner": "domain",
+      "rule": "Preserve vehicle identity in chart/legend/export",
+      "evidence": ["web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx:79-88", "web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx:195", "web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx:205-214"],
+      "mechanism": "Radar values, data-column keys, dataKey and hidden-series identity use display name rather than vehicle id. Two different ids with the same name overwrite one object property and both series read the last value. A name equal to metric also collides with the axis-label key.",
+      "repro": "Synthetic ids1/2 both named Test with distances10/20: row.Test is first50 then100; both Radar series and exported columns read100. No real names or vehicles were inspected.",
+      "needs": "One stable id-backed series key adoption retaining display labels and reconciling existing legend preference IDs deliberately."
+    },
+    {
+      "id": "F10",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "MEDIUM",
+      "owner": "domain",
+      "rule": "MDC-033 preserve valid monetary signs",
+      "evidence": ["web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetOverviewBrief.tsx:19-20", "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetOverviewBrief.tsx:35-36", "internal\\api\\analytics\\queries.go:496"],
+      "mechanism": "Math.max(estimated gasoline cost minus actual cost,0) hides a negative estimated saving, while monthly savings preserves negative monetary differences.",
+      "repro": "Synthetic distance100km and cost30: the hero formula yields12.75-30=-17.25 but sends0 to the currency metric.",
+      "needs": "One signed estimated-savings presentation or explicit approved loss-aware wording; do not silently replace additional spending with measured zero."
+    },
+    {
+      "id": "F11",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "LOW",
+      "owner": "domain localization",
+      "rule": "MDC-044 localize labels and time context",
+      "evidence": ["internal\\api\\analytics\\queries.go:429-438", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:98-110"],
+      "mechanism": "The endpoint emits Sun/Mon/Tue/etc as day labels; OverviewTab uses them directly in axis/data-table fields. Changing UI locale cannot translate these backend English abbreviations through any existing local projection.",
+      "repro": "Synthetic non-English locale with the unchanged seven-row endpoint response: XAxis and exported day column still contain server English labels.",
+      "needs": "One stable weekday identity-to-localized-display projection using existing locale/date formatting; keep chronological day identity and data unchanged."
+    },
+    {
+      "id": "F12",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN_CONTRACT_DEBT",
+      "priority": "MEDIUM",
+      "owner": "SI endpoint integration",
+      "rule": "MDC-045 canonical raw SI on wire/cache",
+      "evidence": ["internal\\api\\analytics\\queries.go:183-199", "internal\\api\\analytics\\queries.go:260-265", "internal\\api\\analytics\\queries.go:628-634", "web\\src\\api\\types.ts:1006-1015", "web\\src\\api\\hooks\\useAnalytics.ts:64-66"],
+      "mechanism": "Backend derives kilometers, kWh, km/h and minutes from canonical stored values and returns those denominations; the hook caches them unchanged. Frontend type comments accurately declare these legacy derived denominations, and existing meter/Wh reconstructions are consistent with them. Nevertheless the endpoint is not the required canonical wire/cache SI shape.",
+      "repro": "Synthetic stored distance1000m and energy1000Wh: inspected expressions emit total_distance_km1 and total_energy_kwh1 instead of canonical meter/Wh fields. This is source contract evidence, not observed API traffic.",
+      "needs": "One explicitly authorized canonical endpoint/DTO/consumer cutover under current SI methodology. Do not change factors under existing field names or add a dual-shape compatibility adapter. Persistent instructions' methodology path was absent; recover its actual authority before a unit-field write."
+    },
+    {
+      "id": "F13",
+      "status": "FAIL",
+      "classification": "SOURCE_PROVEN",
+      "priority": "MEDIUM",
+      "owner": "shared trust",
+      "rule": "MDC-026 paused refresh is not proven device offline",
+      "evidence": ["web\\src\\components\\feedback\\DataSourceNotice.tsx:78-84", "web\\src\\components\\feedback\\DataSourceNotice.tsx:172-175", "web\\src\\components\\feedback\\DataSourceNotice.tsx:252-256", "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:43-47"],
+      "mechanism": "Any fetchStatus=paused maps to the localized Paused offline badge without an online/device-evidence predicate. This page passes the original query to that shared owner.",
+      "repro": "Synthetic query with retained data and fetchStatus=paused, browser connectivity unknown: source status resolves paused and its badge copy asserts offline.",
+      "needs": "One existing shared paused-status wording/evidence correction; preserve retained data and retry, do not turn deferred refresh into an invented server error."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx:95-145", "internal\\api\\analytics\\queries.go:445-462", "internal\\api\\analytics\\queries.go:567-584"],
+      "detail": "Speed/distance bucket labels are fixed backend km/h and km ranges without explicit units, unlike user-unit-converted cards. Potential imperial interpretability issue; no mounted axis/tooltip/accessibility reading was inspected. Do not simply relabel unconverted bounds as mph/mi."
+    },
+    {
+      "id": "C02",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx:49-64", "web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx:212"],
+      "detail": "Zero/unknown efficiency sorts before positive observed efficiency, and radar area opacity0.15 exceeds the design's8percent area target. Exact product semantics and composed intensity need a bounded followup; neither browser harm nor a physical measurement validity contract was established here."
+    },
+    {
+      "id": "C03",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:171", "web\\src\\components\\ui\\GlassPanel.tsx:20-34"],
+      "detail": "Resolved false-positive: glow=cyan is the persisted API spelling for a restrained semantic hover border, not a colored shadow/glow. Do not change this prop merely from its name."
+    },
+    {
+      "id": "C04",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx:3", "web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsPlacedContent.tsx:2"],
+      "detail": "Existing layout-reference sub-barrel imports are not category-barrel adoption. Source-only architectural candidate; no cycle, missing export or runtime failure was established and no source rewrite was authorized."
+    },
+    {
+      "id": "C05",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx:63-65", "web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx:67-71", "web\\src\\components\\charts\\chartUtils.tsx:12"],
+      "detail": "safe() converts missing/invalid numbers to zero before chart projection. These paths can collapse unknown into real zero if partial/null numeric rows arrive. Current declared row numerics are non-null; no actual malformed payload was inspected, so do not call this a reproduced crash."
+    }
+  ],
+  "preservation": {
+    "applicationEdits": 0,
+    "pageLines": 64,
+    "pageSha256": "668029875F4BD877B16C8122DC819189DBF38215AAE409C64352BDB85A7E598D",
+    "auditedPageAndPresenterFileCount": 17,
+    "auditedPageAndPresenterLines": 1955,
+    "tabBranches": 4,
+    "analyticsChartPanels": 21,
+    "analyticsPanels": 5,
+    "glassPanels": 2,
+    "literalGlassPanelOrChartContainerCount": 2,
+    "historicalComparison": "migration-queue.md:1561 records64/63 page lines,21 chart panels,5 panels and4 tabs. Current counts match those recorded accepted source counts; the historical original extraction baseline was not independently reloaded and no >=70percent full-original claim is made.",
+    "originalLineRatioCheck": "NOTRUN",
+    "sections": {
+      "overview": ["Distance by vehicle", "Fleet usage", "Efficiency leaderboard", "Vehicle comparison", "Energy and activity", "Day of week", "Monthly cost", "Quick links"],
+      "driving": ["Performance brief", "Speed distribution", "Distance distribution", "Hourly pattern", "Temperature versus efficiency", "Daily trend", "Duration distribution", "Efficiency trend", "Independent temperature stats"],
+      "charging": ["Charging brief", "Charger types", "Start battery distribution", "Hourly charging", "Charger brands", "Cost by type", "Cost analysis", "Monthly charging"],
+      "battery": ["Battery brief", "Health timeline", "Capacity trend", "Range trend", "Degradation and cycles"]
+    },
+    "actions": ["Four domain selections", "Five overview links", "Source-specific/global source retry", "Freshness refresh", "Chart export/fullscreen and persisted hidden-series controls"],
+    "limits": "These are source wiring/counts, not proof each section/action rendered or executed. Original inventories and frozen captures were not modified."
+  },
+  "commands": [
+    {
+      "kind": "preservation",
+      "command": "Get-Content -LiteralPath $p; Get-FileHash -LiteralPath $p -Algorithm SHA256; Select-String section patterns over the17 explicitly listed presenter paths",
+      "shellId": "4784",
+      "exit": 0,
+      "result": "Per-file line/hash/panel/chart snapshots retained in the allowed log."
+    },
+    {
+      "kind": "guideline-scan",
+      "command": "Select-String -LiteralPath $paths -Pattern $c.Value",
+      "shellId": "4786",
+      "exit": 0,
+      "result": "Executed17-file scan, not an all-checks-pass exit. Root-barrel and glow candidates resolved separately.",
+      "patterns": {
+        "static_inline_var": "style=\\{\\{[^\\r\\n]*var\\(--",
+        "raw_controls": "<(?:button|input|textarea|select|table)\\b",
+        "direct_libraries": "from\\s+['\\\"](?:recharts|react-leaflet|framer-motion)['\\\"]",
+        "old_api": "from\\s+['\\\"]\\.{1,2}[/\\\\](?:\\.\\.[/\\\\])?api['\\\"]",
+        "legacy_unit_helpers": "\\b(?:convertDistance|convertSpeed|convertTemp|convertEfficiency|convertPressure|fmtDistance|fmtSpeed|fmtTemp|fmtPressure)\\s*\\(",
+        "direct_network": "\\b(?:fetch|EventSource)\\s*\\(",
+        "neon_body": "text-neon-"
+      }
+    },
+    {
+      "kind": "scan-disposition-and-hook",
+      "command": "Select-String category-barrel classification; Get-Content src\\api\\hooks\\useAnalytics.ts slice49-67; Select-String '/api/v1/' and '[?&](?:vehicleId|driveId|sessionId|chargingId)='",
+      "shellId": "4787",
+      "exit": 0,
+      "result": "forbidden root imports0; consumed hook double-prefix0/camelCase0; registered route matched by source."
+    },
+    {
+      "kind": "catalog",
+      "command": "Get-Content -LiteralPath src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable; regex literal t() keys from the17 named files; walk each dotted key in the canonical dictionary",
+      "shellId": "4788",
+      "exit": 0,
+      "result": "172 unique keys;0 missing occurrences. No catalog writes."
+    },
+    {
+      "kind": "section-counts",
+      "command": "Get-Content each named file | Measure-Object -Sum; Select-String '<AnalyticsChartPanel\\b', '<AnalyticsPanel\\b', '<GlassPanel\\b', '<GlassPanel\\b|<ChartContainer\\b', and \"activeTab === '\"",
+      "shellId": "4789",
+      "exit": 0,
+      "result": "1955 lines;21 charts;5 analytics panels;2 glass panels;4 tabs."
+    },
+    {
+      "kind": "exact-citations",
+      "command": "Select-String -LiteralPath the named issue-owner files -Pattern their quantity/status/identity expressions",
+      "shellId": "4791",
+      "exit": 0,
+      "result": "Raw file:line:expression evidence retained in allowed log."
+    },
+    {
+      "kind": "audit-scripts",
+      "status": "NOTRUN",
+      "commands": ["bash .github\\skills\\audit-violations\\audit.sh [path]", "bash .github\\skills\\verify-api-hooks\\verify.sh [hook-file]"],
+      "result": "Scripts inspected, not run: audit embeds a global typecheck and verify would inspect unrelated functions/routes. Bounded built-in scans and the consumed-hook/router comparison above are the actual evidence, not a fabricated script pass."
+    },
+    {
+      "kind": "report-and-source-validation",
+      "command": "Get-Content report -Raw | ConvertFrom-Json -AsHashtable; validate item/status/evidence files and start lines; compare Get-FileHash -Algorithm SHA256 against each of the17 preservation rows retained in the log",
+      "shellId": "4793",
+      "exit": 0,
+      "clock": "2026-10-13T09:59:45.0667074-07:00",
+      "result": "JSON parse/item/status evidence validation passed; errors0; audited source hashes unchanged17/changed0. Exact-citation corrections to PageContainer:253-254 and api/types.ts:1029 applied only to this report; final JSON/range validation recorded in the log."
+    },
+    {
+      "kind": "citation-range-correction",
+      "command": "Validate every source evidence start/end range against Get-Content line counts",
+      "shellId": "4795",
+      "exit": 1,
+      "result": "Two report-only workspaceScope end ranges erroneously reached174 in a168-line file. Corrected to157-168 and164-166; no source changed. Corrected report validation follows in the allowed log."
+    }
+  ],
+  "scanTargets": [
+    "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\ChargingTab.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\AnalyticsChartPanel.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\AnalyticsPanel.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\DrivingPerformanceCards.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\DrivingTemperatureStats.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\constants.tsx",
+    "web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx",
+    "web\\src\\features\\analytics\\components\\overview-modernization\\retainFleetContent.ts",
+    "web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsPlacedContent.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetOverviewBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetSectionBrief.tsx"
+  ],
+  "additionalFilesRead": [
+    "web\\src\\features\\analytics\\components\\analytics\\index.ts",
+    "web\\src\\features\\analytics\\components\\overview-modernization\\index.ts",
+    "web\\src\\api\\hooks\\useAnalytics.ts:1-190; unrelated hook functions outside1-67 not audited",
+    "web\\src\\api\\client.ts:1-180",
+    "web\\src\\api\\types.ts:985-1260; FleetAnalytics1003-1062 audited",
+    "web\\src\\hooks\\useRangeState.ts:1-220,248-340,655-686",
+    "web\\src\\hooks\\useUnits.ts:1-195",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\routeRegistry.ts:45; routeLoaders.ts:50 source lookup only",
+    "web\\src\\components\\layout\\WorkspaceHeader.tsx:33-65 source lookup only",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\ui\\TabNav.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\charts\\chartUtils.tsx:12 source lookup only",
+    "web\\src\\components\\data-display\\DataFreshness.tsx:316-345 and narrow source lookup",
+    "web\\src\\i18n\\en.json:12869-13200 and dictionary lookup of the inspected presenters' keys",
+    "internal\\api\\router.go:84,969,3891-3899 source lookup only",
+    "internal\\api\\analytics\\handler.go",
+    "internal\\api\\analytics\\dtos.go",
+    "internal\\api\\analytics\\doc.go",
+    "internal\\api\\analytics\\queries.go:1-278,323-388,419-525,562-683",
+    "internal\\api\\apiparams\\params.go:84-105",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh"
+  ],
+  "evidenceLimits": [
+    "All reported mechanisms are source-derived; none is an executed browser/API reproduction or observed real-world incidence.",
+    "Actual logs retain scan candidates and their corrections; process exit0 does not imply all QA checks pass.",
+    "No unchanged passing tests or global gates rerun; historical Phase5 and cadence1841 receipts are explicitly historical.",
+    "No browser/native grant, locks, pages, network traffic, identifiers, fixtures, servers, dependencies or Docker actions.",
+    "No exhaustive imported source graph, all-analytics audit or unrelated endpoint campaign.",
+    "The persistent SI methodology path .github\\prompts\\db-refactor\\phase-48-si-canonical\\0000-methodology.prompt.md was absent on the attempted read; no reconstruction or field edit was attempted.",
+    "Initial guessed internal\\api\\analytics_handler.go path was absent; router import resolved the actual internal\\api\\analytics owner.",
+    "Source counts are not screenshots, functional section rendering, original full-baseline parity, runtime accessibility or page acceptance."
+  ],
+  "release": {
+    "effective": "At terminal DONE return after the final report/log validation command",
+    "source": "ALL source claims released; no source write ever owned or made",
+    "report": "ALL report/log write ownership released",
+    "browser": "ALL browser ownership released; none acquired or used",
+    "command": "ALL commands released/completed; no background process or server launched",
+    "postReturnWrites": "NONE"
+  }
+}

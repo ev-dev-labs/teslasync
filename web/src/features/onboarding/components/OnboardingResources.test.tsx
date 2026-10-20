@@ -157,3 +157,124 @@ describe('OnboardingResources', () => {
     expect(screen.getAllByRole('link')).toHaveLength(3);
   });
 });
+
+import { createInstance } from 'i18next';
+import * as reactI18next from 'react-i18next';
+import { neonColorMap } from '@/lib/tokens';
+
+describe('OnboardingResources restrained full-label presentation', () => {
+  it('wraps every full resource label with neutral row chrome and theme-aware focus', () => {
+    renderPanel();
+
+    for (const title of ['Tesla account', 'Fleet Telemetry setup guide', 'Documentation']) {
+      const label = screen.getByText(title);
+      expect(label).toHaveClass('block', 'whitespace-normal', 'break-words');
+      expect(label).not.toHaveClass('truncate', 'whitespace-nowrap', 'overflow-hidden');
+    }
+
+    for (const link of screen.getAllByRole('link')) {
+      expect(link).toHaveClass(
+        'min-w-0',
+        'min-h-11',
+        'bg-[var(--surface-1)]',
+        'hover:bg-[var(--control-bg-hover)]',
+        'hover:border-[var(--border-default)]',
+        'focus-visible:ring-2',
+        'focus-visible:ring-[var(--focus-ring)]',
+        'focus-visible:ring-offset-2',
+      );
+      expect(link.className).not.toMatch(/(?:white|cyan)-|truncate|overflow-hidden/);
+      const iconBox = link.querySelector('div');
+      expect(iconBox).toHaveClass(neonColorMap.neutral.bg, neonColorMap.neutral.text);
+      expect(link.querySelectorAll('svg')).toHaveLength(2);
+      link.focus();
+      expect(link).toHaveFocus();
+    }
+  });
+
+  it('retains localized long labels, native destinations and new-tab disclosures', async () => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'de',
+      fallbackLng: false,
+      resources: {
+        de: {
+          translation: {
+            onboarding: {
+              resources: {
+                title: 'Ressourcen und Hilfe',
+                account: {
+                  title: 'Tesla-Konto und ausführliche Verwaltung des Fleet-API-Zugangs',
+                  desc: 'Verbindung und Zugangsverwaltung für Ihr persönliches Tesla-Konto.',
+                },
+                guide: {
+                  title: 'Vollständige Anleitung zur Einrichtung der kontinuierlichen Fleet-Telemetrie',
+                  desc: 'Alle Schritte zur Konfiguration des kontinuierlichen Datenstroms.',
+                },
+                docs: {
+                  title: 'Dokumentation mit ausführlichen Referenzen und Fehlerbehebung',
+                  desc: 'Anleitungen, technische Referenzen und vollständige Fehlerbehebung.',
+                },
+                newTab: '(öffnet in einem neuen Tab)',
+                privacy: 'TeslaSync läuft auf Ihrer eigenen Hardware.',
+              },
+            },
+          },
+        },
+      },
+    });
+    const originalUseTranslation = reactI18next.useTranslation;
+    const spy = vi.spyOn(reactI18next, 'useTranslation').mockImplementation(
+      () => Object.assign(originalUseTranslation(), { t: i18n.t }),
+    );
+
+    try {
+      renderPanel();
+
+      const nav = screen.getByRole('navigation', { name: 'Ressourcen und Hilfe' });
+      expect(within(nav).getAllByRole('link')).toHaveLength(3);
+      expect(screen.getByText('TeslaSync läuft auf Ihrer eigenen Hardware.')).toBeInTheDocument();
+
+      const resources = [
+        {
+          title: 'Tesla-Konto und ausführliche Verwaltung des Fleet-API-Zugangs',
+          desc: 'Verbindung und Zugangsverwaltung für Ihr persönliches Tesla-Konto.',
+          href: '/tesla-account',
+          external: false,
+        },
+        {
+          title: 'Vollständige Anleitung zur Einrichtung der kontinuierlichen Fleet-Telemetrie',
+          desc: 'Alle Schritte zur Konfiguration des kontinuierlichen Datenstroms.',
+          href: '/docs/fleet-telemetry-setup',
+          external: true,
+        },
+        {
+          title: 'Dokumentation mit ausführlichen Referenzen und Fehlerbehebung',
+          desc: 'Anleitungen, technische Referenzen und vollständige Fehlerbehebung.',
+          href: '/docs/',
+          external: true,
+        },
+      ];
+
+      for (const resource of resources) {
+        const name = `${resource.title}${resource.desc}${resource.external ? '(öffnet in einem neuen Tab)' : ''}`;
+        const link = within(nav).getByRole('link', { name });
+        expect(link).toHaveAttribute('href', resource.href);
+        expect(within(link).getByText(resource.title)).toHaveClass('whitespace-normal', 'break-words');
+        expect(within(link).getByText(resource.desc)).toHaveClass('break-words');
+        expect(link).toHaveAccessibleName(name);
+        if (resource.external) {
+          expect(link).toHaveAttribute('target', '_blank');
+          expect(link).toHaveAttribute('rel', 'noreferrer noopener');
+        } else {
+          expect(link).not.toHaveAttribute('target');
+          expect(link).not.toHaveAttribute('rel');
+        }
+        link.focus();
+        expect(link).toHaveFocus();
+      }
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

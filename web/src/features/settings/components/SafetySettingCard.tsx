@@ -57,7 +57,7 @@ export function SafetySettingCard({
   return (
     <li
       data-testid={`safety-settings-row-${testKey}`}
-      className="flex h-full flex-col gap-3 rounded-xl border border-[var(--border-subtle)] bg-white/[0.02] p-4 transition-colors hover:border-white/[0.08]"
+      className="flex h-full flex-col gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4 transition-colors hover:border-[var(--panel-border-hover)]"
     >
       <div className="flex items-start gap-3">
         <span
@@ -98,7 +98,7 @@ export function SafetySettingCard({
           'inline-flex items-center gap-1 self-start rounded hover:underline',
           typography.size.xs,
           typography.weight.medium,
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40',
+          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]',
           c.text,
         )}
       >

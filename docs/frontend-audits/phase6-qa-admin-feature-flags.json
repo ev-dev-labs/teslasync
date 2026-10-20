@@ -1,0 +1,569 @@
+{
+  "item": "phase6-qa-admin-feature-flags",
+  "phase": 6,
+  "reportStatus": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "sourceAcceptance": "FAIL",
+  "nativeAcceptance": "NOTRUN",
+  "applicationAcceptance": "NOTRUN",
+  "mode": "Read-only source inspection; PASS means only the specifically cited source property, never mounted or native acceptance.",
+  "route": "/admin/flags",
+  "page": "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx",
+  "clock": {
+    "requestLocal": "2026-10-13T09:20:10.220-07:00",
+    "firstObservedLocal": "2026-10-13T09:20:30.9557871-07:00",
+    "latestEvidenceLocal": "2026-10-13T09:30:09.8414526-07:00",
+    "returnByLocal": "2026-10-13T09:40:10.220-07:00",
+    "hardByLocal": "2026-10-13T09:45:10.220-07:00",
+    "commandLimitSeconds": 480,
+    "completionClockLocation": "Final validation and ALL ownership release line in web\\logs\\phase6-qa-admin-feature-flags.log; not an invented report-generation timestamp."
+  },
+  "ownership": {
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-qa-admin-feature-flags.json",
+      "web\\logs\\phase6-qa-admin-feature-flags.log"
+    ],
+    "applicationFiles": "READ_ONLY",
+    "logIgnoredEvidence": ".gitignore contains logs/; inspected directly without Git.",
+    "browserGrant": false,
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "catalogWrites": 0,
+    "configWrites": 0,
+    "apiRequests": 0,
+    "flagMutations": 0,
+    "preferenceMutations": 0,
+    "gitCommands": 0,
+    "subagents": 0,
+    "installs": 0,
+    "helpersCreated": 0,
+    "extensionsUsed": 0,
+    "serversStarted": 0,
+    "backgroundCommandsStarted": 0,
+    "release": "ALL report/log/source/command/browser ownership is explicitly released on the final DONE return; no post-return writes or processes. No other owner's claim is released."
+  },
+  "instructionsRead": [
+    "migration-queue.md:149-162,181-187,198 — rolling finished-page source QA and assigned row",
+    "migration-queue.md:1526 — existing accepted source-only page receipt",
+    "docs\\orchestrator-loop.md — worker/claim/time-box/evidence rules",
+    "docs\\session-handoff.md:59-86,123-147 — historical gates and no unchanged passing reruns",
+    "docs\\frontend-design-contract.md:1-55,263-282,420-606 — MDC-002,020-026,032-034,040-046,060-070",
+    "docs\\frontend-mission.md:1-44,529-570,700-789,921-965,1416-1486",
+    ".github\\instructions\\react-frontend.instructions.md:1-570",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md — older examples not used; canonical SI rules take precedence",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh — inspected, not executed because it runs a global compiler",
+    "docs\\frontend-audits\\audit-page-011.json — preserved original inventory and unresolved findings"
+  ],
+  "preservation": {
+    "originalInventory": "docs\\frontend-audits\\audit-page-011.json:251-266",
+    "originalPageLines": 270,
+    "currentPageLines": 272,
+    "originalComposedLines": 1007,
+    "currentComposedLines": 1009,
+    "composedFileLines": {
+      "FeatureFlagsPage.tsx": 272,
+      "FlagsTable.tsx": 181,
+      "ChangesPanel.tsx": 173,
+      "FlagCompositionPanel.tsx": 129,
+      "FlagEditDrawer.tsx": 177,
+      "FeatureFlagsOperationalBrief.tsx": 77
+    },
+    "minimum70PercentOriginalComposed": 704.9,
+    "lineCountStatus": "PASS",
+    "sectionsOriginal": 4,
+    "sectionsCurrent": [
+      "Summary/registry and recent changes — web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:146",
+      "Registry — web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:154",
+      "Value composition — web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:175",
+      "Recent changes — web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:191"
+    ],
+    "tagCounts": {
+      "LayoutCard": 3,
+      "FeatureFlagsOperationalBrief": 1,
+      "GlassPanel": 3,
+      "ChartContainer": 0
+    },
+    "tagCountBasis": "Page plus the five mounted local presentation dependencies; three GlassPanels are editor fields, not missing page sections. Shared component internals and unmounted legacy FlagStatsBand are excluded, consistently with original inventory.",
+    "originalActionInventory": "Add/Edit/Delete; reason validation; confirm/cancel; JSON editor; immutable existing key; save; retries; summary details; sorting/filtering/pagination/export/table preferences.",
+    "changedOriginalFinding": "The old pending editor dismissal defect is corrected: FeatureFlagsPage.tsx:211 now guards setFlag.isPending. Its accepted 15/15 source receipt was not rerun.",
+    "sourcePinCapture": "2026-10-13T09:26:43.5662687-07:00; 15 SHA-256 pins are retained in the log and compared during final validation.",
+    "pageSha256": "42F11D8C0AC1878CCA54F0414B8639FC94A38202B13C922B0511CAB3474C56E0",
+    "hookSha256": "F7DCBB878744E4CCE1BC5335CC5C04A1270AB2F317A68FAC5E2DB0AF1CECA80A",
+    "handlerSha256": "6A045E98C0524ADBD6A7CEC54E376CEAA2627B32CC83FD3FB3BDBA720B7AA94B",
+    "limits": "Pins identify on-disk inspected source, not a Git commit or a freeze of concurrently owned global inputs. Final hash agreement verifies only the 15 pinned files during this audit interval."
+  },
+  "checks": [
+    {
+      "id": "route-and-four-section-preservation",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\App.tsx:274,710", "web\\src\\lib\\routeRegistry.ts:34", "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:138-203"],
+      "result": "Correct lazy route /admin/flags, distinct from /tesla-features. All four original source sections and both mutation overlays remain; no page-level loading/error/data guard hides neighbors."
+    },
+    {
+      "id": "registry-list-api-route",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\api\\hooks\\useFeatureFlags.ts:54", "internal\\api\\router.go:3210,4395,4518"],
+      "result": "GET /system/flags matches GET /api/v1/system/flags after the client's one prefix."
+    },
+    {
+      "id": "global-audit-api-route",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:68", "web\\src\\api\\hooks\\useFeatureFlags.ts:90", "internal\\api\\router.go:4520", "internal\\api\\apiflagsh\\handler.go:205-217"],
+      "result": "GET /system/flags/changes?limit=50 matches the global audit route and server limit parameter. Counts are correctly labeled as returned recent rows, not full history."
+    },
+    {
+      "id": "single-flag-and-scoped-audit-api-routes",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\api\\hooks\\useFeatureFlags.ts:67-68,89", "internal\\api\\router.go:4522,4524"],
+      "result": "Encoded GET /system/flags/{key} and GET /system/flags/{key}/changes?limit=... match. These hook exports are not mounted reads on this page."
+    },
+    {
+      "id": "set-and-delete-api-routes",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\api\\hooks\\useFeatureFlags.ts:116-120,147-150", "internal\\api\\router.go:4525-4532"],
+      "result": "PUT and DELETE encoded-key routes match; DELETE reason is URLSearchParams encoded; both writes are server sudo-gated. Route agreement does not establish payload agreement."
+    },
+    {
+      "id": "api-value-schema-and-boolean-editing",
+      "status": "FAIL",
+      "basis": "source-proven",
+      "evidence": ["web\\src\\types\\admin-diagnostics.ts:162-177", "web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.tsx:81,94-98", "web\\src\\api\\hooks\\useFeatureFlags.ts:114-120", "internal\\api\\apiflagsh\\handler.go:49-57,124-133"],
+      "issueIds": ["FF-01"],
+      "result": "The UI advertises typed JSON and submits raw parsed values, but the mounted handler reads and writes strings. Boolean/number/object/array saves fail decoding; received registry values classify as strings."
+    },
+    {
+      "id": "query-cancellation-cache-and-live-only-mutation-boundaries",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\api\\hooks\\useFeatureFlags.ts:50-59,64-74,85-97,119,150", "web\\src\\api\\client.ts:378-392,413-425"],
+      "result": "Reads forward AbortSignal, preserve keys/interval/retry/stale policies, and writes retain requiresLiveMode and shared sudo cancellation. No actual requests were made."
+    },
+    {
+      "id": "initial-table-loading-semantics",
+      "status": "FAIL",
+      "basis": "source-proven",
+      "evidence": ["web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:138-142,163-168,200", "web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:172-175", "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:164-167", "web\\src\\components\\ui\\DataTable.tsx:1602-1606", "web\\src\\components\\layout\\PageContainer.tsx:138,163"],
+      "issueIds": ["FF-06"],
+      "result": "Registry/audit represent first load only as empty-row loading text; neither provides a contextual skeleton or drives page busy/settled announcements. Composition and summary have independent loading handling."
+    },
+    {
+      "id": "initial-failure-independent-retry",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:156-161,180-181,193-198", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\FeatureFlagsOperationalBrief.tsx:75-76"],
+      "result": "Only fatal errors replace their own source; retry calls the corresponding refetch while neighboring sections remain."
+    },
+    {
+      "id": "authoritatively-empty-registry-and-audit",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:172-175", "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:135-152", "web\\src\\features\\admin\\components\\feature-flags\\FlagCompositionPanel.tsx:92-101"],
+      "result": "Successful empty lists have explanatory section-local messages; composition points to Add flag. Known empty counts remain legitimate zero, not unknown."
+    },
+    {
+      "id": "filtered-no-match-versus-no-records",
+      "status": "FAIL",
+      "basis": "source-proven",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:175", "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:167", "web\\src\\components\\ui\\DataTable.tsx:536-542,1602-1606", "web\\src\\components\\ui\\tableValueFilters.ts:55-58"],
+      "issueIds": ["FF-05"],
+      "result": "Filtering loaded rows down to zero still displays the authoritative no-flags/no-changes copy."
+    },
+    {
+      "id": "unknown-counts-independent-feed-trust",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\FeatureFlagsOperationalBrief.tsx:19,26-39,49-55", "web\\src\\features\\admin\\pages\\FeatureFlagsPage.test.tsx:541-550"],
+      "result": "Unresolved feeds produce null metric inputs while available feed counts remain visible. Source evidence only; cited existing tests were inspected, not rerun."
+    },
+    {
+      "id": "retained-refresh-error",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\api\\dataState.ts:223-241", "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:74-75,156,193", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\FeatureFlagsOperationalBrief.tsx:49-58", "web\\src\\components\\feedback\\DataSourceNotice.tsx:82,167-170,258-273"],
+      "result": "Rows survive failed refreshes; retained state and refresh-failed labels are shown with per-source retry. No browser refresh or failure injection performed."
+    },
+    {
+      "id": "paused-offline-read-trust",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\api\\dataState.ts:193,204-217,244-250", "web\\src\\components\\feedback\\DataSourceNotice.tsx:83,105-114,159-162,258-273", "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:139-142"],
+      "result": "Named sources distinguish paused initial/retained reads; retained data stays and paused sources expose retry. Summary's generic stale label is supplemented by the page's explicit Paused offline source label."
+    },
+    {
+      "id": "delete-confirmation-and-required-reason",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:102-117,218-268"],
+      "result": "Delete stores the exact row target, shows its key in a modal, requires a trimmed reason, supports cancel, and disables duplicate confirm while pending. This is a UI guard, not a claim that the server mandates the reason."
+    },
+    {
+      "id": "editor-validation-and-pending-draft-preservation",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.tsx:67-98,114-120,130-160", "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:91-100,207-215,219-225", "web\\src\\components\\ui\\Drawer.tsx:85,114,179"],
+      "result": "Key/reason/JSON parsing gate Save; existing keys cannot be renamed. Rejected mutations keep drafts. Close/backdrop/Escape share the now-guarded onClose during pending save. Value schema correctness separately fails FF-01."
+    },
+    {
+      "id": "post-success-query-invalidation",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\api\\hooks\\useFeatureFlags.ts:124-126,153-155", "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:93-95,110-115"],
+      "result": "Resolved writes invalidate the system/flags prefix and keyed query; overlays close only after mutateAsync resolves. This does not verify durable persistence or audit completion."
+    },
+    {
+      "id": "operation-and-audit-aware-persistence-feedback",
+      "status": "FAIL",
+      "basis": "source-proven",
+      "evidence": ["web\\src\\api\\hooks\\useFeatureFlags.ts:124-129,153-158", "internal\\api\\apiflagsh\\handler.go:139-154,176-195,220-229", "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:124-127,231-235"],
+      "issueIds": ["FF-02"],
+      "result": "Success callbacks ignore the response: no-op delete still says deleted; audit_id=0 leaves the unconditional logged/audited promise misleading."
+    },
+    {
+      "id": "actual-reload-durable-persistence-or-toggle",
+      "status": "NOTRUN",
+      "basis": "not-authorized",
+      "evidence": ["migration-queue.md:149-162,198", "web\\src\\api\\hooks\\useFeatureFlags.ts:118-120,149-150"],
+      "result": "No flag write, bool toggle, confirmation submission, page reload or preference save executed. Existing editing is JSON form editing, not an inline boolean switch; no switch requirement was invented."
+    },
+    {
+      "id": "filters-sorting-pagination-and-table-preference-identity",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:36-39,85-95,105-107,161-179", "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:39-43,67-128,157-170", "web\\src\\components\\ui\\DataTable.tsx:416,628,709-725"],
+      "result": "Registry key sort, key value filter, audit date/actor/key/op/reason filters, 25/50/100 loaded-row pagination and stable table IDs remain. No preference was changed."
+    },
+    {
+      "id": "mobile-audit-field-completeness",
+      "status": "FAIL",
+      "basis": "source-proven",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:43,85-128,157-170", "web\\src\\components\\ui\\DataTable.tsx:715-725,1386-1388"],
+      "issueIds": ["FF-03"],
+      "result": "Below md, key, before/after value and reason disappear with no supplied detail/expansion adapter. This is a source-proven responsive rule, not a measured native result."
+    },
+    {
+      "id": "full-opaque-audit-value-readability",
+      "status": "FAIL",
+      "basis": "source-proven",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:45-52,104-118,157-170", "web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:43-74"],
+      "issueIds": ["FF-04"],
+      "result": "Audit values longer than 60 characters have no full read-only expansion. Current registry editor can reveal a current value but cannot recover historical old values."
+    },
+    {
+      "id": "csv-opaque-value-completeness",
+      "status": "FAIL",
+      "basis": "source-proven",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:50-74,116-123", "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:45-52,104-118", "web\\src\\components\\ui\\DataTable.tsx:879-893"],
+      "issueIds": ["FF-04"],
+      "result": "Without exportValue/exportRow, CSV chooses rendered preview text, truncating stored strings at 120/60-character display limits."
+    },
+    {
+      "id": "json-export-raw-value-path",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\components\\ui\\DataTable.tsx:873-906"],
+      "result": "For supported raw value types, JSON export follows raw fields rather than CSV's rendered-text branch. No export/download executed; visible-column and loaded-subset scope remain as existing."
+    },
+    {
+      "id": "canonical-english-key-coverage",
+      "status": "FAIL",
+      "basis": "executed-read-only-catalog-traversal",
+      "evidence": ["web\\src\\api\\hooks\\useFeatureFlags.ts:127,133,156,162", "web\\src\\api\\hooks\\_toastHelpers.ts:90,104", "web\\logs\\phase6-qa-admin-feature-flags.log — canonical traversal at 09:28:28.0196921-07:00"],
+      "issueIds": ["FF-07"],
+      "result": "84 static/deterministic admin.flags keys inspected; four mutation toast keys are absent from canonical English. Other inspected keys resolve; this is not translation/native acceptance."
+    },
+    {
+      "id": "source-accessible-names-and-field-error-associations",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:135-149", "web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.tsx:131-159", "web\\src\\components\\ui\\Input.tsx:60-81,107-114", "web\\src\\components\\ui\\Textarea.tsx:50-59,88-110", "web\\src\\components\\ui\\Modal.tsx:72,115-119", "web\\src\\components\\ui\\Drawer.tsx:85,103-108"],
+      "result": "Row-specific localized action names, visible field labels, stable label/error IDs and shared named dialog/focus owner remain. No screen-reader or keyboard pass inferred."
+    },
+    {
+      "id": "source-motion-boundary",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:35,145,150,189", "web\\src\\components\\motion\\FadeIn.tsx:24-33", "web\\src\\components\\data-display\\MetricBar.tsx:49,86-87"],
+      "result": "Feature uses the motion barrel; existing shared motion preference suppresses entrance/motion on reduction. Actual OS motion acceptance is NOTRUN."
+    },
+    {
+      "id": "restrained-theme-driven-composition",
+      "status": "FAIL",
+      "basis": "source-proven-design-contract",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagCompositionPanel.tsx:36-42,118", "web\\src\\components\\data-display\\MetricBar.tsx:45,88", "docs\\frontend-design-contract.md:56-111"],
+      "issueIds": ["FF-08"],
+      "result": "Composition owns six fixed hex colors, including bright cyan/purple, and implicitly uses gradient fill instead of restrained existing palette roles. This is not a measured contrast failure."
+    },
+    {
+      "id": "shared-category-import-rule",
+      "status": "FAIL",
+      "basis": "executed-scoped-scan-and-source",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.tsx:22"],
+      "issueIds": ["FF-09"],
+      "result": "Text is imported from the concrete UI Typography module rather than the existing category barrel."
+    },
+    {
+      "id": "si-and-workspace-scope-preservation",
+      "status": "PASS",
+      "basis": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:66-75", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\FeatureFlagsOperationalBrief.tsx:24-39,67-73", "web\\src\\lib\\workspaceScope.ts:23-76,95-107"],
+      "result": "No physical-unit conversion or deprecated converter is introduced. Opaque flag values must not be presumed physical quantities. Current registry/recent-50 audit scope remains explicit; no duplicate range/vehicle selector is rendered."
+    },
+    {
+      "id": "frontend-observability-boundary",
+      "status": "PASS",
+      "basis": "bounded-source-inspection",
+      "evidence": ["web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:29-55,91-100,108-118", "web\\src\\api\\hooks\\useFeatureFlags.ts:131-134,160-163", ".github\\instructions\\observability.instructions.md:18"],
+      "result": "No page RUM bootstrap, browser console logging of flag contents, new telemetry helper or instrumentation was added. No backend tracing/SLO acceptance claimed."
+    },
+    {
+      "id": "typescript-current-worker",
+      "status": "NOTRUN",
+      "basis": "scope-prohibition-and-no-unchanged-rerun",
+      "evidence": ["migration-queue.md:149-162", "docs\\session-handoff.md:65-72"],
+      "result": "npx tsc --noEmit was not run. Historical handoff records exit0; its empty raw log cannot independently prove the exit, and is not a fresh worker pass."
+    },
+    {
+      "id": "existing-page-tests-current-worker",
+      "status": "NOTRUN",
+      "basis": "no-unchanged-passing-reruns",
+      "evidence": ["migration-queue.md:1526", "web\\src\\features\\admin\\pages\\FeatureFlagsPage.test.tsx:292-323,350-412,499-550"],
+      "result": "Existing accepted 15/15 receipt preserved. No runner was started; discovered=null, executed=0, passed=0, failed=0, skipped=0 for this worker."
+    },
+    {
+      "id": "lint-build-global-audits-full-suites-and-docker",
+      "status": "NOTRUN",
+      "basis": "explicit-scope-prohibition",
+      "evidence": ["migration-queue.md:149-162", ".github\\skills\\audit-violations\\audit.sh:118-124"],
+      "result": "No full suite, lint/build/compiler campaign or Docker operation. Existing audit script was read but not executed; exact scoped native scans are separate evidence."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "FF-01",
+      "severity": "high",
+      "title": "Typed JSON editor and metrics disagree with string-valued mounted API",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.tsx:45,81,94-98", "web\\src\\types\\admin-diagnostics.ts:162-177", "web\\src\\api\\hooks\\useFeatureFlags.ts:114-120", "internal\\api\\apiflagsh\\handler.go:49-57,125-133", "web\\src\\features\\admin\\components\\feature-flags\\flagValueKind.ts:39-41"],
+      "mechanism": "JSON.parse produces true/false/number/object/array/null; the hook JSON.stringify sends that value directly. Go FlagSetRequest.Value is string, so non-null non-string JSON is a decoder error and the explicit 400 path runs. JSON null leaves the zero-value string empty and Set receives an empty string, not a stored JSON null. List/Get likewise serialize strings, so literal stored \"true\" is a string bucket and the editor seeds it as a quoted string.",
+      "safeRepro": "Source trace only: a synthetic qa.boolean value input true produces body {\"value\":true,\"reason\":\"QA explanation\"}, incompatible with the server's string field. null produces a zero-value empty server string. A synthetic list entry with value \"true\" classifies as string. No PUT or flag creation executed.",
+      "reproExecution": "NOTRUN — no mutation authority; deterministic source incompatibility, not a captured response.",
+      "need": "One explicitly owned end-to-end value-contract fix: reconcile actual server storage/handler, TS response/request types, editor, metrics and documentation without inventing typed backend support or mutating flags. Add covering contract cases under a separate source/test claim."
+    },
+    {
+      "id": "FF-02",
+      "severity": "high",
+      "title": "Success feedback ignores no-op deletion and missing audit persistence",
+      "evidence": ["web\\src\\api\\hooks\\useFeatureFlags.ts:124-129,153-158", "internal\\api\\apiflagsh\\handler.go:186-195,220-229", "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:124-127,231-235"],
+      "mechanism": "The handler can return 200 with Deleted=false (omitted by omitempty) when no flag existed, and returns audit_id=0 when audit is absent/fails. Both onSuccess callbacks discard _res; Delete always says deleted, and page/confirmation copy promises logging regardless of audit outcome.",
+      "safeRepro": "Source trace only: delete an already-removed synthetic key => server Deleted=false => unconditional deleted toast. Successful store write with unavailable audit => audit_id=0 => overlay closes while the UI still promises the change was logged. No deletion, outage injection or auth action executed.",
+      "reproExecution": "NOTRUN — mutation forbidden; conditional paths directly proven.",
+      "need": "One narrow operation/audit-aware feedback fix at useFeatureFlags and affected page/localized copy; distinguish no-op from deletion and persisted flag state from unconfirmed audit, keeping source invalidation and sudo guards."
+    },
+    {
+      "id": "FF-03",
+      "severity": "high",
+      "title": "Mobile audit rows lose their key, before/after values and reason",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:43,85-128,157-170", "web\\src\\components\\ui\\DataTable.tsx:715-725,1386-1388"],
+      "mechanism": "mobileColumns contains only changed_at, actor and operation. DataTable adds hidden md:table-cell to all other columns. The caller supplies neither mobilePresentation nor expandable/renderExpanded, so horizontal scrolling or a visibility menu cannot remove the breakpoint hiding rule.",
+      "safeRepro": "Planned read-only synthetic row at 375px: time/actor/op remain, while key/old/new/reason are display:none with no details action. At 768px the hidden columns reappear.",
+      "reproExecution": "NOTRUN native; source CSS/prop mechanism proven.",
+      "previousInventory": "Existing audit-page-011.json responsive finding remains unresolved.",
+      "need": "One local ChangesPanel mobile-detail adoption using existing DataTable presentation/expansion APIs; preserve all seven fields, table IDs and loaded-subset semantics."
+    },
+    {
+      "id": "FF-04",
+      "severity": "high",
+      "title": "Opaque values are irreversibly abbreviated in audit reading and CSV",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:43-74,116-123", "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:45-52,104-118,157-170", "web\\src\\components\\ui\\DataTable.tsx:879-893"],
+      "mechanism": "Historical old/new values have a 60-character compact preview with no full-value detail. Registry values have a 120-character preview. No exportValue/exportRow is supplied, and CSV prefers extractRenderedText, so exported CSV also contains ellipses instead of full raw values. JSON's raw-value branch is distinct and is not claimed truncated.",
+      "safeRepro": "Planned synthetic stored/audit string of 200 x characters: audit view and CSV show the 57-character prefix plus ellipsis; registry CSV shows its 117-character prefix plus ellipsis. Historical old_value has no current editor fallback.",
+      "reproExecution": "NOTRUN runtime/export; truncation/export branches proven by source.",
+      "previousInventory": "Existing audit-page-011.json full-value and CSV findings remain unresolved.",
+      "need": "One opaque-value preservation fix in the two local tables: canonical full-value exportValue plus keyboard-accessible read-only audit detail, using current DataTable/Drawer APIs."
+    },
+    {
+      "id": "FF-05",
+      "severity": "medium",
+      "title": "Loaded-but-filtered-empty is incorrectly described as an empty server",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:166-175", "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:162-167", "web\\src\\components\\ui\\DataTable.tsx:536-542,1602-1606", "web\\src\\components\\ui\\DataTableValueFilter.tsx:40-44,68-74", "web\\src\\components\\ui\\tableValueFilters.ts:55-58"],
+      "mechanism": "Unchecking all shown filter values creates an empty selection, so loaded rows filter to zero. DataTable renders the same caller emptyMessage for filteredData.length===0; registry says no flags are set and audit says no changes yet although original rows still exist.",
+      "safeRepro": "Planned nonempty synthetic registry: open key filter and uncheck Select all shown values. Expect filtered-no-match and reset guidance; source instead chooses the authoritative empty message.",
+      "reproExecution": "NOTRUN browser; filter predicate/message wiring proven.",
+      "need": "One narrowly assigned filtered-empty message fix using the existing table state owner; preserve genuine empty text, loaded counts and reset behavior."
+    },
+    {
+      "id": "FF-06",
+      "severity": "medium",
+      "title": "Registry and audit first load lack designed busy/skeleton semantics",
+      "evidence": ["web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:138-142,163-168,200", "web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:172-175", "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx:164-167", "web\\src\\components\\ui\\DataTable.tsx:1602-1606", "web\\src\\components\\layout\\PageContainer.tsx:138,163"],
+      "mechanism": "Initial status only selects loading text inside the otherwise empty table. PageLayout receives neither loading nor busy; PageContainer's loading/settled announcement and aria-busy are not driven by these feeds. Other sections already have independent states.",
+      "safeRepro": "Planned source fixture: both data values undefined, fetchStatus=fetching. Registry/audit are text rows, not source-shaped skeletons; page busy is undefined. Do not gate all page content in a repair.",
+      "reproExecution": "NOTRUN DOM; source state/prop absence proven.",
+      "previousInventory": "Existing audit-page-011.json initial-table-loading finding remains unresolved.",
+      "need": "One local initial-loading improvement for the two tables with existing contextual skeleton/busy announcement contracts; retain populated tables during background refresh."
+    },
+    {
+      "id": "FF-07",
+      "severity": "medium",
+      "title": "Four mutation feedback keys are absent from canonical English",
+      "evidence": ["web\\src\\api\\hooks\\useFeatureFlags.ts:127,133,156,162", "web\\src\\api\\hooks\\_toastHelpers.ts:90,104", "web\\logs\\phase6-qa-admin-feature-flags.log — MISSING_CANONICAL_KEY output"],
+      "missingKeys": ["admin.flags.toast.deleteError", "admin.flags.toast.deleteSuccess", "admin.flags.toast.saveError", "admin.flags.toast.saveSuccess"],
+      "mechanism": "Executed nested traversal of canonical en.json checked 84 feature keys and found these four absent. Toast helpers use English defaultValue, so fallback can render but these source keys lack the required canonical catalog entries.",
+      "safeRepro": "Performed read-only catalog traversal, not a toast/mutation. Result: CANONICAL_KEYS_CHECKED=84; MISSING_CANONICAL_KEYS=4; command exit0.",
+      "reproExecution": "PASS for missing-key detection only; native/localized toast rendering NOTRUN.",
+      "need": "Serialized catalog owner adds the four existing referenced keys through normal projection generation/guards, coordinated with FF-02 wording if needed. This worker changes no catalog."
+    },
+    {
+      "id": "FF-08",
+      "severity": "low",
+      "title": "Composition uses a fixed bright local palette and default gradients",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagCompositionPanel.tsx:36-42,118", "web\\src\\components\\data-display\\MetricBar.tsx:45,88", "docs\\frontend-design-contract.md:56-111"],
+      "mechanism": "Six local literal colors bypass existing theme-derived restrained roles; MetricBar defaults to gradient fill because the caller provides no fill override. Zero text-neon matches do not establish a calm palette.",
+      "safeRepro": "Source palette/prop inspection performed; theme screenshots and composed contrast NOTRUN.",
+      "reproExecution": "Source-proven contract mismatch, not a measured visual/contrast failure.",
+      "previousInventory": "Existing audit-page-011.json composition-palette finding remains; decorative page icons are now token-muted and are not reported as still hardcoded cyan.",
+      "need": "One local composition palette adoption using existing restrained roles/solid-fill API without changing labels, counts, percentages or saved theme identity."
+    },
+    {
+      "id": "FF-09",
+      "severity": "low",
+      "title": "Editor uses a concrete UI module import instead of the category barrel",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.tsx:22"],
+      "mechanism": "Direct import from @/components/ui/Typography is a production feature-layer category import violation; existing @/components/ui already supplies Text.",
+      "safeRepro": "Executed case-sensitive source scan reports component_deep_import count=1 with this exact line.",
+      "reproExecution": "PASS for detection only; no source repair performed.",
+      "previousInventory": "Existing audit-page-011.json import finding remains unresolved.",
+      "need": "One exact editor import adoption under its assigned source owner; no shared export or new primitive required."
+    }
+  ],
+  "candidatesNotConfirmed": [
+    {
+      "id": "C-01",
+      "status": "NOTRUN",
+      "title": "Composed row/footer mobile targets may remain under 44px",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:130-153", "web\\src\\components\\ui\\Button.tsx:36-46", "web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.tsx:113-125", "web\\src\\index.css:1997-2015"],
+      "mechanismCandidate": "Registry sm buttons use h-9 (36px at the default scale); default editor footer uses md h-10 (40px), with no caller min-h-11/touch-target class. Shared global utilities are opt-in. Actual composed hit rectangles, scaling and spacing were not measured.",
+      "neededProof": "Read-only authorized native geometry/hit tests at 320/375/390/430/767px, including long labels and overlap; no blanket target pass or source-only native FAIL."
+    },
+    {
+      "id": "C-02",
+      "status": "NOTRUN",
+      "title": "Freshness timestamp may ignore saved locale/timezone/time-format preferences",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts:13-16", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\FeatureFlagsOperationalBrief.tsx:69-71"],
+      "mechanismCandidate": "toLocaleString() has no explicit app locale/timezone options. Browser defaults may differ from saved app preferences. No preference mutation, native preference scenario or full formatting-bridge trace performed.",
+      "neededProof": "Assigned formatting owner compares existing saved preference path and formatter without changing preferences; browser validation requires a separate safe grant."
+    },
+    {
+      "id": "C-03",
+      "status": "NOTRUN",
+      "title": "Unbroken keys, nonwrapping row actions and long translations may clip narrow registry allocation",
+      "evidence": ["web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx:109-111,130-153", "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx:151-154"],
+      "mechanismCandidate": "All three registry columns remain on mobile; key text and actions do not explicitly wrap. Table scroll exists, but no native allocated-width/keyboard-scroll proof was captured.",
+      "neededProof": "Authorized synthetic long-key/translated-label and 200% text review in narrow containers; preserve all fields/actions rather than hiding them."
+    }
+  ],
+  "nativeMatrix": [
+    {"id": "functional-open-editor-delete-confirm-and-cancel", "status": "NOTRUN", "reason": "No browser grant; source confirmation wiring only. No submission."},
+    {"id": "native-initial-loading-error-empty-retained-and-paused", "status": "NOTRUN", "reason": "No live browser state interception, fixture mount, API calls or offline manipulation authorized."},
+    {"id": "native-viewports", "status": "NOTRUN", "widths": [320,375,390,430,768,1024,1280,1440,1920,2560], "reason": "No browser or screenshot ownership."},
+    {"id": "native-narrow-allocated-containers-and-200percent-text", "status": "NOTRUN", "reason": "Source grid/table strategies inspected, not rendered."},
+    {"id": "native-dark-light-custom-theme-and-contrast", "status": "NOTRUN", "reason": "No rendered composited colors or contrast measurements."},
+    {"id": "native-keyboard-focus-trap-restore-and-screen-reader", "status": "NOTRUN", "reason": "Shared focus/label owner source inspected; no OS/accessibility-tree verification."},
+    {"id": "native-touch-rectangles-and-hit-overlap", "status": "NOTRUN", "reason": "No geometry or pointer hit testing."},
+    {"id": "native-long-locales-rtl-and-cold-namespace-loading", "status": "NOTRUN", "reason": "Canonical English data traversal only; no application language/preference changes."},
+    {"id": "native-forced-colors-reduced-motion-and-low-bandwidth", "status": "NOTRUN", "reason": "Shared source policy is not OS/open-state acceptance."},
+    {"id": "native-sudo-flow-persistence-peer-refresh-and-exports", "status": "NOTRUN", "reason": "No authentication action, flag mutation, real identities, download or API execution."}
+  ],
+  "commands": [
+    {
+      "id": "scoped-source-patterns-and-pins",
+      "clockLocal": "2026-10-13T09:26:43.5662687-07:00",
+      "command": "PowerShell: Select-String -LiteralPath $scope -Pattern $rule.Value -CaseSensitive; Get-Content line counts; Get-FileHash -Algorithm SHA256 for 15 exact paths. $scope is the six composed files listed in preservation plus web\\src\\api\\hooks\\useFeatureFlags.ts.",
+      "exitCode": 0,
+      "rawCounts": {
+        "static_inline_style": 0,
+        "raw_control": 0,
+        "direct_vendor_import": 0,
+        "old_api_import": 0,
+        "component_deep_import": 1,
+        "hook_double_prefix": 0,
+        "camel_query": 0,
+        "any_type_text_match": 1,
+        "neon_body": 0,
+        "legacy_unit_converter": 0
+      },
+      "classification": "The one any-text match is a doc comment saying the backend accepts any JSON, not an any annotation. The one deep component import is FF-09. Counts are exact case-sensitive scoped pattern matches, not a global clean-code certificate.",
+      "rawOutput": "web\\logs\\phase6-qa-admin-feature-flags.log"
+    },
+    {
+      "id": "canonical-key-traversal",
+      "clockLocal": "2026-10-13T09:28:28.0196921-07:00",
+      "command": "PowerShell: Get-Content -LiteralPath .\\src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable; enumerate static admin.flags key strings in the seven scoped files plus six type-kind and six description keys; traverse every dot segment via IDictionary.Contains.",
+      "exitCode": 0,
+      "keysChecked": 84,
+      "missing": 4,
+      "rawOutput": "web\\logs\\phase6-qa-admin-feature-flags.log",
+      "limitations": "Read-only detection command succeeds while revealing a FAIL in catalog coverage; translations and cold namespace runtime are not certified."
+    },
+    {
+      "id": "route-handler-action-evidence",
+      "clockLocal": "2026-10-13T09:29:18.5786332-07:00",
+      "command": "PowerShell: Select-String -LiteralPath each exact page/component/hook/router/handler path -Pattern its API/state/action expression -CaseSensitive; emit repository-relative file:line:source.",
+      "exitCode": 0,
+      "rawOutput": "web\\logs\\phase6-qa-admin-feature-flags.log"
+    },
+    {
+      "id": "trust-accessibility-export-and-preference-evidence",
+      "clockLocal": "2026-10-13T09:30:09.8414526-07:00",
+      "command": "PowerShell: Select-String -LiteralPath each exact brief/dataState/sourceMetadata/DataTable/Button/composition/Drawer/Modal/toast path -Pattern the recorded trust/a11y/export expressions -CaseSensitive; emit repository-relative file:line:source.",
+      "exitCode": 0,
+      "rawOutput": "web\\logs\\phase6-qa-admin-feature-flags.log"
+    }
+  ],
+  "verification": {
+    "observedLocal": "2026-10-13T09:34:27.5995969-07:00",
+    "reportJsonParse": "PASS",
+    "checkCount": 34,
+    "checkStatuses": {"PASS": 20, "FAIL": 10, "NOTRUN": 4},
+    "confirmedIssueCount": 9,
+    "candidateCount": 3,
+    "nativeMatrixNotRunCount": 10,
+    "invalidStatusCount": 0,
+    "unknownIssueReferenceCount": 0,
+    "nativeNonNotRunCount": 0,
+    "sourcePinsChecked": 15,
+    "sourcePinDeltas": 0,
+    "validationCommandExitCode": 0,
+    "elapsedSecondsAtValidation": 857.38,
+    "limits": "Report validation and source-hash agreement are not functional, native, compiler or test acceptance. Exact original inventory and observability line citations were corrected from the validation output; only the changed report needs final JSON validation."
+  },
+  "historicalEvidenceNotRerun": {
+    "pageReceipt": "migration-queue.md:1526: source-only accepted 15/15 scoped cases exit0, lint0/style0; 270->272 page, 1007->1009 composed lines and four sections. This is not a current-worker execution or native pass.",
+    "technicalGate": "docs\\session-handoff.md:65-72 records serialized build and literal npx tsc --noEmit exit0 at 15:13:56.912--15:20:34.639Z. The raw typecheck log was inspected and is zero lines; numeric exit is historical metadata, not independently recovered from empty text.",
+    "unchangedPassingReruns": 0,
+    "newScopedScanReason": "This QA adds direct component/hook/handler/schema/canonical-key coverage rather than rerunning the accepted page test/lint/style selectors or global gate.",
+    "priorFindingsPreserved": "Original mobile/full-value/CSV/loading/palette/import debt remains. Original pending-dismissal defect and hardcoded page icon colors have source corrections and are not falsely reported still present."
+  },
+  "limits": {
+    "api": "All agreement/failure mechanisms are source-traced. No server response, write, auth challenge, current data or persisted flag was accessed.",
+    "security": "This is the requested bounded operator UX/state/API contract review, not an exploit/security campaign.",
+    "i18n": "Canonical English only; four definite missing keys. Existing API enum strings and stored data are not recased or translated.",
+    "inventory": "Original audit preserved; no queue, route, inventory, source, shared component, test, catalog, config or helper changes.",
+    "failedLookup": "web\\src\\i18n\\namespace-map.ts does not exist. Actual web\\src\\i18n\\index.ts/runtime manifest naming was used; no contents inferred.",
+    "concurrency": "No other actor was contacted or stopped; only this worker's exact report/log scope is released.",
+    "completion": "Report delivery is complete with explicit source findings and NOTRUN native/gates. It is not page or application acceptance."
+  },
+  "needs": [
+    "Priority: assign FF-01 value-contract integration and FF-02 operation/audit-aware feedback; do not test these by mutating flags during QA.",
+    "Assign narrowly scoped FF-03 mobile audit completeness and FF-04 opaque-value reading/CSV preservation.",
+    "Retain/assign FF-05 filtered-empty and FF-06 initial table loading improvements.",
+    "Serialized catalog owner handles FF-07 four mutation toast keys.",
+    "Local owners handle FF-08 palette and FF-09 category import; no broad remodernization.",
+    "Native matrix stays NOTRUN until explicit safe browser ownership and synthetic read-only guards; candidates C-01..C-03 require further proof, not automatic fixes."
+  ]
+}

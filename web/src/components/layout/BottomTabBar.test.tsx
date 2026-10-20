@@ -1,43 +1,47 @@
 /**
  * BottomTabBar behaviour tests.
  *
- * BottomTabBar is the mobile-only (`< lg`) bottom navigation for the five
- * most-trafficked routes (Dashboard / Drives / Charging / Battery / Map) plus
- * a More tab into the Explore catalogue. It renders one <PrefetchLink> per tab
- * inside a navigation landmark, computes an active state from the current
- * pathname, and exposes the tab paths as the `BOTTOM_TAB_PATHS` set so the
- * sidebar can de-emphasise duplicates on mobile.
+ * BottomTabBar is the phone-only bottom navigation owned by the CommandDeck:
+ * four primary section tabs (Home / Vehicles / Driving / Charging) plus a
+ * More tab that opens the deck's section sheet. It renders one native
+ * <button> per tab inside a navigation landmark, derives its selected state
+ * from the `activeSection` prop (exact section-title equality, with More as
+ * the fallback for any section without a primary tab), and reports taps
+ * through `onChoose` (a section title, or null for More). Phone-only display
+ * is CSS-driven (`sidenav-phone-tabs` hides at >=768px) and the deck mounts
+ * the bar only on phone viewports. The `BOTTOM_TAB_PATHS` export is the set
+ * of tab destinations so the sidebar can de-emphasise duplicates on mobile.
  *
  * These tests exercise multiple facets rather than a smoke render:
  *   1. The navigation landmark + its translated accessible label.
- *   2. The full, order-stable set of tab links and their routes/labels.
+ *   2. The full, order-stable set of tab buttons and their labels.
  *   3. i18n wiring — the exact (key, English-fallback) pairs for every string.
- *   4. Active-state logic across the tricky branches:
- *        - "/" is EXACT-match only (never lit on a sub-route),
- *        - a tab lights on its exact route,
- *        - a tab lights on a NESTED child route (`startsWith(path + '/')`),
- *        - a sibling route sharing a prefix (`/charging-curve`) does NOT light
- *          the `/charging` tab (the boundary bug this logic guards against).
+ *   4. Selection logic across the tricky branches:
+ *        - Home is selected by default,
+ *        - a tab is selected on its exact section title,
+ *        - More is selected for ANY section without a primary tab,
+ *        - a similarly-named section (`Charging curve`) does NOT select the
+ *          `Charging` tab (the exact-equality guard).
  *   5. a11y — the decorative glyph is `aria-hidden` (excluded from the a11y
  *      tree) and no unlabelled `img` role leaks to screen readers; every tab is
- *      a native, focusable anchor with a WCAG 2.5.5 touch target.
- *   6. The active underline indicator renders only for the active tab.
- *   7. Route prefetch is wired: hovering a tab prefetches its lazy chunk.
- *   8. Theme surfaces keep inactive text readable and the active state
+ *      a native, focusable button with a WCAG 2.5.5 touch target.
+ *   6. The selected-state marker renders only for the active tab.
+ *   7. Tap activation is wired: pressing a tab reports its section via
+ *      `onChoose` (null for More).
+ *   8. Theme surfaces keep inactive text readable and the selected state
  *      distinguishable without relying on color alone.
  *   9. The `BOTTOM_TAB_PATHS` export is the exact set of destinations.
  *
  * react-i18next is stubbed with a passthrough `t(key, fallback)` spy (the same
  * convention as QuickNav.test.tsx) so the DOM shows English defaults AND we can
- * assert on the exact (key, fallback) pairs. `@/lib/routePrefetch` is mocked so
- * hover never triggers a real dynamic import (matching PrefetchLink.test.tsx).
- * A <MemoryRouter> supplies the router context the links need. No network is
+ * assert on the exact (key, fallback) pairs. The real Button is used so focus,
+ * keyboard activation and touch-target classes are genuine. No network is
  * touched.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
 import { navSections } from './Layout'
 import { navRouteIcons } from '@/lib/navRouteIcons'
 import { SIDEBAR_ROUTE_ICONS } from './sidebar/sidebarIcons'
@@ -50,38 +54,38 @@ vi.mock('react-i18next', async () => {
   return { ...actual, useTranslation: () => ({ t: tSpy }) }
 })
 
-vi.mock('@/lib/routePrefetch', () => ({ prefetchRoute: vi.fn() }))
-
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
-import { prefetchRoute } from '@/lib/routePrefetch'
 
-const mockedPrefetch = vi.mocked(prefetchRoute)
-
-// Declared order of TABS — the rendered link order is deterministic, so the
-// index-based assertions below are stable.
+// Declared tab order — the rendered button order is deterministic, so the
+// index-based assertions below are stable. `section: null` is the More tab,
+// which opens the deck sheet instead of selecting a section.
 const TABS = [
-  { path: '/', label: 'Home', key: 'nav.mobileHome' },
-  { path: '/drives', label: 'Drives', key: 'nav.mobileDrives' },
-  { path: '/charging', label: 'Charging', key: 'nav.mobileCharging' },
-  { path: '/battery', label: 'Battery', key: 'nav.mobileBattery' },
-  { path: '/live', label: 'Map', key: 'nav.mobileMap' },
-  { path: '/explore', label: 'More', key: 'nav.mobileMore' },
+  { section: 'Home', label: 'Home', key: 'nav.mobileHome' },
+  { section: 'Vehicles', label: 'Vehicles', key: 'nav.sidenav.mobileVehicles' },
+  { section: 'Driving', label: 'Driving', key: 'nav.sidenav.mobileDriving' },
+  { section: 'Charging', label: 'Charging', key: 'nav.mobileCharging' },
+  { section: null, label: 'More', key: 'nav.mobileMore' },
 ] as const
 
-function renderBar(pathname = '/') {
-  return render(
-    <MemoryRouter initialEntries={[pathname]}>
-      <BottomTabBar />
-    </MemoryRouter>,
+// The destinations the tabs stand for (used by the sidebar to de-emphasise
+// duplicates on mobile). Note the Driving tab stands for /drives and More
+// stands for the /explore catalogue.
+const TAB_PATHS = ['/', '/vehicles', '/drives', '/charging', '/explore'] as const
+
+function renderBar(activeSection?: string) {
+  const onChoose = vi.fn()
+  const result = render(
+    <BottomTabBar activeSection={activeSection} onChoose={onChoose} />,
   )
+  return { ...result, onChoose }
 }
 
-function indicatorsWithin(el: HTMLElement): HTMLElement[] {
-  // The active underline is the theme-primary pill span. Filter by className
-  // rather than a CSS selector to avoid escaping the `[var(--…)]` arbitrary
-  // value in querySelector.
-  return Array.from(el.querySelectorAll('span')).filter((s) =>
-    s.className.includes('bg-[var(--theme-primary)]'),
+function selectedWithin(el: HTMLElement): HTMLElement[] {
+  // The selected marker is the `is-selected` class (drives the ::before
+  // position bar in sidenav.css alongside `aria-current`). Filter by
+  // className rather than a CSS selector to keep the query exact.
+  return Array.from(el.querySelectorAll('button')).filter((b) =>
+    b.className.includes('is-selected'),
   )
 }
 
@@ -91,7 +95,6 @@ beforeEach(() => {
   // still letting us assert on the (key, fallback) pairs the component passes.
   tSpy.mockReset()
   tSpy.mockImplementation((_key: string, fallback?: string) => fallback ?? _key)
-  mockedPrefetch.mockClear()
 })
 
 describe('BottomTabBar', () => {
@@ -99,17 +102,21 @@ describe('BottomTabBar', () => {
     renderBar()
     const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
     expect(nav).toBeInTheDocument()
-    expect(nav.className).toContain('h-[var(--shell-tab-bar-height)]')
+    expect(nav).toHaveAttribute('data-role', 'bottom-tab-bar')
+    expect(nav.className).toContain('sidenav-phone-tabs')
     expect(tSpy).toHaveBeenCalledWith('nav.quickNav', 'Quick navigation')
   })
 
-  it('renders exactly one link per tab in declared order with correct hrefs', () => {
+  it('renders exactly one button per tab in declared order with correct labels', () => {
     renderBar()
-    const links = screen.getAllByRole('link')
-    expect(links).toHaveLength(TABS.length)
+    const buttons = screen.getAllByRole('button')
+    expect(buttons).toHaveLength(TABS.length)
     TABS.forEach((tab, i) => {
-      expect(links[i]).toHaveAttribute('href', tab.path)
+      expect(buttons[i]).toHaveAccessibleName(tab.label)
+      expect(buttons[i]).toHaveTextContent(tab.label)
     })
+    // Button-based by design: no link roles leak from the tab bar.
+    expect(screen.queryAllByRole('link')).toHaveLength(0)
   })
 
   it('labels every tab via i18n with an English fallback (aria-label + caption)', () => {
@@ -118,150 +125,259 @@ describe('BottomTabBar', () => {
       // The component passes each tab's (i18nKey, fallback) to t().
       expect(tSpy).toHaveBeenCalledWith(tab.key, tab.label)
       // aria-label is the accessible name; getByRole(name) proves it resolved.
-      expect(screen.getByRole('link', { name: tab.label })).toBeInTheDocument()
+      const button = screen.getByRole('button', { name: tab.label })
+      expect(button).toBeInTheDocument()
+      expect(button.querySelector('.sidenav-tab-label')).toHaveTextContent(tab.label)
     }
   })
 
-  it('marks the Home tab active (aria-current="page") on the exact root route', () => {
-    renderBar('/')
-    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute(
+  it('marks the Home tab selected (aria-current="true") by default', () => {
+    renderBar()
+    expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute(
       'aria-current',
-      'page',
+      'true',
     )
-    // Exactly one tab may be current at a time.
-    for (const tab of TABS.filter((t) => t.path !== '/')) {
+    // Exactly one tab may be selected at a time.
+    for (const tab of TABS.filter((t) => t.label !== 'Home')) {
       expect(
-        screen.getByRole('link', { name: tab.label }),
+        screen.getByRole('button', { name: tab.label }),
       ).not.toHaveAttribute('aria-current')
     }
   })
 
-  it('never lights the Home tab on a non-root route ("/" is exact-match only)', () => {
-    renderBar('/drives')
-    expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute(
+  it('never lights the Home tab when another section is active (exact-match only)', () => {
+    renderBar('Driving')
+    expect(screen.getByRole('button', { name: 'Home' })).not.toHaveAttribute(
       'aria-current',
     )
-    expect(screen.getByRole('link', { name: 'Drives' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Driving' })).toHaveAttribute(
       'aria-current',
-      'page',
-    )
-  })
-
-  it('lights a tab on its exact route', () => {
-    renderBar('/charging')
-    expect(screen.getByRole('link', { name: 'Charging' })).toHaveAttribute(
-      'aria-current',
-      'page',
+      'true',
     )
   })
 
-  it('lights the More tab on the Explore catalogue route', () => {
-    renderBar('/explore')
-    const more = screen.getByRole('link', { name: 'More' })
-    expect(more).toHaveAttribute('href', '/explore')
-    expect(more).toHaveAttribute('aria-current', 'page')
-  })
-
-  it('lights a tab on a nested child route (startsWith path + "/")', () => {
-    renderBar('/charging/42')
-    expect(screen.getByRole('link', { name: 'Charging' })).toHaveAttribute(
+  it('lights a tab on its exact section', () => {
+    renderBar('Charging')
+    expect(screen.getByRole('button', { name: 'Charging' })).toHaveAttribute(
       'aria-current',
-      'page',
-    )
-    // No sibling tab is falsely activated by the nested route.
-    expect(screen.getByRole('link', { name: 'Battery' })).not.toHaveAttribute(
-      'aria-current',
+      'true',
     )
   })
 
-  it('does NOT light a tab for a sibling route sharing its prefix (boundary guard)', () => {
-    // "/charging-curve" must not activate the "/charging" tab — the reason the
-    // active check uses `startsWith(path + '/')` and not a bare `startsWith`.
-    renderBar('/charging-curve')
-    expect(screen.getByRole('link', { name: 'Charging' })).not.toHaveAttribute(
+  it('lights the More tab when the active section has no primary tab', () => {
+    renderBar('Battery')
+    const more = screen.getByRole('button', { name: 'More' })
+    expect(more).toHaveAttribute('aria-current', 'true')
+    expect(more).toHaveClass('is-selected')
+    // No primary tab is falsely activated by the off-bar section.
+    for (const tab of TABS.filter((t) => t.section !== null)) {
+      expect(
+        screen.getByRole('button', { name: tab.label }),
+      ).not.toHaveAttribute('aria-current')
+    }
+  })
+
+  it('lights More for any off-bar section (fallback, not a prefix match)', () => {
+    renderBar('Reports')
+    expect(screen.getByRole('button', { name: 'More' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    // No sibling tab is falsely activated by the off-bar section.
+    expect(screen.getByRole('button', { name: 'Charging' })).not.toHaveAttribute(
       'aria-current',
     )
-    // An off-bar route activates no tab at all.
-    screen.getAllByRole('link').forEach((link) => {
-      expect(link).not.toHaveAttribute('aria-current')
-    })
+  })
+
+  it('does NOT light a primary tab for a similarly-named section (exact-equality guard)', () => {
+    // "Charging curve" must not activate the "Charging" tab — the reason the
+    // selected check uses exact section-title equality and not a prefix test.
+    renderBar('Charging curve')
+    expect(screen.getByRole('button', { name: 'Charging' })).not.toHaveAttribute(
+      'aria-current',
+    )
+    // An off-bar section falls back to More, keeping exactly one tab current.
+    const current = screen
+      .getAllByRole('button')
+      .filter((b) => b.hasAttribute('aria-current'))
+    expect(current).toHaveLength(1)
+    expect(current[0]).toHaveAccessibleName('More')
   })
 
   it('marks each tab glyph decorative (aria-hidden) and leaks no img role', () => {
     renderBar()
-    const links = screen.getAllByRole('link')
-    links.forEach((link) => {
+    const buttons = screen.getAllByRole('button')
+    buttons.forEach((button) => {
       // One decorative icon per tab; the meaning is carried by the aria-label.
-      expect(link.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(1)
+      expect(button.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(1)
     })
     expect(screen.queryAllByRole('img')).toHaveLength(0)
   })
 
-  it('renders the active underline indicator only on the active tab', () => {
-    renderBar('/drives')
+  it('renders the selected-state marker only on the active tab', () => {
+    renderBar('Driving')
     const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
-    // Exactly one underline across the whole bar.
-    expect(indicatorsWithin(nav)).toHaveLength(1)
+    // Exactly one selected marker across the whole bar.
+    const selected = selectedWithin(nav)
+    expect(selected).toHaveLength(1)
     // ...and it belongs to the active tab.
+    expect(selected[0]).toBe(screen.getByRole('button', { name: 'Driving' }))
     expect(
-      indicatorsWithin(screen.getByRole('link', { name: 'Drives' })),
-    ).toHaveLength(1)
-    expect(
-      indicatorsWithin(screen.getByRole('link', { name: 'Charging' })),
-    ).toHaveLength(0)
+      screen.getByRole('button', { name: 'Charging' }),
+    ).not.toHaveClass('is-selected')
   })
 
-  it('uses readable theme surfaces and a non-color-only active state', () => {
-    renderBar('/charging')
+  it('uses readable theme surfaces and a non-color-only selected state', () => {
+    renderBar('Charging')
 
     const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
-    expect(nav.className).toContain('bg-[var(--surface-1)]')
-    expect(nav.className).toContain('dark:bg-[var(--surface-overlay)]')
-    expect(nav.className).toContain('border-[var(--border-default)]')
-    expect(nav.className).toContain('shadow-e3')
+    expect(nav.className).toContain('sidenav-phone-tabs')
+    expect(nav.className).toContain('safe-bottom')
+    expect(nav.className).not.toContain('backdrop-blur')
 
-    const active = screen.getByRole('link', { name: 'Charging' })
-    expect(active.className).toContain('text-[var(--text-primary)]')
-    expect(active.className).toContain('bg-[rgba(var(--theme-primary-rgb),0.10)]')
-    expect(active.className).toContain('font-semibold')
-    expect(active.querySelector('svg')).toHaveAttribute('stroke-width', '2.4')
+    // The selected state is exposed three ways: the `is-selected` positional
+    // marker (::before bar in sidenav.css), `aria-current` for assistive
+    // tech, and the accent text color — never color alone.
+    const active = screen.getByRole('button', { name: 'Charging' })
+    expect(active.className).toContain('sidenav-phone-tab')
+    expect(active).toHaveClass('is-selected')
+    expect(active).toHaveAttribute('aria-current', 'true')
+    expect(active.querySelector('svg')).toHaveAttribute('stroke-width', '1.8')
 
-    const inactive = screen.getByRole('link', { name: 'Drives' })
-    expect(inactive.className).toContain('text-[var(--text-secondary)]')
-    expect(inactive.className).not.toContain('text-[var(--text-muted)]')
-    expect(inactive.querySelector('svg')).toHaveAttribute('stroke-width', '2')
+    const inactive = screen.getByRole('button', { name: 'Driving' })
+    expect(inactive.className).toContain('sidenav-phone-tab')
+    expect(inactive).not.toHaveClass('is-selected')
+    expect(inactive).not.toHaveAttribute('aria-current')
+    expect(inactive.querySelector('svg')).toHaveAttribute('stroke-width', '1.8')
   })
 
-  it('shows no underline indicator when the route is off the bar', () => {
-    renderBar('/settings')
+  it('lights More (and only More) when the section is off the bar', () => {
+    renderBar('Settings')
     const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
-    expect(indicatorsWithin(nav)).toHaveLength(0)
+    const selected = selectedWithin(nav)
+    expect(selected).toHaveLength(1)
+    expect(selected[0]).toBe(screen.getByRole('button', { name: 'More' }))
+    expect(screen.getByRole('button', { name: 'More' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
   })
 
-  it('prefetches a tab route on hover (wires PrefetchLink `to`)', () => {
-    renderBar('/')
-    expect(mockedPrefetch).not.toHaveBeenCalled()
-    fireEvent.mouseEnter(screen.getByRole('link', { name: 'Charging' }))
-    expect(mockedPrefetch).toHaveBeenCalledWith('/charging')
+  it('reports the tapped section via onChoose, null for More', () => {
+    const { onChoose } = renderBar('Home')
+    expect(onChoose).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Charging' }))
+    expect(onChoose).toHaveBeenCalledTimes(1)
+    expect(onChoose).toHaveBeenLastCalledWith('Charging')
+    fireEvent.click(screen.getByRole('button', { name: 'More' }))
+    expect(onChoose).toHaveBeenCalledTimes(2)
+    expect(onChoose).toHaveBeenLastCalledWith(null)
+    // Tapping never navigates by itself: no link roles appear.
+    expect(screen.queryAllByRole('link')).toHaveLength(0)
   })
 
-  it('renders tabs as native, focusable anchors (keyboard operable)', () => {
+  it('renders tabs as native, focusable buttons (keyboard operable)', () => {
     renderBar()
-    const first = screen.getByRole('link', { name: 'Home' })
-    expect(first.tagName).toBe('A')
+    const first = screen.getByRole('button', { name: 'Home' })
+    expect(first.tagName).toBe('BUTTON')
+    expect(first).toHaveAttribute('type', 'button')
     first.focus()
     expect(first).toHaveFocus()
   })
 
-  it('is a mobile-only bar with iOS safe-area padding and ≥44px touch targets', () => {
+  it('is a phone-only bar with iOS safe-area padding and 44px touch targets', () => {
     renderBar()
     const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
-    expect(nav.className).toContain('xl:hidden')
-    expect(nav.className).toContain('safe-bottom')
-    screen.getAllByRole('link').forEach((link) => {
-      expect(link.className).toContain('min-h-[44px]')
-      expect(link.className).toContain('min-w-[48px]')
+    // Phone-only display is CSS-driven: `sidenav-phone-tabs` hides at
+    // >=768px and the deck mounts the bar only on phone viewports.
+    expect(nav.className).toContain('sidenav-phone-tabs')
+    expect(nav).toHaveClass('safe-bottom')
+    // Fixed five-tab design: no scroll container by design.
+    expect(nav.className).not.toContain('overflow-x-auto')
+    screen.getAllByRole('button').forEach((button) => {
+      // sidenav.css gives `.sidenav-phone-tab` min-height: 44px (WCAG 2.5.5).
+      expect(button.className).toContain('sidenav-phone-tab')
+      expect(button).toHaveAttribute('type', 'button')
     })
+  })
+
+  it('retains full long translated captions without truncation for RTL', () => {
+    const longLabel = 'Eine sehr lange übersetzte Navigationsbeschriftung'
+    tSpy.mockImplementation((key: string, fallback?: string) =>
+      key === 'nav.mobileCharging' ? longLabel : fallback ?? key,
+    )
+    const { container } = renderBar('Charging')
+    container.setAttribute('dir', 'rtl')
+    const charging = screen.getByRole('button', { name: longLabel })
+    expect(charging).toHaveTextContent(longLabel)
+    expect(charging).toHaveAttribute('aria-current', 'true')
+    expect(charging).toHaveClass('is-selected')
+    expect(charging.querySelector('.sidenav-tab-label')).not.toHaveClass('truncate')
+    expect(container).toHaveAttribute('dir', 'rtl')
+  })
+
+  it('retains keyboard activation, explicit focus and reduced-motion presentation', () => {
+    const { onChoose } = renderBar('Home')
+    const charging = screen.getByRole('button', { name: 'Charging' })
+    charging.focus()
+    expect(charging).toHaveFocus()
+    expect(onChoose).not.toHaveBeenCalled()
+    fireEvent.keyDown(charging, { key: 'Enter' })
+    fireEvent.click(charging)
+    expect(onChoose).toHaveBeenCalledWith('Charging')
+    expect(charging.className).toContain('focus-visible:outline-[var(--focus-ring)]')
+    expect(charging.className).toContain('forced-colors:focus-visible:outline-[Highlight]')
+    expect(charging.className).toContain('motion-reduce:transition-none')
+  })
+
+  it.each(['ltr', 'rtl'])(
+    'moves keyboard focus across every tab in order in %s without choosing',
+    async (direction) => {
+      const user = userEvent.setup()
+      const labels = TABS.map((tab) => `${tab.label} — Sehr lange übersetzte Navigationsbeschriftung`)
+      tSpy.mockImplementation((key: string, fallback?: string) => {
+        const index = TABS.findIndex((tab) => tab.key === key)
+        return index < 0 ? fallback ?? key : labels[index]
+      })
+      const { container, onChoose } = renderBar('Home')
+      container.setAttribute('dir', direction)
+      const buttons = screen.getAllByRole('button')
+
+      expect(onChoose).not.toHaveBeenCalled()
+      for (const [index, tab] of TABS.entries()) {
+        await user.tab()
+        expect(buttons[index]).toHaveFocus()
+        expect(buttons[index]).toHaveAccessibleName(labels[index])
+        expect(buttons[index]).toHaveTextContent(labels[index])
+        // Focus alone never chooses: selection stays on Home throughout.
+        expect(onChoose).not.toHaveBeenCalled()
+        expect(screen.getByRole('button', { name: labels[0] })).toHaveAttribute(
+          'aria-current',
+          'true',
+        )
+        expect(tab.label).toBe(TABS[index].label)
+      }
+
+      await user.tab({ shift: true })
+      expect(buttons[3]).toHaveFocus()
+      expect(onChoose).not.toHaveBeenCalled()
+
+      // Explicit activation chooses the focused tab.
+      await user.keyboard('{Enter}')
+      expect(onChoose).toHaveBeenCalledTimes(1)
+      expect(onChoose).toHaveBeenLastCalledWith('Charging')
+    },
+  )
+
+  it('keeps focus and activation working without an onChoose handler (default noop)', () => {
+    render(<BottomTabBar activeSection="Battery" />)
+    const more = screen.getByRole('button', { name: 'More' })
+
+    expect(() => more.focus()).not.toThrow()
+    expect(more).toHaveFocus()
+    expect(more).toHaveAttribute('aria-current', 'true')
+    expect(() => fireEvent.click(more)).not.toThrow()
+    expect(more).toHaveFocus()
   })
 })
 
@@ -276,9 +392,9 @@ describe('BOTTOM_TAB_PATHS', () => {
 
   it('is the exact set of the bottom-tab destinations', () => {
     expect(BOTTOM_TAB_PATHS).toBeInstanceOf(Set)
-    expect(BOTTOM_TAB_PATHS.size).toBe(TABS.length)
-    for (const tab of TABS) {
-      expect(BOTTOM_TAB_PATHS.has(tab.path)).toBe(true)
+    expect(BOTTOM_TAB_PATHS.size).toBe(TAB_PATHS.length)
+    for (const path of TAB_PATHS) {
+      expect(BOTTOM_TAB_PATHS.has(path)).toBe(true)
     }
   })
 

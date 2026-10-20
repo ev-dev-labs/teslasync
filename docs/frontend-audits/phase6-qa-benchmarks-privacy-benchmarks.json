@@ -1,0 +1,1524 @@
+{
+  "item": "phase6-qa-benchmarks-privacy-benchmarks",
+  "phase": 6,
+  "status": "DONE",
+  "page": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+  "generatedAt": "2026-10-14T01:05:12.738657+00:00",
+  "actor": "6b0f7d5a-643b-46fe-9a6a-3ba7d49c286f",
+  "deadlines": {
+    "returnBy": "2026-10-14T01:05:28.452Z",
+    "hardStop": "2026-10-14T01:10:28.452Z",
+    "actualValidationAt": "2026-10-14T01:08:26.463300+00:00",
+    "softTargetExceeded": true,
+    "hardDeadlineExceeded": false,
+    "limitation": "Conservative soft target exceeded during report authoring; oversized command failed with os206 and was recovered using bounded writes. Original clocks preserved; no new budget."
+  },
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-qa-benchmarks-privacy-benchmarks.json",
+    "web\\logs\\phase6-qa-benchmarks-privacy-benchmarks.log"
+  ],
+  "preflight": {
+    "existingReport": "ABSENT at first check and authoring",
+    "existingLog": "ABSENT at first check and authoring",
+    "noChangeAssessment": "Accepted page SHA-256 unchanged and 139 lines. No source remigration authorized/needed for this report-only QA. The required Phase6 report was absent, so this delivery is not a duplicate.",
+    "duplicateExactQaRows": 1,
+    "exactQueueLine": 373,
+    "exactQueueRow": "| [~] | 6 | phase6-qa-benchmarks-privacy-benchmarks | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-benchmarks-privacy-benchmarks.json | phase5-page-benchmarks-privacy-benchmarks | 1 | actor=6b0f7d5a-643b-46fe-9a6a-3ba7d49c286f; launch-observed=2026-10-14T00:48:33.105Z; conservative return=2026-10-14T01:05:28.452Z; hard=2026-10-14T01:10:28.452Z; LastConsumed=-1 | - | CurrentacceptedPrivacyBenchmarksPage/directparts source-onlyQA; report/logonly/no source/test/catalog/backend/API/browser/native/fullsuite. Preserveprivacy/cohortscope/unknownzero/provenance/preferences/actions/sections; exactsourcefindings vs candidates, deduplicateexistingroots/no acceptedpage remigration. New-machine exact scope reserved for built-in dispatch; recovered attempts continued (new zero-attempt QA starts at one); reservation is NOT a running worker. No browser grant. Actual built-in background launch accepted; exact files held by 6b0f7d5a-643b-46fe-9a6a-3ba7d49c286f, no native lock. Preserve same recovered attempt and original clocks/history; current running state requires health census. |"
+  },
+  "acceptedPhasesPreserved": {
+    "phases": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "reopened": false,
+    "authority": "Latest handoff new-machine recovery 2026-10-14T00:44Z; queue transition preserves checkpoints and recorded source debt.",
+    "acceptedPageItem": "phase5-page-benchmarks-privacy-benchmarks",
+    "recordedCommit": "182dcbe773a7fad58de01ca1f6c1839d28ea2543",
+    "historyLine": 1811,
+    "historicalTests": "Queue records 4 original passes and lint/style0; not rerun or fresh acceptance"
+  },
+  "routes": [
+    {
+      "path": "/benchmarks/privacy",
+      "file": "web\\src\\App.tsx",
+      "line": 759,
+      "lazyLine": 225,
+      "loaderFile": "web\\src\\lib\\routeLoaders.ts",
+      "loaderLine": 95,
+      "registryFile": "web\\src\\lib\\routeRegistry.ts",
+      "registryLine": 67,
+      "mount": "Layout -> SafeRoute -> lazy PrivacyBenchmarksPage",
+      "publicVsAuth": "Intended authenticated workspace surface, separate from s/:token outside Layout at App:564. Uses normal selected-vehicle/settings hooks, not public metrics hooks. SafeRoute is a crash/lazy boundary, NOT authentication proof. Backend/session authorization uninspected and NOTRUN.",
+      "mounted": "NOTRUN"
+    }
+  ],
+  "purpose": "Vehicle-specific opt-in benchmarking, epsilon accounting, coarse cohort releases and informed revocation.",
+  "primaryGoal": "Interpret measured target values versus noisy inference, act on the intended vehicle and retain unknown/source trust.",
+  "currentPins": [
+    {
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "sha256": "2290546adaa7a150d2fa2da4faf447ad89c5b4d10b16939ad7d4733b4168db68",
+      "lineCount": 139
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+      "sha256": "15629e261488213d5af9517f1509074942e2797a5ad5701dd71e1b7ecc42efef",
+      "lineCount": 79
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\BenchmarkStatusContent.tsx",
+      "sha256": "36c201ff20a174d7657bc1b4870b8a67c2a1e63b464692c97f5c2e116b80daa0",
+      "lineCount": 32
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+      "sha256": "8dcb43cf8481438c0957b5ccfd54d9d87d1941483d71cea3b8592b0c47ba68e2",
+      "lineCount": 143
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx",
+      "sha256": "89df0a27791d6cd4542f7011917a1deff20f354b3784248940383becf2603961",
+      "lineCount": 82
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\MethodologyPanel.tsx",
+      "sha256": "7d6bf95025e1d25b90bd20a9baa73ffa983590e39fb14de31aced5380131cbb3",
+      "lineCount": 41
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx",
+      "sha256": "acd4a30d2070429d1304184b3f59268a41429536ffff3741986f587008ca0e29",
+      "lineCount": 170
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\operationalbrief-all\\MetricComparisonDetails.tsx",
+      "sha256": "494583dc3901a3f4985e86396b83ef9425fa7235e0a4d58657d633b01547929c",
+      "lineCount": 48
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx",
+      "sha256": "07d904addf99b1ce86d1052e977b26488d64d308f6901cd3e9982a1994f85273",
+      "lineCount": 102
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx",
+      "sha256": "87e187e2afe1fe3000b3c14fc97b0c18e643a4b4fa16f2fa2164a51528664933",
+      "lineCount": 81
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\index.ts",
+      "sha256": "97ef8662c1cc5647661ac3dcc7f34ce612c2ebab74249d1bf4915fdc501ad205",
+      "lineCount": 8
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "sha256": "2838945fd03e8e0bd214a589cd551e64b2a70ff4eeed643dba6c39c32792a280",
+      "lineCount": 166
+    },
+    {
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lineCount": 174
+    },
+    {
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lineCount": 194
+    },
+    {
+      "file": "web\\src\\hooks\\useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lineCount": 47
+    },
+    {
+      "file": "web\\src\\hooks\\useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lineCount": 24
+    },
+    {
+      "file": "web\\src\\hooks\\usePageTitle.ts",
+      "sha256": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "lineCount": 30
+    },
+    {
+      "file": "web\\src\\hooks\\useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lineCount": 148
+    },
+    {
+      "file": "web\\src\\hooks\\useWorkspaceScope.tsx",
+      "sha256": "54a6830f3d45fb3a55af051ab34cfa41b3006a0f06becf3d932efe163ae63ead",
+      "lineCount": 44
+    },
+    {
+      "file": "web\\src\\api\\dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lineCount": 434
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lineCount": 168
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lineCount": 919
+    },
+    {
+      "file": "web\\src\\lib\\routeLoaders.ts",
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "lineCount": 127
+    },
+    {
+      "file": "web\\src\\lib\\routeRegistry.ts",
+      "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "lineCount": 289
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lineCount": 17
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "sha256": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "lineCount": 48
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lineCount": 74
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lineCount": 259
+    },
+    {
+      "file": "web\\src\\components\\layout\\WorkspaceHeader.tsx",
+      "sha256": "b414ebcd4a69886a2e40f9ce24c06124f40d0552eeca10da881b72a78260b37c",
+      "lineCount": 74
+    },
+    {
+      "file": "web\\src\\components\\layout\\Layout.tsx",
+      "sha256": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "lineCount": 1716
+    },
+    {
+      "file": "web\\src\\components\\ui\\Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lineCount": 93
+    },
+    {
+      "file": "web\\src\\components\\ui\\ConfirmDialog.tsx",
+      "sha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "lineCount": 219
+    },
+    {
+      "file": "web\\src\\components\\feedback\\EmptyState.tsx",
+      "sha256": "81246a08e354c8c05b05b3b39880e8832442c4c30ed468defe53a7478858fa37",
+      "lineCount": 97
+    },
+    {
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lineCount": 115
+    },
+    {
+      "file": "web\\src\\components\\data-display\\UsageCard.tsx",
+      "sha256": "3a5b460448adef6c1c7c4c79637751b43115c94a13ce0f0b868636ea7cc7c036",
+      "lineCount": 379
+    },
+    {
+      "file": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "lineCount": 321
+    },
+    {
+      "file": "web\\src\\components\\charts\\index.ts",
+      "sha256": "7c088add21d5d43f2d37f41c72517db9b2eb7738174914bd8bf21b9fbc62de5d",
+      "lineCount": 88
+    },
+    {
+      "file": "web\\src\\components\\charts\\chartDefaults.tsx",
+      "sha256": "e2955bbdc7d9e73f00c6ba4b6473033a6dd5c77b3edf82cabb192307792e6fc6",
+      "lineCount": 103
+    },
+    {
+      "file": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "lineCount": 42
+    },
+    {
+      "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lineCount": 1006
+    },
+    {
+      "file": "web\\src\\components\\motion\\FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lineCount": 39
+    }
+  ],
+  "lineCounts": {
+    "page": 139,
+    "directPresentationTsxFiles": 10,
+    "directPresentationTsxTotal": 917,
+    "barrelExcluded": 8,
+    "hookExcluded": 166,
+    "historicalArithmetic": "Prior audit reported total1015 but listed counts sum915. Current listed counts sum917; MetricComparisonDetails is48 rather than46. Do not interpret the erroneous aggregate as deletion, change prior reports or reopen accepted phases.",
+    "originalComparison": "Page SHA parity established against prior JSON; no Git/archive/preservation CLI run"
+  },
+  "sections": [
+    {
+      "name": "Private participation",
+      "component": "ConsentGate",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 84,
+      "sourcePresent": true,
+      "rendered": "NOTRUN"
+    },
+    {
+      "name": "Privacy budget",
+      "component": "PrivacyBudgetPanel",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 96,
+      "sourcePresent": true,
+      "rendered": "NOTRUN"
+    },
+    {
+      "name": "Cohort eligibility",
+      "component": "CohortEligibilityPanel",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 99,
+      "sourcePresent": true,
+      "rendered": "NOTRUN"
+    },
+    {
+      "name": "Private comparisons",
+      "component": "MetricComparisonGrid",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 111,
+      "sourcePresent": true,
+      "rendered": "NOTRUN"
+    },
+    {
+      "name": "Noise-adjusted performance percentiles",
+      "component": "BenchmarkPercentileChart",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 119,
+      "sourcePresent": true,
+      "rendered": "NOTRUN"
+    },
+    {
+      "name": "Methodology & limits",
+      "component": "MethodologyPanel",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 123,
+      "sourcePresent": true,
+      "rendered": "NOTRUN"
+    },
+    {
+      "name": "Privacy controls",
+      "component": "PrivacyControls",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 126,
+      "sourcePresent": true,
+      "rendered": "NOTRUN"
+    }
+  ],
+  "sectionCounts": {
+    "selectedVehicleSections": 7,
+    "noVehicleAlternativePanel": 1,
+    "pairedResponsiveGrids": 2,
+    "fadeInWrappers": 7,
+    "domainLayoutCards": 6,
+    "chartCards": 1,
+    "operationalBriefs": 2
+  },
+  "actions": [
+    {
+      "name": "Go to vehicles",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 78,
+      "exercised": "NOTRUN"
+    },
+    {
+      "name": "Consent acknowledgement",
+      "file": "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx",
+      "line": 52,
+      "exercised": "NOTRUN"
+    },
+    {
+      "name": "Opt in",
+      "file": "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx",
+      "line": 60,
+      "exercised": "NOTRUN"
+    },
+    {
+      "name": "Create release",
+      "file": "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+      "line": 130,
+      "exercised": "NOTRUN"
+    },
+    {
+      "name": "Check current source version",
+      "file": "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+      "line": 117,
+      "exercised": "NOTRUN"
+    },
+    {
+      "name": "Chart export and accessible table",
+      "file": "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+      "line": 42,
+      "exercised": "NOTRUN"
+    },
+    {
+      "name": "Comparison review details / dismiss",
+      "file": "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx",
+      "line": 131,
+      "exercised": "NOTRUN"
+    },
+    {
+      "name": "Privacy accounting review details / dismiss",
+      "file": "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx",
+      "line": 63,
+      "exercised": "NOTRUN"
+    },
+    {
+      "name": "Open revoke / localized typed confirmation / cancel / confirm",
+      "file": "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx",
+      "line": 38,
+      "exercised": "NOTRUN"
+    },
+    {
+      "name": "Source retry/recovery",
+      "file": "web\\src\\features\\benchmarks\\components\\BenchmarkStatusContent.tsx",
+      "line": 26,
+      "exercised": "NOTRUN"
+    }
+  ],
+  "actionCount": 10,
+  "filesRead": [
+    ".gitignore",
+    "web\\.gitignore",
+    "migration-queue.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-inventory.md",
+    "docs\\frontend-audits\\audit-page-076.json",
+    ".github\\copilot-instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    "docs\\A11Y_GUIDELINES.md",
+    "docs\\I18N_GUIDELINES.md",
+    "docs\\MOBILE_GUIDELINES.md",
+    "docs\\CONTRIBUTING.md",
+    "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+    "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+    "web\\src\\features\\benchmarks\\components\\BenchmarkStatusContent.tsx",
+    "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+    "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx",
+    "web\\src\\features\\benchmarks\\components\\MethodologyPanel.tsx",
+    "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx",
+    "web\\src\\features\\benchmarks\\components\\operationalbrief-all\\MetricComparisonDetails.tsx",
+    "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx",
+    "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx",
+    "web\\src\\features\\benchmarks\\components\\index.ts",
+    "web\\src\\api\\hooks\\useBenchmarks.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\usePageTitle.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\hooks\\useWorkspaceScope.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeLoaders.ts",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\WorkspaceHeader.tsx",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\feedback\\EmptyState.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\data-display\\UsageCard.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\chartDefaults.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx"
+  ],
+  "fileReadRanges": {
+    "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx": "full",
+    "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx": "full",
+    "web\\src\\features\\benchmarks\\components\\BenchmarkStatusContent.tsx": "full",
+    "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx": "full",
+    "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx": "full",
+    "web\\src\\features\\benchmarks\\components\\MethodologyPanel.tsx": "full",
+    "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx": "full",
+    "web\\src\\features\\benchmarks\\components\\operationalbrief-all\\MetricComparisonDetails.tsx": "full",
+    "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx": "full",
+    "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx": "full",
+    "web\\src\\features\\benchmarks\\components\\index.ts": "full",
+    "web\\src\\api\\hooks\\useBenchmarks.ts": "full",
+    "web\\src\\hooks\\useSelectedVehicle.ts": "full",
+    "web\\src\\hooks\\useUnits.ts": "full",
+    "web\\src\\hooks\\useNumberFormatting.ts": "full",
+    "web\\src\\hooks\\useOperationalMetrics.tsx": "full",
+    "web\\src\\hooks\\usePageTitle.ts": "full",
+    "web\\src\\hooks\\useDateFormat.ts": "full",
+    "web\\src\\hooks\\useWorkspaceScope.tsx": "full",
+    "web\\src\\api\\dataState.ts": "full",
+    "web\\src\\lib\\workspaceScope.ts": "full",
+    "web\\src\\App.tsx": [
+      [
+        350,
+        402
+      ],
+      [
+        500,
+        584
+      ],
+      [
+        650,
+        780
+      ]
+    ],
+    "web\\src\\lib\\routeLoaders.ts": [
+      [
+        91,
+        99
+      ]
+    ],
+    "web\\src\\lib\\routeRegistry.ts": [
+      [
+        63,
+        71
+      ]
+    ],
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx": "full",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx": "full",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx": "full",
+    "web\\src\\components\\layout\\PageContainer.tsx": "full",
+    "web\\src\\components\\layout\\WorkspaceHeader.tsx": "full",
+    "web\\src\\components\\layout\\Layout.tsx": {
+      "searchOnly": "workspace scope producer",
+      "lines": [
+        84,
+        85,
+        833,
+        1311,
+        1712
+      ]
+    },
+    "web\\src\\components\\ui\\Button.tsx": "full",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx": "full",
+    "web\\src\\components\\feedback\\EmptyState.tsx": "full",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx": "full",
+    "web\\src\\components\\data-display\\UsageCard.tsx": [
+      [
+        1,
+        340
+      ]
+    ],
+    "web\\src\\components\\data-display\\OperationalBrief.tsx": "full",
+    "web\\src\\components\\charts\\index.ts": {
+      "searchOnly": "Bar/chartDefaults",
+      "lines": [
+        53,
+        88
+      ]
+    },
+    "web\\src\\components\\charts\\chartDefaults.tsx": "full",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx": "full",
+    "web\\src\\components\\charts\\ChartContainer.tsx": [
+      [
+        859,
+        940
+      ]
+    ],
+    "web\\src\\components\\motion\\FadeIn.tsx": "full",
+    ".gitignore": "full",
+    "web\\.gitignore": "full",
+    "migration-queue.md": {
+      "focusedExactHistory": [
+        373,
+        550,
+        769,
+        1613,
+        1811
+      ],
+      "exactSourceOwnerSearch": true
+    },
+    "docs\\orchestrator-loop.md": "full",
+    "docs\\frontend-design-contract.md": "full",
+    "docs\\session-handoff.md": [
+      [
+        1,
+        220
+      ]
+    ],
+    "docs\\frontend-mission.md": [
+      [
+        1,
+        300
+      ],
+      [
+        1416,
+        1535
+      ]
+    ],
+    "docs\\frontend-worker-conventions.md": "full",
+    "docs\\frontend-inventory.md": {
+      "focusedEntry": 131
+    },
+    "docs\\frontend-audits\\audit-page-076.json": "full",
+    ".github\\copilot-instructions.md": "full",
+    ".github\\instructions\\react-frontend.instructions.md": "full",
+    ".github\\instructions\\frontend-si-cutover.instructions.md": "full",
+    ".github\\instructions\\unit-conversion.instructions.md": "full",
+    "docs\\A11Y_GUIDELINES.md": "full",
+    "docs\\I18N_GUIDELINES.md": "full",
+    "docs\\MOBILE_GUIDELINES.md": "full",
+    "docs\\CONTRIBUTING.md": "full"
+  },
+  "evidenceLimits": {
+    "sourceOnly": true,
+    "native": "NOTRUN",
+    "runtimeAcceptance": "NOTRUN / NOTCLAIMED",
+    "securityCampaign": false,
+    "notRun": [
+      {
+        "check": "npx tsc --noEmit",
+        "status": "NOTRUN",
+        "exitCode": null
+      },
+      {
+        "check": "build",
+        "status": "NOTRUN",
+        "exitCode": null
+      },
+      {
+        "check": "lint/native audit runners",
+        "status": "NOTRUN",
+        "exitCode": null
+      },
+      {
+        "check": "tests/full suites",
+        "status": "NOTRUN",
+        "exitCode": null
+      },
+      {
+        "check": "browser/visual/keyboard/screen reader/contrast/forced colors/touch",
+        "status": "NOTRUN",
+        "exitCode": null
+      },
+      {
+        "check": "native/device acceptance",
+        "status": "NOTRUN",
+        "exitCode": null
+      },
+      {
+        "check": "API/backend/privacy algorithm/deletion/idempotency",
+        "status": "NOTRUN",
+        "exitCode": null
+      },
+      {
+        "check": "catalog/key/generator validation",
+        "status": "NOTRUN",
+        "exitCode": null
+      },
+      {
+        "check": "Git/status/check-ignore/history",
+        "status": "NOTRUN",
+        "exitCode": null
+      },
+      {
+        "check": "server/Docker/installs/subagents/security campaign",
+        "status": "NOTRUN",
+        "exitCode": null
+      }
+    ],
+    "testCounts": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "mission43": "Mounted themes/widths/states/visual/accessibility gate NOTRUN",
+    "mission44": "Not full page Definition-of-Done acceptance",
+    "mission45": "No whole application or Phase7 acceptance",
+    "viewportMatrix": [
+      {
+        "width": 320,
+        "status": "NOTRUN"
+      },
+      {
+        "width": 375,
+        "status": "NOTRUN"
+      },
+      {
+        "width": 390,
+        "status": "NOTRUN"
+      },
+      {
+        "width": 430,
+        "status": "NOTRUN"
+      },
+      {
+        "width": 768,
+        "status": "NOTRUN"
+      },
+      {
+        "width": 1024,
+        "status": "NOTRUN"
+      },
+      {
+        "width": 1280,
+        "status": "NOTRUN"
+      },
+      {
+        "width": 1440,
+        "status": "NOTRUN"
+      },
+      {
+        "width": 1920,
+        "status": "NOTRUN"
+      },
+      {
+        "width": 2560,
+        "status": "NOTRUN"
+      }
+    ],
+    "privacy": "No private application data read. Backend cryptography/clipping, source-window/order, denominators, stable-release idempotency, subject isolation, deletion and global write guards remain unknown. No security campaign.",
+    "catalogs": "No catalogs read or changed; no generated-key proof",
+    "ignoredLog": "Root .gitignore logs/ covers web/logs; web/.gitignore has no contrary override. Git check-ignore NOTRUN.",
+    "scopedSourceDrift": "Independent final validation matched all41 current source SHA256 and line counts; no source drift between artifact snapshot and validation. Not a Git diff or repository-wide change proof."
+  },
+  "result": "Source-only QA report complete; exact fixes proposed, not whole-page/native/runtime acceptance",
+  "confirmedIssues": [
+    {
+      "id": "PB01",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 30,
+      "rule": "workspace-scope",
+      "contract": "MDC-032 / MDC-046",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "high",
+      "snippet": "const { vehicleId } = useSelectedVehicle();",
+      "detail": "Selected vehicle drives reads/mutations, but this page exposes neither a selector nor target identity. /benchmarks disables the managed vehicle control, and desktop WorkspaceHeader conditions VehiclePicker on that control. URL/saved/first-fleet fallback may therefore determine an unseen target. This is source scope ambiguity, not observed unauthorized access.",
+      "fix": "Make a route-specific workspace vehicle-control decision and render real target identity. Reuse the existing selector/store.",
+      "fixNeedId": "N1",
+      "owner": "integration",
+      "relatedEvidence": [
+        "web/src/lib/workspaceScope.ts:99,156-166",
+        "web/src/components/layout/WorkspaceHeader.tsx:33-35,63-68",
+        "web/src/components/layout/Layout.tsx:833,1311",
+        "web/src/hooks/useSelectedVehicle.ts:64-74"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB02",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 33,
+      "rule": "unknown-state",
+      "contract": "MDC-026",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "high",
+      "snippet": "const optedIn = statusQuery.data?.opted_in ?? false;",
+      "detail": "Unknown/failed participation without retained data becomes optedIn=false. CohortEligibilityPanel receives this false and selects Consent required before participation is known. ConsentGate itself is protected by BenchmarkStatusContent; its loading opt-in button is not claimed visible.",
+      "fix": "Keep unknown distinct from known false; pass existing status trust to the cohort explanation while preserving consent-dependent reads.",
+      "fixNeedId": "N3",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:35,100",
+        "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx:66-76"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB03",
+      "file": "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+      "line": 136,
+      "rule": "source-trust",
+      "contract": "MDC-026",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "high",
+      "snippet": "{t('benchmarks.cohort.error', 'Could not create release: {{message}}', {",
+      "detail": "Page merges GET-release and create-mutation errors into one prop; this callout labels either Could not create release. Cohort/chart also receive no release DataState, so failed initial reads can select local empty wording. Global named DataSourceNotice and comparison retained warnings exist; this is NOT absence of all retry/error feedback.",
+      "fix": "Separate read/command errors and thread existing release DataState into affected sections, preserving retained values and source-specific initial/paused/fatal/empty/retry meaning.",
+      "fixNeedId": "N3",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:41-45,99-107,119",
+        "web/src/components/layout/PageContainer.tsx:253-254"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB04",
+      "file": "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx",
+      "line": 26,
+      "rule": "denominator-validation",
+      "contract": "MDC-026 / MDC-033",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "high",
+      "snippet": "const pct = hasBudget && budget > 0 ? (spent / budget) * 100 : 0;",
+      "detail": "hasBudget checks finite inputs only. Present zero/negative allowance receives pct=0 and normal intent through UsageCard, converting an undefined ratio into measured zero use. Negative finite spent also passes. Missing inputs already omit the budget correctly.",
+      "fix": "Validate denominator/domain at this display boundary; invalid ratios remain unknown/indeterminate. Preserve valid spent=0 with positive allowance, 70/90 thresholds and actual over-budget overflow.",
+      "fixNeedId": "N5",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx:24-25,82-96",
+        "web/src/components/data-display/UsageCard.tsx:234-268"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB05",
+      "file": "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+      "line": 130,
+      "rule": "pending-action",
+      "contract": "MDC-020 / MDC-026",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "high",
+      "snippet": "action={{ label: t('benchmarks.cohort.create', 'Create release'), onClick: onCreate }}",
+      "detail": "Initial Create release passes only onClick. EmptyState renders an enabled Button; createNow guards only vehicleId. Unlike the existing-release Button, this branch does not consume pending. Duplicate requests and backend idempotency were NOT exercised.",
+      "fix": "Use existing Button pending/disabled presentation and a dispatch guard for initial create, preserving its explanation and stable source check; no shared EmptyState expansion needed.",
+      "fixNeedId": "N4",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:50-51",
+        "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx:117",
+        "web/src/components/feedback/EmptyState.tsx:82-86"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB06",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 31,
+      "rule": "mutation-context",
+      "contract": "MDC-046",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "high",
+      "snippet": "const [acknowledged, setAcknowledged] = useState(false);",
+      "detail": "Acknowledgement is an unscoped boolean; PrivacyControls holds an unscoped open dialog whose current callback dispatches the current vehicleId. SafeRoute keys only pathname, not query-only vehicle changes. Neither acknowledgement nor typed confirmation captures target identity. No wrong-target mutation was run.",
+      "fix": "Bind acknowledgement/confirmation authority to the captured real vehicle; invalidate stale authority on scope change without retargeting a submitted/confirmed action or misrepresenting server outcomes.",
+      "fixNeedId": "N2",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:48,54,86,126-131",
+        "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx:27,73-75",
+        "web/src/App.tsx:368-377",
+        "web/src/components/ui/ConfirmDialog.tsx:101-108"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB07",
+      "file": "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx",
+      "line": 75,
+      "rule": "success-only-transition",
+      "contract": "MDC-026 / MDC-046",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "high",
+      "snippet": "setOpen(false);",
+      "detail": "onConfirm calls void onRevoke and immediately closes before the mutation settles. loading={pending} cannot retain the confirmed dialog attempt during settlement/rejection. The outside error callout remains; no fake success toast is alleged.",
+      "fix": "Await actual revoke settlement, close/reset only on current-target success, and retain failure context/recovery using existing mutateAsync/dialog owners.",
+      "fixNeedId": "N2",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx:57-76",
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:53-54"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB08",
+      "file": "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx",
+      "line": 114,
+      "rule": "date-preferences",
+      "contract": "MDC-044",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "medium",
+      "snippet": "? t('benchmarks.brief.created', 'Released {{date}}', { date: release.created_at })",
+      "detail": "created_at is interpolated directly into visible Released {{date}} freshness/provenance, bypassing the preference-aware date hook. Period boundaries are also raw; calendar-versus-instant semantics must not be guessed.",
+      "fix": "Use existing preference-aware release timestamp display; preserve raw instant and independent completed-period calendar meaning.",
+      "fixNeedId": "N6",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web/src/hooks/useDateFormat.ts:74-99",
+        "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx:103-119"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB09",
+      "file": "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+      "line": 63,
+      "rule": "number-preferences",
+      "contract": "MDC-033 / MDC-044",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "medium",
+      "snippet": "String(value),",
+      "detail": "Tooltip uses String(value). The percentile data column also lacks kind/formatter; ChartContainer consequently selects String(raw). User-facing values bypass effective locale/precision though comparison details use preferences.",
+      "fix": "Use useNumberFormatting for tooltip/accessibility column display; retain raw numeric data/export scope and 0-100 scale.",
+      "fixNeedId": "N6",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx:49-52",
+        "web/src/components/charts/ChartContainer.tsx:923-934"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB10",
+      "file": "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+      "line": 67,
+      "rule": "reduced-motion",
+      "contract": "MDC-042 / MDC-040",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "medium",
+      "snippet": "<Bar dataKey=\"percentile\" fill={CHART_COLORS[0]} radius={[6, 6, 0, 0]} />",
+      "detail": "Bar receives no motion-aware animation props. The chart barrel directly re-exports vendor Bar; chartDefaults requires chartAnimationProps for such series. Page FadeIn governs its own entrance, not this series. Actual OS/low-bandwidth behavior NOTRUN.",
+      "fix": "Apply existing chartAnimationProps/useMotionPreference contract at this Bar, without changing data/identity/export/table.",
+      "fixNeedId": "N7",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web/src/components/charts/index.ts:88",
+        "web/src/components/charts/chartDefaults.tsx:24,44-60",
+        "web/src/components/motion/FadeIn.tsx:24-33"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB11",
+      "file": "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx",
+      "line": 60,
+      "rule": "mobile-target-minimum",
+      "contract": "MDC-020 / MDC-040 / MDC-043",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "medium",
+      "snippet": "<Button",
+      "detail": "Opt in has no below-md minimum override. Button defaults to md h-10; wrapping retains min-h-10, not mobile min-h-11. This is 40-versus-44 source allocation at a 16px root, NOT a measured rectangle or a claim every wrapped label renders below44. Initial EmptyState and confirmation footer already have mobile44.",
+      "fix": "Adopt existing below-md min-h-11 with explicit md restoration at this call. Preserve pending/disabled, wrapping/focus and density; no global Button resize.",
+      "fixNeedId": "N8",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web/src/components/ui/Button.tsx:37-49,61-76",
+        "web/src/components/feedback/EmptyState.tsx:83",
+        "web/src/components/ui/ConfirmDialog.tsx:174-188"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB12",
+      "file": "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+      "line": 117,
+      "rule": "mobile-target-minimum",
+      "contract": "MDC-020 / MDC-040 / MDC-043",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "medium",
+      "snippet": "<Button type=\"button\" variant=\"secondary\" onClick={onCreate} loading={pending} wrapLabel>",
+      "detail": "Check current source version has no below-md minimum override. Button defaults to md h-10; wrapping retains min-h-10, not mobile min-h-11. This is 40-versus-44 source allocation at a 16px root, NOT a measured rectangle or a claim every wrapped label renders below44. Initial EmptyState and confirmation footer already have mobile44.",
+      "fix": "Adopt existing below-md min-h-11 with explicit md restoration at this call. Preserve pending/disabled, wrapping/focus and density; no global Button resize.",
+      "fixNeedId": "N8",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web/src/components/ui/Button.tsx:37-49,61-76",
+        "web/src/components/feedback/EmptyState.tsx:83",
+        "web/src/components/ui/ConfirmDialog.tsx:174-188"
+      ],
+      "runtimeObserved": false
+    },
+    {
+      "id": "PB13",
+      "file": "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx",
+      "line": 38,
+      "rule": "mobile-target-minimum",
+      "contract": "MDC-020 / MDC-040 / MDC-043",
+      "confidence": "high",
+      "classification": "confirmed-source-finding",
+      "priority": "medium",
+      "snippet": "<Button",
+      "detail": "Revoke contribution data has no below-md minimum override. Button defaults to md h-10; wrapping retains min-h-10, not mobile min-h-11. This is 40-versus-44 source allocation at a 16px root, NOT a measured rectangle or a claim every wrapped label renders below44. Initial EmptyState and confirmation footer already have mobile44.",
+      "fix": "Adopt existing below-md min-h-11 with explicit md restoration at this call. Preserve pending/disabled, wrapping/focus and density; no global Button resize.",
+      "fixNeedId": "N8",
+      "owner": "page/domain",
+      "relatedEvidence": [
+        "web/src/components/ui/Button.tsx:37-49,61-76",
+        "web/src/components/feedback/EmptyState.tsx:83",
+        "web/src/components/ui/ConfirmDialog.tsx:174-188"
+      ],
+      "runtimeObserved": false
+    }
+  ],
+  "confirmedIssueCount": 13,
+  "candidates": [
+    {
+      "id": "PBC01",
+      "file": "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+      "line": 31,
+      "rule": "numeric-domain-validation",
+      "confidence": "medium",
+      "classification": "candidate-not-confirmed",
+      "detail": "Chart checks suppression/null, not finite/range validity. Zero is correctly retained; no malformed response sampled.",
+      "evidenceNeeded": "Authorized percentile bounds/malformed-input proof; do not clamp/invent values.",
+      "queueFixProposed": false
+    },
+    {
+      "id": "PBC02",
+      "file": "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx",
+      "line": 71,
+      "rule": "measurement-versus-inference",
+      "confidence": "medium",
+      "classification": "candidate-not-confirmed",
+      "detail": "Primary target and noisy IQR have no explicit local-versus-cohort value label. Reliability observation denominators are absent from hook types; k is a threshold and noisy cohort count an estimate, neither exact denominator.",
+      "evidenceNeeded": "Establish target/denominator semantics before changing copy; no causal significance/confidence interval inference.",
+      "queueFixProposed": false
+    },
+    {
+      "id": "PBC03",
+      "file": "web\\src\\features\\benchmarks\\components\\operationalbrief-all\\MetricComparisonDetails.tsx",
+      "line": 28,
+      "rule": "quality-versus-outcome",
+      "confidence": "medium",
+      "classification": "candidate-not-confirmed",
+      "detail": "quality=strong uses success. Ownership VerdictBadge strength mapping does not automatically govern benchmark quality.",
+      "evidenceNeeded": "Benchmark-specific meaning/design disposition; no universal status remap.",
+      "queueFixProposed": false
+    },
+    {
+      "id": "PBC04",
+      "file": "web\\src\\features\\benchmarks\\components\\operationalbrief-all\\MetricComparisonDetails.tsx",
+      "line": 39,
+      "rule": "noise-scale-unit",
+      "confidence": "medium",
+      "classification": "candidate-not-confirmed",
+      "detail": "noise_scale has no dimension declared. It might be histogram/count noise rather than an efficiency-scale quantity.",
+      "evidenceNeeded": "Authorized dimensional contract before any conversion; retain raw data.",
+      "queueFixProposed": false
+    },
+    {
+      "id": "PBC05",
+      "file": "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+      "line": 59,
+      "rule": "mobile-label-fit",
+      "confidence": "low",
+      "classification": "candidate-not-confirmed",
+      "detail": "Four categorical translations in a bounded chart may clip; no viewport rendered.",
+      "evidenceNeeded": "Mounted mission widths, narrow allocated containers, RTL/long labels and 200% text proof.",
+      "queueFixProposed": false
+    },
+    {
+      "id": "PBC06",
+      "file": "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx",
+      "line": 124,
+      "rule": "duplicate-chrome",
+      "confidence": "low",
+      "classification": "candidate-not-confirmed",
+      "detail": "LayoutCard/compact OperationalBrief repeat title/description/surfaces, also in accounting; actual density/noise unmeasured.",
+      "evidenceNeeded": "Composed review with existing embedded presentation; retain metrics/provenance/drawers.",
+      "queueFixProposed": false
+    },
+    {
+      "id": "PBC07",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 119,
+      "rule": "live-only-mutation-boundary",
+      "confidence": "medium",
+      "classification": "candidate-not-confirmed",
+      "detail": "Scoped hooks have no local mode guard; PageContainer badge does not itself disable domain actions. Shared client/backend enforcement uninspected, so ineffective protection is not established.",
+      "evidenceNeeded": "Separately authorized existing global-guard seam proof; no security/backend/API campaign or speculative repair.",
+      "queueFixProposed": false
+    }
+  ],
+  "candidateCount": 7,
+  "fixNeeds": [
+    {
+      "id": "N1",
+      "name": "Vehicle scope / visible target",
+      "issueIds": [
+        "PB01"
+      ],
+      "proposedSourceFiles": [
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+        "web\\src\\lib\\workspaceScope.ts"
+      ],
+      "request": "Only route-specific scope/identity wiring. Reuse managed picker/store. Serialize page claims.",
+      "deduplication": {
+        "existingExactPhase6OwnerMatches": [],
+        "disposition": "Reuse exact owner if later present; otherwise parent may reserve one narrow corrective scope",
+        "queueEdited": false
+      },
+      "claimAndTests": "Proposal only; separately explicit source/direct-covering test lease required. Retain original assertions/normal guarded proof. No tests read or written here."
+    },
+    {
+      "id": "N2",
+      "name": "Contextual consent/revoke settlement",
+      "issueIds": [
+        "PB06",
+        "PB07"
+      ],
+      "proposedSourceFiles": [
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+        "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx"
+      ],
+      "request": "One captured-target and success-only-close root; retain typed confirmation/error/pending/cache outcome. No shared dialog or hook expansion presumed.",
+      "deduplication": {
+        "existingExactPhase6OwnerMatches": [],
+        "disposition": "Reuse exact owner if later present; otherwise parent may reserve one narrow corrective scope",
+        "queueEdited": false
+      },
+      "claimAndTests": "Proposal only; separately explicit source/direct-covering test lease required. Retain original assertions/normal guarded proof. No tests read or written here."
+    },
+    {
+      "id": "N3",
+      "name": "Participation/release source trust",
+      "issueIds": [
+        "PB02",
+        "PB03"
+      ],
+      "proposedSourceFiles": [
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+        "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+        "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx"
+      ],
+      "request": "Use existing DataState/SourceContent, separate read/write errors, preserve seven shells/retained values. Serialize page/cohort/chart claims.",
+      "deduplication": {
+        "existingExactPhase6OwnerMatches": [],
+        "disposition": "Reuse exact owner if later present; otherwise parent may reserve one narrow corrective scope",
+        "queueEdited": false
+      },
+      "claimAndTests": "Proposal only; separately explicit source/direct-covering test lease required. Retain original assertions/normal guarded proof. No tests read or written here."
+    },
+    {
+      "id": "N4",
+      "name": "Initial create pending guard",
+      "issueIds": [
+        "PB05"
+      ],
+      "proposedSourceFiles": [
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+        "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx"
+      ],
+      "request": "Initial action only. May combine with N3 ONLY under an explicit exact lease; otherwise serialize, no duplicate action repair.",
+      "deduplication": {
+        "existingExactPhase6OwnerMatches": [],
+        "disposition": "Reuse exact owner if later present; otherwise parent may reserve one narrow corrective scope",
+        "queueEdited": false
+      },
+      "claimAndTests": "Proposal only; separately explicit source/direct-covering test lease required. Retain original assertions/normal guarded proof. No tests read or written here."
+    },
+    {
+      "id": "N5",
+      "name": "Epsilon ratio validation",
+      "issueIds": [
+        "PB04"
+      ],
+      "proposedSourceFiles": [
+        "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx"
+      ],
+      "request": "Domain display derivation only. Preserve raw epsilon and real overspend; accepted UsageCard is not remigrated.",
+      "deduplication": {
+        "existingExactPhase6OwnerMatches": [],
+        "disposition": "Reuse exact owner if later present; otherwise parent may reserve one narrow corrective scope",
+        "queueEdited": false
+      },
+      "claimAndTests": "Proposal only; separately explicit source/direct-covering test lease required. Retain original assertions/normal guarded proof. No tests read or written here."
+    },
+    {
+      "id": "N6",
+      "name": "Date/percentile preferences",
+      "issueIds": [
+        "PB08",
+        "PB09"
+      ],
+      "proposedSourceFiles": [
+        "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx",
+        "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx"
+      ],
+      "request": "Reuse current hooks. Advanced evidence date root owns different files; do not extend its lease or rewrite helpers/catalog. Serialize chart claims.",
+      "deduplication": {
+        "existingExactPhase6OwnerMatches": [],
+        "disposition": "Reuse exact owner if later present; otherwise parent may reserve one narrow corrective scope",
+        "queueEdited": false
+      },
+      "claimAndTests": "Proposal only; separately explicit source/direct-covering test lease required. Retain original assertions/normal guarded proof. No tests read or written here."
+    },
+    {
+      "id": "N7",
+      "name": "Bar motion adoption",
+      "issueIds": [
+        "PB10"
+      ],
+      "proposedSourceFiles": [
+        "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx"
+      ],
+      "request": "Existing animation props at this Bar only; no chart barrel/defaults changes. Serialize with N3/N6.",
+      "deduplication": {
+        "existingExactPhase6OwnerMatches": [],
+        "disposition": "Reuse exact owner if later present; otherwise parent may reserve one narrow corrective scope",
+        "queueEdited": false
+      },
+      "claimAndTests": "Proposal only; separately explicit source/direct-covering test lease required. Retain original assertions/normal guarded proof. No tests read or written here."
+    },
+    {
+      "id": "N8",
+      "name": "Three mobile action allocations",
+      "issueIds": [
+        "PB11",
+        "PB12",
+        "PB13"
+      ],
+      "proposedSourceFiles": [
+        "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx",
+        "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+        "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx"
+      ],
+      "request": "Exact three calls only; EmptyState/ConfirmDialog/OperationalBrief are already allocated. No shared Button campaign; serialize overlapping pairs.",
+      "deduplication": {
+        "existingExactPhase6OwnerMatches": [],
+        "disposition": "Reuse exact owner if later present; otherwise parent may reserve one narrow corrective scope",
+        "queueEdited": false
+      },
+      "claimAndTests": "Proposal only; separately explicit source/direct-covering test lease required. Retain original assertions/normal guarded proof. No tests read or written here."
+    }
+  ],
+  "fixNeedCount": 8,
+  "summary": {
+    "totalConfirmedFindings": 13,
+    "byRule": {
+      "date-preferences": 1,
+      "denominator-validation": 1,
+      "mobile-target-minimum": 3,
+      "mutation-context": 1,
+      "number-preferences": 1,
+      "pending-action": 1,
+      "reduced-motion": 1,
+      "source-trust": 1,
+      "success-only-transition": 1,
+      "unknown-state": 1,
+      "workspace-scope": 1
+    },
+    "filesWithMostPrimaryFindings": [
+      {
+        "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+        "count": 3
+      },
+      {
+        "file": "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+        "count": 3
+      },
+      {
+        "file": "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx",
+        "count": 2
+      },
+      {
+        "file": "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+        "count": 2
+      },
+      {
+        "file": "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx",
+        "count": 1
+      }
+    ],
+    "countMethod": "Each issue counted once at primary exact anchor; related evidence not recounted. Three mobile calls are three findings grouped into one fix need. Candidates/resolved roots excluded.",
+    "priorityFixes": [
+      "N1 visible vehicle",
+      "N2 captured confirmation/settlement",
+      "N3 unknown/read trust",
+      "N4 initial pending guard",
+      "N5 epsilon denominator",
+      "N6 preferences",
+      "N7 motion",
+      "N8 mobile allocations"
+    ]
+  },
+  "checks": {
+    "boundedGrep": {
+      "command": "Python via PowerShell here-string: exact12 production files, per-line regex counts, SHA256, splitlines, presentation sum and mounts",
+      "exitCode": 0,
+      "results": [
+        {
+          "rule": "static-inline-style",
+          "lineMatchCount": 0,
+          "matches": []
+        },
+        {
+          "rule": "raw-html",
+          "lineMatchCount": 0,
+          "matches": []
+        },
+        {
+          "rule": "direct-library-import",
+          "lineMatchCount": 0,
+          "matches": []
+        },
+        {
+          "rule": "old-api-import",
+          "lineMatchCount": 0,
+          "matches": []
+        },
+        {
+          "rule": "double-prefix",
+          "lineMatchCount": 0,
+          "matches": []
+        },
+        {
+          "rule": "camelcase-param",
+          "lineMatchCount": 0,
+          "matches": []
+        },
+        {
+          "rule": "hidden-section",
+          "lineMatchCount": 0,
+          "matches": []
+        },
+        {
+          "rule": "hardcoded-string",
+          "lineMatchCount": 0,
+          "matches": []
+        },
+        {
+          "rule": "fetch-useeffect",
+          "lineMatchCount": 0,
+          "matches": []
+        },
+        {
+          "rule": "ad-hoc-useeffect",
+          "lineMatchCount": 0,
+          "matches": []
+        },
+        {
+          "rule": "neon-glow-white-candidate",
+          "lineMatchCount": 0,
+          "matches": []
+        }
+      ],
+      "interpretation": "Actual source grep counts, NOT global zero violations, AST/catalog/runtime/security acceptance",
+      "missingPageContainer": "1 PageLayout -> PageContainer at PageLayout:11; acceptable wrapper"
+    },
+    "recoveredFailures": [
+      {
+        "check": "Python cp1252 probe",
+        "exitCode": 1,
+        "rawError": "UnicodeEncodeError: 'charmap' codec can't encode character '\\u2192' in position 713: character maps to <undefined>",
+        "recovery": "UTF8 stdout, corrected probe exit0 then narrow exact reads"
+      },
+      {
+        "check": "Oversized author command",
+        "exitCode": 1,
+        "rawError": "The filename or extension is too long. (os error 206)",
+        "recovery": "No script executed; bounded allowed-file commands used"
+      },
+      {
+        "check": "useWorkspaceScope.ts read",
+        "exitCode": null,
+        "rawError": "Path does not exist",
+        "recovery": "Actual .tsx located and fully read"
+      }
+    ],
+    "native": "NOTRUN",
+    "backendRules": [
+      {
+        "rule": "sql-interpolation",
+        "status": "NOTAPPLICABLE",
+        "reason": "No internal/**/*.go audited; backend/router/API proof excluded by assignment"
+      },
+      {
+        "rule": "fmt-println",
+        "status": "NOTAPPLICABLE",
+        "reason": "No internal/**/*.go audited; backend/router/API proof excluded by assignment"
+      },
+      {
+        "rule": "bare-panic",
+        "status": "NOTAPPLICABLE",
+        "reason": "No internal/**/*.go audited; backend/router/API proof excluded by assignment"
+      },
+      {
+        "rule": "missing-context",
+        "status": "NOTAPPLICABLE",
+        "reason": "No internal/**/*.go audited; backend/router/API proof excluded by assignment"
+      }
+    ]
+  },
+  "deduplication": {
+    "authority": "migration-queue.md exact history/source-owner matches; queue not edited",
+    "priorAudit": "docs/frontend-audits/audit-page-076.json",
+    "resolvedRoots": [
+      {
+        "item": "repair-benchmark-count",
+        "line": 769,
+        "commit": "b0d3ec74b2",
+        "disposition": "Preserve current replace.count interpolation; no duplicate fix"
+      },
+      {
+        "item": "phase3-usage-card",
+        "line": 1613,
+        "commit": "55ac73818b",
+        "disposition": "Current semantic bar colors/surface-3 resolve prior fixed-cyan/white-rail source finding; no remigration"
+      }
+    ],
+    "differentScopeRoots": [
+      {
+        "item": "phase6-fix-advanced-evidence-date-preferences",
+        "line": 334,
+        "disposition": "Different advanced files; reuse API not lease"
+      },
+      {
+        "item": "phase6-fix-causal-live-write-guard",
+        "line": 335,
+        "disposition": "Different hook; PBC07 unpromoted"
+      }
+    ],
+    "candidatesDispatched": false
+  },
+  "preservation": {
+    "sourceSHA256": "2290546adaa7a150d2fa2da4faf447ad89c5b4d10b16939ad7d4733b4168db68",
+    "currentLineCount": 139,
+    "featurePresentationLineCount": 917,
+    "sectionCount": 7,
+    "actionCount": 10,
+    "sourceChangedByThisWorker": false,
+    "mustPreserve": [
+      "vehicle-scoped raw payloads/query keys/abort signals/enablement/stale-time/cache success policy",
+      "all four metric identities/targets/noisy IQR/count/scale/quality/direction/percentiles",
+      "missing/zero/negative-valid and suppression distinctions",
+      "epsilon spent/allowance/remaining, 70/90 thresholds and real overspend",
+      "independent source period/model family/five-year bucket/k/release/mechanism identity",
+      "all consent/create/check/revoke/typed cancel/error actions",
+      "chart scale/table/export and both review drawers",
+      "four methodology steps and nonrepresentative/noncausal/revocation boundaries",
+      "raw hook/cache SI and every unit/locale/precision/timezone/theme/chart preference",
+      "all selected-vehicle shells/loading/error/empty/retained/unknown/mobile accessibility"
+    ]
+  },
+  "release": {
+    "explicit": true,
+    "sourceWriteClaim": "none: source read-only",
+    "artifactWriteClaim": "Released on final delivery after independent final validation; no further writes thereafter",
+    "queueCatalogGitStatusHeartbeatOtherSourceWrites": false,
+    "nativeLock": "none acquired; native NOTRUN",
+    "remainingNeeds": "8 narrow proposals; parent owns queue/claims/deduplication"
+  },
+  "dataSources": [
+    {
+      "hook": "useBenchmarkPrivacyStatus",
+      "method": "GET",
+      "hookPath": "/benchmarks/privacy?vehicle_id=...",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 77,
+      "scope": "selected vehicle",
+      "executed": "NOTRUN"
+    },
+    {
+      "hook": "useBenchmarkReleases",
+      "method": "GET",
+      "hookPath": "/benchmarks/releases?vehicle_id=...&limit=12&offset=0",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 90,
+      "scope": "selected vehicle",
+      "executed": "NOTRUN"
+    },
+    {
+      "hook": "useOptInBenchmarks",
+      "method": "PUT",
+      "hookPath": "/benchmarks/privacy/consent {vehicle_id}",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 119,
+      "scope": "selected vehicle",
+      "executed": "NOTRUN"
+    },
+    {
+      "hook": "useCreateBenchmarkRelease",
+      "method": "POST",
+      "hookPath": "/benchmarks/releases {vehicle_id, optional period_end (page omits)}",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 134,
+      "scope": "selected vehicle",
+      "executed": "NOTRUN"
+    },
+    {
+      "hook": "useRevokeBenchmarks",
+      "method": "DELETE",
+      "hookPath": "/benchmarks/privacy/consent?vehicle_id=...",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 153,
+      "scope": "selected vehicle",
+      "executed": "NOTRUN"
+    }
+  ],
+  "components": {
+    "reuse": "PageLayout/PageContainer, seven domain sections, DataState/SourceContent/StaleRefreshWarning, OperationalBrief/UsageCard, ChartCard/EmbeddedChart/ChartContainer, Button/Checkbox/Table/ConfirmDialog/FadeIn",
+    "newCompetingImplementation": false,
+    "sourceChartAlternative": "Actual fallback Table/caption/column headers at ChartContainer:891-934; export/control interactions NOTRUN"
+  },
+  "auditDimensions": {
+    "measurementInferenceDenominator": "Targets are separate from noisy IQR/percentiles/cohort count/noise scale. UI disclaims exact rankings/representativeness/causality. Reliability observation denominators and noise-scale dimension absent from hook types remain unknown; k is a suppression threshold, not denominator. PB04 is the actual undefined epsilon ratio finding.",
+    "privacyBoundary": "Scoped mutation inputs contain vehicle_id/optional period_end only, no raw trips/precise locations/VIN. No sensitive source logging found in scoped domain files. Local clipping/coarse cohorts/cryptographic Laplace/stable reuse/revocation statements are UI explanations, not verified privacy/deletion/authorization guarantees. No private application data read.",
+    "publicVsAuth": "Workspace route uses authenticated settings/selected vehicle hooks, not public metrics DTOs. No data exposure/route added. SafeRoute is not authentication proof; backend subject/session enforcement remains unknown.",
+    "unknownZero": "Null targets remain null/em dash; percentile0 retained; missing budget object omitted. Positive-denominator zero is valid. PB02/PB04 are exact false/zero conflations. Initial unknown minimum threshold fallback5 is NOT alleged visibly rendered before status: optedOut branch does not show it.",
+    "SIPreferences": "Hooks retain raw wh_per_km. Display derives Wh per selected distance using convertDistanceToSI; operational adapter divides by1000 then specialist formatter restores. No guessed backend SI migration/double conversion. Existing number/units hooks preserve settings; PB08/PB09 are display preference gaps only.",
+    "queryTrust": "Named independent sources and busy keep all selected-vehicle children mounted; no primary loading/error all-page gate passed. Status SourceContent uses fatal-only replacement and retained warning/retry. Comparison retains release with warning. Cohort/chart/read-error wiring has PB02/PB03. Paused no-data status maps to loading while stale warning returns null; complete global paused recovery remains unverified.",
+    "i18n": "Source prose/control labels use t(). Technical IDs/units/symbols are exceptions. replace.count preserves the accepted interpolation repair. Catalog existence, dynamic keys/plurals and locale rendering NOTRUN; fallback calls are not catalog closure.",
+    "sourceA11y": "Labeled checkbox, localized typed confirmation, semantic row headers, named chart/real fallback table, hidden decorative icons, route-title/focus owners and detail drawers exist in source. PB10/PB11-13 are motion/minimum allocation gaps, not measured keyboard/focus/contrast acceptance.",
+    "mobile": "Base stacked / lg paired grids, min-w-0 and shared wrapping summaries exist. EmptyState/ConfirmDialog CTAs already mobile44. Exact three other calls need minima; tick clipping is only a candidate. Mission viewport/container/RTL/200% text/safe-area/native matrix NOTRUN.",
+    "actionsSections": "Seven selected-vehicle shells plus intentional no-vehicle alternative and ten grouped actions preserved. No null-data all-page hiding found. No action executed; pending/context/success-only transition findings remain narrow."
+  },
+  "validation": {
+    "command": "Independent Python strict JSON parse/duplicate-key check; exact counts/unique IDs/rule totals; source snippets; section anchors; filesRead existence; all SHA256/line pins and presentation sum; explicit NOTRUN limits",
+    "exitCode": 0,
+    "validJson": true,
+    "duplicateJsonKeys": 0,
+    "confirmedPrimaryCitationsVerified": 13,
+    "candidateLineAnchorsVerified": 7,
+    "sectionAnchorsVerified": 7,
+    "sourcePinsMatched": 41,
+    "sourcePinsMismatched": 0,
+    "presentationLineCount": 917,
+    "filesReadExist": 59,
+    "validatedAt": "2026-10-14T01:08:26.463300+00:00",
+    "artifactAcceptanceOnly": true
+  }
+}

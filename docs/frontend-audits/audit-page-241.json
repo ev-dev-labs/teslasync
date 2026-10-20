@@ -1,0 +1,349 @@
+{
+  "item": "audit-page-241",
+  "page": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+  "routes": ["/watch"],
+  "purpose": "Chrome-less Tesla wearable/PWA glance surface with deterministic battery, range, charging, lock, climate and sentry information, two command controls, and optional Helix narration.",
+  "primaryGoal": "Read trustworthy selected-vehicle status at a glance and safely lock/unlock or toggle climate without losing the wearable baseline.",
+  "dataSources": [
+    {
+      "hook": "useWatchSummary(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useWatch.ts",
+      "line": 100,
+      "endpoint": "GET /api/v1/watch/summary?vehicle_id=<id>",
+      "routeEvidence": "internal\\api\\router.go:5136-5140",
+      "owner": "Watch hook and internal\\api\\watch\\handler.go; handler reads vehicle metadata and Redis signal cache.",
+      "behavior": "Key ['watch-summary', vehicleId]; abort signal forwarded; 30000ms polling, 15000ms staleTime, retry 2. X-API-Key comes from URL key or sessionStorage; skipAuthRefresh retained.",
+      "trust": "Page derives DataState with live provenance; retains data after refresh error. Actual endpoint uses non-null numeric/boolean fields and can return a 200 metadata fallback with unknown state but zero-valued measurements. This is not proof of fresh measured live values.",
+      "unitEvidence": "handler.go:286-296 multiplies RatedRange by 1.60934 and TimeToFullCharge by 60; page:105-109 converts range_km * 1000 and inside_temp_c at the display boundary. Actual Redis signal unit/freshness semantics were not traced; do not infer upstream units from legacy comments."
+    },
+    {
+      "hook": "useWatchCommand()",
+      "file": "web\\src\\api\\hooks\\useWatch.ts",
+      "line": 124,
+      "endpoint": "POST /api/v1/watch/command",
+      "routeEvidence": "internal\\api\\router.go:5140",
+      "owner": "Watch hook; watch handler dispatches Tesla client commands.",
+      "behavior": "Body {vehicle_id: vehicleId ?? 0, command}; requiresLiveMode true; networkMode always. Success and soft failure distinguished by response.success, with toast feedback; transport errors also toast. Page exposes only lock/unlock and climate_on/climate_off. Backend also allows other commands, but these are not page features.",
+      "authorization": "API-key route; backend checks read-write/admin permissions, API suspension, supported command, vehicle, Tesla token; rate limited to five requests/minute. No commands were exercised."
+    },
+    {
+      "hook": "useSelectedVehicle() -> useVehicles()",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 47,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-76; internal\\api\\router.go:3319-3320",
+      "owner": "Existing workspace selection store and URL precedence; vehicles domain hook.",
+      "behavior": "URL vehicle_id, persisted selection, then first vehicle fallback on /watch. Page renders no duplicate vehicle selector. The fleet query uses the normal request client rather than watchRequest; API-key-only PWA fleet-query behavior is unverified."
+    },
+    {
+      "hook": "useUnits(); useOperationalMode()",
+      "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+      "line": 50,
+      "endpoint": null,
+      "owner": "Existing preferences/display formatter and global operational mode provider.",
+      "behavior": "Unit preferences select distance and temperature display only. Offline/as-of mode blocks command dispatch and disables controls; the watch summary itself is not historical/as-of scoped."
+    },
+    {
+      "hook": "AIWatchFaceNLResponse -> useAiStream",
+      "file": "web\\src\\components\\ai\\AIWatchFaceNLResponse.tsx",
+      "line": 129,
+      "endpoint": "POST /api/v1/ai/watch/respond (SSE narration)",
+      "routeEvidence": "internal\\api\\ai_routes.go:134,692-696",
+      "owner": "Existing AI feature gate, AIFeatureCard and stream hook; backend AI feature guard.",
+      "behavior": "Feature disabled returns null. Enabled panel sends optional trimmed message (1000-character cap), displays narrative through shared output, prevents double-submit/paused-confirm and cancels on unmount. Body has no vehicle_id. Backend vehicle scoping, stream auth and runtime lifecycle were not traced."
+    }
+  ],
+  "components": [
+    {"name": "WatchShell", "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx", "line": 234, "owner": "page", "role": "Local full-height OLED-black, chrome-less shell; an intentional wearable exception, not a candidate for generic header/date-picker replacement."},
+    {"name": "BatteryGauge -> ProgressRing", "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx", "line": 242, "owner": "page adapter / shared data-display", "role": "128px ring, source percent, display range and translated battery/range accessible name. Shared ProgressRing clamps geometry and uses role=img, hiding duplicate center text."},
+    {"name": "StatusIcon -> Button", "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx", "line": 291, "owner": "page adapter / shared ui", "role": "44px lock/climate actions and sentry indicator; shared native button, focus and disabled treatment."},
+    {"name": "Text, Badge", "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx", "line": 5, "owner": "shared ui", "role": "Role typography and semantic state/cache badges imported through category barrel."},
+    {"name": "Skeleton", "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx", "line": 4, "owner": "shared feedback", "role": "Contextual name, gauge and three action loading geometry with status/aria-busy wrapper."},
+    {"name": "OperationalModeBadge", "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx", "line": 125, "owner": "shared data-display", "role": "Compact global read-only mode indicator."},
+    {"name": "WatchPWAMeta", "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx", "line": 323, "owner": "page", "role": "Scoped meta/manifest injection with cleanup restoring prior values; currently only mounted for populated summary."},
+    {"name": "AIWatchFaceNLResponse, withAiFeature, AIFeatureCard, Textarea", "file": "web\\src\\components\\ai\\AIWatchFaceNLResponse.tsx", "line": 163, "owner": "shared AI scaffold / watch-specific narration adapter", "role": "Optional sibling after deterministic shell; shared prompt, action and streaming output, not a replacement glance surface."},
+    {"name": "SafeRoute, lazy route", "file": "web\\src\\App.tsx", "line": 565, "owner": "application route", "role": "/watch is mounted outside Layout, preserving chrome-less exception; existing global route announcer/focus manager are present above Routes."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+      "line": 389,
+      "rule": "MDC-025 semantic status ownership",
+      "detail": "watchStateVariant selects shared Badge variants, then watchStateClassName independently supplies state-specific colors. getBatteryColor is another local semantic palette. These overlap existing Badge/token ownership; no separate watch status system is justified.",
+      "fix": "Reuse current semantic Badge/severity tokens while retaining exact battery thresholds and source state text. Keep watch domain mapping local where meanings genuinely differ.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+      "line": 404,
+      "rule": "MDC-044 date/locale reuse",
+      "detail": "Local relative-time formatter translates captions and validates invalid timestamps, but uses its own bucket logic and raw count strings. Shared date/number policy should be checked before retaining another formatter.",
+      "fix": "Evaluate existing dateFormat/number-formatting owners for equivalent compact output; preserve just-now/minute/hour/day thresholds and empty invalid-timestamp behavior if no equivalent exists.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "observed": "Single flex screen h-screen/p-3/overflow-hidden; no viewport or container breakpoints. Fixed 128px ring, 44px action targets, three icons with gap-4 (164px row before 24px shell padding). Long name/error text wraps; AI narrator is a later flow sibling.",
+    "verifiedViewports": [],
+    "issues": [
+      {
+        "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+        "line": 236,
+        "rule": "MDC-043 reachable wearable content",
+        "detail": "Declared ~180x180 wearable target conflicts with fixed geometry: action row alone needs 188px including shell padding, and 128px gauge plus 44px controls plus padding exceeds 180px height before vehicle/status/time rows. min-h-0 and overflow-hidden can clip rather than preserve content. Long labels, charging, cache/read-only badges and text scaling increase this pressure.",
+        "fix": "Use a page-local measured compact wearable layout with a responsive ring size via existing ProgressRing.size; maintain 44px reachable controls, all status/detail content and a deliberate accessible overflow strategy when content cannot fit. Preserve OLED/no-shell baseline rather than forcing standard PageLayout.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+        "line": 216,
+        "rule": "MDC-043 preserve optional content with honest device behavior",
+        "detail": "Comments promise wearables never see narration, but rendering is gated by AI settings only; inspected withAiFeature.tsx:46-57 has no wearable/viewport exclusion. Enabled AI adds a scrollable second section on any device. This is a source/comment mismatch, not proof of actual browser scrolling.",
+        "fix": "Clarify and validate the wearable opt-in behavior while preserving narrator access and AI-off null invariant; do not silently remove AI functionality or create a second feature-gate engine.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "accessibility": {
+    "observed": "Localized accessible names for lock/climate/sentry and loading; named ring with decorative SVG/duplicate labels hidden; 44px action geometry and shared Button focus styles. Charging icon is aria-hidden. No page h1/main/usePageTitle is present; effective global title behavior not traced.",
+    "runtimeStatus": "Keyboard, screen reader, contrast, focus, forced colors, reduced motion and zoom unverified.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+        "line": 190,
+        "rule": "MDC-040 action semantics",
+        "detail": "Sentry StatusIcon renders a focusable button with on/off accessible name but no onClick. It appears alongside real command buttons, suggesting an action that it cannot perform.",
+        "fix": "Use a noninteractive named status presentation with the same sentry information and geometry; do not invent a sentry mutation.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+        "line": 305,
+        "rule": "MDC-020/MDC-040 pending and disabled communication",
+        "detail": "StatusIcon.loading only feeds disabled/opacity, not Button.loading or aria-busy; both command controls disable during one pending mutation without an announced busy state. Read-only reason is only a title on a disabled control, not dependable touch/keyboard explanation.",
+        "fix": "Forward an explicit aria-busy/pending status without changing target geometry; expose localized read-only reason as visible/described text while retaining OperationalModeBadge and dispatch guard.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+        "line": 234,
+        "rule": "MDC-040 document orientation",
+        "detail": "Chrome-less shell is a div without main landmark or heading; page does not set its own document title. App.tsx:546-552 mounts title/focus helpers globally, but absence of a local h1 makes their effective watch behavior unknown.",
+        "fix": "Provide localized watch title and appropriate semantic landmark/visually-hidden heading using existing typography/title helpers without adding wearable chrome; validate SPA navigation focus.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Page:68-87 contextual skeleton only when loading and no retained data, role=status/aria-busy.",
+    "empty": "Page:88-99 localized No vehicle found with no follow-up action. Actual missing/no fleet backend typically responds 400/404, entering fatal-error instead; success null is not evidenced by handler.",
+    "fatalError": "Page:92 prints String(source.fatalError), with localized retry if refetch exists; technical error wording is not a standardized friendly recovery explanation.",
+    "refreshError": "Page:118-122 retained content survives and Cached badge appears, but no refresh-error retry in populated view.",
+    "offlineReadOnly": "Page:123-126 displays OperationalModeBadge, disables lock/climate and checks canWrite before dispatch.",
+    "partialUnknown": "Page:105-111 and 251-269 reject nonfinite numbers and show em dash; numeric zero remains valid. Server fallback and missing scalar defaults cannot be recognized as unknown by these checks.",
+    "mutation": "Both command controls disable while pending; hook distinguishes success:false and thrown errors with toasts; no immediate summary invalidation shown in useWatchCommand.",
+    "ai": "withAiFeature null while off; enabled question/default-summary input, stream states and cancel-on-unmount are delegated to existing AI owners. Runtime not exercised.",
+    "issues": [
+      {
+        "file": "internal\\api\\watch\\handler.go",
+        "line": 135,
+        "rule": "MDC-026/MDC-045 unknown is not zero or measured state",
+        "detail": "200 fallback returns vehicle_name/state unknown/is_locked true/metadata timestamp but omits numeric and other boolean struct values, encoding zero/false. queryWatchSummary:284-335 discards scalar presence and defaults locked=true, sentry=false, climate=false. Page finite checks accept zero as a measurement and offers an Unlock action for fallback assumed-lock state.",
+        "fix": "Integration owner must expose honest field availability/provenance and timestamp metadata, using nullable/known state semantics; page must retain real zero and show unknown for absent values. Do not infer measured lock/climate/sentry values or command direction from fallback defaults.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "internal\\api\\watch\\handler.go",
+        "line": 351,
+        "rule": "MDC-026 freshness and source truth",
+        "detail": "Successful queryWatchSummary stamps last_updated with server now, not inspected per-signal observation time; metadata fallback uses vehicle UpdatedAt. Page:48 declares live provenance and page:204-205 displays this timestamp as relative freshness. Paused-query isRefreshBlocked/stale fields are not rendered by the page, only refreshError is checked. Successful summary construction does not assign State, so state badge can receive an empty string.",
+        "fix": "Expose observed source freshness/availability and actual state in watch response; render shared DataState status including paused/age stale without losing retained content. Keep receipt time separate from measurement time; never synthesize a fresh state label.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+        "line": 92,
+        "rule": "MDC-026 actionable recovery",
+        "detail": "Initial errors are raw Error strings; empty view does not explain selection/key setup; cached refresh errors have no direct retry. Existing dataState.retry is already available, so a second fetching/retry system is unnecessary.",
+        "fix": "Use compact localized friendly recovery copy and source.retry, preserving details where useful and the watch layout. Keep offline, empty, initial failure and retained refresh failure distinct.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+      "line": 377,
+      "rule": "MDC-010/MDC-025 restrained semantic accents",
+      "detail": "Battery ring hardcodes saturated green #22c55e, amber #f59e0b and red #ef4444; action icons use emerald/red/amber/cyan-400 and state helpers add blue/emerald-500/20 with -400 text. Multiple accents compete with the primary battery metric. No explicit neon class, glow, shadow or gradient was found in the assigned page.",
+      "fix": "Use existing restrained semantic color tokens for ring/state/actions; preserve >40 and >20 thresholds and all text/icon state meaning. Do not change saved theme IDs or explicit user palettes.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+      "line": 268,
+      "rule": "MDC-012 visual intensity and on-accent purpose",
+      "detail": "Vehicle name, error text, battery value and secondary range use text-on-accent on OLED black; index.css:59 defaults this to pure white. Secondary range/name share bright primary emphasis. Other captions and neutral status/control tokens inherit application theme surfaces on fixed black, so composed theme contrast is not established.",
+      "fix": "Retain intentional OLED black but use one reviewed existing semantic foreground hierarchy appropriate to that background. Shared theme owner should resolve any missing OLED-compatible token contract; do not blindly substitute light-theme primary text onto black or introduce a new palette.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+      "line": 105,
+      "rule": "MDC-045 SI/source preservation",
+      "detail": "Watch uses a legacy range_km DTO and handwritten km-to-meter boundary plus backend RatedRange conversion. Handler comments claim legacy miles/hours, but actual cache units are not established in this bounded audit. This conflicts with canonical SI direction and creates an integration dependency, not authorization for an isolated factor/field rename.",
+      "fix": "Have the SI/backend owner verify Redis producer/read normalization and migrate watch wire types/handler/frontend atomically if required; preserve actual source values and existing unit preferences. Read Phase-48 methodology before such implementation.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+      "line": 242,
+      "rule": "MDC-002 separation / one exported component per file",
+      "detail": "425-line page also exports BatteryGauge, StatusIcon and WatchPWAMeta plus domain utilities. Existing WatchFacePage.test.tsx:106-115 imports those exports directly; decomposition has a real test-contract dependency.",
+      "fix": "Extract page-owned adapters/utilities into watch feature files when modernizing, preserving aggregate content and test behavior. Do not create a replacement global ring/button/layout library.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIWatchFaceNLResponse.tsx",
+      "line": 112,
+      "rule": "MDC-032/MDC-046 source scope consistency",
+      "detail": "Narration request body only carries message while deterministic summary is scoped with selected vehicleId. AI backend selection was not inspected. Agreement between narrator, selected vehicle, API-key identity and watch PWA is therefore an unresolved dependency, not a proven mismatch.",
+      "fix": "Integration owner must establish and test identical vehicle/source scope across deterministic and narration surfaces using existing supported contracts; do not invent a vehicle_id body capability.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Source-trust defects can present unknown state as real zeros/locked/fresh and wearable geometry cannot fit the declared tiny target. Address source contracts before cosmetic adoption, then responsive/a11y and restrained hierarchy.",
+    "order": ["watch availability/freshness/state/SI integration", "wearable reachability and semantics", "semantic OLED hierarchy", "page decomposition with test preservation"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Honest watch summary source contract",
+      "owner": "internal\\api\\watch\\handler.go and web\\src\\api\\hooks\\useWatch.ts (integration)",
+      "propsVariantsStates": ["Per-field measured versus unavailable numeric/boolean state", "Actual vehicle state or explicit unknown", "Observed timestamp separate from receipt/metadata time", "Canonical SI units verified at source", "Preserve real zero, retained refresh failure and command permission semantics"],
+      "usedBy": ["WatchFacePage", "existing watch complication endpoint (same queryWatchSummary source; not a mounted page dependency)"],
+      "dependsOn": ["RedisSignalCache value/unit/freshness contract verification", "Phase-48 methodology for coupled SI cutover", "Existing deriveDataState contract and backend watch handler tests"],
+      "note": "Extend existing watch ownership; no new universal state/fetch engine."
+    },
+    {
+      "name": "OLED foreground/surface compatibility review",
+      "owner": "web\\src\\index.css existing semantic token owner; page adapter consumes approved tokens",
+      "propsVariantsStates": ["Primary versus secondary/muted text on fixed black", "Semantic button/badge surfaces", "Unknown/error/cache state contrast", "Forced-colors and saved themes preserved"],
+      "usedBy": ["WatchShell", "BatteryGauge", "StatusIcon and compact watch recovery"],
+      "dependsOn": ["MDC-010/MDC-012/MDC-041", "Actual composed contrast checks across theme and forced-color modes"],
+      "note": "Shared extension is conditional on missing existing token support; only one production consumer was inspected, so no speculative new OLED component/token engine is proposed."
+    },
+    {
+      "name": "Watch narration scope and opt-in integration verification",
+      "owner": "web\\src\\components\\ai\\AIWatchFaceNLResponse.tsx and existing /ai/watch/respond integration owner",
+      "propsVariantsStates": ["Same selected vehicle/source identity as summary", "AI off returns null", "Enabled wearable narrator remains accessible", "Idle/streaming/error/paused-confirm/cancel retained", "API-key-only PWA auth compatibility verified"],
+      "usedBy": ["WatchFacePage deterministic baseline and optional narrator"],
+      "dependsOn": ["Existing withAiFeature/useAiEnabled settings gate", "Existing useAiStream/backend request contract", "Workspace useSelectedVehicle selection"],
+      "note": "Unknown server behavior must be resolved before adding request fields or device gates."
+    }
+  ],
+  "competingImplementations": {
+    "observed": [
+      "Local watch state color classes overlap shared Badge semantics.",
+      "Local battery color constants bypass shared semantic tokens.",
+      "Local relative-time helper should be reconciled with existing date formatting only if compact semantics are equivalent."
+    ],
+    "notCompeting": [
+      "WatchShell is an explicit chrome-less wearable exception, not permission to replace application layout.",
+      "BatteryGauge already delegates geometry and accessible image semantics to ProgressRing.",
+      "StatusIcon already delegates controls/focus to shared Button.",
+      "AI narration already uses AIFeatureCard and withAiFeature; preserve these owners."
+    ],
+    "scopeLimit": "No other production pages were audited; no cross-page duplication count or new shared-component justification is claimed."
+  },
+  "preservation": {
+    "sourceHash": "3f6b51d7c7167ec74e3b84f2bf16e985690e1ae25e7a241b4c3d122f9f8a6b78",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact bytes of repository-root-relative web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+    "currentLineCount": 425,
+    "sections": [
+      {"name": "Vehicle identity and cache/read-only indicators", "count": 1, "line": 114},
+      {"name": "Battery percentage and display range ring", "count": 1, "line": 129},
+      {"name": "Conditional charging countdown", "count": 1, "line": 137},
+      {"name": "Vehicle state badge", "count": 1, "line": 151},
+      {"name": "Quick lock/climate actions and sentry indicator", "count": 1, "line": 161},
+      {"name": "Last updated relative timestamp", "count": 1, "line": 203},
+      {"name": "Optional Helix narration sibling", "count": 1, "line": 231}
+    ],
+    "sectionCount": 7,
+    "sectionCountingMethod": "Named source UI regions, not inferred runtime visibility; 6 deterministic regions plus one conditional narrator. Initial loading and recovery are alternate states, not additional content sections.",
+    "componentCounts": {"pageLocalGlassPanel": 0, "pageLocalChartContainer": 0, "batteryGaugeCall": 1, "statusIconCalls": 3, "mutatingControls": 2, "narratorCall": 1},
+    "actions": ["Lock or unlock selected vehicle", "Climate on or off selected vehicle", "Retry initial summary failure", "Ask optional Helix question or empty/default summary", "Narrator stream cleanup on unmount"],
+    "dataBehavior": [
+      "Keep all rendered identity, battery/range, charging ETA, state, lock/climate/sentry and timestamp content.",
+      "Do not add page UI for unused charge_rate/outside_temp_c or unused complication query and call it preservation.",
+      "Keep selected vehicle URL/store/fallback behavior, exact query keys, 30s polling, 15s staleTime, retry=2 and abort forwarding.",
+      "Keep API-key X-API-Key watch transport, skipAuthRefresh and operational canWrite dispatch guard.",
+      "Preserve live-only mutation policy and success:false/transport failure toast distinctions.",
+      "Retain cache payload on failed refresh; never collapse unknown into zero or assume fallback booleans are measured.",
+      "Preserve saved distance/temperature preferences and SI display boundary; integration changes must verify source units rather than trusting legacy comments.",
+      "Keep >40/>20 battery thresholds, unknown numeric em dashes and named ring alternative.",
+      "Preserve OLED-black wearable baseline and optional narration; AI off must remain absent from DOM.",
+      "Keep PWA manifest path, meta injection and restoration cleanup.",
+      "Retain compact localized labels, invalid timestamp handling and existing page/helper test imports or update them consistently during extraction."
+    ],
+    "exports": "No page data export/download workflow found; exported components/utilities are module APIs used by existing tests, not data exports."
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source inspection, with only assigned audit report and heartbeat written.",
+    "runtime": "Unverified; no browser, network, commands, production actions or viewport/keyboard exercises.",
+    "visual": "Source-based noise/geometry findings only; actual composed contrast, layout clipping, themes, OS reduced motion, forced colors, 200% text, RTL and long-content behavior unverified.",
+    "tests": "Existing WatchFacePage.test.tsx inspected through line 230 for contracts only; no tests executed, no current passing claim.",
+    "tooling": "Full audit skill script intentionally not executed because it invokes package-wide TypeScript; no Git, full lint/build, nested agent or source edit performed.",
+    "backend": "Only watch handler and relevant route registrations inspected. Redis producer/cache freshness, canonical signal units, fleet API-key auth compatibility, global client/provider policy and AI backend scoping remain unresolved.",
+    "focusedCommands": [
+      {"command": "Get-FileHash 'web\\src\\features\\watch\\pages\\WatchFacePage.tsx' -Algorithm SHA256; (Get-Content same).Count", "exitCode": 0, "output": "SHA256=3f6b51d7c7167ec74e3b84f2bf16e985690e1ae25e7a241b4c3d122f9f8a6b78; LINES=425"},
+      {"command": "PowerShell regex counts against WatchFacePage.tsx only", "exitCode": 0, "output": "style\\s*= => 0; raw button/input/textarea/select/table => 0; direct recharts/react-leaflet/framer-motion imports => 0; text-neon|shadow-neon|glow => 0; GlassPanel|ChartContainer => 0"}
+    ],
+    "countsMeaning": "Zero page regex matches do not establish all-guideline compliance, dependency cleanliness or runtime acceptance; saturated constants and pure-white token usage remain evidenced above."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\watch\\pages\\WatchFacePage.tsx",
+    "web\\src\\features\\watch\\pages\\WatchFacePage.test.tsx",
+    "web\\src\\api\\hooks\\useWatch.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useOperationalMode.tsx",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\components\\data-display\\ProgressRing.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ai\\AIWatchFaceNLResponse.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\index.css",
+    "web\\src\\lib\\constants.ts",
+    "web\\public\\watch-manifest.json",
+    "internal\\api\\watch\\handler.go",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go"
+  ]
+}

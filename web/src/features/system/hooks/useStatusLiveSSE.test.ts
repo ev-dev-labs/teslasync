@@ -120,7 +120,7 @@ describe('parseStatusSnapshot', () => {
 
   it('returns null for valid JSON that is not a snapshot object', () => {
     // `JSON.parse` does NOT throw for any of these — the guard must.
-    expect(parseStatusSnapshot('null')).toBeNull()
+    expect(parseStatusSnapshot('Null')).toBeNull()
     expect(parseStatusSnapshot('42')).toBeNull()
     expect(parseStatusSnapshot('"a string"')).toBeNull()
     expect(parseStatusSnapshot('[1, 2, 3]')).toBeNull()
@@ -191,7 +191,7 @@ describe('useStatusLiveSSE', () => {
     // A stray `data: null` (or number/array) frame must NOT overwrite the
     // last good snapshot — this is the regression the guard protects against.
     act(() => {
-      latest().emitStatus('null')
+      latest().emitStatus('Null')
       latest().emitStatus('123')
       latest().emitStatus('[]')
     })

@@ -139,8 +139,17 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 	// Resolve vehicle display name for context (best-effort: VIN
 	// fallback when the DB row lacks a friendly DisplayName).
 	vehicleName := ""
-	if v, err := e.vehicleRepo.GetByID(ctx, vehicleID); err == nil && v != nil && v.DisplayName != "" {
+	alertSettings, prefsErr := e.settingsRepo.Get(ctx)
+	prefs := alertmsg.PreferencesFromSettings(alertSettings)
+	if prefsErr != nil {
+		log.Warn().Err(prefsErr).Msg("alert_rules: formatting settings unavailable; using defaults")
+	}
+	if v, err := e.vehicleRepo.GetByID(ctx, vehicleID); err == nil && v != nil {
 		vehicleName = v.DisplayName
+		if vehicleName == "" {
+			vehicleName = vin
+		}
+		prefs = prefs.WithVehicleTimezone(v.Timezone)
 	} else if vin != "" {
 		vehicleName = vin
 	}
@@ -152,7 +161,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 	// package would otherwise stamp.
 	msgCtx := alertmsg.BuildContext(rule, vehicleName, evalContext, map[string]any{
 		"Severity": severity,
-	})
+	}, prefs)
 	title := alertmsg.RenderTitle(rule, msgCtx)
 	body := alertmsg.RenderBody(rule, msgCtx)
 	// When include_title is FALSE we promise the transport will deliver
@@ -186,7 +195,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 	// Check quiet hours — suppress non-critical notifications during quiet hours
 	quietSuppressed := false
 	if severity != "critical" {
-		if settings, err := e.settingsRepo.Get(ctx); err == nil && settings.QuietHoursEnabled {
+		if settings := alertSettings; prefsErr == nil && settings != nil && settings.QuietHoursEnabled {
 			nowHHMM := now.Format("15:04")
 			start, end := settings.QuietHoursStart, settings.QuietHoursEnd
 			if start <= end {

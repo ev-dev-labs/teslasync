@@ -59,16 +59,43 @@ export interface SettingsImportResult {
   sections: Partial<Record<SettingsBundleSectionKey, SettingsImportSectionResult>>;
 }
 
+/** Stable validation identities; canonical translation keys belong to the catalog owner. */
+export type SettingsBundleValidationCode =
+  | 'bundle_object'
+  | 'schema_version_positive_integer'
+  | 'schema_version_unsupported'
+  | 'exported_at_nonempty'
+  | 'sections_object'
+  | 'unknown_section'
+  | 'settings_object'
+  | 'section_array';
+
+export interface SettingsBundleValidationIssue {
+  code: SettingsBundleValidationCode;
+  values: Record<string, string | number>;
+  message: string;
+}
+
 /**
  * Validate an unknown value parsed from a user-uploaded file. Returns
  * a normalised SettingsBundle on success or a string describing the
  * first validation failure encountered. Kept conservative — anything
  * the backend would reject is rejected here so we never round-trip a
- * known-bad upload.
+ * known-bad upload. An optional localizer receives stable codes and raw
+ * interpolation values; existing callers retain their exact messages.
  */
-export function validateSettingsBundle(input: unknown): SettingsBundle | string {
+export function validateSettingsBundle(
+  input: unknown,
+  localize?: (issue: SettingsBundleValidationIssue) => string,
+): SettingsBundle | string {
+  const reject = (
+    code: SettingsBundleValidationCode,
+    message: string,
+    values: SettingsBundleValidationIssue['values'] = {},
+  ): string => localize?.({ code, message, values }) ?? message;
+
   if (input == null || typeof input !== 'object') {
-    return 'Bundle must be a JSON object';
+    return reject('bundle_object', 'Bundle must be a JSON object');
   }
   const obj = input as Record<string, unknown>;
 
@@ -79,35 +106,39 @@ export function validateSettingsBundle(input: unknown): SettingsBundle | string 
   // fractional version previously slipped through to the confusing
   // "newer than this build supports" branch instead of this message.
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
-    return 'schema_version must be a positive integer';
+    return reject('schema_version_positive_integer', 'schema_version must be a positive integer');
   }
   if (version > SETTINGS_BUNDLE_SCHEMA_VERSION) {
-    return `schema_version ${version} is newer than this build supports (max ${SETTINGS_BUNDLE_SCHEMA_VERSION})`;
+    return reject(
+      'schema_version_unsupported',
+      `schema_version ${version} is newer than this build supports (max ${SETTINGS_BUNDLE_SCHEMA_VERSION})`,
+      { version, max: SETTINGS_BUNDLE_SCHEMA_VERSION },
+    );
   }
 
   const exportedAt = obj.exported_at;
   if (typeof exportedAt !== 'string' || exportedAt.trim() === '') {
-    return 'exported_at must be a non-empty ISO-8601 string';
+    return reject('exported_at_nonempty', 'exported_at must be a non-empty ISO-8601 string');
   }
 
   const rawSections = obj.sections;
   if (rawSections == null || typeof rawSections !== 'object') {
-    return 'sections must be a JSON object';
+    return reject('sections_object', 'sections must be a JSON object');
   }
   const sections = rawSections as Record<string, unknown>;
 
   for (const key of Object.keys(sections)) {
     if (!(SETTINGS_BUNDLE_SECTION_KEYS as readonly string[]).includes(key)) {
-      return `Unknown section "${key}"`;
+      return reject('unknown_section', `Unknown section "${key}"`, { section: key });
     }
   }
 
   if (sections.settings != null && typeof sections.settings !== 'object') {
-    return 'sections.settings must be an object';
+    return reject('settings_object', 'sections.settings must be an object');
   }
   for (const k of ['alert_rules', 'geofences', 'quiet_hours'] as const) {
     if (sections[k] != null && !Array.isArray(sections[k])) {
-      return `sections.${k} must be an array`;
+      return reject('section_array', `sections.${k} must be an array`, { section: k });
     }
   }
 

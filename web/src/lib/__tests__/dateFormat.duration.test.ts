@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { beforeEach, describe, it, expect } from 'vitest'
+import { setGlobalLocale, setGlobalPrecision } from '../numberFormat'
 import {
   formatDurationMs,
   formatDurationMsCompact,
@@ -10,6 +11,11 @@ import {
 } from '../dateFormat'
 
 const FALLBACK = '—'
+
+beforeEach(() => {
+  setGlobalLocale('en-US')
+  setGlobalPrecision(2)
+})
 
 type SingleArgFormatter = (v: unknown) => string
 
@@ -85,17 +91,17 @@ describe('formatDurationClock — the trip-replay NaN:NaN bug source', () => {
 
 describe('formatDurationMs — accepts valid values', () => {
   it('renders millisecond and second outputs', () => {
-    expect(formatDurationMs(0)).toBe('0ms')
-    expect(formatDurationMs(250)).toBe('250ms')
-    expect(formatDurationMs(1_500)).toBe('1.5s')
+    expect(formatDurationMs(0)).toBe('0.00ms')
+    expect(formatDurationMs(250)).toBe('250.00ms')
+    expect(formatDurationMs(1_500)).toBe('1.50s')
   })
 })
 
 describe('formatDurationMsCompact — accepts valid values', () => {
   it('rolls over to seconds and minutes', () => {
-    expect(formatDurationMsCompact(250)).toBe('250ms')
-    expect(formatDurationMsCompact(1_500)).toBe('1.5s')
-    expect(formatDurationMsCompact(150_000)).toBe('2.5m')
+    expect(formatDurationMsCompact(250)).toBe('250.00ms')
+    expect(formatDurationMsCompact(1_500)).toBe('1.50s')
+    expect(formatDurationMsCompact(150_000)).toBe('2.50m')
   })
 })
 
@@ -104,8 +110,8 @@ describe('formatDurationMsLong — accepts valid values', () => {
     expect(formatDurationMsLong(0)).toBe(FALLBACK)
   })
   it('renders longer durations with minutes and seconds', () => {
-    expect(formatDurationMsLong(250)).toBe('250ms')
-    expect(formatDurationMsLong(1_500)).toBe('1.5s')
+    expect(formatDurationMsLong(250)).toBe('250.00ms')
+    expect(formatDurationMsLong(1_500)).toBe('1.50s')
     expect(formatDurationMsLong(65_000)).toBe('1m 5s')
   })
 })

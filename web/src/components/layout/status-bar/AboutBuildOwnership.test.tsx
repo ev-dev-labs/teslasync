@@ -32,10 +32,10 @@ vi.mock('@/api/hooks/useSettings', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useChangelog', () => ({
-  useChangelog: () => ({
+vi.mock('@/hooks/useChangelogStatus', () => ({
+  useChangelogStatus: () => ({
     hasUnseen: false,
-    newEntries: [],
+    unseenCount: 0,
   }),
   openChangelogModal: vi.fn(),
 }));

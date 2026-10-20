@@ -29,12 +29,13 @@
  * Strategy: `useClimateLatest` + `useVehicles` are the network boundary and are
  * fully controllable via hoisted mocks. `useUnits` is mocked so the temperature
  * preference is observable. `react-i18next` echoes each `t(key, fallback)`
- * fallback so assertions read against English copy. `DataFreshness`'s display
+ * fallback so assertions read against English copy. `FreshnessDot`'s display
  * hooks are stubbed so the freshness chip renders without a Settings provider.
  * A `<MemoryRouter>` wraps every render because `EmptyState` renders a `<Link>`.
  */
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { ClimateSnapshot } from '@/api/types';
@@ -63,19 +64,35 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (_key: string, fallback?: string) => fallback ?? _key,
+      t: (_key: string, fallback?: string, options?: Record<string, unknown>) =>
+        (fallback ?? _key).replace(/\{\{(\w+)\}\}/g, (match, key: string) => String(options?.[key] ?? match)),
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
 });
 
-// DataFreshness display hooks — stubbed so the freshness chip renders without a
+// FreshnessDot display hooks — stubbed so the freshness chip renders without a
 // Settings/QueryClient provider.
-vi.mock('@/hooks/useDateFormat', () => ({
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (() => ({
   useDateFormat: () => ({ formatTime: (v: unknown) => String(v) }),
-}));
+}))();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
+    }),
+  };
+});
 vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: false, durationMs: 250 }),
+}));
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
 }));
 
 import ClimateControlPanelWidget from './ClimateControlPanelWidget';
@@ -125,6 +142,7 @@ function makeClimate(over: Partial<ClimateSnapshot> = {}): ClimateSnapshot {
 
 interface QueryOverrides {
   data?: ClimateSnapshot;
+  error?: unknown;
   isLoading?: boolean;
   isFetching?: boolean;
   isStale?: boolean;
@@ -182,16 +200,119 @@ beforeEach(() => {
   setQuery({ data: makeClimate() });
 });
 
+describe('ClimateControlPanelWidget — source brief', () => {
+  it('renders four real cells with zero and negative Celsius, zero levels and all independent status chips in their original order', () => {
+    setQuery({ data: makeClimate({
+      inside_temp: 0, outside_temp: -10, fan_speed: 0, hvac_steering_wheel_heat_level: 0,
+      hvac_power: true, is_ac_on: false, defrost_mode: 'Front', battery_heater: true,
+      seat_heater_left: 3, seat_heater_right: 2, seat_heater_rear_left: 1,
+      seat_heater_rear_center: 2, seat_heater_rear_right: 3,
+    }) });
+    renderWidget(FULL, 7);
+
+    const brief = screen.getByTestId('dashboard-climate-panel-brief');
+    const cells = within(brief).getAllByRole('listitem');
+    expect(cells).toHaveLength(4);
+    expect(cells.map(cell => cell.getAttribute('data-operational-metric'))).toEqual([
+      'climate-panel-cabin', 'climate-panel-outside', 'climate-panel-fan-level', 'climate-panel-wheel-level',
+    ]);
+    expect(cells.map(cell => cell.getAttribute('data-value-state'))).toEqual(['value', 'value', 'value', 'value']);
+    expect(cells.map(cell => cell.querySelector('[data-operational-value]')?.textContent)).toEqual([
+      '0°C', '-10°C', '0', 'Off',
+    ]);
+    assertOperationalBriefDisclosure(brief, 'Source available', { contains: true });
+    assertOperationalBriefDisclosure(brief, 'Vehicle 7', { contains: true });
+    assertOperationalBriefDisclosure(brief, 'continuous recording coverage is not established', { contains: true });
+    // The fan-level explanation lives in the drawer metric group, not on the value-only face.
+    assertOperationalBriefDisclosure(brief, 'not a velocity measurement', { contains: true, region: 'drawer' });
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
+    expect(screen.getByText('Defrost')).toBeInTheDocument();
+    expect(screen.getByText('Bat heater')).toBeInTheDocument();
+    expect(screen.getAllByText(/^(FL|FR|RL|RC|RR) [1-3]\/3$/).map(chip => chip.textContent?.trim())).toEqual([
+      'FL 3/3', 'FR 2/3', 'RL 1/3', 'RC 2/3', 'RR 3/3',
+    ]);
+  });
+
+  it('distinguishes missing operands from invalid source values without treating malformed HVAC strings as known status', () => {
+    const query = setQuery({ data: makeClimate() });
+    climateMock.mockReturnValue({
+      ...query,
+      data: { ...makeClimate(), inside_temp: null, outside_temp: Number.NaN, fan_speed: '0',
+        hvac_steering_wheel_heat_level: Number.POSITIVE_INFINITY, hvac_power: '—', is_ac_on: 'false' },
+    });
+    renderWidget(FULL);
+
+    const brief = screen.getByTestId('dashboard-climate-panel-brief');
+    // Every operand is unknown, so the face shows the shared empty-metrics
+    // state and the drawer counts the four hidden fields.
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief, 'Cabin');
+    assertOperationalMetricUnavailable(brief, 'Outside');
+    assertOperationalMetricUnavailable(brief, 'Fan speed');
+    assertOperationalMetricUnavailable(brief, 'Wheel heat');
+    expect(screen.getByText('HVAC unknown')).toBeInTheDocument();
+    expect(screen.queryByText('HVAC off')).toBeNull();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(within(brief).queryByText('Off')).toBeNull();
+  });
+
+  it('keeps the parent retained-source state, four measurements and heater chips on refresh failure with the same retry action', () => {
+    const query = setQuery({ data: makeClimate({
+      inside_temp: 0, outside_temp: -5, fan_speed: 2, hvac_steering_wheel_heat_level: 1,
+      defrost_mode: 'Front', battery_heater: true,
+    }), isError: true, error: new Error('refresh failed') });
+    renderWidget(FULL);
+
+    const brief = screen.getByTestId('dashboard-climate-panel-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    assertOperationalBriefDisclosure(brief, 'Retained readings', { contains: true });
+    // Provenance freshness moved to the drawer header alongside the status.
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.querySelector('[data-provenance="cached"]')).toHaveAttribute('data-data-status', 'stale');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('0°C')).toBeInTheDocument();
+    expect(screen.getByText('1/3')).toBeInTheDocument();
+    expect(screen.getByText('Defrost')).toBeInTheDocument();
+    expect(screen.getByText('Bat heater')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not manufacture a four-cell summary after initial source failure and retains the shell retry', () => {
+    const query = setQuery({ data: undefined, isError: true, error: new Error('source failed') });
+    renderWidget(FULL);
+
+    expect(screen.queryByTestId('dashboard-climate-panel-brief')).toBeNull();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
 // ── Loading & empty states ──────────────────────────────────────────────────────
 
 describe('ClimateControlPanelWidget — loading & empty states', () => {
+  it('keeps measured values and heater status during a failed cached refresh', () => {
+    setQuery({ data: makeClimate({ inside_temp: 21, seat_heater_left: 3 }), isError: true });
+    renderWidget(FULL);
+    expect(screen.getByText('21°C')).toBeInTheDocument();
+    expect(screen.getByText('FL 3/3')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('renders only a skeleton (no heading or content) while loading', () => {
     setQuery({ isLoading: true, data: undefined });
     const { container } = renderWidget(FULL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('heading', { name: /Climate Control/i })).toBeNull();
-    expect(screen.queryByText('Fan Speed')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByRole('heading', { name: /Climate control/i })).toBeInTheDocument();
+    expect(screen.queryByText('Fan speed')).toBeNull();
   });
 
   it('shows the empty state (not a temperature row) when there is no climate data', () => {
@@ -199,9 +320,9 @@ describe('ClimateControlPanelWidget — loading & empty states', () => {
     renderWidget(FULL);
 
     expect(screen.getByRole('status')).toHaveTextContent('No climate data');
-    expect(screen.queryByText('Fan Speed')).toBeNull();
-    expect(screen.queryByText('HVAC On')).toBeNull();
-    expect(screen.queryByText('HVAC Off')).toBeNull();
+    expect(screen.queryByText('Fan speed')).toBeNull();
+    expect(screen.queryByText('HVAC on')).toBeNull();
+    expect(screen.queryByText('HVAC off')).toBeNull();
   });
 });
 
@@ -213,7 +334,7 @@ describe('ClimateControlPanelWidget — compact layout', () => {
     renderWidget(COMPACT);
 
     expect(screen.getByText('21°C')).toBeInTheDocument();
-    expect(screen.queryByText('Fan Speed')).toBeNull();
+    expect(screen.queryByText('Fan speed')).toBeNull();
     expect(screen.queryByText('Cabin')).toBeNull();
   });
 
@@ -251,8 +372,11 @@ describe('ClimateControlPanelWidget — temperature display', () => {
     setQuery({ data: makeClimate({ inside_temp: null, outside_temp: null }) });
     renderWidget(FULL);
 
-    // Cabin + Outside cells both fall back.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    // Cabin + Outside cells are omitted from the value-only face and counted as hidden.
+    const brief = screen.getByTestId('dashboard-climate-panel-brief');
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief, 'Cabin');
+    assertOperationalMetricUnavailable(brief, 'Outside');
   });
 });
 
@@ -265,22 +389,22 @@ describe('ClimateControlPanelWidget — HVAC status', () => {
     setQuery({ data: makeClimate({ is_ac_on: true, hvac_power: null }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('HVAC On')).toBeInTheDocument();
-    expect(screen.queryByText('HVAC Off')).toBeNull();
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
+    expect(screen.queryByText('HVAC off')).toBeNull();
   });
 
   it('shows "HVAC On" from the canonical boolean hvac_power field', () => {
     setQuery({ data: makeClimate({ hvac_power: true, is_ac_on: false }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('HVAC On')).toBeInTheDocument();
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
   });
 
   it('shows "HVAC Off" when both HVAC signals are explicitly off', () => {
     setQuery({ data: makeClimate({ is_ac_on: false, hvac_power: false }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('HVAC Off')).toBeInTheDocument();
+    expect(screen.getByText('HVAC off')).toBeInTheDocument();
   });
 });
 
@@ -292,7 +416,7 @@ describe('ClimateControlPanelWidget — fan speed & wheel heat', () => {
     setQuery({ data: makeClimate({ fan_speed: 7 }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('Fan Speed')).toBeInTheDocument();
+    expect(screen.getByText('Fan speed')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
   });
 
@@ -331,10 +455,17 @@ describe('ClimateControlPanelWidget — status chips', () => {
   });
 
   it('shows the "no seat heaters active" caption when none are on', () => {
-    setQuery({ data: makeClimate({ seat_heater_left: 0, seat_heater_rear_center: null }) });
+    setQuery({ data: makeClimate({ seat_heater_left: 0, seat_heater_right: 0, seat_heater_rear_left: 0, seat_heater_rear_center: 0, seat_heater_rear_right: 0 }) });
     renderWidget(FULL);
 
     expect(screen.getByText('No seat heaters active')).toBeInTheDocument();
+  });
+
+  it('does not claim missing seat-heater observations are off', () => {
+    setQuery({ data: makeClimate({ seat_heater_left: null, seat_heater_rear_center: null }) });
+    renderWidget(FULL);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('No seat heaters active')).toBeNull();
   });
 
   it('shows the defrost chip only when defrost_mode is set and not "Off"', () => {
@@ -355,7 +486,7 @@ describe('ClimateControlPanelWidget — status chips', () => {
     // Pins the fix: pre-fix read `battery_heater_on` (never emitted) → chip never showed.
     setQuery({ data: makeClimate({ battery_heater: true }) });
     const { rerender } = renderWidget(FULL);
-    expect(screen.getByText('Bat Heater')).toBeInTheDocument();
+    expect(screen.getByText('Bat heater')).toBeInTheDocument();
 
     setQuery({ data: makeClimate({ battery_heater: false }) });
     rerender(
@@ -363,7 +494,7 @@ describe('ClimateControlPanelWidget — status chips', () => {
         <ClimateControlPanelWidget size={FULL} />
       </MemoryRouter>,
     );
-    expect(screen.queryByText('Bat Heater')).toBeNull();
+    expect(screen.queryByText('Bat heater')).toBeNull();
   });
 });
 
@@ -411,6 +542,6 @@ describe('ClimateControlPanelWidget — interactions & a11y', () => {
     setQuery({ data: makeClimate() });
     renderWidget(FULL);
 
-    expect(screen.getByRole('heading', { name: /Climate Control/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Climate control$/i })).toBeInTheDocument();
   });
 });

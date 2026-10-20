@@ -2,7 +2,7 @@
  * SessionComparisonChart — behaviour + hardening coverage.
  *
  * SessionComparisonChart default-exports a single presentational chart that
- * overlays the power-vs-SOC curves of up to the 10 most-recent charging
+ * overlays the power-vs-SOC curves of up to the first 10 returned charging
  * sessions on one shared axis. Its real work is data-shaping, not pixels: it
  * caps the session list, asks the REAL `generateChargingCurve` helper for each
  * session's synthetic curve, then merges those curves onto a unified SOC axis
@@ -28,7 +28,7 @@
  *   3. LINES     — one <Line> per session with palette stroke, "date (charger)"
  *      name, index dataKey and the kW unit.
  *   4. LEGEND    — one entry per session, each swatch decorative (aria-hidden).
- *   5. CAP+WRAP  — 12 sessions collapse to the 10 newest and the palette wraps
+ *   5. CAP+WRAP  — 12 sessions collapse to the first 10 and the palette wraps
  *      modulo its length.
  *   6. EMPTY     — no sessions ⇒ the container is told it is empty and no line
  *      or legend swatch renders (never a blank panel).
@@ -98,6 +98,9 @@ vi.mock('@/components/charts', () => ({
     title,
     subtitle,
     ariaLabel,
+    ariaDescription,
+    metadata,
+    exportData,
     height,
     empty,
     exportable,
@@ -107,6 +110,9 @@ vi.mock('@/components/charts', () => ({
     title: string;
     subtitle?: string;
     ariaLabel: string;
+    ariaDescription?: string;
+    metadata?: { sourceLabel?: string; rangeLabel?: string };
+    exportData?: ReadonlyArray<Record<string, unknown>>;
     height?: number;
     empty?: boolean;
     exportable?: boolean;
@@ -118,6 +124,9 @@ vi.mock('@/components/charts', () => ({
       data-title={title}
       data-subtitle={subtitle ?? ''}
       data-aria-label={ariaLabel}
+      data-description={ariaDescription}
+      data-metadata={JSON.stringify(metadata)}
+      data-export-json={JSON.stringify(exportData)}
       data-height={String(height ?? '')}
       data-empty={String(!!empty)}
       data-exportable={String(!!exportable)}
@@ -226,12 +235,12 @@ describe('SessionComparisonChart', () => {
     render(<SessionComparisonChart sessions={[dcSession, acSession]} />);
 
     const container = screen.getByTestId('chart-container');
-    expect(container).toHaveAttribute('data-title', 'Session Comparison');
+    expect(container).toHaveAttribute('data-title', 'Session comparison');
     expect(container).toHaveAttribute(
       'data-subtitle',
-      'Power curves overlaid from last 10 sessions',
+      'Curves are modeled from session metadata, not sampled charging telemetry.',
     );
-    expect(container.getAttribute('data-aria-label')).toContain('Overlaid power-vs-SOC line chart');
+    expect(container.getAttribute('data-aria-label')).toContain('Returned sessions in the workspace range');
     expect(container).toHaveAttribute('data-height', '300');
     expect(container).toHaveAttribute('data-exportable', 'true');
     expect(container).toHaveAttribute('data-export-filename', 'session-comparison');
@@ -288,7 +297,7 @@ describe('SessionComparisonChart', () => {
     swatches.forEach((sw) => expect(sw).toHaveAttribute('aria-hidden', 'true'));
   });
 
-  it('caps the overlay at the 10 most recent sessions and wraps the palette', () => {
+  it('caps the overlay at the first 10 returned sessions and wraps the palette', () => {
     const many = Array.from({ length: 12 }, (_, i) =>
       makeSession({ id: 200 + i, started_at: `2024-06-${String(i + 1).padStart(2, '0')}T10:00:00Z` }),
     );
@@ -308,6 +317,35 @@ describe('SessionComparisonChart', () => {
     const legend = screen.getAllByText(/^D:2024-06-/);
     expect(legend).toHaveLength(10);
     expect(screen.queryByText('D:2024-06-11')).not.toBeInTheDocument();
+  });
+
+  it('discloses modeled and bounded export scope without claiming or changing chronological order', () => {
+    const sessions = [acSession, dcSession, ...Array.from({ length: 10 }, (_, i) =>
+      makeSession({ id: 300 + i, started_at: '2025-01-01T10:00:00Z' }),
+    )];
+    render(<SessionComparisonChart sessions={sessions} />);
+
+    const container = screen.getByTestId('chart-container');
+    expect(container.getAttribute('data-description')).toContain('not sampled charging telemetry');
+    expect(container.getAttribute('data-description')).toContain('not a full-history aggregate');
+    expect(container.getAttribute('data-description')).toContain('10 / 12');
+    expect(container.getAttribute('data-metadata')).toContain('10 / 12');
+    expect(container.getAttribute('data-subtitle')).not.toMatch(/last|recent|newest/i);
+    expect(container.getAttribute('data-aria-label')).not.toMatch(/last|recent|newest/i);
+    expect(screen.getAllByTestId('line')[0]).toHaveAttribute('data-name', 'D:2024-05-02 (Home / AC)');
+    expect(screen.getAllByTestId('line')[1]).toHaveAttribute('data-name', 'D:2024-05-01 (Supercharger)');
+    const exported = JSON.parse(container.getAttribute('data-export-json') ?? '[]');
+    expect(exported).toHaveLength(chartPoints().length);
+    expect(exported[0]).toMatchObject({
+      ...chartPoints()[0],
+      source_context: 'Curves are modeled from session metadata, not sampled charging telemetry.',
+      returned_window: 'Up to 200 returned sessions; not a full-history aggregate.',
+      sessions_shown: 10,
+      sessions_returned: 12,
+      overlay_limit: 10,
+    });
+    expect(sessions[0]).toBe(acSession);
+    expect(sessions[1]).toBe(dcSession);
   });
 
   it('signals the empty state and renders no line or swatch when there are no sessions', () => {

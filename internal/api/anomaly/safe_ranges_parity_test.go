@@ -2,7 +2,8 @@
 //
 // safe-range parity test: pins
 // internal/api/anomaly.safeRanges <-> internal/ml/anomaly.StaticEnvelope()
-// byte-for-byte. The two maps MUST stay identical; if a future change
+// in equivalent physical units. Only the four tire-pressure entries need
+// bar-to-Pa normalization; all other entries MUST stay identical. If a future change
 // updates one but not the other,
 // learned-baseline fallback would silently disagree with the
 // deterministic detector and the off-mode contract (ADR-015 §I3)
@@ -23,7 +24,7 @@ import (
 )
 
 // TestSafeRangesParity_APIvsMLAnomaly proves the two copies of the
-// canonical safe-range envelope stay byte-equal. A failure here
+// canonical safe-range envelope stay physically equivalent. A failure here
 // means either:
 //
 //   - The deterministic detector at internal/api/anomaly/handler.go
@@ -40,6 +41,12 @@ func TestSafeRangesParity_APIvsMLAnomaly(t *testing.T) {
 
 	apiCopy := safeRanges
 	mlCopy := mlanomaly.StaticEnvelope()
+	// The learned fallback still expresses these four bounds in bar.
+	for _, signal := range []string{"TpmsPressureFl", "TpmsPressureFr", "TpmsPressureRl", "TpmsPressureRr"} {
+		if bounds, ok := mlCopy[signal]; ok {
+			mlCopy[signal] = [2]float64{bounds[0] * 100000, bounds[1] * 100000}
+		}
+	}
 
 	if len(apiCopy) != len(mlCopy) {
 		t.Fatalf("safe-range key count drift: api=%d ml=%d", len(apiCopy), len(mlCopy))

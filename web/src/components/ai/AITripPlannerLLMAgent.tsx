@@ -75,12 +75,10 @@ function InnerSection({
     url: '/ai/trips/plan/draft',
     body,
     onEvent: () => {},
-    // AI-01: vehicle + route scope is part of stream identity —
-    // changing the vehicle, origin, or destination aborts an
-    // in-flight draft and clears the previous route's plan before
-    // the new scope streams in.
+    // Every drafting input belongs to the scope, including missing locations
+    // that would otherwise share the payload's default zero coordinates.
     scopeKey: haveVehicle
-      ? `${numericVehicleId}:${origin?.lat ?? ''},${origin?.lng ?? ''}:${destination?.lat ?? ''},${destination?.lng ?? ''}`
+      ? JSON.stringify([body, origin != null, destination != null])
       : null,
   })
   const haveOrigin = origin != null
@@ -113,8 +111,8 @@ function InnerSection({
     <AIFeatureCard
       title={t('tripPlanner.aiAgent.title', 'Draft a plan with Helix')}
       description={t(
-        'tripPlanner.aiAgent.description',
-        'Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically \u2014 review the proposed plan and click Plan in the form below to save it.',
+        'tripPlanner.aiAgent.draftingDescription',
+        'Ask Helix to draft a trip plan grounded in your past charging history along the corridor. This advisory draft does not change the form, compute a route, or save a plan. Review the suggestions, enter your trip inputs in the form below, and use Plan to compute the route separately.',
       )}
       buttonLabel={t('tripPlanner.aiAgent.generateButton', 'Draft a plan')}
       badgeLabel={t('tripPlanner.aiAgent.badge', 'Helix')}

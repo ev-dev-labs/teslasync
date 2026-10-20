@@ -1,0 +1,1447 @@
+{
+  "item": "phase6-qa-driving-drive-dna",
+  "attempt": 1,
+  "actor": "ba8bb8dc-a7b8-485b-91f2-d4fe0eea0d31",
+  "page": "web/src/features/driving/pages/DriveDNAPage.tsx",
+  "routes": [
+    "/drive-dna"
+  ],
+  "status": "SOURCE_QA_DELIVERED_WITH_FINDINGS",
+  "purpose": "Source-only accepted-page QA. No source change/remigration; runtime/native/page PASS NOTRUN.",
+  "reservation": {
+    "reservedUTC": "2026-10-14T01:04:13.296Z",
+    "returnByUTC": "2026-10-14T01:24:13.296Z",
+    "hardUTC": "2026-10-14T01:29:13.296Z",
+    "firstObservedUTC": "2026-10-14T01:06:15.9547833Z",
+    "clockRenewed": false
+  },
+  "firstCheck": {
+    "reportExisted": false,
+    "logExisted": false,
+    "decision": "Report/log only; accepted source preserved, not a whole-page no-issues conclusion."
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "reservedRowFirstRead": 390,
+    "acceptedRowFirstRead": 1854,
+    "acceptedItem": "phase5-page-driving-drive-dna",
+    "commit": "14ed28c7c6d74227ae593d6252df689530440dcc",
+    "acceptance": "SOURCE ONLY; historical parent16/16 receipt NOT rerun/not native acceptance",
+    "phasePreservation": "Phases0-5 closed, Phase6 unfinished, Phase7 NOTRUN",
+    "inventory": "docs/frontend-inventory.md:160,465-466,1242 bounded only"
+  },
+  "mandatoryReads": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "coverage": "FULL1-296"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "coverage": "FULL1-2539; split reads, truncated261-520 recovered from507"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "coverage": "FULL latest current New-machine recovery00:44Z section; read1-190; old history partial/context"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "coverage": "43-45 at1416-1518"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "coverage": "FULL"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "coverage": "FULL"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "coverage": "FULL1-629"
+    },
+    {
+      "file": ".github/instructions/observability.instructions.md",
+      "coverage": "FULL"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "coverage": "FULL; current SI contract supersedes legacy dual-unit examples"
+    },
+    {
+      "file": "docs/MOBILE_GUIDELINES.md",
+      "coverage": "FULL; current contract governs conflicting historical shell guidance"
+    },
+    {
+      "file": "docs/A11Y_GUIDELINES.md",
+      "coverage": "FULL"
+    },
+    {
+      "file": "docs/I18N_GUIDELINES.md",
+      "coverage": "FULL"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "coverage": "Applicable integrity/SI1-200"
+    }
+  ],
+  "workspaceScope": {
+    "vehicle": true,
+    "range": false,
+    "evidence": "workspaceScope.ts:23-78,98-138,159-174; route absent from range and vehicle-disable lists. App.tsx:130,834 lazy route",
+    "bounds": "No header-owned range on this single-drive route, so absent useRangeState/start/end is NOT a violation. Telemetry handler scopes drive interval. No DST/auth/history runtime proof.",
+    "selection": "Page58-62 chooses selected ID or first current drive; no stale telemetry ID while new vehicle list unresolved. Inference, not tested switch."
+  },
+  "dataSources": [
+    {
+      "hook": "useDriveHistory",
+      "caller": "DriveDNAPage.tsx:46-47",
+      "owner": "web/src/api/hooks/useDriving.ts:143-157",
+      "endpoint": "GET /drives?vehicle_id=<encoded ID>&limit=1000",
+      "key": "['drives',vehicleId,'history',limit]",
+      "enabled": "!!vehicleId",
+      "policy": "Signal propagated to request, MODERATE stale time, safeArray; raw payload",
+      "population": "<=1000 recent returned drives, not lifetime/whole-range totals"
+    },
+    {
+      "hook": "useDriveTelemetry",
+      "caller": "DriveDNAPage.tsx:63",
+      "owner": "web/src/api/hooks/useDriving.ts:329-337",
+      "endpoint": "GET /drives/<ID>/telemetry",
+      "key": "['drive-telemetry',driveId]",
+      "enabled": "!!driveId",
+      "policy": "Signal -> request; raw payload",
+      "population": "Returned emissions of one selected drive, independent of selector cap; expected denominator absent"
+    }
+  ],
+  "backendProvenance": {
+    "files": "internal/api/router.go:3506-3518; internal/api/drives/detail.go:132-178,551-582",
+    "observed": "GET routes; actual drive.VehicleID/StartTs to EndTs or now, r.Context on GetByID/Timeline. Legacy pack power=voltage*current/1000 kW, missing power omitted. Elevation intentionally unmapped atdetail60-65.",
+    "limit": "Source only, not API/device/complete collection proof; no backend-wide audit."
+  },
+  "siAndPreferences": {
+    "preserved": "m/s, m, s, C, W canonical model; legacykW lifted once809-817, supported backend132-178. Hooks unchanged, useUnits/current converters at display. Null/em dash distinct from measured0, signed power/SoC retained, regen peak positive magnitude. Elevation intentionally metres with explicit explanation.",
+    "gaps": "Dates DNA003, static analytical palette DNA005, count plural/grouping DNA010. Dynamic deterministic art is not static-inline-style violation."
+  },
+  "validation": {
+    "runtime": "NOTRUN",
+    "native": "NOTRUN",
+    "page": "NOTRUN",
+    "browser": "NOTRUN",
+    "screenshots": "NOTRUN",
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "globalTSC": "NOTRUN",
+    "Git": "NOTRUN",
+    "API": "NOTRUN",
+    "downloads": "NOTRUN",
+    "mutations": "NOTRUN",
+    "testCounts": {
+      "authoredPageCaseNamesRead": 16,
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "failures": [
+      {
+        "shellId": "719",
+        "exitCode": 1,
+        "cause": "Path-array concatenation joined7 paths; population scan failed, following category NOTRUN; corrected765 exit0"
+      },
+      {
+        "shellId": "1003",
+        "exitCode": 1,
+        "cause": "Host os206; body NOTRUN"
+      },
+      {
+        "shellId": "1032",
+        "exitCode": 1,
+        "cause": "Host os206; body NOTRUN"
+      },
+      {
+        "view": "ui/QueryError.tsx",
+        "cause": "Not found; resolved feedback/QueryError.tsx"
+      },
+      {
+        "view": "charts/chartUtils.ts",
+        "cause": "Not found; resolved chartUtils.tsx"
+      }
+    ]
+  },
+  "limits": [
+    "Source mechanisms observed; execution effects are inferences, not mounted proof.",
+    "No real drive/identity/location/API/device/auth/mutation accessed.",
+    "Source pins not Git ancestry/diff/repository-wide unchanged proof; concurrent queue lines snapshot-relative.",
+    "Historical16-pass parent receipt context only; no tests/lint/build/TSC/native/browser run.",
+    "No Git/subagents/installs/servers/Docker/customhelpers/extensions/heartbeats. Parent5173 untouched; no browser lock; Edge msedge only if later authorized/no downloads.",
+    "Candidates unpromoted; text scans do not certify completeness/sampling/contrast/focus/mobile/backend authorization."
+  ],
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-driving-drive-dna.json",
+    "web/logs/phase6-qa-driving-drive-dna.log"
+  ],
+  "changes": {
+    "source": 0,
+    "tests": 0,
+    "catalog": 0,
+    "backend": 0,
+    "config": 0,
+    "queue": 0,
+    "handoff": 0
+  },
+  "release": {
+    "allReportLogCommandClaimsReleased": true,
+    "sourceWriteClaim": "NONE",
+    "commandsRunning": 0,
+    "browserLockHeld": false,
+    "postReturnWrites": false,
+    "finalJSONParse": "0",
+    "sourcePins": "26 initial pins matched; supplemental scoped hashes recorded",
+    "UTC": "2026-10-14T01:26:06.5483533Z",
+    "parentServerTouched": false,
+    "returnDeadlineMet": true
+  },
+  "snapshotUTC": "2026-10-14T01:26:05.8317160Z",
+  "findings": [
+    {
+      "id": "DNA001",
+      "rule": "duplicate-section-render",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaMethodology.tsx",
+      "line": 134,
+      "mechanism": "Identical consecutive mounts133/134 render two methodology cards twice (4 mounted cards).",
+      "fix": "Remove only second mount; preserve every unique list/heading/status; covering original page test."
+    },
+    {
+      "id": "DNA002",
+      "rule": "initial-paused-state-loss",
+      "priority": "P1",
+      "file": "web/src/features/driving/pages/DriveDNAPage.tsx",
+      "line": 104,
+      "relatedLines": [
+        115,
+        175,
+        178
+      ],
+      "mechanism": "No-data paused deriveDataState=>initial plus blocked; child flags label loading, only blocked notice returns null for !hasData; local state omits blocked flag.",
+      "evidence": "api/dataState.ts:188-220; StaleRefreshWarning.tsx:58; drive-dna/types.ts:1-7; SectionBody.tsx:74-83,120-131",
+      "fix": "Existing initial-paused source feedback; forward blocked state, retain shells/independent retries; never infer device offline."
+    },
+    {
+      "id": "DNA003",
+      "rule": "date-display-preference-bypass",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx",
+      "line": 47,
+      "mechanism": "Scope uses raw UTC timestamps; page85/94 passes tz only to formatDateTime, browser locale not saved locale.",
+      "fix": "Existing useDateFormat saved-locale/chosen-zone rendering; preserve raw dates/ongoing null and intentional vehicle-zone policy."
+    },
+    {
+      "id": "DNA004",
+      "rule": "declared-mobile-target-below-44",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaGenomePanel.tsx",
+      "line": 159,
+      "mechanism": "Default Button md h10/40px at16px root; KpiNotices111/137 use sm h9/36px, no mobile44 override/wrapLabel. Declared allocation, NOT measured/WCAG AA proof.",
+      "fix": "Existing min-h11/wrapLabel/md restoration at3 sites; no global Button resize; preserve events/disabled/focus."
+    },
+    {
+      "id": "DNA005",
+      "rule": "chart-palette-preference-bypass",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaSpeedPowerPlot.tsx",
+      "line": 159,
+      "mechanism": "Static CHART_COLORS also SocElevationPlot131, PowerDistribution47, SpeedDistribution81. chartUtils.tsx5 reexports static CB-safe dark array, no useChartPalette; saved palette/light derivation ignored.",
+      "fix": "Existing reactive palette at4 consumers, retain indices/legend/signs/scales/rows; art independent/no new palette."
+    },
+    {
+      "id": "DNA006",
+      "rule": "theme-surface-token-bypass",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaEncodingLegend.tsx",
+      "line": 174,
+      "mechanism": "White-alpha embedded chrome also MethodologyCards12/46 bypasses surface/border roles. Repeated mounts not extra authored violations.",
+      "fix": "Existing neutral theme roles at3 definitions; no geometry/content/global token changes; contrast NOTRUN."
+    },
+    {
+      "id": "DNA007",
+      "rule": "category-barrel-bypass",
+      "priority": "P3",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaCadenceMetrics.tsx",
+      "line": 2,
+      "mechanism": "5 feature type-imports from internal stat-reference: also SignalCoverageGrid2, operationalbrief-a-m/EvidenceBrief3, DrivingSummaryBrief4, NestedDrivingBrief4. data-display/index.ts5-6 already exports types. Not vendor/bundle defect.",
+      "fix": "Category data-display type imports; no barrel/API edit; serialize cross-page support owners."
+    },
+    {
+      "id": "DNA008",
+      "rule": "unsupported-telemetry-completeness-copy",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaKpiNotices.tsx",
+      "line": 183,
+      "mechanism": "Cap notice asserts telemetry remains complete; model has returned rows/no expected denominator and brief says possibly incomplete. Drive scoped endpoint/no selector cap does not prove collection completeness.",
+      "fix": "Qualify selector-cap independence; serialized existing driveDna.kpis.capReached canonical leaf/fallback/generated closure. Preserve qualified full available feed methodology; no API guess."
+    },
+    {
+      "id": "DNA009",
+      "rule": "disabled-source-freshness-and-retry",
+      "priority": "P1",
+      "file": "web/src/features/driving/pages/DriveDNAPage.tsx",
+      "line": 145,
+      "mechanism": "Unconditional query array includes disabled history(undefined)/telemetry(''). Worst-query ignores enablement/data; DataFreshness151-159 defaults fresh and330-339 refetch default true. Can advertise Up to date/unscoped manual retry; no request sent.",
+      "fix": "Only scoped active queries or truthful existing metadata slot; guard empty IDs, preserve independent retries/keys; no global freshness rewrite."
+    },
+    {
+      "id": "DNA010",
+      "rule": "evidence-count-plural-and-number-presentation",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaDistributionBarPlot.tsx",
+      "line": 96,
+      "mechanism": "Canonical emissionValue/progressEvidence/coverageDenominator/artBound lack _one/_other. EncodingLegend95 and distribution formatted value without plural count=>1 emissions/rows; SignalCoverageGrid25/31 raw count and FingerprintPanel123 raw encoded/source bypass grouping.",
+      "fix": "Numeric plural count + separately formatted interpolation; preserve denominators; add-only exact catalog leaves under serialized English owner."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C1",
+      "promoted": false,
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaSpeedPowerChart.tsx",
+      "line": 91,
+      "detail": "Also SocElevationChart64: <=600 plots/tables lack local actual sampling metadata; global methodology bound present. Not confirmed hidden sampling/deleted CSV; use existing metadata.sampling if contract requires."
+    },
+    {
+      "id": "C2",
+      "promoted": false,
+      "file": "web/src/features/driving/lib/driveDNA.ts",
+      "line": 702,
+      "detail": "Computed HSL/art white ink/430px caps need design/composed review; deterministic art not static-inline-style violation; no perceived neon/contrast/clipping/equivalence proof."
+    },
+    {
+      "id": "C3",
+      "promoted": false,
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaSpeedPowerPlot.tsx",
+      "line": 162,
+      "detail": "Defined values can connect across long time gaps; finite null-transition budget can saturate. No adversarial/mounted case run; no invented lost data."
+    },
+    {
+      "id": "C4",
+      "promoted": false,
+      "file": "web/src/features/driving/lib/driveDNA.ts",
+      "line": 663,
+      "detail": "Cold-start artistic trait uses first available ambient, not necessarily drive start; diagnostic caveats already present; no actual observation timing proof."
+    },
+    {
+      "id": "C5",
+      "promoted": false,
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx",
+      "line": 51,
+      "detail": "Local state omits updatedAt/blocked; brief retained only errors, but retained paused warning visible. Review individual fetch-age labels, not measurement freshness; no payload loss promoted."
+    }
+  ],
+  "sections": [
+    "EvidenceBrief:6metrics/status/source/scope/review drawer/notices",
+    "Fingerprint:signature-named SVG/petals/rings/neutral/bounded art",
+    "Genome:signature/7possible traits/5KV/SVG action",
+    "Encoding:5dimensions/availability/canonical-normalized ranges",
+    "SpeedPower:elapsed/2signed series/zero reference/partial/table/export",
+    "SocElevation:SoC/metres/partial/table/export",
+    "PowerDistribution:3count bins/channel denominator/coast band/table",
+    "SpeedDistribution:4SI bands/display conversions/channel denominator/table",
+    "CoverageCadence:6cadence metrics/5channel counts/2drawers/timestamp-gap notices",
+    "Methodology:source statuses/history cap/2card definitions mounted twice"
+  ],
+  "actions": [
+    {
+      "name": "Select drive",
+      "count": 1,
+      "lines": "page152-168"
+    },
+    {
+      "name": "Safe SVG",
+      "count": 1,
+      "lines": "Genome159-167; Svg11-81; escapedXML/sanitizedfilename/Blob cleanup; NOT executed"
+    },
+    {
+      "name": "Fatal/retained source retries",
+      "count": 4,
+      "lines": "KpiNotices84-94,111-118,137-144;2QueryError bindings+2Buttons conditional"
+    },
+    {
+      "name": "Retained paused refresh",
+      "count": 2,
+      "lines": "page175-180/sharedwarning104-127"
+    },
+    {
+      "name": "Header refresh",
+      "count": 1,
+      "lines": "page145"
+    },
+    {
+      "name": "Legend series toggles",
+      "count": 4,
+      "lines": "SpeedPower165-185/Soc135-153;stable speed/power/soc/elevation IDs/shared pressed/mobile controls"
+    },
+    {
+      "name": "Chart menus",
+      "count": 4,
+      "leafKinds": [
+        "PNG",
+        "SVG",
+        "copy image"
+      ],
+      "leafBindings": 12,
+      "lines": "4outer frames; ChartExportMenu22-60; no exportData=>no CSV/fullscreen/annotation props absent; NOT executed"
+    },
+    {
+      "name": "Review details drawer",
+      "count": 3,
+      "lines": "OperationalBrief159-170,246-265;main/cadence/coverage;close/Escape/focus NOTRUN"
+    },
+    {
+      "name": "Page help",
+      "count": 1,
+      "lines": "PageContainer196-211;NOTRUN"
+    }
+  ],
+  "populations": [
+    {
+      "name": "returned/valid",
+      "basis": "raw rows.length incl invalid vs sorted finite timestamps, duplicates retained",
+      "lines": "driveDNA759-794,1026-1034"
+    },
+    {
+      "name": "availability",
+      "basis": "valid-row denominator, zero denominator=>null percent",
+      "lines": "547-561,991-997"
+    },
+    {
+      "name": "distribution/regen",
+      "basis": "channel-available valid rows, independent speed/power; no rows=>null share, measured zero power coast",
+      "lines": "578-585,915-989"
+    },
+    {
+      "name": "SoC/climb",
+      "basis": "last-first available SoC; positive differences between available elevations, not guaranteed endpoint/terrain measurements",
+      "lines": "901-940"
+    },
+    {
+      "name": "cadence",
+      "basis": "adjacent sorted intervals incl duplicate zero; first-last observed span",
+      "lines": "798-801,879-889"
+    },
+    {
+      "name": "art/signature/chart",
+      "basis": "art<=720 reps/signature all valid normalized; charts/tables<=600 reps, endpoint/extrema/null priorities budgeted; metrics all valid",
+      "lines": "500-545,603-622,690-713,749-752,1021-1034"
+    }
+  ],
+  "states": {
+    "initial": "Ten persistent shells/independent skeletons; metadata survives telemetry first load",
+    "initialPaused": "DNA002 gap; not proven vehicle offline",
+    "fatal": "fatalError only; independent QueryError/passive panels; metadata survives telemetry failure",
+    "retained": "Refresh errors keep payload and own warnings/retry; paused retained warning present",
+    "empty": "No vehicle/resolved empty list/no telemetry/all-invalid/one insufficient row/missing channels distinct; coverage resolved zero rows with unknown denominator",
+    "disabled": "Empty selector/nonreadySVG/image gates, header gap DNA009",
+    "retry": "Separate callbacks preserved, no requests"
+  },
+  "preciseNeeds": [
+    {
+      "covers": [
+        "DNA001"
+      ],
+      "need": "Reserve Methodology.tsx + original DriveDNAPage.test.tsx duplicate-only correction"
+    },
+    {
+      "covers": [
+        "DNA002",
+        "DNA009"
+      ],
+      "need": "Reserve page/types/SectionBody/KpiNotices + original page test initial-paused/disabled-header guards, existing feedback only"
+    },
+    {
+      "covers": [
+        "DNA003"
+      ],
+      "need": "Reserve page/EvidenceBrief + original page test locale/zone display; raw dates unchanged"
+    },
+    {
+      "covers": [
+        "DNA004"
+      ],
+      "need": "Reserve Genome/KpiNotices + covering original test, existing min44 roles; later measured proof"
+    },
+    {
+      "covers": [
+        "DNA005"
+      ],
+      "need": "Reserve4cited chart consumers + covering original test; existing reactive palette"
+    },
+    {
+      "covers": [
+        "DNA006"
+      ],
+      "need": "Reserve Encoding/MethodologyCards + covering original test theme roles only"
+    },
+    {
+      "covers": [
+        "DNA007"
+      ],
+      "need": "5cited type sites only; cross-page briefs require release/serialized claim"
+    },
+    {
+      "covers": [
+        "DNA008",
+        "DNA010"
+      ],
+      "need": "Exact driveDna cap/plural canonical leaves after existing English lease; normal generator determines outputs, no manual guessed artifacts; then source/fallback/format sites and covering original tests"
+    },
+    {
+      "covers": [],
+      "need": "Later authorized msedge-only parent5173 browser lock/safe synthetic matrix; all widths/themes/RTL/200%/forcedcolors/motion/states/actions; no authority here"
+    }
+  ],
+  "queueDedup": {
+    "exactDriveDnaCorrection": "Only this QA row found, no correction owner; parent must reserve new exact scopes, never edit queue here",
+    "related": "EvidencePanel plural row413 and source-trust412 own advanced-intelligence, not DNA; accepted Drivetrain import/palette/range and Drives mobile rows different files. Reuse mechanisms without widening/redispatching accepted roots."
+  },
+  "responsive": {
+    "declared": "Hero1->xl3/chartpairs1->xl2/encoding1->sm2->xl5/wrapping/p4->sm5; responsive chart hosts310-340 heights",
+    "matrix": "320/375/390/430/768/1024/1280/1440/1920/2560/narrow containers/themes/RTL/200% ALL NOTRUN;3local declared target gaps",
+    "safeAreas": "NOTRUN"
+  },
+  "accessibility": {
+    "source": "Labelled Select/signature roleimg/hidden decoration/persistent panels/stable legendIDs+pressed controls/outer tables/shared drawers/FadeIn motion preference",
+    "exceptions": "Shared raw HTML/vendor imports expected; dense child no-table justified by outer alternatives; old KPI band type-only not mounted; dynamic artwork not staticstyle defect",
+    "runtime": "Keyboard/focus/SR/contrast/forcedcolors/motion NOTRUN"
+  },
+  "architecture": {
+    "wrapper": "PageLayout delegates PageContainer, acceptable",
+    "separation": "Typed hooks read/model computes/render converts; no fetch/useEffect match in26file domain",
+    "legacy": "KpiBand type-only props dependency not second mounted summary; no deletion/remount/competing framework",
+    "observability": "Page RUM/console grep0; no runtime bootstrap/API/device check"
+  },
+  "summary": {
+    "byRule": [
+      {
+        "count": 1,
+        "rule": "category-barrel-bypass"
+      },
+      {
+        "count": 1,
+        "rule": "chart-palette-preference-bypass"
+      },
+      {
+        "count": 1,
+        "rule": "date-display-preference-bypass"
+      },
+      {
+        "count": 1,
+        "rule": "declared-mobile-target-below-44"
+      },
+      {
+        "count": 1,
+        "rule": "disabled-source-freshness-and-retry"
+      },
+      {
+        "count": 1,
+        "rule": "duplicate-section-render"
+      },
+      {
+        "count": 1,
+        "rule": "evidence-count-plural-and-number-presentation"
+      },
+      {
+        "count": 1,
+        "rule": "initial-paused-state-loss"
+      },
+      {
+        "count": 1,
+        "rule": "theme-surface-token-bypass"
+      },
+      {
+        "count": 1,
+        "rule": "unsupported-telemetry-completeness-copy"
+      }
+    ],
+    "confirmedFindingCount": 10,
+    "countBasis": "10 deduplicated source mechanisms, not raw matches or repeated mounted instances",
+    "priorityFixes": [
+      "DNA002 initial-paused",
+      "DNA009 disabled header",
+      "DNA001 duplicate mount"
+    ],
+    "candidateCount": 5,
+    "filesWithMostPrimaryFindings": [
+      {
+        "file": "web/src/features/driving/pages/DriveDNAPage.tsx",
+        "primaryFindings": 2
+      },
+      {
+        "file": "web/src/features/driving/components/drive-dna/DriveDnaCadenceMetrics.tsx",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/features/driving/components/drive-dna/DriveDnaDistributionBarPlot.tsx",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/features/driving/components/drive-dna/DriveDnaEncodingLegend.tsx",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/features/driving/components/drive-dna/DriveDnaGenomePanel.tsx",
+        "primaryFindings": 1
+      }
+    ]
+  },
+  "sourcePins": [
+    {
+      "sha256": "9d8d9133bdff2e9cae89f849f3b4b2b64adbf5ed76571ac5db8d61a6477167c1",
+      "lines": 209,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/pages/DriveDNAPage.tsx",
+      "finalSHA256": "9d8d9133bdff2e9cae89f849f3b4b2b64adbf5ed76571ac5db8d61a6477167c1"
+    },
+    {
+      "sha256": "0db8f12bbcbb23fb2fa043bfcbbd0ec3fbc3eabd094d5087bac8ddb8d78265c2",
+      "lines": 53,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaCadenceMetrics.tsx",
+      "finalSHA256": "0db8f12bbcbb23fb2fa043bfcbbd0ec3fbc3eabd094d5087bac8ddb8d78265c2"
+    },
+    {
+      "sha256": "aff6d05da45d57f7d6e9b4dd340d9c953ab42f480bb82bdc1c2760760e73d568",
+      "lines": 127,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaCoverageCadence.tsx",
+      "finalSHA256": "aff6d05da45d57f7d6e9b4dd340d9c953ab42f480bb82bdc1c2760760e73d568"
+    },
+    {
+      "sha256": "a41814a2c5429d0669a96ae95780e4996b56783103a15f63ba2bb683873aba15",
+      "lines": 118,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaDistributionBarPlot.tsx",
+      "finalSHA256": "a41814a2c5429d0669a96ae95780e4996b56783103a15f63ba2bb683873aba15"
+    },
+    {
+      "sha256": "9b4a3999ba583182601d79271df5982465fc99e866e8b38c0971182284ba25c9",
+      "lines": 196,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaEncodingLegend.tsx",
+      "finalSHA256": "9b4a3999ba583182601d79271df5982465fc99e866e8b38c0971182284ba25c9"
+    },
+    {
+      "sha256": "ea977638e351bcfeb33b34749b87aff14820ff03acadfca35031f874e80e7bee",
+      "lines": 136,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaFingerprintPanel.tsx",
+      "finalSHA256": "ea977638e351bcfeb33b34749b87aff14820ff03acadfca35031f874e80e7bee"
+    },
+    {
+      "sha256": "64710921bc7f66497117ac8e951ff02e5141e7348d0d8701acac14fa76c86049",
+      "lines": 172,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaGenomePanel.tsx",
+      "finalSHA256": "64710921bc7f66497117ac8e951ff02e5141e7348d0d8701acac14fa76c86049"
+    },
+    {
+      "sha256": "20347eecfa88681b6903da4cdc77e811104622a5ec24084251cfe4c73b7996bd",
+      "lines": 155,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaKpiBand.tsx",
+      "finalSHA256": "20347eecfa88681b6903da4cdc77e811104622a5ec24084251cfe4c73b7996bd"
+    },
+    {
+      "sha256": "f7a95caeee3aee370d61a47986fbe59379bbd4504c595a28950e76f1abe8ae00",
+      "lines": 189,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaKpiNotices.tsx",
+      "finalSHA256": "f7a95caeee3aee370d61a47986fbe59379bbd4504c595a28950e76f1abe8ae00"
+    },
+    {
+      "sha256": "09a72f6986c894114176f4af0d1cec675954f08cd5317c9db455e8b33d130d9e",
+      "lines": 138,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaMethodology.tsx",
+      "finalSHA256": "09a72f6986c894114176f4af0d1cec675954f08cd5317c9db455e8b33d130d9e"
+    },
+    {
+      "sha256": "6f852ef4a503869b480de60fc9e14b40bc1231caaf1156f56de0722b9d3c6c52",
+      "lines": 80,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaMethodologyCards.tsx",
+      "finalSHA256": "6f852ef4a503869b480de60fc9e14b40bc1231caaf1156f56de0722b9d3c6c52"
+    },
+    {
+      "sha256": "a8a0ca5b9f58781239b22bd55bb1bbfd15de0150c9bf7992cff34bd5295f8a86",
+      "lines": 143,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaPowerDistribution.tsx",
+      "finalSHA256": "a8a0ca5b9f58781239b22bd55bb1bbfd15de0150c9bf7992cff34bd5295f8a86"
+    },
+    {
+      "sha256": "f44a77e1d5a63d5bc07510e13570b2d107ad6468979e59b6354baa89554999a2",
+      "lines": 192,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaSectionBody.tsx",
+      "finalSHA256": "f44a77e1d5a63d5bc07510e13570b2d107ad6468979e59b6354baa89554999a2"
+    },
+    {
+      "sha256": "39ba6696433f1155164bd1cad1bc4cd0ae3584fa3443a0621d5a034326b2c3ec",
+      "lines": 32,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaSignalCoverageGrid.tsx",
+      "finalSHA256": "39ba6696433f1155164bd1cad1bc4cd0ae3584fa3443a0621d5a034326b2c3ec"
+    },
+    {
+      "sha256": "de4d60f527e5e3160085ab8c991afdf193b8160465b9346d40b1b1fa6026cced",
+      "lines": 162,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaSocElevationChart.tsx",
+      "finalSHA256": "de4d60f527e5e3160085ab8c991afdf193b8160465b9346d40b1b1fa6026cced"
+    },
+    {
+      "sha256": "ca1940ebc6d63099320f801c16e9e17acfa541a7455d0fb36e3e4b832adc3ff9",
+      "lines": 160,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaSocElevationPlot.tsx",
+      "finalSHA256": "ca1940ebc6d63099320f801c16e9e17acfa541a7455d0fb36e3e4b832adc3ff9"
+    },
+    {
+      "sha256": "893b2a4531bdc2209fed7ed40a6d57910cebe0b7d2503ff82be9968366505337",
+      "lines": 170,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaSpeedDistribution.tsx",
+      "finalSHA256": "893b2a4531bdc2209fed7ed40a6d57910cebe0b7d2503ff82be9968366505337"
+    },
+    {
+      "sha256": "b815e15800a2806f0892a4a586b3d13b744d245ee93e3a6f451a246f77abbb7d",
+      "lines": 187,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaSpeedPowerChart.tsx",
+      "finalSHA256": "b815e15800a2806f0892a4a586b3d13b744d245ee93e3a6f451a246f77abbb7d"
+    },
+    {
+      "sha256": "ec7dfdeb5863599b4153040bb7ebb8df17e3619ee5304c2b992a42f96320e096",
+      "lines": 189,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/DriveDnaSpeedPowerPlot.tsx",
+      "finalSHA256": "ec7dfdeb5863599b4153040bb7ebb8df17e3619ee5304c2b992a42f96320e096"
+    },
+    {
+      "sha256": "b9345309ee76fc9ffa4b017251dbaeacbae308decba903498a68bac220d7f256",
+      "lines": 81,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/driveDnaSvg.ts",
+      "finalSHA256": "b9345309ee76fc9ffa4b017251dbaeacbae308decba903498a68bac220d7f256"
+    },
+    {
+      "sha256": "161f076583a266f65820b2b202c59aa618bb2479f3476ca144afe3ce2e02ce97",
+      "lines": 28,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/index.ts",
+      "finalSHA256": "161f076583a266f65820b2b202c59aa618bb2479f3476ca144afe3ce2e02ce97"
+    },
+    {
+      "sha256": "979ea656510831a813c246f977e0e1cb5816124aeb16a00b5c1b5e8b002282db",
+      "lines": 14,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/drive-dna/types.ts",
+      "finalSHA256": "979ea656510831a813c246f977e0e1cb5816124aeb16a00b5c1b5e8b002282db"
+    },
+    {
+      "sha256": "ce04d3dab9ec2442bf254e25dc8b42e7aecaeead4ee6e17132a12d03f61a2288",
+      "lines": 1076,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/lib/driveDNA.ts",
+      "finalSHA256": "ce04d3dab9ec2442bf254e25dc8b42e7aecaeead4ee6e17132a12d03f61a2288"
+    },
+    {
+      "sha256": "04bf1459b1b6e2bcb230945ee7dae83d5597ff57d921399859aeaab3bb86c52f",
+      "lines": 59,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx",
+      "finalSHA256": "04bf1459b1b6e2bcb230945ee7dae83d5597ff57d921399859aeaab3bb86c52f"
+    },
+    {
+      "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+      "lines": 53,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "finalSHA256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93"
+    },
+    {
+      "sha256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba",
+      "lines": 63,
+      "readCoverage": "FULL",
+      "pinUTC": "2026-10-14T01:09:18.6343679Z",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+      "finalSHA256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/api/hooks/useDriving.ts",
+      "lines": 454,
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "lines": 174,
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/hooks/useDataState.ts",
+      "lines": 65,
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/api/dataState.ts",
+      "lines": 434,
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/hooks/useUnits.ts",
+      "lines": 194,
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "lines": 47,
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/hooks/useDateFormat.ts",
+      "lines": 148,
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/lib/dateFormat.ts",
+      "lines": 462,
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/lib/timezone.ts",
+      "lines": 51,
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/lib/workspaceScope.ts",
+      "lines": 168,
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/App.tsx",
+      "lines": 919,
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/types/driving.ts",
+      "lines": 411,
+      "sha256": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/api/client.ts",
+      "lines": 458,
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "lines": 24,
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "lines": 17,
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "lines": 259,
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "lines": 115,
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/feedback/QueryError.tsx",
+      "lines": 16,
+      "sha256": "5dc7d6a24694c2f34411d8b042864c94a630be9fc0a516586c2596172f19e48a",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/ui/Button.tsx",
+      "lines": 93,
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "lines": 42,
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "lines": 1006,
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/charts/ChartLegend.tsx",
+      "lines": 193,
+      "sha256": "e5f0b49f6f1159224d3b000ce2c57800dc13ce33c3053dc72ee1e35b2da67095",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/charts/ChartExportMenu.tsx",
+      "lines": 263,
+      "sha256": "84d0aa6fd871b3d0374ee6f929f0d67a7080c11d2f0e1048086288a0a116184b",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/charts/chartUtils.tsx",
+      "lines": 28,
+      "sha256": "a9ec06aa5e321797194b9fb278aad015272b5d7809a01f01c655508f114303d2",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/charts/index.ts",
+      "lines": 88,
+      "sha256": "7c088add21d5d43f2d37f41c72517db9b2eb7738174914bd8bf21b9fbc62de5d",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/data-display/index.ts",
+      "lines": 178,
+      "sha256": "f8495446c7eb521756f6071b4fb021fc71cec90218f2f204db7ad65d841158d9",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "lines": 342,
+      "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "lines": 321,
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "lines": 39,
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/hooks/useChartPalette.ts",
+      "lines": 49,
+      "sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/lib/colors.ts",
+      "lines": 388,
+      "sha256": "a5c53faeaaa3a2d07c6475f0d64f67ddce9e36e6c3405ac983584f4a1fcf5e93",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/features/driving/pages/DriveDNAPage.test.tsx",
+      "lines": 734,
+      "sha256": "fb3878798b3585d411e4c30e5c9c5802d9585f269c759e44c12350fe10dad13b",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "web/src/i18n/en.json",
+      "lines": 38994,
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "internal/api/router.go",
+      "lines": 5363,
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "internal/api/drives/detail.go",
+      "lines": 583,
+      "sha256": "862a309d97f3313b881ede80fa01ef12f5d3038722d2d9412f652ebabf36c313",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "docs/orchestrator-loop.md",
+      "lines": 296,
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "docs/frontend-design-contract.md",
+      "lines": 2539,
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "docs/session-handoff.md",
+      "lines": 2460,
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "docs/frontend-mission.md",
+      "lines": 1593,
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "docs/frontend-worker-conventions.md",
+      "lines": 152,
+      "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "docs/MOBILE_GUIDELINES.md",
+      "lines": 166,
+      "sha256": "c2aad7d2ea44a3c2ea317a1b6f38d59c5a6cb71fd13d91816fb60a301f9f2228",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "docs/A11Y_GUIDELINES.md",
+      "lines": 234,
+      "sha256": "5d8ff67ca9cecab201c214d252304eedef653230d8463067a69b8b2c94697580",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "docs/I18N_GUIDELINES.md",
+      "lines": 216,
+      "sha256": "9dafaa22475219a8ddb7e36905d428a6e0f7ef4a685006ee6d7f257878b8de94",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "lines": 94,
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "lines": 629,
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": ".github/instructions/observability.instructions.md",
+      "lines": 45,
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "lines": 221,
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    },
+    {
+      "readCoverage": "Scoped ranges/matches only unless mandatoryReads states FULL; not a full source-read claim",
+      "file": "migration-queue.md",
+      "lines": 2082,
+      "sha256": "10e8409c99e9d67afafb9e393709a030816f5f32cb215e608e1047f29311191e",
+      "pinLimit": "Supplemental final snapshot; only initial26 have before/after drift proof",
+      "pinUTC": "2026-10-14T01:26:05.8317160Z"
+    }
+  ],
+  "filesRead": [
+    "web/src/features/driving/pages/DriveDNAPage.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaCadenceMetrics.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaCoverageCadence.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaDistributionBarPlot.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaEncodingLegend.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaFingerprintPanel.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaGenomePanel.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaKpiBand.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaKpiNotices.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaMethodology.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaMethodologyCards.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaPowerDistribution.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaSectionBody.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaSignalCoverageGrid.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaSocElevationChart.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaSocElevationPlot.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaSpeedDistribution.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaSpeedPowerChart.tsx",
+    "web/src/features/driving/components/drive-dna/DriveDnaSpeedPowerPlot.tsx",
+    "web/src/features/driving/components/drive-dna/driveDnaSvg.ts",
+    "web/src/features/driving/components/drive-dna/index.ts",
+    "web/src/features/driving/components/drive-dna/types.ts",
+    "web/src/features/driving/lib/driveDNA.ts",
+    "web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx",
+    "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+    "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+    "web/src/api/hooks/useDriving.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/timezone.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/App.tsx",
+    "web/src/types/driving.ts",
+    "web/src/api/client.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/feedback/QueryError.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/charts/EmbeddedChart.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/charts/ChartLegend.tsx",
+    "web/src/components/charts/ChartExportMenu.tsx",
+    "web/src/components/charts/chartUtils.tsx",
+    "web/src/components/charts/index.ts",
+    "web/src/components/data-display/index.ts",
+    "web/src/components/data-display/DataFreshness.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/hooks/useChartPalette.ts",
+    "web/src/lib/colors.ts",
+    "web/src/features/driving/pages/DriveDNAPage.test.tsx",
+    "web/src/i18n/en.json",
+    "internal/api/router.go",
+    "internal/api/drives/detail.go",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/session-handoff.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/MOBILE_GUIDELINES.md",
+    "docs/A11Y_GUIDELINES.md",
+    "docs/I18N_GUIDELINES.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "migration-queue.md"
+  ],
+  "preservation": {
+    "pagePlusPresentationUniqueLines": 2828.0,
+    "modelLines": 1076,
+    "legacyKpiBandLines": 155,
+    "topBriefPanelCount": 1,
+    "pageLines": 209,
+    "svgHelperLines": 81,
+    "localGlassPanelDefinitions": 5,
+    "embeddedChartMountedInstances": 4,
+    "presentationFileCount": 20,
+    "legacyKpiBandMounted": false,
+    "presentationUniqueLines": 2619.0,
+    "embeddedChartDefinitions": 3,
+    "outerChartCount": 4,
+    "comparison": "Current accepted source/queue description; originals/baselines not regenerated; no original70percent ratio claim",
+    "methodologyCardMountedInstances": 4,
+    "methodologyCardDefinitions": 2,
+    "sectionCount": 10,
+    "pageSHA256": "9d8d9133bdff2e9cae89f849f3b4b2b64adbf5ed76571ac5db8d61a6477167c1"
+  },
+  "boundedScans": [
+    {
+      "rawMatchCount": 0,
+      "rule": "static-inline-style",
+      "command": "Select-String -LiteralPath <26 sourceDomainPins paths> -Pattern style\\s*=\\s*\\{\\{ -CaseSensitive",
+      "exitCode": 0,
+      "scopePinIndices": "0-25",
+      "rawOutput": [
+        "MATCH_COUNT=0"
+      ],
+      "disposition": "No bounded regex candidate; not parser/type/lint/whole-page PASS"
+    },
+    {
+      "rawMatchCount": 0,
+      "rule": "raw-html",
+      "command": "Select-String -LiteralPath <26 sourceDomainPins paths> -Pattern <(button|input|textarea|select|table)\\b -CaseSensitive",
+      "exitCode": 0,
+      "scopePinIndices": "0-25",
+      "rawOutput": [
+        "MATCH_COUNT=0"
+      ],
+      "disposition": "No bounded regex candidate; not parser/type/lint/whole-page PASS"
+    },
+    {
+      "rawMatchCount": 0,
+      "rule": "direct-library-import",
+      "command": "Select-String -LiteralPath <26 sourceDomainPins paths> -Pattern from\\s+['\\\"](recharts|react-leaflet|framer-motion)['\\\"] -CaseSensitive",
+      "exitCode": 0,
+      "scopePinIndices": "0-25",
+      "rawOutput": [
+        "MATCH_COUNT=0"
+      ],
+      "disposition": "No bounded regex candidate; not parser/type/lint/whole-page PASS"
+    },
+    {
+      "rawMatchCount": 0,
+      "rule": "old-api-import",
+      "command": "Select-String -LiteralPath <26 sourceDomainPins paths> -Pattern from\\s+['\\\"](?:\\.\\./)+api['\\\"] -CaseSensitive",
+      "exitCode": 0,
+      "scopePinIndices": "0-25",
+      "rawOutput": [
+        "MATCH_COUNT=0"
+      ],
+      "disposition": "No bounded regex candidate; not parser/type/lint/whole-page PASS"
+    },
+    {
+      "rawMatchCount": 0,
+      "rule": "double-prefix",
+      "command": "Select-String -LiteralPath <26 sourceDomainPins paths> -Pattern /api/v1/ -CaseSensitive",
+      "exitCode": 0,
+      "scopePinIndices": "0-25",
+      "rawOutput": [
+        "MATCH_COUNT=0"
+      ],
+      "disposition": "No bounded regex candidate; not parser/type/lint/whole-page PASS"
+    },
+    {
+      "rawMatchCount": 0,
+      "rule": "camelcase-param",
+      "command": "Select-String -LiteralPath <26 sourceDomainPins paths> -Pattern [?&][a-z]+[A-Z][A-Za-z]*= -CaseSensitive",
+      "exitCode": 0,
+      "scopePinIndices": "0-25",
+      "rawOutput": [
+        "MATCH_COUNT=0"
+      ],
+      "disposition": "No bounded regex candidate; not parser/type/lint/whole-page PASS"
+    },
+    {
+      "rawMatchCount": 0,
+      "rule": "hidden-section",
+      "command": "Select-String -LiteralPath <26 sourceDomainPins paths> -Pattern &&\\s*<(GlassPanel|section|ChartContainer) -CaseSensitive",
+      "exitCode": 0,
+      "scopePinIndices": "0-25",
+      "rawOutput": [
+        "MATCH_COUNT=0"
+      ],
+      "disposition": "No bounded regex candidate; not parser/type/lint/whole-page PASS"
+    },
+    {
+      "rawMatchCount": 0,
+      "rule": "hardcoded-string",
+      "command": "Select-String -LiteralPath <26 sourceDomainPins paths> -Pattern >\\s*[A-Za-z][A-Za-z ,&:;.!?–-]*\\s*</ -CaseSensitive",
+      "exitCode": 0,
+      "scopePinIndices": "0-25",
+      "rawOutput": [
+        "MATCH_COUNT=0"
+      ],
+      "disposition": "No bounded regex candidate; not parser/type/lint/whole-page PASS"
+    },
+    {
+      "rawMatchCount": 1,
+      "rule": "missing-page-container",
+      "command": "Select-String -LiteralPath <26 sourceDomainPins paths> -Pattern <PageLayout|<PageContainer -CaseSensitive",
+      "exitCode": 0,
+      "scopePinIndices": "0-25",
+      "rawOutput": [
+        "MATCH_COUNT=1",
+        "web\\src\\features\\driving\\pages\\DriveDNAPage.tsx:143:<PageLayout"
+      ],
+      "disposition": "One PageLayout wrapper delegates existing PageContainer; acceptable"
+    },
+    {
+      "rawMatchCount": 0,
+      "rule": "fetch-useeffect",
+      "command": "Select-String -LiteralPath <26 sourceDomainPins paths> -Pattern \\b(fetch\\s*\\(|useEffect\\s*\\() -CaseSensitive",
+      "exitCode": 0,
+      "scopePinIndices": "0-25",
+      "rawOutput": [
+        "MATCH_COUNT=0"
+      ],
+      "disposition": "No bounded regex candidate; not parser/type/lint/whole-page PASS"
+    }
+  ],
+  "rawLog": {
+    "category": {
+      "matches": 5,
+      "exitCode": 0
+    },
+    "canonical": {
+      "exitCode": 0,
+      "uniqueKeyCount": 219,
+      "tCallCount": 257,
+      "missingOccurrences": 0
+    },
+    "discoveryLimit": "First5 startup discovery commands returned raw in tools before transcript initialization; do not claim logged. Later every scoped check command/raw output is in transcript. Overbroad bounded router grep388 preserved/narrowed; initial case-insensitive HTML4 corrected0.",
+    "failedCommands": 3,
+    "backend": {
+      "println": 0,
+      "panic": 0,
+      "httpNewRequest": 0,
+      "exitCode": 0,
+      "scope": "detail.go551-583",
+      "sqlInterpolation": 0,
+      "contextCalls": 2
+    },
+    "path": "web/logs/phase6-qa-driving-drive-dna.log",
+    "paletteSurfacePrimary": {
+      "matches": 7,
+      "exitCode": 0
+    },
+    "method": "Native Start-Transcript append, no redirection/helper files",
+    "ignoredBy": ".gitignore:80 logs/"
+  },
+  "commandReceipts": [
+    {
+      "exitCode": 1,
+      "shellId": "719",
+      "body": "FAILED scan, corrected765exit0"
+    },
+    {
+      "exitCode": 1,
+      "shellId": "1003",
+      "body": "NOTRUN hostos206"
+    },
+    {
+      "exitCode": 1,
+      "shellId": "1032",
+      "body": "NOTRUN hostos206"
+    }
+  ]
+}

@@ -7,6 +7,7 @@
     "staleBanner": {
       "title": "Live data unavailable",
       "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored."
-    }
+    },
+    "scope": "Live data"
   }
 }

@@ -5,6 +5,8 @@ import (
 	"math"
 	"regexp"
 	"time"
+
+	"golang.org/x/text/currency"
 )
 
 // Ledger categories. Stored as free text but validated against this set so
@@ -62,7 +64,7 @@ func ValidateLedgerEntry(e LedgerEntry, now time.Time) error {
 	if !(e.Amount > 0) || e.Amount >= 10_000_000 {
 		return fmt.Errorf("amount must be positive and below 10,000,000")
 	}
-	if !currencyRe.MatchString(e.Currency) {
+	if !validLedgerCurrency(e.Currency) {
 		return fmt.Errorf("currency must be a 3-letter ISO code")
 	}
 	day, err := time.Parse("2006-01-02", e.Incurred)
@@ -80,18 +82,55 @@ func ValidateLedgerEntry(e LedgerEntry, now time.Time) error {
 
 // LedgerTotals is the pure rollup over a vehicle's entries.
 type LedgerTotals struct {
-	ByCategory map[string]float64 `json:"by_category"`
-	GrandTotal float64            `json:"grand_total"`
-	Entries    int                `json:"entries"`
+	ByCategory map[string]float64              `json:"by_category"`
+	GrandTotal *float64                        `json:"grand_total"`
+	Entries    int                             `json:"entries"`
+	Currency   string                          `json:"currency"`
+	ByCurrency map[string]LedgerCurrencyTotals `json:"by_currency"`
 }
 
-// SummarizeLedger folds entries into per-category totals. Amounts are
-// rounded to cents; an empty input yields an empty (non-nil) map.
+type LedgerCurrencyTotals struct {
+	ByCategory map[string]float64 `json:"by_category"`
+	GrandTotal float64            `json:"grand_total"`
+}
+
+func validLedgerCurrency(code string) bool {
+	if !currencyRe.MatchString(code) || code == "XXX" {
+		return false
+	}
+	_, err := currency.ParseISO(code)
+	return err == nil
+}
+
+// SummarizeLedger preserves source denominations. A scalar total is only
+// available for an empty ledger or one known currency; no FX is inferred.
 func SummarizeLedger(entries []LedgerEntry) LedgerTotals {
-	t := LedgerTotals{ByCategory: map[string]float64{}, Entries: len(entries)}
+	zero := 0.0
+	t := LedgerTotals{ByCategory: map[string]float64{}, Entries: len(entries),
+		GrandTotal: &zero, ByCurrency: map[string]LedgerCurrencyTotals{}}
+	unknown := false
 	for _, e := range entries {
-		t.ByCategory[e.Category] = roundCents(t.ByCategory[e.Category] + e.Amount)
-		t.GrandTotal = roundCents(t.GrandTotal + e.Amount)
+		if !validLedgerCurrency(e.Currency) {
+			unknown = true
+			continue
+		}
+		group := t.ByCurrency[e.Currency]
+		if group.ByCategory == nil {
+			group.ByCategory = map[string]float64{}
+		}
+		group.ByCategory[e.Category] = roundCents(group.ByCategory[e.Category] + e.Amount)
+		group.GrandTotal = roundCents(group.GrandTotal + e.Amount)
+		t.ByCurrency[e.Currency] = group
+	}
+	if unknown || len(t.ByCurrency) > 1 {
+		t.GrandTotal = nil
+	} else {
+		for code, group := range t.ByCurrency {
+			t.Currency = code
+			t.ByCategory = group.ByCategory
+			total := group.GrandTotal
+			t.GrandTotal = &total
+		}
 	}
 	return t
 }

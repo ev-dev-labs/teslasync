@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { DataProvenanceBadge } from '@/components/data-display';
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { Button, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -19,13 +21,13 @@ import {
   FsdConfidencePanel,
   FsdDistanceTrend,
   FsdDriveAnalyticsPanels,
-  FsdKpiBand,
   FsdObservatoryPanel,
   FsdShareTrend,
   FsdTopDays,
   FsdWeekdayPattern,
   type FsdSectionState,
 } from '../components/fsd-insights';
+import { FsdEvidenceBrief } from '../components/operationalbrief-a-m/FsdEvidenceBrief';
 
 const SPLIT_COLUMNS = { default: 1, xl: 2 } as const;
 const LEGACY_PERIOD_PRESETS: Record<string, string> = {
@@ -52,6 +54,7 @@ const LEGACY_PERIOD_PRESETS: Record<string, string> = {
  */
 export default function FSDInsightsPage() {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
   usePageTitle(t('fsd.title', 'FSD Insights'));
 
   const { vehicleId } = useSelectedVehicle();
@@ -105,27 +108,29 @@ export default function FSDInsightsPage() {
     if (insightsState.status === 'initial') return;
     const id = window.location.hash.replace(/^#/, '');
     if (!id) return;
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [insightsState.status, insightsState.data]);
+    document.getElementById(id)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }, [insightsState.status, insightsState.data, reduce]);
 
   const sectionState: FsdSectionState = {
     // `initial` is the only status with nothing retained AND no failure, so it
-    // is the only one that should show a skeleton. A failed refresh keeps the
-    // retained payload on screen.
-    isLoading: insightsState.status === 'initial',
+    // can show a skeleton once a vehicle enables the query. Without a vehicle
+    // the disabled query stays pending/idle indefinitely, not loading.
+    // A failed refresh keeps the retained payload on screen.
+    isLoading: vehicleId != null && insightsState.status === 'initial',
     error: insightsState.fatalError,
     onRetry,
     noVehicle: vehicleId == null,
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('fsd.title', 'FSD Insights')}
       subtitle={t(
         'fsd.subtitle',
         'Reported supervised self-driving distance and its share of observed driving, with the counter evidence behind every metric.',
       )}
       query={insightsQuery}
+      busy={insightsQuery.fetchStatus === 'fetching'}
       copyLink
       contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
@@ -137,40 +142,76 @@ export default function FSDInsightsPage() {
         </div>
       }
     >
+      {insightsState.status === 'initial' && insightsState.isRefreshBlocked && vehicleId != null ? (
+        <AlertBanner
+          variant="info"
+          role="status"
+          aria-live="polite"
+          data-refresh-blocked
+          title={t('dataSources.status.paused', 'Refresh paused')}
+        >
+          <Text as="p" variant="bodySm" color="secondary">
+            {t('fsd.kpi.noPeriod', 'No period loaded yet')}
+          </Text>
+          <Button variant="ghost" size="sm" onClick={onRetry}>
+            {t('common.refresh', 'Refresh')}
+          </Button>
+        </AlertBanner>
+      ) : null}
       <StaleRefreshWarning state={insightsState} label={t('fsd.title', 'FSD Insights')} />
 
       <FadeIn>
-        <FsdKpiBand insights={insightsState.data} state={sectionState} />
+        <SectionErrorBoundary name="FsdEvidenceBrief">
+          <FsdEvidenceBrief insights={insightsState.data} state={sectionState}
+            scope={t('fsd.brief.window', '{{start}}–{{end}} (exclusive end) · {{timezone}}', {
+              start: startInstant, end: endInstantExclusive, timezone,
+            })}
+            retained={insightsState.status === 'stale' || insightsState.refreshError != null} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.04}>
-        <FsdObservatoryPanel insights={insightsState.data} state={sectionState} />
+        <SectionErrorBoundary name="FsdObservatoryPanel">
+          <FsdObservatoryPanel insights={insightsState.data} state={sectionState} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <FsdDistanceTrend insights={insightsState.data} state={sectionState} />
+        <SectionErrorBoundary name="FsdDistanceTrend">
+          <FsdDistanceTrend insights={insightsState.data} state={sectionState} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.1}>
         <Grid cols={SPLIT_COLUMNS} gap={4}>
-          <FsdShareTrend insights={insightsState.data} state={sectionState} />
-          <FsdWeekdayPattern insights={insightsState.data} state={sectionState} />
+          <SectionErrorBoundary name="FsdShareTrend">
+            <FsdShareTrend insights={insightsState.data} state={sectionState} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="FsdWeekdayPattern">
+            <FsdWeekdayPattern insights={insightsState.data} state={sectionState} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
 
       <FadeIn delay={0.15}>
-        <FsdTopDays insights={insightsState.data} state={sectionState} />
+        <SectionErrorBoundary name="FsdTopDays">
+          <FsdTopDays insights={insightsState.data} state={sectionState} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.2}>
         <div className="space-y-4 sm:space-y-5">
-          <FsdDriveAnalyticsPanels insights={insightsState.data} state={sectionState} />
+          <SectionErrorBoundary name="FsdDriveAnalyticsPanels">
+            <FsdDriveAnalyticsPanels insights={insightsState.data} state={sectionState} />
+          </SectionErrorBoundary>
         </div>
       </FadeIn>
 
       <FadeIn delay={0.25}>
-        <FsdConfidencePanel insights={insightsState.data} state={sectionState} />
+        <SectionErrorBoundary name="FsdConfidencePanel">
+          <FsdConfidencePanel insights={insightsState.data} state={sectionState} />
+        </SectionErrorBoundary>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

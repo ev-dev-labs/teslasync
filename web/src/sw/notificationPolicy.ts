@@ -69,9 +69,9 @@ export interface DeviceQuietHours {
   startLocal: string
   /** Local wall clock `HH:MM`. Wraps past midnight when `<= startLocal`. */
   endLocal: string
-  /** Bitmask, Sun = 1 … Sat = 64. */
+  /** Bitmask, Sun = 1 … Sat = 64; 0 selects no days, 127 selects every day. */
   weekdays: number
-  /** Severities that ring through the window anyway. */
+  /** Selected severities bypass quiet-hours silence, not other device mutes. */
   bypassSeverities: NotificationSeverity[]
 }
 
@@ -395,11 +395,13 @@ export interface EvaluateNotificationOptions {
  *   2. category mute,
  *   3. minimum severity,
  *   4. vehicle scope,
- *   5. quiet hours (silences rather than suppresses; bypass severities ring).
+ *   5. quiet hours (silences rather than suppresses; only selected bypass
+ *      severities ring, provided all preceding filters allow delivery).
  *
- * A payload with no resolvable vehicle is treated as fleet-wide and is never
- * filtered by vehicle scope — suppressing "Fleet telemetry offline" because
- * it lacks a vehicle id would hide exactly the alerts that matter most.
+ * A payload with no resolvable vehicle is treated as fleet-wide and is exempt
+ * only from the vehicle filter. System notifications without a vehicle still
+ * respect the master switch, category mute, minimum severity and quiet hours;
+ * the vehicle exemption does not guarantee delivery.
  */
 export function evaluateNotification(
   payload: NotificationPayloadLike,

@@ -106,12 +106,18 @@ function assertDigestMetricsShape(m: DigestMetrics): void {
     'totalDistanceM', 'prevDistanceM', 'totalDrives', 'prevDriveCount',
     'energyUsedWh', 'prevEnergyWh', 'chargingCost', 'prevChargingCost',
     'co2Saved', 'prevCo2', 'avgEfficiencyWhPerM', 'prevAvgEfficiencyWhPerM',
-    'totalDurationS', 'chargeEnergyAddedWh', 'prevChargeEnergyWh', 'avgChargePowerW',
-    'chargingSessionCount', 'batteryStart', 'batteryEnd', 'alertTotal',
+    'totalDurationS', 'avgChargePowerW',
+    'chargingSessionCount', 'alertTotal',
   ];
   for (const key of numericKeys) {
     expect(typeof m[key]).toBe('number');
     expect(Number.isNaN(m[key] as number)).toBe(false);
+  }
+  // Battery averages and charge-energy aggregates are unknown (null), never
+  // fabricated, without an available charging feed.
+  for (const key of ['batteryStart', 'batteryEnd', 'chargeEnergyAddedWh', 'prevChargeEnergyWh'] as const) {
+    const value = m[key];
+    expect(value === null || (typeof value === 'number' && !Number.isNaN(value))).toBe(true);
   }
   expect(typeof m.alertsByType).toBe('object');
   expect(m.alertsByType).not.toBeNull();
@@ -268,6 +274,10 @@ describe('useWeeklyDigest → DigestMetrics (the derived aggregate contract)', (
     expect(m.avgEfficiencyWhPerM).toBeCloseTo(1 / 6, 6);
     // CO₂ scales linearly with energy via the shared constant.
     expect(m.co2Saved).toBeCloseTo(25 * CO2_PER_KWH_GASOLINE_KG, 6);
+    expect(typeof m.batteryStart).toBe('number');
+    expect(typeof m.batteryEnd).toBe('number');
+    expect(typeof m.chargeEnergyAddedWh).toBe('number');
+    expect(typeof m.prevChargeEnergyWh).toBe('number');
 
     // Prior-week baselines (drive 3 / session 13) — never mixed with this week.
     expect(m.prevDistanceM).toBe(80_000);
@@ -371,7 +381,7 @@ describe('useWeeklyDigest → FunFact (the optional headline contract)', () => {
     // 150 km → nearest CITY_PAIRS entry is New York→Boston (350 km); 150/350≈0.4.
     expect(fact.from).toBe('New York');
     expect(fact.to).toBe('Boston');
-    expect(fact.times).toBe('0.4');
+    expect(fact.times).toBe('0.43'); // 150 / 350, formatted only at the display boundary
   });
 });
 
@@ -388,6 +398,10 @@ describe('useWeeklyDigest — empty + null-safety guards', () => {
     expect(m.totalDistanceM).toBe(0);
     expect(m.chargingSessionCount).toBe(0);
     expect(m.alertTotal).toBe(0);
+    expect(m.batteryStart).toBeNull();
+    expect(m.batteryEnd).toBeNull();
+    expect(m.chargeEnergyAddedWh).toBeNull();
+    expect(m.prevChargeEnergyWh).toBeNull();
     expect(m.topDrive).toBeUndefined();
     expect(m.alertsByType).toEqual({});
 
@@ -410,8 +424,11 @@ describe('useWeeklyDigest — empty + null-safety guards', () => {
     const m = result.current.metrics;
     assertDigestMetricsShape(m);
     expect(m.totalDrives).toBe(0);
-    expect(m.chargeEnergyAddedWh).toBe(0);
+    expect(m.chargeEnergyAddedWh).toBeNull();
+    expect(m.prevChargeEnergyWh).toBeNull();
     expect(m.alertTotal).toBe(0);
+    expect(m.batteryStart).toBeNull();
+    expect(m.batteryEnd).toBeNull();
     expect(result.current.dailyEnergyData).toHaveLength(7);
     expect(result.current.hasData).toBe(false);
   });

@@ -1,0 +1,360 @@
+{
+  "item": "phase6-qa-advanced-causal-experimentation",
+  "phase": 6,
+  "status": "SOURCE_ONLY_REVIEW_COMPLETED_WITH_CONFIRMED_FINDINGS",
+  "fullQA": "NOT ACCEPTED",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+  "routes": ["/intelligence/causal-lab"],
+  "purpose": "Bounded read-only review of the actual rescued, mounted observational estimate page and its direct presentation/data contracts.",
+  "primaryGoal": "Review history, SI baseline/treatment/effect values, samples and confounders; review immutable independent business windows before deliberately creating an observational estimate. Neither randomized causal proof nor intervention execution is supported.",
+  "authority": {
+    "existingItem": "migration-queue.md:225",
+    "acceptedOriginal": "migration-queue.md:1595",
+    "actualRescue": "migration-queue.md:1853",
+    "acceptedSourceCommitFromQueue": "23a0a452e8cd18746f0d22b30a14b853ebc910b0",
+    "actualMountedSource": "App.tsx:240 lazy-imports CausalExperimentationPage.tsx; App.tsx:774 mounts intelligence/causal-lab. No AcceptedCausalExperimentationPage.tsx wrapper was found; the queue names the actual CausalExperimentationPage.tsx.",
+    "originalItemRedispatched": false,
+    "writableVersionedFiles": ["docs\\frontend-audits\\phase6-qa-advanced-causal-experimentation.json"],
+    "ignoredLog": "web\\logs\\phase6-qa-advanced-causal-experimentation.log",
+    "ignoredLogEvidence": ".gitignore:80 contains logs/; no Git command was used.",
+    "allApplicationFiles": "READ ONLY, including source, tests, catalogs, APIs, backend, configuration, queue and historical receipts.",
+    "requestsExecuted": 0,
+    "realExperimentsCreated": 0,
+    "browserOperations": 0,
+    "gitCommands": 0,
+    "dockerCommands": 0,
+    "installs": 0,
+    "serversStarted": 0,
+    "subagentsLaunched": 0,
+    "helpersOrExtensionsCreatedOrExecuted": 0
+  },
+  "timebox": {
+    "actualDispatchAt": "2026-10-13T11:10:19.331-07:00",
+    "targetMinutes": 10,
+    "maximumMinutes": 20,
+    "hardLimitMinutes": 25,
+    "lastSourceAuditClockAt": "2026-10-13T11:18:52.8477978-07:00",
+    "documentValidationClockAt": "2026-10-13T11:22:32.5114493-07:00",
+    "commandCeilingSeconds": 480,
+    "ownCommandBehavior": "Only synchronous bounded filesystem reads, case-sensitive source greps, hashing, historical-JSON reading and owned-document/log writes. No background process or application command.",
+    "stopAndRelease": "Conclude with the current persistent report; release all source-read, report, log and command ownership. No post-return writes or parent orchestration loop."
+  },
+  "acceptanceMeaning": {
+    "confirmed": "A deterministic source contract gap with exact file/line/mechanism and a source-derived sequence. No live reproduction was executed.",
+    "candidate": "A conditional source concern whose production activation or composed effect was not established; not promoted to a confirmed issue.",
+    "sourceReviewed": "Only the specifically described source branch or contract was inspected; not an application, test, visual or native pass.",
+    "NOTRUN": "No fresh execution evidence, including all tests, TypeScript, lint, build, mounted runtime, browser, native, mobile, keyboard and full-page acceptance."
+  },
+  "historicalEvidence": [
+    {
+      "file": "docs\\frontend-audits\\audit-page-029.json",
+      "meaning": "Original audit identifies preserved sections, data owners and historical gaps. Its old line numbers and failures are not automatically applied to rescued source.",
+      "disposition": "Untouched; current source independently reviewed."
+    },
+    {
+      "file": "logs\\phase5-page-advanced-intelligence-causal-experimentation-receipt.json",
+      "meaning": "Original receipt explicitly limits acceptance to scoped source adoption. Its test command exited 1 before discovery with executedTests=0; original lint/style exited 0; capture exited 2 before browser context.",
+      "rawFailure": "[i18n-split] generated locale files are invalid (locale-telemetry.json, locale-dashboard.json, locale-admin.json, locale-diagnostics.json, locale-fleet-ops.json, locale-advanced-intelligence.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.",
+      "rawCapture": "browser.newContext: storageState.origins[0].localStorage[2].name: expected string, got undefined",
+      "disposition": "Preserved, not erased by later test rescue and not a fresh result."
+    },
+    {
+      "file": "logs\\phase6-causal-actionlayout-type-compatibility.log",
+      "meaning": "Earlier narrow caller work preserved stacked/wrapped details and original assertions; its bounded Vitest attempt exited 124 with no reported result. Cause remained unknown.",
+      "disposition": "Preserved partial/timeout evidence, not rewritten as a pass."
+    },
+    {
+      "file": "web\\logs\\phase6-causal-actionlayout-type-compatibility.log",
+      "meaning": "Actual retained attempt 2 records minimal owned Retry restoration and fixture formatter/local-clock corrections; final exact names, counts and hashes were reconciled by that prior worker.",
+      "rawSummary": [
+        "first: discovered=29 passed=6 failed=23 pending=0 success=False",
+        "corrected: discovered=29 passed=26 failed=3 pending=0 success=False",
+        "final: discovered=29 passed=29 failed=0 pending=0 success=True"
+      ],
+      "nativeReportsRead": [
+        "web\\logs\\phase6-causal-actionlayout-type-compatibility-attempt2-first.json",
+        "web\\logs\\phase6-causal-actionlayout-type-compatibility-attempt2-corrected.json",
+        "web\\logs\\phase6-causal-actionlayout-type-compatibility-attempt2-final.json"
+      ],
+      "currentHashAgreement": "Current page/test hashes match the prior final hashes. This establishes inspected-source identity, not fresh execution.",
+      "disposition": "Earlier 23 and 3 failures remain explicit; historical final 29/29 success is not a fresh test, native, browser or full-app acceptance."
+    },
+    {
+      "file": "migration-queue.md:1595,1853",
+      "meaning": "Queue records original blocked/stuck WIP, released ownership and independent narrow resolution. A parent literal compiler success is mentioned there but was not independently rerun or read as a raw compiler receipt in this review.",
+      "disposition": "Queue read only; no completed-item redo or attempt-budget reset."
+    }
+  ],
+  "dataSources": [
+    {
+      "name": "Vehicle-scoped experiment history",
+      "hook": "useCausalExperiments(vehicleId, 10, (page - 1) * 10)",
+      "evidence": ["web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx:48-74", "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:45-74,149-153"],
+      "endpoint": "GET /api/v1/advanced-intelligence/causal-experiments?vehicle_id=N&limit=10&offset=N",
+      "sourceContract": "Query identity includes vehicle, limit and offset; enabled only for a positive vehicle; AbortSignal forwarded. History rows are scope-filtered before rendering. No raw-SI conversion in the hook.",
+      "routeAgreement": ["internal\\api\\router.go:3210,3960", "internal\\handler\\v1\\advancedintelligence\\handler.go:71,83,304-322"],
+      "status": "SOURCE CONTRACT MATCH; no request executed"
+    },
+    {
+      "name": "Persist observational estimate",
+      "hook": "useCreateCausalExperiment",
+      "evidence": ["web\\src\\api\\hooks\\useAdvancedIntelligence.ts:229-251", "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx:119-148,304-329"],
+      "endpoint": "POST /api/v1/advanced-intelligence/causal-experiments",
+      "sourceContract": "Confirmed immutable snapshot carries vehicle, intervention, metric and four ISO instants. Success closes review and invalidates history; error remains in the modal and form. A synchronous ref latch prevents duplicate submission. Missing live-only request opt-in is CE004, not a route mismatch.",
+      "routeAgreement": ["internal\\api\\router.go:3210,3960", "internal\\handler\\v1\\advancedintelligence\\handler.go:71,84,325-350"],
+      "status": "SOURCE CONTRACT MATCH; no mutation executed"
+    },
+    {
+      "name": "Backend bounds and estimator semantics",
+      "evidence": ["internal\\app\\advancedintelligencesvc\\federated_causal_tco.go:197-342", "web\\src\\types\\advancedIntelligence.ts:352-397"],
+      "sourceContract": "Server validates confirmation, positive vehicle, allowed intervention/metric, ordered nonoverlapping 24-hour-to-365-day windows and one-minute future tolerance. It reads baseline/treatment historical aggregates and persists an estimate. At least five samples each and known metric values are required; low/unknown confounder coverage or unsuitable ambient comparison yields non_causal. Signed effect is treatment minus baseline. Wire fields are Wh/m, m/s and percentage/percentage-point values.",
+      "limit": "Database query execution, actual samples, authorization success, live inputs and full schema/model equivalence were not exercised."
+    },
+    {
+      "name": "Existing selected vehicle and display settings",
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:23-78,94-111", "web\\src\\hooks\\useDateFormat.ts:70-145", "web\\src\\hooks\\useNumberFormatting.ts:19-56", "web\\src\\api\\hooks\\useVehicles.ts:73-77", "web\\src\\api\\hooks\\useSettings.ts:27-31"],
+      "sourceContract": "Page consumes the existing workspace vehicle, unit and formatting hooks. This route is not range-enabled: four independent baseline/treatment business-date fields are not duplicate workspace range pickers. Indirect GET /vehicles and GET /settings hook literals omit the prefix.",
+      "routeEvidence": "router.go:3210 mounts /api/v1, :3362 mounts the vehicles subtree, and :3702 registers GET /settings. Prefix-free indirect hooks agree with those source registrations.",
+      "limit": "No real selected vehicle, settings, VIN, location, user identity or preferences were requested."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "contract": "Existing full-width PageContainer adapter, min-w-0, container and gap-6; no competing page shell."},
+    {"name": "InsightPanel", "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "contract": "LayoutCard/SourceContent/useDataState own loading, fatal-only error, genuine empty, unresolved/paused, retained warning, freshness and retry."},
+    {"name": "EvidencePanel", "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "contract": "Three always-present quality/evidence/limitations subregions, nullable arrays, preserved unsupported capabilities. Date preference gap CE001 and raw quality label CE002 remain."},
+    {"name": "StatGroup/StatTile/formatMetric", "owners": ["web\\src\\components\\data-display\\stat-reference\\StatGroup.tsx", "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx", "web\\src\\components\\data-display\\stat-reference\\StatTile.tsx", "web\\src\\lib\\metric-reference\\formatMetric.ts"], "contract": "Four raw numeric inputs per record, invalid/missing versus measured zero, sample captions, specialist validated display formatter, signed effects and accessible numeric labels."},
+    {"name": "Input/Select/ConfirmDialog/Modal", "owners": ["web\\src\\components\\ui\\Input.tsx", "web\\src\\components\\ui\\Select.tsx", "web\\src\\components\\ui\\ConfirmDialog.tsx", "web\\src\\components\\ui\\Modal.tsx"], "contract": "Explicit stable IDs, required native date fields and linked hint/error; stacked seven-row review; pending disables actions and dismissal; existing portal/focus owner. Source presence is not keyboard or touch acceptance."},
+    {"name": "MutationError/StaleRefreshWarning/FadeIn", "owners": ["web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "web\\src\\components\\motion\\FadeIn.tsx"], "contract": "Assertive mutation error, nonblocking retained warning/retry and existing reduced-motion-aware animation."},
+    {"name": "formatEfficiencyFromSI", "owner": "web\\src\\features\\advanced-intelligence\\formatters.ts:10-18", "contract": "Finite/null validation and existing SI conversions at render only; source Wh/m and sign preserved."}
+  ],
+  "states": {
+    "noVehicle": "History asks for a vehicle, Review is disabled, three evidence subregions and unsupported disclosures remain. No competing local vehicle picker.",
+    "initialLoading": "History source skeleton and evidence subregion source loading branches remain independent of the form.",
+    "initialPausedOrUnresolved": "Copy explicitly avoids inferring an empty result before availability resolves. Placeholder-specific history mismatch is candidate C01, not a proven production transition.",
+    "fatalError": "History fatal-only source error and evidence subregion recovery remain; form is not erased.",
+    "resolvedEmpty": "Successful empty list has no-recorded-experiments copy and retry/refresh; evidence subregions retain unsupported causal warnings.",
+    "readyOrPartial": "Each record retains baseline, treatment, signed effect, sample counts and confounder coverage. Quality/reasons/evidence/limitations are separate from the persistent association warning.",
+    "nullInvalidZero": "Nullable list/metadata arrays default empty. Metric renderer validates raw numeric inputs before specialist formatting; null/nonfinite is missing/invalid, measured zero remains zero. No blanket raw-value zero substitution was observed.",
+    "retainedRefreshError": "Retained articles survive, history and evidence disclose stale state, individual retry remains. Rescue inserted the explicit history Retry without deleting source recovery.",
+    "retainedPaused": "DataState keeps retained payload and records isRefreshBlocked; history shows paused-specific notice. No fresh online/offline exercise.",
+    "scopeChange": "Pagination resets to page one; history filters current vehicle; mutation fallback requires matching vehicle; pending review confirmation cannot retarget to another vehicle.",
+    "outOfRange": "Successful non-placeholder matching-offset response clamps to last page.",
+    "reviewPendingErrorSuccess": "Window validation precedes immutable review; confirm is guarded by snapshot vehicle and a ref latch. Pending prevents cancel/backdrop/Escape dismissal. Success-only closes; server rejection remains inside and beneath review.",
+    "execution": "All state descriptions are source-derived, not freshly rendered or tested."
+  },
+  "confirmedIssues": [
+    {
+      "id": "CE001",
+      "severity": "medium",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 6,
+      "relatedLines": ["EvidencePanel.tsx:61-62,88-92", "CausalExperimentationPage.tsx:46,188,259,322", "useDateFormat.ts:75-102", "dateFormat.ts:39-60"],
+      "rule": "MDC-044 saved locale/timezone preservation",
+      "mechanism": "EvidencePanel imports the bare date utility and calls it without locale/tz options. Its quality-window and evidence timestamps use browser defaults, while parent history/review timestamps use the saved preference-aware useDateFormat hook. Identical instants can therefore be presented in conflicting zones/locales on the same page.",
+      "sourceDerivedRepro": ["Assume browser timezone America/Los_Angeles and saved display timezone UTC.", "Use a synthetic record with updated_at and evidence observed_at both 2026-10-07T10:00:00Z.", "Trace parent formatDateTime through useDateFormat: display is UTC 10:00.", "Trace EvidencePanel bare formatDateTime: browser default gives Los Angeles 03:00, with no explicit timezone label.", "No browser, settings write or record creation was executed."],
+      "fix": "At the assigned shared/domain owner, use the existing preference-aware date hook or an equivalent existing formatter contract; preserve raw instants and every evidence field.",
+      "owner": "shared/domain EvidencePanel",
+      "confidence": "high",
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "CE002",
+      "severity": "medium",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 191,
+      "relatedLines": ["EvidencePanel.tsx:57", "CausalExperimentationPage.tsx:82-92"],
+      "rule": "MDC-044 localized domain-state labels",
+      "mechanism": "Known intervention/metric choices are localized, but experiment badges render item.state directly and quality badges render quality.status directly. Backend tokens such as non_causal, insufficient and limited remain user-facing identifiers rather than translated labels.",
+      "sourceDerivedRepro": ["Assume a non-English locale and a synthetic experiment with state non_causal and quality.status limited.", "Follow JSX text nodes: the badges render those exact raw tokens without t(), unlike intervention and metric labels.", "No language switch or mounted screen was exercised."],
+      "fix": "Use existing canonical domain-label keys where available, with an assigned catalog owner for missing keys and safe raw fallback for unknown future states. Never rewrite cached/wire tokens or translate server narrative text speculatively.",
+      "owner": "page and shared/domain label integration",
+      "confidence": "high",
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "CE003",
+      "severity": "medium",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 131,
+      "relatedLines": ["CausalExperimentationPage.tsx:119-132,234-242", "Input.tsx:55-63,110-116"],
+      "rule": "MDC-021 / MDC-040 accurate field-level validation and recovery",
+      "mechanism": "Any aggregate window failure sets one invalidWindows boolean, gives all four fields the same error, and always focuses the first datetime-local control. A treatment-only error marks valid baseline fields invalid and sends the operator back to Baseline start. Error/hint text also omits the enforced 365-day maximum.",
+      "sourceDerivedRepro": ["Assume now is after 2026-10-06.", "Use synthetic baseline 2026-10-01T10:00 through 2026-10-03T10:00, valid and ordered.", "Use treatment 2026-10-04T10:00 through 2026-10-05T09:59, one minute below minimum.", "requestConfirmation sets invalidWindows=true and focuses querySelector's first datetime input, Baseline start.", "Each mapped Input receives error; Input emits aria-invalid=true and identical alerts for all four fields.", "No form submission or test run was executed."],
+      "fix": "Track failures by existing field identity, describe violated bounds accurately, and focus the actual invalid field or linked validation summary using current form primitives. Keep authoritative backend validation and the immutable confirmation snapshot.",
+      "owner": "page",
+      "confidence": "high",
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "CE004",
+      "severity": "medium",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 234,
+      "relatedLines": ["useAdvancedIntelligence.ts:234-237", "CausalExperimentationPage.tsx:119-120,141-148,244-248,305-309", "client.ts:386-403", "operationalMode.ts:66-75", "offlineCache.ts:50-74,144-151", "queryClient.ts:68-74"],
+      "rule": "MDC-045 explicit live-only mutation boundary",
+      "mechanism": "The POST omits requiresLiveMode. request defaults it to false, so assertOperationalWriteAllowed returns before checking historical/offline mode. The page's review/confirm guards check vehicle and pending state, not operational mode. The causal path is absent from offline-unsafe patterns. The frontend therefore does not prevent this persisted estimate write in historical mode; mutations are not queued by the global policy.",
+      "sourceDerivedRepro": ["Assume an online URL /intelligence/causal-lab?as_of=2026-10-07T10:00:00Z and a valid synthetic selected vehicle/window snapshot.", "Trace the two deliberate review/confirm callbacks; neither checks as_of or operational read-only mode.", "Trace request options: method POST, requiresLiveMode defaults false.", "assertOperationalWriteAllowed exits on !requiresLiveMode; offline guard also exits while online.", "The frontend path reaches the existing network request boundary; no request was sent and actual server acceptance was not established."],
+      "fix": "At the assigned API integration owner, opt this persisted mutation into the existing live-only request contract and expose read-only/reconnect guidance through existing controls without removing observational estimation.",
+      "owner": "API/page operational-mode integration",
+      "confidence": "high for frontend guard omission; server outcome unverified",
+      "runtime": "NOTRUN"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 169,
+      "relatedLines": ["CausalExperimentationPage.tsx:65-67,169-176,200-201", "InsightPanel.tsx:41-52"],
+      "rule": "MDC-026 placeholder scope/trust",
+      "mechanism": "If isPlaceholderData=true, page rows and historyState discard placeholder payload, but InsightPanel receives the original query and Pagination reads its old total. InsightPanel can treat the placeholder as resolved empty and show an old-scope freshness/total instead of pending availability.",
+      "sourceDerivedCondition": "A source with data from another scope, isPlaceholderData=true and fetchStatus fetching would exercise this mismatch.",
+      "whyCandidate": "Current inspected hook and QueryClient defaults do not enable keepPreviousData/placeholderData. The retained test supplies a mock placeholder state; a production activation was not established. Not promoted to a confirmed live bug.",
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "C02",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 236,
+      "relatedLines": ["CausalExperimentationPage.tsx:36-39,122,322", "dateFormat.ts:380-395"],
+      "rule": "MDC-044 independent business-date timezone interpretation",
+      "mechanism": "datetime-local defaults/parsing intentionally use browser-local wall time, while review formats instants in the saved display zone and labels that zone. The editable fields do not disclose the browser input zone.",
+      "whyCandidate": "Local-to-UTC conversion follows the existing explicit precedent and is not proven corrupt. Operator confusion when browser and saved/vehicle zones differ, plus DST gaps/overlaps, requires composed authorized review. No shift or invalid experiment is asserted.",
+      "runtime": "NOTRUN"
+    }
+  ],
+  "responsive": {
+    "sourceReviewed": ["PageLayout is full-width/min-w-0 with no whole-page cap.", "History title/metadata wrap; evidence uses min-w-0 and break-words.", "Form defaults to one column, md two, xl three; evidence defaults to one, lg three.", "Six controls and Review have min-h-11 below md; shared confirmation actions also retain mobile minimum-height classes.", "Seven confirmation rows use stacked/wrapped KVList, preserving all fields and actions."],
+    "measuredWidths": "NOTRUN: 320/375/390/430/768/1024/1280/1440/1920/2560; narrow allocated containers, 200% text, RTL and open controls.",
+    "themeAndOverflow": "NOTRUN: dark/light/custom themes, contrast, clipping, computed touch widths and horizontal overflow. Source classes do not prove visual/mobile acceptance."
+  },
+  "accessibility": {
+    "sourceReviewed": ["Shared native required date fields have explicit stable IDs and associated labels/hints/errors.", "Decorative page icons are hidden; state badges retain text as well as color.", "Three evidence sections carry localized accessible labels.", "MutationError uses alert semantics; retained warning is nonblocking and has recovery.", "ConfirmDialog delegates portal, dialog semantics and focus ownership to Modal; pending callbacks prevent cancellation.", "FadeIn delegates reduced-motion behavior to the existing preference hook."],
+    "confirmedGap": "CE003 incorrect field focus/invalid association; CE002 raw machine-token accessible labels.",
+    "nativeKeyboardFocusScreenReaderContrastForcedColors": "NOTRUN",
+    "deferredBoundary": "Modal/useDialogFocus source is a contract boundary; its actual trap, restoration, nested-overlay and mobile-shell composition were not exercised."
+  },
+  "prohibitedPatternAudit": {
+    "scope": "Exactly page, InsightPanel, EvidencePanel, MutationError and formatters.ts; separate two literal hook-pattern checks.",
+    "commandEvidence": "web\\logs\\phase6-qa-advanced-causal-experimentation.log",
+    "actualRawOutput": [
+      "PATTERN inlineStyleOpening matches=0 scope=5 explicit production files",
+      "PATTERN rawInteractive matches=0 scope=5 explicit production files",
+      "PATTERN directVendors matches=0 scope=5 explicit production files",
+      "PATTERN oldApiImport matches=0 scope=5 explicit production files",
+      "PATTERN neonBodyOrGlow matches=0 scope=5 explicit production files",
+      "PATTERN anyType matches=0 scope=5 explicit production files",
+      "PATTERN pageWidthCap matches=0 scope=5 explicit production files",
+      "HOOK_REQUEST_LITERAL_DOUBLE_PREFIX=0",
+      "HOOK_CAMEL_QUERY_ASSIGNMENTS=0",
+      "SOURCE_AUDIT_EXIT=0 (read command completed; not app/typecheck/visual acceptance)"
+    ],
+    "limits": "Case-sensitive regex counts are narrow source evidence, not full scanner, arbitrary typography, catalog completeness, dynamic URL or visual approval. Audit skill script and API verifier script were not executed; global TypeScript and helper execution are prohibited."
+  },
+  "preservation": {
+    "historicalOriginalPageLines": 271,
+    "historicalOriginalEvidence": "Inspected original receipt and retained rescue log; no Git/HEAD retrieval or baseline regeneration.",
+    "currentPageLines": 332,
+    "currentPageRetentionPercentVsHistorical": 122.51,
+    "currentPageAndDirectFeatureComponentsLines": 582,
+    "currentFeatureComponents": {"InsightPanel": 95, "EvidencePanel": 132, "MutationError": 23},
+    "currentFormatterLinesSeparate": 44,
+    "currentReadonlyTestLines": 379,
+    "currentPageSHA256": "321EC4593C637DA5C86066398E23FB8116CB16144880B8E7A27BB28879800CC4",
+    "currentTestSHA256": "D7774F006B09B659727817EB049C3ABB017D2F68C7B07511534B6613225A6038",
+    "semanticSections": ["Association warning", "Experiment history and pagination", "Four measurements per history record with baseline/treatment samples", "Create windowed experiment form", "Owning-record evidence caption", "Data quality", "Evidence sources", "Limitations and explicitly unsupported capabilities", "Structured confirmation and mutation recovery"],
+    "literalPageSectionCounts": {"InsightPanel": 3, "EvidencePanel": 1, "SourceContent": 1, "StatGroup": 1, "ConfirmDialog": 1, "GlassPanelOrChartContainer": 0},
+    "sectionCountMeaning": "Three resolved domain shells: history, form and evidence; evidence has three subregions. EvidencePanel and fallback InsightPanel are alternate implementations of the same shell. Zero literal GlassPanel/ChartContainer does not mean sections were deleted: shared LayoutCard owns panels. Original had no charts/export/delete/intervention-execution action.",
+    "actions": ["History retry/refresh", "Server pagination", "Five intervention choices", "Three metric choices", "Four independent datetime-local business fields", "Review", "Cancel", "Confirmed Create estimate", "Error recovery without automatic write replay"],
+    "sourceAndTestChangesByThisWorker": 0,
+    "baselineReset": false
+  },
+  "notRun": [
+    "Native/desktop/mobile/browser/runtime/full-page acceptance",
+    "Any request, real experiment, production mutation or identity capture",
+    "Fresh tests, including the exact causal test file",
+    "Global or scoped TypeScript; npx tsc --noEmit",
+    "Lint, build, full suites, scanner/helper/extension execution",
+    "Screenshots, open dropdowns, measured overflow/contrast/touch targets, keyboard/focus/screen-reader/forced-colors checks",
+    "Full database, authorization, API payload and localization-catalog equivalence"
+  ],
+  "requiredSharedChanges": [
+    {"existingOwner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "need": "CE001 preference-aware evidence dates and CE002 translated quality labels, preserving nullable metadata and all subsections.", "authority": "Separate assigned shared/domain integration only; this worker writes no source."},
+    {"existingOwner": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts", "need": "CE004 current operational live-only mutation contract; preserve deliberate confirmation, raw SI and success/error lifecycle.", "authority": "Separate assigned API integration only."}
+  ],
+  "evidenceLimits": [
+    "No full-page acceptance is inferred from accepted queue status, historical tests, zero regex matches or source hash identity.",
+    "All reproduction sequences use synthetic assumptions and inspected branches; none was executed against a running application.",
+    "Historical failures, partial progress, timeout and rescue evidence remain intact at original paths.",
+    "Candidate conditions are explicitly separate from four confirmed source contract gaps.",
+    "No source/catalog/test/backend/configuration repair, new test, helper, extension, server, Git operation or parent loop was performed."
+  ],
+  "filesRead": [
+    "migration-queue.md:225,1595,1853",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md:1-210,417-608",
+    "docs\\frontend-mission.md:1-200,1410-1490",
+    ".github\\instructions\\react-frontend.instructions.md:1-510",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\prompts\\modern-ui\\0000-design-language.md:1-240",
+    ".github\\prompts\\modern-ui\\personas\\5-qa-consistency-reviewer.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "docs\\frontend-audits\\audit-page-029.json:1-285",
+    "docs\\frontend-audits\\phase6-qa-admin-api-playground.json:1-145",
+    "logs\\phase5-page-advanced-intelligence-causal-experimentation-receipt.json",
+    "logs\\phase5-page-advanced-intelligence-causal-experimentation-capture.log",
+    "logs\\phase6-causal-actionlayout-type-compatibility.log",
+    "web\\logs\\phase6-causal-actionlayout-type-compatibility.log",
+    "web\\logs\\phase6-causal-actionlayout-type-compatibility-attempt2-first.json",
+    "web\\logs\\phase6-causal-actionlayout-type-compatibility-attempt2-corrected.json",
+    "web\\logs\\phase6-causal-actionlayout-type-compatibility-attempt2-final.json",
+    "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.test.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+    "web\\src\\features\\advanced-intelligence\\formatters.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:1-90,135-158,222-260",
+    "web\\src\\types\\advancedIntelligence.ts:1-70,345-405",
+    "web\\src\\api\\dataState.ts:1-200",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\dateFormat.ts:1-93,375-398",
+    "web\\src\\lib\\workspaceScope.ts:1-115",
+    "web\\src\\lib\\operationalMode.ts",
+    "web\\src\\api\\client.ts:350-420 and prefix/guard grep",
+    "web\\src\\api\\offlineCache.ts:40-85,136-157",
+    "web\\src\\api\\queryClient.ts",
+    "web\\src\\api\\queryPolicy.ts:placeholderData grep",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\data-display\\stat-reference\\StatGroup.tsx",
+    "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx:1-145",
+    "web\\src\\components\\data-display\\stat-reference\\StatTile.tsx:1-210",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts:1-210",
+    "web\\src\\components\\ui\\Input.tsx:1-170",
+    "web\\src\\components\\ui\\Select.tsx:1-160",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\ui\\Modal.tsx:1-140",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:1-145",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\i18n\\en\\locale-advanced-intelligence.json:1-50 and label grep",
+    "web\\src\\App.tsx:240,774 source grep",
+    "web\\src\\lib\\routeLoaders.ts:causal source grep",
+    "web\\src\\api\\hooks\\useVehicles.ts:read-hook source grep",
+    "web\\src\\api\\hooks\\useSettings.ts:read-hook source grep",
+    "internal\\api\\router.go:3210,3362,3702,3948-3967 source reads/grep",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go:69-86,300-353",
+    "internal\\app\\advancedintelligencesvc\\federated_causal_tco.go:197-342",
+    ".gitignore:80 source grep"
+  ],
+  "release": {
+    "sourceAndTests": "RELEASED; read-only throughout",
+    "reportAndIgnoredLog": "RELEASED after final bounded document validation",
+    "commands": "No background commands; final synchronous document command completes before return",
+    "postReturnWrites": "NONE",
+    "parentOrchestrationLoop": "NOT ENTERED"
+  }
+}

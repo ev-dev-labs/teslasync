@@ -3,8 +3,8 @@
  *
  * Renders:
  *   - Selection checkbox
- *   - Severity dot (colored disc, color from rule severity if known)
- *   - Time   (vehicle-tz when vehicle is known, else user)
+ *   - Persisted severity (unknown values retain their raw label)
+ *   - Time   (disclosed user timezone, consistent across inbox vehicles)
  *   - Title  (from notification log)
  *   - Vehicle name (when known)
  *   - Drill-through link (uses `getAlertDrillthroughHref`)
@@ -18,7 +18,8 @@ import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, ChevronRight, MailOpen, Mail } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { DateTime, SeverityBadge } from '@/components/data-display';
-import { Button, Checkbox } from '@/components/ui';
+import { Badge, Button, BUTTON_BASE, Caption, Checkbox, Text } from '@/components/ui';
+import { typography } from '@/lib/tokens';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import type { NotificationLog, AlertRule, Alert, Vehicle } from '@/api/types';
 
@@ -53,7 +54,17 @@ export function NotificationRow({
   const { t } = useTranslation();
   const isRead = !!log.read_at;
   const isArchived = !!log.archived_at;
-  const severity = rule?.severity ?? log.severity ?? 'info';
+  const severity = log.severity;
+  const knownSeverity = severity === 'warning' ? 'warn'
+    : severity === 'info' || severity === 'warn' || severity === 'critical' ? severity
+    : null;
+  const severityLabel = knownSeverity === 'info'
+    ? t('notifications.inbox.filter.severity.info', 'Info')
+    : knownSeverity === 'warn'
+      ? t('notifications.inbox.filter.severity.warn', 'Warn')
+      : knownSeverity === 'critical'
+        ? t('notifications.inbox.filter.severity.critical', 'Critical')
+        : severity || '—';
   // A blank/absent title would otherwise render an empty primary line. Degrade
   // to an em-dash so the row never collapses to a headless body (matches the
   // sibling AlertCard behavior). `||` (not `??`) so empty strings degrade too.
@@ -63,7 +74,7 @@ export function NotificationRow({
     id: log.id,
     vehicle_id: vehicle?.id ?? rule?.vehicle_id ?? 0,
     type: rule?.name ?? log.title,
-    severity: severity as Alert['severity'],
+    severity: severity ?? '',
     title: log.title,
     message: log.message,
     is_read: isRead,
@@ -74,17 +85,17 @@ export function NotificationRow({
   };
 
   const drillHref = rule ? getAlertDrillthroughHref(synthetic) : null;
-  const tzMode = vehicle ? 'vehicle' : 'user';
+  // DateTime's vehicle mode follows workspace selection, not this row's vehicle.
+  // Use one disclosed inbox timezone rather than implying a different identity.
 
   return (
     <div
       role="group"
       aria-label={displayTitle}
       className={cn(
-        'group relative flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors',
-        'border-white/[0.06] hover:bg-white/[0.04]',
-        !isRead && 'bg-white/[0.03] border-l-2 border-l-cyan-400/70',
-        isRead && 'opacity-90',
+        'group relative flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors duration-fast motion-reduce:transition-none',
+        'border-[var(--border-default)] hover:bg-[var(--control-bg-hover)]',
+        !isRead && 'bg-[var(--surface-2)] border-l-2 border-l-[var(--text-secondary)]',
       )}
     >
       <Checkbox
@@ -99,51 +110,54 @@ export function NotificationRow({
         variant="ghost"
         onClick={() => onActivate?.(log)}
         aria-label={t('notifications.inbox.row.open', 'Open notification: {{title}}', { title: displayTitle })}
-        className="!h-auto min-w-0 flex-1 !justify-start !p-0 text-left !font-normal focus-visible:ring-2"
+        className="!h-auto min-w-0 flex-1 !justify-start !p-0 text-left !font-normal"
       >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <SeverityBadge severity={severity} size="sm" showIcon={false}>
-            {severity}
-          </SeverityBadge>
+          {knownSeverity ? (
+            <SeverityBadge severity={knownSeverity} size="sm" showIcon={false}>
+              {severityLabel}
+            </SeverityBadge>
+          ) : (
+            <Badge variant="neutral" size="sm">{severityLabel}</Badge>
+          )}
           <DateTime
             value={log.created_at}
-            in={tzMode}
-            className="whitespace-nowrap text-xs text-[var(--text-muted)]"
+            in="user"
+            showTz
+            className={cn('whitespace-nowrap', typography.role.caption)}
           />
           {vehicle && (
-            <span className="truncate text-xs text-[var(--text-muted)]">
+            <Caption className="truncate">
               · {vehicle.display_name || `#${vehicle.id}`}
-            </span>
+            </Caption>
           )}
           {rule?.name && (
-            <span className="truncate text-xs text-[var(--text-muted)]">
+            <Caption className="truncate">
               · {rule.name}
-            </span>
+            </Caption>
           )}
           {log.event_type && (
-            <span className="truncate text-xs text-[var(--text-muted)]">
+            <Caption className="truncate">
               · {log.event_type}
-            </span>
+            </Caption>
           )}
+          {!isRead && <Badge variant="neutral" size="sm">{t('notifications.inbox.columns.unread', 'Unread')}</Badge>}
         </div>
         <div className="mt-1 flex items-baseline gap-2">
-          <span className={cn(
-            'truncate text-sm',
-            isRead ? 'text-[var(--text-secondary)]' : 'font-medium text-[var(--text-primary)]',
-          )}>
+          <Text variant={isRead ? 'bodySm' : 'body'} className={cn('truncate', !isRead && typography.weight.medium)}>
             {displayTitle}
-          </span>
+          </Text>
         </div>
         {log.message && (
-          <p className="mt-0.5 line-clamp-1 text-xs text-[var(--text-muted)]">
+          <Caption as="p" className="mt-0.5 line-clamp-1">
             {log.message}
-          </p>
+          </Caption>
         )}
       </div>
       </Button>
 
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-fast motion-reduce:transition-none group-hover:opacity-100 focus-within:opacity-100">
         {!isRead && onMarkRead && (
           <Button
             variant="ghost"
@@ -183,7 +197,7 @@ export function NotificationRow({
         {drillHref && (
           <Link
             to={drillHref}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-cyan-300 hover:bg-white/[0.06] hover:text-cyan-200"
+            className={cn(BUTTON_BASE, typography.role.caption, 'px-2 py-1 hover:bg-[var(--control-bg-hover)]')}
             aria-label={t('alerts.viewContext', 'View context')}
           >
             <span className="hidden sm:inline">{t('alerts.viewContext', 'View context')}</span>

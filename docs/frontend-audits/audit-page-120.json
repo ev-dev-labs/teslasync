@@ -1,0 +1,324 @@
+{
+  "item": "audit-page-120",
+  "page": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx",
+  "routes": ["/range-buffer"],
+  "purpose": "Inspect observed completed-drive arrival battery percentages, contextual profiles, evidence support and row accounting in the selected vehicle-local history window.",
+  "primaryGoal": "Understand historical arrival buffer and the descriptive effect of a planning threshold without mistaking capped observational evidence for future range prediction.",
+  "dataSources": [
+    {
+      "hook": "useDrives",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 104,
+      "endpoint": "GET /api/v1/drives",
+      "sourceOwner": "internal\\api\\router.go:3463-3464 -> driveHandler.ListByVehicle",
+      "parameters": ["vehicle_id", "start", "end", "limit=1000"],
+      "behavior": "Page lines 47-56 pass workspace half-open instant bounds. Hook lines 114-132 keys by vehicle/window/cap, forwards AbortSignal, enables only with vehicle, selects safeArray and inherits FAST stale time. Router path matches; backend filtering, ordering and returned payload were not exercised."
+    },
+    {
+      "hook": "useRangeState / useSelectedVehicle / useTimezone / useUnits",
+      "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx",
+      "line": 42,
+      "endpoint": null,
+      "sourceOwner": "Existing workspace, vehicle, timezone and display-unit hooks; their implementations were not inspected in this bounded audit.",
+      "behavior": "Selected vehicle and vehicle timezone; range persistence key range-buffer.range, default all; raw distance stays meters and formatDistance converts at presentation. RANGE_ENABLED_PATHS includes /range-buffer at web\\src\\lib\\workspaceScope.ts:56."
+    },
+    {
+      "hook": "analyzeRangeBuffer",
+      "file": "web\\src\\features\\driving\\lib\\rangeBuffer.ts",
+      "line": 738,
+      "endpoint": null,
+      "sourceOwner": "Driving domain pure analysis",
+      "behavior": "Mount-frozen nowMs, validated completed arrivals, exclusion accounting, interpolated percentiles, strict thresholds, ten histogram bands, latest 24 local months, seven weekdays, six four-hour buckets, five SI distance bands, supported destinations capped at 12, ten lowest arrivals, evidence breadth/recency support. No prediction or additional server aggregate."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Grid / FadeIn / StaleRefreshWarning",
+      "owner": "Existing layout, motion and feedback category barrels",
+      "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx",
+      "line": 96,
+      "props": "PageLayout(title, subtitle, query); Grid(cols={default:1,xl:2},gap=4); FadeIn delays 0 through .45; StaleRefreshWarning(state,label).",
+      "notes": "PageLayout implementation at web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-14 retains full-width min-w-0 container. FadeIn internals were not inspected."
+    },
+    {
+      "name": "RangeBufferSummaryBrief -> DrivingSummaryBrief -> OperationalBrief",
+      "owner": "Existing driving operational-brief adapter and shared data-display owner",
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\RangeBufferSummaryBrief.tsx",
+      "line": 16,
+      "props": "kind=arrivals|context|support|accounting, result, state, locale, scope, thresholdPct, onThresholdChange, formatDistance.",
+      "notes": "Four bands contain 6/6/6/8 metrics. StatMetric raw values pass through useOperationalMetrics. Shared brief supplies Review details drawer action, compact reflow, retained/unavailable/loading labels and missing values; existing owner is web\\src\\components\\data-display\\OperationalBrief.tsx."
+    },
+    {
+      "name": "RangeBufferDistribution / MonthTrend / ThresholdSensitivity / WeekdayProfile / HourProfile / DistanceProfile",
+      "owner": "Driving range-buffer feature components using shared ChartContainer",
+      "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx",
+      "line": 113,
+      "props": "All receive result/state; month receives locale; weekday/hour receive timeZone; distance receives formatDistance. Six charts use height=300, explicit export rows and accessible data columns.",
+      "notes": "Four percentile profiles reuse RangeBufferPercentileChart(rows,samplesName,p10Name,medianName,p90Name,contextName?,hiddenSeries?,ariaLabel?). Distance adds median drop. Threshold chart uses count/share; distribution uses count/share by arrival band."
+    },
+    {
+      "name": "RangeBufferDestinationDirectory / RangeBufferLowArrivals",
+      "owner": "Driving domain column adapters using shared DataTable",
+      "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx",
+      "line": 156,
+      "props": "result,state,locale,timeZone,formatDistance; stable table IDs driving:range-buffer-destinations and driving:range-buffer-low-arrivals.",
+      "notes": "Directory has eight columns, value filters, sample sorting, page size 12 and mobile destination/samples/median. Lowest arrivals has six columns, arrival sorting and mobile date/destination/arrival. Shared DataTable implementation and export/hidden-column detail behavior not inspected."
+    },
+    {
+      "name": "RangeBufferSectionBody / RangeBufferQueryStatus / RangeBufferMethodology",
+      "owner": "Existing page-domain state and methodology owners",
+      "file": "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferSectionBody.tsx",
+      "line": 47,
+      "props": "SectionBody(result,state,requirement=none|included|distance|destinations,className?,skeletonHeight=240); QueryStatus(result,state); Methodology(result,startDate,endDate).",
+      "notes": "Visible section shells survive missing data. One primary retry source plus passive local explanations; methodology always retains eight explanation articles and prediction warning."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferMonthTrend.tsx",
+      "line": 41,
+      "rule": "MDC-002/MDC-034",
+      "detail": "Month, weekday, hour and distance each own an outer ChartContainer and reuse a percentile component that creates another EmbeddedChart. Accessible data columns and chart state therefore have two owners.",
+      "fix": "Keep existing wrappers/capabilities; make the domain percentile renderer use a single agreed chart-state owner or explicitly pass unique chart identity. Preserve outer export and fallback data.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "source only",
+    "observations": [
+      "RangeBufferPage.tsx:36,112,123,137 stacks chart pairs until xl; PageLayout.tsx:12 uses allocated @container width.",
+      "OperationalBrief.tsx:129-185 reflows header/actions and compact metrics across 1/2/3/6 columns.",
+      "RangeBufferMethodology.tsx:155 uses 1/2/4 columns.",
+      "DestinationDirectory.tsx:59 sets min-w-44; both tables explicitly select three mobile columns. Hidden-column reachability must be checked in actual DataTable integration."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferDistribution.tsx",
+        "line": 108,
+        "rule": "MDC-043",
+        "detail": "Histogram forces all ten X-axis labels with interval=0; percentile and sensitivity charts also force category labels while using dual axes. Narrow-width readability is not established.",
+        "fix": "Exercise 320-430px and allocated-width variants; use existing chart responsive label strategy if crowded, retaining every category in tooltip/export/accessibility alternatives.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverifiedWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "verified": "source only",
+    "observations": [
+      "SummaryBrief.tsx:186-211 labels threshold Select with stable id and localized aria-label.",
+      "QueryStatus.tsx:40-47 announces initial loading; refresh failure has role=alert and shared Retry Button.",
+      "Charts provide localized ariaLabel and dataColumns. ChartContainer.tsx:768-835 provides forced-colors/screen-reader fallback Table.",
+      "Domain decorative icons inspected have aria-hidden=true; OperationalBrief.tsx:117 uses aria-labelledby and aria-busy."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferPercentileChart.tsx",
+        "line": 69,
+        "rule": "MDC-044/MDC-034",
+        "detail": "Embedded fallback formats raw percent values as `${v}%` and counts as String rather than the locale/precision helpers used in the KPI and tables. The same profile has both outer and inner fallback tables.",
+        "fix": "Reuse existing number-formatting/column-kind contract and one source of fallback columns; retain null as an em dash and all specialist series.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["keyboard navigation", "focus visibility/restoration", "screen reader output", "composed contrast", "44px target reachability", "forced-colors OS mode", "200% text", "RTL", "reduced motion"]
+  },
+  "states": {
+    "initialLoading": "Page:80-81 derives initial-only loading from historical DataState; brief loading suppresses raw displays and SectionBody:68-81 supplies skeletons.",
+    "noVehicle": "Query disabled, drives array empty, unresolved numeric KPIs null; QueryStatus:26-36 directs to workspace vehicle picker and sections remain visible.",
+    "empty": "QueryStatus:122-130 distinguishes zero returned drives; SectionBody:102-125 distinguishes returned rows with no qualifying arrivals. Support/accounting use requirement=none so actual zero counts remain available.",
+    "partial": "SectionBody:127-151 distinguishes missing positive distance and insufficient destination support. Context invalid-start/increasing-SoC exclusions remain separate from arrival inclusion.",
+    "fatalError": "Page:84 uses fatalError; QueryStatus:65-69 owns QueryError/retry; local sections show passive retry guidance.",
+    "refreshError": "Retained data remains resolved; page:104-105 shows StaleRefreshWarning; QueryStatus:72-99 also shows warning/retry; briefs retained=true.",
+    "offlineStale": "Page observes isRefreshBlocked; shared data trust implementation was not inspected or exercised. No source claim that every offline/stale state is covered.",
+    "success": "All 13 sections visible; cap/low-support/trend omission warnings retain evidence limits.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferDistribution.tsx",
+        "line": 74,
+        "rule": "MDC-026/MDC-034",
+        "detail": "empty=false is unconditional and data={rows} is supplied outside SectionBody. The histogram produces ten zero-count buckets even without resolved/included evidence; ChartContainer fallback table is derived independently of the domain body. Assistive fallback can therefore expose synthetic zero rows beside a no-vehicle/error/empty explanation.",
+        "fix": "Gate source-backed chart/fallback rows on resolved qualified evidence while keeping section shells, explicit empty explanations and genuine zero counts in populated buckets. Apply the same trust gating to fixed weekday/hour/distance/threshold arrays.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferLowArrivals.tsx",
+      "line": 120,
+      "rule": "MDC-010/MDC-012",
+      "detail": "Arrival values use fixed text-rose-300/text-amber-300/text-emerald-300 with no light-theme counterpart. Methodology.tsx:141,161 and directory.tsx:190 also hard-code cyan-300 for decorative emphasis. These are toned-down rather than neon, but theme-effective contrast is unknown.",
+      "fix": "Reuse semantic severity/theme text tokens or established light/dark pairs. Neutralize decorative icons; preserve numeric threshold meaning and textual values. Measure real light/dark backgrounds.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferPercentileChart.tsx",
+      "line": 123,
+      "rule": "MDC-010/MDC-034",
+      "detail": "Each percentile profile uses indexed purple/count plus rose/p10, blue/median, amber/p90 and optional sixth-color context. Sensitivity also uses palette positions to represent selected threshold. These are existing shared palettes, not proven visual failures, but repeat multi-hue emphasis without explicit palette semantics.",
+      "fix": "Use existing chart palette owner to distinguish ordinal percentile series by restrained hue/line weight/dash and count opacity; reserve danger/warning hues for real threshold meaning. Preserve saved palette choices and every series.",
+      "owner": "shared",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx",
+      "line": 104,
+      "rule": "MDC-026/mission 43 hierarchy",
+      "detail": "Retained refresh failure can show both page StaleRefreshWarning and QueryStatus warning/retry, plus retained badges on four briefs. This can repeat the same warning above a dense 13-section page.",
+      "fix": "Coordinate the existing feedback owners to present one primary recovery action and retain local trust indicators without duplicated long banners. Preserve both error semantics and cached evidence.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferPercentileChart.tsx",
+      "line": 79,
+      "rule": "MDC-002/MDC-034/MDC-046",
+      "detail": "All four embedded percentile profiles use chartKey=range-buffer-percentile. The embedded context state takes precedence over the unique outer profile hiddenSeries at line 86. Source wiring gives four mounted charts a common legend persistence identity instead of their distinct outer keys.",
+      "fix": "Use one hidden-series provider per profile or pass its existing outer chart key through the domain renderer; retain existing keys and correct persisted/URL behavior rather than introducing another store.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferDestinationDirectory.tsx",
+      "line": 222,
+      "rule": "MDC-026 evidence coverage",
+      "detail": "Analysis slices supported destination profiles to 12 (rangeBuffer.ts:666) and records omittedSupportedDestinations, but directory disclosure only reports supported/locatable totals. A reader cannot see how many supported destinations were omitted from the displayed directory.",
+      "fix": "Display the existing displayed/omitted destination coverage counts without changing grouping, cap, sorting or backend scope.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Resolve chart trust/fallback and shared legend-identity source risks before cosmetic adoption; P2 for restrained palette, warning hierarchy and destination truncation disclosure. Source-only audit is not runtime acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse chart-state ownership contract; no new chart library",
+      "ownerFile": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "props": ["chartKey", "children({hiddenSeries})", "data", "dataColumns", "loading", "empty", "error", "exportData"],
+      "variants": ["panel", "embedded"],
+      "states": ["resolved qualified evidence", "no vehicle", "initial", "fatal", "retained", "empty", "no distance"],
+      "usedBy": ["RangeBufferMonthTrend", "RangeBufferWeekdayProfile", "RangeBufferHourProfile", "RangeBufferDistanceProfile", "RangeBufferDistribution"],
+      "dependsOn": ["RangeBufferPercentileChart must not override outer profile identity", "RangeBufferSectionBody trust decisions must also govern fallback data"],
+      "changeNeeded": "Integration coordination with existing chart owner; current public props appear sufficient. No shared source patch is established as necessary."
+    },
+    {
+      "name": "Existing restrained chart palette and severity text guidance",
+      "ownerFile": "web\\src\\lib\\tokens.ts",
+      "props": ["chartTokens.series", "existing semantic severity text tokens"],
+      "variants": ["saved chart palette", "light", "dark", "forced colors"],
+      "states": ["critical below 10%", "below selected threshold", "ordinary arrivals", "ordinal percentile context"],
+      "usedBy": ["RangeBufferDistribution", "RangeBufferThresholdSensitivity", "RangeBufferPercentileChart", "RangeBufferLowArrivals"],
+      "dependsOn": ["shared chart palette owner review", "actual composed contrast validation", "preserve saved palette settings"],
+      "changeNeeded": "Confirm existing token mapping rather than inventing per-page colors. Token owner implementation was not inspected; no mandatory new API is proposed."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\range-buffer\\index.ts",
+      "line": 1,
+      "detail": "Barrel still exports RangeBufferAccounting, RangeBufferDriveContext, RangeBufferEvidenceSupport and RangeBufferKpiBand while the audited page mounts four RangeBufferSummaryBrief variants instead.",
+      "status": "Confirmed exported alternatives only; implementations/callers and dead-code status were not investigated. Do not delete or transplant them during page modernization."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "0abef267dd17b8f1f024aa2fdeb22fffc3cc7135337de48fdf0f921804c9a12b",
+    "sourceHashAlgorithm": "SHA-256 of current page bytes",
+    "currentLineCount": 192,
+    "sectionCount": 13,
+    "sections": [
+      {"name": "Observed arrival-buffer evidence", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 108, "metricCount": 6},
+      {"name": "Arrival SoC distribution", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 113},
+      {"name": "Vehicle-local monthly arrival bands", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 114},
+      {"name": "Planning-threshold sensitivity", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 124},
+      {"name": "Arrival buffer by local weekday", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 128},
+      {"name": "Arrival buffer by local completion time", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 138},
+      {"name": "Arrival buffer by drive distance", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 143},
+      {"name": "Drive-use context and field coverage", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 152, "metricCount": 6},
+      {"name": "Supported destination profiles", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 156, "columnCount": 8},
+      {"name": "Ten lowest observed arrivals", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 166, "columnCount": 6},
+      {"name": "Evidence support and coverage", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 176, "metricCount": 6},
+      {"name": "Row accounting and secondary coverage", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 180, "metricCount": 8},
+      {"name": "Methodology and limitations", "file": "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx", "line": 184, "articleCount": 8}
+    ],
+    "counts": {"chartSections": 6, "tableSections": 2, "summaryBriefs": 4, "summaryMetrics": 26, "methodologySections": 1, "pageDirectGlassPanel": 0, "pageDirectChartContainer": 0, "mountedDomainDirectGlassPanel": 3, "mountedDomainDirectChartContainer": 6, "nestedEmbeddedChartInstances": 4},
+    "actions": [
+      "Workspace vehicle/range changes; do not duplicate these selectors.",
+      "Planning threshold Select: 10/15/20/25/30/40%, default 20, in-memory state; recomputes local evidence.",
+      "Fatal/refresh retry refetches the same drives query.",
+      "Four OperationalBrief Review details actions and drawer closure via shared owner; drawer internals not inspected.",
+      "Chart legend series toggles in monthly/weekday/hour/distance/threshold charts; preserve current source-backed identities.",
+      "Six chart export menus support PNG/SVG/copy-image and CSV through existing ChartContainer; enabled only with relevant resolved evidence by callers.",
+      "Destination value filters, sample sorting and pagination; lowest-arrivals arrival sorting; table persistence IDs must survive. Further DataTable capabilities are unverified."
+    ],
+    "dataBehavior": [
+      "One bounded drives source, maximum 1000 rows, server-bound selected vehicle/start/end; cap warning never claims lifetime completeness.",
+      "Frozen mount clock rejects later completions; preserve intentionally frozen analysis semantics.",
+      "Every row enters exactly one primary category: included/incomplete/invalid time-order/future/invalid arrival.",
+      "End SoC finite 0-100 is required; secondary start/distance/destination fields never decide arrival inclusion.",
+      "Increasing SoC rows excluded only from depletion; missing percentiles/distance remain null, not zero.",
+      "Linear interpolated drive-weighted percentiles rounded in model; selected threshold comparison is strict less-than.",
+      "Destination address normalization, rounded 3-decimal coordinate fallback, minimum 3 arrivals, sample-count/name ordering, top-12 cap.",
+      "Latest 24 months, all weekdays/four-hour categories and fixed meter bands; missing categories retain null percentile evidence.",
+      "Lowest 10 sort by arrival SoC then newest completion and original source order.",
+      "Support weights .35/.25/.25/.15 with volume/day/week targets 50/20/8 and tiered recency; support is not predictive confidence.",
+      "Timezone, locale, precision, saved units, display-only SI conversion, query keys/cancellation and retained-data recovery remain intact.",
+      "Methodology preserves eight definitions plus future-range caution; do not hide any content for mobile."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified; no browser, API request or user interaction exercised",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified at all ten required widths",
+    "backend": "route registration confirmed only; handler/repository/filtering payload behavior not read or exercised",
+    "validation": "No source edits, Git, TypeScript, lint, tests or build performed, per read-only assignment. Mandatory skill script inspected but not run because it launches project-wide tsc, conflicting with scoped audit validation rules.",
+    "staticCounts": "Corrected PowerShell Select-String checks on sole page: style={{=0; raw button/input/textarea/select/table=0; text-neon/text-white/text-gray/glow=0; direct recharts/react-leaflet/framer-motion imports=0; old ../api imports=0. Exit 0. These counts are not a full dependency audit.",
+    "toolFailure": "One first static-count PowerShell expression failed to parse (exit 1); corrected simpler expression then completed (exit 0). No validation success attributed to failed command.",
+    "sourceOnly": "Mounted dependency source inspection is not mounted runtime coverage. Shared owners outside exact inspected ranges and exported alternative implementations remain unknown.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-120.json", ".agent-status\\audit-page-120.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\RangeBufferPage.tsx",
+    "web\\src\\features\\driving\\lib\\rangeBuffer.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\RangeBufferSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\index.ts",
+    "web\\src\\features\\driving\\components\\range-buffer\\types.ts",
+    "web\\src\\features\\driving\\components\\range-buffer\\labels.ts",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferDistribution.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferMonthTrend.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferThresholdSensitivity.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferWeekdayProfile.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferHourProfile.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferDistanceProfile.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferPercentileChart.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferDestinationDirectory.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferLowArrivals.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferMethodology.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\range-buffer\\RangeBufferQueryStatus.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

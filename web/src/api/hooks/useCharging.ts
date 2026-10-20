@@ -3,6 +3,7 @@ import { request } from '../client';
 import { queryPolicy } from '../queryPolicy';
 import { scopedPath } from '../scope';
 import { safeArray } from '@/lib/safeArray';
+import { validateAnalyticalHistory } from '@/lib/analyticalHistory';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
@@ -49,8 +50,10 @@ export const chargingKeys = {
   detailById: (id: number) => ['charging-session', id] as const,
   telemetry: (id: number) => ['charge-telemetry', id] as const,
   byVehicle: (vehicleId: string) => ['charging-sessions', 'vehicle', vehicleId] as const,
-  history: (vehicleId: string, limit = 1000) =>
-    ['charging-sessions', 'history', vehicleId, limit] as const,
+  history: (vehicleId: string, limit = 1000, window?: { start?: string; end?: string }) =>
+    (window?.start || window?.end
+      ? ['charging-sessions', 'history', vehicleId, limit, window.start ?? null, window.end ?? null] as const
+      : ['charging-sessions', 'history', vehicleId, limit] as const),
 };
 
 export function useChargingSessions(vehicleId?: string) {
@@ -69,18 +72,24 @@ export function useChargingSessions(vehicleId?: string) {
  * models without expanding the ordinary list query or sharing its cache key.
  * The result is an observed window (maximum 1,000 rows), not a lifetime claim.
  */
-export function useChargingHistory(vehicleId?: string, limit = 1000) {
+export function useChargingHistory(
+  vehicleId?: string,
+  limit = 1000,
+  window?: { start?: string; end?: string },
+) {
   const boundedLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+  const params = new URLSearchParams({ vehicle_id: String(vehicleId), limit: String(boundedLimit) });
+  if (window?.start) params.set('start', window.start);
+  if (window?.end) params.set('end', window.end);
   return useQuery({
-    queryKey: chargingKeys.history(vehicleId ?? '', boundedLimit),
+    queryKey: chargingKeys.history(vehicleId ?? '', boundedLimit, window),
     queryFn: ({ signal }) =>
       request<ChargingSession[]>(
-        `/charging?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
+        `/charging?${params}`,
         { signal },
-      ),
+      ).then((rows) => validateAnalyticalHistory(rows, 'charging')),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.MODERATE,
-    select: safeArray,
   });
 }
 
@@ -105,13 +114,41 @@ export function useChargingSessionDetail(id: number | null) {
   });
 }
 
-/** Fetches detailed telemetry readings for a charging session. */
+type ChargeTelemetryResponse = Omit<ChargeTelemetryReading,
+  'ts' | 'battery_heater_power_w' | 'ac_charging_power_w' | 'dc_charging_power_w'
+  | 'ac_charging_energy_in_wh' | 'dc_charging_energy_in_wh'
+> & Partial<Pick<ChargeTelemetryReading,
+  'ts' | 'battery_heater_power_w' | 'ac_charging_power_w' | 'dc_charging_power_w'
+  | 'ac_charging_energy_in_wh' | 'dc_charging_energy_in_wh'
+>>;
+
+function thermalTelemetryRows(rows: ChargeTelemetryResponse[] | null): ChargeTelemetryReading[] {
+  return safeArray(rows).map(row => ({
+    ...row,
+    ts: row.ts ?? row.created_at,
+    // The session endpoint merges AC/DC into power_w; do not count it twice.
+    ac_charging_power_w: 'ac_charging_power_w' in row
+      ? row.ac_charging_power_w ?? null
+      : 'dc_charging_power_w' in row ? null : row.power_w ?? null,
+    dc_charging_power_w: row.dc_charging_power_w ?? null,
+    // energy_added is the endpoint's legacy kWh counter, unlike canonical Wh fields.
+    ac_charging_energy_in_wh: 'ac_charging_energy_in_wh' in row
+      ? row.ac_charging_energy_in_wh ?? null
+      : 'dc_charging_energy_in_wh' in row ? null
+      : row.energy_added == null ? null : row.energy_added * 1000,
+    dc_charging_energy_in_wh: row.dc_charging_energy_in_wh ?? null,
+    // Heater state is not a power measurement. Unsupported power stays unknown.
+    battery_heater_power_w: row.battery_heater_power_w ?? null,
+  }));
+}
+
+/** Fetches session telemetry, retaining raw fields and adapting thermal-analysis operands to SI. */
 export function useChargeTelemetry(sessionId: number | null) {
   return useQuery({
     queryKey: chargingKeys.telemetry(sessionId!),
-    queryFn: ({ signal }) => request<ChargeTelemetryReading[]>(`/charging/${sessionId}/telemetry`, { signal }),
+    queryFn: ({ signal }) => request<ChargeTelemetryResponse[]>(`/charging/${sessionId}/telemetry`, { signal }),
     enabled: sessionId != null,
-    select: safeArray,
+    select: thermalTelemetryRows,
   });
 }
 
@@ -126,8 +163,13 @@ export function useChargingSessionsPaginated(
   const { limit = 50, offset = 0, start, end } = options;
   return useQuery({
     queryKey: ['charging', vehicleId, start, end, limit, offset] as const,
-    queryFn: ({ signal }) => getChargingSessions(vehicleId!, limit, offset, start, end, { signal }),
-    enabled: vehicleId !== null,
+    queryFn: ({ signal }) => {
+      if (vehicleId === null || !Number.isSafeInteger(vehicleId) || vehicleId <= 0) {
+        throw new Error('Vehicle scope has not resolved');
+      }
+      return getChargingSessions(vehicleId, limit, offset, start, end, { signal });
+    },
+    enabled: vehicleId !== null && Number.isSafeInteger(vehicleId) && vehicleId > 0,
     staleTime: STALE_TIMES.FAST,
     select: safeArray,
   });
@@ -226,7 +268,7 @@ export function useTeslaChargingHistory(vin?: string, options?: { enabled?: bool
   });
 }
 
-/** Mutation to refresh Tesla charging historyfrom the Tesla API. */
+/** Manually refreshes Tesla charging history from the Tesla API in live mode. */
 export function useRefreshTeslaChargingHistory() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
@@ -239,7 +281,7 @@ export function useRefreshTeslaChargingHistory() {
       const qs = searchParams.toString();
       return request<TeslaChargingHistoryResponse>(
         `/tesla/charging/history/refresh${qs ? `?${qs}` : ''}`,
-        { method: 'POST' }
+        { method: 'POST', requiresLiveMode: true }
       );
     },
     onSuccess: () => {
@@ -319,15 +361,20 @@ export const teslaChargingSessionKeys = {
   byVin: (vin: string) => ['tesla-charging-sessions', vin] as const,
 };
 
-/** Fetches Tesla fleet charging sessions from the local DB (business accounts only). */
-export function useTeslaChargingSessions(vin?: string, options?: { enabled?: boolean }) {
+/** Undefined selects fleet scope; null represents an unresolved, non-fetchable VIN. */
+export function useTeslaChargingSessions(vin?: string | null, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: vin ? teslaChargingSessionKeys.byVin(vin) : teslaChargingSessionKeys.all,
-    queryFn: ({ signal }) => request<TeslaChargingSessionResponse>(
-      `/tesla/charging/sessions${vin ? `?vin=${vin}` : ''}`, { signal }
-    ),
+    queryKey: vin === null
+      ? ['tesla-charging-sessions-unresolved']
+      : vin ? teslaChargingSessionKeys.byVin(vin) : teslaChargingSessionKeys.all,
+    queryFn: ({ signal }) => {
+      if (vin === null) throw new Error('Vehicle scope has not resolved');
+      return request<TeslaChargingSessionResponse>(
+        `/tesla/charging/sessions${vin ? `?vin=${encodeURIComponent(vin)}` : ''}`, { signal }
+      );
+    },
     staleTime: STALE_TIMES.SLOW,
-    enabled: options?.enabled ?? true,
+    enabled: vin !== null && (options?.enabled ?? true),
   });
 }
 
@@ -436,13 +483,14 @@ export const chargePlannerKeys = {
   ratePlans: ['charge-planner-rate-plans'] as const,
 };
 
-/** Mutation to optimize a charge schedule using TOU rates. */
+/** Optimizes and persists a charge schedule using TOU rates; requires live mode. */
 export function useOptimizeCharge() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (params: OptimizeChargeRequest) =>
       request<OptimizeChargeResponse>('/charge-planner/optimize', {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(params),
       }),
     onSuccess: () => {
@@ -511,7 +559,7 @@ export function useAutopilotProfile(vehicleId?: number) {
   });
 }
 
-/** Mutation to save the Autopilot profile for a vehicle. */
+/** Saves the Autopilot profile for a vehicle; requires live mode. */
 export function useSaveAutopilotProfile() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
@@ -519,6 +567,7 @@ export function useSaveAutopilotProfile() {
     mutationFn: (params: AutopilotProfile) =>
       request<AutopilotProfile>('/charge-autopilot/profile', {
         method: 'PUT',
+        requiresLiveMode: true,
         body: JSON.stringify(params),
       }),
     onSuccess: () => {
@@ -633,6 +682,7 @@ export function useBulkDeleteCharging() {
       ),
     onSuccess: (res) => {
       invalidateAndBroadcast(qc, { queryKey: chargingKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: ['charging'] });
       success('toast.bulk.delete.success', '{{count}} deleted', {
         count: res.deleted ?? 0,
       });

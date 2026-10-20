@@ -22,7 +22,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sparkline } from '@/components/charts';
+import { Caption } from '@/components/ui';
 import { useSignalHistory } from '@/api/hooks/useSignals';
+import { useDataState } from '@/hooks/useDataState';
 import type { SignalKind, SignalEnvelope } from '@/api/types';
 import { cn } from '@/lib/cn';
 
@@ -96,10 +98,9 @@ export function SignalSparklinePreview({
 
   if (!isNumeric) {
     return (
-      <span
+      <Caption
         className={cn(
-          'inline-flex items-center rounded px-1.5 py-0.5 text-2xs uppercase tracking-wide',
-          'text-[var(--text-muted)] border border-[var(--glass-border)]',
+          'inline-flex items-center rounded border border-[var(--glass-border)] px-1.5 py-0.5',
           className,
         )}
         title={t('telemetry.sparkline.nonNumeric', 'Non-numeric signal ({{kind}})', {
@@ -107,7 +108,7 @@ export function SignalSparklinePreview({
         })}
       >
         {valueKind}
-      </span>
+      </Caption>
     );
   }
 
@@ -151,18 +152,19 @@ function SparklineFetcher({
     hours: SPARKLINE_HOURS,
     limit: SPARKLINE_LIMIT,
   });
+  const historyState = useDataState(query, { provenance: 'historical' });
 
   const numericSeries = useMemo(
     () => envelopesToNumbers(query.data?.data),
     [query.data],
   );
 
-  if (query.isLoading) {
+  if (query.isLoading && !historyState.hasData) {
     return (
       <span
         aria-hidden="true"
         className={cn(
-          'inline-block animate-pulse rounded bg-[var(--surface-2)]',
+          'inline-block animate-pulse rounded bg-[var(--surface-2)] motion-reduce:animate-none',
           className,
         )}
         style={{ width, height }}
@@ -170,42 +172,42 @@ function SparklineFetcher({
     );
   }
 
-  if (query.isError) {
+  if (historyState.fatalError) {
     const label = t('telemetry.sparkline.error', 'Failed to load trend');
     return (
-      <span
+      <Caption
         role="img"
         aria-label={label}
         title={label}
-        className={cn('text-2xs text-rose-300', className)}
+        className={cn('text-rose-300', className)}
       >
         —
-      </span>
-    );
-  }
-
-  if (numericSeries.length < MIN_POINTS) {
-    return (
-      <span
-        className={cn('text-2xs text-[var(--text-muted)]', className)}
-        title={t('telemetry.sparkline.empty', 'No samples in last hour')}
-      >
-        —
-      </span>
+      </Caption>
     );
   }
 
   return (
-    <span
-      role="img"
-      aria-label={t(
-        'telemetry.sparkline.trend',
-        '{{signal}} trend, {{count}} samples in the last hour',
-        { signal, count: numericSeries.length },
+    <span className={cn('inline-flex min-w-0 max-w-full flex-wrap items-center gap-1', className)}>
+      {numericSeries.length < MIN_POINTS ? (
+        <Caption title={t('telemetry.sparkline.empty', 'No samples in last hour')}>—</Caption>
+      ) : (
+        <span
+          role="img"
+          aria-label={t(
+            'telemetry.sparkline.trend',
+            '{{signal}} trend, {{count}} samples in the last hour',
+            { signal, count: numericSeries.length },
+          )}
+          className="inline-block"
+        >
+          <Sparkline data={numericSeries} color={color} width={width} height={height} />
+        </span>
       )}
-      className={cn('inline-block', className)}
-    >
-      <Sparkline data={numericSeries} color={color} width={width} height={height} />
+      {historyState.status === 'stale' && (
+        <Caption role="status" className="text-amber-300">
+          {t('telemetry.sparkline.retained', 'Trend may be out of date')}
+        </Caption>
+      )}
     </span>
   );
 }

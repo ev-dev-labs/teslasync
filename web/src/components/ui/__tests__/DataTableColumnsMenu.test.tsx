@@ -76,7 +76,8 @@ describe('DataTableColumnsMenu — trigger + open/close', () => {
     expect(trigger).toBeInTheDocument();
     expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(trigger).toHaveTextContent('Columns');
+    // Icon-only trigger: the label lives in the tooltip description, not visible text.
+    expect(trigger).toHaveAccessibleDescription('Columns');
     expect(screen.queryByRole('menu')).toBeNull();
   });
 

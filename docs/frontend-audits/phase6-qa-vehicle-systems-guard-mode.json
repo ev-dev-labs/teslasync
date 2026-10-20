@@ -1,0 +1,1329 @@
+{
+  "item": "phase6-qa-vehicle-systems-guard-mode",
+  "attempt": 1,
+  "actor": "70b5eb28-2b63-4b0b-bc90-95b3bd646ea4",
+  "status": "SOURCE_QA_COMPLETE_WITH_NEEDS; NOT_PAGE_ACCEPTED",
+  "page": "web/src/features/vehicle-systems/pages/GuardModePage.tsx",
+  "route": "/guard-mode",
+  "startedAt": "2026-10-14T01:27:58.5275295Z",
+  "returnDeadline": "2026-10-14T01:44:50.678Z",
+  "hardDeadline": "2026-10-14T01:49:50.678Z",
+  "confirmedIssues": [
+    {
+      "id": "GM01",
+      "rule": "hardcoded-string",
+      "occurrenceCount": 6,
+      "title": "Six guard mutation toasts bypass i18n",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useGuard.ts",
+          "line": 149,
+          "text": "toast.success('Guard configuration updated');"
+        },
+        {
+          "file": "web/src/api/hooks/useGuard.ts",
+          "line": 155,
+          "text": "toast.error(`Failed to update guard config: ${err.message}`);"
+        },
+        {
+          "file": "web/src/api/hooks/useGuard.ts",
+          "line": 173,
+          "text": "toast.success('Panic alert triggered');"
+        },
+        {
+          "file": "web/src/api/hooks/useGuard.ts",
+          "line": 176,
+          "text": "toast.error(`Failed to trigger panic: ${err.message}`);"
+        },
+        {
+          "file": "web/src/api/hooks/useGuard.ts",
+          "line": 197,
+          "text": "toast.success('Event acknowledged');"
+        },
+        {
+          "file": "web/src/api/hooks/useGuard.ts",
+          "line": 200,
+          "text": "toast.error(`Failed to acknowledge event: ${err.message}`);"
+        }
+      ],
+      "mechanism": "Success/error callbacks for config, panic and acknowledgement use English literals/template strings without translation.",
+      "repro": {
+        "kind": "synthetic source specification",
+        "executed": false,
+        "steps": "Inspect/invoke isolated callbacks with synthetic responses/errors and a non-English locale; no transport or vehicle commands."
+      },
+      "fix": "Use existing localized mutation-toast convention, preserving rejection, invalidation and live safeguards.",
+      "priorEvidence": "audit-page-220; inventory G224/P434",
+      "confidence": "source-confirmed only"
+    },
+    {
+      "id": "GM02",
+      "rule": "missing-i18n-key",
+      "occurrenceCount": 9,
+      "title": "Nine known event label keys absent from canonical English",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/eventMetadata.ts",
+          "line": 16,
+          "text": "vehicle_moved: ['guard.eventVehicleMoved', 'Vehicle moved'],"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/eventMetadata.ts",
+          "line": 17,
+          "text": "unauthorized_unlock: ['guard.eventUnauthorizedUnlock', 'Unauthorized unlock'],"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/eventMetadata.ts",
+          "line": 18,
+          "text": "unauthorized_drive: ['guard.eventUnauthorizedDrive', 'Unauthorized drive'],"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/eventMetadata.ts",
+          "line": 19,
+          "text": "sentry_triggered: ['guard.eventSentryTriggered', 'Sentry triggered'],"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/eventMetadata.ts",
+          "line": 20,
+          "text": "manual_panic: ['guard.eventManualPanic', 'Manual panic'],"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/eventMetadata.ts",
+          "line": 21,
+          "text": "test_alert: ['guard.eventTestAlert', 'Test alert'],"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/eventMetadata.ts",
+          "line": 22,
+          "text": "locked: ['guard.eventLocked', 'Lock state changed'],"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/eventMetadata.ts",
+          "line": 23,
+          "text": "sentry_mode: ['guard.eventSentryMode', 'Sentry mode'],"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/eventMetadata.ts",
+          "line": 24,
+          "text": "valet_mode_enabled: ['guard.eventValetMode', 'Valet mode'],"
+        }
+      ],
+      "mechanism": "Parsed en.json and locale-vehicle-systems lack all nine eventLabelKey identities used by t in event cards and the alert. English fallbacks do not supply localizable canonical identities.",
+      "repro": {
+        "kind": "synthetic source specification",
+        "executed": false,
+        "steps": "Look up all nine exact keys; render synthetic known event types with real catalogs rather than the fallback t mock."
+      },
+      "fix": "Canonical catalog owner adds exact existing keys through normal serialized workflow. Unknown raw event tokens remain untouched.",
+      "priorEvidence": null,
+      "confidence": "source-confirmed only"
+    },
+    {
+      "id": "GM03",
+      "rule": "history-current-copy",
+      "occurrenceCount": 1,
+      "title": "Measured-empty history uses current-alert assurance",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardEvents.tsx",
+          "line": 46,
+          "text": "message={t('guard.noEvents', 'No guard events yet')}"
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "line": 25049,
+          "text": "\"noEvents\": \"No active alerts\","
+        },
+        {
+          "file": "web/src/i18n/en/locale-vehicle-systems.json",
+          "line": 2563,
+          "text": "\"noEvents\": \"No active alerts\","
+        }
+      ],
+      "mechanism": "guard.noEvents fallback says 'No guard events yet', but canonical/split values say 'No active alerts'. Returned history is not current security status. The coverage caveat does not change the sentence.",
+      "repro": {
+        "kind": "synthetic source specification",
+        "executed": false,
+        "steps": "With synthetic eventsQuery.data=[] and real English catalog, inspect EmptyState; fallback-only tests display a different sentence."
+      },
+      "fix": "Correct this exact catalog history-empty key without inferring security status.",
+      "priorEvidence": null,
+      "confidence": "source-confirmed only"
+    },
+    {
+      "id": "GM04",
+      "rule": "initial-paused-disclosure",
+      "occurrenceCount": 1,
+      "title": "Initial-paused sources collapse to unavailable/unknown",
+      "evidence": [
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 214,
+          "text": "isRefreshBlocked: isPaused,"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 59,
+          "text": "if (!state.hasData) return null;"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardEvents.tsx",
+          "line": 36,
+          "text": ") : m.eventsQuery.isLoading && !m.eventsKnown ? ("
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardSettings.tsx",
+          "line": 23,
+          "text": "{m.configQuery.isLoading && !configReady ? <Skeleton height={180} /> : configReady ? ("
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+          "line": 29,
+          "text": ") : m.vehicleStateQuery.isLoading && !m.stateResponse?.state ? ("
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardControls.tsx",
+          "line": 37,
+          "text": "{!configReady && ("
+        }
+      ],
+      "mechanism": "For data undefined, fetchStatus paused, isPending true, isLoading false and no error, DataState preserves isRefreshBlocked=true. StaleRefreshWarning hides without data; presenters test isLoading/fatalError/data but not initial blocked reason.",
+      "repro": {
+        "kind": "synthetic source specification",
+        "executed": false,
+        "steps": "Supply this synthetic source independently for config/history/vehicle/geofences; keep neighboring sources populated. Do not assert device offline from pause alone."
+      },
+      "fix": "Use existing source APIs for a local initial-deferred reason, preserving panels, unknown values and recovery.",
+      "priorEvidence": null,
+      "confidence": "source-confirmed only"
+    },
+    {
+      "id": "GM05",
+      "rule": "date-preferences",
+      "occurrenceCount": 1,
+      "title": "Policy update time bypasses saved locale/timezone",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardStatus.tsx",
+          "line": 26,
+          "text": "? t('guard.modernization.policyUpdated', 'Policy updated {{time}}', { time: formatDateTime(m.guardConfig.updated_at) })"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 54,
+          "text": "export function formatDateTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {"
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 75,
+          "text": "// `??` only substitutes null/undefined, so an empty string or a legacy"
+        }
+      ],
+      "mechanism": "Pure formatDateTime(updated_at) receives no locale/tz options and defaults to browser. TimeStamp elsewhere uses effective preference owners.",
+      "repro": {
+        "kind": "synthetic source specification",
+        "executed": false,
+        "steps": "Synthetic UTC instant with saved locale/timezone different from browser; compare policy row and preference-aware absolute timestamp after preference change."
+      },
+      "fix": "Use existing preference-aware hook/TimeStamp, preserving raw instant.",
+      "priorEvidence": null,
+      "confidence": "source-confirmed only"
+    },
+    {
+      "id": "GM06",
+      "rule": "command-outcome-loss",
+      "occurrenceCount": 1,
+      "title": "Panic partial-command results never reach outcome UI",
+      "evidence": [
+        {
+          "file": "internal/api/guard/handler.go",
+          "line": 560,
+          "text": "// 502 Bad Gateway — the proxy/Tesla rejected at least one"
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 251,
+          "text": "const { message, code } = await parseError(res)"
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 252,
+          "text": "throw new ApiError(message, res.status, code)"
+        },
+        {
+          "file": "web/src/api/hooks/useGuard.ts",
+          "line": 176,
+          "text": "toast.error(`Failed to trigger panic: ${err.message}`);"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardControls.tsx",
+          "line": 54,
+          "text": "{m.panic.error && <QueryError error={m.panic.error} compact />}"
+        }
+      ],
+      "mechanism": "Backend 502 includes per-command results; directRequest reduces error to message/status/code; guard hook and presenter retain only generic error. Returned individual successes/failures are lost. Generic partial-failure caveat is not outcome evidence.",
+      "repro": {
+        "kind": "synthetic source specification",
+        "executed": false,
+        "steps": "Use synthetic shape from TestGuard_Panic_PartialFailureReturns502 at handler_test.go:608: Sentry success/horn failure/lights success. Mock transport must reject degraded and retain three results; never issue commands."
+      },
+      "fix": "Guard integration and actual transport owner provide typed retained degraded outcomes without treating502 as success, unowned global-client changes, replay or auth/live bypass.",
+      "priorEvidence": null,
+      "confidence": "source-confirmed only"
+    },
+    {
+      "id": "GM07",
+      "rule": "map-text-alternative",
+      "occurrenceCount": 1,
+      "title": "No map-independent location text",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+          "line": 64,
+          "text": "<MapContainer center={[vehicleLat, vehicleLng]} zoom={15} scrollWheelZoom className=\"z-0 h-full w-full\">"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+          "line": 67,
+          "text": "<Marker position={[vehicleLat, vehicleLng]} icon={vehicleIcon()}>"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+          "line": 88,
+          "text": "<Popup>"
+        }
+      ],
+      "mechanism": "Only vehicle/coordinate text is in Leaflet Popup; no equivalent source-backed text adjacent to map. This proves missing independent alternative, not keyboard failure.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic source specification",
+        "steps": "Synthetic verified coordinates with popup closed/unavailable map; inspect independent text."
+      },
+      "fix": "Add localized source-backed vehicle/coordinate/home-area summary using existing Text/formatting; preserve map/popup.",
+      "priorEvidence": "audit-page-220 accessibility root",
+      "confidence": "source-confirmed; no native claim"
+    },
+    {
+      "id": "GM08",
+      "rule": "initial-loading-classification",
+      "occurrenceCount": 1,
+      "title": "Overview initial loading classified as unresolved",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardOverview.tsx",
+          "line": 76,
+          "text": "<VehicleOperationalBrief id=\"guard-overview\" metrics={metrics} period={period}"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardOverview.tsx",
+          "line": 78,
+          "text": "available={!m.noVehicle && m.eventsKnown && m.guardConfig != null && m.vehicleState.hasData}"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+          "line": 27,
+          "text": "retained = false, available, error, footer, className, embedded = false,"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+          "line": 33,
+          "text": ": error ? 'unavailable' : known ? 'returned' : 'unknown';"
+        }
+      ],
+      "mechanism": "Overview never forwards loading; brief defaults false and selects unknown while initial sources fetch. Individual metrics still say Updating.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic source specification",
+        "steps": "All sources undefined/isLoading true, then one resolved source; inspect aggregate state without masking known metrics."
+      },
+      "fix": "Derive accurate initial/mixed loading without blanket suppression of successful metrics.",
+      "priorEvidence": "audit-page-220 loading root",
+      "confidence": "source-confirmed; no native claim"
+    },
+    {
+      "id": "GM09",
+      "rule": "overlay-source-trust",
+      "occurrenceCount": 1,
+      "title": "Home circle lacks adjacent independent-source trust",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+          "line": 23,
+          "text": "<StaleRefreshWarning state={m.vehicleState} label={t('guard.liveMap', 'Live vehicle location')} />"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+          "line": 34,
+          "text": "homeGeofence={m.homeGeofence} events={m.events} />"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+          "line": 70,
+          "text": "{homeGeofence && ("
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/useGuardPageModel.ts",
+          "line": 68,
+          "text": "const homeGeofence = geofences?.find(g => String(g.id) === effectiveHomeGeofenceId) ?? null;"
+        }
+      ],
+      "mechanism": "Map warns for vehicleState only; circle also depends on policy/geofences. Their refresh failure/retention is shown elsewhere, not beside overlay.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic source specification",
+        "steps": "Current synthetic vehicle location plus retained failing/paused policy/geofence; inspect circle source context/recovery."
+      },
+      "fix": "Disclose overlay sources locally without blocking current marker/deleting retained circle.",
+      "priorEvidence": "audit-page-220 map trust root",
+      "confidence": "source-confirmed; no native claim"
+    },
+    {
+      "id": "GM10",
+      "rule": "display-unit-preferences",
+      "occurrenceCount": 2,
+      "title": "Policy threshold labels hardcode metric units",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/useGuardPageModel.ts",
+          "line": 74,
+          "text": "{ value: 'low', label: t('guard.sensitivityLowFull', 'Low — movement > 1 km') },"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/useGuardPageModel.ts",
+          "line": 75,
+          "text": "{ value: 'medium', label: t('guard.sensitivityMediumFull', 'Medium — movement > 200 m') },"
+        }
+      ],
+      "mechanism": "Literal1km/200m labels do not consume saved length units. These describe policy, not measured movement or proof of a detector.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic source specification",
+        "steps": "Compare option labels under miles/km preferences; literal labels unchanged."
+      },
+      "fix": "Format existing1000m/200m meanings using current units at display boundary; preserve enum/default/policy caveats and no invented evaluator.",
+      "priorEvidence": "audit-page-220 display root",
+      "confidence": "source-confirmed; no native claim"
+    },
+    {
+      "id": "GM11",
+      "rule": "page-owned-map-palette",
+      "occurrenceCount": 2,
+      "title": "Reachable circle uses page-owned fixed blue paint",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+          "line": 73,
+          "text": "color: 'rgba(59, 130, 246, 0.6)',"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+          "line": 74,
+          "text": "fillColor: 'rgba(59, 130, 246, 0.1)',"
+        }
+      ],
+      "mechanism": "Circle color/fill use rgba literals instead of existing theme-aware map roles. API pathOptions are not static-inline-style; composed contrast was not measured.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic source specification",
+        "steps": "Inspect synthetic current location/home circle; mounted theme matrix remains NOTRUN."
+      },
+      "fix": "Use existing restrained map palette owner; preserve radius/geometry; no new palette.",
+      "priorEvidence": "audit-page-220 visual root",
+      "confidence": "source-confirmed; no native claim"
+    },
+    {
+      "id": "GM12",
+      "rule": "command-feedback-semantics",
+      "occurrenceCount": 1,
+      "title": "Panic success toast implies an alert rather than command outcome",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useGuard.ts",
+          "line": 173,
+          "text": "toast.success('Panic alert triggered');"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/GuardModePage.tsx",
+          "line": 57,
+          "text": "message={t('guard.modernization.panicEffects', 'This requests Sentry mode on, then horn honking, then light flashing. It does not lock doors, send notifications, or create a guard event. Commands can fail or complete only partially.')}"
+        },
+        {
+          "file": "internal/api/guard/handler.go",
+          "line": 489,
+          "text": "// Panic serves POST /vehicles/{vehicleID}/guard/panic. It keeps running later"
+        }
+      ],
+      "mechanism": "Toast says Panic alert triggered; confirmation/handler establish Sentry/horn/lights and no event/notifications. Different semantic rule at the same physical line as GM01, not another hardcoded-string count.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic source specification",
+        "steps": "Inspect isolated success callback against command contract; no real execution."
+      },
+      "fix": "Repair/localize truthful supported outcome wording with GM01 at G224/P434.",
+      "priorEvidence": "audit-page-220 mutation feedback root",
+      "confidence": "source-confirmed; no native claim"
+    }
+  ],
+  "authority": {
+    "soleLoop": "docs/orchestrator-loop.md1-296 fully read; superseded playbook not authority",
+    "designContract": "docs/frontend-design-contract.md baseline1-705, relevant MDC002/026/031-034/040-047/060-070",
+    "mission": "docs/frontend-mission.md principles and15/16/22-26/43-45",
+    "inventory": "docs/frontend-inventory.md271,579/G224/P434; audit-page-220 reread",
+    "handoff": "docs/session-handoff.md current recovery and conventions1-165",
+    "queue": "Canonical QA row61/current accepted-source row2005, d353dfe91913d08c7b73369e567bff6096c26a7a source-only",
+    "instructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      "docs/I18N_GUIDELINES.md"
+    ],
+    "precedence": "Current SI/design overrides stale two-unit examples. Explicit assignment forbids globalTSC/helpers/native/source/test/catalog/Git writes; no acceptance inferred."
+  },
+  "sections": [
+    {
+      "name": "Overview",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardOverview.tsx",
+      "line": 76,
+      "preserved": "Six labelled raw/missing-aware metrics and independent fatal/stale footer"
+    },
+    {
+      "name": "Live location",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+      "line": 22,
+      "preserved": "Verified bounded finite coordinates including0; vehicle popup/home circle radius meters; no fabricated trail"
+    },
+    {
+      "name": "Policy/arming",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardControls.tsx",
+      "line": 21,
+      "preserved": "Policy distinct from monitoring; unsaved null editable; enable lock/Sentry and disable saves only"
+    },
+    {
+      "name": "Emergency",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardControls.tsx",
+      "line": 47,
+      "preserved": "Danger explicit confirm/cancel and pending/vehicle protection; accurate effects caveat"
+    },
+    {
+      "name": "Settings",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardSettings.tsx",
+      "line": 16,
+      "preserved": "Home none, low/medium/high, explicit false auto-panic and save operands/draft reconciliation"
+    },
+    {
+      "name": "Status",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardStatus.tsx",
+      "line": 19,
+      "preserved": "Policy timestamp, verified true/false vs unknown lock/Sentry, returned event count/observation time"
+    },
+    {
+      "name": "History",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardEvents.tsx",
+      "line": 25,
+      "preserved": "Returned order/IDs/ts/transitions/attribution/type fallback, ack and local recovery"
+    }
+  ],
+  "preservation": {
+    "sectionCount": 7,
+    "gridItems": 5,
+    "composedShippingLines": 717,
+    "historicalAuditLines": 709,
+    "floor": 532,
+    "sourceFloorMet": true,
+    "conditionalSurfaces": [
+      "triggered non-test latest event banner",
+      "panic confirmation",
+      "source/mutation feedback"
+    ],
+    "actionFamilies": 10,
+    "actions": [
+      "header vehicle scope",
+      "toggle policy",
+      "geofence including none",
+      "sensitivity",
+      "auto-panic including false",
+      "save settings",
+      "panic open/cancel/confirm",
+      "event acknowledgement",
+      "individual retry/refresh/manage vehicles",
+      "map pan/zoom/popup"
+    ],
+    "vehicleIdentity": {
+      "file": "web/src/features/vehicle-systems/pages/GuardModePage.tsx",
+      "line": 21,
+      "mechanism": "Workspace keyed by vehicleId??0 resets drafts/confirmation on change/deselection; same-vehicle refresh retains explicit drafts. Tests599/648/670 cover it; prior identity finding is resolved."
+    }
+  },
+  "scopeAndBounds": {
+    "vehicle": "Header-owned /guard-mode enables vehicle; no second picker",
+    "range": "workspaceScope.ts23-76 excludes /guard-mode; no date controls or declared historical analysis window",
+    "current": "useVehicles.ts260-289 has as_of key/request and disables historical polling; model requests5s armed/30s otherwise",
+    "history": "useGuard.ts116-125 requests returned vehicle history only; handler351-406 supports limit only, default100/max1000; repo248-255 orders ts DESC,id DESC LIMIT$2, no total/pagination",
+    "bothDateBounds": {
+      "status": "NOT_APPLICABLE_TO_DECLARED_ROUTE; ENDPOINT_UNSUPPORTED",
+      "startPassed": false,
+      "endExclusivePassed": false,
+      "reason": "Do not invent from/to backend capability or filter only loaded rows. Dated expansion needs real endpoint/type/scope owners."
+    },
+    "sourceDisclosure": "Policy/current verified fields/returned history explicitly independent; returned counts not theft assessment. GM03 remains canonically misleading."
+  },
+  "trustNumbersPreferences": {
+    "known": "eventsKnown prevents undefined from0; [] measured zero; null policy unsaved, not disabled observation; current verified false preserved; stale/unverified/null unknown; verified finite0,0 is real location",
+    "retained": "DataState keeps payload/last successful query timestamp for refresh error/paused with data, source-local retries and panels; overlay locality GM09",
+    "initial": "Local fetching skeletons; GM04 deferred initial reason and GM08 aggregate classification gaps",
+    "freshness": "useVehicles.ts1117-1128 checks observation age/verified identity with sparse-feed stream freshness, not field-change age; no passive expiry execution",
+    "SI": "Raw degrees/meters and enum/payload operands retained. Popup reactive number formatting; OperationalBrief counts. Fixed threshold display GM10/policy timeGM05 remain."
+  },
+  "readinessPrivacy": {
+    "access": "Only source/docs/synthetic test inspection; no real security events, API/device/browser/auth/physical command or callback invocation",
+    "liveOnly": "useGuard.ts141/145,168/170,192/194 requiresLiveMode/networkMode always. client.ts358 prefetch operationalMode guard rejects offline/as_of. Offline class regex lacks vehicle-prefixed guard but explicit opt-in independently protects it; no bypass proved.",
+    "server": "router.go3466-3473 config/panic sudo+5/min,ack60/min; handler412-462/repo299-302 filter vehicle+event and same404 for missing/cross-vehicle; mounted auth source is not runtime acceptance.",
+    "effects": "Policy enable saves then lock/Sentry; disable only policy. Panic Sentry/horn/lights; no event/notifications. Partial results GM06/wordingGM12.",
+    "map": "Source provider attribution and tile URLs inspected only; actual traffic/privacy/consent unproved."
+  },
+  "unprovedCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+      "line": 64,
+      "topic": "Native map keyboard/mobile/themes/forced colors/RTL200%/all ten widths/low bandwidth and motion; no mounted evidence"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/useGuardPageModel.ts",
+      "line": 30,
+      "topic": "Passive freshness expiry when offline/hidden/as_of without rerender; no false-current execution"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardControls.tsx",
+      "line": 49,
+      "topic": "Readiness buttons omit mode/proxy/API suspension/capability UX; transport safe guard exists; no unauthorized execution proved"
+    },
+    {
+      "id": "C04",
+      "file": "web/src/components/maps/MapTileLayer.tsx",
+      "line": 17,
+      "topic": "Configured external provider tile geography/privacy consent and actual traffic; no requests made or exfiltration asserted"
+    },
+    {
+      "id": "C05",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 264,
+      "topic": "Time-machine state versus current policy/unbounded history labeling; near-now as_of fixture needed"
+    },
+    {
+      "id": "C06",
+      "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardControls.tsx",
+      "line": 3,
+      "topic": "Category placement export not proved missing; dormant EventTrail red at map96 unreachable because positions always empty; not counted active paint"
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "findings": [
+        "GM04",
+        "GM07",
+        "GM09",
+        "GM11"
+      ],
+      "owner": "orchestrator intake; existing GuardLiveMap presenter owner",
+      "files": [
+        "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+        "web/src/features/vehicle-systems/components/guard-modernization/GuardModernization.test.tsx"
+      ],
+      "scope": "One map trust/text/palette repair, reuse audit-page-220 roots; no matching queued Guard repair row; not a fabricated claim"
+    },
+    {
+      "id": "N02",
+      "findings": [
+        "GM04",
+        "GM05",
+        "GM08"
+      ],
+      "owner": "orchestrator canonical Guard presenter intake",
+      "files": [
+        "web/src/features/vehicle-systems/components/guard-modernization/GuardControls.tsx",
+        "web/src/features/vehicle-systems/components/guard-modernization/GuardEvents.tsx",
+        "web/src/features/vehicle-systems/components/guard-modernization/GuardSettings.tsx",
+        "web/src/features/vehicle-systems/components/guard-modernization/GuardOverview.tsx",
+        "web/src/features/vehicle-systems/components/guard-modernization/GuardStatus.tsx",
+        "web/src/features/vehicle-systems/components/guard-modernization/GuardModernization.test.tsx"
+      ],
+      "scope": "One initial-source-state/policy-date caller family; preserve known neighbors. Advanced-date queued owner is different scope; completed Phase5 stays closed."
+    },
+    {
+      "id": "N03",
+      "findings": [
+        "GM10"
+      ],
+      "owner": "existing Guard model display owner via orchestrator",
+      "files": [
+        "web/src/features/vehicle-systems/components/guard-modernization/useGuardPageModel.ts",
+        "web/src/features/vehicle-systems/components/guard-modernization/GuardModernization.test.tsx"
+      ],
+      "scope": "Only threshold display-unit adoption; reuse old audit need, unchanged enums/defaults/API"
+    },
+    {
+      "id": "N04",
+      "findings": [
+        "GM01",
+        "GM06",
+        "GM12"
+      ],
+      "owner": "existing integration G224/P434 at useGuard.ts; orchestrator exact claim required",
+      "files": [
+        "web/src/api/hooks/useGuard.ts"
+      ],
+      "scope": "One localized truthful retained-command-feedback root, not three workers. Shared transport/test extensions require their actual owners; no client authority granted."
+    },
+    {
+      "id": "N05",
+      "findings": [
+        "GM02",
+        "GM03"
+      ],
+      "owner": "sole orchestrator canonical/generated English integration",
+      "files": [
+        "web/src/i18n/en.json",
+        "web/src/i18n/en/locale-vehicle-systems.json"
+      ],
+      "scope": "Nine exact existing label keys and guard.noEvents meaning; serialize future exact toast keys after producer ready. Completed catalog roots stay complete; unrelated pending catalog rows are not Guard owners."
+    }
+  ],
+  "needsPolicy": "No queue/source/test/catalog edits or claims made. Exact owner search found no pending Guard repair row: parent must enqueue precise successors, not redispatch completed page. N01/N02/N03 share readonly covering test: any future writers must be serialized, never concurrent overlap.",
+  "summary": {
+    "confirmedIssueCount": 12,
+    "ruleOccurrenceCount": 27,
+    "ruleOccurrences": {
+      "hardcoded-string": 6,
+      "missing-i18n-key": 9,
+      "history-current-copy": 1,
+      "initial-paused-disclosure": 1,
+      "date-preferences": 1,
+      "command-outcome-loss": 1,
+      "map-text-alternative": 1,
+      "initial-loading-classification": 1,
+      "overlay-source-trust": 1,
+      "display-unit-preferences": 2,
+      "page-owned-map-palette": 2,
+      "command-feedback-semantics": 1
+    },
+    "coreRuleViolationCount": 6,
+    "candidateCount": 6,
+    "needCount": 5,
+    "counting": "Distinct roots vs occurrences:6 toast literals,9 missing label keys,2 threshold labels,2 active circle paint literals; each other root counted once. Support citations not extra. GM12 separate semantic rule at GM01 line.",
+    "priority": [
+      "degraded command outcome evidence",
+      "truthful history-empty catalog",
+      "independent initial/retained source trust",
+      "localized truthful feedback",
+      "effective display preferences",
+      "map text alternative/theme-aware palette"
+    ]
+  },
+  "checks": {
+    "allFourteenRulesSearched": true,
+    "method": "Bounded inline Python stdlib regex discovery + manual source classification, no repository helper/audit runner",
+    "rawMatchingLinesByRule": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 8,
+      "missing-page-container": 1,
+      "fetch-useeffect": 0,
+      "sql-interpolation": 0,
+      "fmt-println": 0,
+      "bare-panic": 1,
+      "missing-context": 9
+    },
+    "classifiedCoreViolationCount": 6,
+    "exceptions": [
+      "2 hardcoded regex hits are TS generic syntax;6 true toasts",
+      "PageLayout forwards PageContainer at layout-reference/PageLayout.tsx11",
+      "1 panic is nil constructor wiring invariant, guarded by TestNewGuardRepo_NilPoolPanics; not runtime error handling",
+      "8 DB calls have ctx; remaining context hit is URL.Query",
+      "CSS-variable classes/dynamic styles/library pathOptions are not static-inline-style",
+      "Shared building-block raw HTML/vendor imports and test mocks are exceptions",
+      "Unknown event types/transitions/attribution are source identifiers"
+    ],
+    "catalog": {
+      "staticOccurrences": 124,
+      "uniqueKeys": 87,
+      "canonicalMissing": 9,
+      "fallbackMismatches": 8,
+      "meaning": "Only guard.noEvents mismatch counted as semantic defect; punctuation/emoji/equivalent lock labels not counted"
+    },
+    "backendScope": [
+      "internal/api/guard/handler.go",
+      "internal/database/system/guard_repo.go"
+    ]
+  },
+  "tests": {
+    "status": "READONLY_INSPECTED; NOTRUN",
+    "frontendFiles": [
+      {
+        "file": "web/src/features/vehicle-systems/pages/GuardModePage.test.tsx",
+        "declarations": 18,
+        "authoredScenarios": 18
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardModernization.test.tsx",
+        "declarations": 28,
+        "authoredScenarios": 46
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardPlacement.test.tsx",
+        "declarations": 1,
+        "authoredScenarios": 1
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/guard-modernization/GuardSourcePreservation.test.ts",
+        "declarations": 4,
+        "authoredScenarios": 4
+      }
+    ],
+    "declarations": 51,
+    "authoredScenarios": 69,
+    "runtimeCounts": {
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0
+    },
+    "limits": "English fallback/hooks/map mocks do not prove real catalogs/auth/backend/native. Backend test source also inspected; no tests executed. Corrected log arithmetic: measured28 declarations-4 tables+22rows=46; earlier27/45 illustrative line preserved/corrected."
+  },
+  "notRun": [
+    "npx tsc --noEmit/global TSC/build/lint/full suites/scoped Vitest/Go execution",
+    "repository helper/preservation/style/i18n/generator tools",
+    "installs/subagents/servers/browser/native/screenshots/API/device/auth/security/physical command execution",
+    "mounted ten mission widths320/375/390/430/768/1024/1280/1440/1920/2560,narrow containers,dark/light/custom,RTL200%,keyboard/contrast/forced colors/motion/low bandwidth",
+    "actual provider network/privacy consent/real security events",
+    "source/tests/catalog/queue/handoff/Git writes/commits"
+  ],
+  "commandFailures": [
+    {
+      "session": "1348",
+      "exit": 1,
+      "reason": "cp1252 UnicodeEncodeError",
+      "correctedRetry": "1363 exit0 UTF8"
+    },
+    {
+      "session": "1402",
+      "exit": 1,
+      "reason": "cp1252 UnicodeEncodeError",
+      "correctedRetry": "1411 exit0 UTF8"
+    },
+    {
+      "session": "1435",
+      "exit": 1,
+      "reason": "cp1252 UnicodeEncodeError",
+      "correctedRetry": "1438 exit0 UTF8"
+    },
+    {
+      "session": "1478",
+      "exit": 1,
+      "reason": "Windows tool os206 oversized command; process not started/report not created",
+      "recovery": "bounded stages1496/1517 and this finalization"
+    }
+  ],
+  "pins": [
+    {
+      "path": "internal/api/guard/handler.go",
+      "beforeSha256": "b9e6b4f0e41f6f1c1d5742ee4fdb41fa5050a4fc18161d5ac7f3c948f1519018",
+      "afterSha256": "b9e6b4f0e41f6f1c1d5742ee4fdb41fa5050a4fc18161d5ac7f3c948f1519018",
+      "unchanged": true,
+      "bytesBefore": 19543,
+      "bytesAfter": 19543,
+      "incremental": false
+    },
+    {
+      "path": "internal/api/guard/handler_test.go",
+      "beforeSha256": "e6d0b8438112487ba8e2d6810344be0aa1824c7fae0073ceb78146b347e5c81c",
+      "afterSha256": "e6d0b8438112487ba8e2d6810344be0aa1824c7fae0073ceb78146b347e5c81c",
+      "unchanged": true,
+      "bytesBefore": 27539,
+      "bytesAfter": 27539,
+      "incremental": true
+    },
+    {
+      "path": "internal/api/router.go",
+      "beforeSha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "afterSha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "unchanged": true,
+      "bytesBefore": 260353,
+      "bytesAfter": 260353,
+      "incremental": false
+    },
+    {
+      "path": "internal/database/system/guard_config_test.go",
+      "beforeSha256": "b243e17fcdcbcc457803537295bd0ef7bcae0d933b3d9d5365a995ba637ac4c2",
+      "afterSha256": "b243e17fcdcbcc457803537295bd0ef7bcae0d933b3d9d5365a995ba637ac4c2",
+      "unchanged": true,
+      "bytesBefore": 3445,
+      "bytesAfter": 3445,
+      "incremental": true
+    },
+    {
+      "path": "internal/database/system/guard_repo.go",
+      "beforeSha256": "66113f54638f144bd963be345c4c2323466f029de95429750600d51ac88ddc77",
+      "afterSha256": "66113f54638f144bd963be345c4c2323466f029de95429750600d51ac88ddc77",
+      "unchanged": true,
+      "bytesBefore": 14357,
+      "bytesAfter": 14357,
+      "incremental": true
+    },
+    {
+      "path": "internal/database/system/guard_repo_test.go",
+      "beforeSha256": "f18e336fb32586af501ba7a24cdc992bce2500af0970b42fcbdbb70a3a829443",
+      "afterSha256": "f18e336fb32586af501ba7a24cdc992bce2500af0970b42fcbdbb70a3a829443",
+      "unchanged": true,
+      "bytesBefore": 6597,
+      "bytesAfter": 6597,
+      "incremental": true
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "beforeSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "afterSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "unchanged": true,
+      "bytesBefore": 17825,
+      "bytesAfter": 17825,
+      "incremental": false
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "beforeSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "afterSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true,
+      "bytesBefore": 15482,
+      "bytesAfter": 15482,
+      "incremental": false
+    },
+    {
+      "path": "web/src/api/hooks/useGuard.ts",
+      "beforeSha256": "f43823638c4a80a4d57a44447a28524ccf29a3ebd70260daa6a7895ac6c71218",
+      "afterSha256": "f43823638c4a80a4d57a44447a28524ccf29a3ebd70260daa6a7895ac6c71218",
+      "unchanged": true,
+      "bytesBefore": 7646,
+      "bytesAfter": 7646,
+      "incremental": false
+    },
+    {
+      "path": "web/src/api/hooks/useLocations.ts",
+      "beforeSha256": "548c91d7cb0b48d93561b8fc3b5c8738ec9493809f0a2b946a4eea4e5854a090",
+      "afterSha256": "548c91d7cb0b48d93561b8fc3b5c8738ec9493809f0a2b946a4eea4e5854a090",
+      "unchanged": true,
+      "bytesBefore": 22369,
+      "bytesAfter": 22369,
+      "incremental": false
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "beforeSha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "afterSha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "unchanged": true,
+      "bytesBefore": 70205,
+      "bytesAfter": 70205,
+      "incremental": false
+    },
+    {
+      "path": "web/src/api/offlineCache.ts",
+      "beforeSha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "afterSha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "unchanged": true,
+      "bytesBefore": 6961,
+      "bytesAfter": 6961,
+      "incremental": true
+    },
+    {
+      "path": "web/src/api/queryPolicy.ts",
+      "beforeSha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "afterSha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "unchanged": true,
+      "bytesBefore": 11340,
+      "bytesAfter": 11340,
+      "incremental": true
+    },
+    {
+      "path": "web/src/components/data-display/TimeStamp.tsx",
+      "beforeSha256": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+      "afterSha256": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+      "unchanged": true,
+      "bytesBefore": 2520,
+      "bytesAfter": 2520,
+      "incremental": false
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "beforeSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "afterSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "unchanged": true,
+      "bytesBefore": 4093,
+      "bytesAfter": 4093,
+      "incremental": false
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "beforeSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "afterSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true,
+      "bytesBefore": 10783,
+      "bytesAfter": 10783,
+      "incremental": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "afterSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true,
+      "bytesBefore": 658,
+      "bytesAfter": 658,
+      "incremental": false
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "beforeSha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "afterSha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "unchanged": true,
+      "bytesBefore": 3322,
+      "bytesAfter": 3322,
+      "incremental": false
+    },
+    {
+      "path": "web/src/components/maps/MapTileLayer.tsx",
+      "beforeSha256": "9f63c7228617637cd37a2c02d9fb1420c67a3fd5826a32a93f39cb60b37f5b44",
+      "afterSha256": "9f63c7228617637cd37a2c02d9fb1420c67a3fd5826a32a93f39cb60b37f5b44",
+      "unchanged": true,
+      "bytesBefore": 8099,
+      "bytesAfter": 8099,
+      "incremental": false
+    },
+    {
+      "path": "web/src/components/ui/ConfirmDialog.tsx",
+      "beforeSha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "afterSha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "unchanged": true,
+      "bytesBefore": 8134,
+      "bytesAfter": 8134,
+      "incremental": false
+    },
+    {
+      "path": "web/src/components/ui/Toggle.tsx",
+      "beforeSha256": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "afterSha256": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "unchanged": true,
+      "bytesBefore": 5204,
+      "bytesAfter": 5204,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/GuardControls.tsx",
+      "beforeSha256": "2ff2e6702ce2e7bb2e582028eecbfdc98e36bcac59ab2e5f50064f6070df37d4",
+      "afterSha256": "2ff2e6702ce2e7bb2e582028eecbfdc98e36bcac59ab2e5f50064f6070df37d4",
+      "unchanged": true,
+      "bytesBefore": 4178,
+      "bytesAfter": 4178,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/GuardEvents.tsx",
+      "beforeSha256": "ca155c96d3d9138a4a6976dcf29a487d5f6c6e5a282c0b47182387a02a5f02b1",
+      "afterSha256": "ca155c96d3d9138a4a6976dcf29a487d5f6c6e5a282c0b47182387a02a5f02b1",
+      "unchanged": true,
+      "bytesBefore": 5106,
+      "bytesAfter": 5106,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/GuardLiveMap.tsx",
+      "beforeSha256": "11c33a5c1894b580f1e16d6e2c72ed4a39816edec99fcf47d14e4b7590e93775",
+      "afterSha256": "11c33a5c1894b580f1e16d6e2c72ed4a39816edec99fcf47d14e4b7590e93775",
+      "unchanged": true,
+      "bytesBefore": 4368,
+      "bytesAfter": 4368,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/GuardModernization.test.tsx",
+      "beforeSha256": "358809efa05f717b7d60498ef85a41238b2cb91ee5774ea7a881887163658a01",
+      "afterSha256": "358809efa05f717b7d60498ef85a41238b2cb91ee5774ea7a881887163658a01",
+      "unchanged": true,
+      "bytesBefore": 34929,
+      "bytesAfter": 34929,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/GuardOverview.tsx",
+      "beforeSha256": "c69b4826cb8cd06f6065d96ae7facb54c61bcbb204f01bc87e2e592ccad68db9",
+      "afterSha256": "c69b4826cb8cd06f6065d96ae7facb54c61bcbb204f01bc87e2e592ccad68db9",
+      "unchanged": true,
+      "bytesBefore": 5713,
+      "bytesAfter": 5713,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/GuardPlacement.test.tsx",
+      "beforeSha256": "83c35f7ee2e50f9591766e764f0681a7519b9692e6fde700e9d90ac5c9fa8102",
+      "afterSha256": "83c35f7ee2e50f9591766e764f0681a7519b9692e6fde700e9d90ac5c9fa8102",
+      "unchanged": true,
+      "bytesBefore": 2201,
+      "bytesAfter": 2201,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/GuardSettings.tsx",
+      "beforeSha256": "f2a6e90f2a4ac8ec50ab087498678405a853780f67ebb42a2b04ca39fddc5ce0",
+      "afterSha256": "f2a6e90f2a4ac8ec50ab087498678405a853780f67ebb42a2b04ca39fddc5ce0",
+      "unchanged": true,
+      "bytesBefore": 4269,
+      "bytesAfter": 4269,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/GuardSourcePreservation.test.ts",
+      "beforeSha256": "1171f4c85c222b0d6fe22773c6373820d6d24b9e1e2aca9541abdf8795f1ff47",
+      "afterSha256": "1171f4c85c222b0d6fe22773c6373820d6d24b9e1e2aca9541abdf8795f1ff47",
+      "unchanged": true,
+      "bytesBefore": 3683,
+      "bytesAfter": 3683,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/GuardStatus.tsx",
+      "beforeSha256": "1fd48dded4c325266458d5a25de75dd2e7edbd306fdb569bfa2c85708763de24",
+      "afterSha256": "1fd48dded4c325266458d5a25de75dd2e7edbd306fdb569bfa2c85708763de24",
+      "unchanged": true,
+      "bytesBefore": 3984,
+      "bytesAfter": 3984,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/eventMetadata.ts",
+      "beforeSha256": "1d546425469f8aa2fb5ccd01b6271a6fc5c72fa4b60a794c23c68fa048b62ad8",
+      "afterSha256": "1d546425469f8aa2fb5ccd01b6271a6fc5c72fa4b60a794c23c68fa048b62ad8",
+      "unchanged": true,
+      "bytesBefore": 1258,
+      "bytesAfter": 1258,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/index.ts",
+      "beforeSha256": "41714bb9e6e1d4a496e90ed4f12f7acc801a5cafe25400e02d1a827c405543dc",
+      "afterSha256": "41714bb9e6e1d4a496e90ed4f12f7acc801a5cafe25400e02d1a827c405543dc",
+      "unchanged": true,
+      "bytesBefore": 411,
+      "bytesAfter": 411,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/guard-modernization/useGuardPageModel.ts",
+      "beforeSha256": "dcc2c329a202b88c77691ff9af072b8878b67dc9c7228d5817310361b88fbc12",
+      "afterSha256": "dcc2c329a202b88c77691ff9af072b8878b67dc9c7228d5817310361b88fbc12",
+      "unchanged": true,
+      "bytesBefore": 6582,
+      "bytesAfter": 6582,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "beforeSha256": "e0b859e45485e60c9cce07bbf523817c6971c9c95c3d4dddb254294a19f2b173",
+      "afterSha256": "e0b859e45485e60c9cce07bbf523817c6971c9c95c3d4dddb254294a19f2b173",
+      "unchanged": true,
+      "bytesBefore": 3234,
+      "bytesAfter": 3234,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/pages/GuardModePage.test.tsx",
+      "beforeSha256": "f95b533ce24d79ac40a36523196ee1509479f31220b6ec1f4783b67e2ccdba4f",
+      "afterSha256": "f95b533ce24d79ac40a36523196ee1509479f31220b6ec1f4783b67e2ccdba4f",
+      "unchanged": true,
+      "bytesBefore": 30357,
+      "bytesAfter": 30357,
+      "incremental": false
+    },
+    {
+      "path": "web/src/features/vehicle-systems/pages/GuardModePage.tsx",
+      "beforeSha256": "b6939b2e941bceac2bef50e16b8d80ae3911654a47e69cf72dd05e97a9b44aa6",
+      "afterSha256": "b6939b2e941bceac2bef50e16b8d80ae3911654a47e69cf72dd05e97a9b44aa6",
+      "unchanged": true,
+      "bytesBefore": 3612,
+      "bytesAfter": 3612,
+      "incremental": false
+    },
+    {
+      "path": "web/src/hooks/useAsOfDate.ts",
+      "beforeSha256": "dce9cc82af1d73ac61f793d0df69ff124e44fa21d85afdd0d60d74ddb1ad8c1e",
+      "afterSha256": "dce9cc82af1d73ac61f793d0df69ff124e44fa21d85afdd0d60d74ddb1ad8c1e",
+      "unchanged": true,
+      "bytesBefore": 3028,
+      "bytesAfter": 3028,
+      "incremental": true
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "beforeSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "afterSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true,
+      "bytesBefore": 2035,
+      "bytesAfter": 2035,
+      "incremental": false
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "beforeSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "afterSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "unchanged": true,
+      "bytesBefore": 5230,
+      "bytesAfter": 5230,
+      "incremental": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "beforeSha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "afterSha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "unchanged": true,
+      "bytesBefore": 2095,
+      "bytesAfter": 2095,
+      "incremental": true
+    },
+    {
+      "path": "web/src/hooks/useRangeState.ts",
+      "beforeSha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "afterSha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "unchanged": true,
+      "bytesBefore": 22200,
+      "bytesAfter": 22200,
+      "incremental": false
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "beforeSha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "afterSha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "unchanged": true,
+      "bytesBefore": 6593,
+      "bytesAfter": 6593,
+      "incremental": false
+    },
+    {
+      "path": "web/src/hooks/useTimeFormatPreference.ts",
+      "beforeSha256": "720db3c19e020a343f8c3df9a28d869d3a6c119ae5ddc7345dc86f7e4a5c1132",
+      "afterSha256": "720db3c19e020a343f8c3df9a28d869d3a6c119ae5ddc7345dc86f7e4a5c1132",
+      "unchanged": true,
+      "bytesBefore": 1039,
+      "bytesAfter": 1039,
+      "incremental": true
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "beforeSha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "afterSha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "unchanged": true,
+      "bytesBefore": 6545,
+      "bytesAfter": 6545,
+      "incremental": true
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "beforeSha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "afterSha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "unchanged": true,
+      "bytesBefore": 1842282,
+      "bytesAfter": 1842282,
+      "incremental": true
+    },
+    {
+      "path": "web/src/i18n/en/locale-vehicle-systems.json",
+      "beforeSha256": "cc7e0b112a28ddb600d3f4aaaa8923595c761dd0e9aba3209ff14366586a60a7",
+      "afterSha256": "cc7e0b112a28ddb600d3f4aaaa8923595c761dd0e9aba3209ff14366586a60a7",
+      "unchanged": true,
+      "bytesBefore": 162732,
+      "bytesAfter": 162732,
+      "incremental": false
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "beforeSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "afterSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "unchanged": true,
+      "bytesBefore": 18863,
+      "bytesAfter": 18863,
+      "incremental": false
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "beforeSha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "afterSha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "unchanged": true,
+      "bytesBefore": 6443,
+      "bytesAfter": 6443,
+      "incremental": true
+    },
+    {
+      "path": "web/src/lib/operationalMode.ts",
+      "beforeSha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "afterSha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "unchanged": true,
+      "bytesBefore": 2495,
+      "bytesAfter": 2495,
+      "incremental": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "beforeSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "afterSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "unchanged": true,
+      "bytesBefore": 4411,
+      "bytesAfter": 4411,
+      "incremental": false
+    },
+    {
+      "path": "web/src/types/location.ts",
+      "beforeSha256": "c6630fb486d0c8d8b166c449361b8657818c232078992f6d12c4ce97757e3e8a",
+      "afterSha256": "c6630fb486d0c8d8b166c449361b8657818c232078992f6d12c4ce97757e3e8a",
+      "unchanged": true,
+      "bytesBefore": 2949,
+      "bytesAfter": 2949,
+      "incremental": true
+    }
+  ],
+  "hashVerification": {
+    "algorithm": "SHA256",
+    "count": 51,
+    "matched": 51,
+    "mismatches": [],
+    "verifiedAt": "2026-10-14T01:43:56.499233+00:00",
+    "baselineLimit": "Baseline01:30:19 after initial source reads, before report writes;16 dependencies pinned incrementally. No claim of first-call frozen tree.",
+    "postWriteReparseAndHashes": "verified by this command and final readback"
+  },
+  "writeBoundary": {
+    "writtenOnly": [
+      "docs/frontend-audits/phase6-qa-vehicle-systems-guard-mode.json",
+      "web/logs/phase6-qa-vehicle-systems-guard-mode.log"
+    ],
+    "sourceTestCatalogWrites": 0,
+    "scannedShippingFiles": 11,
+    "primaryShippingFiles": 10,
+    "primaryTestFiles": 4,
+    "supportPinCount": 51,
+    "inheritedDirtyTree": "Preserved; initial readonly Git status only. No final Git operation/global status rewrite."
+  },
+  "logEvidenceLimit": "All bounded verification commands/outputs/exits/failures are logged. Initial locator sessions1096/1191 small raw outputs remain in caller tool receipts; initial1144/1180/1191/1219 full command text is referenced by exact tool session rather than duplicated verbatim. Large initial raw tool captures copied verbatim. Not a claim of a fully verbatim initial-discovery transcript.",
+  "release": {
+    "report": true,
+    "log": true,
+    "commands": true,
+    "releasedAt": "2026-10-14T01:43:56.499259+00:00",
+    "sourceTestsCatalogWereReadOnly": true,
+    "noPostReturnWrites": true,
+    "meaning": "Artifacts/command ownership released after final verification; no page/native acceptance."
+  }
+}

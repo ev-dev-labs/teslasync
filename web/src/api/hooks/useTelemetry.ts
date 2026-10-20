@@ -3,20 +3,28 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { queryPolicy } from '../queryPolicy';
+import { deriveDataState, type DataState } from '../dataState';
 import { useToast } from '@/components/feedback/Toast';
-import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
+import type { SignalHistoryResponse, SignalStats, TelemetryStatus } from '@/types/telemetry';
 import { telemetryUptimeSeconds, telemetryVehicleList } from '@/types/telemetry';
-import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
+import type { SignalsCatalogResponse, SignalObservation } from '@/types/signals';
 
 export const telemetryKeys = {
   signals: (vehicleId: number) => ['signals', vehicleId] as const,
   liveSignals: (vehicleId?: number) => ['live-signals', vehicleId] as const,
   signalStats: (vehicleId: number) => ['signal-stats', vehicleId] as const,
-  signalHistory: (vehicleId: number, signal: string, hours: number) => ['signal-history', vehicleId, signal, hours] as const,
-  signalAnalysisHistory: (vehicleId: number, signal: string, hours: number, limit: number) =>
-    ['signal-analysis-history', vehicleId, signal, hours, limit] as const,
-  signalEvidenceHistory: (vehicleId: number, signal: string, hours: number, limit: number) =>
-    ['signal-evidence-history', vehicleId, signal, hours, limit] as const,
+  signalHistory: (vehicleId: number, signal: string, hours: number, from?: string, to?: string) =>
+    from === undefined && to === undefined
+      ? ['signal-history', vehicleId, signal, hours] as const
+      : ['signal-history', vehicleId, signal, hours, from, to] as const,
+  signalAnalysisHistory: (vehicleId: number, signal: string, hours: number, limit: number, from?: string, to?: string) =>
+    from === undefined && to === undefined
+      ? ['signal-analysis-history', vehicleId, signal, hours, limit] as const
+      : ['signal-analysis-history', vehicleId, signal, hours, limit, from, to] as const,
+  signalEvidenceHistory: (vehicleId: number, signal: string, hours: number, limit: number, from?: string, to?: string) =>
+    from === undefined && to === undefined
+      ? ['signal-evidence-history', vehicleId, signal, hours, limit] as const
+      : ['signal-evidence-history', vehicleId, signal, hours, limit, from, to] as const,
   signalLog: (vehicleId: number, signal: string, hours: number, page: number) => ['signal-log', vehicleId, signal, hours, page] as const,
   signalDiff: (vehicleId: number, signal: string, from: string, to: string) => ['signal-diff', vehicleId, signal, from, to] as const,
   signalDiffServer: (vehicleId: number, atA: string, atB: string, signalsCsv: string) =>
@@ -52,9 +60,22 @@ export interface SignalEvidenceBundleSeries {
   response: SignalHistoryResponse;
 }
 
+export interface SignalEvidenceWindow {
+  startInstant: string;
+  endInstantExclusive: string;
+}
+
+export interface SignalEvidenceBundleSource {
+  signal: string;
+  state: DataState<SignalHistoryResponse>;
+}
+
 export interface SignalEvidenceBundleResult {
   data: SignalEvidenceBundleSeries[];
+  sources: SignalEvidenceBundleSource[];
   isLoading: boolean;
+  isPending?: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   isFetching: boolean;
   isError: boolean;
   error: Error | null;
@@ -166,15 +187,34 @@ export function useSignalStats(vehicleId: number) {
   });
 }
 
-export function useSignalHistory(vehicleId: number, signal: string, hours: number) {
+export function useSignalHistory(
+  vehicleId: number,
+  signal: string,
+  hours: number,
+  window?: SignalEvidenceWindow,
+) {
   return useQuery({
-    queryKey: telemetryKeys.signalHistory(vehicleId, signal, hours),
+    queryKey: telemetryKeys.signalHistory(
+      vehicleId, signal, hours, window?.startInstant, window?.endInstantExclusive,
+    ),
     // Rename the query context's AbortSignal so it does NOT shadow the outer
     // `signal` (the signal NAME). Destructuring `{ signal }` here would
     // stringify the AbortSignal into the URL path segment
     // (`/signals/1/[object AbortSignal]/history`) and drop the name entirely.
-    queryFn: ({ signal: abortSignal }) =>
-      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`, { signal: abortSignal }),
+    queryFn: ({ signal: abortSignal }) => {
+      // Workspace instants have millisecond precision; BETWEEN includes its
+      // end, so retain the final PostgreSQL microsecond before the boundary.
+      let range = `hours=${hours}`;
+      if (window) {
+        const inclusiveEnd = new Date(Date.parse(window.endInstantExclusive) - 1)
+          .toISOString().replace('Z', '999Z');
+        range = `from=${encodeURIComponent(window.startInstant)}&to=${encodeURIComponent(inclusiveEnd)}`;
+      }
+      return request<SignalHistoryResponse>(
+        `/signals/${vehicleId}/${encodeURIComponent(signal)}/history?${range}`,
+        { signal: abortSignal },
+      );
+    },
     enabled: vehicleId > 0 && !!signal,
     refetchInterval: INTERVALS.STANDARD,
   });
@@ -183,12 +223,14 @@ export function useSignalHistory(vehicleId: number, signal: string, hours: numbe
 /**
  * Fetches the backend's largest supported signal window for statistical
  * analysis without expanding ordinary sparkline/history queries.
+ * An explicit workspace window takes precedence over the relative hours.
  */
 export function useSignalAnalysisHistory(
   vehicleId: number,
   signalName: string,
   hours: number,
   limit = 10_000,
+  window?: SignalEvidenceWindow,
 ) {
   const boundedHours = Number.isFinite(hours)
     ? Math.max(1, Math.min(24 * 365, Math.floor(hours)))
@@ -202,10 +244,14 @@ export function useSignalAnalysisHistory(
       signalName,
       boundedHours,
       boundedLimit,
+      window?.startInstant,
+      window?.endInstantExclusive,
     ),
     queryFn: ({ signal }) =>
       request<SignalHistoryResponse>(
-        `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?hours=${boundedHours}&limit=${boundedLimit}`,
+        `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?${window
+          ? `from=${encodeURIComponent(window.startInstant)}&to=${encodeURIComponent(window.endInstantExclusive)}`
+          : `hours=${boundedHours}`}&limit=${boundedLimit}`,
         { signal },
       ),
     enabled: vehicleId > 0 && signalName.length > 0,
@@ -219,12 +265,15 @@ export function useSignalAnalysisHistory(
  * Loads a bounded set of signal histories for local evidence analysis.
  * Each signal keeps an independent cache entry and cancellation signal so
  * changing the focal signal does not strand obsolete multi-request work.
+ * Sources include pending and failed identities; retained responses remain
+ * in data after refresh failure, with historical trust and retry metadata.
  */
 export function useSignalEvidenceBundle(
   vehicleId: number,
   signalNames: readonly string[],
   hours: number,
   limit = 10_000,
+  window?: SignalEvidenceWindow,
 ): SignalEvidenceBundleResult {
   const boundedHours = Number.isFinite(hours)
     ? Math.max(1, Math.min(24 * 365, Math.floor(hours)))
@@ -243,10 +292,14 @@ export function useSignalEvidenceBundle(
         signalName,
         boundedHours,
         boundedLimit,
+        window?.startInstant,
+        window?.endInstantExclusive,
       ),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         request<SignalHistoryResponse>(
-          `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?hours=${boundedHours}&limit=${boundedLimit}`,
+          `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?${window
+            ? `from=${encodeURIComponent(window.startInstant)}&to=${encodeURIComponent(window.endInstantExclusive)}`
+            : `hours=${boundedHours}`}&limit=${boundedLimit}`,
           { signal },
         ),
       enabled: vehicleId > 0,
@@ -254,12 +307,25 @@ export function useSignalEvidenceBundle(
       refetchInterval: false,
     })),
     combine: (results): SignalEvidenceBundleResult => ({
+      sources: results.map((result, index) => ({
+        signal: normalizedSignals[index]!,
+        state: deriveDataState(result, {
+          provenance: 'historical',
+          unavailable: result.isSuccess
+            && Array.isArray(result.data?.data)
+            && result.data.data.length === 0,
+        }),
+      })),
       data: results.flatMap((result, index) =>
         result.data == null
           ? []
           : [{ signal: normalizedSignals[index]!, response: result.data }],
       ),
       isLoading: results.some((result) => result.isLoading),
+      isPending: results.some((result) => result.isPending),
+      fetchStatus: results.some((result) => result.fetchStatus === 'fetching')
+        ? 'fetching'
+        : results.some((result) => result.fetchStatus === 'paused') ? 'paused' : 'idle',
       isFetching: results.some((result) => result.isFetching),
       isError: results.some((result) => result.isError),
       error: results.find((result) => result.error != null)?.error ?? null,
@@ -401,13 +467,13 @@ export function useMQTTStatus() {
       const raw = await request<TelemetryStatus>('/telemetry', { signal });
       // The backend has shipped vehicles as an array or a Record<vin, …> map,
       // under `vehicles` or the older `streaming_vehicles`, in either casing.
-      // telemetryVehicleList() collapses all of that to one normalized array
+      // telemetryVehicleList() preserves unknown versus observed empty lists
       // (and telemetryUptimeSeconds() resolves the dual-shape uptime field).
       return {
         ...raw,
         uptimeSeconds: telemetryUptimeSeconds(raw),
         vehicles: telemetryVehicleList(raw),
-      } as TelemetryStatus & { vehicles: VehicleTelemetry[] };
+      };
     },
     refetchInterval: INTERVALS.REALTIME,
   });
@@ -415,22 +481,40 @@ export function useMQTTStatus() {
 
 // ─── Typed Signal Hooks ──────────────────────────────────────────────────────
 
-/**
- * DEPRECATED. The backend `/signals/catalog` route was deleted alongside
- * `signal_catalog_handler.go`; the typed
- * `signal_log` pipeline (migrations 000167+) plus
- * `internal/api/signal_handler.go`'s `/signals/{vehicleID}/available`
- * endpoint are now the authoritative catalog surface. This hook will
- * reliably 404 in production. Kept (not removed) because the
- * `features/dashboard` SignalCatalogWidget still imports it; its UI
- * surfaces the resulting query error gracefully. A future replacement
- * should source the catalog from `useSignals()` (via `/available`) or
- * from `protomodel.Signals` exposed through a new endpoint.
- */
+function validateSignalCatalog(payload: unknown): SignalsCatalogResponse {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    value != null && typeof value === 'object' && !Array.isArray(value);
+  const isIdentity = (value: unknown) =>
+    typeof value === 'string' && value.trim().length > 0;
+  const isTimestamp = (value: unknown) =>
+    typeof value === 'string'
+    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)
+    && Number.isFinite(Date.parse(value));
+  const isCount = (value: unknown) =>
+    value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0);
+
+  if (!isRecord(payload) || !Array.isArray(payload.signals) || !isTimestamp(payload.generated_at)) {
+    throw new Error('Invalid signal catalog envelope');
+  }
+  for (const [index, row] of payload.signals.entries()) {
+    if (!isRecord(row)
+      || !isIdentity(row.field)
+      || !isIdentity(row.destination)
+      || !isIdentity(row.value_kind)
+      || !(row.last_seen_at === null || isTimestamp(row.last_seen_at))
+      || !isCount(row.sample_count_total)
+      || !isCount(row.vehicle_count)) {
+      throw new Error(`Invalid signal catalog row at index ${index}`);
+    }
+  }
+  return payload as unknown as SignalsCatalogResponse;
+}
+
 export function useSignalCatalog() {
   return useQuery({
     queryKey: ['signal-catalog'],
-    queryFn: ({ signal }) => request<SignalCatalogEntry[]>('/signals/catalog', { signal }),
+    queryFn: async ({ signal }) =>
+      validateSignalCatalog(await request<unknown>('/signals/catalog', { signal })),
     staleTime: STALE_TIMES.SLOW,
   });
 }
@@ -620,7 +704,8 @@ export function useRefreshFleetTelemetryErrorVINs() {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
-    mutationFn: () => request('/tesla/fleet-telemetry/error-vins/refresh', { method: 'POST' }),
+    networkMode: 'always',
+    mutationFn: () => request('/tesla/fleet-telemetry/error-vins/refresh', { method: 'POST', requiresLiveMode: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fleet-telemetry-error-vins'] });
       toast.success('Telemetry error VINs refreshed');
@@ -635,7 +720,8 @@ export function useRefreshFleetTelemetryErrors() {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
-    mutationFn: () => request('/tesla/fleet-telemetry/errors/refresh', { method: 'POST' }),
+    networkMode: 'always',
+    mutationFn: () => request('/tesla/fleet-telemetry/errors/refresh', { method: 'POST', requiresLiveMode: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fleet-telemetry-errors'] });
       toast.success('Telemetry errors refreshed');

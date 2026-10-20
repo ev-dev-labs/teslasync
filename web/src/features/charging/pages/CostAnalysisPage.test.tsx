@@ -21,13 +21,13 @@
  *      pre-SI double-conversion that inflated it ~1600x to ~$96.56/km. The gas
  *      calculator's gallons still derive from miles (mpg is miles-based).
  *   3. Loading — while sessions are in flight the data sections show their
- *      loading affordances (chart spinners) and the KPI values are withheld,
+ *      loading affordances (chart statuses and static skeletons) and the KPI values are withheld,
  *      never a half-populated dashboard.
  *   4. Error — a failed sessions query surfaces retryable "Can't reach server"
  *      banners while the independent forecast section still renders its chart
  *      (graceful degrade), and Retry re-fires the sessions request.
  *   5. Empty — brand-new / replay accounts get honest per-section empty states
- *      (and zeroed KPI cards) with no divide-by-zero in the savings math.
+ *      (and unknown KPI cards) with no divide-by-zero in the savings math.
  *   6. Savings calculator interaction — editing the gas price recomputes the
  *      gas-equivalent cost, and Reset Defaults restores it.
  *   7. a11y + anti-stub — the landmark regions expose accessible names and the
@@ -41,7 +41,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -84,6 +84,7 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 import CostAnalysisPage from './CostAnalysisPage'
@@ -264,17 +265,39 @@ function renderPage(initialEntries: string[] = ['/cost-analysis']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   })
-  return render(
+  const mounted = render(
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <ToastProvider>
           <SelectedVehicleProvider>
-            <CostAnalysisPage />
+            <ThemeProvider>
+              <CostAnalysisPage />
+            </ThemeProvider>
           </SelectedVehicleProvider>
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...mounted, client }
+}
+
+function summaryRegion() {
+  const region = screen.getByRole('heading', { name: 'Cost summary metrics' })
+    .closest<HTMLElement>('[data-tour="cost-analysis"]')
+  if (!region) throw new Error('Cost summary must retain its named landmark')
+  return region
+}
+
+function briefContaining(label: string): HTMLElement {
+  const brief = screen.getByText(label).closest<HTMLElement>('[data-operational-brief]')
+  if (!brief) throw new Error(`Expected an OperationalBrief containing "${label}"`)
+  return brief
+}
+
+async function closeDetailsDialog() {
+  const dialog = screen.getByRole('dialog')
+  fireEvent.click(within(dialog).getByText('Close'))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 }
 
 beforeEach(() => {
@@ -288,6 +311,28 @@ beforeEach(() => {
 })
 
 describe('CostAnalysisPage', () => {
+  it('keeps all loaded sections and calculator inputs across independent background failures', async () => {
+    const { client } = renderPage()
+    expect(await screen.findByText('$0.10')).toBeInTheDocument()
+    fireEvent.change(screen.getByRole('spinbutton', { name: /Gas price/i }), { target: { value: '5.25' } })
+    install({ sessionsError: true, forecastError: true })
+    await act(async () => {
+      await Promise.all([
+        client.refetchQueries({ queryKey: ['charging'] }),
+        client.refetchQueries({ queryKey: ['cost-forecast'] }),
+      ])
+    })
+    await waitFor(() => expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2))
+    expect(screen.getByRole('spinbutton', { name: /Gas price/i })).toHaveValue(5.25)
+    expect(screen.getByText('Monthly Cost Trend')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Monthly cost breakdown' })).toBeInTheDocument()
+    expect(screen.getByText('Lifetime Summary')).toBeInTheDocument()
+    const energy = within(summaryRegion())
+      .getByText('Total Energy').closest('[data-operational-metric]')
+    expect(energy).not.toBeNull()
+    expect(energy?.querySelector('[data-operational-value]')).toHaveTextContent('60.00 kWh')
+    expect(screen.queryAllByText("Can't reach server")).toHaveLength(0)
+  })
   it('renders the full dashboard with every section once sessions + forecast load', async () => {
     renderPage()
 
@@ -297,18 +342,25 @@ describe('CostAnalysisPage', () => {
 
     // KPI band derived at the SI→display boundary: $6 total / 60 kWh → $0.100,
     // 100 km moved → $0.060/km, 60 kWh total energy.
-    expect(await screen.findByText('$0.100')).toBeInTheDocument()
+    expect(await screen.findByText('$0.10')).toBeInTheDocument()
     expect(screen.getAllByText('$6.00').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('3 sessions').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('60.0 kWh').length).toBeGreaterThan(0)
+    // The session-count context now lives in the brief's Review details drawer.
+    fireEvent.click(within(summaryRegion()).getByRole('button', { name: 'Review details' }))
+    const summaryDetails = screen.getByRole('dialog', { name: 'Cost summary metrics details' })
+    expect(within(summaryDetails).getByText('3 sessions')).toBeInTheDocument()
+    await closeDetailsDialog()
+    const energy = within(summaryRegion())
+      .getByText('Total Energy').closest('[data-operational-metric]')
+    expect(energy).not.toBeNull()
+    expect(energy?.querySelector('[data-operational-value]')).toHaveTextContent('60.00 kWh')
 
     // All nine section headings are present — nothing stubbed out.
     expect(screen.getByText('Monthly Cost Trend')).toBeInTheDocument()
     expect(screen.getAllByText('Cost by Charger Type').length).toBeGreaterThan(0)
     expect(screen.getByText('Gas vs Electric Savings Calculator')).toBeInTheDocument()
-    expect(screen.getByText('Monthly Cost Breakdown')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Monthly cost breakdown' })).toBeInTheDocument()
     expect(screen.getByText('Electricity Rate Analysis (Time-of-Use)')).toBeInTheDocument()
-    expect(screen.getAllByText('Cost Forecast').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Cost forecast').length).toBeGreaterThan(0)
     expect(screen.getByText('Lifetime Summary')).toBeInTheDocument()
     expect(screen.getByText('Environmental Impact')).toBeInTheDocument()
 
@@ -323,31 +375,48 @@ describe('CostAnalysisPage', () => {
 
   it('derives cost-per-distance from SI meters once (no ~1600x double-conversion)', async () => {
     renderPage()
+    await screen.findByText('$0.10')
 
-    // 100 km moved for $6 total → $0.060/km at the display boundary.
-    expect(await screen.findByText('$0.060')).toBeInTheDocument()
+    // Stationary charging odometer deltas do not establish driven distance, so
+    // cost-per-distance is honestly unknown: omitted from the brief face and
+    // counted in the drawer instead of fabricated or double-converted.
+    const region = summaryRegion()
+    expect(region.querySelector('[data-operational-metric="currency:2"]')).toBeNull()
+    expect(screen.queryByText('$0.06')).toBeNull()
+    fireEvent.click(within(region).getByRole('button', { name: 'Review details' }))
+    const details = screen.getByRole('dialog', { name: 'Cost summary metrics details' })
+    expect(within(details).getByText('1 empty fields are hidden.')).toBeInTheDocument()
+    await closeDetailsDialog()
 
     // Regression guard: the pre-SI code fed miles into a meters converter,
     // dividing by ~1609 twice and printing ~$96.56/km.
     expect(screen.queryByText(/96\.5/)).toBeNull()
 
-    // The gas calculator still uses miles for gallons (mpg is miles-based):
-    // 100 km ≈ 62.14 mi ÷ 30 mpg × $3.50 → "$7.25" gas-equivalent cost.
-    expect(await screen.findByText('$7.25')).toBeInTheDocument()
+    // The gas calculator likewise withholds the distance-based gas-equivalent
+    // cost instead of deriving gallons from odometer movement.
+    const calcBrief = briefContaining('EV Cost (actual)')
+    expect(calcBrief.querySelector('[data-operational-metric="currency:0"]')).toBeNull()
+    expect(screen.queryByText('$7.25')).toBeNull()
   })
 
   it('shows loading affordances while sessions are in flight and withholds KPI values', async () => {
     install({ sessionsPending: true })
-    renderPage()
+    const { container } = renderPage()
 
     // Once the fleet loads and the vehicle auto-selects, the enabled-but-pending
     // sessions query drives the data sections into their loading state.
-    const spinners = await screen.findAllByRole('status', { name: /Loading/i })
-    expect(spinners.length).toBeGreaterThan(0)
+    const loadingStatuses = await screen.findAllByRole('status', { name: /Loading/i })
+    expect(loadingStatuses.length).toBeGreaterThan(0)
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0)
 
     // The KPI values are not fabricated while data is loading.
-    expect(screen.queryByText('$0.100')).toBeNull()
-    expect(screen.queryByText('60.0 kWh')).toBeNull()
+    expect(screen.queryByText('$0.10')).toBeNull()
+    expect(screen.queryByText('60.00 kWh')).toBeNull()
+    const energy = within(summaryRegion())
+      .queryByText('Total Energy')?.closest('[data-operational-metric]')
+    expect(energy).not.toBeNull()
+    expect(summaryRegion().querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true')
+    expect(energy?.querySelector('[data-operational-value]')).toBeNull()
   })
 
   it('surfaces retryable error banners and still renders the independent forecast', async () => {
@@ -370,7 +439,7 @@ describe('CostAnalysisPage', () => {
     // Retry re-fires the failed sessions request.
     const before = chargingCallCount()
     expect(before).toBeGreaterThanOrEqual(1)
-    const retry = screen.getAllByRole('button', { name: 'Retry' })[0]
+    const retry = within(summaryRegion()).getByRole('button', { name: 'Retry' })
     fireEvent.click(retry)
     await waitFor(() => expect(chargingCallCount()).toBeGreaterThan(before))
   })
@@ -386,41 +455,54 @@ describe('CostAnalysisPage', () => {
       screen.getByText('Need at least 3 months of charging data for cost forecasting.'),
     ).toBeInTheDocument()
 
-    // KPI cards fold to honest zeros; savingsPercent === 0 must not NaN out.
+    // No sessions means unknown source measurements, not fabricated zeros.
+    expect(within(summaryRegion()).getByText('No metric values are available yet.')).toBeInTheDocument()
+    expect(summaryRegion().querySelectorAll('[data-operational-metric]')).toHaveLength(0)
+    fireEvent.click(within(summaryRegion()).getByRole('button', { name: 'Review details' }))
+    const details = screen.getByRole('dialog', { name: 'Cost summary metrics details' })
+    expect(within(details).getByText('6 empty fields are hidden.')).toBeInTheDocument()
+    // Missing operands must not leak NaN or divide-by-zero into savings.
     expect(screen.queryByText(/NaN|Infinity/)).toBeNull()
 
     // No populated values leak through the empty branch.
-    expect(screen.queryByText('$0.100')).toBeNull()
+    expect(screen.queryByText('$0.10')).toBeNull()
   })
 
   it('recomputes the gas-equivalent cost when the gas price changes and Reset restores it', async () => {
     renderPage()
+    await screen.findByText('$0.10')
 
-    // Baseline gas-equivalent cost at the default $3.50/gal.
-    expect(await screen.findByText('$7.25')).toBeInTheDocument()
+    // Baseline: no verified driven distance, so the distance-based
+    // gas-equivalent cost is honestly unknown — never fabricated.
+    const calcBrief = briefContaining('EV Cost (actual)')
+    expect(calcBrief.querySelector('[data-operational-metric="currency:0"]')).toBeNull()
+    expect(screen.queryByText('$7.25')).toBeNull()
     expect(screen.queryByText('$14.50')).toBeNull()
 
-    // Doubling the gas price doubles the gas-equivalent cost (62.14 mi ÷ 30 mpg
-    // × $7.00 → "$14.50").
-    const gasPriceInput = screen.getByLabelText('Gas Price ($/gal)')
+    // Doubling the gas price still does not fabricate a distance-based cost.
+    const gasPriceInput = screen.getByLabelText('Gas price (USD/US gal)')
     fireEvent.change(gasPriceInput, { target: { value: '7' } })
-    await waitFor(() => expect(screen.getAllByText('$14.50').length).toBeGreaterThan(0))
+    await waitFor(() => expect(gasPriceInput).toHaveValue(7))
+    expect(screen.queryByText('$14.50')).toBeNull()
     expect(screen.queryByText('$7.25')).toBeNull()
+    expect(calcBrief.querySelectorAll('[data-operational-metric]')).toHaveLength(1)
 
     // Reset Defaults restores the $3.50/gal assumption.
     fireEvent.click(screen.getByRole('button', { name: 'Reset Defaults' }))
-    await waitFor(() => expect(screen.getAllByText('$7.25').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getByLabelText('Gas price (USD/US gal)')).toHaveValue(3.5))
     expect(screen.queryByText('$14.50')).toBeNull()
+    expect(screen.queryByText('$7.25')).toBeNull()
   })
 
   it('exposes landmark regions and keeps the opt-in AI narration absent in ai_mode=off', async () => {
     renderPage()
 
     // Wait for data so the KPI region has rendered its cards.
-    await screen.findByText('$0.100')
+    await screen.findByText('$0.10')
 
     // Landmark regions expose their accessible names for screen-reader nav.
-    expect(screen.getByRole('region', { name: 'Cost summary metrics' })).toBeInTheDocument()
+    expect(summaryRegion()).toHaveAttribute('aria-label', 'Cost summary metrics')
+    expect(within(summaryRegion()).getByRole('region', { name: 'Cost summary metrics' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Cost trends' })).toBeInTheDocument()
     expect(
       screen.getByRole('region', { name: 'Lifetime and environmental impact' }),
@@ -432,4 +514,80 @@ describe('CostAnalysisPage', () => {
       screen.queryByTestId('ai-feature-cost-forecast-narration-root'),
     ).not.toBeInTheDocument()
   })
+
+  it('uses shrink-safe shared grids without staged section entrances', async () => {
+    renderPage()
+    await screen.findByText('$0.10')
+
+    const trends = screen.getByRole('region', { name: 'Cost trends' })
+    const impact = screen.getByRole('region', { name: 'Lifetime and environmental impact' })
+    const trendGrid = trends.querySelector(':scope > [data-layout="responsive-columns"]')
+    const impactGrid = impact.querySelector(':scope > [data-layout="responsive-columns"]')
+    expect(trendGrid).toHaveClass('min-w-0', 'grid-cols-1', 'xl:grid-cols-3', 'gap-4')
+    expect(impactGrid).toHaveClass('min-w-0', 'grid-cols-1', 'xl:grid-cols-2', 'gap-4')
+    expect(trendGrid?.firstElementChild).toHaveClass('min-w-0', 'xl:col-span-2')
+    expect(within(trends).getByText('Monthly Cost Trend')).toBeInTheDocument()
+    expect(within(impact).getByText('Lifetime Summary')).toBeInTheDocument()
+    expect(within(impact).getByText('Environmental Impact')).toBeInTheDocument()
+
+    for (const section of [summaryRegion(), trends, impact]) {
+      expect(section.parentElement).toHaveClass('min-w-0')
+      expect(section.parentElement).not.toHaveAttribute('style')
+    }
+  })
+
+  it.each([
+    { caseId: 'canonical', route: '/cost-analysis' },
+    { caseId: 'alias', route: '/charging/costs' },
+  ])('retains header scope and modeled costs on the $caseId route', async ({ route }) => {
+    renderPage([`${route}?from=2025-04-01&to=2025-06-30`])
+    expect(await screen.findByText('$0.10')).toBeInTheDocument()
+    // Modeled costs retained: actual EV spend stays visible while the
+    // distance-based gas-equivalent cost is honestly unknown.
+    const calcBrief = briefContaining('EV Cost (actual)')
+    expect(calcBrief.querySelector('[data-operational-metric="currency:1"] [data-operational-value]')).toHaveTextContent('$6.00')
+    expect(calcBrief.querySelector('[data-operational-metric="currency:0"]')).toBeNull()
+    const paths = mockedRequest.mock.calls.map(([path]) => String(path))
+    const sessionPath = paths.find(path => path.startsWith('/charging?'))
+    expect(sessionPath).toBeDefined()
+    const params = new URLSearchParams(sessionPath?.split('?')[1])
+    expect(params.get('vehicle_id')).toBe('7')
+    expect(params.get('start')).toBe(new Date('2025-04-01T00:00:00').toISOString())
+    expect(params.get('end')).toBe(new Date('2025-07-01T00:00:00').toISOString())
+    expect(params.get('limit')).toBe('1000')
+    expect(paths).toContain('/analytics/cost-forecast?vehicle_id=7&months=6')
+    expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^start date$|^end date$/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: 'Gas price (USD/US gal)' })).toHaveValue(3.5)
+  })
+
+  it.each(['/cost-analysis', '/charging/costs'])(
+    'passes the precise rolling 24-hour window through the sessions hook on %s',
+    async route => {
+      const now = Date.parse('2025-06-15T18:37:42.123Z')
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
+      try {
+        renderPage([`${route}?time_scope=24h`])
+        expect(await screen.findByText('$0.10')).toBeInTheDocument()
+        const sessionPaths = mockedRequest.mock.calls
+          .map(([path]) => String(path))
+          .filter(path => path.startsWith('/charging?'))
+        expect(sessionPaths.length).toBeGreaterThan(0)
+        for (const path of sessionPaths) {
+          const params = new URLSearchParams(path.split('?')[1])
+          expect(params.get('vehicle_id')).toBe('7')
+          expect(params.get('start')).toBe('2025-06-14T18:37:42.123Z')
+          expect(params.get('end')).toBe('2025-06-15T18:37:42.123Z')
+          expect(params.get('limit')).toBe('1000')
+        }
+        const rollingCalcBrief = briefContaining('EV Cost (actual)')
+        expect(rollingCalcBrief.querySelector('[data-operational-metric="currency:1"] [data-operational-value]')).toHaveTextContent('$6.00')
+        expect(rollingCalcBrief.querySelector('[data-operational-metric="currency:0"]')).toBeNull()
+        expect(screen.queryByLabelText(/^start date$|^end date$/i)).not.toBeInTheDocument()
+        expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument()
+      } finally {
+        clock.mockRestore()
+      }
+    },
+  )
 })

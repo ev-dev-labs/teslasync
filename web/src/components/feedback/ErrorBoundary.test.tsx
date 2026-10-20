@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
+import '@/i18n'
 import { ErrorBoundary } from './ErrorBoundary'
 
 // A component that throws on demand
@@ -60,6 +61,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     )
     fireEvent.click(btn)
+    expect(screen.getByText('All good')).toBeInTheDocument()
   })
 
   it('renders a custom fallback when provided', () => {
@@ -91,5 +93,23 @@ describe('ErrorBoundary', () => {
     const homeButton = screen.getByText('Go Home')
     expect(homeButton).toBeInTheDocument()
     expect(homeButton.closest('button')).toBeInTheDocument()
+  })
+
+  it('keeps the named growing minimum and wraps inline error details', () => {
+    const { container, rerender } = render(
+      <ErrorBoundary>
+        <ThrowingComponent shouldThrow />
+      </ErrorBoundary>
+    )
+    expect(container.firstChild).toHaveClass('min-h-error-fallback', 'p-8')
+    expect(container.firstChild).not.toHaveClass('min-h-[400px]')
+
+    rerender(
+      <ErrorBoundary inline>
+        <ThrowingComponent shouldThrow />
+      </ErrorBoundary>
+    )
+    expect(screen.getByText('Test explosion')).toHaveClass('break-words', 'whitespace-pre-wrap')
+    expect(screen.getByText('Test explosion')).not.toHaveClass('truncate')
   })
 })

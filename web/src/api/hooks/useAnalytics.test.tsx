@@ -112,6 +112,15 @@ describe('analyticsKeys', () => {
       'analytics',
       'state-summary',
       '7',
+      undefined,
+      undefined,
+    ]);
+    expect(analyticsKeys.stateSummary('7', 'a', 'b')).toEqual([
+      'analytics',
+      'state-summary',
+      '7',
+      'a',
+      'b',
     ]);
     expect(analyticsKeys.weeklyDigest('7')).toEqual([
       'analytics',
@@ -170,7 +179,7 @@ describe('useAnalyticsSummary', () => {
     const [url, opts] = callAt();
     expect(url).toBe('/analytics/fleet?days=30');
     expect(opts).toHaveProperty('signal');
-    expect(result.current.data).toEqual({ totalVehicles: 2 });
+    expect(result.current.data).toEqual({ totalVehicles: 2, totalEnergyWh: 0 });
   });
 
   it('honours an explicit day count', async () => {
@@ -178,6 +187,13 @@ describe('useAnalyticsSummary', () => {
     renderHook(() => useAnalyticsSummary(7), { wrapper });
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
     expect(callAt()[0]).toBe('/analytics/fleet?days=7');
+  });
+
+  it('maps the wire kWh total to SI watt-hours once at the boundary', async () => {
+    mockedRequest.mockResolvedValueOnce({ totalVehicles: 2, total_energy_kwh: 450 });
+    const { result } = renderHook(() => useAnalyticsSummary(), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.totalEnergyWh).toBe(450000);
   });
 
   it('surfaces a request rejection through the error channel', async () => {
@@ -401,14 +417,22 @@ describe('useTimeline', () => {
 // ---------------------------------------------------------------------------
 
 describe('useStateSummary', () => {
-  it('passes an array payload straight through', async () => {
-    mockedRequest.mockResolvedValueOnce([
-      { state: 'asleep', totalMin: 600, count: 3 },
-    ]);
+  it('passes the by_state rows straight through', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      vehicle_id: 7,
+      days: 7,
+      start: '2026-05-01T00:00:00Z',
+      end: '2026-05-08T00:00:00Z',
+      total_seconds: 36000,
+      by_state: [
+        { state: 'asleep', total_seconds: 36000, percentage: 100, transition_count: 3 },
+      ],
+    });
     const { result } = renderHook(() => useStateSummary('7'), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(callAt()[0]).toBe('/vehicle-states/summary?vehicle_id=7');
     expect(result.current.data?.[0].state).toBe('asleep');
+    expect(result.current.data?.[0].total_seconds).toBe(36000);
   });
 
   it('coerces a non-array payload to an empty array', async () => {
@@ -430,6 +454,14 @@ describe('useWeeklyDigest', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(callAt()[0]).toBe('/vehicles/9/weekly-digest');
     expect(result.current.data?.drives).toBe(9);
+  });
+
+  it('maps the wire kWh energy keys to SI watt-hours once at the boundary', async () => {
+    mockedRequest.mockResolvedValueOnce({ drives: 9, energy_kwh: 25, prev_energy_kwh: 20 });
+    const { result } = renderHook(() => useWeeklyDigest('9'), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.energyWh).toBe(25000);
+    expect(result.current.data?.prevEnergyWh).toBe(20000);
   });
 
   it('is disabled without a vehicle id', async () => {

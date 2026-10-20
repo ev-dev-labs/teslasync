@@ -1,0 +1,1677 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-vehicles-vehicle-access",
+  "attempt": 1,
+  "page": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+  "routes": [
+    "/vehicles/:id/access"
+  ],
+  "status": "SOURCE_QA_COMPLETE_WITH_FINDINGS; NOT_PAGE_ACCEPTANCE",
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-vehicles-vehicle-access.json",
+    "web/logs/phase6-qa-vehicles-vehicle-access.log"
+  ],
+  "execution": {
+    "actualStartObservedUtc": "2026-10-14T01:43:49.1653511Z",
+    "preparedUtc": "2026-10-14T01:58:04.400406+00:00",
+    "reservedStartUtc": "2026-10-14T01:39:44.162Z",
+    "returnDeadlineUtc": "2026-10-14T01:59:44.162Z",
+    "hardDeadlineUtc": "2026-10-14T02:04:44.162Z",
+    "method": "READONLY source/test-declaration inspection; no executable source QA",
+    "sourceTestCatalogGitWrites": false,
+    "gitCommands": false,
+    "realActions": [],
+    "subagentsInstallsServersHelpers": false
+  },
+  "queue": {
+    "authority": "migration-queue.md",
+    "line": 149,
+    "exactRow": "| [~] | 6 | phase6-qa-vehicles-vehicle-access | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-vehicles-vehicle-access.json; web\\logs\\phase6-qa-vehicles-vehicle-access.log | phase5-page-vehicles-vehicle-access | 1 | reserved01:39:44.162Z; actor pending | - | VehicleAccessPage/direct supports source only; no real identity/permission/device actions, nativeNOTRUN. |",
+    "attemptExactFilesVerified": true,
+    "queueUnmodified": true,
+    "actorPendingReservationIsNotRuntimeEvidence": true,
+    "deduplication": "Exact item/files/notes and active phase6 owner searches; no matching active VehicleAccess repair source owner. Completed original/palette/primitive/shared work not reopened. Canonical English needs serialized with unrelated pending GDPR catalog owner."
+  },
+  "confirmedIssues": [
+    {
+      "id": "VA-QA-01",
+      "classification": "confirmed-source",
+      "rule": "independent-source-gate",
+      "priority": "high",
+      "title": "Access overview hides a healthy source behind its neighbor loading/failure",
+      "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+      "line": 386,
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 386,
+          "source": "            isLoading={driversLoading || invitationsLoading}"
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 387,
+          "source": "            isError={driversState.fatalError != null || invitationsState.fatalError != null}"
+        },
+        {
+          "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+          "line": 82,
+          "source": "      {isLoading ? ("
+        },
+        {
+          "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+          "line": 87,
+          "source": "      ) : showError ? ("
+        }
+      ],
+      "mechanism": "Caller ORs source loading/fatal flags; child replaces its whole composition with skeleton/error. Independent tables and summary retain known data, but overview loses healthy role/status content.",
+      "sourceDerivedRepro": "Trace drivers present plus invitations undefined/isLoading true, then reverse sources or make one no-data source fatal: healthy overview subsection cannot render.",
+      "reproExecuted": false,
+      "fix": "Use independent source states and retry in the existing overview; adapt page only after bounded child acceptance.",
+      "needIds": [
+        "NEED-01",
+        "NEED-02"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    },
+    {
+      "id": "VA-QA-02",
+      "classification": "confirmed-source",
+      "rule": "unknown-as-empty",
+      "priority": "high",
+      "title": "Initial-paused sources fall through to authoritative empty panels",
+      "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+      "line": 143,
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 143,
+          "source": "  const driversList = drivers ?? [];"
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 353,
+          "source": "            {driversLoading ? ("
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 361,
+          "source": "            ) : driversList.length === 0 ? ("
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 430,
+          "source": "          {invitationsLoading ? ("
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 438,
+          "source": "          ) : invitationsList.length === 0 ? ("
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 384,
+          "source": "            totalInvitations={invitationsList.length}"
+        },
+        {
+          "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+          "line": 65,
+          "source": "  const invitations = totalInvitations ?? 0;"
+        }
+      ],
+      "mechanism": "No-data paused query has isLoading false and no fatalError. [] fallback gives zero lengths and overview totals0, rendering No drivers/No invitations/No access data while KPI raw values correctly remain null.",
+      "sourceDerivedRepro": "Trace data undefined, fetchStatus paused, isLoading false, error null through each branch. No synthetic or actual action executed.",
+      "reproExecuted": false,
+      "fix": "Separate unresolved/initial-paused from returned []; retain panels and known neighbors without inventing zero or no records.",
+      "needIds": [
+        "NEED-01",
+        "NEED-02"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    },
+    {
+      "id": "VA-QA-03",
+      "classification": "confirmed-source",
+      "rule": "false-refresh-failure",
+      "priority": "high",
+      "title": "Retained paused evidence falsely reports refresh failure",
+      "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "line": 31,
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+          "line": 31,
+          "source": "    stale: t('vehicles.evidenceBrief.status.stale', 'Retained after refresh failure'),"
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 316,
+          "source": "          status={briefState.status}"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 247,
+          "source": "      status: 'stale',"
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "line": 25906,
+          "source": "        \"stale\": \"Retained after refresh failure\","
+        }
+      ],
+      "mechanism": "Retained paused derives stale with refreshError null; brief receives status only and labels every stale case Retained after refresh failure. Source warnings are already cause-neutral.",
+      "sourceDerivedRepro": "Trace existing paused retained declarations in page test570 into the combined status and brief badge.",
+      "reproExecuted": false,
+      "fix": "Use reason-neutral retained wording or actual existing source evidence; serialize exact canonical label reconciliation.",
+      "needIds": [
+        "NEED-03",
+        "NEED-06"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    },
+    {
+      "id": "VA-QA-04",
+      "classification": "confirmed-source",
+      "rule": "false-offline-cause",
+      "priority": "medium",
+      "title": "Paused source badge asserts offline without connectivity evidence",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "line": 82,
+      "evidence": [
+        {
+          "file": "web/src/components/feedback/DataSourceNotice.tsx",
+          "line": 82,
+          "source": "  if (query.fetchStatus === 'paused') return 'paused';"
+        },
+        {
+          "file": "web/src/components/feedback/DataSourceNotice.tsx",
+          "line": 164,
+          "source": "      label: t('dataSources.status.paused', 'Paused offline'),"
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 305,
+          "source": "      breadcrumbLabels={{"
+        }
+      ],
+      "mechanism": "PageLayout/PageContainer mounts DataSourceNotice. fetchStatus paused resolves paused, then status label unconditionally says Paused offline despite online hook availability.",
+      "sourceDerivedRepro": "Source-trace paused query with online environment: badge still asserts offline. Native connectivity NOTRUN.",
+      "reproExecuted": false,
+      "fix": "At existing shared owner use neutral paused copy unless connectivity proves cause; no page workaround.",
+      "needIds": [
+        "NEED-04",
+        "NEED-06"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    },
+    {
+      "id": "VA-QA-05",
+      "classification": "confirmed-source",
+      "rule": "missing-live-mode-guard",
+      "priority": "high",
+      "title": "Five access writes omit the existing historical-mode guard",
+      "file": "web/src/api/hooks/useVehicleAccess.ts",
+      "line": 42,
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 42,
+          "source": "      request<VehicleDriver[]>(`/vehicles/${vehicleId}/drivers/refresh`, { method: 'POST' }),"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 56,
+          "source": "      request<VehicleInvitation[]>(`/vehicles/${vehicleId}/invitations/refresh`, { method: 'POST' }),"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 71,
+          "source": "        method: 'DELETE',"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 87,
+          "source": "      request<VehicleInvitation>(`/vehicles/${vehicleId}/invitations`, { method: 'POST' }),"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 101,
+          "source": "      request<void>(`/vehicles/${vehicleId}/invitations/${invitationId}/revoke`, { method: 'POST' }),"
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 353,
+          "source": "    requiresLiveMode = false,"
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 358,
+          "source": "  assertOperationalWriteAllowed(fetchOptions.method, requiresLiveMode)"
+        },
+        {
+          "file": "web/src/lib/operationalMode.ts",
+          "line": 71,
+          "source": "  if (READ_METHODS.has(normalizedMethod) || !requiresLiveMode) return;"
+        }
+      ],
+      "mechanism": "request defaults requiresLiveMode false and operational guard returns early without opt-in. Hook requests omit it; page does not disable in as_of mode. OfflineCache separately blocks offline access writes; retry0/networkMode always prevents replay. No backend authorization bypass claimed.",
+      "sourceDerivedRepro": "Source-trace online /vehicles/7/access?as_of=<valid ISO> to any access write: historical guard is skipped. No URL opened and no request executed.",
+      "reproExecuted": false,
+      "fix": "Opt exact five hook writes into requiresLiveMode:true, preserve payloads/keys/toasts. Consume existing read-only readiness for localized page disabled explanation.",
+      "needIds": [
+        "NEED-05",
+        "NEED-02"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    },
+    {
+      "id": "VA-QA-06",
+      "classification": "confirmed-source",
+      "rule": "success-only-lifecycle",
+      "priority": "high",
+      "title": "Rejected destructive mutations discard their selected target",
+      "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+      "line": 131,
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 131,
+          "source": "      { onSettled: () => setRemoveTarget(null) },"
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 139,
+          "source": "      { onSettled: () => setRevokeTarget(null) },"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 78,
+          "source": "    onError: (err) => error(err, 'toast.vehicleAccess.drivers.remove.error', 'Failed to remove driver'),"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 106,
+          "source": "    onError: (err) => error(err, 'toast.vehicleAccess.invitations.revoke.error', 'Failed to revoke invitation'),"
+        }
+      ],
+      "mechanism": "Both dialogs clear target in onSettled, including rejected requests. Hook error toast remains truthful, but target/retry context and dialog are lost without success. Existing settle test does not distinguish rejected outcome.",
+      "sourceDerivedRepro": "Trace rejected Remove/Revoke followed by onSettled: same clearing as success. No mutation run.",
+      "reproExecuted": false,
+      "fix": "Close/clear on confirmed success or explicit idle Cancel only; retain failed target/error recovery and pending dismissal protection.",
+      "needIds": [
+        "NEED-02"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    },
+    {
+      "id": "VA-QA-07",
+      "classification": "confirmed-source",
+      "rule": "hardcoded-string",
+      "priority": "medium",
+      "title": "Both page dialogs inherit an English Cancel label",
+      "file": "web/src/components/ui/ConfirmDialog.tsx",
+      "line": 78,
+      "evidence": [
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 78,
+          "source": "  cancelLabel = 'Cancel',"
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 172,
+          "source": "            {cancelLabel}"
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 460,
+          "source": "      <ConfirmDialog"
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 470,
+          "source": "      <ConfirmDialog"
+        }
+      ],
+      "mechanism": "Shared cancelLabel defaults to literal Cancel and renders verbatim; neither page caller passes cancelLabel. Existing common.cancel key is present.",
+      "sourceDerivedRepro": "Source-trace either dialog in a non-English locale; default remains English. Locale/browser NOTRUN.",
+      "reproExecuted": false,
+      "fix": "Pass cancelLabel={t(common.cancel, Cancel)} at both page callers; no shared/catalog edit needed for minimal fix.",
+      "needIds": [
+        "NEED-02"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    },
+    {
+      "id": "VA-QA-08",
+      "classification": "confirmed-source",
+      "rule": "missing-role-i18n",
+      "priority": "medium",
+      "title": "Known driver/owner labels have no effective localization",
+      "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+      "line": 213,
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 213,
+          "source": "        <Badge variant=\"info\">{row.role}</Badge>"
+        },
+        {
+          "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+          "line": 134,
+          "source": "                      {t(`vehicleAccess.role.${slice.role}`, titleCase(slice.role))}"
+        }
+      ],
+      "mechanism": "Table renders raw role. Overview uses dynamic vehicleAccess.role keys, but driver/owner keys are absent from canonical English. Unknown backend role strings are open-ended and must stay preserved, not fabricated.",
+      "sourceDerivedRepro": "Read existing populated driver/owner declarations and exact-key lookup: table bypasses t and overview only has title-case fallback.",
+      "reproExecuted": false,
+      "fix": "Use existing localized known-role mapping at page/overview after exact canonical integration; preserve raw unknown identities.",
+      "needIds": [
+        "NEED-01",
+        "NEED-02",
+        "NEED-06"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    },
+    {
+      "id": "VA-QA-09",
+      "classification": "confirmed-source",
+      "rule": "locale-number",
+      "priority": "low",
+      "title": "Secondary counts bypass saved locale formatting",
+      "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+      "line": 115,
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+          "line": 115,
+          "source": "                      sublabel={`${count} · ${fmtPercent(pct)}`}"
+        },
+        {
+          "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+          "line": 135,
+          "source": "                      <Text color=\"muted\" className=\"ml-1\">{slice.count ?? 0}</Text>"
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 337,
+          "source": "                  <Badge variant=\"neutral\">{driversList.length}</Badge>"
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 402,
+          "source": "                <Badge variant=\"neutral\">{invitationsList.length}</Badge>"
+        }
+      ],
+      "mechanism": "Raw count interpolation overrides MetricBar formatted readout; raw numeric role/title badges also bypass fmtInt. Percent and operational KPI formatting already use preference owners.",
+      "sourceDerivedRepro": "Trace count1000 under another locale through four sites: raw count string unchanged. Locale preference NOTRUN.",
+      "reproExecuted": false,
+      "fix": "Use existing reactive fmtInt for secondary count strings without changing totals/ratios/SI/raw cache values.",
+      "needIds": [
+        "NEED-01",
+        "NEED-02"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    },
+    {
+      "id": "VA-QA-10",
+      "classification": "confirmed-source",
+      "rule": "decorative-color",
+      "priority": "low",
+      "title": "Overview decorative glyph retains fixed cyan",
+      "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+      "line": 78,
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+          "line": 78,
+          "source": "        <PieChart className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        }
+      ],
+      "mechanism": "Fixed text-cyan-300 is decorative heading paint, not measured semantic state; bypasses restrained theme roles and Icon renderer. No measured contrast defect claimed.",
+      "sourceDerivedRepro": "Inspect same fixed glyph color across declared themes; screenshots NOTRUN.",
+      "reproExecuted": false,
+      "fix": "Use existing Icon and neutral typography role, retain aria-hidden/title; preserve accepted semantic bars/solid fill.",
+      "needIds": [
+        "NEED-01"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    },
+    {
+      "id": "VA-QA-11",
+      "classification": "confirmed-source",
+      "rule": "missing-canonical-copy",
+      "priority": "medium",
+      "title": "Ten toast keys exist only as English fallbacks",
+      "file": "web/src/api/hooks/useVehicleAccess.ts",
+      "line": 45,
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 45,
+          "source": "      success('toast.vehicleAccess.drivers.refresh.success', 'Drivers refreshed');"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 47,
+          "source": "    onError: (err) => error(err, 'toast.vehicleAccess.drivers.refresh.error', 'Failed to refresh drivers'),"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 59,
+          "source": "      success('toast.vehicleAccess.invitations.refresh.success', 'Invitations refreshed');"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 61,
+          "source": "    onError: (err) => error(err, 'toast.vehicleAccess.invitations.refresh.error', 'Failed to refresh invitations'),"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 76,
+          "source": "      success('toast.vehicleAccess.drivers.remove.success', 'Driver removed');"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 78,
+          "source": "    onError: (err) => error(err, 'toast.vehicleAccess.drivers.remove.error', 'Failed to remove driver'),"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 90,
+          "source": "      success('toast.vehicleAccess.invitations.create.success', 'Invitation created');"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 92,
+          "source": "    onError: (err) => error(err, 'toast.vehicleAccess.invitations.create.error', 'Failed to create invitation'),"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 104,
+          "source": "      success('toast.vehicleAccess.invitations.revoke.success', 'Invitation revoked');"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 106,
+          "source": "    onError: (err) => error(err, 'toast.vehicleAccess.invitations.revoke.error', 'Failed to revoke invitation'),"
+        }
+      ],
+      "mechanism": "Five hooks each provide success/error toast.vehicleAccess keys; all ten are absent from canonical en.json. Real hook feedback exists, but fallback-only copy has no canonical translation contract. Mocked hook tests only assert keys/fallbacks.",
+      "sourceDerivedRepro": "Read ten exact canonical-key misses in raw log; no toast/mutation run.",
+      "reproExecuted": false,
+      "fix": "One serialized exact key/default catalog integration and normal generated closure, preserve protected leaves/guards; no wider campaign.",
+      "needIds": [
+        "NEED-06"
+      ],
+      "confidence": "high source; runtime NOTRUN"
+    }
+  ],
+  "summary": {
+    "confirmedFindingCount": 11,
+    "byRule": {
+      "independent-source-gate": 1,
+      "unknown-as-empty": 1,
+      "false-refresh-failure": 1,
+      "false-offline-cause": 1,
+      "missing-live-mode-guard": 1,
+      "success-only-lifecycle": 1,
+      "hardcoded-string": 1,
+      "missing-role-i18n": 1,
+      "locale-number": 1,
+      "decorative-color": 1,
+      "missing-canonical-copy": 1
+    },
+    "byPriority": {
+      "high": 5,
+      "medium": 4,
+      "low": 2
+    },
+    "filesWithMostPrimaryFindings": [
+      {
+        "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+        "count": 4
+      },
+      {
+        "file": "web/src/api/hooks/useVehicleAccess.ts",
+        "count": 2
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+        "count": 2
+      },
+      {
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/components/feedback/DataSourceNotice.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/components/ui/ConfirmDialog.tsx",
+        "count": 1
+      }
+    ],
+    "countingConvention": "One underlying confirmed mechanism once; multiple citations are not inflated as extra mechanisms. Missing canonical toast keys counted separately as10, known role keys2. Conditional/native candidates excluded.",
+    "missingToastKeyCount": 10,
+    "missingKnownRoleKeyCount": 2,
+    "newTestsExecuted": 0,
+    "passingRerun": false,
+    "inspectionCommandFailures": 4,
+    "viewRangeFailures": 1,
+    "conditionalCandidateCount": 5,
+    "nativeCandidateCount": 1,
+    "deduplicatedNeedOwnerCount": 6,
+    "sourceFingerprintCount": 37,
+    "sourceDriftCount": 0
+  },
+  "preservation": {
+    "baselineKind": "fresh before/after this attempt only, not regenerated historical original",
+    "before": [
+      {
+        "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+        "sha256": "6d03a49d3c8d3d95b40b9c456a8c105d951047c0750361cf89c446fd0695aacd",
+        "bytes": 19700,
+        "lines": 482
+      },
+      {
+        "file": "web/src/features/vehicles/pages/VehicleAccessPage.test.tsx",
+        "sha256": "b163c4075753b80530bb168dce7f0fcb7284ad73fee1b86aee9145c92fdc940a",
+        "bytes": 31226,
+        "lines": 690
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+        "sha256": "13cf02166f76fac99d8391538d22ccec1bbbe6d6722a391bb439b103cdc2558c",
+        "bytes": 5252,
+        "lines": 146
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.test.tsx",
+        "sha256": "55cc5ccdf1f208d725a13b0d329c48ad4bdcdc9ee09164fa08b8a9ea155147bc",
+        "bytes": 11066,
+        "lines": 294
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-access/index.ts",
+        "sha256": "10e176bf4ebc5c6f9ecd713e2dd584cfa43eebc930c31e7f97c7b89324a26eb7",
+        "bytes": 163,
+        "lines": 6
+      },
+      {
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+        "sha256": "9de001133e32ee63e950fdacf113d195845dee7d1595b4ea3a92e09267844f75",
+        "bytes": 1931,
+        "lines": 43
+      },
+      {
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.test.tsx",
+        "sha256": "65efd96ba0c6da2e3aeb0ef14fc9b63b7e7242ce7c986a0a2adae3ef19990c68",
+        "bytes": 4747,
+        "lines": 89
+      },
+      {
+        "file": "web/src/api/hooks/useVehicleAccess.ts",
+        "sha256": "58eb0fd43dbd73e1b88c05652ca77e7cced08c8482d0c32ccee96bdc0f265112",
+        "bytes": 4891,
+        "lines": 108
+      },
+      {
+        "file": "web/src/api/hooks/useVehicles.ts",
+        "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+        "bytes": 70205,
+        "lines": 1898
+      },
+      {
+        "file": "web/src/api/hooks/_toastHelpers.ts",
+        "sha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+        "bytes": 5112,
+        "lines": 123
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "bytes": 15482,
+        "lines": 434
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "bytes": 2035,
+        "lines": 65
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "bytes": 658,
+        "lines": 17
+      },
+      {
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "bytes": 4093,
+        "lines": 115
+      },
+      {
+        "file": "web/src/components/ui/ConfirmDialog.tsx",
+        "sha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+        "bytes": 8134,
+        "lines": 219
+      },
+      {
+        "file": "web/src/components/ui/CopyButton.tsx",
+        "sha256": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+        "bytes": 5307,
+        "lines": 155
+      },
+      {
+        "file": "web/src/components/data-display/TimeStamp.tsx",
+        "sha256": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+        "bytes": 2520,
+        "lines": 64
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "bytes": 5174,
+        "lines": 93
+      },
+      {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "bytes": 77157,
+        "lines": 1707
+      },
+      {
+        "file": "web/src/components/data-display/MetricBar.tsx",
+        "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+        "bytes": 4359,
+        "lines": 93
+      },
+      {
+        "file": "web/src/api/queryClient.ts",
+        "sha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+        "bytes": 3802,
+        "lines": 86
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "bytes": 17825,
+        "lines": 458
+      },
+      {
+        "file": "web/src/lib/safeArray.ts",
+        "sha256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14",
+        "bytes": 859,
+        "lines": 28
+      },
+      {
+        "file": "web/src/App.tsx",
+        "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "bytes": 68125,
+        "lines": 919
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "bytes": 4411,
+        "lines": 168
+      },
+      {
+        "file": "web/src/main.tsx",
+        "sha256": "0f6618142f999757db4bbe8633bb5a422132f09fa3350274f3265ee77daf5d04",
+        "bytes": 10317,
+        "lines": 216
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "bytes": 10783,
+        "lines": 259
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "bytes": 1493,
+        "lines": 39
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "bytes": 2095,
+        "lines": 47
+      },
+      {
+        "file": "web/src/hooks/useOperationalMetrics.tsx",
+        "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+        "bytes": 1161,
+        "lines": 24
+      },
+      {
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+        "bytes": 11591,
+        "lines": 321
+      },
+      {
+        "file": "web/src/api/offlineCache.ts",
+        "sha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+        "bytes": 6961,
+        "lines": 185
+      },
+      {
+        "file": "web/src/lib/operationalMode.ts",
+        "sha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+        "bytes": 2495,
+        "lines": 89
+      },
+      {
+        "file": "web/src/components/feedback/DataSourceNotice.tsx",
+        "sha256": "79b11817e939f044a2c1f6fbfa1617b61a435c8461dc84b99b6014f54059afc6",
+        "bytes": 9480,
+        "lines": 291
+      },
+      {
+        "file": "web/src/api/types.ts",
+        "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "bytes": 120243,
+        "lines": 4194
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+        "bytes": 1843667,
+        "lines": 39002
+      },
+      {
+        "file": "web/src/api/hooks/useVehicleAccess.test.tsx",
+        "sha256": "7836272cdb11365ebea9349c4e4feacedf7a2fdf96aadc8ce63ba86c6207628c",
+        "bytes": 14645,
+        "lines": 376
+      }
+    ],
+    "pageLines": 482,
+    "pageBytes": 19700,
+    "declaredSectionCount": 4,
+    "declaredMetrics": 4,
+    "declaredTables": 2,
+    "declaredDestructiveConfirms": 2,
+    "historicalOriginalLines": 465,
+    "historicalLimit": "465 and earlier25page/14overview passing cases are queue context only; no immutable original read or current pass inferred.",
+    "after": [
+      {
+        "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+        "sha256": "6d03a49d3c8d3d95b40b9c456a8c105d951047c0750361cf89c446fd0695aacd",
+        "bytes": 19700,
+        "lines": 482,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/features/vehicles/pages/VehicleAccessPage.test.tsx",
+        "sha256": "b163c4075753b80530bb168dce7f0fcb7284ad73fee1b86aee9145c92fdc940a",
+        "bytes": 31226,
+        "lines": 690,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+        "sha256": "13cf02166f76fac99d8391538d22ccec1bbbe6d6722a391bb439b103cdc2558c",
+        "bytes": 5252,
+        "lines": 146,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.test.tsx",
+        "sha256": "55cc5ccdf1f208d725a13b0d329c48ad4bdcdc9ee09164fa08b8a9ea155147bc",
+        "bytes": 11066,
+        "lines": 294,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-access/index.ts",
+        "sha256": "10e176bf4ebc5c6f9ecd713e2dd584cfa43eebc930c31e7f97c7b89324a26eb7",
+        "bytes": 163,
+        "lines": 6,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+        "sha256": "9de001133e32ee63e950fdacf113d195845dee7d1595b4ea3a92e09267844f75",
+        "bytes": 1931,
+        "lines": 43,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.test.tsx",
+        "sha256": "65efd96ba0c6da2e3aeb0ef14fc9b63b7e7242ce7c986a0a2adae3ef19990c68",
+        "bytes": 4747,
+        "lines": 89,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/api/hooks/useVehicleAccess.ts",
+        "sha256": "58eb0fd43dbd73e1b88c05652ca77e7cced08c8482d0c32ccee96bdc0f265112",
+        "bytes": 4891,
+        "lines": 108,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/api/hooks/useVehicles.ts",
+        "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+        "bytes": 70205,
+        "lines": 1898,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/api/hooks/_toastHelpers.ts",
+        "sha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+        "bytes": 5112,
+        "lines": 123,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "bytes": 15482,
+        "lines": 434,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "bytes": 2035,
+        "lines": 65,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "bytes": 658,
+        "lines": 17,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "bytes": 4093,
+        "lines": 115,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/ui/ConfirmDialog.tsx",
+        "sha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+        "bytes": 8134,
+        "lines": 219,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/ui/CopyButton.tsx",
+        "sha256": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+        "bytes": 5307,
+        "lines": 155,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/data-display/TimeStamp.tsx",
+        "sha256": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+        "bytes": 2520,
+        "lines": 64,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "bytes": 5174,
+        "lines": 93,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "bytes": 77157,
+        "lines": 1707,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/data-display/MetricBar.tsx",
+        "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+        "bytes": 4359,
+        "lines": 93,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/api/queryClient.ts",
+        "sha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+        "bytes": 3802,
+        "lines": 86,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "bytes": 17825,
+        "lines": 458,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/lib/safeArray.ts",
+        "sha256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14",
+        "bytes": 859,
+        "lines": 28,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/App.tsx",
+        "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "bytes": 68125,
+        "lines": 919,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "bytes": 4411,
+        "lines": 168,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/main.tsx",
+        "sha256": "0f6618142f999757db4bbe8633bb5a422132f09fa3350274f3265ee77daf5d04",
+        "bytes": 10317,
+        "lines": 216,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "bytes": 10783,
+        "lines": 259,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "bytes": 1493,
+        "lines": 39,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "bytes": 2095,
+        "lines": 47,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/hooks/useOperationalMetrics.tsx",
+        "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+        "bytes": 1161,
+        "lines": 24,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+        "bytes": 11591,
+        "lines": 321,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/api/offlineCache.ts",
+        "sha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+        "bytes": 6961,
+        "lines": 185,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/lib/operationalMode.ts",
+        "sha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+        "bytes": 2495,
+        "lines": 89,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/components/feedback/DataSourceNotice.tsx",
+        "sha256": "79b11817e939f044a2c1f6fbfa1617b61a435c8461dc84b99b6014f54059afc6",
+        "bytes": 9480,
+        "lines": 291,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/api/types.ts",
+        "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "bytes": 120243,
+        "lines": 4194,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+        "bytes": 1843667,
+        "lines": 39002,
+        "matchesBefore": true
+      },
+      {
+        "file": "web/src/api/hooks/useVehicleAccess.test.tsx",
+        "sha256": "7836272cdb11365ebea9349c4e4feacedf7a2fdf96aadc8ce63ba86c6207628c",
+        "bytes": 14645,
+        "lines": 376,
+        "matchesBefore": true
+      }
+    ],
+    "changedReadonlyFiles": [],
+    "allComparedUnchanged": true,
+    "afterTimestampUtc": "2026-10-14T02:00:07.918825+00:00"
+  },
+  "notRun": {
+    "Vitest": "NOTRUN",
+    "ESLint/style scanner/preservation CLI": "NOTRUN",
+    "npx tsc --noEmit": "NOTRUN",
+    "build/full suites/docs build": "NOTRUN",
+    "catalog generator/guards": "NOTRUN",
+    "browser/API/native/device/viewport/contrast": "NOTRUN",
+    "real identity/permission/access/device/clipboard actions": "NOTRUN",
+    "Git/subagents/installs/servers/helpers": "NOTRUN"
+  },
+  "commands": {
+    "rawLog": "web/logs/phase6-qa-vehicles-vehicle-access.log",
+    "initialToolShellIds": [
+      1538,
+      1539,
+      1554,
+      1562,
+      1583,
+      1607,
+      1627,
+      1635,
+      1640,
+      1650,
+      1655,
+      1669,
+      1686,
+      1692,
+      1696,
+      1707,
+      1713,
+      1831,
+      1846
+    ],
+    "failures": [
+      {
+        "shellId": 1627,
+        "exit": 1,
+        "rawOutput": "",
+        "detail": "Nested here-string wrapper failed without stdout; inspection not executed."
+      },
+      {
+        "shellId": 1635,
+        "exit": 1,
+        "detail": "cp1252 stdout UnicodeEncodeError on CONTRIBUTING arrow; partial raw stdout/traceback retained; corrected UTF8 read1640 exit0."
+      },
+      {
+        "shellId": 1831,
+        "exit": 1,
+        "rawError": "The filename or extension is too long. (os error206)",
+        "detail": "Oversized artifact assembly never started process; no writes, split assembly instead."
+      },
+      {
+        "shellId": 1938,
+        "exit": 1,
+        "detail": "Final probe substring queue match also matched note references; exact item-column corrected. Prior JSON/source writes had not occurred in failed probe; no source failure hidden."
+      }
+    ],
+    "viewFailure": {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "requestedRange": [
+        661,
+        -1
+      ],
+      "rawError": "start line661 beyond EOF630",
+      "detail": "Earlier1..630 already read; no command exit/test failure invented."
+    },
+    "rawOutputLimits": "Full logged source commands/stdout since1635. Initial1539/1562/1583 raw tool outputs retained verbatim from host temp receipts; early1538/1554/1607 stdout is in caller tool receipts and source pin markers, not rerun.",
+    "artifactAssemblyReceipts": [
+      {
+        "shellId": 1895,
+        "exit": 0
+      },
+      {
+        "shellId": 1930,
+        "exit": 0
+      }
+    ]
+  },
+  "release": {
+    "finalJsonParsePinCheck": "PASS: owned JSON/37 read-file pins/exact item-column attempt1 claim only",
+    "sourceWriteClaim": "none",
+    "artifactWritesReleased": true,
+    "runningCommands": [],
+    "postReturnWrites": false,
+    "sourceNativePageAcceptance": "NOT_GRANTED/NOTRUN",
+    "releasedUtc": "2026-10-14T02:00:07.918852+00:00"
+  },
+  "conditionalCandidates": [
+    {
+      "id": "VA-C01",
+      "classification": "conditional-source-candidate",
+      "title": "Cross-vehicle confirmation retargeting is mitigated by production remount",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 114
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 126
+        },
+        {
+          "file": "web/src/App.tsx",
+          "line": 375
+        },
+        {
+          "file": "web/src/App.tsx",
+          "line": 583
+        }
+      ],
+      "mechanism": "Local targets lack their own vehicle pin, but SafeRoute keys ErrorBoundary by pathname and remounts the production page for vehicle-path changes. Bare embed/test reuse is not this mounted flow.",
+      "conditionToConfirm": "Actual mounted owner reuses same instance across semantic vehicle change without pathname remount; NOT confirmed now.",
+      "executed": false
+    },
+    {
+      "id": "VA-C02",
+      "classification": "conditional-source-candidate",
+      "title": "Malformed/null payload normalization to empty",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 21
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleAccess.ts",
+          "line": 31
+        },
+        {
+          "file": "web/src/lib/safeArray.ts",
+          "line": 9
+        }
+      ],
+      "mechanism": "safeArray intentionally normalizes null/nonarray to[]; existing hook tests preserve this. Whether this is authoritative empty requires backend contract evidence.",
+      "conditionToConfirm": "Prove these wire shapes mean unknown/failure, not accepted empty; API/backend NOTRUN.",
+      "executed": false
+    },
+    {
+      "id": "VA-C03",
+      "classification": "conditional-source-candidate",
+      "title": "Authorization/identity/Tesla readiness is not proven by row predicates",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 221
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 283
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 418
+        }
+      ],
+      "mechanism": "Remove uses share_user_id!=null including valid0, Revoke uses pending, header actions truthy route ID. Client auth/sudo/offline refusal still applies; no permission bypass inferred.",
+      "conditionToConfirm": "Existing authoritative capability denies action but mounted action targets invalid or denied scope; no real identity/permission/device action allowed.",
+      "executed": false
+    },
+    {
+      "id": "VA-C04",
+      "classification": "conditional-source-candidate",
+      "title": "Confirmation copy does not identify selected record",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 463
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 473
+        }
+      ],
+      "mechanism": "Generic dialog messages name neither driver nor invitation. Submitted request remains ID-scoped, so this is identity UX risk, not proved wrong-record action.",
+      "conditionToConfirm": "Product acceptance requires visible target identity or safe mounted workflow proves ambiguity.",
+      "executed": false
+    },
+    {
+      "id": "VA-C05",
+      "classification": "conditional-source-candidate",
+      "title": "Rapid duplicate-event behavior before pending rerender",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 127
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 136
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 418
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 74
+        }
+      ],
+      "mechanism": "Existing guards rely on isPending/shared disabled rendering; page tests cover after rerender. No synchronous double-event race was executed.",
+      "conditionToConfirm": "A permitted future synthetic seam proves duplicate requests before pending protection; not a current finding.",
+      "executed": false
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "VA-N01",
+      "classification": "native-acceptance-candidate",
+      "status": "NOTRUN",
+      "title": "Mounted a11y/mobile/theme/preference acceptance remains open",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 330
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 371
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 448
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+          "line": 227
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 170
+        }
+      ],
+      "neededEvidence": [
+        "all mission widths320/375/390/430/768/1024/1280/1440/1920/2560 and narrow containers",
+        "table-owned scroll/no page overflow; every email/creator/copy/action reachable",
+        "44x44 actual targets/nonoverlap, 200% text, long labels/RTL",
+        "dark/light/custom/forced-colors contrast/focus, reduced motion/low bandwidth",
+        "keyboard topmost dismissal/focus restoration and safe areas",
+        "authorized identity/readiness/clipboard feedback without access/device mutations"
+      ]
+    }
+  ],
+  "needs": [
+    {
+      "id": "NEED-01",
+      "owner": "existing AccessOverviewPanel source/test pair",
+      "files": [
+        "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+        "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.test.tsx"
+      ],
+      "findings": [
+        "VA-QA-01",
+        "VA-QA-02",
+        "VA-QA-08",
+        "VA-QA-09",
+        "VA-QA-10"
+      ],
+      "objective": "One bounded independent-source overview API/presentation correction preserving all distributions/counts/solid fill; no new component.",
+      "queueDedup": "No active matching source repair; completed phase6-vehicle-access-role-palette not reopened.",
+      "dependsOn": [
+        "NEED-06 for known role copy only"
+      ],
+      "writeAuthority": "NOT GRANTED"
+    },
+    {
+      "id": "NEED-02",
+      "owner": "VehicleAccessPage source/test pair",
+      "files": [
+        "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+        "web/src/features/vehicles/pages/VehicleAccessPage.test.tsx"
+      ],
+      "findings": [
+        "VA-QA-01",
+        "VA-QA-02",
+        "VA-QA-05",
+        "VA-QA-06",
+        "VA-QA-07",
+        "VA-QA-08",
+        "VA-QA-09"
+      ],
+      "objective": "One exclusive caller state/readiness/settlement/localization adoption; common.cancel already exists. Preserve original tests/actions; not third original migration.",
+      "queueDedup": "Completed phase5-page-vehicles-vehicle-access remains complete; no active exact repair.",
+      "dependsOn": [
+        "NEED-01 before overview adapter",
+        "NEED-05 live guard acceptance",
+        "NEED-06 for known role copy only"
+      ],
+      "writeAuthority": "NOT GRANTED"
+    },
+    {
+      "id": "NEED-03",
+      "owner": "existing VehicleEvidenceBrief source/test pair",
+      "files": [
+        "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+        "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.test.tsx"
+      ],
+      "findings": [
+        "VA-QA-03"
+      ],
+      "objective": "Truthful retained/paused wording using existing trust owner; no new model.",
+      "queueDedup": "Existing original notes explicitly leave paused wording unresolved; no active exact owner. Coalesce with other page QA at same owner.",
+      "dependsOn": [
+        "NEED-06 exact existing stale label"
+      ],
+      "writeAuthority": "NOT GRANTED"
+    },
+    {
+      "id": "NEED-04",
+      "owner": "existing shared DataSourceNotice source/tests",
+      "files": [
+        "web/src/components/feedback/DataSourceNotice.tsx",
+        "web/src/components/feedback/DataSourceNotice.test.tsx",
+        "web/src/components/feedback/__tests__/DataSourceNotice.classifier.test.tsx"
+      ],
+      "findings": [
+        "VA-QA-04"
+      ],
+      "objective": "One shared truthful paused-cause label correction, not page-local workarounds.",
+      "queueDedup": "phase3-data-source-notice completed; no matching active fix. Test paths from existing owner ledger, test bodies not inspected.",
+      "dependsOn": [
+        "NEED-06 existing paused label"
+      ],
+      "writeAuthority": "NOT GRANTED"
+    },
+    {
+      "id": "NEED-05",
+      "owner": "useVehicleAccess source/test pair",
+      "files": [
+        "web/src/api/hooks/useVehicleAccess.ts",
+        "web/src/api/hooks/useVehicleAccess.test.tsx"
+      ],
+      "findings": [
+        "VA-QA-05"
+      ],
+      "objective": "Opt five writes into requiresLiveMode; preserve20 declared original cases, keys, signals, payloads, raw response/invalidation/toasts. No offline queue patch needed.",
+      "queueDedup": "No active matching hook claim.",
+      "dependsOn": [],
+      "writeAuthority": "NOT GRANTED"
+    },
+    {
+      "id": "NEED-06",
+      "owner": "serialized canonical English integration",
+      "files": [
+        "web/src/i18n/en.json",
+        "only actual normal-generator-selected projections/manifests; exact generated set UNKNOWN pending lease"
+      ],
+      "findings": [
+        "VA-QA-03",
+        "VA-QA-04",
+        "VA-QA-08",
+        "VA-QA-11"
+      ],
+      "objective": "One exact integration: ten existing toast key/default pairs, two known driver/owner role keys, two existing misleading trust labels. No new catalog campaign or invented unknown roles.",
+      "queueDedup": "Serialize with unrelated pending phase6-fix-gdpr-status-catalog canonical owner; completed DLQ/causal/projection roots are not these keys and not reopened.",
+      "existingLabelReconciliations": [
+        "vehicles.evidenceBrief.status.stale: propose reason-neutral retained wording",
+        "dataSources.status.paused: propose neutral Paused"
+      ],
+      "knownRoleKeys": [
+        "vehicleAccess.role.driver",
+        "vehicleAccess.role.owner"
+      ],
+      "toastKeys": [
+        "toast.vehicleAccess.drivers.refresh.success",
+        "toast.vehicleAccess.drivers.refresh.error",
+        "toast.vehicleAccess.invitations.refresh.success",
+        "toast.vehicleAccess.invitations.refresh.error",
+        "toast.vehicleAccess.drivers.remove.success",
+        "toast.vehicleAccess.drivers.remove.error",
+        "toast.vehicleAccess.invitations.create.success",
+        "toast.vehicleAccess.invitations.create.error",
+        "toast.vehicleAccess.invitations.revoke.success",
+        "toast.vehicleAccess.invitations.revoke.error"
+      ],
+      "dependsOn": [
+        "separate canonical lease and exact copy/output authority"
+      ],
+      "writeAuthority": "NOT GRANTED"
+    }
+  ],
+  "tests": {
+    "method": "Read-only declarations, not test discovery/execution",
+    "files": [
+      {
+        "file": "web/src/features/vehicles/pages/VehicleAccessPage.test.tsx",
+        "declaredItCount": 25
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.test.tsx",
+        "declaredItCount": 14
+      },
+      {
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.test.tsx",
+        "declaredItCount": 4
+      },
+      {
+        "file": "web/src/api/hooks/useVehicleAccess.test.tsx",
+        "declaredItCount": 20
+      }
+    ],
+    "declaredItTotal": 63,
+    "discovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "status": "NOTRUN",
+    "limits": [
+      "page hooks/i18n/motion mocked; mobile tests inspect classes, not viewport",
+      "paused test retains DOM but does not verify truthful stale label",
+      "hook tests mock request/toast; no requiresLiveMode/as_of/offline coverage",
+      "settle test does not distinguish rejected/successful settlement",
+      "existing25page+14overview passing receipts are historical across two reports, not rerun/current acceptance"
+    ]
+  },
+  "sourceQACoverage": {
+    "sections": [
+      {
+        "name": "Access summary",
+        "line": 313,
+        "metrics": 4
+      },
+      {
+        "name": "Drivers",
+        "line": 331
+      },
+      {
+        "name": "Access overview",
+        "line": 381
+      },
+      {
+        "name": "Share invitations",
+        "line": 396
+      }
+    ],
+    "mutationTypes": [
+      "refresh drivers",
+      "refresh invitations",
+      "remove driver",
+      "create invitation",
+      "revoke invitation"
+    ],
+    "otherActions": [
+      "copy invite link",
+      "review details drawer",
+      "individual source retries",
+      "overview retryboth",
+      "table value filters/pagination",
+      "two danger confirmations/cancel"
+    ],
+    "identity": [
+      "useParams id scopes useVehicle and two distinct list query keys; enabled!!id and cancellation signals preserved",
+      "valid share_user_id0 supported",
+      "App375 pathname remount mitigates route retargeting; no wrong-vehicle production finding",
+      "offline client rejection and always/no-retry mutation defaults mitigate queueing",
+      "historical-mode readiness remains confirmed gap; backend authorization/Tesla readiness unverified"
+    ],
+    "trust": [
+      "initial skeleton220 + unknown KPI nulls preserved",
+      "own-source fatal QueryError only; overview mixed gate is confirmed defect",
+      "retained failure rows/actions/source warnings preserved",
+      "retained paused rows preserved but brief cause label false",
+      "initial paused unanswered source incorrectly empty",
+      "returned[] means real0; unknown KPI null remains separate"
+    ],
+    "SIAndPreferences": [
+      "No physical measurements on page; no conversions guessed/changed",
+      "IDs/raw arrays/status/timestamps/cache untouched; seven-day window in milliseconds and minute display timer preserved",
+      "OperationalBrief bridge uses useUnits/useFormatting; secondary count locale defect retained",
+      "TimeStamp delegates locale/timezone/time preference and invalid/null handling",
+      "tableIds vehicles:access-drivers/invitations and25/50/100 pagination preserve preferences",
+      "CSS semantic invitation status colors + MetricBar solid fill preserved; completed palette not reopened"
+    ],
+    "a11yMobileSource": [
+      "base single-column/xl3 bento with Drivers2; wrapping toolbars/p4-sm5",
+      "all email/creator/link/action columns retained in mobileColumns",
+      "row buttons declare min-h11/min-w11; toolbar/dialog minimum44-height utilities",
+      "localized action names/headings/text status/progressbar labels/brief region/source live feedback",
+      "shared pending confirmation dismissal protection; FadeIn reduced-motion preference",
+      "actual targets/overflow/safe areas/focus/contrast/RTL/200% text/mobile behavior NOTRUN"
+    ]
+  },
+  "guidelineChecks": {
+    "method": "source regex+manual adjudication, not scanner/lint pass",
+    "files": [
+      "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+      "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+      "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "web/src/api/hooks/useVehicleAccess.ts"
+    ],
+    "rawMatches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 0,
+      "missing-page-container": 1,
+      "fetch-useeffect": 1
+    },
+    "exceptions": [
+      "PageLayout actually wraps PageContainer; no missing container",
+      "only page useEffect is minute display aging/cleanup, not fetch data",
+      "literal JSX grep0 misses inherited Cancel/dynamic roles/canonical gaps; not all violations0",
+      "MetricBar color is dynamic and solid; CSS variable constants not static-inline-style",
+      "shared Button native markup/FadeIn vendor import are expected building blocks"
+    ],
+    "backend": "four backend rules NOT_APPLICABLE; no Go audit/zero-violation claim"
+  },
+  "documentsRead": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "range": "1..296 FULL"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "range": "1..2539 FULL in chunks, truncated overlaps recovered"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "range": "1..210,238..423,507..811,921..1081,1416..1518 relevant sections"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "range": "1..50 authority, exact288 mounted route row"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "range": "1..132 current;2186..2270 conventions"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "range": "FULL1..152"
+    },
+    {
+      "file": "docs/CONTRIBUTING.md",
+      "range": "FULL in two reads; encoding failure disclosed"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "range": "FULL"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "range": "FULL1..630; redundant out-of-range request disclosed"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "range": "FULL"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "range": "FULL"
+    },
+    {
+      "file": "migration-queue.md",
+      "range": "exact row and relevant existing/active owner searches"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-237.json",
+      "range": "relevant parsed historical state/owner/a11y/mobile fields, not current acceptance"
+    }
+  ],
+  "filesRead": [
+    "web/src/features/vehicles/pages/VehicleAccessPage.tsx",
+    "web/src/features/vehicles/pages/VehicleAccessPage.test.tsx",
+    "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+    "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.test.tsx",
+    "web/src/features/vehicles/components/vehicle-access/index.ts",
+    "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+    "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.test.tsx",
+    "web/src/api/hooks/useVehicleAccess.ts",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/api/hooks/_toastHelpers.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/ui/ConfirmDialog.tsx",
+    "web/src/components/ui/CopyButton.tsx",
+    "web/src/components/data-display/TimeStamp.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/data-display/MetricBar.tsx",
+    "web/src/api/queryClient.ts",
+    "web/src/api/client.ts",
+    "web/src/lib/safeArray.ts",
+    "web/src/App.tsx",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/main.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/api/offlineCache.ts",
+    "web/src/lib/operationalMode.ts",
+    "web/src/components/feedback/DataSourceNotice.tsx",
+    "web/src/api/types.ts",
+    "web/src/i18n/en.json",
+    "web/src/api/hooks/useVehicleAccess.test.tsx"
+  ],
+  "evidenceLimits": [
+    "Confirmed source mechanism is not an executed live repro; every repro unexecuted.",
+    "Only read-file pins and two artifact writes proved; no Git repository-wide change attribution.",
+    "No auth/real ID/backend source readiness/permission/device/clipboard actions established.",
+    "Regex0 is not no violations; no current test/lint/TSC/build/native or whole-page acceptance.",
+    "Conditional/native candidates are separate and cannot dispatch a source fix without confirming condition."
+  ]
+}

@@ -1,0 +1,420 @@
+{
+  "item": "phase6-qa-automations-automation-history",
+  "result": "DONE",
+  "mode": "bounded read-only accepted-page source QA",
+  "page": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx",
+  "routes": ["/automations/history"],
+  "acceptance": {
+    "auditCompleted": true,
+    "pageRuntimeAccepted": false,
+    "visualAccessibilityAccepted": false,
+    "remigrationPerformed": false,
+    "firstCheck": {
+      "exactQaQueueLine": 284,
+      "exactQaStatus": "[ ]",
+      "existingExactReport": false,
+      "existingExactLog": false,
+      "acceptedDependencyQueueLine": 1674,
+      "acceptedDependencyStatus": "[x]",
+      "acceptedDependency": "phase5-page-automations-automation-history",
+      "historicalAcceptedCommit": "61efe6fab0475b581c587e9999a55e2ed0765866",
+      "meaning": "Existing Phase5 source acceptance is preserved. Exact Phase6 QA was not already completed. Historical tests are not fresh QA evidence."
+    }
+  },
+  "timebox": {
+    "taskCreatedUtc": "2026-10-13T20:03:47.550Z",
+    "targetMinutes": 10,
+    "returnByUtc": "2026-10-13T20:23:47.550Z",
+    "hardStopUtc": "2026-10-13T20:28:47.550Z",
+    "commandLimitSeconds": 480,
+    "latestLoggedSourceEvidenceUtc": "2026-10-13T20:09:41.9488514Z"
+  },
+  "authorities": [
+    "migration-queue.md:284,1674",
+    "docs\\orchestrator-loop.md: entire sole playbook; worker contract and parent-only orchestration",
+    "docs\\frontend-mission.md:1416-1486 (sections 43-44)",
+    "docs\\frontend-design-contract.md: MDC-001/002/020/023/026/032/033/034/040-047/060-070",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    "docs\\session-handoff.md: relevant source-only QA conventions"
+  ],
+  "authorityResolution": "Later frontend SI/MDC-045 and restrained design decisions supersede historical source-unit conversion and neon/glass examples. Combined audit helpers/global gates were not executed under the explicit source-only/no-helper/fullsuite assignment.",
+  "exclusiveWrites": [
+    "docs\\frontend-audits\\phase6-qa-automations-automation-history.json",
+    "logs\\phase6-qa-automations-automation-history.log"
+  ],
+  "ignoredLogEvidence": ".gitignore:80 contains logs/",
+  "scope": {
+    "directFeatureSupport": [
+      "web\\src\\features\\automations\\components\\AutomationHistorySummary.tsx",
+      "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx",
+      "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx",
+      "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx"
+    ],
+    "boundedReadSupport": [
+      "web\\src\\api\\hooks\\useAutomations.ts:44-50,63-135",
+      "web\\src\\api\\types.ts:2618-2649,2719-2747",
+      "web\\src\\api\\dataState.ts:1-235",
+      "web\\src\\hooks\\useDataState.ts",
+      "web\\src\\hooks\\useRangeState.ts: range ownership, timezone, pagination reset, rolling/calendar bounds",
+      "web\\src\\hooks\\useNumberFormatting.ts",
+      "web\\src\\hooks\\useOperationalMetrics.tsx: effective preference adapter",
+      "web\\src\\lib\\workspaceScope.ts",
+      "web\\src\\lib\\timezone.ts",
+      "web\\src\\lib\\dateFormat.ts:1-85,330-353",
+      "web\\src\\App.tsx:618-620",
+      "web\\src\\components\\layout\\WorkspaceHeader.tsx:33-65",
+      "web\\src\\components\\layout\\WorkspaceContextControl.tsx:1-160",
+      "web\\src\\components\\layout\\Layout.tsx:1395-1445",
+      "web\\src\\components\\data-display\\format\\DateTime.tsx",
+      "web\\src\\components\\ui\\DataTable.tsx: scoped mobile/search/pagination/export/naming ranges",
+      "web\\src\\components\\ui\\Button.tsx:1-125",
+      "web\\src\\components\\ui\\Select.tsx:1-140",
+      "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "web\\src\\components\\charts\\ChartContainer.tsx: scoped props/state/metadata/alternative/export ranges",
+      "web\\src\\components\\motion\\FadeIn.tsx",
+      "web\\src\\i18n\\en\\locale-automations.json: parsed read-only",
+      "internal\\api\\router.go:3847-3884",
+      "internal\\api\\automation\\history.go",
+      "internal\\database\\automation\\history_repo.go",
+      "docs\\frontend-audits\\audit-page-057.json: historical inventory comparator only",
+      ".gitignore:80"
+    ],
+    "prohibitedActivitiesPerformed": 0,
+    "actualRequests": 0,
+    "actualHistoryRecordsRead": 0,
+    "actualIdentitiesRead": 0,
+    "sourceEditsByThisWorker": 0,
+    "testsEditedOrExecuted": 0
+  },
+  "sourceContracts": {
+    "executionVersusCommand": {
+      "evidence": [
+        "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:22-24,40-45,89-95",
+        "web\\src\\api\\types.ts:2620-2640,2735-2747",
+        "internal\\database\\automation\\history_repo.go:24-29,42-68",
+        "internal\\api\\automation\\history.go:140-193",
+        "web\\src\\App.tsx:615,618"
+      ],
+      "meaning": "This route reads automation execution records, not /command-history, live automation SSE events, or a vehicle-command acknowledgement stream. Row status is the execution outcome; actions_succeeded/actions_total are recorded action counts, not proof of downstream vehicle effect. Business partial differs from partial source availability. FSM transitions are time-window associations, not causal proof that the execution caused each transition.",
+      "actions": "New automation and Manage rules navigate only. Filter/page changes alter URL/read scope; opening detail supplies a history record ID. No run/test/undo/retry-command mutation is called by these five feature files."
+    },
+    "vehicleAndHeaderRange": {
+      "routeScope": {"range": true, "vehicle": false},
+      "evidence": [
+        "web\\src\\lib\\workspaceScope.ts:28,95-99,156-175",
+        "web\\src\\components\\layout\\WorkspaceHeader.tsx:33-35,59-65",
+        "web\\src\\components\\layout\\Layout.tsx:1413-1424",
+        "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:29-42",
+        "web\\src\\hooks\\useRangeState.ts:299-331,424-429,656-675"
+      ],
+      "meaning": "The actual /automations/history route is fleet/workflow scoped: the /automations prefix intentionally disables the header vehicle picker. The page does not consume a selected vehicle and sends no vehicle filter; rule filtering is not vehicle filtering. No vehicle-filter capability is invented. The header and mobile drawer provide the one shared range control; no duplicate page picker exists. Header ownership ignores the page persistKey and inherits workspace defaults/preferences.",
+      "bounds": "startInstant -> since and endInstantExclusive -> until; RFC3339 inclusive lower/exclusive upper. Custom/calendar timezone and rolling 24h/live semantics remain in useRangeState. Calendar interpretation defaults to browser timezone; DateTime in=user can use a different saved timezone_user. That mismatch is disclosed below, not silently corrected.",
+      "actualUiInteraction": "NOTRUN"
+    },
+    "readEndpoints": [
+      {"hook": "useAutomations", "hookSource": "web\\src\\api\\hooks\\useAutomations.ts:44-50", "method": "GET", "path": "/automations", "routeSource": "internal\\api\\router.go:3847-3848"},
+      {"hook": "useAutomationHistoryPage", "hookSource": "web\\src\\api\\hooks\\useAutomations.ts:105-125", "method": "GET", "path": "/automations/history", "routeSource": "internal\\api\\router.go:3864-3865"},
+      {"hook": "useAutomationHistoryPage", "hookSource": "web\\src\\api\\hooks\\useAutomations.ts:117-122", "method": "GET", "path": "/automations/{id}/history", "routeSource": "internal\\api\\router.go:3881,3884"},
+      {"hook": "useAutomationExecutionDetail", "hookSource": "web\\src\\api\\hooks\\useAutomations.ts:128-135", "method": "GET", "path": "/automations/history/{historyId}", "routeSource": "internal\\api\\router.go:3864,3866"}
+    ],
+    "hookVerification": "Four relevant route shapes match source registration; no actual requests. limit/offset/status/since/until use exact backend names; the rule ID chooses the per-rule route, not an unsupported global automation_id query. All three read hooks forward signal; detail enables only for non-null ID. History key contains every page/rule/status/bound input.",
+    "paginationAndDenominators": {
+      "evidence": [
+        "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:21,65-84,158-164",
+        "web\\src\\api\\hooks\\useAutomations.ts:108-122",
+        "internal\\api\\automation\\history.go:32-65,103-136,197-226",
+        "internal\\database\\automation\\history_repo.go:190-214,256-301,307-342",
+        "web\\src\\components\\ui\\DataTable.tsx:516-553,925-934"
+      ],
+      "meaning": "Server page size is 25; offset=(page-1)*25. Page count uses envelope total, not loaded rows. SQL count/list/summary/trend use the same HistoryFilter and both bounds; only row fetch applies limit/offset. Stable row ordering is triggered_at DESC,id DESC. Rule/status/range changes reset pagination; high URL pages are clamped after data resolves. Success-rate denominator excludes running/skipped/cancelled/test/undo; summary count differs intentionally from list total. Average-duration population differs from completed-count population (AHQA-03).",
+      "loadedVersusFull": "DataTable receives only current server rows and has its own explicitly labeled Search loaded rows/default loaded-row exports. Separate page Pagination controls full server paging. No full-range export/search or chart CSV/fullscreen capability is claimed. Trend preserves totals when folding UTC daily rows into period prefixes; resolution thresholds use trend row count, not elapsed days."
+    },
+    "trust": {
+      "evidence": [
+        "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:46-47,116,140-156",
+        "web\\src\\features\\automations\\components\\AutomationHistorySummary.tsx:20-65",
+        "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx:13-43",
+        "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx:17-31,87-94",
+        "web\\src\\api\\dataState.ts:187-235",
+        "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:55-105"
+      ],
+      "meaning": "With retained data, refresh failure/paused status does not replace rows, summary, chart or detail with a fatal error. Shared warnings provide nonblocking retry; independent rule-list failure does not erase history. Initial genuine error uses QueryError. Successful validated empty history has an explanatory state and Manage rules link. Missing duration is a dash; zero duration remains zero; zero completed runs makes rate/average undefined. Cold paused/no-data behavior is not authoritative emptiness (AHQA-01).",
+      "coupling": "Rows/count/summary/trend are one backend envelope; aggregate failure fails that source rather than retaining a separately fresh subsource. Rule options and execution detail are separate queries.",
+      "freshnessLimit": "DataState computes last-success time but page summary freshness text is static and warning does not show an actual age. No fresh/live correctness claim. No polling/recovery behavior was exercised."
+    },
+    "rawSiSignDisplayLocalePreferences": {
+      "evidence": [
+        "web\\src\\features\\automations\\components\\AutomationHistorySummary.tsx:25-35",
+        "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx:16-25",
+        "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx:44-56,67",
+        "web\\src\\hooks\\useNumberFormatting.ts:20-49",
+        "web\\src\\components\\data-display\\format\\DateTime.tsx:87-96,117-149",
+        "web\\src\\lib\\timezone.ts:29-49",
+        "web\\src\\lib\\dateFormat.ts:29-63,330-334"
+      ],
+      "meaning": "Hooks preserve raw payloads. Existing execution timing wire fields duration_ms/avg_duration_ms are milliseconds, not canonical SI seconds; this historical instrumentation contract is disclosed, not remigrated in QA. The brief adapts avg milliseconds to raw metric seconds (/1000) and formats at display (x1000); row/detail use the millisecond formatter. Primary content has no distance/speed/temperature/pressure/energy values requiring automotive unit conversion. Opaque action JSON is raw diagnostic content, not validated physical display. No legacy converter call was found.",
+      "preferences": "Brief/number adapters and DateTime subscribe to existing settings; durations/rate use locale/precision-aware numeric formatting. Row/detail action-count ratios bypass that path (AHQA-07). DateTime in=user uses saved user timezone/locale, while range defaults to browser timezone and trend buckets are UTC (AHQA-04). Existing date FormatOptions do not carry an explicit 12/24h preference; that preference mapping is not claimed verified.",
+      "signs": "No abs/clamp rewrites of measured source values in these five files. Negative elapsed durations are invalid, not a valid signed physical quantity; the shared row/detail formatter currently displays them (AHQA-08). Null versus zero brief behavior is explicit. Invalid/huge/signed automotive measurements inside opaque JSON remain unverified.",
+      "observability": "No page-local RUM bootstrap or direct EventSource/fetch appears. List history handlers create spans and traced errors; detail handler lacks the same required instrumentation (AHQA-09)."
+    }
+  },
+  "sectionsAndActions": {
+    "topLevelCount": 4,
+    "sections": [
+      {"name": "Execution summary", "source": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:103-112", "retained": "Six metrics, scope, context, status, provenance and unavailable/error fallback."},
+      {"name": "Execution activity", "source": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:115-116", "retained": "Server full-range trend; success/failed/other series, hidden-series identities, shared chart alternative and image exports."},
+      {"name": "Filtered history", "source": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:119-166", "retained": "Rule/status filters, independent rules trust/retry, loading/error/empty branches, seven-column table, detail action and 25-row pagination."},
+      {"name": "Execution detail overlay", "source": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:169", "retained": "Six metadata fields, error, optional action results and optional FSM transitions, retained warning, retry and dismissal."}
+    ],
+    "optionalDetailSubsections": 2,
+    "actionsPreservedInSource": [
+      "Copy link via existing PageLayout",
+      "Navigate to /automations/new and /automations/list",
+      "Select rule and eight known business statuses; preserve unrelated URL keys",
+      "Change server page and reset pagination with rule/status/range changes",
+      "Open record detail by history ID and dismiss existing Modal",
+      "Retry history, rule options and detail independently",
+      "Persist automations:history column layout and retain loaded-row search/export",
+      "Persist automation-history-trend legend identities and chart image export behavior"
+    ],
+    "sourceAccessibility": "Localized visible/accessible Select labels; shared label IDs/44px mobile minimum; native Link navigation with shared focus chrome; named table caption; text outcome labels; chart ariaLabel/data/dataColumns; shared Modal; FadeIn uses existing reduction preference. Actual keyboard, contrast, screen reader, forced-colors and native target sizes are NOTRUN.",
+    "sourceMobile": "Filter wrapper allocation was repaired in accepted source; w-full/min-w-0 and wrapped toolbar remain. Shared header is xl-only and equivalent View settings is in mobile drawer. Detail metadata stacks then splits at sm, JSON wraps/contains overflow. Table preserves hidden metadata through detail, but visible execution identity and target styling remain problematic (AHQA-06). No browser viewport acceptance.",
+    "i18n": "51 unique literal automations keys plus eight known status outcomes were checked as one deduplicated set against canonical locale-automations.json: 51 checked, zero missing/nonstring. Shared common keys, other locales, runtime namespaces, dynamic unknown statuses and RTL were not validated. Raw rule names/errors/trigger types/action JSON are backend content, not falsely labeled translated strings."
+  },
+  "findings": [
+    {
+      "id": "AHQA-01",
+      "severity": "high",
+      "file": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx",
+      "lines": [79, 144, 150, 153],
+      "rule": "MDC-026; authoritative empty versus initial/paused",
+      "mechanism": "No-data paused query can be pending but not isLoading. Page loading gate tests isLoading only; fatalError is null for paused initial state and rows default to []. It therefore selects the authoritative 'No executions match' branch without a successful response. Summary marks unavailable, chart renders nonloading empty points without empty=true, and detail selects unavailable on the equivalent source state.",
+      "support": ["web\\src\\api\\dataState.ts:193-225", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:55", "web\\src\\features\\automations\\components\\AutomationHistorySummary.tsx:45-61", "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx:33-37", "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx:27-31,87-94"],
+      "owner": "Parent-assigned automation-history feature owner",
+      "need": "Handle initial/paused without retained data distinctly from successful empty; preserve retained source branches and individual recovery.",
+      "evidenceClass": "Source branch mechanism; offline reproduction NOTRUN"
+    },
+    {
+      "id": "AHQA-02",
+      "severity": "high",
+      "file": "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx",
+      "lines": [60, 74],
+      "rule": "MDC-026; section identity and partial/unknown source completeness",
+      "mechanism": "Action-results and FSM-transition sections disappear when arrays are empty/null. The backend additionally maps no vehicle, successful empty and FSM lookup error to the same [] and discards the returned count from a 100-row query. A successful outer record does not prove complete transitions or successful transition retrieval.",
+      "support": ["internal\\api\\automation\\history.go:170-185", "web\\src\\api\\types.ts:2735-2747"],
+      "owner": "Parent-assigned automation-history feature owner plus execution-detail API/type integration owner",
+      "need": "Keep neutral subsection shells; expose availability/failure/truncation metadata at the integration owner before asserting no transitions or complete history. Preserve the existing record payload.",
+      "evidenceClass": "Source-proven conditional suppression and information loss; backend execution NOTRUN"
+    },
+    {
+      "id": "AHQA-03",
+      "severity": "medium",
+      "file": "internal\\database\\automation\\history_repo.go",
+      "lines": [285, 289],
+      "rule": "MDC-033; explicit aggregate populations",
+      "mechanism": "Completed count excludes running/skipped/cancelled/test/undo; AVG(duration_ms) excludes only test/undo and missing durations. Thus skipped/cancelled/running rows with recorded duration can contribute to the average accompanying Completed runs. Brief hides the average entirely when completed count is zero, regardless of the average's distinct population.",
+      "support": ["web\\src\\features\\automations\\components\\AutomationHistorySummary.tsx:23-34"],
+      "owner": "Automation-history aggregate integration owner; feature owner for accurate population description",
+      "need": "Agree and disclose the duration population, or align SQL with the intended completed-run population. Do not silently recalculate from page rows.",
+      "evidenceClass": "Source-defined population mismatch; existence/frequency of affected records NOTRUN"
+    },
+    {
+      "id": "AHQA-04",
+      "severity": "medium",
+      "file": "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx",
+      "lines": [19, 39, 49],
+      "rule": "MDC-044; timezone and localized period interpretation",
+      "mechanism": "Trend day strings originate from UTC SQL buckets, are sliced into raw ISO periods and shown on XAxis/fallback Period without UTC/resolution disclosure. User-context record timestamps can be rendered in a saved timezone different from the browser-calendar range and from UTC buckets. This is not evidence of incorrectly filtered SQL, but the visible period interpretation is ambiguous.",
+      "support": ["internal\\database\\automation\\history_repo.go:259", "web\\src\\hooks\\useRangeState.ts:324-331,656-669", "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:29-31,105-109", "web\\src\\components\\data-display\\format\\DateTime.tsx:87-96", "web\\src\\lib\\timezone.ts:29-36"],
+      "owner": "Automation-history chart feature owner; existing workspace date/format owner for any shared timezone-policy change",
+      "need": "Disclose actual UTC bucket timezone/resolution and format display labels with existing locale tools without re-bucketing aggregates blindly.",
+      "evidenceClass": "Source-defined timezone mismatch/disclosure gap; DST/locale interaction NOTRUN"
+    },
+    {
+      "id": "AHQA-05",
+      "severity": "medium",
+      "file": "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx",
+      "lines": [54, 55, 56],
+      "rule": "MDC-010/034; existing theme/chart presentation owners",
+      "mechanism": "All three Bar fills are feature-local fixed hex values rather than deriving from the existing chart/semantic preference owners. Shared frame styling does not transform these explicit incoming series fills.",
+      "owner": "Automation-history chart feature owner",
+      "need": "Use existing restrained chart/semantic roles while preserving success/failed/other identities, counts, hidden-series state and saved preferences.",
+      "evidenceClass": "Three actual fixed-fill source matches; rendered saturation/contrast NOTRUN"
+    },
+    {
+      "id": "AHQA-06",
+      "severity": "medium",
+      "file": "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx",
+      "lines": [16, 18, 19, 36],
+      "rule": "MDC-020/023/040/043; distinguishable reachable execution actions",
+      "mechanism": "Detail buttons use only the rule name (or Rule #id), !h-auto and !p-0. Repeated executions of a rule have identical accessible action names. Below md, the supplied rule/status allow-list hides Triggered time; no mobilePresentation is supplied, so visible rows can be indistinguishable until individually opened. The detail does preserve hidden metadata, so this is not total field loss. Source overrides remove the shared button's default height/padding; an actual WCAG spacing/size exception has not been demonstrated.",
+      "support": ["web\\src\\components\\ui\\DataTable.tsx:506-510,733-743", "web\\src\\components\\ui\\Button.tsx:35-40,64-75", "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx:42-56"],
+      "owner": "Automation-history table feature owner",
+      "need": "Preserve an execution-specific mobile identity/accessibility name and an adequate existing shared target; retain every hidden field/detail action.",
+      "evidenceClass": "Source identity/target override mechanism; measured pixel targets and native/keyboard behavior NOTRUN"
+    },
+    {
+      "id": "AHQA-07",
+      "severity": "low",
+      "file": "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx",
+      "lines": [24],
+      "rule": "MDC-033/044; locale-driven numeric display",
+      "mechanism": "Succeeded/total action counts are interpolated directly into a string rather than using the subscribed locale-aware integer formatter. Detail renders the same numbers directly. Locale/number-system settings therefore do not govern these counts, unlike rate and duration formatting.",
+      "support": ["web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx:56", "web\\src\\hooks\\useNumberFormatting.ts:27-42"],
+      "owner": "Automation-history table/detail feature owner",
+      "need": "Format each known action count through existing locale-aware count formatting, retaining exact ratio meaning and unknown/invalid distinctions.",
+      "evidenceClass": "Source formatter bypass; locale runtime NOTRUN"
+    },
+    {
+      "id": "AHQA-08",
+      "severity": "medium",
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "lines": [330, 331, 332, 333],
+      "rule": "MDC-033; invalid negative elapsed duration",
+      "mechanism": "formatDurationMs rejects non-finite/null input but not negative elapsed durations; any negative finite value enters the '<1000' branch and is displayed as negative milliseconds. Row/detail pass every non-null duration_ms directly. assertHistoryPage validates row identity/status but not duration, so source validation does not close this path. The brief's duration metric adapter and row/detail display can consequently disagree on invalid duration handling.",
+      "support": ["web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx:25", "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx:48", "web\\src\\api\\hooks\\useAutomations.ts:90-98"],
+      "owner": "Existing date/number-format owner, with bounded automation-history caller regression responsibility",
+      "need": "Treat negative elapsed duration as invalid, without erasing legitimate zero or signs on unrelated physical/net metrics.",
+      "evidenceClass": "Source predicate/call-path evidence; no malformed payload supplied and no tests executed"
+    },
+    {
+      "id": "AHQA-09",
+      "severity": "medium",
+      "file": "internal\\api\\automation\\history.go",
+      "lines": [144, 152, 154],
+      "rule": "observability.instructions.md required rules 1 and 7",
+      "mechanism": "GetHistoryDetail does not create the required handler-local span, unlike both history-list handlers. Its record-read Error log has no trace_id; its optional FSM warning also lacks trace context. This is a direct read-endpoint observability gap, not a claim that global HTTP tracing is absent.",
+      "support": ["internal\\api\\automation\\history.go:22-23,36,72-73,178-181"],
+      "owner": "Automation execution-detail backend observability owner",
+      "need": "Apply existing handler span/error trace propagation at that integration owner; no backend changes in this QA item.",
+      "evidenceClass": "Source instrumentation absence; trace collector/runtime NOTRUN"
+    }
+  ],
+  "candidatesNotExecuted": [
+    {
+      "id": "AHQC-01",
+      "source": "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx:59,65-67",
+      "candidate": "Fixed rose error text may fail some light/custom composed contrasts; opaque action JSON may contain measurements requiring diagnostic unit context or sensitive values requiring existing redaction policy.",
+      "owner": "Feature presentation/privacy and action-result contract owners",
+      "whyNotFinding": "No actual payload, computed color, privacy policy violation or physical field semantics was observed. No identities/history were accessed.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "AHQC-02",
+      "source": "web\\src\\features\\automations\\components\\AutomationHistorySummary.tsx:53; web\\src\\components\\feedback\\StaleRefreshWarning.tsx:75-105; web\\src\\lib\\dateFormat.ts:29-63",
+      "candidate": "Review actual last-success age/timezone and explicit 12/24h preference presentation under retained/offline/locale changes.",
+      "owner": "Existing source-trust/date-format preference owners",
+      "whyNotFinding": "Static text/predicate evidence does not demonstrate the full shell/formatter preference presentation or an actual stale-age error.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "AHQC-03",
+      "source": "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx:15-27; web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:76-84",
+      "candidate": "Verify large sparse/dense trend windows, monthly/yearly resolution disclosure, rapid scope changes with open detail, high-page correction, loaded search/export expectations and extreme translated content.",
+      "owner": "Parent-authorized scoped runtime/test QA owner",
+      "whyNotFinding": "Aggregation retains counts in source and server pagination is bounded. No runtime data/performance or stale-detail defect was established.",
+      "status": "NOTRUN"
+    }
+  ],
+  "counts": {
+    "sourceFindings": 9,
+    "highSeverity": 2,
+    "mediumSeverity": 6,
+    "lowSeverity": 1,
+    "candidatesNotExecuted": 3,
+    "hooksInspected": 3,
+    "readRouteShapes": 4,
+    "staticRouteMatches": 4,
+    "unmatchedReadRouteShapes": 0,
+    "topLevelSections": 4,
+    "optionalDetailSubsections": 2,
+    "literalAndKnownStatusTranslationKeysChecked": 51,
+    "missingOrNonstringTranslationKeys": 0,
+    "tests": {"discovered": 0, "executed": 0, "passed": 0, "failed": 0, "skipped": 0},
+    "testNames": [],
+    "zeroDiscoveryIsPass": false
+  },
+  "scopedScan": {
+    "files": 5,
+    "staticInlineVariableMatchLines": 0,
+    "rawControlMatchLinesCaseSensitive": 0,
+    "directVendorImportMatchLines": 0,
+    "oldApiImportMatchLines": 0,
+    "untypedAnyMatchLines": 0,
+    "neonBodyMatchLines": 0,
+    "legacyPhysicalHelperMatchLines": 0,
+    "directFetchEventSourceMatchLines": 0,
+    "directReadHookDoublePrefixMatchLines": 0,
+    "directReadHookCamelCaseQueryMatchLines": 0,
+    "fixedSeriesHexFillMatchLines": 3,
+    "scopeLimit": "Text scan of the five feature files; hook scans use only relevant read slices. Zero matched patterns are not a clean all-rules/typecheck/runtime claim. C003 shell rg unavailable; C004 raw-control false positives were corrected by C005 case-sensitive scan and independent rg tool."
+  },
+  "preservation": {
+    "currentLineCounts": {
+      "AutomationHistoryPage.tsx": 172,
+      "AutomationHistorySummary.tsx": 67,
+      "AutomationHistoryTrend.tsx": 62,
+      "AutomationHistoryTable.tsx": 41,
+      "AutomationExecutionDetail.tsx": 96
+    },
+    "currentTotal": 438,
+    "historicalInventoryTotal": 428,
+    "currentOverInventoryPercent": 102.34,
+    "historicalInventorySections": 4,
+    "currentSections": 4,
+    "currentJsxShellCounts": {"GlassPanel": 2, "ChartContainer": 1, "OperationalBrief": 1, "Modal": 1},
+    "historicalJsxShellCounts": {"GlassPanel": 2, "ChartContainer": 1, "OperationalBrief": 1, "Modal": 1},
+    "comparator": "docs\\frontend-audits\\audit-page-057.json preservation fields",
+    "limit": "Historical inventory comparison exceeds 70% and preserves named sections. It is not immutable original/Phase5 baseline proof; Git/preservation capture was prohibited. No source was shortened or rewritten by this audit.",
+    "initialSha256": {
+      "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx": "D0CB681B3D0278D6D4B8A7DA198C19AF7A344804015FC4A4A457E0751A86EAD9",
+      "web\\src\\features\\automations\\components\\AutomationHistorySummary.tsx": "C750776B0F45434E10A25A0DCF71A2D64716C1A140A2D328C7E39C0391A48A74",
+      "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx": "1CFEBFF7BFE9208EC0EFF36C5304F8D3DE9276408953DAD3F2B3A9B9FD37CD8E",
+      "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx": "6211B7679E7B337F7A666B41EEFB75F94E62AFF9D16210D7799FF173344F2F24",
+      "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx": "D8285CCD312863974BB485548A8E0DB24B49844401F9856B34020FACCACA3807"
+    },
+    "finalDriftValidation": "C008 exited 0: five actual file hashes checked, zero feature-source drift. Shared-support drift is not asserted absent."
+  },
+  "commands": [
+    {"id": "C001", "command": "PowerShell Test via [IO.File]::Exists and conditional Get-Content -TotalCount 70 for exact report/log", "numericExit": 0, "result": "Both exact files absent before this audit."},
+    {"id": "C002", "command": "PowerShell Get-Content migration-queue.md; print exact Phase6 QA and Phase5 acceptance rows with source line numbers", "numericExit": 0, "result": "Exact QA pending; Phase5 dependency accepted source-only; queue unchanged."},
+    {"id": "C003", "command": "PowerShell & rg --line-number --no-heading --color never -e $c.pattern -- $files; planned scoped scan/hash/section loop", "numericExit": 1, "result": "rg shell executable unavailable; aborted before any scan. No package install or helper used."},
+    {"id": "C004", "command": "PowerShell Select-String -LiteralPath $files -Pattern $c.pattern; Get-Content line counts; Get-FileHash -Algorithm SHA256; scoped hook-slice and section counts; Tee-Object sole log", "numericExit": 0, "result": "438 total lines; fingerprints; nine component/shell match lines; restricted scan counts. Initial raw-control count=3 was case-insensitive shared-component false positives, not violations."},
+    {"id": "C005", "command": "PowerShell Select-String -LiteralPath $paths -Pattern '<(button|input|textarea|select|table)\\b','<(GlassPanel|ChartContainer)\\b','fill=\"#[0-9a-fA-F]{6}\"' -CaseSensitive; exact display mechanism scan", "numericExit": 0, "result": "Corrected raw controls=0; GlassPanel/ChartContainer=3 (2+1); fixed fills=3; display evidence lines=11."},
+    {"id": "C006", "command": "PowerShell Get-Content locale-automations.json -Raw | ConvertFrom-Json -AsHashtable; deduplicate literal automations keys from five files plus eight known status keys; traverse canonical key paths", "numericExit": 0, "result": "51 unique keys; 0 missing/nonstring; no catalog edits."},
+    {"id": "C007", "command": "PowerShell Get-Content router.go scoped rows; Select-String history_repo.go aggregate/bound/order predicates; ConvertFrom-Json audit-page-057.json preservation comparator", "numericExit": 0, "result": "Four relevant read route shapes source-matched; bound/aggregate predicates recorded; 438/428=102.34%; four/four top-level sections."},
+    {"id": "C008", "command": "PowerShell ConvertFrom-Json report; verify required counts, exact primary-citation line bounds, owned write paths and current source hashes; record count/NOTRUN receipts in sole log", "numericExit": 0, "result": "JSON valid; 9 findings (2 high,6 medium,1 low),3 candidates; primary line bounds valid; five hashes checked,zero drift; test discovery/execution/passes/failures/skips all zero."}
+  ],
+  "finalPersistenceValidation": "C009 re-reads this sealed JSON, checks C001-C008 numeric exits/counts and records final report SHA256, its own actual numeric exit and ALL RELEASED/NO POST-RETURN WRITES in the sole ignored log. The final terminal receipt is authoritative; no asynchronous command remains.",
+  "toolReadsAndSearches": "Parallel view/glob/rg tools inspected only assigned feature and direct support/authority paths. Independent case-sensitive rg source probe returned No matches found for raw controls/static inline styles/direct/old imports/double prefix/camelCase parameters. Tool-search output is not a numeric shell exit.",
+  "notRun": [
+    {"check": "npx tsc --noEmit", "status": "NOTRUN", "reason": "Global compiler gate excluded by this bounded source-only assignment; no clean TypeScript claim."},
+    {"check": "npm run build, lint, full suites and focused tests", "status": "NOTRUN", "reason": "No source/test changes; user prohibited code/tests/fullsuite/helper execution."},
+    {"check": "audit.sh and verify.sh combined helpers", "status": "NOTRUN", "reason": "Read as skill guidance; user prohibited helper/global-gate execution. Direct native scans/static route comparison used instead."},
+    {"check": "Browser/API/native/server/actual history/identity", "status": "NOTRUN", "reason": "Explicit prohibition; zero requests, actual records, browser sessions and identity reads."},
+    {"check": "Mission43-44 visual/responsive/theme/a11y matrix", "status": "NOTRUN", "reason": "320/375/390/430/768/1024/1280/1440/1920/2560, narrow allocated containers, long labels, RTL, 200% text, dark/light/custom/forced colors, keyboard/focus/screen-reader/touch/reduced-motion remain unaccepted."},
+    {"check": "Immutable original/Phase5 preservation baseline and Git working tree", "status": "NOTRUN", "reason": "Git/capture/helper forbidden; historical inventory comparison is explicitly narrower."},
+    {"check": "Other locale completeness, common-key catalogs and runtime namespace behavior", "status": "NOTRUN", "reason": "Only the 51 directly owned canonical automation labels/statuses were checked."}
+  ],
+  "needs": [
+    "Parent alone triages nine exact source findings to exclusive existing/new narrow owners; no queue edits or remigration in this item.",
+    "Resolve cold paused trust and detail subsection/completeness first; preserve full server-range row/summary/trend scope.",
+    "Integration owners review duration population and detail tracing/availability/truncation contract; feature owners address chart timezone/palette and mobile execution identity/count locale.",
+    "Shared formatter owner handles invalid elapsed-duration sign without changing legitimate signed physical/net values.",
+    "Parent-authorized supported-runtime scoped tests/typecheck and mission43-44 browser/native/visual/keyboard QA are still required; all candidates remain NOTRUN."
+  ],
+  "release": {
+    "allSourceClaims": "RELEASED",
+    "report": "RELEASED",
+    "log": "RELEASED",
+    "json": "RELEASED",
+    "commands": "RELEASED",
+    "ongoingCommandsOrServices": 0,
+    "postReturnWrites": "NONE"
+  }
+}

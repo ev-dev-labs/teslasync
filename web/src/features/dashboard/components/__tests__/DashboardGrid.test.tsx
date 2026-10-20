@@ -130,6 +130,20 @@ afterEach(() => {
 });
 
 describe('DashboardGrid — render paths', () => {
+  it('keeps a native, nonzero-height drop grid for an empty dashboard in edit mode', async () => {
+    const { container } = renderGrid({ dashboard: makeDashboard([]), editMode: true });
+    await waitFor(() => expect(container.querySelector('.react-grid-layout')).toHaveClass('min-h-72'));
+  });
+  it('retains native drop and resize surface when editing at the narrowest breakpoint', async () => {
+    setViewport(375);
+    const { container } = renderGrid({
+      dashboard: makeDashboard([{ id: 'wid-1', widgetId: W1_ID }]),
+      editMode: true,
+    });
+    await waitFor(() => expect(container.querySelector('.react-grid-layout')).toBeInTheDocument());
+    expect(screen.queryByTestId('dashboard-mobile-stack')).toBeNull();
+    expect(container.querySelector('.react-resizable-handle')).toBeInTheDocument();
+  });
   it('renders the desktop RGL grid (not the mobile stack) on a wide viewport', () => {
     setViewport(1440);
     const { container } = renderGrid({ dashboard: makeDashboard([
@@ -144,6 +158,9 @@ describe('DashboardGrid — render paths', () => {
     expect(screen.getAllByRole('button', { name: /^Expand /i })).toHaveLength(2);
     expect(screen.getByRole('button', { name: `Expand ${W1_NAME}` })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Expand ${W2_NAME}` })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Expand ${W1_NAME}` })).toHaveClass('right-12');
+    expect(container.querySelector('.widget-panel')).toHaveClass('[&_[data-role=widget-shell-header]]:pr-28');
+    expect(container.querySelector('.widget-container')).not.toHaveClass('[--dashboard-widget-chrome-inset:4rem]');
   });
 
   it('renders the mobile flex stack (not RGL) on a narrow viewport', () => {
@@ -231,6 +248,22 @@ describe('DashboardGrid — edit-mode chrome', () => {
 });
 
 describe('DashboardGrid — fullscreen overlay', () => {
+  it.each([375, 1440])('portals fullscreen outside the grid and restores keyboard focus at %ipx', async width => {
+    setViewport(width);
+    const { container } = renderGrid({ dashboard: makeDashboard([{ id: 'wid-1', widgetId: W1_ID }]) });
+    const expand = screen.getByRole('button', { name: `Expand ${W1_NAME}` });
+    expand.focus();
+    fireEvent.click(expand);
+    const dialog = screen.getByRole('dialog', { name: W1_NAME });
+    expect(container).not.toContainElement(dialog);
+    expect(document.body).toContainElement(dialog);
+    const exit = screen.getByRole('button', { name: /exit fullscreen/i });
+    expect(exit).toHaveFocus();
+    fireEvent.keyDown(exit, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: W1_NAME })).toBeNull());
+    await waitFor(() => expect(expand).toHaveFocus());
+  });
+
   it('opens the fullscreen overlay on expand and closes it on exit', () => {
     setViewport(1440);
     renderGrid({ dashboard: makeDashboard([{ id: 'wid-1', widgetId: W1_ID }]) });

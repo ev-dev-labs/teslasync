@@ -1,18 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { DestinationEvidenceBrief } from '../components/operationalbrief-a-m/DestinationEvidenceBrief';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { Button, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import type { Drive } from '@/types/driving';
 
 import {
   DestinationTransitionsEvidenceQuality,
-  DestinationTransitionsKpiBand,
   DestinationTransitionsMethodology,
   DestinationVisitShareChart,
   EmpiricalInformationEdges,
@@ -31,16 +35,27 @@ const DRIVE_HISTORY_LIMIT = 1_000;
 const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function DestinationTransitionsPage() {
-  const { t, i18n } = useTranslation();
-  usePageTitle(t('destinationTransitions.title', 'Destination Transitions'));
+  const { t } = useTranslation();
+  const { locale } = useNumberFormatting();
+  usePageTitle(t('destinationTransitions.title', 'Destination transitions'));
 
   const { vehicleId } = useSelectedVehicle();
   const selectedTimeZone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
-  const [nowMs] = useState(() => Date.now());
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
+  const analysisScope = useMemo(
+    () => ({ vehicleId, initialNowMs: Date.now() }),
+    [vehicleId],
+  );
+  // A refresh failure keeps the last successful snapshot's classification clock.
+  const snapshotAt = drivesState.updatedAt;
+  const nowMs =
+    snapshotAt != null && Number.isFinite(snapshotAt)
+      ? snapshotAt
+      : analysisScope.initialNowMs;
   const hasCachedData =
-    vehicleId != null && drivesQuery.data !== undefined;
+    vehicleId != null && drivesState.hasData;
   const isResolved =
     vehicleId != null && (hasCachedData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
@@ -58,32 +73,50 @@ export default function DestinationTransitionsPage() {
     [drives, nowMs, selectedTimeZone],
   );
   const state: DestinationTransitionsQueryState = {
+    sourceTrust: drivesState,
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && !hasCachedData && drivesQuery.isLoading,
+      vehicleId != null && drivesState.status === 'initial' && !drivesState.isRefreshBlocked,
     isResolved,
     error:
-      drivesQuery.isError && !hasCachedData
-        ? drivesQuery.error
-        : null,
+      drivesState.fatalError,
     refreshError:
-      drivesQuery.isError && hasCachedData
-        ? drivesQuery.error
-        : null,
+      drivesState.refreshError,
     onRetry: () => void drivesQuery.refetch(),
   };
-  const locale = i18n.language;
   const timeZone = model.timeZone;
   return (
-    <PageContainer
-      title={t('destinationTransitions.title', 'Destination Transitions')}
+    <PageLayout
+      title={t('destinationTransitions.title', 'Destination transitions')}
+      query={drivesQuery}
       subtitle={t(
         'destinationTransitions.subtitle',
         'Continuity-safe historical destination flows, support, temporal profiles, and complete returned-row accounting',
       )}
     >
+      {state.vehicleSelected && drivesState.isRefreshBlocked && !drivesState.hasData && !state.error && (
+        <AlertBanner
+          variant="info"
+          role="status"
+          aria-live="polite"
+          title={t('dataSources.status.paused', 'Refresh paused')}
+          data-testid="destination-transitions-initial-pause"
+        >
+          <Text as="p" variant="bodySm">
+            {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+          </Text>
+          {drivesState.retry != null && (
+            <Button type="button" variant="ghost" size="sm" onClick={drivesState.retry}>
+              {t('destinationTransitions.states.retry', 'Retry')}
+            </Button>
+          )}
+        </AlertBanner>
+      )}
+      {drivesState.isRefreshBlocked && drivesState.hasData && (
+        <StaleRefreshWarning state={drivesState} hideRetry={drivesState.refreshError != null} label={t('destinationTransitions.title', 'Destination transitions')} />
+      )}
       <FadeIn>
-        <DestinationTransitionsKpiBand
+        <DestinationEvidenceBrief
           model={model} state={state} locale={locale}
         />
       </FadeIn>
@@ -174,6 +207,6 @@ export default function DestinationTransitionsPage() {
           timeZone={timeZone}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

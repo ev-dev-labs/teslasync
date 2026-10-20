@@ -81,7 +81,7 @@ func TestRepositoryInterfaceSurfaces(t *testing.T) {
 			iface: reflect.TypeOf((*repository.VehicleRepository)(nil)).Elem(),
 			methods: []methodSpec{
 				{"GetByID", []reflect.Type{ctxT, strT}, []reflect.Type{vehPtr, errT}},
-				{"GetByUserID", []reflect.Type{ctxT, strT}, []reflect.Type{vehSlice, errT}},
+				{"GetAll", []reflect.Type{ctxT}, []reflect.Type{vehSlice, errT}},
 				{"GetByVIN", []reflect.Type{ctxT, strT}, []reflect.Type{vehPtr, errT}},
 				{"Save", []reflect.Type{ctxT, vehPtr}, []reflect.Type{errT}},
 				{"Delete", []reflect.Type{ctxT, strT}, []reflect.Type{errT}},
@@ -261,14 +261,12 @@ func (f *fakeVehicleRepo) GetByVIN(_ context.Context, vin string) (*vehicle.Vehi
 	return nil, fmt.Errorf("vehicle vin %s: %w", vin, domain.ErrNotFound)
 }
 
-func (f *fakeVehicleRepo) GetByUserID(_ context.Context, userID string) ([]vehicle.Vehicle, error) {
+func (f *fakeVehicleRepo) GetAll(_ context.Context) ([]vehicle.Vehicle, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var out []vehicle.Vehicle
 	for _, v := range f.byID {
-		if v.UserID == userID {
-			out = append(out, v)
-		}
+		out = append(out, v)
 	}
 	return out, nil
 }
@@ -630,7 +628,7 @@ func TestVehicleRepositoryContract(t *testing.T) {
 	ctx := context.Background()
 	var repo repository.VehicleRepository = newFakeVehicleRepo()
 
-	v := &vehicle.Vehicle{ID: "v1", UserID: "u1", VIN: "5YJ3E1EA7KF123456", DisplayName: "My Tesla"}
+	v := &vehicle.Vehicle{ID: "v1", TeslaID: 1, VIN: "5YJ3E1EA7KF123456", DisplayName: "My Tesla"}
 
 	t.Run("save then get", func(t *testing.T) {
 		if err := repo.Save(ctx, v); err != nil {
@@ -662,18 +660,25 @@ func TestVehicleRepositoryContract(t *testing.T) {
 		}
 	})
 
-	t.Run("get by user id filters", func(t *testing.T) {
-		_ = repo.Save(ctx, &vehicle.Vehicle{ID: "v2", UserID: "u2", VIN: "OTHER"})
-		mine, err := repo.GetByUserID(ctx, "u1")
+	t.Run("get all shared fleet", func(t *testing.T) {
+		_ = repo.Save(ctx, &vehicle.Vehicle{ID: "v2", TeslaID: 2, VIN: "OTHER"})
+		mine, err := repo.GetAll(ctx)
 		if err != nil {
-			t.Fatalf("GetByUserID: %v", err)
+			t.Fatalf("GetAll: %v", err)
 		}
-		if len(mine) != 1 || mine[0].ID != "v1" {
-			t.Errorf("GetByUserID(u1): got %+v, want single v1", mine)
+		if len(mine) != 2 {
+			t.Errorf("GetAll: got %+v, want both fleet vehicles", mine)
 		}
-		none, _ := repo.GetByUserID(ctx, "ghost")
+		ids := map[string]int64{}
+		for _, item := range mine {
+			ids[item.ID] = item.TeslaID
+		}
+		if !reflect.DeepEqual(ids, map[string]int64{"v1": 1, "v2": 2}) {
+			t.Errorf("shared fleet identities = %v, want both canonical identities", ids)
+		}
+		none, _ := newFakeVehicleRepo().GetAll(ctx)
 		if len(none) != 0 {
-			t.Errorf("GetByUserID(ghost): got %d, want 0", len(none))
+			t.Errorf("GetAll on empty fleet: got %d, want 0", len(none))
 		}
 	})
 
@@ -1143,15 +1148,15 @@ func TestFakeVehicleRepoConcurrentSave(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			id := fmt.Sprintf("v%d", i)
-			_ = repo.Save(ctx, &vehicle.Vehicle{ID: id, UserID: "u1"})
+			_ = repo.Save(ctx, &vehicle.Vehicle{ID: id})
 			_, _ = repo.GetByID(ctx, id)
 		}(i)
 	}
 	wg.Wait()
 
-	got, err := repo.GetByUserID(ctx, "u1")
+	got, err := repo.GetAll(ctx)
 	if err != nil {
-		t.Fatalf("GetByUserID: %v", err)
+		t.Fatalf("GetAll: %v", err)
 	}
 	if len(got) != n {
 		t.Errorf("after %d concurrent saves: got %d, want %d", n, len(got), n)

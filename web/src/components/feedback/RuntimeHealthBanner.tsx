@@ -23,16 +23,15 @@ function componentLabel(
   component: string,
   t: ReturnType<typeof useTranslation>['t'],
 ): string {
-  const fallbacks: Record<string, string> = {
-    database: 'Database',
-    mqtt: 'MQTT',
-    redis: 'Redis',
-    telemetry: 'Fleet Telemetry',
-    tesla_api: 'Tesla API',
-    worker: 'Background worker',
-  };
-  const fallback = fallbacks[component] ?? component.replace(/_/g, ' ');
-  return t(`runtimeHealth.components.${component}`, fallback);
+  switch (component) {
+    case "database": return t("runtimeHealth.components.database", "Database");
+    case "mqtt": return t("runtimeHealth.components.mqtt", "MQTT");
+    case "redis": return t("runtimeHealth.components.redis", "Redis");
+    case "telemetry": return t("runtimeHealth.components.telemetry", "Fleet Telemetry");
+    case "tesla_api": return t("runtimeHealth.components.tesla_api", "Tesla API");
+    case "worker": return t("runtimeHealth.components.worker", "Background worker");
+    default: return component.replace(/_/g, ' ');
+  }
 }
 
 export function RuntimeHealthBanner() {
@@ -92,6 +91,8 @@ export function RuntimeHealthBanner() {
           <Button
             size="sm"
             variant="outline"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9"
             icon={<Gauge className="h-4 w-4" />}
             onClick={() => navigate('/system-status')}
           >
@@ -100,6 +101,8 @@ export function RuntimeHealthBanner() {
           <Button
             size="sm"
             variant="outline"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9"
             icon={<Bell className="h-4 w-4" />}
             onClick={() => navigate('/notifications/channels')}
           >

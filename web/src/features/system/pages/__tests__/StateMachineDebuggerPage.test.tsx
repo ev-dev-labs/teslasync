@@ -13,10 +13,9 @@
  *   3. Empty fleet hides the page-specific filters and shows the empty copy.
  *   4. Transition Log renders rows, triggers, badges + per-row detail toggles.
  *   5. Clicking a row's detail toggle expands the Transition Detail panel and
- *      formats `duration_in_state_ms` — exercising the `formatDuration`
- *      hours/minutes rollover fix (7199s → "2h", never "1h 60m").
+ *      formats raw `duration_in_state_ms` through the numeric-duration helper.
  *   6. Distribution legend + Transition Counts summarise by `to_state` and the
- *      avg-interval cell rolls a 7199s gap up to "2h".
+ *      avg-interval cell retains numeric-duration precision.
  *   7. FSM-type + per-page selects are user-operable.
  *   8. The share-permalink control copies the URL to the clipboard.
  *   9. A full-page spinner is shown while every data source is loading.
@@ -33,12 +32,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import type { ReactNode } from 'react';
 import type { FSMTransition } from '@/types/fsm';
+import { formatDurationMsCompact } from '@/lib/dateFormat';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 // ── Mutable per-test fixture (referenced inside hoisted vi.mock factories) ──
 const mockStore = {
   transitions: [] as FSMTransition[],
   total: 0,
   transLoading: false,
+  transPaused: false,
   stats: { enabled: true, stats: {}, active_subs: [] } as unknown,
   statsLoading: false,
   state: undefined as unknown,
@@ -52,6 +54,12 @@ const mockStore = {
   flapIds: new Set<number>(),
   snapshot: null as unknown,
   snapshotFetching: false,
+  timelineProps: undefined as {
+    transitions: FSMTransition[];
+    hours: number;
+    startInstant?: string;
+    endInstantExclusive?: string;
+  } | undefined,
 };
 
 // ── i18n: return the English defaultValue, interpolating {{placeholders}} ──
@@ -85,16 +93,25 @@ vi.mock('react-i18next', () => ({
 
 // ── framer-motion: strip animation props, render children synchronously ──
 vi.mock('framer-motion', () => {
+  // Cache one component per tag: returning a fresh component on every access
+  // changes the element type each render, which unmounts/remounts every
+  // motion subtree on every state update and strands node references.
+  const motionCache = new Map<string | symbol, unknown>();
   const motionProxy: Record<string, unknown> = new Proxy(
     {},
     {
-      get: () => ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
-        const safeRest: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(rest)) {
-          if (['animate', 'initial', 'exit', 'transition', 'whileHover', 'whileTap', 'variants'].includes(k)) continue;
-          safeRest[k] = v;
+      get: (_target, tag: string) => {
+        if (!motionCache.has(tag)) {
+          motionCache.set(tag, ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
+            const safeRest: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(rest)) {
+              if (['animate', 'initial', 'exit', 'transition', 'whileHover', 'whileTap', 'variants'].includes(k)) continue;
+              safeRest[k] = v;
+            }
+            return <div {...(safeRest as Record<string, unknown>)}>{children}</div>;
+          });
         }
-        return <div {...(safeRest as Record<string, unknown>)}>{children}</div>;
+        return motionCache.get(tag);
       },
     },
   );
@@ -117,7 +134,14 @@ vi.mock('@/features/system/components/FSMStateDiagram', () => ({
   FSMStateDiagram: () => <div data-testid="mock-fsm-diagram" />,
 }));
 vi.mock('@/features/system/components/FSMTimelineChart', () => ({
-  FSMTimelineChart: () => <div data-testid="mock-fsm-timeline" />,
+  FSMTimelineChart: (props: NonNullable<typeof mockStore.timelineProps>) => {
+    mockStore.timelineProps = props;
+    return <div data-testid="mock-fsm-timeline" />;
+  },
+}));
+vi.mock('@/lib/timezone', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => 'America/Los_Angeles',
 }));
 vi.mock('@/features/system/components/FSMSubFSMPanel', () => ({
   FSMSubFSMPanel: () => <div data-testid="mock-fsm-subfsm" />,
@@ -140,8 +164,10 @@ vi.mock('@/api/hooks/useFSM', () => ({
   fsmKeys: { stats: () => [], transitions: () => [] },
   useFSMStats: () => ({ data: mockStore.stats, isLoading: mockStore.statsLoading }),
   useFSMTransitions: () => ({
-    data: { data: mockStore.transitions, total: mockStore.total, page: 1, per_page: 50 },
+    data: mockStore.transLoading || mockStore.transPaused ? undefined
+      : { data: mockStore.transitions, total: mockStore.total, page: 1, per_page: 50 },
     isLoading: mockStore.transLoading,
+    fetchStatus: mockStore.transPaused ? 'paused' : mockStore.transLoading ? 'fetching' : 'idle',
   }),
 }));
 vi.mock('@/api/hooks/useAdmin', () => ({
@@ -151,7 +177,8 @@ vi.mock('@/api/hooks/useAdmin', () => ({
     isFetching: mockStore.stateFetching,
   }),
 }));
-vi.mock('@/api/hooks/useVehicles', () => ({
+vi.mock('@/api/hooks/useVehicles', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/hooks/useVehicles')>(),
   useVehicles: () => ({ data: mockStore.vehicles, isLoading: false }),
 }));
 vi.mock('@/api/hooks/useTelemetry', () => ({
@@ -175,7 +202,9 @@ function makeTransition(overrides: Partial<FSMTransition> = {}): FSMTransition {
 }
 
 function wrapVehicleState(state: Record<string, unknown>) {
-  return { state, live: true, data_source: 'signal_store' };
+  return { state, live: true, data_source: 'live_signal_store',
+    observed_at: new Date().toISOString(), freshness: 'fresh',
+    verified_fields: Object.keys(state) };
 }
 
 function renderPage(initialEntries: string[] = ['/system/fsm']) {
@@ -191,18 +220,31 @@ function renderPage(initialEntries: string[] = ['/system/fsm']) {
   );
 }
 
-/** Resolve a StatCard root element from its unique label. */
+/** Resolve the canonical stat tile from its unique source label. */
 function kpiCard(label: string): HTMLElement {
-  const labelEl = screen.getByText(label);
-  const card = labelEl.closest('div')?.parentElement;
-  if (!card) throw new Error(`StatCard not found for label "${label}"`);
+  const labelEl = within(screen.getByRole('region', { name: 'FSM summary metrics' })).getByText(label);
+  const card = labelEl.closest('[data-operational-metric]');
+  if (!card) throw new Error(`Stat tile not found for label "${label}"`);
   return card as HTMLElement;
+}
+
+/** Open the FSM summary drawer and resolve a per-metric group by label. */
+function drawerGroup(label: string): HTMLElement {
+  const band = screen.getByRole('region', { name: 'FSM summary metrics' });
+  fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
+  return within(screen.getByRole('dialog')).getByRole('group', { name: label });
+}
+
+function closeDrawer() {
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 }
 
 beforeEach(() => {
   mockStore.transitions = [];
   mockStore.total = 0;
   mockStore.transLoading = false;
+  mockStore.transPaused = false;
   mockStore.stats = { enabled: true, stats: {}, active_subs: [] };
   mockStore.statsLoading = false;
   mockStore.state = undefined;
@@ -212,6 +254,31 @@ beforeEach(() => {
   mockStore.flapIds = new Set<number>();
   mockStore.snapshot = null;
   mockStore.snapshotFetching = false;
+  mockStore.timelineProps = undefined;
+});
+
+describe('StateMachineDebuggerPage — exact chart range', () => {
+  it('threads a historical non-UTC custom range while retaining the loaded-page state series', () => {
+    mockStore.transitions = [makeTransition({ to_state: 'driving', ts: '2026-03-08T09:00:00Z' })];
+    mockStore.total = 200;
+    renderPage(['/system/fsm?from=2026-03-08&to=2026-03-08&time_scope=custom']);
+    expect(mockStore.timelineProps).toMatchObject({
+      hours: 23,
+      startInstant: '2026-03-08T08:00:00.000Z',
+      endInstantExclusive: '2026-03-09T07:00:00.000Z',
+      transitions: [{ ...mockStore.transitions[0], fsm_name: 'driving' }],
+    });
+    expect(mockStore.timelineProps?.transitions).toHaveLength(1);
+    // The page/total count moved off the face into the drawer's metric group.
+    expect(drawerGroup('Transitions (Page)')).toHaveTextContent('1 / 200');
+    closeDrawer();
+    expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
+      '0 in window · 1 in filtered buffer · 1 loaded · 200 matching',
+    );
+    expect(screen.getAllByText(/2026-03-08T08:00:00.000Z/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Loaded transition page only').length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByTestId('live-controls-counter')).not.toHaveTextContent('in 24 h');
+  });
 });
 
 describe('StateMachineDebuggerPage — KPI band', () => {
@@ -227,10 +294,11 @@ describe('StateMachineDebuggerPage — KPI band', () => {
 
     renderPage();
 
-    expect(within(kpiCard('Transitions (Page)')).getByText('3 / 233')).toBeInTheDocument();
-    expect(within(kpiCard('Total Transitions')).getByText('233')).toBeInTheDocument();
-    expect(within(kpiCard('Flap Warnings')).getByText('3')).toBeInTheDocument();
-    expect(within(kpiCard('Current State')).getByText('driving')).toBeInTheDocument();
+    expect(drawerGroup('Transitions (Page)')).toHaveTextContent('3 / 233');
+    closeDrawer();
+    expect(within(kpiCard('Total transitions')).getByText('233')).toBeInTheDocument();
+    expect(within(kpiCard('Flap warnings')).getByText('3')).toBeInTheDocument();
+    expect(within(kpiCard('Current state')).getByText('driving')).toBeInTheDocument();
   });
 
   it('falls back to an em dash for the current state when no live state is loaded', () => {
@@ -238,11 +306,56 @@ describe('StateMachineDebuggerPage — KPI band', () => {
 
     renderPage();
 
-    expect(within(kpiCard('Current State')).getByText('—')).toBeInTheDocument();
+    // Unknown current state is omitted from the face and counted in the
+    // drawer rather than rendered as a placeholder value.
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'FSM summary metrics' }),
+      'Current state',
+    );
+  });
+
+  it('distinguishes the current-state metric from the populated unconfirmed snapshot heading', () => {
+    mockStore.state = {
+      state: { state: 'parked', is_charging: false, speed: 0 },
+      live: false,
+      data_source: 'db_fallback',
+    };
+
+    renderPage();
+
+    expect(within(kpiCard('Current state')).getByText('parked')).toBeInTheDocument();
+    const overview = screen.getByRole('region', { name: 'Vehicle state overview' });
+    expect(within(overview).getByRole('heading', { name: 'Current state' })).toBeInTheDocument();
+    expect(within(overview).getByText('parked')).toBeInTheDocument();
+    expect(within(overview).queryByText('Vehicle live state')).not.toBeInTheDocument();
   });
 });
 
 describe('StateMachineDebuggerPage — live-state hero', () => {
+  it.each([
+    { state: 'parked' },
+    { state: 'parked', is_charging: false },
+    { state: 'parked', speed: 0 },
+    { state: 'parked', is_charging: false, speed: null },
+    { state: 'parked', is_charging: false, speed: Number.NaN },
+    { state: 'offline', is_charging: false, speed: 0 },
+  ])('shows Unknown instead of inventing Idle with insufficient evidence: %j', (state) => {
+    mockStore.state = wrapVehicleState(state);
+    renderPage();
+    const overview = screen.getByRole('region', { name: 'Vehicle state overview' });
+    expect(within(overview).getByText('Unknown')).toBeInTheDocument();
+    expect(within(overview).queryByText('Idle')).not.toBeInTheDocument();
+  });
+
+  it('does not treat synthetic default flags and speed as verified idle evidence', () => {
+    mockStore.state = {
+      ...wrapVehicleState({ state: 'parked', is_charging: false, speed: 0 }),
+      verified_fields: ['state'],
+    };
+    renderPage();
+    expect(within(screen.getByRole('region', { name: 'Vehicle state overview' })).getByText('Unknown')).toBeInTheDocument();
+  });
+
   it('shows the resolved state name and "Charging" mode when charging', () => {
     mockStore.state = wrapVehicleState({
       state: 'charging',
@@ -253,7 +366,7 @@ describe('StateMachineDebuggerPage — live-state hero', () => {
 
     renderPage();
 
-    const hero = screen.getByText('Vehicle Live State').closest('div')?.parentElement as HTMLElement;
+    const hero = screen.getByText('Vehicle live state').closest('div')?.parentElement as HTMLElement;
     expect(within(hero).getByText('charging')).toBeInTheDocument();
     expect(within(hero).getByText('Charging')).toBeInTheDocument();
   });
@@ -313,7 +426,7 @@ describe('StateMachineDebuggerPage — empty fleet', () => {
     renderPage();
 
     expect(screen.getByText('No vehicles available')).toBeInTheDocument();
-    expect(screen.queryByLabelText('FSM Type')).toBeNull();
+    expect(screen.queryByLabelText('FSM type')).toBeNull();
     expect(screen.queryByLabelText('Select vehicle')).toBeNull();
   });
 });
@@ -328,10 +441,17 @@ describe('StateMachineDebuggerPage — transition log', () => {
 
     renderPage();
 
-    expect(screen.getByText('Transition Log')).toBeInTheDocument();
+    // The table carries its own screen-reader caption, so target the visible
+    // section heading (which also shows the matching total).
+    expect(screen.getByRole('heading', { name: 'Transition log2 total' })).toBeInTheDocument();
     expect(screen.getByText('speed_changed')).toBeInTheDocument();
     expect(screen.getByText('gear_changed')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'View detail' })).toHaveLength(2);
+    for (const button of screen.getAllByRole('button', { name: 'View detail' })) {
+      expect(button).toHaveAttribute('aria-expanded', 'false');
+      expect(button).toHaveAttribute('aria-controls', screen.getByRole('region', { name: 'Transition detail' }).id);
+      expect(button).toHaveClass('min-h-11', 'min-w-11');
+    }
   });
 
   it('shows the range-aware empty copy across sections when there are no transitions', () => {
@@ -350,7 +470,7 @@ describe('StateMachineDebuggerPage — transition log', () => {
 });
 
 describe('StateMachineDebuggerPage — transition detail panel', () => {
-  it('expands the detail panel and formats duration_in_state_ms without a "1h 60m" artefact', () => {
+  it('expands the detail panel and formats duration_in_state_ms with numeric precision', () => {
     mockStore.transitions = [
       makeTransition({
         id: 42,
@@ -365,18 +485,18 @@ describe('StateMachineDebuggerPage — transition detail panel', () => {
 
     renderPage();
 
-    // Detail is collapsed until the toggle is clicked.
-    expect(screen.queryByText('Transition Detail')).toBeNull();
+    expect(screen.getByText('Transition detail')).toBeInTheDocument();
+    expect(screen.getAllByText('Select a transition to inspect its snapshot').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
+    expect(screen.getByRole('button', { name: 'View detail' })).toHaveAttribute('aria-expanded', 'true');
 
-    expect(screen.getByText('Transition Detail')).toBeInTheDocument();
+    expect(screen.getByText('Transition detail')).toBeInTheDocument();
     // Transition ID field (id=42) is unique to the detail panel.
     expect(screen.getByText('42')).toBeInTheDocument();
     // Guard field renders the raw guard string.
     expect(screen.getByText('speed_gt_0')).toBeInTheDocument();
-    // 7199s rounds up to a full 2h — the fix ensures it is never "1h 60m".
-    expect(screen.getByText('2h')).toBeInTheDocument();
+    expect(screen.getByText(formatDurationMsCompact(7_199_000))).toBeInTheDocument();
     expect(screen.queryByText('1h 60m')).toBeNull();
     expect(screen.queryByText('1h 59m')).toBeNull();
   });
@@ -387,18 +507,25 @@ describe('StateMachineDebuggerPage — transition detail panel', () => {
 
     renderPage();
 
+    const detailRegion = screen.getByRole('region', { name: 'Transition detail' });
+    const detailId = detailRegion.id;
     // Re-query the toggle each time: selecting a row re-memoises the column
     // defs (selectedId is a dep), which replaces the button node.
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
-    expect(screen.getByText('Transition Detail')).toBeInTheDocument();
+    expect(screen.getByText('Transition detail')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View detail' })).toHaveAttribute('aria-controls', detailId);
+    expect(detailRegion).toHaveTextContent('5');
 
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
-    expect(screen.queryByText('Transition Detail')).toBeNull();
+    expect(screen.getByRole('button', { name: 'View detail' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('region', { name: 'Transition detail' })).toBe(detailRegion);
+    expect(screen.getByText('Transition detail')).toBeInTheDocument();
+    expect(screen.getAllByText('Select a transition to inspect its snapshot').length).toBeGreaterThan(0);
   });
 });
 
 describe('StateMachineDebuggerPage — distribution + counts', () => {
-  it('summarises transitions by to_state and rolls a 7199s avg interval up to 2h', () => {
+  it('summarises transitions by to_state and formats a 7199s avg interval without premature rounding', () => {
     // Two transitions into `driving` spaced exactly 7199s apart → avg 7199s.
     const base = new Date('2026-06-01T00:00:00.000Z').getTime();
     mockStore.transitions = [
@@ -413,8 +540,7 @@ describe('StateMachineDebuggerPage — distribution + counts', () => {
     // Distribution legend + counts table both surface the two states.
     expect(screen.getAllByText('driving').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('parked').length).toBeGreaterThanOrEqual(1);
-    // Avg-interval cell: 7199s must render as "2h", never the "1h 60m" artefact.
-    expect(screen.getByText('2h')).toBeInTheDocument();
+    expect(screen.getByText(formatDurationMsCompact(7_199_000))).toBeInTheDocument();
     expect(screen.queryByText('1h 60m')).toBeNull();
   });
 });
@@ -426,12 +552,12 @@ describe('StateMachineDebuggerPage — filter controls', () => {
 
     renderPage();
 
-    const select = screen.getByLabelText('FSM Type') as HTMLSelectElement;
+    const select = screen.getByLabelText('FSM type', { selector: 'select' }) as HTMLSelectElement;
     expect(select.value).toBe('all');
 
     fireEvent.change(select, { target: { value: 'vehicle' } });
 
-    expect((screen.getByLabelText('FSM Type') as HTMLSelectElement).value).toBe('vehicle');
+    expect((screen.getByLabelText('FSM type', { selector: 'select' }) as HTMLSelectElement).value).toBe('vehicle');
   });
 
   it('lets the user change the per-page size', () => {
@@ -440,12 +566,12 @@ describe('StateMachineDebuggerPage — filter controls', () => {
 
     renderPage();
 
-    const select = screen.getByLabelText('Per Page') as HTMLSelectElement;
+    const select = screen.getByLabelText('Per page') as HTMLSelectElement;
     expect(select.value).toBe('50');
 
     fireEvent.change(select, { target: { value: '100' } });
 
-    expect((screen.getByLabelText('Per Page') as HTMLSelectElement).value).toBe('100');
+    expect((screen.getByLabelText('Per page') as HTMLSelectElement).value).toBe('100');
   });
 });
 
@@ -467,9 +593,45 @@ describe('StateMachineDebuggerPage — share permalink', () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     expect(String(writeText.mock.calls[0][0])).toContain('http');
   });
+
+  it('copies the supported calendar analysis scope with vehicle and selected evidence', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    mockStore.transitions = [makeTransition({ id: 42, ts: '2026-03-08T09:00:00Z' })];
+    mockStore.total = 1;
+    renderPage(['/system/fsm?selected=42&at=2026-03-08T09:00:00Z&from=2026-03-08&to=2026-03-08&time_scope=custom']);
+    fireEvent.click(screen.getByRole('button', { name: 'Share permalink' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const url = new URL(String(writeText.mock.calls[0][0]));
+    expect(url.pathname).toBe('/system/fsm');
+    expect(url.searchParams.get('vehicle_id')).toBe('1');
+    expect(url.searchParams.get('selected')).toBe('42');
+    expect(url.searchParams.get('at')).toBe('2026-03-08T09:00:00Z');
+    expect(url.searchParams.get('from')).toBe('2026-03-08');
+    expect(url.searchParams.get('to')).toBe('2026-03-08');
+    expect(url.searchParams.get('time_scope')).toBe('custom');
+    expect(mockStore.timelineProps?.hours).toBe(23);
+    expect(screen.getByText('42')).toBeInTheDocument();
+  });
 });
 
 describe('StateMachineDebuggerPage — loading', () => {
+  it.each(['loading', 'paused'])('does not mount transition-derived children while %s without data', (status) => {
+    mockStore.transLoading = status === 'loading';
+    mockStore.transPaused = status === 'paused';
+    mockStore.state = wrapVehicleState({ state: 'parked' });
+    const { container } = renderPage();
+    expect(container.querySelectorAll('[data-transition-pending]')).toHaveLength(8);
+    expect(screen.queryByTestId('mock-fsm-health')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mock-fsm-diagram')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mock-fsm-timeline')).not.toBeInTheDocument();
+    expect(screen.getByTestId('mock-fsm-subfsm')).toBeInTheDocument();
+    expect(screen.queryByTestId('live-controls-counter')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No transitions in/)).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Vehicle state overview' })).getByText('parked')).toBeInTheDocument();
+    if (status === 'paused') expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+  });
+
   it('shows a full-page spinner while every data source is loading', () => {
     mockStore.stateLoading = true;
     mockStore.transLoading = true;
@@ -477,9 +639,9 @@ describe('StateMachineDebuggerPage — loading', () => {
 
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'FSM Debugger' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'FSM debugger' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /Loading/i })).toBeInTheDocument();
     // The KPI band is replaced by the spinner while loading.
-    expect(screen.queryByText('Total Transitions')).toBeNull();
+    expect(screen.queryByText('Total transitions')).toBeNull();
   });
 });

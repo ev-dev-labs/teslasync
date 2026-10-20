@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import type { SignalObservation } from '@/types/signals';
+import type { SignalHistoryPoint } from '@/api/types';
 import {
   crossCorrelate,
+  analyzeCorrelation,
   effectiveSampleSize,
   pearson,
   resample,
@@ -10,15 +11,15 @@ import {
 
 const ANCHOR = Date.UTC(2026, 6, 1, 0, 0, 0);
 
-function obs(name: string, secondsIn: number, value: number | boolean | null): SignalObservation {
+function obs(_name: string, secondsIn: number, value: number | boolean | null): SignalHistoryPoint {
   return {
-    vehicle_id: 1,
     ts: new Date(ANCHOR + secondsIn * 1000).toISOString(),
-    signal_name: name,
-    value_numeric: typeof value === 'number' ? value : null,
-    value_text: null,
-    value_bool: typeof value === 'boolean' ? value : null,
-    source: 'telemetry' as SignalObservation['source'],
+    kind: typeof value === 'boolean' ? 'ValueKindBool' : 'ValueKindDouble',
+    value,
+    ingest_origin: 'fleet_telemetry_mqtt',
+    source_emitted_at: null,
+    received_at: null,
+    normalization_version: 1,
   };
 }
 
@@ -29,7 +30,7 @@ function signal(
   stepS: number,
   fn: (i: number) => number,
   offsetS = 0,
-): SignalObservation[] {
+): SignalHistoryPoint[] {
   return Array.from({ length: n }, (_, i) => obs(name, offsetS + i * stepS, fn(i)));
 }
 
@@ -132,6 +133,177 @@ describe('effectiveSampleSize', () => {
 });
 
 describe('crossCorrelate', () => {
+  it('preserves the fixed screening cutoff and lead classification at small effective sample sizes', () => {
+    const a = signal('a', 10, 60, i => i);
+    const b = signal('b', 10, 60, i => 2 * i + 5);
+    const r = crossCorrelate(a, b, { maxLagS: 0 })!;
+    expect(r.effectiveN).toBe(3);
+    expect(r.significanceThreshold).toBe(0.8908);
+    expect(r.bestR).toBe(1);
+    expect(r.bestN).toBe(10);
+    expect(r.bestLagS).toBe(0);
+    expect(r.significant).toBe(true);
+    expect(r.lead).toBe('simultaneous');
+  });
+
+  it('distinguishes original records and valid deduplicated measurements from resampled pairs', () => {
+    const a = [obs('a', 0, -0.25), obs('a', 600, 0), obs('a', 1200, 0.5)];
+    const b = [...a, obs('b', 600, 0), obs('b', 300, null),
+      obs('b', 400, Number.NaN), { ...obs('b', 500, 1), ts: 'invalid' }];
+    const r = crossCorrelate(a, b, { maxLagS: 0 })!;
+    expect(r.sourceCountA).toBe(3);
+    expect(r.sourceCountB).toBe(7);
+    expect(r.validCountA).toBe(3);
+    expect(r.validCountB).toBe(3);
+    expect(r.bestN).toBe(21);
+    expect(r.bestR).toBe(1);
+    expect(r.zeroLagR).toBe(1);
+    expect(r.effectiveN).toBeLessThan(r.bestN);
+    expect(r.seriesA.v).toContain(-0.25);
+    expect(r.seriesA.v).toContain(0);
+    expect(r.seriesA.v).toContain(0.5);
+    const swapped = crossCorrelate(b, a, { maxLagS: 0 })!;
+    expect(swapped.sourceCountA).toBe(7);
+    expect(swapped.sourceCountB).toBe(3);
+    expect(swapped.validCountA).toBe(3);
+    expect(swapped.validCountB).toBe(3);
+    expect(swapped.bestN).toBe(r.bestN);
+    expect(swapped.effectiveN).toBe(r.effectiveN);
+  });
+
+  it('keeps zero-lag unavailable when only shifted samples meet the overlap minimum', () => {
+    const a = [obs('a', 0, 1), obs('a', 60, 2), obs('a', 120, 1), obs('a', 300, 0)];
+    const b = [obs('b', 0, 0), obs('b', 180, 1), obs('b', 240, 2), obs('b', 300, 1)];
+    const r = crossCorrelate(a, b, { maxStaleS: 0, minOverlap: 3, maxLagS: 180 })!;
+    expect(r.zeroLagR).toBeNull();
+    expect(r.zeroLagReason).toBe('insufficient');
+    expect(r.correlogram.some(point => point.lagS === 0)).toBe(false);
+    expect(r.bestR).toBe(1);
+    expect(r.bestLagS).toBe(180);
+    expect(r.lead).toBe('a');
+    const swapped = crossCorrelate(b, a, { maxStaleS: 0, minOverlap: 3, maxLagS: 180 })!;
+    expect(swapped.zeroLagR).toBeNull();
+    expect(swapped.zeroLagReason).toBe('insufficient');
+    expect(swapped.bestLagS).toBe(-180);
+    expect(swapped.lead).toBe('b');
+  });
+
+  it('keeps a measured zero coefficient distinct from an unavailable estimate', () => {
+    const a = signal('a', 4, 60, i => [-1, 0, 0, 1][i]!);
+    const b = signal('b', 4, 60, i => [0, -1, 1, 0][i]!);
+    const r = crossCorrelate(a, b, { minOverlap: 4, maxLagS: 0 })!;
+    expect(r.zeroLagR).toBe(0);
+    expect(r.zeroLagReason).toBeNull();
+    expect(r.bestR).toBe(0);
+  });
+
+  it.each([1, -1])('preserves signed fractional coefficients (%s)', sign => {
+    const a = signal('a', 4, 60, i => [0.25, 0.5, 0.75, 1][i]!);
+    const b = signal('b', 4, 60, i => sign * [0.25, 0.75, 0.5, 1][i]!);
+    const r = crossCorrelate(a, b, { minOverlap: 4, maxLagS: 0 })!;
+    expect(r.zeroLagR).toBeCloseTo(sign * 0.8, 4);
+    expect(r.bestR).toBeCloseTo(sign * 0.8, 4);
+    expect(r.zeroLagReason).toBeNull();
+    expect(r.lead).toBe('none');
+  });
+
+  it('does not report a nonfinite zero-lag coefficient as measured zero', () => {
+    const a = signal('a', 6, 60, i => [1e200, -1e200, 1, 2, 3, 4][i]!);
+    const b = signal('b', 6, 60, i => [1e200, -1e200, 3, 4, 5, 6][i]!);
+    const r = crossCorrelate(a, b, { minOverlap: 3, maxLagS: 180 })!;
+    expect(r.zeroLagR).toBeNull();
+    expect(r.zeroLagReason).toBe('invalid');
+    expect(r.correlogram.every(point => Number.isFinite(point.r))).toBe(true);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'rejects invalid numeric inputs rather than treating them as measured zeros (%s)', value => {
+      const invalid = signal('a', 10, 60, () => value);
+      const valid = signal('b', 10, 60, i => i);
+      expect(analyzeCorrelation(invalid, valid)).toEqual({ result: null, reason: 'nonnumeric' });
+    },
+  );
+
+  it('keeps the negative peak coefficient while reversing only the lead orientation', () => {
+    const a = signal('a', 300, 60, i => Math.sin(i / 9));
+    const b = signal('b', 300, 60, i => -Math.sin((i - 5) / 9));
+    const forward = crossCorrelate(a, b, { maxLagS: 1200 })!;
+    const reverse = crossCorrelate(b, a, { maxLagS: 1200 })!;
+    expect(forward.bestR).toBe(-1);
+    expect(reverse.bestR).toBe(-1);
+    expect(forward.bestLagS).toBe(300);
+    expect(reverse.bestLagS).toBe(-300);
+    expect(forward.lead).toBe('a');
+    expect(reverse.lead).toBe('b');
+  });
+
+  it.each([false, true])('retains independent coverage rather than combined or lag-paired counts (detrend: %s)', (detrend) => {
+    const dense = signal('a', 40, 60, (i) => Math.sin(i / 4));
+    const sparse = [...signal('b', 10, 60, (i) => Math.sin(i / 4)), obs('b', 39 * 60, 0)];
+    const options = { detrend, maxStaleS: 120, maxLagS: 0, minOverlap: 3 };
+    const result = crossCorrelate(dense, sparse, options)!;
+    expect(result.seriesA.filled).toBe(40);
+    expect(result.seriesA.gaps).toBe(0);
+    expect(result.seriesB.filled).toBe(13);
+    expect(result.seriesB.gaps).toBe(27);
+    expect(result.seriesB.v.filter((value) => value !== null)).toHaveLength(13);
+    expect(result.bestN).toBe(detrend ? 11 : 13);
+    const swapped = crossCorrelate(sparse, dense, options)!;
+    expect(swapped.seriesA).toEqual(result.seriesB);
+    expect(swapped.seriesB).toEqual(result.seriesA);
+    expect(swapped.bestN).toBe(result.bestN);
+  });
+
+  it('distinguishes empty, unusable, short and actually disjoint evidence', () => {
+    const enough = signal('b', 40, 60, (i) => i);
+    expect(analyzeCorrelation([], enough)).toEqual({ result: null, reason: 'empty' });
+    expect(analyzeCorrelation([obs('a', 0, null)], enough)).toEqual({ result: null, reason: 'nonnumeric' });
+    expect(analyzeCorrelation([
+      { ...obs('a', 0, 0), kind: 'ValueKindString', value: '0' },
+      { ...obs('a', 60, 1), ts: 'invalid' },
+    ], enough)).toEqual({ result: null, reason: 'nonnumeric' });
+    expect(analyzeCorrelation([obs('a', 0, 0)], enough)).toEqual({ result: null, reason: 'insufficient' });
+    expect(analyzeCorrelation(signal('a', 3, 60, (i) => i), enough))
+      .toEqual({ result: null, reason: 'insufficient' });
+    expect(analyzeCorrelation(enough, signal('b', 40, 60, (i) => i, 100_000)))
+      .toEqual({ result: null, reason: 'disjoint' });
+    expect(analyzeCorrelation(signal('a', 2, 60, (i) => i), signal('b', 2, 60, (i) => i, 60)))
+      .toEqual({ result: null, reason: 'insufficient' });
+  });
+
+  it('reports insufficient paired evidence after gaps or differencing, not disjoint histories', () => {
+    const a = signal('a', 10, 60, (i) => i);
+    expect(analyzeCorrelation(a, a, { detrend: true })).toEqual({ result: null, reason: 'insufficient' });
+    const sparse = [obs('b', 0, 0), obs('b', 540, 1)];
+    expect(analyzeCorrelation(a, sparse, { maxStaleS: 0 })).toEqual({ result: null, reason: 'insufficient' });
+  });
+
+  it('accepts the exact minimum comparable overlap with measured zeros', () => {
+    const zeros = signal('a', 10, 60, () => 0);
+    const evidence = analyzeCorrelation(zeros, zeros);
+    expect(evidence.reason).toBeNull();
+    expect(evidence.result?.bestN).toBe(10);
+    expect(evidence.result?.bestR).toBe(0);
+    expect(evidence.result?.seriesA.v).toEqual(Array(10).fill(0));
+  });
+
+  it('keeps canonical numeric zero and boolean false overlap without inventing correlation', () => {
+    const zeros = signal('a', 40, 60, () => 0);
+    const falses = zeros.map((point) => ({ ...point, kind: 'ValueKindBool', value: false }));
+    const r = crossCorrelate(zeros, falses)!;
+    expect(r.bestN).toBe(40);
+    expect(r.zeroLagR).toBe(0);
+    expect(r.bestR).toBe(0);
+    expect(r.bestLagS).toBe(0);
+    expect(r.significant).toBe(false);
+    expect(r.lead).toBe('none');
+    expect(r.seriesA.filled).toBe(40);
+    expect(r.seriesB.filled).toBe(40);
+    expect(r.seriesA.gaps).toBe(0);
+    expect(r.seriesB.gaps).toBe(0);
+    expect(r.seriesB.v.every((value) => value === 0)).toBe(true);
+  });
+
   it('returns null without enough data on both sides', () => {
     expect(crossCorrelate([], [])).toBeNull();
     expect(crossCorrelate([obs('a', 0, 1)], signal('b', 10, 60, (i) => i))).toBeNull();
@@ -161,7 +333,7 @@ describe('crossCorrelate', () => {
     expect(r.bestR).toBeGreaterThan(0.99);
     expect(r.lead).toBe('a');
     // The naive overlay chart would badly understate the relationship.
-    expect(Math.abs(r.zeroLagR)).toBeLessThan(r.bestR);
+    expect(Math.abs(r.zeroLagR!)).toBeLessThan(r.bestR);
   });
 
   it('reports a negative lag when the second signal leads', () => {
@@ -224,14 +396,14 @@ describe('crossCorrelate', () => {
     expect([...lags].sort((x, y) => x - y)).toEqual(lags);
   });
 
-  it('reads the camelCase history shape as well as the snake_case log shape', () => {
-    // /signals/{id}/{name}/history returns { timestamp, valueNum }.
-    const camel = Array.from({ length: 60 }, (_, i) => ({
-      timestamp: new Date(ANCHOR + i * 60_000).toISOString(),
-      valueNum: Math.sin(i / 6),
+  it('reads canonical float and double histories without a row adapter', () => {
+    const floats = Array.from({ length: 60 }, (_, i) => ({
+      ts: new Date(ANCHOR + i * 60_000).toISOString(),
+      kind: 'ValueKindFloat',
+      value: Math.sin(i / 6),
     }));
-    const snake = signal('b', 60, 60, (i) => Math.sin(i / 6));
-    const r = crossCorrelate(camel, snake)!;
+    const doubles = signal('b', 60, 60, (i) => Math.sin(i / 6));
+    const r = crossCorrelate(floats, doubles)!;
     expect(r.bestLagS).toBe(0);
     expect(r.bestR).toBeGreaterThan(0.99);
   });
@@ -252,8 +424,8 @@ describe('crossCorrelate', () => {
     const on = (i: number) => (i >= 50 && i < 90 ? 1 : 0);
     const hvac = signal('hvac_on', 200, 60, on).map((o) => ({
       ...o,
-      value_numeric: null,
-      value_bool: o.value_numeric === 1,
+      kind: 'ValueKindBool',
+      value: o.value === 1,
     }));
     const temp = signal('cabin', 200, 60, (i) => (on(i) === 1 ? 24 : 18));
     const r = crossCorrelate(hvac, temp)!;

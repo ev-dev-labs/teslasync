@@ -4,8 +4,10 @@ import { Badge, Button, Caption, GlassPanel, PanelTitle, Text } from '@/componen
 import { useAiUsageByFeature, useAiUsageRecent } from '@/api/hooks/useAiUsage'
 import { useDataState } from '@/hooks/useDataState'
 import { useFormatting } from '@/hooks/useFormatting'
-import { fmtInt } from '@/lib/numberFormat'
+import { useDateFormat } from '@/hooks/useDateFormat'
+
 import { AI_FEATURES, type AiFeatureId } from '@/ai/features'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface Props {
   enabled: boolean
@@ -13,8 +15,10 @@ interface Props {
 }
 
 export function AIFeatureSpendPanel({ enabled, capCents }: Props) {
-  const { t, i18n } = useTranslation('settings')
+  const { fmtInt } = useNumberFormatting();
+  const { t } = useTranslation('settings')
   const { formatCurrency } = useFormatting()
+  const { formatDateTime } = useDateFormat('utc')
   const breakdownQuery = useAiUsageByFeature(undefined, { enabled })
   const recentQuery = useAiUsageRecent(50, { enabled })
   const breakdown = useDataState(breakdownQuery, { provenance: 'historical' })
@@ -40,16 +44,6 @@ export function AIFeatureSpendPanel({ enabled, capCents }: Props) {
     if (!Number.isFinite(microCents)) return '—'
     const dollars = microCents / 1_000_000
     return formatCurrency(dollars, dollars > 0 && dollars < 0.01 ? 6 : 2)
-  }
-  const formatLastCall = (timestamp: string) => {
-    const date = new Date(timestamp)
-    return Number.isNaN(date.getTime())
-      ? '—'
-      : new Intl.DateTimeFormat(i18n.language || 'en', {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-          timeZone: 'UTC',
-        }).format(date)
   }
 
   return (
@@ -120,7 +114,7 @@ export function AIFeatureSpendPanel({ enabled, capCents }: Props) {
                             calls: fmtInt(row.call_count),
                             input: fmtInt(row.input_tokens),
                             output: fmtInt(row.output_tokens),
-                            last: formatLastCall(row.last_call_at),
+                            last: formatDateTime(row.last_call_at),
                           })}
                         </Caption>
                         <Caption className="block">

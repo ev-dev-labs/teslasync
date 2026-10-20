@@ -8,8 +8,15 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
 interface HeatmapGridProps {
   model: HeatmapModel;
+  /** Row-major slot evidence shared with the accessible table and export. */
+  energySlots?: readonly {
+    energy_wh: number | null;
+    recorded_energy_count: number;
+  }[];
   /** Formats an SI watt-hours value for the hover tooltip. */
   formatEnergy: (wh: number) => string;
+  /** The containing chart frame already provides the visualization label. */
+  framed?: boolean;
 }
 
 /**
@@ -18,7 +25,7 @@ interface HeatmapGridProps {
  * sensible min-width and scrolls inside its own container on narrow screens so
  * the page itself never scrolls horizontally.
  */
-export function HeatmapGrid({ model, formatEnergy }: HeatmapGridProps) {
+export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false }: HeatmapGridProps) {
   const { t } = useTranslation();
   const grid = model?.grid ?? [];
   const maxCount = model?.maxCount ?? 0;
@@ -29,8 +36,10 @@ export function HeatmapGrid({ model, formatEnergy }: HeatmapGridProps) {
     <div>
       <div className="overflow-x-auto">
         <div
-          role="img"
-          aria-label={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
+          {...(framed ? {} : {
+            role: 'img' as const,
+            'aria-label': t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day'),
+          })}
           className="grid min-w-[640px] grid-cols-[56px_repeat(24,minmax(0,1fr))] gap-[2px]"
         >
           {/* Hour header row */}
@@ -49,6 +58,13 @@ export function HeatmapGrid({ model, formatEnergy }: HeatmapGridProps) {
               </div>
               {HOURS.map((hour) => {
                 const cell = grid[day]?.[hour] ?? { count: 0, totalEnergyWh: 0 };
+                const evidence = energySlots?.[day * 24 + hour];
+                const energy = evidence?.energy_wh;
+                const recordedCount = evidence?.recorded_energy_count;
+                const hasEnergy = typeof energy === 'number' && Number.isFinite(energy)
+                  && typeof recordedCount === 'number' && Number.isInteger(recordedCount)
+                  && recordedCount > 0 && recordedCount <= cell.count;
+                const partial = hasEnergy && recordedCount < cell.count;
                 const isHovered = hovered?.day === day && hovered?.hour === hour;
                 return (
                   <div
@@ -60,13 +76,20 @@ export function HeatmapGrid({ model, formatEnergy }: HeatmapGridProps) {
                     onMouseLeave={() => setHovered(null)}
                   >
                     {isHovered && cell.count > 0 && (
-                      <div className="absolute -top-14 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-2 py-1 shadow-lg">
+                      <div className="absolute bottom-full left-1/2 z-20 mb-1 w-max max-w-64 -translate-x-1/2 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-2 py-1 shadow-lg">
                         <Text as="div" size="xs" color="primary">
                           {dayLabel} {formatHourLabel(hour)}
                         </Text>
                         <Text variant="caption" as="div">
-                          {cell.count} {sessionsWord} · {formatEnergy(cell.totalEnergyWh ?? 0)}
+                          {cell.count} {sessionsWord} · {hasEnergy
+                            ? formatEnergy(energy)
+                            : t('charging.heatmap.noMeasurements', 'No recorded measurements in the returned sessions')}
                         </Text>
+                        {partial && (
+                          <Text variant="caption" as="div">
+                            {t('charging.heatmap.partialMeasurements', 'Some returned sessions have no recorded value; the total includes recorded values only.')}
+                          </Text>
+                        )}
                       </div>
                     )}
                   </div>

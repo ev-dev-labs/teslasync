@@ -2,12 +2,14 @@ import { ClipboardList, Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
-
+import { type StatMetric } from '@/components/data-display';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorComponentProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const driveCategories = Object.entries(analysis.driveAccounting.categories);
   const chargingCategories = Object.entries(analysis.chargingAccounting.categories);
@@ -58,6 +60,23 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
       value: analysis.chargingAccounting.includedRows,
     },
   ];
+  const summaryMetrics = (items: typeof driveSummary, source: 'drive' | 'charging'): StatMetric[] =>
+    items.map((item, index) => ({
+      metricId: 'count',
+      occurrenceId: `advisor-${source}-accounting-${index}`,
+      label: item.label,
+      rawValue: item.value,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
+    }));
+  const period = {
+    kind: 'unknown' as const,
+    label: t('chargeAdvisor.accounting.summaryWindow', 'Analysis window: {{start}} – {{end}} ({{timeZone}})', {
+      start: analysis.evidence.windowStartLocalDate,
+      end: analysis.evidence.windowEndLocalDate,
+      timeZone: analysis.timeZone,
+    }),
+    reason: t('chargeAdvisor.accounting.scope', 'Returned histories; qualification uses the stated local-date analysis window. Counts are not lifetime totals.'),
+  };
 
   return (
     <ChargeAdvisorSection
@@ -66,25 +85,29 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
         'chargeAdvisor.accounting.subtitle',
         'Every returned row is assigned exactly one mutually exclusive category.',
       )}
-      icon={<ClipboardList className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<ClipboardList className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
       state={state}
-      dependency="both"
+      dependency="none"
       dataTestId="charge-advisor-accounting"
     >
       <div className="grid gap-4 lg:grid-cols-2">
-        <div>
+        <ChargeAdvisorSection
+          title={t('chargeAdvisor.accounting.drives', 'Drive rows')}
+          state={state}
+          dependency="drive"
+          dataTestId="charge-advisor-accounting-drive"
+          contentOnly
+        >
           <div className="mb-2 flex items-center gap-2">
-            <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Database className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             <Text className="font-semibold">{t('chargeAdvisor.accounting.drives', 'Drive rows')}</Text>
           </div>
-          <div className="mb-3 grid grid-cols-3 gap-2">
-            {driveSummary.map((item) => (
-              <div key={item.label} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2">
-                <Text variant="caption">{item.label}</Text>
-                <Text className="mt-1 font-semibold">{fmtInt(item.value)}</Text>
-              </div>
-            ))}
-          </div>
+          <BatteryEvidenceBrief
+            title={t('chargeAdvisor.accounting.driveSummary', 'Drive-row evidence summary')}
+            metrics={summaryMetrics(driveSummary, 'drive')}
+            period={period}
+            retained={Boolean(state.refreshError)}
+          />
           <div className="space-y-1">
             {driveCategories.map(([category, count]) => (
               <div key={category} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
@@ -93,20 +116,24 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
               </div>
             ))}
           </div>
-        </div>
-        <div>
+        </ChargeAdvisorSection>
+        <ChargeAdvisorSection
+          title={t('chargeAdvisor.accounting.charging', 'Charging rows')}
+          state={state}
+          dependency="charging"
+          dataTestId="charge-advisor-accounting-charging"
+          contentOnly
+        >
           <div className="mb-2 flex items-center gap-2">
-            <Database className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            <Database className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             <Text className="font-semibold">{t('chargeAdvisor.accounting.charging', 'Charging rows')}</Text>
           </div>
-          <div className="mb-3 grid grid-cols-3 gap-2">
-            {chargingSummary.map((item) => (
-              <div key={item.label} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2">
-                <Text variant="caption">{item.label}</Text>
-                <Text className="mt-1 font-semibold">{fmtInt(item.value)}</Text>
-              </div>
-            ))}
-          </div>
+          <BatteryEvidenceBrief
+            title={t('chargeAdvisor.accounting.chargingSummary', 'Charging-row evidence summary')}
+            metrics={summaryMetrics(chargingSummary, 'charging')}
+            period={period}
+            retained={Boolean(state.refreshError)}
+          />
           <div className="space-y-1">
             {chargingCategories.map(([category, count]) => (
               <div key={category} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
@@ -115,7 +142,7 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
               </div>
             ))}
           </div>
-        </div>
+        </ChargeAdvisorSection>
       </div>
       <Text as="p" variant="caption" className="mt-4">
         {t(

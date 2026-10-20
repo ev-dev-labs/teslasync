@@ -135,8 +135,8 @@ describe('ClimatePanel — temperatures', () => {
 
     expect(mockFormatTemperature).toHaveBeenCalledWith(20)
     expect(mockFormatTemperature).toHaveBeenCalledWith(18)
-    expect(screen.getByText('Driver Setpoint')).toBeInTheDocument()
-    expect(screen.getByText('Passenger Setpoint')).toBeInTheDocument()
+    expect(screen.getByText('Driver setpoint')).toBeInTheDocument()
+    expect(screen.getByText('Passenger setpoint')).toBeInTheDocument()
     expect(screen.getByText('20°C')).toBeInTheDocument()
     expect(screen.getByText('18°C')).toBeInTheDocument()
   })
@@ -158,10 +158,10 @@ describe('ClimatePanel — HVAC state', () => {
 
   it('falls back to an em dash when HVAC state is null or whitespace-only', () => {
     const { rerender } = render(<ClimatePanel climateData={makeClimate({ hvac_state: null })} />)
-    expect(screen.getByText('HVAC State').parentElement).toHaveTextContent('—')
+    expect(screen.getByText('HVAC state').parentElement).toHaveTextContent('—')
 
     rerender(<ClimatePanel climateData={makeClimate({ hvac_state: '   ' })} />)
-    expect(screen.getByText('HVAC State').parentElement).toHaveTextContent('—')
+    expect(screen.getByText('HVAC state').parentElement).toHaveTextContent('—')
   })
 })
 
@@ -170,7 +170,7 @@ describe('ClimatePanel — fan speed meter', () => {
     render(<ClimatePanel climateData={makeClimate({ fan_status: 4 })} />)
 
     const meter = screen.getByRole('meter')
-    expect(meter).toHaveAttribute('aria-label', 'Fan Speed')
+    expect(meter).toHaveAttribute('aria-label', 'Fan speed')
     expect(meter).toHaveAttribute('aria-valuemin', '0')
     expect(meter).toHaveAttribute('aria-valuemax', '6')
     expect(meter).toHaveAttribute('aria-valuenow', '4')

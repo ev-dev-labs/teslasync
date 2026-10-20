@@ -7,6 +7,7 @@ package aidigest
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,7 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // TestWeeklyDigestAIOffUsesTemplateNarrator pins the off-mode contract:
@@ -134,33 +135,57 @@ func TestHandler_RejectsBadInput(t *testing.T) {
 		{"missing vehicle_id", `{}`},
 		{"zero vehicle_id", `{"vehicle_id":0}`},
 		{"negative vehicle_id", `{"vehicle_id":-1}`},
+		{"too old week", `{"vehicle_id":1,"week_offset_weeks":-13}`},
+		{"future week", `{"vehicle_id":1,"week_offset_weeks":1}`},
+		{"fractional week", `{"vehicle_id":1,"week_offset_weeks":-1.5}`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/digests/weekly/narrate", strings.NewReader(tc.body))
-			// Inline the validator branch — same code the real
-			// handler runs in steps 1-2 of ServeHTTP.
-			validateOnly(rec, req)
+			// Nil dependencies prove rejection precedes provider resolution.
+			(&Handler{}).ServeHTTP(rec, req)
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400 (body=%q)", rec.Code, rec.Body.String())
+			}
+			if !strings.HasPrefix(rec.Header().Get("Content-Type"), "application/json") {
+				t.Fatalf("bad input opened a stream: %s", rec.Header().Get("Content-Type"))
 			}
 		})
 	}
 }
 
-// validateOnly mirrors the pre-stream validator branch of
-// Handler.ServeHTTP. Kept as a same-package helper so the
-// test does not need to construct a full handler with stub deps.
-func validateOnly(w http.ResponseWriter, r *http.Request) {
-	var body narrationRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
-		return
+type digestValidationSpy struct {
+	tools.Tool
+	calls int
+}
+
+func (t *digestValidationSpy) Validate(raw json.RawMessage) (any, error) {
+	t.calls++
+	return string(raw), nil
+}
+
+func TestScopedDigestToolPinsVehicleAndWeek(t *testing.T) {
+	t.Parallel()
+	for _, offset := range []int{0, -1, -12} {
+		t.Run(fmt.Sprint(offset), func(t *testing.T) {
+			spy := &digestValidationSpy{}
+			tool := scopedDigestTool{Tool: spy, scope: narrationRequest{VehicleID: 7, WeekOffsetWeeks: offset}}
+			raw := json.RawMessage(fmt.Sprintf(`{"vehicle_id":7,"week_offset_weeks":%d}`, offset))
+			if _, err := tool.Validate(raw); err != nil {
+				t.Fatalf("selected scope rejected: %v", err)
+			}
+			for _, wrong := range []json.RawMessage{
+				json.RawMessage(fmt.Sprintf(`{"vehicle_id":9,"week_offset_weeks":%d}`, offset)),
+				json.RawMessage(fmt.Sprintf(`{"vehicle_id":7,"week_offset_weeks":%d}`, offset-1)),
+			} {
+				if _, err := tool.Validate(wrong); err == nil {
+					t.Fatal("model-selected substitute scope accepted")
+				}
+			}
+			if spy.calls != 1 {
+				t.Fatalf("underlying tool validated %d calls, want only selected scope", spy.calls)
+			}
+		})
 	}
-	if body.VehicleID <= 0 {
-		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
-		return
-	}
-	w.WriteHeader(http.StatusOK)
 }

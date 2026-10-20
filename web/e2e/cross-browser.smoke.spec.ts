@@ -36,12 +36,16 @@ test('installed mobile navigation opens and follows a shortcut in secondary engi
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await waitForHarnessReady(page, mockApi);
 
-  const sidebar = page.locator('[data-role="sidebar"]');
-  await page.getByRole('button', { name: 'Open sidebar' }).click();
-  await expect(sidebar).toHaveAttribute('data-sidebar-open', 'true');
-  await expect(sidebar.getByRole('navigation', { name: 'Sections and shortcuts' })).toBeVisible();
-  await sidebar.getByRole('link', { name: 'All pages' }).click();
+  // The Home tab opens the Home-view sheet directly (polish keeps tabbed
+  // sections out of the More grid); the drawer-era data-sidebar-open hook
+  // is gone by design and unit tests pin its absence.
+  await page.locator('.sidenav-phone-tabs').getByRole('button', { name: 'Home' }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+  // The section sheet hosts panel navigation with the All pages shortcut.
+  await expect(page.getByRole('navigation', { name: 'Sidebar navigation' })).toBeVisible();
+  await page.getByRole('link', { name: 'All pages' }).click();
   await expect(page).toHaveURL(/\/explore$/);
-  await expect(sidebar).toHaveAttribute('data-sidebar-open', 'false');
+  await expect(sheet).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Open sidebar' })).toBeVisible();
 });

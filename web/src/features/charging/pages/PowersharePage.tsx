@@ -1,37 +1,43 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Zap, Home, Power, Clock, RefreshCw } from 'lucide-react';
+import { Zap, RefreshCw } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { Button } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { Grid, PageLayout } from '@/components/layout';
+import { Button, Caption } from '@/components/ui';
+import { type StatMetric } from '@/components/data-display';
+import { ChargingSummaryBrief } from '../components/operationalbrief-all/ChargingSummaryBrief';
 import { FadeIn } from '@/components/motion';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { latestNumeric, latestText } from '@/lib/signalObservation';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
 
 import {
-  PowerTrendPanel, RuntimePanel, HoursTrendPanel, StopReasonPanel, SignalSnapshotPanel,
-  POWERSHARE_SIGNALS, SERIES_LIMIT, buildSeries, humanizeEnum, seriesPeak, statusNeon,
+  POWERSHARE_SIGNALS, SERIES_LIMIT, buildSeries, humanizeEnum, seriesPeak,
   type SnapshotRow,
 } from '../components/powershare';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { combineDataStates, knownNumber } from '@/api/dataState';
+import { safeArray } from '@/lib/safeArray';
+import { TrendCard } from '../components/powershare-modernization/TrendCard';
+import { RuntimeCard } from '../components/powershare-modernization/RuntimeCard';
+import { StopReasonCard } from '../components/powershare-modernization/StopReasonCard';
+import { SnapshotCard } from '../components/powershare-modernization/SnapshotCard';
 
-/**
- * Powershare — bidirectional power-sharing cockpit. Five cold signals
- * (PowershareStatus/Type/StopReason/HoursLeft/InstantaneousPowerKW) are read
- * from `/signals/observations` (router.go:4170); the numeric pair is pulled as
- * a short series to drive the trend charts. All display formatting happens at
- * this render boundary — the API returns raw values.
- */
+const outputColumns = { default: 1, xl: 3 };
+const detailColumns = { default: 1, xl: 2 };
+
+/** Powershare recorded observations, formatted only at the render boundary. */
 export default function PowersharePage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('powershare.title', 'Powershare'));
 
-  const { vehicleId: selectedId } = useSelectedVehicle();
+  const { vehicleId: selectedId, vehiclesState } = useSelectedVehicle();
   const vehicleId = selectedId ?? undefined;
 
   const statusQ = useSignalObservations(vehicleId, { signal_name: POWERSHARE_SIGNALS.status, limit: 1 });
@@ -39,15 +45,22 @@ export default function PowersharePage() {
   const stopQ = useSignalObservations(vehicleId, { signal_name: POWERSHARE_SIGNALS.stopReason, limit: 1 });
   const hoursQ = useSignalObservations(vehicleId, { signal_name: POWERSHARE_SIGNALS.hoursLeft, limit: SERIES_LIMIT });
   const powerQ = useSignalObservations(vehicleId, { signal_name: POWERSHARE_SIGNALS.power, limit: SERIES_LIMIT });
+  const statusState = useDataState(statusQ, { provenance: 'historical' });
+  const typeState = useDataState(typeQ, { provenance: 'historical' });
+  const stopState = useDataState(stopQ, { provenance: 'historical' });
+  const hoursState = useDataState(hoursQ, { provenance: 'historical' });
+  const powerState = useDataState(powerQ, { provenance: 'historical' });
+  const runtimeState = combineDataStates([statusState, typeState, powerState, hoursState]);
+  const snapshotState = combineDataStates([statusState, typeState, stopState, powerState, hoursState]);
 
-  const status = latestText(statusQ.data);
-  const shareType = latestText(typeQ.data);
-  const stopReason = latestText(stopQ.data);
-  const hoursLeft = latestNumeric(hoursQ.data);
-  const powerKw = latestNumeric(powerQ.data);
+  const status = latestText(safeArray(statusState.data));
+  const shareType = latestText(safeArray(typeState.data));
+  const stopReason = latestText(safeArray(stopState.data));
+  const hoursLeft = knownNumber(latestNumeric(safeArray(hoursState.data)));
+  const powerKw = knownNumber(latestNumeric(safeArray(powerState.data)));
 
-  const powerSeries = useMemo(() => buildSeries(powerQ.data), [powerQ.data]);
-  const hoursSeries = useMemo(() => buildSeries(hoursQ.data), [hoursQ.data]);
+  const powerSeries = useMemo(() => buildSeries(safeArray(powerQ.data)), [powerQ.data]);
+  const hoursSeries = useMemo(() => buildSeries(safeArray(hoursQ.data)), [hoursQ.data]);
   const powerPeak = seriesPeak(powerSeries);
   const hoursPeak = seriesPeak(hoursSeries);
 
@@ -58,6 +71,18 @@ export default function PowersharePage() {
     hoursQ.refetch();
     powerQ.refetch();
   };
+  const refetchRuntime = () => {
+    statusQ.refetch();
+    typeQ.refetch();
+    hoursQ.refetch();
+    powerQ.refetch();
+  };
+  const runtimeSources = [
+    { id: 'status', label: t('powershare.kpi.status', 'Status'), query: statusQ },
+    { id: 'type', label: t('powershare.runtime.typeLabel', 'Destination'), query: typeQ },
+    { id: 'power', label: t('powershare.kpi.outputPower', 'Output Power'), query: powerQ },
+    { id: 'hours', label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'), query: hoursQ },
+  ];
 
   const snapshotRows = useMemo<SnapshotRow[]>(
     () => [
@@ -68,28 +93,80 @@ export default function PowersharePage() {
         value: humanizeEnum(shareType, POWERSHARE_SIGNALS.type) ?? '—',
         ts: typeQ.data?.[0]?.ts ?? null },
       { key: 'power', label: t('powershare.kpi.outputPower', 'Output Power'),
-        value: powerKw != null ? `${fmtNumber(powerKw, 2)} kW` : '—',
+        value: powerKw != null ? `${fmtNumber(powerKw)} kW` : '—',
         ts: powerQ.data?.[0]?.ts ?? null },
       { key: 'hours', label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'),
-        value: hoursLeft != null ? `${fmtNumber(hoursLeft, 1)} h` : '—',
+        value: hoursLeft != null ? `${fmtNumber(hoursLeft)} h` : '—',
         ts: hoursQ.data?.[0]?.ts ?? null },
       { key: 'stop', label: t('powershare.stopReason.title', 'Stop Reason'),
         value: humanizeEnum(stopReason, POWERSHARE_SIGNALS.stopReason) ?? '—',
         ts: stopQ.data?.[0]?.ts ?? null },
     ],
     [t, status, shareType, powerKw, hoursLeft, stopReason,
-      statusQ.data, typeQ.data, powerQ.data, hoursQ.data, stopQ.data],
+      statusQ.data, typeQ.data, powerQ.data, hoursQ.data, stopQ.data, fmtNumber],
   );
 
-  const snapshotLoading = [statusQ, typeQ, stopQ, hoursQ, powerQ].every((q) => q.isLoading);
-  const snapshotError = [statusQ, typeQ, stopQ, hoursQ, powerQ].map((q) => q.error).find(Boolean);
-  const runtimeError = statusQ.error ?? typeQ.error ?? powerQ.error ?? hoursQ.error;
-  const runtimeLoading = statusQ.isLoading || typeQ.isLoading || powerQ.isLoading || hoursQ.isLoading;
+  const snapshotLoading = [statusState, typeState, stopState, hoursState, powerState].every((state) => !state.hasData)
+    && [statusQ, typeQ, stopQ, hoursQ, powerQ].some((q) => q.isLoading);
+  const runtimeLoading = [statusState, typeState, hoursState, powerState].every((state) => !state.hasData)
+    && [statusQ, typeQ, hoursQ, powerQ].some((q) => q.isLoading && q.fetchStatus !== 'paused');
+  const runtimePaused = runtimeSources.some(source => source.query.fetchStatus === 'paused');
+  const summaryRetained = runtimeState.status === 'stale'
+    || runtimeState.refreshError != null || runtimeState.isRefreshBlocked;
+  const summaryStatus = runtimeLoading
+    ? t('charging.brief.loading', 'Loading source measurements')
+    : runtimePaused && runtimeSources.every(source => source.query.data === undefined)
+      ? t('dataSources.status.paused', 'Refresh paused')
+    : summaryRetained
+      ? t('charging.brief.retained', 'Retained source measurements')
+      : runtimeState.status === 'partial'
+        ? t('charging.brief.partial', 'Some measurements unavailable')
+        : undefined;
+  const snapshotEmpty = [statusState, typeState, stopState, hoursState, powerState]
+    .every(state => state.hasData && !state.fatalError && !state.refreshError
+      && !state.isRefreshBlocked && safeArray(state.data).length === 0);
+  const metrics: StatMetric[] = [
+    {
+      metricId: 'status', occurrenceId: 'status',
+      label: t('powershare.kpi.status', 'Status'),
+      rawValue: humanizeEnum(status, POWERSHARE_SIGNALS.status),
+      description: t('powershare.statusSection', 'Powershare status'),
+      context: t('powershare.statusSection', 'Powershare status'),
+    },
+    {
+      metricId: 'text', occurrenceId: 'type',
+      label: t('powershare.kpi.type', 'Type'),
+      rawValue: humanizeEnum(shareType, POWERSHARE_SIGNALS.type),
+      description: t('powershare.kpi.typeSub', 'Powershare destination'),
+      context: t('powershare.kpi.typeSub', 'Powershare destination'),
+    },
+    {
+      metricId: 'power', occurrenceId: 'output-power',
+      label: t('powershare.kpi.outputPower', 'Output Power'),
+      rawValue: powerKw != null ? powerKw * 1000 : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) },
+      description: t('powershare.powerTrend.title', 'Output Power Trend'),
+      context: t('powershare.powerTrend.title', 'Output Power Trend'),
+    },
+    {
+      metricId: 'duration', occurrenceId: 'hours-remaining',
+      label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'),
+      rawValue: hoursLeft != null ? hoursLeft * 3600 : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw / 3600), unit: 'h' }) },
+      description: t('powershare.hoursTrend.title', 'Remaining Runtime Trend'),
+      context: t('powershare.hoursTrend.title', 'Remaining Runtime Trend'),
+    },
+  ];
+  const recordedTimes = snapshotRows
+    .map(row => row.ts == null ? Number.NaN : Date.parse(row.ts))
+    .filter(Number.isFinite);
+  const oldestRecordedAt = recordedTimes.length ? new Date(Math.min(...recordedTimes)).toISOString() : null;
 
   const actions = (
     <div className="flex items-center gap-2">
       <Button
         variant="ghost"
+        className="h-11 min-h-11 min-w-11 md:h-10 md:min-h-0 md:min-w-0"
         onClick={refetchAll}
         aria-label={t('powershare.refresh', 'Refresh Powershare data')}
       >
@@ -106,72 +183,89 @@ export default function PowersharePage() {
 
   if (vehicleId == null) {
     return (
-      <PageContainer title={title} subtitle={subtitle}>
-        <EmptyState /* no-action: page precondition — no vehicle in scope yet */
-          icon={<Zap className="h-8 w-8" />}
-          message={t('powershare.noVehicle', 'Select a vehicle to view its Powershare telemetry.')}
-        />
-      </PageContainer>
+      <PageLayout title={title} subtitle={subtitle}>
+        {vehiclesState.fatalError ? (
+          <QueryError error={vehiclesState.fatalError} onRetry={vehiclesState.retry ?? undefined} />
+        ) : !vehiclesState.hasData ? (
+          <div role="status" aria-busy={!vehiclesState.isRefreshBlocked || undefined}>
+            <Caption as="p">
+              {vehiclesState.isRefreshBlocked
+                ? t('dataSources.status.paused', 'Refresh paused')
+                : t('common.loading', 'Loading...')}
+            </Caption>
+            {!vehiclesState.isRefreshBlocked && <Skeleton className="mt-3 h-24 w-full" />}
+          </div>
+        ) : (
+          <>
+            {(vehiclesState.refreshError || vehiclesState.isRefreshBlocked || vehiclesState.status === 'stale') && (
+              <StaleRefreshWarning state={vehiclesState} />
+            )}
+            <EmptyState /* no-action: page precondition — no vehicle in scope yet */
+              icon={<Zap className="h-8 w-8" />}
+              message={t('powershare.noVehicle', 'Select a vehicle to view its Powershare telemetry.')}
+            />
+          </>
+        )}
+      </PageLayout>
     );
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={subtitle}
-      actions={actions}
+      secondaryActions={actions}
       query={[statusQ, typeQ, stopQ, hoursQ, powerQ]}
+      dataSources={snapshotState.status === 'partial' ? [
+        { id: 'status', label: t('powershare.kpi.status', 'Status'), query: statusQ },
+        { id: 'type', label: t('powershare.kpi.type', 'Type'), query: typeQ },
+        { id: 'stop', label: t('powershare.stopReason.title', 'Stop Reason'), query: stopQ },
+        { id: 'power', label: t('powershare.kpi.outputPower', 'Output Power'), query: powerQ },
+        { id: 'hours', label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'), query: hoursQ },
+      ] : undefined}
     >
+      {(vehiclesState.refreshError || vehiclesState.isRefreshBlocked || vehiclesState.status === 'stale') && (
+        <StaleRefreshWarning state={vehiclesState} />
+      )}
       {/* 1 — KPI band */}
       <FadeIn>
         <section
           aria-label={t('powershare.kpi.sectionLabel', 'Powershare metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+          aria-busy={runtimeLoading || undefined}
         >
-          <MetricCard
-            label={t('powershare.kpi.status', 'Status')}
-            value={humanizeEnum(status, POWERSHARE_SIGNALS.status) ?? '—'}
-            icon={<Zap className="h-5 w-5" />}
-            color={statusNeon(status)}
-            subtitle={t('powershare.kpi.statusSub', 'Current sharing state')}
-          />
-          <MetricCard
-            label={t('powershare.kpi.type', 'Type')}
-            value={humanizeEnum(shareType, POWERSHARE_SIGNALS.type) ?? '—'}
-            icon={<Home className="h-5 w-5" />}
-            color="blue"
-            subtitle={t('powershare.kpi.typeSub', 'Powershare destination')}
-          />
-          <MetricCard
-            label={t('powershare.kpi.outputPower', 'Output Power')}
-            value={powerKw != null ? `${fmtNumber(powerKw, 2)} kW` : '—'}
-            icon={<Power className="h-5 w-5" />}
-            color="amber"
-            subtitle={t('powershare.kpi.outputPowerSub', 'Instantaneous power draw')}
-          />
-          <MetricCard
-            label={t('powershare.kpi.hoursRemaining', 'Hours Remaining')}
-            value={hoursLeft != null ? `${fmtNumber(hoursLeft, 1)} h` : '—'}
-            icon={<Clock className="h-5 w-5" />}
-            color="cyan"
-            subtitle={t('powershare.kpi.hoursRemainingSub', 'Runtime at current output')}
+          <ChargingSummaryBrief
+            id="powershare-metrics"
+            metrics={metrics}
+            retained={summaryRetained}
+            sourceStatus={summaryStatus}
+            period={{
+              kind: 'snapshot',
+              label: t('powershare.snapshot.subtitle', 'Latest raw Powershare telemetry'),
+              observedAt: oldestRecordedAt,
+              provenance: t('powershare.modernization.observationContext', 'Latest recorded observations; the trends show up to 48 recent readings per signal, not a complete time range.'),
+            }}
           />
         </section>
       </FadeIn>
 
-      {/* 2 — Hero output-power trend + live-session side panel */}
+      {/* 2 — Output-power trend + recorded observations */}
       <FadeIn delay={0.1}>
         <section
-          aria-label={t('powershare.output.sectionLabel', 'Powershare output and live session')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+          aria-label={t('powershare.statusSection', 'Powershare status')}
         >
-          <PowerTrendPanel
+          <Grid cols={outputColumns}>
+          <div className="min-w-0 xl:col-span-2">
+          <StaleRefreshWarning state={powerState} />
+          <TrendCard
+            kind="power"
             points={powerSeries}
-            isLoading={powerQ.isLoading}
-            error={powerQ.error}
+            isLoading={powerQ.isLoading && !powerState.hasData}
+            error={powerState.fatalError}
             onRetry={() => powerQ.refetch()}
           />
-          <RuntimePanel
+          </div>
+          <div className="min-w-0">
+          <RuntimeCard
             status={status}
             shareType={shareType}
             powerKw={powerKw}
@@ -179,9 +273,12 @@ export default function PowersharePage() {
             powerPeak={powerPeak}
             hoursPeak={hoursPeak}
             isLoading={runtimeLoading}
-            error={runtimeError}
-            onRetry={refetchAll}
+            error={runtimeState.fatalError}
+            onRetry={refetchRuntime}
+            sources={runtimeSources}
           />
+          </div>
+          </Grid>
         </section>
       </FadeIn>
 
@@ -189,32 +286,49 @@ export default function PowersharePage() {
       <FadeIn delay={0.2}>
         <section
           aria-label={t('powershare.detail.sectionLabel', 'Powershare runtime trend and stop reason')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5"
         >
-          <HoursTrendPanel
+          <Grid cols={detailColumns}>
+          <div className="min-w-0">
+          <StaleRefreshWarning state={hoursState} />
+          <TrendCard
+            kind="hours"
             points={hoursSeries}
-            isLoading={hoursQ.isLoading}
-            error={hoursQ.error}
+            isLoading={hoursQ.isLoading && !hoursState.hasData}
+            error={hoursState.fatalError}
             onRetry={() => hoursQ.refetch()}
           />
-          <StopReasonPanel
+          </div>
+          <div className="min-w-0">
+          <StaleRefreshWarning state={stopState} />
+          <StopReasonCard
             reason={stopReason}
-            isLoading={stopQ.isLoading}
-            error={stopQ.error}
+            isLoading={stopQ.isLoading && !stopState.hasData}
+            error={stopState.fatalError}
             onRetry={() => stopQ.refetch()}
           />
+          </div>
+          </Grid>
         </section>
       </FadeIn>
 
       {/* 4 — Raw signal snapshot */}
       <FadeIn delay={0.3}>
-        <SignalSnapshotPanel
+        <section aria-label={t('powershare.snapshot.title', 'Signal Snapshot')}>
+        <StaleRefreshWarning state={statusState} />
+        <StaleRefreshWarning state={typeState} />
+        {snapshotEmpty && (
+          <Caption as="p" className="mb-3">
+            {t('powershare.snapshot.noData', 'No Powershare signals received yet.')}
+          </Caption>
+        )}
+        <SnapshotCard
           rows={snapshotRows}
           isLoading={snapshotLoading}
-          error={snapshotError}
+          error={snapshotState.fatalError}
           onRetry={refetchAll}
         />
+        </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

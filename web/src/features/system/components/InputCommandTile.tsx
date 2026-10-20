@@ -36,7 +36,8 @@ export function InputCommandTile({ def, onRequestDialog, loading, disabled = fal
   // The tile is a clickable surface, so mirror native button keyboard
   // semantics (Enter/Space) — otherwise the command is mouse-only.
   const handleKeyDown = useCallback(
-    (e: ReactKeyboardEvent) => {
+    (e: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (e.target !== e.currentTarget) return;
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         handleActivate();

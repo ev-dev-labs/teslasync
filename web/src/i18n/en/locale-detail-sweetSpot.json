@@ -1,0 +1,141 @@
+{
+  "sweetSpot": {
+    "title": "Speed sweet spot",
+    "subtitle": "Observed efficiency by whole-drive average speed — not instantaneous cruising speed or a recommended road speed",
+    "loading": "Loading speed sweet spot evidence",
+    "kpis": "Sweet spot summary metrics",
+    "spot": "Best qualified band",
+    "atSpot": "Consumption in band",
+    "overall": "Overall weighted consumption",
+    "observedGap": "Observed efficiency gap",
+    "observedGapHint": "descriptive comparison, not a savings forecast",
+    "emptyWindow": "No drives were returned for this selected window.",
+    "qualified": "Qualified",
+    "unqualified": "Below sample floor",
+    "curveHint": "Distance-weighted band consumption; distance bars show evidence volume and dashed points are below the sample floor.",
+    "distanceLogged": "Observed distance",
+    "consumption": "Consumption",
+    "mph": "mph",
+    "kmh": "km/h",
+    "whPerMi": "Wh/mi",
+    "whPerKm": "Wh/km",
+    "band": {
+      "range": "{{from}}–{{to}} {{unit}}"
+    },
+    "kpi": {
+      "bandSample": "{{drives}} drives · {{distance}} observed",
+      "noQualified": "No band meets the sample floor",
+      "weightedBand": "distance-weighted within this band",
+      "windowSample": "{{eligible}} eligible of {{observed}} returned drives",
+      "cappedWindowSample": "{{eligible}} eligible · returned window hit the row cap"
+    },
+    "sections": {
+      "evidence": "Sweet spot evidence and confidence",
+      "curve": "Consumption by average-speed band",
+      "scatter": "Drive-level speed and consumption evidence",
+      "monthly": "Monthly operating context",
+      "coverage": "Speed-band distance and drive coverage",
+      "scorecard": "Detailed speed-band scorecard",
+      "method": "Coverage and methodology"
+    },
+    "evidence": {
+      "title": "Evidence & confidence",
+      "subtitle": "A band needs at least {{count}} eligible whole drives before it can rank.",
+      "qualified": "Qualified comparison",
+      "insufficient": "Insufficient evidence",
+      "eligible": "Eligible drives",
+      "winningDrives": "Drives in best band",
+      "winningDistance": "Distance in best band",
+      "distanceShare": "Eligible distance share",
+      "qualifiedBands": "Qualified bands",
+      "empty": "No speed band has enough eligible drives to support a best-band comparison in this window.",
+      "runnerUp": "Next-best qualified band {{band}} measured {{gap}} higher than the winner ({{percent}}).",
+      "noRunnerUp": "Only one band qualifies, so there is no runner-up contrast yet."
+    },
+    "curve": {
+      "title": "Consumption vs whole-drive average speed",
+      "aria": "Distance-weighted consumption across whole-drive average-speed bands with qualification and the best band identified",
+      "empty": "No eligible drives are available to form speed bands.",
+      "qualifiedSeries": "Qualified consumption",
+      "unqualifiedSeries": "Unqualified consumption"
+    },
+    "scatter": {
+      "title": "Drive-level whole-drive evidence",
+      "subtitle": "{{shown}} eligible drives; marker size follows distance and each point is one whole drive.",
+      "cappedSubtitle": "{{shown}} evenly sampled points from {{total}} eligible drives; every eligible drive still feeds the aggregates.",
+      "aria": "Scatter plot of whole-drive average speed against drive consumption with distance represented by marker size",
+      "sampled": "Visual sample",
+      "allPoints": "All eligible points",
+      "empty": "No eligible drives are available for drive-level evidence.",
+      "inBand": "Best-band drives",
+      "other": "Other eligible drives",
+      "speed": "Whole-drive average speed",
+      "drive": "Drive",
+      "date": "Date",
+      "group": "Evidence group"
+    },
+    "monthly": {
+      "title": "Monthly operating context",
+      "subtitle": "Monthly speed is total distance ÷ total duration and consumption is distance-weighted; co-movement is not evidence that speed caused the change.",
+      "aria": "Monthly distance-weighted consumption and aggregate whole-drive average speed with drive counts",
+      "consumptionSeries": "Weighted consumption",
+      "speedSeries": "Aggregate average speed",
+      "monthCount": "{{count}} observed months",
+      "tick": "{{month}} · {{count}}",
+      "sample": "{{count}} drives",
+      "empty": "No eligible drives with valid dates are available for monthly context."
+    },
+    "coverage": {
+      "title": "Evidence coverage by speed band",
+      "subtitle": "Bars show observed distance and the line shows eligible drives; muted bars are below the qualification floor.",
+      "aria": "Observed distance and drive count distributed across whole-drive average-speed bands",
+      "distanceSeries": "Distance",
+      "drivesSeries": "Drive count",
+      "qualifiedCount": "{{count}} qualified",
+      "driveValue": "{{count}} drives",
+      "empty": "No eligible distance is available to distribute across speed bands."
+    },
+    "score": {
+      "title": "Detailed band scorecard",
+      "subtitle": "Qualified bands rank by lowest distance-weighted consumption; unqualified bands remain visible but unranked.",
+      "rank": "Rank",
+      "rankValue": "#{{rank}}",
+      "gapBest": "Gap to best",
+      "gapOverall": "Gap to overall",
+      "empty": "No eligible speed bands are available for the scorecard."
+    },
+    "method": {
+      "title": "Coverage & methodology",
+      "windowLabel": "{{start}} – {{end}} selected window",
+      "returned": "Rows returned",
+      "eligible": "Eligible drives",
+      "excluded": "Excluded drives",
+      "capReached": "{{limit}}-row cap reached",
+      "belowCap": "Observed window below API cap",
+      "empty": "Coverage will appear when the selected window returns drives.",
+      "capped": "The request returned {{limit}} rows, so this describes the observed selected-window subset; additional drives in the date range may not be represented.",
+      "window": "This describes all {{count}} rows returned for the selected window, up to the {{limit}}-row API limit.",
+      "eligibility": "Eligibility requires positive measured energy and average speed, at least {{distance}} km, and at least {{minutes}} minutes.",
+      "buckets": "Whole-drive average speed is grouped into {{width}} km/h half-open bands; at least {{count}} drives qualify a band.",
+      "weighting": "Band, monthly, and overall consumption use total energy ÷ total distance, not an average of drive-level ratios.",
+      "monthly": "Monthly average speed is total eligible distance ÷ total eligible duration. Drives with malformed dates stay in non-calendar aggregates.",
+      "scatter": "The scatter shows at most {{limit}} evenly spaced chronological points, including the endpoints; all eligible drives feed every aggregate.",
+      "scope": "This is whole-drive average-speed evidence, not instantaneous cruising speed and not a recommended road speed.",
+      "confounders": "Route, weather, elevation, HVAC, traffic, and trip length can confound the association. The observed gap is descriptive, not causal and not a savings forecast."
+    },
+    "col": {
+      "band": "Speed band",
+      "consumption": "Consumption",
+      "distance": "Distance",
+      "drives": "Drives",
+      "distanceShare": "Distance share",
+      "qualification": "Qualification",
+      "month": "Month and sample",
+      "sample": "Sample"
+    },
+    "brief": {
+      "provenance": "Distance-weighted eligible returned drives; sample floor and row cap are unchanged.",
+      "methodDescription": "Returned, eligible, and excluded counts reconcile the same selected-window sample."
+    }
+  }
+}

@@ -15,15 +15,18 @@
  * converts the value to RFC3339 (with seconds) before invoking
  * useUpsertVehicleSetting.
  *
- * The section short-circuits to a small skeleton + EmptyState while
- * loading or on error so it never blocks the rest of the page.
+ * Initial failures replace rows; refresh failures keep rows and drafts
+ * mounted beside the shared trust warning and retry. Paused reads keep
+ * drafts but block mutations until the query can resume. Vehicle changes
+ * discard local drafts; only matching successful mutations clear edits.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Badge, Button, GlassPanel, Input, Select, type SelectOption } from '@/components/ui'
 import { Heading, Text } from '@/components/ui'
-import { Skeleton, ErrorDisplay } from '@/components/feedback'
+import { Skeleton, ErrorDisplay, StaleRefreshWarning } from '@/components/feedback'
+import { useDataState } from '@/hooks/useDataState'
 
 import {
   findEffectiveSetting,
@@ -123,10 +126,12 @@ export interface VehicleSettingsTabProps {
 
 export default function VehicleSettingsTab({ vehicleId }: VehicleSettingsTabProps) {
   const { t } = useTranslation()
-  const { data, isLoading, isError, refetch } = useVehicleSettings(vehicleId)
+  const query = useVehicleSettings(vehicleId)
+  const { data, refetch } = query
+  const trust = useDataState(query)
 
   return (
-    <GlassPanel className="p-6" data-testid="vehicle-settings-section">
+    <GlassPanel className="min-w-0 p-4 sm:p-6" data-testid="vehicle-settings-section">
       <div className="mb-4 space-y-1">
         <Heading level="section">{t('vehicleSettings.title', 'Per-vehicle settings')}</Heading>
         <Text variant="bodySm">
@@ -137,32 +142,43 @@ export default function VehicleSettingsTab({ vehicleId }: VehicleSettingsTabProp
         </Text>
       </div>
 
-      {isLoading ? (
-        <div data-testid="vehicle-settings-loading" className="space-y-3">
-          <Skeleton className="h-12 rounded-lg" />
-          <Skeleton className="h-12 rounded-lg" />
-          <Skeleton className="h-12 rounded-lg" />
-        </div>
-      ) : isError ? (
+      <StaleRefreshWarning state={trust} label={t('vehicleSettings.title', 'Per-vehicle settings')} />
+      {trust.fatalError ? (
         <div data-testid="vehicle-settings-error">
           <ErrorDisplay
-            error={new Error(t('vehicleSettings.error', 'Could not load vehicle settings.'))}
+            error={trust.fatalError}
+            message={t('vehicleSettings.error', 'Could not load vehicle settings.')}
             onRetry={() => {
               void refetch()
             }}
             compact
           />
         </div>
+      ) : !trust.hasData ? (
+        <div data-testid="vehicle-settings-loading" className="space-y-3">
+          {trust.isRefreshBlocked ? (
+            <Text role="status" variant="bodySm">
+              {t('fleetOps.brief.refreshBlocked', 'Refresh paused')}
+            </Text>
+          ) : (
+            <>
+              <Skeleton className="h-12 rounded-lg" />
+              <Skeleton className="h-12 rounded-lg" />
+              <Skeleton className="h-12 rounded-lg" />
+            </>
+          )}
+        </div>
       ) : (
-        <ul className="divide-y divide-white/5" data-testid="vehicle-settings-rows">
+        <ul className="divide-y divide-[var(--border-subtle)]" data-testid="vehicle-settings-rows">
           {VEHICLE_SETTING_DESCRIPTORS.map((desc) => {
             const effective = findEffectiveSetting(data, desc.key)
             return (
               <VehicleSettingRow
-                key={desc.key}
+                key={`${vehicleId}:${desc.key}`}
                 vehicleId={vehicleId}
                 descriptor={desc}
                 effective={effective}
+                refreshBlocked={trust.isRefreshBlocked}
               />
             )
           })}
@@ -185,7 +201,7 @@ function SourcePill({ source }: { source: EffectiveSettingSource }) {
   const { t } = useTranslation()
   const variant = SOURCE_PILL_VARIANT[source] ?? 'neutral'
   return (
-    <Badge variant={variant} data-testid={`vehicle-settings-source-${source}`}>
+    <Badge variant={variant} className="min-w-0 max-w-full whitespace-normal break-words" data-testid={`vehicle-settings-source-${source}`}>
       {t(`vehicleSettings.source.${source}`, source)}
     </Badge>
   )
@@ -197,9 +213,10 @@ interface VehicleSettingRowProps {
   vehicleId: number
   descriptor: VehicleSettingDescriptor
   effective: EffectiveSetting | undefined
+  refreshBlocked: boolean
 }
 
-function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingRowProps) {
+function VehicleSettingRow({ vehicleId, descriptor, effective, refreshBlocked }: VehicleSettingRowProps) {
   const { t } = useTranslation()
   const upsert = useUpsertVehicleSetting(vehicleId)
   const reset = useResetVehicleSetting(vehicleId)
@@ -207,22 +224,33 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
   const source: EffectiveSettingSource = effective?.source ?? 'default'
   const isOverride = source === 'override'
 
-  // Local draft state — initialised from the effective value, kept in
-  // sync when the effective value changes from outside (e.g. another
-  // tab saved an override). The draft is always a string so the
-  // input components can be rendered uniformly.
+  // Rows remount for vehicleId + key. Untouched inputs follow the server;
+  // edited drafts survive refreshes until their matching mutation succeeds.
   const initialDraft = useMemo(() => effectiveToDraft(descriptor, effective), [descriptor, effective])
-  const [draft, setDraft] = useState<string>(initialDraft)
+  const [localDraft, setDraft] = useState<string | null>(null)
+  const draftRevision = useRef(0)
   const [validationError, setValidationError] = useState<string | null>(null)
-
-  useEffect(() => {
-    setDraft(initialDraft)
-    setValidationError(null)
-  }, [initialDraft])
-
+  const draft = localDraft ?? initialDraft
   const dirty = draft !== initialDraft
+  const pending = upsert.isPending || reset.isPending
+
+  const handleChange = (value: string) => {
+    draftRevision.current += 1
+    setDraft(value)
+    setValidationError(null)
+  }
+
+  const matchingSuccess = () => {
+    const revision = draftRevision.current
+    return () => {
+      if (draftRevision.current !== revision) return
+      setDraft(null)
+      setValidationError(null)
+    }
+  }
 
   const handleSave = () => {
+    if (pending || refreshBlocked) return
     setValidationError(null)
     const parsed = parseDraft(descriptor, draft)
     if (parsed.kind === 'invalid') {
@@ -233,31 +261,36 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
       setValidationError(t('vehicleSettings.validation.required', 'Value is required.'))
       return
     }
-    upsert.mutate({ key: descriptor.key, value: parsed.value })
+    upsert.mutate(
+      { key: descriptor.key, value: parsed.value },
+      { onSuccess: matchingSuccess() },
+    )
   }
 
   const handleReset = () => {
-    if (!isOverride) return
-    reset.mutate(descriptor.key)
+    if (!isOverride || pending || refreshBlocked) return
+    reset.mutate(descriptor.key, { onSuccess: matchingSuccess() })
   }
 
   return (
     <li className="py-4" data-testid={`vehicle-settings-row-${descriptor.key}`}>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start">
-        <div className="lg:col-span-4 space-y-1">
-          <div className="flex items-center gap-2">
-            <Text size="xs" weight="medium" color="primary">
-              {t(`vehicleSettings.keys.${descriptor.key}.label`, descriptor.key)}
-            </Text>
+        <div className="min-w-0 lg:col-span-4 space-y-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <label htmlFor={`vehicle-setting-${vehicleId}-${descriptor.key}`} className="min-w-0 break-words">
+              <Text size="xs" weight="medium" color="primary">
+                {t(`vehicleSettings.keys.${descriptor.key}.label`, descriptor.key)}
+              </Text>
+            </label>
             <SourcePill source={source} />
           </div>
-          <Text variant="caption">
+          <Text variant="caption" className="break-words">
             {t(`vehicleSettings.keys.${descriptor.key}.help`, '')}
           </Text>
         </div>
 
-        <div className="lg:col-span-5">
-          {renderInput(descriptor, draft, setDraft)}
+        <div className="min-w-0 lg:col-span-5">
+          {renderInput(descriptor, draft, handleChange, `vehicle-setting-${vehicleId}-${descriptor.key}`)}
           {validationError ? (
             <Text
               variant="error"
@@ -269,11 +302,13 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
           ) : null}
         </div>
 
-        <div className="lg:col-span-3 flex items-center justify-start gap-2 lg:justify-end">
+        <div className="min-w-0 lg:col-span-3 flex flex-wrap items-center justify-start gap-2 lg:justify-end">
           <Button
             variant="primary"
             size="sm"
-            disabled={!dirty || upsert.isPending}
+            wrapLabel
+            className="min-h-11 md:min-h-9"
+            disabled={!dirty || pending || refreshBlocked}
             onClick={handleSave}
             data-testid={`vehicle-settings-save-${descriptor.key}`}
           >
@@ -284,7 +319,9 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
           <Button
             variant="secondary"
             size="sm"
-            disabled={!isOverride || reset.isPending}
+            wrapLabel
+            className="min-h-11 md:min-h-9"
+            disabled={!isOverride || pending || refreshBlocked}
             onClick={handleReset}
             data-testid={`vehicle-settings-reset-${descriptor.key}`}
           >
@@ -359,11 +396,14 @@ function renderInput(
   descriptor: VehicleSettingDescriptor,
   draft: string,
   onChange: (value: string) => void,
+  id: string,
 ) {
   switch (descriptor.kind) {
     case 'timestamp':
       return (
         <Input
+          id={id}
+          className="min-h-11 md:min-h-10"
           type="datetime-local"
           value={draft}
           onChange={(e) => onChange(e.target.value)}
@@ -373,6 +413,8 @@ function renderInput(
     case 'select':
       return (
         <Select
+          id={id}
+          className="min-h-11 md:min-h-10"
           options={descriptor.options ?? []}
           value={draft}
           onChange={(e) => onChange(e.target.value)}
@@ -383,6 +425,8 @@ function renderInput(
     default:
       return (
         <Input
+          id={id}
+          className="min-h-11 md:min-h-10"
           type="text"
           value={draft}
           onChange={(e) => onChange(e.target.value)}

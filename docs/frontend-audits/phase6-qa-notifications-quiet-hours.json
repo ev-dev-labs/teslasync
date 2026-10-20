@@ -1,0 +1,1131 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-notifications-quiet-hours",
+  "attempt": 1,
+  "status": "DONE_SOURCE_ONLY_AUDIT_WITH_FINDINGS",
+  "route": "/notifications/quiet-hours",
+  "acceptance": {
+    "sourceAudit": "completed",
+    "source": "unchanged",
+    "technical": "NOTRUN",
+    "native": "NOTRUN",
+    "browser": "NOTRUN",
+    "backendParity": "NOTRUN",
+    "wholePage": "NOT_ACCEPTED",
+    "phase7": "NOTRUN"
+  },
+  "clocks": {
+    "reservationUTC": "2026-10-14T02:04:58.538Z",
+    "actualFirstCommandUTC": "2026-10-14T02:09:38.8419643Z",
+    "returnDeadlineUTC": "2026-10-14T02:24:58.538Z",
+    "hardDeadlineUTC": "2026-10-14T02:29:58.538Z",
+    "releaseUTC": "2026-10-14T02:24:44.8131318Z",
+    "note": "Reservation deadlines are earlier than actual first command+20/25; earlier creation if known to orchestrator still governs."
+  },
+  "scope": {
+    "page": "web/src/features/notifications/pages/QuietHoursPage.tsx",
+    "readOnly": true,
+    "writableFiles": [
+      "docs/frontend-audits/phase6-qa-notifications-quiet-hours.json",
+      "web/logs/phase6-qa-notifications-quiet-hours.log"
+    ],
+    "method": "Existing source/tests, PowerShell Select-String checks and hypothetical source traces only. Repros NOTEXECUTED. Built-in artifact serialization; no helper files or runners."
+  },
+  "authority": {
+    "solePlaybook": "docs/orchestrator-loop.md FULL",
+    "designContract": "docs/frontend-design-contract.md FULL",
+    "mission": "docs/frontend-mission.md principles0-26 and QA/DoD43-45",
+    "inventory": "docs/frontend-inventory.md route202,G143/P268,scope1298",
+    "handoff": "docs/session-handoff.md1-180 current recovery/conventions",
+    "queue": "Exact row initially109/later126, attempt1 report/log only; predecessor initially2092/later2109 complete. Other orchestrator writes shifted coordinates; no queue edits.",
+    "instructions": [
+      ".github/copilot-instructions.md FULL1-708",
+      ".github/instructions/react-frontend.instructions.md FULL",
+      ".github/instructions/frontend-si-cutover.instructions.md FULL"
+    ],
+    "supersededReads": [
+      "agent-loop-playbook.md",
+      "shared-library-loop.md"
+    ]
+  },
+  "sectionMap": [
+    {
+      "section": "Header/title/freshness/copy",
+      "file": "web/src/features/notifications/pages/QuietHoursPage.tsx",
+      "lines": [
+        30,
+        53,
+        58
+      ],
+      "mechanism": "Translated titles/subtitle; query metadata only. PageLayout forwards PageContainer (adapter11). CopyLinkButton38-68 copies current URL and only reports success after clipboard/fallback succeeds; failure caught. No interaction executed."
+    },
+    {
+      "section": "Summary and Review details",
+      "file": "web/src/features/notifications/components/QuietHoursSummary.tsx",
+      "lines": [
+        66,
+        69,
+        101,
+        128,
+        129,
+        132,
+        140,
+        166
+      ],
+      "mechanism": "Four metrics: configured count, enabled fraction, inferred current policy, bypass union. Skeleton/fatal retry/retained warning and refresh. OperationalBrief159-169,246-318 opens/closes local Drawer with all metrics/captions/provenance; no network action. Initial-paused/schedule truth issues below."
+    },
+    {
+      "section": "Canonical list/editor",
+      "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+      "lines": [
+        203,
+        296,
+        343,
+        393,
+        425,
+        441,
+        521,
+        688
+      ],
+      "mechanism": "Persistent Add; loading/fatal/empty/retained source slot. Rows retain enabled, rawHH:MM/IANAzone,next change, weekdays,bypass,Edit/Delete. Form retains enabled/start/end/timezone/weekdays/bypass/Create/Update/Cancel and discard/delete dialogs. Editor is outside source slot so fatal query does not erase draft."
+    },
+    {
+      "section": "Optional propose-only advisor",
+      "file": "web/src/components/ai/AIQuietHoursSuggestion.tsx",
+      "lines": [
+        83,
+        97,
+        141,
+        158,
+        169,
+        180,
+        195,
+        211,
+        300
+      ],
+      "mechanism": "Explicit Ask Helix starts typed SSE emptybody, busy/paused-confirm guard. Preview includes window/bitmask/bypass, insufficient-history and existing-count caveats. Apply forwards scalars into page pendingSeed and editor, never saves. HOC hides only opt-in AI when off/unresolved, not canonical editor."
+    },
+    {
+      "section": "Static guide",
+      "file": "web/src/features/notifications/components/QuietHoursGuide.tsx",
+      "lines": [
+        27,
+        35,
+        63,
+        85,
+        111
+      ],
+      "mechanism": "Three translated steps plus Critical/Warning/Info legend. Persistent named region, useId labels, hidden glyphs. Critical-delivery assurance too strong."
+    }
+  ],
+  "actionMap": [
+    {
+      "action": "Add/Edit",
+      "citation": "QuietHoursPanel.tsx:256-272,411-420,463-470",
+      "effect": "Draft only. Defaults23:00-07:00/browserzone/allweekdays/critical; Edit retains id/rawvalues. Replacement confirmation gap."
+    },
+    {
+      "action": "Enabled/start/end/timezone/weekdays/severities",
+      "citation": "QuietHoursPanel.tsx:364-381,532-639",
+      "effect": "Controlled draft only, stable Sunday-first bit/test identities, empty bypass legal; no automatic write."
+    },
+    {
+      "action": "Cancel/discard/keep editing",
+      "citation": "QuietHoursPanel.tsx:281-293,658-667,687; useDiscardChangesGuard.ts:30-63",
+      "effect": "Explicit close/navigation dirty guard, Cancel blocked during save. Row switches/AI Apply bypass guard."
+    },
+    {
+      "action": "Create/Update",
+      "citation": "QuietHoursPanel.tsx:296-340,669-683; useNotifications.ts:1375-1400",
+      "effect": "Explicit validated submit POST/PATCH exactid. Success-only invalidation/broadcast/toast/reset; rejection retains draft. Pending identity and duplicate feedback defects. NOTEXECUTED."
+    },
+    {
+      "action": "Delete/confirm/cancel",
+      "citation": "QuietHoursPanel.tsx:343-362,472-480,688; useNotifications.ts:1403-1414",
+      "effect": "Danger confirmation before DELETE capturedid; cancel no mutation; busy row indicator. NOTEXECUTED."
+    },
+    {
+      "action": "Retry/Refresh",
+      "citation": "QuietHoursSummary.tsx:134-136,140; QuietHoursPanel.tsx:431; SourceContent.tsx:53-67; StaleRefreshWarning.tsx:95-110",
+      "effect": "Same-source read retry only; retained content stays. No retry executed."
+    },
+    {
+      "action": "Ask Helix",
+      "citation": "AIQuietHoursSuggestion.tsx:141-145,169-177; useAiStream.ts:324-359",
+      "effect": "Explicit SSE command; stablebody, busy/generation/cancellation/double-start guard. Independent trailing30-day context, not workspace range. NOTEXECUTED."
+    },
+    {
+      "action": "Apply to form",
+      "citation": "AIQuietHoursSuggestion.tsx:179-191,214-229; QuietHoursPage.tsx:42-49,71-74; QuietHoursPanel.tsx:230-249",
+      "effect": "Consume-once draft scalar handoff, no id/no API write; canonical Save remains sole schedule persistence. Dirty/pending replacement gaps."
+    }
+  ],
+  "businessScope": {
+    "scheduleVersusWorkspace": "Per-user recurring HH:MM+IANAzone+weekday mask is independent configuration, not analysis range. No duplicate picker. workspaceScope range set omits quiet-hours; /notifications disables vehicle picker. Do not add workspace bounds to CRUD.",
+    "timezoneDST": "Raw times/timezone/masks preserved on wire. Both local evaluators ignore configured zone; browser date/DST substituted. Backend/DST equivalence NOTRUN.",
+    "preferences": "useOperationalMetrics.tsx14-22 uses translation,useUnits,useFormatting. Saved preferences untouched. Rawtime editor and browserzone default retained; 12/24h/displayzone compatibility remains candidate.",
+    "identity": "Rows keyed by id; Edit keeps id; seed creates newwindow withoutid. Fixed resource querykey and auth transition purge remain outside narrow proof.",
+    "trust": "Only fatal/no-retained replaces own slot. Retained rows/[] survive refresh failures/paused source with warning/retry; editor/guide remain. Initial-paused summary and malformed schedule evaluation have defects."
+  },
+  "confirmedIssues": [
+    {
+      "id": "QH-001",
+      "rule": "schedule-timezone",
+      "severity": "high",
+      "owner": "schedule-domain",
+      "file": "web/src/features/notifications/components/QuietHoursSummary.tsx",
+      "lines": [
+        46,
+        51,
+        52,
+        53
+      ],
+      "related": [
+        {
+          "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+          "lines": [
+            160,
+            162,
+            166
+          ]
+        }
+      ],
+      "mechanism": "Both evaluators use browser Date.getHours/getDay, never w.timezone, although row displays configured IANAzone.",
+      "sourceRepro": "NOTEXECUTED: browserUTC2026-10-14T16:30Z, LA09:30, enabled every-day09:00-10:00 LA window: summary computes16:30/Delivering rather than Quiet. Different date/DST offsets also change weekday.",
+      "fix": "Reuse one existing-owner interpretation with explicitinstant/configuredIANAzone, retain rawHH:MM/masks; separately prove server/DST equivalence."
+    },
+    {
+      "id": "QH-002",
+      "rule": "schedule-transition-weekday",
+      "severity": "high",
+      "owner": "schedule-domain",
+      "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+      "lines": [
+        162,
+        164,
+        165,
+        172,
+        178
+      ],
+      "mechanism": "Nextlabel gates today only, not yesterday's overnight tail; after same-day end claims tomorrow without checking tomorrow's bit. Summary does credit yesterday.",
+      "sourceRepro": "NOTEXECUTED: UTC Tuesdaybit4/22:00-06:00 atWednesday02:00: summaryQuiet but panelnextlabelnull. Wednesday-only09:00-17:00 atWednesday18:00 says starts tomorrow though Thursdayoff.",
+      "fix": "Find next eligible transition, including previous-day tail and skipped days, in actualschedulezone; unknown when unsupported."
+    },
+    {
+      "id": "QH-003",
+      "rule": "schedule-clock-invalidation",
+      "severity": "medium",
+      "owner": "schedule-domain",
+      "file": "web/src/features/notifications/components/QuietHoursSummary.tsx",
+      "lines": [
+        69,
+        70,
+        82,
+        83,
+        93
+      ],
+      "related": [
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "lines": [
+            1364,
+            1371
+          ]
+        }
+      ],
+      "mechanism": "Now captured inside useMemo depending only on windows; identical retained array and elapsedtime never update activeNow. Hook has staleTime, no interval.",
+      "sourceRepro": "NOTEXECUTED: load09:00-10:00 at09:59; retain same array at10:01 -> staysQuiet even on unrelated rerender.",
+      "fix": "Existing-owner clock/boundary invalidation independent of querydata identity; respect timezone/DST and announcement policy."
+    },
+    {
+      "id": "QH-004",
+      "rule": "initial-paused-as-known-empty",
+      "severity": "high",
+      "owner": "summary-source-trust",
+      "file": "web/src/features/notifications/components/QuietHoursSummary.tsx",
+      "lines": [
+        67,
+        90,
+        93,
+        95,
+        104,
+        129,
+        132,
+        153
+      ],
+      "related": [
+        {
+          "file": "web/src/api/dataState.ts",
+          "lines": [
+            200,
+            205,
+            214
+          ]
+        }
+      ],
+      "mechanism": "firstLoad uses isLoading, not DataStateinitial. Initialpaused has no data/isPendingtrue/isLoadingfalse; [] default becomes0/Delivering/No schedules. Fatalerrornull; retained warning returnsnull withoutdata.",
+      "sourceRepro": "NOTEXECUTED: dataundefined,fetchStatuspaused,isLoadingfalse,isErrorfalse -> known-looking metrics despite initial/unknown/isRefreshBlockedtrue. Summarytest185 accepts idleundefined as empty; page346 only tests cachedpaused.",
+      "fix": "Use no-data initial/paused state with persistent geometry and explicit pending/unknown reason, not fabricated authoritativeempty."
+    },
+    {
+      "id": "QH-005",
+      "rule": "unknown-schedule-as-inactive",
+      "severity": "medium",
+      "owner": "schedule-domain",
+      "file": "web/src/features/notifications/components/QuietHoursSummary.tsx",
+      "lines": [
+        48,
+        49,
+        50,
+        54,
+        55,
+        93,
+        95,
+        101
+      ],
+      "mechanism": "Malformed/missing HH:MM returnsfalse and missingweekday becomes0; aggregation exposes no unknown evaluation and claims Delivering/No window active now.",
+      "sourceRepro": "NOTEXECUTED: enabledtrue/start99:99/end17:00 -> inactive,enabledcount1/Delivering. Existing test256-281 expects inactive for malformed/missing fields; not fresh passing proof.",
+      "fix": "Preserve malformedrawwindow but distinguish unknown from evaluableinactive with partial/unknown presentation."
+    },
+    {
+      "id": "QH-006",
+      "rule": "unguarded-draft-replacement",
+      "severity": "high",
+      "owner": "canonical-editor",
+      "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+      "lines": [
+        230,
+        244,
+        245,
+        256,
+        259,
+        260,
+        281,
+        284,
+        467
+      ],
+      "related": [
+        {
+          "file": "web/src/features/notifications/pages/QuietHoursPage.tsx",
+          "lines": [
+            45,
+            46,
+            71,
+            72
+          ]
+        }
+      ],
+      "mechanism": "Discardguard covers Cancel/navigation only. RowEdit and AIseed unconditionally replace dirty draft/initialDraft/editingId without confirmation.",
+      "sourceRepro": "NOTEXECUTED: editA/changeEnd/clickEditB or Applyproposal -> unsavedA replaced, no discarddialog, replacement markedclean.",
+      "fix": "Confirm explicit replacement through currenteditor authority; declined replacement keeps originaldraft, Apply remains propose-only."
+    },
+    {
+      "id": "QH-007",
+      "rule": "stale-save-settlement-clears-current-draft",
+      "severity": "high",
+      "owner": "canonical-editor",
+      "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+      "lines": [
+        328,
+        329,
+        335,
+        467,
+        535,
+        546,
+        559,
+        573,
+        665,
+        674
+      ],
+      "mechanism": "Save/Cancel disabled pending, but fields/rowEdit/AIseed not blocked. Oldsave onSuccess unconditionally discardDraft without draft/attempt identity, erasing newer changes.",
+      "sourceRepro": "NOTEXECUTED: submitA, editEnd or switchB before settlement, resolveA -> latest unsaved draft cleared though submittedpayload was originalA.",
+      "fix": "Block pending replacement/edits or guard settlement by attempt/generation/currentdraft identity; preserve original-target server outcome."
+    },
+    {
+      "id": "QH-008",
+      "rule": "duplicate-mutation-feedback",
+      "severity": "medium",
+      "owner": "canonical-editor",
+      "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+      "lines": [
+        330,
+        338,
+        356,
+        359
+      ],
+      "related": [
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "lines": [
+            1394,
+            1399,
+            1411,
+            1413
+          ]
+        },
+        {
+          "file": "web/src/api/hooks/_toastHelpers.ts",
+          "lines": [
+            90,
+            104
+          ]
+        },
+        {
+          "file": "web/src/components/feedback/Toast.tsx",
+          "lines": [
+            138,
+            139,
+            141,
+            149,
+            150
+          ]
+        }
+      ],
+      "mechanism": "Hook-level and mutate-call callbacks both emit success/error. Toast always allocates new id, no dedup.",
+      "sourceRepro": "NOTEXECUTED: one successfulcreate calls hookcreatedtoast then panelcreatedtoast; delete/error have equivalent duplicate paths. Paneltests mock hooks, not real bridge.",
+      "fix": "Single existing mutationhook toastowner; retain panel draft lifecycle and distinct inline recovery, not second toast."
+    },
+    {
+      "id": "QH-009",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "owner": "schedule-domain",
+      "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+      "lines": [
+        172,
+        173,
+        174,
+        176,
+        177,
+        178,
+        459
+      ],
+      "violationOccurrences": 6,
+      "mechanism": "Six English returned nextchange templates bypass t; nextLabel rendered directly. Comment158 excluded.",
+      "sourceRepro": "NOTEXECUTED: non-Englishlocale still displays ends at/ends tomorrow at/starts at/starts tomorrow at.",
+      "fix": "Evaluator returns semantic transition; caller localizes wholemessage/interpolation with approved canonical copy/timeformatter, preserve wireHH:MM."
+    },
+    {
+      "id": "QH-010",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "owner": "localized-severity-presentation",
+      "file": "web/src/features/notifications/components/QuietHoursSummary.tsx",
+      "lines": [
+        122
+      ],
+      "related": [
+        {
+          "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+          "lines": [
+            509
+          ]
+        },
+        {
+          "file": "web/src/components/ai/AIQuietHoursSuggestion.tsx",
+          "lines": [
+            258
+          ]
+        }
+      ],
+      "violationOccurrences": 3,
+      "mechanism": "Known critical/warn/info identifiers shown directly or joined in summary,rowbadges,AIpreview, unlike translatedform/guide labels.",
+      "sourceRepro": "NOTEXECUTED: translatedlocale with critical/warn payload still displays wiretokens at allthree sites.",
+      "fix": "Localize recognized IDs at displayboundary; keep unrecognized identifiers visible/verbatim and raw payload unchanged."
+    },
+    {
+      "id": "QH-011",
+      "rule": "overstated-critical-delivery-policy",
+      "severity": "medium",
+      "owner": "guide-copy",
+      "file": "web/src/features/notifications/components/QuietHoursGuide.tsx",
+      "lines": [
+        47,
+        49
+      ],
+      "related": [
+        {
+          "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+          "lines": [
+            146,
+            147,
+            148,
+            373,
+            378,
+            617,
+            620
+          ]
+        }
+      ],
+      "mechanism": "Guide says never miss a criticalalert though form allows removing critical and legal emptybypass, documented as deferringeverything.",
+      "sourceRepro": "NOTEXECUTED: deselectcritical -> validemptybypass; guide still says nevermisscritical. Existing paneltest310-323 asserts legalempty; no realnotification/backendtest.",
+      "fix": "Truthful conditional copy: explicitlyallowed severities bypass configuredwindow; no unconditional critical/delivery guarantee. Parent serializes canonical copy separately."
+    },
+    {
+      "id": "QH-012",
+      "rule": "source-mobile-target-declaration",
+      "severity": "medium",
+      "owner": "canonical-editor-and-advisor",
+      "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+      "lines": [
+        414,
+        466,
+        475,
+        660,
+        671
+      ],
+      "related": [
+        {
+          "file": "web/src/components/ai/AIQuietHoursSuggestion.tsx",
+          "lines": [
+            216
+          ]
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "lines": [
+            36,
+            45
+          ]
+        }
+      ],
+      "mechanism": "Add/Edit/Delete/Cancel/Save sm+wrapLabel inherit2.25rem minimum, no below-md44 override/exception. AdvisorApply sm has fixedh9. Weekday/severity min-h11/min-w11 excluded.",
+      "sourceRepro": "NOTEXECUTED declarationtrace: standard16pxroot/shortlabel/mobile ->36px declared minimum versus contract44. Not measured native rectangles or claimed WCAG failure.",
+      "fix": "Existing localowner min-h11 belowmd with explicitmd restoration; retain wrapping/density, do not globallyresize Button. Mountedmeasurements remainNOTRUN."
+    },
+    {
+      "id": "QH-013",
+      "rule": "source-a11y-weekday-state-not-exposed",
+      "severity": "medium",
+      "owner": "canonical-editor",
+      "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+      "lines": [
+        485,
+        486,
+        488,
+        489,
+        492,
+        494,
+        495,
+        497,
+        499
+      ],
+      "mechanism": "Readonlyrow emits allseven daynames for everymask; on/off only CSScolor/ring/weight. No text/ARIA conveys selecteddays. Formaria-pressed is correct but separate.",
+      "sourceRepro": "NOTEXECUTED accessible-text trace: masks2 versus127 both readSun Mon Tue Wed Thu Fri Sat without eligibility descriptions; fontweight is not accessible state.",
+      "fix": "Localized selectedday summary or descriptions, preserving all bitmaskfields/visualchips/stableids/formpressed states. MountedAT NOTRUN."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C-001",
+      "topic": "Live-only readiness",
+      "citations": [
+        "QuietHoursPanel.tsx:296-328,343-354",
+        "useNotifications.ts:1378-1414",
+        "AIQuietHoursSuggestion.tsx:165-176",
+        "useAiStream.ts:324-359"
+      ],
+      "mechanism": "Busy/AI opt-in gates visible; live/auth/capability and paused-source command guards not shown here.",
+      "neededEvidence": "QueryClient/networkMode/client operational/serverauth authority outside narrow proof; no offlinequeue or actualwrite claimed."
+    },
+    {
+      "id": "C-002",
+      "topic": "User identity/cache partition",
+      "citations": [
+        "useNotifications.ts:123,1366",
+        "QuietHoursPanel.tsx:37-39,213,441"
+      ],
+      "mechanism": "Per-user resource uses fixed notification-quiet-hours key; authtransition cacheclear/remount unverified.",
+      "neededEvidence": "Parent identityowner proves user/server cache isolation; no realusers accessed/no leak claimed."
+    },
+    {
+      "id": "C-003",
+      "topic": "Malformed response/proposal validation",
+      "citations": [
+        "useNotifications.ts:1368-1369",
+        "AIQuietHoursSuggestion.tsx:112-138",
+        "QuietHoursPanel.tsx:141-145"
+      ],
+      "mechanism": "Missing/nonarray windows normalized; AI primitivechecks lack semantic IANAtz/integer-mask validation; editor only requires nonemptyzone/bounds.",
+      "neededEvidence": "Actualbackend contract/validation before calling malformed normalization an APIbug; no malformed requests sent."
+    },
+    {
+      "id": "C-004",
+      "topic": "Bypass aggregation semantics",
+      "citations": [
+        "QuietHoursSummary.tsx:73-79,122-125",
+        "useNotifications.ts:1353-1356"
+      ],
+      "mechanism": "Union of all enabledwindow bypasses labeled Alwaysallowed may overstate overlapping/disjoint policy.",
+      "neededEvidence": "Existingdomainowner verifies server overlap/gate semantics; no backend regression claimed."
+    },
+    {
+      "id": "C-005",
+      "topic": "12/24h and timezone preference compatibility",
+      "citations": [
+        "QuietHoursPanel.tsx:85-96,154,541-582",
+        "AIQuietHoursSuggestion.tsx:239-249",
+        "useOperationalMetrics.tsx:14-22"
+      ],
+      "mechanism": "RawHH:MM row/preview; defaultzone browser-derived; native timeinput display browser/locale-owned.",
+      "neededEvidence": "Existing saveddisplayprefs/formatter intent; do not change wireHH:MM or explicitschedulezone. Native/RTL/DST NOTRUN."
+    },
+    {
+      "id": "C-006",
+      "topic": "Delivery/proposal evidence qualifications",
+      "citations": [
+        "QuietHoursSummary.tsx:93-101",
+        "AIQuietHoursSuggestion.tsx:125-138,165-190,264-279"
+      ],
+      "mechanism": "Delivering inferred from policy not providerhealth; AI status defaultsok/count0 and capturedproposal not cleared on laterstreamerror, but Apply staysdraftonly.",
+      "neededEvidence": "Product/domain qualification and safe streamfixture proof, no liveAI request."
+    }
+  ],
+  "ruleChecks": [
+    {
+      "rule": "static-inline-style",
+      "rawMatchedLines": 0,
+      "confirmedViolations": 0
+    },
+    {
+      "rule": "raw-html",
+      "rawMatchedLines": 0,
+      "confirmedViolations": 0,
+      "exceptions": "CorrectedCaseSensitive scan; first insensitive11 matched capitalizedsharedcomponents, not rawHTML. Teststubs/sharedimplementations expected."
+    },
+    {
+      "rule": "direct-library-import",
+      "rawMatchedLines": 0,
+      "confirmedViolations": 0
+    },
+    {
+      "rule": "old-api-import",
+      "rawMatchedLines": 0,
+      "confirmedViolations": 0
+    },
+    {
+      "rule": "double-prefix",
+      "rawMatchedLines": 0,
+      "confirmedViolations": 0,
+      "scope": "Five domainfiles plus hook1364-1414; sanctioned SSE adds oneprefix; final URL teststrings excluded."
+    },
+    {
+      "rule": "camelcase-param",
+      "rawMatchedLines": 0,
+      "confirmedViolations": 0,
+      "scope": "Five domainfiles plus hook1364-1414; quiet-hoursCRUD has noqueryparams."
+    },
+    {
+      "rule": "hidden-section",
+      "rawMatchedLines": 8,
+      "confirmedViolations": 0,
+      "exceptions": "Optionaldraft/proposal/labels/errors/dialogs/busyexpression, not wholedata-source gating; AIoff explicitconsentexception."
+    },
+    {
+      "rule": "hardcoded-string",
+      "rawMatchedLines": 11,
+      "confirmedRootFindings": 2,
+      "confirmedOccurrences": 9,
+      "exceptions": "Comment158 and Badgeopening508 excluded. Six Englishreturns plus three recognizedseverity displaysites."
+    },
+    {
+      "rule": "missing-page-container",
+      "rawMatchedLines": 1,
+      "confirmedViolations": 0,
+      "exceptions": "PageLayout53 resolves PageContainer atadapter11."
+    },
+    {
+      "rule": "fetch-useeffect",
+      "rawMatchedLines": 2,
+      "confirmedViolations": 0,
+      "exceptions": "Seedcopy and unmountstreamcancel effects, not ad-hocdatafetch; typedcommandSSEowner acceptable."
+    },
+    {
+      "rule": "backend11-14",
+      "status": "NOT_APPLICABLE",
+      "scope": "No internalGo files authorized; no backendscan or zero-violationclaim."
+    }
+  ],
+  "pins": [
+    {
+      "file": "web/src/features/notifications/pages/QuietHoursPage.tsx",
+      "beforeSHA256": "5360930ccb2f264b6098c507bd1c66e37df770911e65d4ef3bda10a255e39791",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "5360930ccb2f264b6098c507bd1c66e37df770911e65d4ef3bda10a255e39791",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/QuietHoursSummary.tsx",
+      "beforeSHA256": "7260803fae3a302927ad433c88c38987d797b946bedf612f30ef8e04ea7c40eb",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "7260803fae3a302927ad433c88c38987d797b946bedf612f30ef8e04ea7c40eb",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/QuietHoursGuide.tsx",
+      "beforeSHA256": "632e4fb91b9c53e83ed04bfe861ab07c65b06b527143f897ad080e540ad0e0b9",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "632e4fb91b9c53e83ed04bfe861ab07c65b06b527143f897ad080e540ad0e0b9",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+      "beforeSHA256": "68add43e0787bd88ee0bfbbd64b9ae2110e015783668b05de43b68ffe3a624ba",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "68add43e0787bd88ee0bfbbd64b9ae2110e015783668b05de43b68ffe3a624ba",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ai/AIQuietHoursSuggestion.tsx",
+      "beforeSHA256": "108bd3c662c7ad8877053b118319b0c11f7751e2514d28282c2455c79320abdb",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "108bd3c662c7ad8877053b118319b0c11f7751e2514d28282c2455c79320abdb",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useNotifications.ts",
+      "beforeSHA256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/pages/QuietHoursPage.test.tsx",
+      "beforeSHA256": "a84875cc79ae285dc9da417f9d840381e0cc0528bfe8e76f9ffccb9c87b6dab4",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "a84875cc79ae285dc9da417f9d840381e0cc0528bfe8e76f9ffccb9c87b6dab4",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/QuietHoursSummary.test.tsx",
+      "beforeSHA256": "9d75de4cff35051dd78ca22c21783ba263f82259bb250f06aef6aa5854402177",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "9d75de4cff35051dd78ca22c21783ba263f82259bb250f06aef6aa5854402177",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/QuietHoursGuide.test.tsx",
+      "beforeSHA256": "81f9d52593d24c29909b99b25ba6a405ce813268e76f1bb51d041ba94ed9ba7f",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "81f9d52593d24c29909b99b25ba6a405ce813268e76f1bb51d041ba94ed9ba7f",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/__tests__/TestQuietHoursSuggestionAIOffManualSettingsWork.test.tsx",
+      "beforeSHA256": "77b4f5391e83558c8e18a3559ae9f4c3df7b86ce670129b4662dc72db71ead56",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "77b4f5391e83558c8e18a3559ae9f4c3df7b86ce670129b4662dc72db71ead56",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/__tests__/TestQuietHoursSuggestionAIOnWiredCallsRoute.test.tsx",
+      "beforeSHA256": "43d9785c1d4c196271f8329ffb30f0ea460571a0c65ff053d21e6590ddb8e753",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "43d9785c1d4c196271f8329ffb30f0ea460571a0c65ff053d21e6590ddb8e753",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/settings/components/QuietHoursPanel.test.tsx",
+      "beforeSHA256": "607f53ec9e35b79bb752b36ef49de03be5448a359816cab7352718694aeff6c6",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "607f53ec9e35b79bb752b36ef49de03be5448a359816cab7352718694aeff6c6",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "beforeSHA256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "beforeSHA256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "beforeSHA256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSHA256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "beforeSHA256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDiscardChangesGuard.ts",
+      "beforeSHA256": "1aead18ecf0fc903ccd4af7a3801cd3f4ca7aa52f0eb6dbd99cc5cd87478e907",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "1aead18ecf0fc903ccd4af7a3801cd3f4ca7aa52f0eb6dbd99cc5cd87478e907",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ai/withAiFeature.tsx",
+      "beforeSHA256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ai/AIFeatureCard.tsx",
+      "beforeSHA256": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useAiStream.ts",
+      "beforeSHA256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "beforeSHA256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "beforeSHA256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/CopyLinkButton.tsx",
+      "beforeSHA256": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useAiEnabled.ts",
+      "beforeSHA256": "afb5dddd9edc3f024249d1ba97f04a8c9c9a5d5b9bc09be672113fe155069250",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "afb5dddd9edc3f024249d1ba97f04a8c9c9a5d5b9bc09be672113fe155069250",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/_toastHelpers.ts",
+      "beforeSHA256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "baselineTiming": "Before substantive source/test read",
+      "afterSHA256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/feedback/Toast.tsx",
+      "beforeSHA256": "a26c69c800959a7bc59d1cff41a0de84e86195e8e46cf4037572acedb5c0aeb3",
+      "baselineTiming": "Late-discovered baseline after initial search; disclosed",
+      "afterSHA256": "a26c69c800959a7bc59d1cff41a0de84e86195e8e46cf4037572acedb5c0aeb3",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "beforeSHA256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "baselineTiming": "Late-discovered baseline after initial search; disclosed",
+      "afterSHA256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "beforeSHA256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "baselineTiming": "Before substantive source read",
+      "afterSHA256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "beforeSHA256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "baselineTiming": "Before substantive source read",
+      "afterSHA256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "beforeSHA256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "baselineTiming": "Before substantive source read",
+      "afterSHA256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "unchanged": true
+    }
+  ],
+  "ownersAndNeeds": [
+    {
+      "owner": "Existing QuietHoursPanel source/test owner",
+      "files": [
+        "web/src/features/settings/components/QuietHoursPanel.tsx",
+        "web/src/features/settings/components/QuietHoursPanel.test.tsx"
+      ],
+      "findingIds": [
+        "QH-001",
+        "QH-002",
+        "QH-006",
+        "QH-007",
+        "QH-008",
+        "QH-009",
+        "QH-010",
+        "QH-012",
+        "QH-013"
+      ],
+      "need": "Bounded SERIALIZED fixes at same pair, no competingeditor or overlappingwriter."
+    },
+    {
+      "owner": "Existing QuietHoursSummary source/test owner",
+      "files": [
+        "web/src/features/notifications/components/QuietHoursSummary.tsx",
+        "web/src/features/notifications/components/QuietHoursSummary.test.tsx"
+      ],
+      "findingIds": [
+        "QH-001",
+        "QH-003",
+        "QH-004",
+        "QH-005",
+        "QH-010"
+      ],
+      "need": "Source/clock/unknown corrections; reuse G143/P268 existing interpretationreview, not speculativehelper."
+    },
+    {
+      "owner": "Existing AIQuietHoursSuggestion owner",
+      "files": [
+        "web/src/components/ai/AIQuietHoursSuggestion.tsx",
+        "web/src/features/notifications/__tests__/TestQuietHoursSuggestionAIOnWiredCallsRoute.test.tsx"
+      ],
+      "findingIds": [
+        "QH-010",
+        "QH-012"
+      ],
+      "need": "Displaylabels/mobile declarations, retain opt-in/propose-only/canonicalSave."
+    },
+    {
+      "owner": "Existing QuietHoursGuide owner plus parent catalog integration",
+      "files": [
+        "web/src/features/notifications/components/QuietHoursGuide.tsx",
+        "web/src/features/notifications/components/QuietHoursGuide.test.tsx"
+      ],
+      "findingIds": [
+        "QH-011"
+      ],
+      "need": "Truthful conditional guidecopy and separate parentserialized catalog; no catalogwrite here."
+    }
+  ],
+  "testInventory": {
+    "authoredDeclarations": 46,
+    "method": "Literal existing it declarations only, not discovery/execution",
+    "files": [
+      {
+        "file": "web/src/features/notifications/pages/QuietHoursPage.test.tsx",
+        "declarations": 9
+      },
+      {
+        "file": "web/src/features/notifications/components/QuietHoursSummary.test.tsx",
+        "declarations": 12
+      },
+      {
+        "file": "web/src/features/notifications/components/QuietHoursGuide.test.tsx",
+        "declarations": 7
+      },
+      {
+        "file": "web/src/features/settings/components/QuietHoursPanel.test.tsx",
+        "declarations": 12
+      },
+      {
+        "file": "web/src/features/notifications/__tests__/TestQuietHoursSuggestionAIOffManualSettingsWork.test.tsx",
+        "declarations": 3
+      },
+      {
+        "file": "web/src/features/notifications/__tests__/TestQuietHoursSuggestionAIOnWiredCallsRoute.test.tsx",
+        "declarations": 3
+      }
+    ],
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "status": "NOTRUN",
+    "gaps": [
+      "Page stubs real editor/advisor; editor stubs mutation hooks",
+      "Schedule tests freeze localtime, not configuredzone/DST",
+      "Initialoffline page case346 has retaineddata only",
+      "No inspected case for dirtyreplacement,late-save clearingnewdraft,mobile measurements or readonlyweekday ATstate"
+    ],
+    "historicalReceipt": "Predecessor queue records externalcatalogguardexit1 before discovery/zeroexecuted; unchanged tests were not rerun."
+  },
+  "notRun": [
+    "Tests/lint/build/global npx tsc --noEmit/customhelpers/passingreruns",
+    "Browser/native/keyboard/AT/mobile/forcedcolors/contrast/theme/RTL/200percent mounted QA",
+    "Actual schedule/configuration/notification/network/API/AI/business or clipboard actions",
+    "Backend/DST/auth/capability/runtime checks",
+    "Servers/installs/subagents/source/tests/catalog/Gitwrites/commits/staging"
+  ],
+  "commandReceipts": [
+    {
+      "successfulShellIds": [
+        "2257",
+        "2264",
+        "2271",
+        "2278",
+        "2286",
+        "2295",
+        "2307",
+        "2322",
+        "2339",
+        "2355",
+        "2362",
+        "2393",
+        "2416",
+        "2427",
+        "2506",
+        "2514",
+        "2520"
+      ],
+      "exit": 0,
+      "rawOutput": "Ownlog Start-Transcript sections and returned tool output; checks use Get-FileHash/Get-Content/Select-String and artifact ConvertFrom-Json/ConvertTo-Json/Set-Content only"
+    },
+    {
+      "shellId": "2245",
+      "exit": 1,
+      "failure": "rg unavailable; read-only Gitstatus ran, no Gitwrites"
+    },
+    {
+      "shellId": "2315",
+      "exit": 1,
+      "failure": "Guessed src/hooks/useMutationToast.ts missing; rest of scopedcommand NOTRUN; corrected actual _toastHelpers"
+    },
+    {
+      "shellId": "2496",
+      "exit": 1,
+      "failure": "Windows error206 oversizedcommand refused beforeexecution; splitartifactserialization only"
+    },
+    {
+      "tool": "view",
+      "exit": null,
+      "failure": "copilot-instructions741-EOF invalidrange/EOF708; full1-740 coveredfile; initial design output truncated, continued full ranges; no pass derived from unread output"
+    },
+    {
+      "shellId": "2531",
+      "exit": 0,
+      "command": "Artifact-only completion of candidates/rulecounts/owners and31 original baselinepins"
+    },
+    {
+      "command": "Final ConvertFrom-Json/count/location/Get-FileHash check; exact artifact finalwrite/reparse",
+      "exit": 0,
+      "note": "Numeric finalexit and exact release timestamp in raw log; hash drift if any is explicitly retained"
+    },
+    {
+      "shellId": "2535",
+      "exit": 1,
+      "failure": "All31 source/test afterpins matched; postwrite string equality of release timestamp failed because ConvertFrom-Json materialized System.DateTime. Corrected date-aware validation; not a source/test failure."
+    }
+  ],
+  "summary": {
+    "confirmedIssueCount": 13,
+    "candidateCount": 6,
+    "hardcodedStringOccurrences": 9,
+    "ownerGroups": 4,
+    "byRule": [
+      {
+        "rule": "duplicate-mutation-feedback",
+        "rootFindings": 1
+      },
+      {
+        "rule": "hardcoded-string",
+        "rootFindings": 2
+      },
+      {
+        "rule": "initial-paused-as-known-empty",
+        "rootFindings": 1
+      },
+      {
+        "rule": "overstated-critical-delivery-policy",
+        "rootFindings": 1
+      },
+      {
+        "rule": "schedule-clock-invalidation",
+        "rootFindings": 1
+      },
+      {
+        "rule": "schedule-timezone",
+        "rootFindings": 1
+      },
+      {
+        "rule": "schedule-transition-weekday",
+        "rootFindings": 1
+      },
+      {
+        "rule": "source-a11y-weekday-state-not-exposed",
+        "rootFindings": 1
+      },
+      {
+        "rule": "source-mobile-target-declaration",
+        "rootFindings": 1
+      },
+      {
+        "rule": "stale-save-settlement-clears-current-draft",
+        "rootFindings": 1
+      },
+      {
+        "rule": "unguarded-draft-replacement",
+        "rootFindings": 1
+      },
+      {
+        "rule": "unknown-schedule-as-inactive",
+        "rootFindings": 1
+      }
+    ],
+    "byPrimaryFile": [
+      {
+        "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+        "rootFindings": 7
+      },
+      {
+        "file": "web/src/features/notifications/components/QuietHoursSummary.tsx",
+        "rootFindings": 5
+      },
+      {
+        "file": "web/src/features/notifications/components/QuietHoursGuide.tsx",
+        "rootFindings": 1
+      }
+    ],
+    "native": "NOTRUN, not zero native defects",
+    "needs": "Existing four sourceowners; parentserialized copy/catalog; separately authorized native validation. No routine user approval needed for report.",
+    "priorities": [
+      "Initial-paused/unknown trust",
+      "Timezone/DST/weekday/clock interpretation",
+      "Dirty/pending editor authority",
+      "Singlefeedbackowner",
+      "Localization/truthfulcopy/mobile and readonlyweekday a11y"
+    ]
+  },
+  "pinVerification": {
+    "baselineFiles": 31,
+    "coreTestFiles": 6,
+    "lateBaselineFiles": 2,
+    "afterCheck": "PASS_UNCHANGED",
+    "sourceWrites": "NONE",
+    "note": "Two wrapped Format-List testpaths expanded to exactexisting fullpaths without changing original hashes.",
+    "mismatches": []
+  },
+  "artifactVerification": {
+    "finalJSONParse": "PASS_AFTER_CORRECTED_DATE_AWARE_CHECK",
+    "finalPinCheck": "PASS_31_UNCHANGED",
+    "artifactRelease": "RELEASED",
+    "commandRelease": "RELEASED"
+  },
+  "ownerDeduplication": "Exact path and semantic queue searches found no active quiet-hours sourcefix. Phase5 page and Phase0 audit already complete: do not remigrate/reopen. G143/P268 is reviewcoordinate, not accepted helperimplementation. Only current exactreport/log objective; no tasks/owners created, no browserlocks."
+}

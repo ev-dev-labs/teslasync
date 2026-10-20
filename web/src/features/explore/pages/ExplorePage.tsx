@@ -18,7 +18,7 @@
  * Design rules preserved:
  *   - URL-driven state (`?q=&section=`) so a link reproduces the user's view.
  *   - Shared components + design tokens only (Button / Input / GlassPanel /
- *     MetricCard / typography). The few `<a>` tags are internal navigation and
+ *     OperationalBrief / typography). The few `<a>` tags are internal navigation and
  *     keep focus rings + ARIA.
  *   - Visibility gates (`minVehicles`, `requiresAuth`) honored so the hub never
  *     surfaces something the sidebar would hide.
@@ -29,25 +29,33 @@ import { useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-import { PageContainer } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout';
+import { PillFilterBar } from '@/components/forms';
 import {
   GlassPanel,
   Input,
   Badge,
   Button,
+  BUTTON_BASE,
   SectionTitle,
   Text,
   Caption,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { OperationalBrief } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DataStateNotice, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDataState } from '@/hooks/useDataState';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useIsForwardAuth } from '@/api/hooks/useAuthMode';
+import { useAuthMode } from '@/api/hooks/useAuthMode';
 import { cn } from '@/lib/cn';
 import { closestRoutes } from '@/lib/closestRoute';
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry';
+import { isInsideModalSurface, isTextEntryElement } from '@/lib/routeFocus';
 
 import {
   buildFeatureCatalog,
@@ -62,6 +70,7 @@ const CARD_GRID =
 
 export default function ExplorePage() {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -70,8 +79,16 @@ export default function ExplorePage() {
 
   // Gating — same predicates the sidebar uses, so this page surfaces
   // exactly what the user would see in the legacy nav.
-  const { data: vehicles } = useVehicles();
-  const isForwardAuth = useIsForwardAuth();
+  const vehiclesQuery = useVehicles();
+  const { data: vehicles } = vehiclesQuery;
+  const fleetState = useDataState(vehiclesQuery);
+  const authQuery = useAuthMode();
+  const authState = useDataState(authQuery);
+  const isForwardAuth = authState.data?.mode === 'forward_auth';
+  const authFeaturesLabel = buildFeatureCatalog()
+    .filter(entry => entry.requiresAuth)
+    .map(entry => t(entry.labelKey, entry.label))
+    .join(', ');
   const vehicleCount = vehicles?.length ?? 0;
 
   const query = searchParams.get('q') ?? '';
@@ -123,14 +140,24 @@ export default function ExplorePage() {
   // to open the command palette — global handler upstream owns that.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const tag = target?.tagName;
-      const inEditable =
-        tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable;
-      if (!inEditable && e.key === '/') {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
+      if (
+        e.key !== '/' || e.defaultPrevented || e.ctrlKey || e.metaKey ||
+        e.altKey || e.shiftKey || e.isComposing
+      ) return;
+
+      const target = e.target instanceof Element ? e.target : null;
+      const active = document.activeElement;
+      const ownsEntryOrOverlay = (element: Element | null) => {
+        const editable = element?.closest('[contenteditable]');
+        return isTextEntryElement(element) ||
+          Boolean(editable && editable.getAttribute('contenteditable') !== 'false') ||
+          Boolean(element?.closest('input, textarea, select, [role="textbox"], [role="combobox"], [role="searchbox"], [role="spinbutton"], [role="menu"], [role="listbox"]')) ||
+          isInsideModalSurface(element);
+      };
+      if (ownsEntryOrOverlay(target) || ownsEntryOrOverlay(active)) return;
+
+      e.preventDefault();
+      inputRef.current?.focus();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -138,6 +165,63 @@ export default function ExplorePage() {
 
   const totalFeatures = visibleCatalog.length;
   const matchCount = grouped.reduce((count, group) => count + group.entries.length, 0);
+  const sourceStatus = fleetState.fatalError
+    ? 'unavailable'
+    : fleetState.isRefreshBlocked
+      ? 'offline'
+      : fleetState.refreshError
+        ? 'retained'
+        : !fleetState.hasData
+          ? 'pending'
+          : fleetState.isRefreshing
+            ? 'refreshing'
+            : 'ready';
+  const statusLabels = {
+    unavailable: t('explore.brief.status.unavailable', 'Fleet unavailable'),
+    offline: t('dataSources.status.paused', 'Refresh paused'),
+    retained: t('explore.brief.status.retained', 'Retained fleet'),
+    pending: t('explore.brief.status.pending', 'Fleet pending'),
+    refreshing: t('explore.brief.status.refreshing', 'Fleet refreshing'),
+    ready: t('explore.brief.status.ready', 'Catalog ready'),
+  };
+  const filterCaption = query
+    ? t('explore.kpi.filtered', 'matching filter')
+    : selectedSection !== 'all'
+      ? t('explore.brief.selectedCategory', 'selected category')
+      : t('explore.kpi.all', 'all features');
+  const scopeLabel = t('explore.brief.scope', 'Visible catalog and returned fleet list · no date window');
+  const freshnessLabel = fleetState.updatedAt == null
+    ? t('explore.brief.freshnessUnknown', 'Fleet load time not supplied')
+    : t('explore.brief.freshness', 'Fleet last loaded: {{time}}', { time: formatDateTime(new Date(fleetState.updatedAt)) });
+  const metrics: readonly StatMetric[] = [
+    {
+      metricId: 'count', occurrenceId: 'features', rawValue: totalFeatures,
+      label: t('explore.kpi.features', 'Features'),
+      description: t('explore.brief.featuresDetail', 'Visible catalog entries after vehicle and authentication gates; unaffected by search or category filters.'),
+    },
+    {
+      metricId: 'count', occurrenceId: 'categories', rawValue: categoriesCount,
+      label: t('explore.kpi.categories', 'Categories'),
+      description: t('explore.brief.categoriesDetail', 'Distinct categories in the visible catalog before search and category filters.'),
+    },
+    {
+      metricId: 'count', occurrenceId: 'showing', rawValue: matchCount,
+      label: t('explore.kpi.showing', 'Showing'),
+      description: filterCaption,
+      context: t('explore.brief.filterContext', 'Search: {{query}} · Category: {{category}}', {
+        query: query || t('explore.brief.noSearch', 'No search filter'),
+        category: selectedSection === 'all' ? t('explore.all', 'All') : selectedSection,
+      }),
+    },
+    {
+      metricId: 'count', occurrenceId: 'vehicles', rawValue: vehicles?.length,
+      label: t('explore.kpi.vehicles', 'Vehicles'),
+      description: t('explore.brief.vehiclesDetail', 'Vehicles in the returned fleet list, not the workspace vehicle selection or a historical total.'),
+      missingReason: t('explore.brief.vehiclesMissing', 'No fleet list is available; vehicle-gated destinations remain hidden.'),
+      context: <><div>{statusLabels[sourceStatus]}</div><div>{scopeLabel}</div><div>{freshnessLabel}</div></>,
+    },
+  ];
+  const operationalMetrics = useOperationalMetrics(metrics);
 
   const subtitle = query
     ? t('explore.subtitle.filtered', '{{matches}} of {{total}} features match "{{query}}"', {
@@ -154,48 +238,84 @@ export default function ExplorePage() {
       });
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('explore.title', 'Explore features')}
-      subtitle={subtitle}
+      metadataActions={<Text variant="caption">{subtitle}</Text>}
     >
       <div className="space-y-6">
-        {/* 1 — KPI overview band: full-width metric grid, derived from the
-            catalog (no extra API). "Showing" tracks the live filter. */}
+        {/* Catalog counts remain usable independently of the fleet source. */}
         <FadeIn>
-          <section
-            aria-label={t('explore.overview', 'Feature overview')}
-            className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-          >
-            <MetricCard
-              label={t('explore.kpi.features', 'Features')}
-              value={totalFeatures}
-              icon={<Icons.layoutGrid className="h-5 w-5" aria-hidden="true" />}
-              color="cyan"
+          <OperationalBrief
+            compact
+            testId="explore-operational-brief"
+            eyebrow={t('explore.brief.eyebrow', 'Feature discovery')}
+            title={t('explore.overview', 'Feature overview')}
+            description={t('explore.brief.description', 'Catalog counts follow visibility gates; showing follows your search and category. Fleet availability is independent of catalog navigation.')}
+            statusLabel={statusLabels[sourceStatus]}
+            statusTone={sourceStatus === 'ready' ? 'neutral' : 'warning'}
+            metrics={operationalMetrics}
+            scope={<Caption>{scopeLabel}</Caption>}
+            freshness={<Caption>{freshnessLabel}</Caption>}
+            provenance={t('explore.brief.provenance', 'Local navigation catalog, authentication mode, and the vehicles query snapshot. Catalog counts are derived, not vehicle telemetry.')}
+            attention={sourceStatus === 'unavailable' || sourceStatus === 'pending' || sourceStatus === 'offline'
+              ? [{
+                key: 'fleet-source',
+                title: statusLabels[sourceStatus],
+                description: vehicles == null
+                  ? t('explore.brief.vehiclesMissing', 'No fleet list is available; vehicle-gated destinations remain hidden.')
+                  : t('explore.brief.offlineRetained', 'Fleet refresh is paused; retained vehicles still determine destination eligibility.'),
+                tone: 'warning',
+              }]
+              : []}
+          />
+          <StaleRefreshWarning state={fleetState} label={t('explore.kpi.vehicles', 'Vehicles')} />
+          {!fleetState.hasData && fleetState.retry != null && (fleetState.fatalError || fleetState.isRefreshBlocked) && (
+            <Button
+              variant="secondary"
+              onClick={fleetState.retry}
+              disabled={vehiclesQuery.isFetching}
+              aria-label={`${t('error.retry', 'Retry')} · ${t('explore.kpi.vehicles', 'Vehicles')}`}
+            >
+              {t('error.retry', 'Retry')} · {t('explore.kpi.vehicles', 'Vehicles')}
+            </Button>
+          )}
+          <div data-testid="explore-auth-source" className="mt-4 space-y-2">
+            {(!authState.hasData || !isForwardAuth) && (
+              <DataStateNotice
+                state={authState.fatalError ? 'unavailable' : !authState.hasData ? 'partial' : 'unsupported'}
+                title={t('requiresAuth.title', '{{feature}} requires authentication mode', {
+                  feature: authFeaturesLabel,
+                })}
+              >
+                {!authState.hasData && (
+                  <Text as="p" variant="bodySm" color="secondary" role="status">
+                    {authState.fatalError
+                      ? t('dataSources.status.failed', 'Failed')
+                      : authState.isRefreshBlocked
+                        ? t('dataSources.status.paused', 'Refresh paused')
+                        : authQuery.isFetching
+                          ? t('dataSources.status.loading', 'Loading')
+                          : t('dataSources.status.pending', 'Pending')}
+                    {' · '}{t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+                  </Text>
+                )}
+                <Text as="p" variant="bodySm" color="secondary">
+                  {t('requiresAuth.body', '{{feature}} is only available when TeslaSync is configured behind an authentication provider (Authentik, Authelia, oauth2-proxy, Keycloak, or similar). Set FORWARD_AUTH_HEADER on the API service to enable it.', {
+                    feature: authFeaturesLabel,
+                  })}
+                </Text>
+                {!authState.hasData && authState.retry != null && (authState.fatalError || authState.isRefreshBlocked) && (
+                  <Button variant="secondary" onClick={authState.retry} disabled={authQuery.isFetching}>
+                    {t('error.retry', 'Retry')}
+                  </Button>
+                )}
+              </DataStateNotice>
+            )}
+            <StaleRefreshWarning
+              state={authState}
+              label={authFeaturesLabel}
             />
-            <MetricCard
-              label={t('explore.kpi.categories', 'Categories')}
-              value={categoriesCount}
-              icon={<Icons.folderOpen className="h-5 w-5" aria-hidden="true" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t('explore.kpi.showing', 'Showing')}
-              value={matchCount}
-              icon={<Icons.filter className="h-5 w-5" aria-hidden="true" />}
-              color="green"
-              subtitle={
-                query
-                  ? t('explore.kpi.filtered', 'matching filter')
-                  : t('explore.kpi.all', 'all features')
-              }
-            />
-            <MetricCard
-              label={t('explore.kpi.vehicles', 'Vehicles')}
-              value={vehicleCount}
-              icon={<Icons.vehicle className="h-5 w-5" aria-hidden="true" />}
-              color="blue"
-            />
-          </section>
+          </div>
         </FadeIn>
 
         {/* Match the rule-template gallery: labeled search, outlined category
@@ -247,6 +367,7 @@ export default function ExplorePage() {
           {grouped.length === 0 ? (
             <EmptyResult
               query={query}
+              selectedSection={selectedSection}
               catalog={visibleCatalog}
               onPickSuggestion={(to) => {
                 setSearchParams({}, { replace: true });
@@ -270,7 +391,7 @@ export default function ExplorePage() {
           )}
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }
 
@@ -289,36 +410,21 @@ function SectionFilter({
 }) {
   const { t } = useTranslation();
   return (
-    <div
-      role="group"
-      className="mt-4 flex flex-wrap gap-2"
-      aria-label={t('explore.sectionsAriaLabel', 'Filter features by category')}
-      data-testid="explore-anchor-strip"
-    >
-      <Button
-        type="button"
-        size="sm"
-        variant={selected === 'all' ? 'primary' : 'outline'}
-        aria-pressed={selected === 'all'}
-        onClick={() => onSelect('all')}
-        className="min-h-9 rounded-shape-sm px-3"
-      >
-        {t('explore.all', 'All')} ({total})
-      </Button>
-      {groups.map(({ section, sectionKey, count }) => (
-        <Button
-          key={section}
-          type="button"
-          size="sm"
-          variant={selected === slugify(section) ? 'primary' : 'outline'}
-          aria-pressed={selected === slugify(section)}
-          onClick={() => onSelect(slugify(section))}
-          className="min-h-9 rounded-shape-sm px-3"
-        >
-          {t(sectionKey, section)} ({count})
-        </Button>
-      ))}
-    </div>
+    <PillFilterBar
+      semanticMode="filters"
+      scrollable={false}
+      className="mt-4 flex-wrap gap-2"
+      ariaLabel={t('explore.sectionsAriaLabel', 'Filter features by category')}
+      testId="explore-anchor-strip"
+      activeKey={selected}
+      onChange={onSelect}
+      items={[
+        { key: 'all', label: t('explore.all', 'All'), count: total },
+        ...groups.map(({ section, sectionKey, count }) => ({
+          key: slugify(section), label: t(sectionKey, section), count,
+        })),
+      ]}
+    />
   );
 }
 
@@ -345,7 +451,7 @@ function SectionBand({
       className="scroll-mt-24"
     >
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <SectionTitle id={`explore-section-heading-${slugify(section)}`} className="truncate">
+        <SectionTitle id={`explore-section-heading-${slugify(section)}`} className="min-w-0 break-words">
           {t(sectionKey, section)}
         </SectionTitle>
         <Badge variant="neutral" size="sm" className="shrink-0 tabular-nums">
@@ -390,17 +496,17 @@ function FeatureCard({
           onNavigate(entry.to);
         }}
         className={cn(
-          'group block h-full rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] p-4',
-          'hover:border-[var(--glass-border-strong,rgba(255,255,255,0.18))] hover:bg-[var(--surface-2)]',
-          'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
-          'transition-colors',
+          BUTTON_BASE,
+          'group block h-full rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-4',
+          'hover:border-[var(--control-border-hover)] hover:bg-[var(--surface-2)]',
+          'forced-colors:border-[ButtonBorder]',
         )}
       >
         <div className="flex items-start gap-3">
           <div
             className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-              'border border-[var(--glass-border)] bg-white/[0.04]',
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-shape-md',
+              'border border-[var(--border-default)] bg-[var(--surface-2)]',
               // Neutral icon tone: per-page rainbow colors carried no
               // information, so color is reserved for status instead.
               'text-[var(--text-secondary)]',
@@ -410,13 +516,13 @@ function FeatureCard({
             <Icon className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <Text as="div" size="sm" weight="medium" color="primary">
+            <Text as="div" size="sm" weight="medium" color="primary" className="break-words">
               <Highlight text={t(entry.labelKey, entry.label)} query={query} />
             </Text>
             <Text
               as="p"
               variant="bodySm"
-              className="mt-1 line-clamp-2 leading-relaxed"
+              className="mt-1 break-words leading-relaxed"
             >
               <Highlight text={entry.description} query={query} />
             </Text>
@@ -470,7 +576,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
         return (
           <mark
             key={i}
-            className="rounded bg-[var(--theme-primary)]/25 px-0.5 text-[var(--text-primary)]"
+            className="rounded-shape-xs bg-[var(--control-bg)] px-0.5 font-medium text-[var(--text-primary)] underline decoration-[var(--text-secondary)] underline-offset-2 forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]"
           >
             {part}
           </mark>
@@ -488,16 +594,22 @@ function escapeRegExp(s: string): string {
 
 function EmptyResult({
   query,
+  selectedSection,
   catalog,
   onPickSuggestion,
   onClear,
 }: {
   query: string;
+  selectedSection: string;
   catalog: FeatureCatalogEntry[];
   onPickSuggestion: (to: string) => void;
   onClear: () => void;
 }) {
   const { t } = useTranslation();
+  const selectedCategory = catalog.find(entry => slugify(entry.section) === selectedSection);
+  const categoryLabel = selectedCategory
+    ? t(selectedCategory.sectionKey, selectedCategory.section)
+    : selectedSection;
   // Suggest the closest known routes — combines (a) full route registry
   // (so we pick up hidden pages too) and (b) catalog labels (so we match
   // the user's mental model). De-dupe by path; honor the catalog's
@@ -511,7 +623,7 @@ function EmptyResult({
         path: c.to,
         name: c.label.replace(/\s+/g, ''),
         label: c.label,
-        i18nKey: '',
+        i18nKey: c.labelKey,
       })),
       5,
     );
@@ -531,8 +643,18 @@ function EmptyResult({
     <GlassPanel className="p-6 text-center sm:p-8" data-testid="explore-empty">
       <Icons.search className="mx-auto h-6 w-6 text-[var(--text-muted)]" aria-hidden="true" />
       <SectionTitle className="mt-3">
-        {t('explore.empty.title', 'No features match "{{query}}"', { query })}
+        {selectedSection === 'all'
+          ? t('explore.empty.title', 'No features match "{{query}}"', { query })
+          : t('explore.subtitle.category', '{{matches}} features in the selected category', { matches: 0 })}
       </SectionTitle>
+      {selectedSection !== 'all' && (
+        <Caption as="p" className="mt-2 break-words">
+          {t('explore.brief.filterContext', 'Search: {{query}} · Category: {{category}}', {
+            query: query || t('explore.brief.noSearch', 'No search filter'),
+            category: categoryLabel,
+          })}
+        </Caption>
+      )}
       <Text as="p" variant="bodySm" className="mx-auto mt-1 max-w-md">
         {t(
           'explore.empty.body',
@@ -550,11 +672,17 @@ function EmptyResult({
               <li key={s.path}>
                 <Button
                   variant="ghost"
+                  wrapLabel
                   onClick={() => onPickSuggestion(s.path)}
                   className="w-full justify-between border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
                 >
-                  <span>{s.label}</span>
-                  <Caption>{s.path}</Caption>
+                  <span className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-start">
+                    <span className="min-w-0 break-words">{t(s.i18nKey, s.label)}</span>
+                    {/* Word separator for the accessible name; a whitespace-only
+                        anonymous flex item is not rendered, so layout is unchanged. */}
+                    {' '}
+                    <Caption className="break-all">{s.path}</Caption>
+                  </span>
                 </Button>
               </li>
             ))}
@@ -565,6 +693,7 @@ function EmptyResult({
       <Button
         variant="secondary"
         size="sm"
+        wrapLabel
         onClick={onClear}
         className="mt-5"
       >

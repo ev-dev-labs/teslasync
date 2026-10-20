@@ -33,7 +33,7 @@ function OrderCardImpl({ order }: OrderCardProps) {
   const { formatDate } = useDateFormat();
 
   const model = order.model || '—';
-  const statusLabel = formatOrderStatus(order.status);
+  const statusLabel = formatOrderStatus(order.status, t);
   const orderId = order.order_id || '—';
 
   return (
@@ -103,9 +103,9 @@ function OrderCardImpl({ order }: OrderCardProps) {
       </dl>
 
       {order.is_upgradable && (
-        <div className="mt-auto flex items-center gap-1.5 rounded-md border border-purple-500/20 bg-purple-500/[0.08] px-2 py-1">
-          <Sparkles className="h-3.5 w-3.5 text-purple-300" aria-hidden="true" />
-          <Caption className="text-purple-300">
+        <div className="mt-auto flex items-center gap-1.5 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1">
+          <Sparkles className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+          <Caption>
             {t('admin.teslaOrders.card.upgradable', 'Upgrade available')}
           </Caption>
         </div>

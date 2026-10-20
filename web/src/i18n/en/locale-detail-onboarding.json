@@ -40,16 +40,16 @@
       "or": " or the ",
       "docs": "documentation"
     },
-    "syncTitle": "Sync Your Vehicles",
+    "syncTitle": "Sync your vehicles",
     "title": "Welcome to TeslaSync",
     "syncDesc": "Your Tesla account is connected. Sync your vehicles to start tracking.",
     "desc": "The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.",
-    "sync": "Sync Vehicles",
-    "connect": "Connect Tesla Account",
+    "sync": "Sync vehicles",
+    "connect": "Connect Tesla account",
     "tracking": "Real-time Tracking",
-    "drives": "Drive History",
-    "charging": "Charge Analytics",
-    "control": "Vehicle Control",
+    "drives": "Drive history",
+    "charging": "Charge analytics",
+    "control": "Vehicle control",
     "status": {
       "sectionLabel": "Setup status",
       "tesla": {
@@ -69,7 +69,9 @@
         "flowing": "Flowing",
         "waiting": "Waiting",
         "hintDone": "Live signals arriving",
-        "hint": "No signals received yet"
+        "hint": "No signals received yet",
+        "stale": "Interrupted",
+        "hintStale": "Stored history remains available"
       },
       "loading": "Loading status…"
     },
@@ -103,6 +105,92 @@
       "drives": "Every trip logged with route, efficiency, and stats.",
       "charging": "Track sessions, costs, and battery health over time.",
       "control": "Climate, charging, and locks — all from one place."
-    }
+    },
+    "subtitleComplete": "Your setup stays complete even when a live service is temporarily unavailable.",
+    "brief": {
+      "missing": "Setup status has not been received; no completed-step or vehicle count is known.",
+      "eyebrow": "First-run setup",
+      "description": "Account authorization, synced vehicles, and telemetry readiness from the existing setup check.",
+      "unavailable": "Setup status unavailable",
+      "retained": "Retained setup status",
+      "notReceived": "Setup status not yet received",
+      "scope": "This installation · 3 setup anchors",
+      "lastTelemetry": "Last telemetry: {{time}}",
+      "noTelemetryTime": "Last telemetry time not supplied",
+      "provenance": "Existing onboarding status response; completed setup remains complete during a live-service outage. Telemetry health is not a status-fetch timestamp."
+    },
+    "stepper": {
+      "status": {
+        "current": "In progress",
+        "done": "Completed",
+        "pending": "Not started"
+      },
+      "empty": "No setup steps to show right now.",
+      "label": "Onboarding steps"
+    },
+    "next": "Next",
+    "stepAccount": "Connect Tesla account",
+    "runtimeHealth": {
+      "systemStatus": "View system status",
+      "telemetryLastSeen": "Fleet Telemetry is stale. The last signal arrived {{time}}.",
+      "telemetryStale": "Fleet Telemetry is stale and live values may be out of date.",
+      "title": "Setup is complete, but a live service needs attention",
+      "access": "You can keep using TeslaSync and viewing stored history while live services recover.",
+      "teslaAuth": "Your Tesla account authorization is unavailable and may need to be renewed.",
+      "reconnect": "Reconnect Tesla account",
+      "alerts": "Configure health alerts"
+    },
+    "close": "Close and skip introduction",
+    "getStarted": "Get Started",
+    "trackingHelp": "See current vehicle state and data freshness.",
+    "drivesHelp": "Review routes, efficiency, and driving patterns.",
+    "chargingHelp": "Understand charging cost and battery health.",
+    "controlHelp": "Manage alerts, automations, and vehicle actions.",
+    "stepAccountHelp": "Authorize TeslaSync through the account settings.",
+    "stepVehicles": "Sync vehicle inventory",
+    "stepVehiclesHelp": "Import the vehicles available to your account.",
+    "stepWorkspace": "Activate your workspace",
+    "stepWorkspaceHelp": "Live dashboards populate as telemetry arrives.",
+    "accountConnected": "Account connected",
+    "setupRequired": "Workspace setup",
+    "explore": "Explore capabilities",
+    "privateTitle": "Private by design",
+    "privateHelp": "Your fleet data stays in the infrastructure you control.",
+    "tasks": {
+      "optOut": "Stop showing setup tips",
+      "dismiss": "Dismiss this tip",
+      "linkVehicle": {
+        "title": "Link a vehicle to start collecting data",
+        "body": "Nothing is recorded until at least one vehicle is linked to your Tesla account."
+      },
+      "liveTelemetry": {
+        "title": "Turn on live telemetry for second-by-second signals",
+        "body": "Without streaming telemetry this page can only show polled snapshots, which arrive minutes apart."
+      },
+      "chargingCost": {
+        "title": "Set an electricity price to see charging costs",
+        "body": "Charging sessions are recorded without a price until a tariff is configured, so cost columns stay empty."
+      },
+      "automation": {
+        "title": "Create your first automation",
+        "body": "Automations react to vehicle state — for example, notify when charging stops below a target."
+      },
+      "notificationChannel": {
+        "title": "Add a notification channel so alerts can reach you",
+        "body": "Automations and alerts evaluate normally, but nothing is delivered until a channel exists."
+      }
+    },
+    "welcome.title": "Welcome to TeslaSync",
+    "connect.title": "Connect Your Tesla",
+    "configure": {
+      "title": "Configure Settings",
+      "desc": "Customize your polling interval, distance units, energy cost per kWh, notification preferences, and MQTT integration to match your setup."
+    },
+    "done": {
+      "title": "You're All Set!",
+      "desc": "Your dashboard is ready. Explore drives, charging sessions, efficiency analytics, and more. You can always revisit settings to fine-tune your experience."
+    },
+    "welcome.desc": "Your all-in-one Tesla fleet management dashboard. Track drives, monitor battery health, analyze energy usage, and control your vehicles — all in one place.",
+    "connect.desc": "Head to Settings and link your Tesla account via OAuth. TeslaSync will securely poll your vehicle data and keep everything in sync automatically."
   }
 }

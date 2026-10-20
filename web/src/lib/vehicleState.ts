@@ -1,7 +1,73 @@
 import { parseWindowState as parseWindowEnum } from './parseEnums';
-import { asNonEmptyString } from './typeGuards';
+import { asFiniteNumber, asNonEmptyString } from './typeGuards';
 import type { SecurityEvent, ChargingTelemetry } from '@/api/types';
 import type { VehicleLiveState } from '@/hooks/useVehicleLive';
+import { deriveDataState, type DataState, type DataStateSource } from '@/api/dataState';
+
+export type TwinSource = 'security' | 'vehicle-state' | 'charging';
+
+export interface TwinSourceObservation<T> {
+  source: TwinSource;
+  identity: string | null;
+  observedAt: number | null;
+  ageMs: number | null;
+  query: DataState<T>;
+  isLoading: boolean;
+}
+
+function observationTime(value: string | number | Date | null | undefined, now: number): number | null {
+  const time = typeof value === 'number' ? value
+    : value instanceof Date ? value.getTime()
+    : typeof value === 'string' && value.trim() ? Date.parse(value) : NaN;
+  return Number.isFinite(time) && time >= 0 && time <= now ? time : null;
+}
+
+/** Observation age and identity never use the query's last successful fetch time. */
+export function resolveTwinSourceObservation<T>(
+  source: TwinSource,
+  input: DataStateSource<T>,
+  observation: { vehicleId?: number; observedAt?: string | number | Date | null },
+  now = Date.now(),
+): TwinSourceObservation<T> {
+  const empty = input.data == null || (Array.isArray(input.data) && input.data.length === 0);
+  const query = deriveDataState(input, { unavailable: empty, now: () => now });
+  const observedAt = empty ? null : observationTime(observation.observedAt, now);
+  return {
+    source,
+    identity: observedAt != null && observation.vehicleId != null
+      ? `${source}:${observation.vehicleId}:${observedAt}` : null,
+    observedAt,
+    ageMs: observedAt == null ? null : now - observedAt,
+    query,
+    isLoading: !query.hasData && (input.isLoading === true ||
+      (input.isPending === true && input.fetchStatus === 'fetching')),
+  };
+}
+
+export function buildTwinSourceObservations(
+  security: DataStateSource<SecurityEvent | null>,
+  vehicle: DataStateSource<{
+    state?: { vehicle_id?: number | null } | null;
+    observedAt?: number | null;
+  } | null>,
+  charging: DataStateSource<ChargingTelemetry | null>,
+  now = Date.now(),
+) {
+  return {
+    security: resolveTwinSourceObservation('security', security, {
+      vehicleId: security.data?.vehicle_id,
+      observedAt: security.data?.ts ?? security.data?.created_at,
+    }, now),
+    vehicleState: resolveTwinSourceObservation('vehicle-state', vehicle, {
+      vehicleId: vehicle.data?.state?.vehicle_id ?? undefined,
+      observedAt: vehicle.data?.observedAt,
+    }, now),
+    charging: resolveTwinSourceObservation('charging', charging, {
+      vehicleId: charging.data?.vehicle_id,
+      observedAt: charging.data?.ts,
+    }, now),
+  };
+}
 
 // ── Door State Parser ──────────────────────────────────────────────────
 
@@ -159,6 +225,7 @@ export interface VehicleTwinState {
   turnSignal: TurnSignalState;
   driverSeatOccupied: boolean | null;
   vehicleColor: string;
+  /** Security observation only; not freshness of the combined twin. */
   lastUpdated: string | Date | null;
 }
 
@@ -183,19 +250,19 @@ const EMPTY_TWIN_STATE: VehicleTwinState = {
   lastUpdated: null,
 };
 
-function isVehicleDriving(vehicleState: { state?: string; speed?: number } | null | undefined): boolean {
+function isVehicleDriving(vehicleState: { state?: string | null; speed?: number | null } | null | undefined): boolean {
   if (!vehicleState) return false;
   return vehicleState.state?.toLowerCase() === 'driving' || (vehicleState.speed ?? 0) > 0;
 }
 
 function isChargingActive(
-  vehicleState: { is_charging?: boolean; charger_power?: number } | null | undefined,
-  charging: { charging_state?: string | null; charger_power_kw?: number | null } | null | undefined,
+  vehicleState: { is_charging?: boolean | null; charger_power?: number | null } | null | undefined,
+  charging: { charging_state?: string | null; charger_power_w?: number | null } | null | undefined,
 ): boolean {
   const normalizedState = charging?.charging_state?.toLowerCase().replace(/[\s_-]/g, '') ?? '';
   return Boolean(vehicleState?.is_charging) ||
-    (vehicleState?.charger_power ?? 0) > 0 ||
-    (charging?.charger_power_kw ?? 0) > 0 ||
+    (asFiniteNumber(vehicleState?.charger_power) ?? 0) > 0 ||
+    (asFiniteNumber(charging?.charger_power_w) ?? 0) > 0 ||
     normalizedState === 'charging' ||
     normalizedState === 'starting';
 }
@@ -217,7 +284,7 @@ function parseWindowOpenSummary(
  */
 export function buildTwinState(
   security: SecurityEvent | null | undefined,
-  vehicleState: { state?: string; speed?: number; is_charging?: boolean; charger_power?: number; is_locked?: boolean; sentry_mode?: boolean } | null | undefined,
+  vehicleState: { state?: string | null; speed?: number | null; is_charging?: boolean | null; charger_power?: number | null; is_locked?: boolean | null; sentry_mode?: boolean | null } | null | undefined,
   charging: ChargingTelemetry | null | undefined,
 ): VehicleTwinState {
   if (!security && !vehicleState && !charging) return { ...EMPTY_TWIN_STATE };
@@ -242,7 +309,7 @@ export function buildTwinState(
     turnSignal: parseTurnSignal(security?.lights_turn_signal),
     driverSeatOccupied: security?.driver_seat_occupied ?? null,
     vehicleColor: '',
-    lastUpdated: security?.created_at ?? null,
+    lastUpdated: security?.ts ?? security?.created_at ?? null,
   };
 }
 

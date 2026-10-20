@@ -1,0 +1,1685 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-telemetry-signal-change-points",
+  "attempt": 1,
+  "status": "DONE",
+  "created_at_utc": "2026-10-14T02:53:46.099884+00:00",
+  "completion_scope": "Source-only QA report; native/page/application acceptance remains PARTIAL. No implementation or runtime acceptance.",
+  "timebox": {
+    "reservation": "2026-10-14T02:37:46.371Z",
+    "return": "2026-10-14T02:57:46.371Z",
+    "hard": "2026-10-14T03:02:46.371Z",
+    "actual_actor_creation": null,
+    "rule": "No renewal; earlier actual creation+20/25 wins if parent has that clock. Conservative reservation used here."
+  },
+  "scope": {
+    "writable": [
+      "docs/frontend-audits/phase6-qa-telemetry-signal-change-points.json",
+      "web/logs/phase6-qa-telemetry-signal-change-points.log"
+    ],
+    "readonly_inputs": [
+      "docs/orchestrator-loop.md",
+      "docs/frontend-design-contract.md",
+      "docs/frontend-mission.md",
+      "docs/frontend-inventory.md",
+      "docs/session-handoff.md",
+      "migration-queue.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      "docs/frontend-audits/audit-page-202.json",
+      "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+      "web/src/features/telemetry/pages/SignalChangePointsPage.test.tsx",
+      "web/src/features/telemetry/lib/signalChangePoints.ts",
+      "web/src/features/telemetry/lib/signalChangePoints.test.ts",
+      "web/src/features/telemetry/lib/signalHistorySamples.ts",
+      "web/src/features/telemetry/lib/signalHistorySamples.test.ts",
+      "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+      "web/src/api/hooks/useTelemetry.ts",
+      "web/src/api/hooks/useSignals.ts",
+      "web/src/api/dataState.ts",
+      "web/src/api/client.ts",
+      "web/src/types/telemetry.ts",
+      "web/src/types/signals.ts",
+      "web/src/hooks/useDataState.ts",
+      "web/src/hooks/useSelectedVehicle.ts",
+      "web/src/hooks/useDateFormat.ts",
+      "web/src/hooks/useNumberFormatting.ts",
+      "web/src/hooks/useOperationalMetrics.tsx",
+      "web/src/hooks/useMotionPreference.ts",
+      "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "web/src/components/layout/PageContainer.tsx",
+      "web/src/components/feedback/DataSourceNotice.tsx",
+      "web/src/components/ui/HelpTooltip.tsx",
+      "web/src/components/ui/Select.tsx",
+      "web/src/components/charts/ChartContainer.tsx",
+      "web/src/components/charts/ChartTooltip.tsx",
+      "web/src/components/motion/FadeIn.tsx",
+      "web/src/lib/chartTypography.ts",
+      "web/src/lib/workspaceScope.ts",
+      "web/src/lib/tokens.ts",
+      "web/src/App.tsx",
+      "web/src/i18n/en.json",
+      "internal/api/router.go",
+      "web/src/i18n/en/locale-telemetry.json",
+      "internal/api/signalinspect/handler.go",
+      "web/src/lib/numberFormat.ts",
+      "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+      "web/src/components/data-display/DataFreshness.tsx",
+      "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.test.tsx",
+      "web/src/i18n/en/locale-detail-help.json",
+      "web/src/i18n/en/shell.json",
+      "docs/I18N_GUIDELINES.md"
+    ],
+    "performed_writes": "Only report and log. No Git, agents, installs, helper files, tests, lint, compiler, build, server, browser, network/API, signals/replay/vehicle/business actions."
+  },
+  "objective_duplicate_check": {
+    "disposition": "Audit needed; own artifacts absent at first probe; completed Phase5 accepted SOURCE ONLY and expressly left full/native QA open. Historical audit is not current finished-page QA.",
+    "checked_before_writes": true,
+    "queue_rows": [
+      {
+        "line": 257,
+        "raw": "| phase6-qa-telemetry-signal-change-points | 6accd389-874f-440f-85e4-a3b306f02bd5 |"
+      },
+      {
+        "line": 279,
+        "raw": "| [~] | 6 | phase6-qa-telemetry-signal-change-points | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-telemetry-signal-change-points.json; web\\logs\\phase6-qa-telemetry-signal-change-points.log | phase5-page-telemetry-signal-change-points | 1 | reserved02:37:46.371Z; actor pending | - | SignalChangePointsPage/direct supports; no actual signal/replay/network actions. |"
+      },
+      {
+        "line": 788,
+        "raw": "| [ ] | 6 | phase6-fix-evidence-sample-count-plurals | confirmed-BS004-localized-evidence-count | web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx; web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.sampleCounts.test.tsx; web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\usage-manifest.json | phase6-qa-advanced-behavioral-sentinel; phase6-fix-behavioral-evidence-source-trust; phase6-fix-dlq-toast-catalog | 0 | - | - | BS004 exactrawcount template/no_one_other produces1samples and bypassesfmtInt. Preserve numericpluralcount/rawwire; existinguseNumberFormatting supplies separatelyformattedinterpolation, add-onlycanonical singular/other leaves/normalgeneration/preservation. Actualcomponent and soleEnglishwriteclaims serialized afterexistingroots, no competingformatter/globali18n config/otherlocale changes. Null count/date-only/sourceidentity/zero/grouping/nonEnglishreactivity remain distinct tests; no silentguardbypass/currentCatalogpass assumed. |"
+      },
+      {
+        "line": 2322,
+        "raw": "| [x] | 5 | phase5-page-telemetry-signal-change-points | original-page-migration | web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx; web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.test.tsx | - | 1 | 2026-10-12T13:32:36.2461510Z | e3ea4180a8400139294613d7b828ddb44313f4e5 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/signal-change-points; audit=docs\\frontend-audits\\audit-page-202.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fresh previously unstarted scope reserved for rolling dispatch; original Page+namedtest only. Returning fixture has actual5173 origin; E2E_STORAGE_STATE supported variable. Parent-owned generator closure, no worker catalog edits/bypass. Original source/fullQA separation and all preservation/helper budget rules remain. Actual worker=c2598e35-daf5-4b0b-96d7-5367a3650a29; lifecycle=awaitingterminalnotification; doNOTpoll/duplicate/rereadownedsource. Supported instructions in session files; separate path/private screenshot boundaries. Actual parent wave2 scoped run: 14 executed, 0 failed; file=passed. Evidence logs\\phase5-parent-wave2-blocked-tests.json. Passed source delivery awaits exact reported-file Git intake; full/native QA unaccepted. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual unchanged parent600case receipt: own file 14 cases passed,0failed/0pending. Existing worker scoped lint/style/section/line/hook evidence retained, no cases rerun for provenance. Source-only acceptance; inherited geometry/static/preservation/native resource/privacy failures remain explicitly UNACCEPTED in own receipt; no page/application QA claim.; commit=e3ea4180a8400139294613d7b828ddb44313f4e5; pushed. |"
+      }
+    ],
+    "duplicate_resolution": "Six current mechanisms compared with exact queue filename/term searches; no exact open repair objective found. Keep completed phases/items closed. Pending evidence-count-plural item overlaps en.json ownership only; parent must serialize any exact new catalog key. Queue never edited."
+  },
+  "contract_reads": {
+    "orchestrator": "Fully read; complete raw output retained in log.",
+    "design_contract": "Relevant MDC-001/002/010-016/020-034/040-047/060-070 and state/SI/mobile/a11y/acceptance sections.",
+    "mission": "Principles/design/component architecture/extreme data/QA matrix and sections43-45.",
+    "inventory": "audit-page-202 route row; G086/G206/G207/G208 and replacement-equivalence entry.",
+    "handoff": "Current new-machine recovery and source/native/catalog/test conventions.",
+    "instructions": [
+      ".github/copilot-instructions.md applicable frontend/SI/route/data-integrity sections",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      "docs/I18N_GUIDELINES.md"
+    ],
+    "limits": "Legacy neon/car-source-unit examples do not authorize conflicts with active restrained-design/SI contract; no source edits."
+  },
+  "input_pins": {
+    "algorithm": "SHA256",
+    "before_capture_groups": [
+      {
+        "group": "BEFORE_PINS",
+        "at": "2026-10-14T02:42:59.2144011Z"
+      },
+      {
+        "group": "SUPPLEMENTAL_BEFORE_PINS",
+        "at": "2026-10-14T02:46:37.2318723Z"
+      },
+      {
+        "group": "CATALOG_BEFORE_PINS",
+        "at": "2026-10-14T02:47:23.4420205Z"
+      }
+    ],
+    "before": [
+      {
+        "path": "docs/orchestrator-loop.md",
+        "sha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+        "bytes": 16978,
+        "last_write_utc": "2026-10-14T00:29:40.7179123Z"
+      },
+      {
+        "path": "docs/frontend-design-contract.md",
+        "sha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+        "bytes": 182554,
+        "last_write_utc": "2026-10-14T00:29:40.7095452Z"
+      },
+      {
+        "path": "docs/frontend-mission.md",
+        "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "bytes": 31079,
+        "last_write_utc": "2026-10-14T00:29:40.7179123Z"
+      },
+      {
+        "path": "docs/frontend-inventory.md",
+        "sha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+        "bytes": 1743758,
+        "last_write_utc": "2026-10-14T00:29:40.7179123Z"
+      },
+      {
+        "path": "docs/session-handoff.md",
+        "sha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+        "bytes": 163930,
+        "last_write_utc": "2026-10-14T00:49:12.6472024Z"
+      },
+      {
+        "path": "migration-queue.md",
+        "sha256": "B99617A253DBC607C066727A63DA9A4D09D03FFECF3CE8BD4476DEDEA6A90948",
+        "bytes": 2607992,
+        "last_write_utc": "2026-10-14T02:38:37.9156528Z"
+      },
+      {
+        "path": ".github/copilot-instructions.md",
+        "sha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+        "bytes": 37483,
+        "last_write_utc": "2026-10-13T06:09:16.8548532Z"
+      },
+      {
+        "path": ".github/instructions/react-frontend.instructions.md",
+        "sha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+        "bytes": 22645,
+        "last_write_utc": "2026-10-13T06:09:16.8548532Z"
+      },
+      {
+        "path": ".github/instructions/unit-conversion.instructions.md",
+        "sha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+        "bytes": 6501,
+        "last_write_utc": "2026-10-13T06:09:16.8548532Z"
+      },
+      {
+        "path": ".github/instructions/frontend-si-cutover.instructions.md",
+        "sha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+        "bytes": 3585,
+        "last_write_utc": "2026-10-13T06:09:16.8548532Z"
+      },
+      {
+        "path": "docs/frontend-audits/audit-page-202.json",
+        "sha256": "2697C321529AE568A9B14365C651AEBCA1C82553D10100A869AFCE269D2C3155",
+        "bytes": 36100,
+        "last_write_utc": "2026-10-14T00:29:40.6594786Z"
+      },
+      {
+        "path": "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+        "sha256": "6E6F070FD5E167D9275A803F282071E4DA85852650809C4C988291C593306AFC",
+        "bytes": 15762,
+        "last_write_utc": "2026-10-14T00:29:41.7523023Z"
+      },
+      {
+        "path": "web/src/features/telemetry/pages/SignalChangePointsPage.test.tsx",
+        "sha256": "0134F9590CD778FC64574D09E29CB46A7280A6B122DAA0D496BD2AF7232CF002",
+        "bytes": 15658,
+        "last_write_utc": "2026-10-14T00:29:41.7523023Z"
+      },
+      {
+        "path": "web/src/features/telemetry/lib/signalChangePoints.ts",
+        "sha256": "49B85B4EB4177150B5528EFA02C4A5021DE012273AAD25C87D9BE0C93C0578BD",
+        "bytes": 11201,
+        "last_write_utc": "2026-10-14T00:29:41.7494692Z"
+      },
+      {
+        "path": "web/src/features/telemetry/lib/signalChangePoints.test.ts",
+        "sha256": "216B915CBE43CD2317ABC04EBB65EDC163A1CD872CF1ECF0426B7BB5E2724114",
+        "bytes": 9980,
+        "last_write_utc": "2026-10-14T00:29:41.7494692Z"
+      },
+      {
+        "path": "web/src/features/telemetry/lib/signalHistorySamples.ts",
+        "sha256": "B53DD46B07056C1BF5063787CEDACB75B088DA562A3316259B05A39BB9A954D5",
+        "bytes": 1642,
+        "last_write_utc": "2026-10-14T00:29:41.7494692Z"
+      },
+      {
+        "path": "web/src/features/telemetry/lib/signalHistorySamples.test.ts",
+        "sha256": "7241CFD45C7AA11D4D04CFC449B9C575F2B54517C2CC6D231EC0C93B9B37A87E",
+        "bytes": 5985,
+        "last_write_utc": "2026-10-14T00:29:41.7494692Z"
+      },
+      {
+        "path": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+        "sha256": "09A9FB9B7ED9B9A0FA220A8D648F1613A20B99BB43D3FA9BB221494D93272AAD",
+        "bytes": 2595,
+        "last_write_utc": "2026-10-14T00:29:41.7440060Z"
+      },
+      {
+        "path": "web/src/api/hooks/useTelemetry.ts",
+        "sha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+        "bytes": 25746,
+        "last_write_utc": "2026-10-14T00:29:40.8597018Z"
+      },
+      {
+        "path": "web/src/api/hooks/useSignals.ts",
+        "sha256": "ACCD8580C7144C90F7B6D1AFF14E3A43510C9AA2DD59B5FD85330C9D91ED1966",
+        "bytes": 13991,
+        "last_write_utc": "2026-10-13T06:09:17.7871125Z"
+      },
+      {
+        "path": "web/src/api/dataState.ts",
+        "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "bytes": 15482,
+        "last_write_utc": "2026-10-13T06:09:17.7649888Z"
+      },
+      {
+        "path": "web/src/api/client.ts",
+        "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+        "bytes": 17825,
+        "last_write_utc": "2026-10-14T00:29:40.8468672Z"
+      },
+      {
+        "path": "web/src/types/telemetry.ts",
+        "sha256": "15AF5C9C884E582B7B79C19C97E21583F38E48F2B69BFDBDA0F3BDAB74989CE4",
+        "bytes": 5083,
+        "last_write_utc": "2026-10-14T00:29:41.9942654Z"
+      },
+      {
+        "path": "web/src/types/signals.ts",
+        "sha256": "0E178614C842EB3BC56BDB0568FFBA583F85460485348CF352D58CD5CD65B8CB",
+        "bytes": 2530,
+        "last_write_utc": "2026-10-14T00:29:41.9942654Z"
+      },
+      {
+        "path": "web/src/hooks/useDataState.ts",
+        "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "bytes": 2035,
+        "last_write_utc": "2026-10-13T06:09:18.5649346Z"
+      },
+      {
+        "path": "web/src/hooks/useSelectedVehicle.ts",
+        "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "bytes": 6593,
+        "last_write_utc": "2026-10-13T06:09:18.5715117Z"
+      },
+      {
+        "path": "web/src/hooks/useDateFormat.ts",
+        "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "bytes": 5230,
+        "last_write_utc": "2026-10-13T06:09:18.5649346Z"
+      },
+      {
+        "path": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "bytes": 2095,
+        "last_write_utc": "2026-10-14T00:29:41.8646135Z"
+      },
+      {
+        "path": "web/src/hooks/useOperationalMetrics.tsx",
+        "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "bytes": 1161,
+        "last_write_utc": "2026-10-14T00:29:41.8646135Z"
+      },
+      {
+        "path": "web/src/hooks/useMotionPreference.ts",
+        "sha256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+        "bytes": 2081,
+        "last_write_utc": "2026-10-13T06:09:18.5699407Z"
+      },
+      {
+        "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "bytes": 658,
+        "last_write_utc": "2026-10-14T00:29:40.9682184Z"
+      },
+      {
+        "path": "web/src/components/layout/PageContainer.tsx",
+        "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "bytes": 10783,
+        "last_write_utc": "2026-10-14T00:29:40.9542141Z"
+      },
+      {
+        "path": "web/src/components/feedback/DataSourceNotice.tsx",
+        "sha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+        "bytes": 9480,
+        "last_write_utc": "2026-10-14T00:29:40.9264222Z"
+      },
+      {
+        "path": "web/src/components/ui/HelpTooltip.tsx",
+        "sha256": "FB8D5D08643E810939608E5255F5F967084EC7C7AF3C49EB130E38A682A27C86",
+        "bytes": 4388,
+        "last_write_utc": "2026-10-14T00:29:41.0015712Z"
+      },
+      {
+        "path": "web/src/components/ui/Select.tsx",
+        "sha256": "3157A4B90D9142E619E619028FF33D8D980D80E4DAF880A45D1B120ED6782CD2",
+        "bytes": 4432,
+        "last_write_utc": "2026-10-14T00:29:41.0099114Z"
+      },
+      {
+        "path": "web/src/components/charts/ChartContainer.tsx",
+        "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+        "bytes": 41517,
+        "last_write_utc": "2026-10-14T00:29:40.8764844Z"
+      },
+      {
+        "path": "web/src/components/charts/ChartTooltip.tsx",
+        "sha256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2",
+        "bytes": 6130,
+        "last_write_utc": "2026-10-14T00:29:40.8864661Z"
+      },
+      {
+        "path": "web/src/components/motion/FadeIn.tsx",
+        "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "bytes": 1493,
+        "last_write_utc": "2026-10-13T06:09:17.9163834Z"
+      },
+      {
+        "path": "web/src/lib/chartTypography.ts",
+        "sha256": "A2CEC2F5C734EDE8A4E9C26262C8017317CCB531BDCCF6A3C5A69FF979D41902",
+        "bytes": 2654,
+        "last_write_utc": "2026-10-13T06:09:18.6331636Z"
+      },
+      {
+        "path": "web/src/lib/workspaceScope.ts",
+        "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "bytes": 4411,
+        "last_write_utc": "2026-10-14T00:29:41.9890728Z"
+      },
+      {
+        "path": "web/src/lib/tokens.ts",
+        "sha256": "04BDAA937938F96AF3B2D39B8236608063DE83D7A530DB8C67FE6BD1DEE120A3",
+        "bytes": 20093,
+        "last_write_utc": "2026-10-14T00:29:41.9890728Z"
+      },
+      {
+        "path": "web/src/App.tsx",
+        "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "bytes": 68125,
+        "last_write_utc": "2026-10-14T00:29:40.8444677Z"
+      },
+      {
+        "path": "web/src/i18n/en.json",
+        "sha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+        "bytes": 1843667,
+        "last_write_utc": "2026-10-14T01:45:34.0447866Z"
+      },
+      {
+        "path": "internal/api/router.go",
+        "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+        "bytes": 260353,
+        "last_write_utc": "2026-10-14T00:29:40.7565408Z"
+      },
+      {
+        "path": "web/src/i18n/en/locale-telemetry.json",
+        "sha256": "C5AAEE5AB0B68C1FDF9C1B7CE310A0358D3AA011DF8B11CE09C033CAFABD83DD",
+        "bytes": 120213,
+        "last_write_utc": "2026-10-14T01:50:41.7680125Z"
+      },
+      {
+        "path": "internal/api/signalinspect/handler.go",
+        "sha256": "E275BE9D55B40A807F075A3A0346FDBE02D4CF53221C78EE1E37102D7F7B71AA",
+        "bytes": 31788,
+        "last_write_utc": "2026-10-13T06:09:17.3482340Z"
+      },
+      {
+        "path": "web/src/lib/numberFormat.ts",
+        "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+        "bytes": 6443,
+        "last_write_utc": "2026-10-14T00:29:41.9860120Z"
+      },
+      {
+        "path": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+        "sha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+        "bytes": 2977,
+        "last_write_utc": "2026-10-13T06:09:18.3540415Z"
+      },
+      {
+        "path": "web/src/components/data-display/DataFreshness.tsx",
+        "sha256": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+        "bytes": 11545,
+        "last_write_utc": "2026-10-14T00:29:40.8945434Z"
+      },
+      {
+        "path": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.test.tsx",
+        "sha256": "EF456A0FFCF83F4D50DE931CCC32F74B590A0FECD9A414111069B551C09B5BE0",
+        "bytes": 9979,
+        "last_write_utc": "2026-10-14T00:29:41.7440060Z"
+      },
+      {
+        "path": "web/src/i18n/en/locale-detail-help.json",
+        "sha256": "1BA00BB8AAD30A8F0866B02ECE63FDB975FBAECC823CDAB65AEB5E24A4CAD7CF",
+        "bytes": 30261,
+        "last_write_utc": "2026-10-14T01:50:41.7534976Z"
+      },
+      {
+        "path": "web/src/i18n/en/shell.json",
+        "sha256": "EC8C6D42D5E93B3A9E1D8B151769E78B1766DB49BA30595B3F5F687DE11E384B",
+        "bytes": 82216,
+        "last_write_utc": "2026-10-14T01:50:41.7394936Z"
+      },
+      {
+        "path": "docs/I18N_GUIDELINES.md",
+        "sha256": "9DAFAA22475219A8DDB7E36905D428A6E0F7EF4A685006EE6D7F257878B8DE94",
+        "bytes": 8039,
+        "last_write_utc": "2026-10-13T06:09:17.0125843Z"
+      }
+    ],
+    "after_at": "2026-10-14T02:57:09.049857+00:00",
+    "after": [
+      {
+        "path": "docs/orchestrator-loop.md",
+        "sha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+        "bytes": 16978,
+        "matches_before": true
+      },
+      {
+        "path": "docs/frontend-design-contract.md",
+        "sha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+        "bytes": 182554,
+        "matches_before": true
+      },
+      {
+        "path": "docs/frontend-mission.md",
+        "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "bytes": 31079,
+        "matches_before": true
+      },
+      {
+        "path": "docs/frontend-inventory.md",
+        "sha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+        "bytes": 1743758,
+        "matches_before": true
+      },
+      {
+        "path": "docs/session-handoff.md",
+        "sha256": "09FA66582FCEACEB709073D64299B2CA24842837D7C8ED43EF6F3AF40C80BFEB",
+        "bytes": 170173,
+        "matches_before": false
+      },
+      {
+        "path": "migration-queue.md",
+        "sha256": "01B3676F9D5B25B6DDD31F246B5A59DEB053DCB0055EAD33AB6F825BEFE7B9C7",
+        "bytes": 2613693,
+        "matches_before": false
+      },
+      {
+        "path": ".github/copilot-instructions.md",
+        "sha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+        "bytes": 37483,
+        "matches_before": true
+      },
+      {
+        "path": ".github/instructions/react-frontend.instructions.md",
+        "sha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+        "bytes": 22645,
+        "matches_before": true
+      },
+      {
+        "path": ".github/instructions/unit-conversion.instructions.md",
+        "sha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+        "bytes": 6501,
+        "matches_before": true
+      },
+      {
+        "path": ".github/instructions/frontend-si-cutover.instructions.md",
+        "sha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+        "bytes": 3585,
+        "matches_before": true
+      },
+      {
+        "path": "docs/frontend-audits/audit-page-202.json",
+        "sha256": "2697C321529AE568A9B14365C651AEBCA1C82553D10100A869AFCE269D2C3155",
+        "bytes": 36100,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+        "sha256": "6E6F070FD5E167D9275A803F282071E4DA85852650809C4C988291C593306AFC",
+        "bytes": 15762,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/features/telemetry/pages/SignalChangePointsPage.test.tsx",
+        "sha256": "0134F9590CD778FC64574D09E29CB46A7280A6B122DAA0D496BD2AF7232CF002",
+        "bytes": 15658,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/features/telemetry/lib/signalChangePoints.ts",
+        "sha256": "49B85B4EB4177150B5528EFA02C4A5021DE012273AAD25C87D9BE0C93C0578BD",
+        "bytes": 11201,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/features/telemetry/lib/signalChangePoints.test.ts",
+        "sha256": "216B915CBE43CD2317ABC04EBB65EDC163A1CD872CF1ECF0426B7BB5E2724114",
+        "bytes": 9980,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/features/telemetry/lib/signalHistorySamples.ts",
+        "sha256": "B53DD46B07056C1BF5063787CEDACB75B088DA562A3316259B05A39BB9A954D5",
+        "bytes": 1642,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/features/telemetry/lib/signalHistorySamples.test.ts",
+        "sha256": "7241CFD45C7AA11D4D04CFC449B9C575F2B54517C2CC6D231EC0C93B9B37A87E",
+        "bytes": 5985,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+        "sha256": "09A9FB9B7ED9B9A0FA220A8D648F1613A20B99BB43D3FA9BB221494D93272AAD",
+        "bytes": 2595,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/api/hooks/useTelemetry.ts",
+        "sha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+        "bytes": 25746,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/api/hooks/useSignals.ts",
+        "sha256": "ACCD8580C7144C90F7B6D1AFF14E3A43510C9AA2DD59B5FD85330C9D91ED1966",
+        "bytes": 13991,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/api/dataState.ts",
+        "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "bytes": 15482,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/api/client.ts",
+        "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+        "bytes": 17825,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/types/telemetry.ts",
+        "sha256": "15AF5C9C884E582B7B79C19C97E21583F38E48F2B69BFDBDA0F3BDAB74989CE4",
+        "bytes": 5083,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/types/signals.ts",
+        "sha256": "0E178614C842EB3BC56BDB0568FFBA583F85460485348CF352D58CD5CD65B8CB",
+        "bytes": 2530,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/hooks/useDataState.ts",
+        "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "bytes": 2035,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/hooks/useSelectedVehicle.ts",
+        "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "bytes": 6593,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/hooks/useDateFormat.ts",
+        "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "bytes": 5230,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "bytes": 2095,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/hooks/useOperationalMetrics.tsx",
+        "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "bytes": 1161,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/hooks/useMotionPreference.ts",
+        "sha256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+        "bytes": 2081,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "bytes": 658,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/components/layout/PageContainer.tsx",
+        "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "bytes": 10783,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/components/feedback/DataSourceNotice.tsx",
+        "sha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+        "bytes": 9480,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/components/ui/HelpTooltip.tsx",
+        "sha256": "FB8D5D08643E810939608E5255F5F967084EC7C7AF3C49EB130E38A682A27C86",
+        "bytes": 4388,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/components/ui/Select.tsx",
+        "sha256": "3157A4B90D9142E619E619028FF33D8D980D80E4DAF880A45D1B120ED6782CD2",
+        "bytes": 4432,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/components/charts/ChartContainer.tsx",
+        "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+        "bytes": 41517,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/components/charts/ChartTooltip.tsx",
+        "sha256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2",
+        "bytes": 6130,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/components/motion/FadeIn.tsx",
+        "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "bytes": 1493,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/lib/chartTypography.ts",
+        "sha256": "A2CEC2F5C734EDE8A4E9C26262C8017317CCB531BDCCF6A3C5A69FF979D41902",
+        "bytes": 2654,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/lib/workspaceScope.ts",
+        "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "bytes": 4411,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/lib/tokens.ts",
+        "sha256": "04BDAA937938F96AF3B2D39B8236608063DE83D7A530DB8C67FE6BD1DEE120A3",
+        "bytes": 20093,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/App.tsx",
+        "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "bytes": 68125,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/i18n/en.json",
+        "sha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+        "bytes": 1846735,
+        "matches_before": false
+      },
+      {
+        "path": "internal/api/router.go",
+        "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+        "bytes": 260353,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/i18n/en/locale-telemetry.json",
+        "sha256": "C5AAEE5AB0B68C1FDF9C1B7CE310A0358D3AA011DF8B11CE09C033CAFABD83DD",
+        "bytes": 120213,
+        "matches_before": true
+      },
+      {
+        "path": "internal/api/signalinspect/handler.go",
+        "sha256": "E275BE9D55B40A807F075A3A0346FDBE02D4CF53221C78EE1E37102D7F7B71AA",
+        "bytes": 31788,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/lib/numberFormat.ts",
+        "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+        "bytes": 6443,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+        "sha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+        "bytes": 2977,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/components/data-display/DataFreshness.tsx",
+        "sha256": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+        "bytes": 11545,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.test.tsx",
+        "sha256": "EF456A0FFCF83F4D50DE931CCC32F74B590A0FECD9A414111069B551C09B5BE0",
+        "bytes": 9979,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/i18n/en/locale-detail-help.json",
+        "sha256": "1BA00BB8AAD30A8F0866B02ECE63FDB975FBAECC823CDAB65AEB5E24A4CAD7CF",
+        "bytes": 30261,
+        "matches_before": true
+      },
+      {
+        "path": "web/src/i18n/en/shell.json",
+        "sha256": "EC8C6D42D5E93B3A9E1D8B151769E78B1766DB49BA30595B3F5F687DE11E384B",
+        "bytes": 82216,
+        "matches_before": true
+      },
+      {
+        "path": "docs/I18N_GUIDELINES.md",
+        "sha256": "9DAFAA22475219A8DDB7E36905D428A6E0F7EF4A685006EE6D7F257878B8DE94",
+        "bytes": 8039,
+        "matches_before": true
+      }
+    ],
+    "changed_paths": [
+      "docs/session-handoff.md",
+      "migration-queue.md",
+      "web/src/i18n/en.json"
+    ],
+    "limits": "Early prerequisite/source reads preceded pin captures. Pins cover detailed review to report assembly, not those early bytes. Concurrent parent queue drift is recorded, not attributed to this worker. No repo-wide Git cleanliness claim."
+  },
+  "execution": {
+    "tests": "NOTRUN",
+    "native": "NOTRUN",
+    "lint": "NOTRUN",
+    "compiler": "NOTRUN",
+    "build": "NOTRUN",
+    "browser/server/network/API": "NOTRUN",
+    "catalog_generator_validator": "NOTRUN",
+    "preservation_cli": "NOTRUN",
+    "Git": "NOTRUN",
+    "domain_repro": "NOTRUN",
+    "runtime_test_counts": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    }
+  },
+  "commands_and_limits": {
+    "raw_log": "web/logs/phase6-qa-telemetry-signal-change-points.log",
+    "checks_executed": "Read text/JSON, regex/Select-String grep, SHA256 and artifact validation only; application/domain code never imported/evaluated.",
+    "failures": [
+      {
+        "shell": "2878",
+        "exit": 1,
+        "reason": "Absent own artifact probe; complete raw output retained."
+      },
+      {
+        "shell": "2977",
+        "exit": 1,
+        "reason": "Absent artifact probe; not a test failure."
+      },
+      {
+        "shell": "3119",
+        "exit": 1,
+        "reason": "Nested PowerShell here-string failed parsing before grep; empty stdout is not a pass. Corrected source check shell3135 exit0."
+      },
+      {
+        "shell": "3271",
+        "exit": 1,
+        "reason": "Oversized inline report-assembly command failed host process creation: The filename or extension is too long (os error206). No report was written by that failed command. Split bounded artifact-only assembly follows."
+      },
+      {
+        "shell": "3308",
+        "python_exit": 1,
+        "powershell_exit": 0,
+        "raw_error": "RuntimeError: Invalid citation ('SCP003', 'web/src/features/telemetry/lib/signalChangePoints.ts', 272, 290, False)",
+        "reason": "Citation end beyond EOF; corrected to actual EOF, then reran artifact checks only, never tests."
+      }
+    ],
+    "grep_correction": "PowerShell case-insensitive camelCase query grep produced one hours/limit false-positive. Explicit -CaseSensitive correction returned0; full raw outputs preserved."
+  },
+  "findings": [
+    {
+      "id": "SCP001",
+      "rule": "workspace-range-integration",
+      "severity": "high",
+      "file": "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+      "line": 31,
+      "title": "Fixed72h analysis bypasses workspace range ownership",
+      "mechanism": "HOURS=72 goes to a hours/limit-only hook; route absent from RANGE_ENABLED_PATHS; page does not consume useRangeState. Backend supports explicit from/to but inclusive BETWEEN requires reconciliation with endInstantExclusive.",
+      "citations": [
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          31,
+          44
+        ],
+        [
+          "web/src/api/hooks/useTelemetry.ts",
+          194,
+          232
+        ],
+        [
+          "web/src/lib/workspaceScope.ts",
+          23,
+          77
+        ],
+        [
+          "internal/api/signalinspect/handler.go",
+          308,
+          318
+        ],
+        [
+          "internal/api/signalinspect/handler.go",
+          403,
+          423
+        ]
+      ],
+      "source_repro": {
+        "status": "NOTRUN",
+        "steps": [
+          "Proposed synthetic custom workspace window would leave the source-constructed URL at hours=72&limit=10000, without from/to.",
+          "Source reasoning only; no range/vehicle/API action taken."
+        ],
+        "runtime_observation": null
+      },
+      "fix": "Extend existing typed hook/cache bounds and abort contract; orchestrator registers actual route; page adopts shared range. Preserve default, 10000 cap and polling; no second picker.",
+      "contract": [
+        "MDC-032",
+        "MDC-046"
+      ],
+      "owner_need": {
+        "files": [
+          "web/src/api/hooks/useTelemetry.ts",
+          "web/src/lib/workspaceScope.ts",
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          "web/src/features/telemetry/pages/SignalChangePointsPage.test.tsx"
+        ],
+        "owner": "API integration + orchestrator route registration + narrow page adoption"
+      },
+      "dedupe": "audit-page-202/G207 already recorded range need; no exact open fix objective in queue. Phase5 source acceptance does not close it."
+    },
+    {
+      "id": "SCP002",
+      "rule": "requested-versus-observed-bounds",
+      "severity": "high",
+      "file": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+      "line": 37,
+      "title": "Request bounds are printed as source evidence bounds",
+      "mechanism": "History returns requested from/to unchanged, with first10000 ascending rows. Adapter labels these as source bounds rather than observed numeric extrema; cap/completeness unknown not explicit. Page caveat correctly denies guaranteed full-window coverage but does not fix terminology.",
+      "citations": [
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          189,
+          192
+        ],
+        [
+          "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+          34,
+          38
+        ],
+        [
+          "internal/api/signalinspect/handler.go",
+          265,
+          302
+        ],
+        [
+          "internal/api/signalinspect/handler.go",
+          308,
+          318
+        ]
+      ],
+      "source_repro": {
+        "status": "NOTRUN",
+        "steps": [
+          "Proposed envelope requests A..B but has sparse middle samples, or reaches10000-row cap.",
+          "sourceBounds still prints A..B as source bounds. Analytical prediction; no endpoint/model execution."
+        ],
+        "runtime_observation": null
+      },
+      "fix": "At existing domain adapter distinguish requested and observed valid bounds, cap-reached/completeness unknown and last-success freshness; retain caveat/payload.",
+      "contract": [
+        "MDC-026",
+        "MDC-033"
+      ],
+      "owner_need": {
+        "files": [
+          "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+          "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.test.tsx"
+        ],
+        "owner": "Existing telemetry adapter; parent serializes exact copy keys if needed"
+      },
+      "dedupe": "audit-page-202/G206/G207; completed phase3-telemetry-summary-brief stays closed; no exact open repair row."
+    },
+    {
+      "id": "SCP003",
+      "rule": "statistical-output-rounding",
+      "severity": "high",
+      "file": "web/src/features/telemetry/lib/signalChangePoints.ts",
+      "line": 255,
+      "title": "Model rounds small nonzero shifts to zero before rendering",
+      "mechanism": "beforeMean/afterMean/magnitude/globalSpread rounded3decimals inside detector. Biggest compares already-rounded magnitude, allowing false-zero evidence and lossy ties. Phase5 preserved raw timeline/segment data, not these remaining derived outputs.",
+      "citations": [
+        [
+          "web/src/features/telemetry/lib/signalChangePoints.ts",
+          250,
+          265
+        ],
+        [
+          "web/src/features/telemetry/lib/signalChangePoints.ts",
+          272,
+          288
+        ],
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          115,
+          121
+        ]
+      ],
+      "source_repro": {
+        "status": "NOTRUN",
+        "steps": [
+          "Proposed values eight zeros then eight0.0001 samples at valid distinct times.",
+          "Source reasoning: tiny noise-scale fallback permits a sustained alarm, but sub0.0005 magnitude rounds to numeric0; confidence may remain nonzero.",
+          "No summarize/detect invocation or tests."
+        ],
+        "runtime_observation": null
+      },
+      "fix": "Keep unrounded finite model outputs and select largest before presentation formatting; extend existing model test without replacing detector.",
+      "contract": [
+        "MDC-033",
+        "MDC-045"
+      ],
+      "owner_need": {
+        "files": [
+          "web/src/features/telemetry/lib/signalChangePoints.ts",
+          "web/src/features/telemetry/lib/signalChangePoints.test.ts"
+        ],
+        "owner": "Existing pure statistical model"
+      },
+      "dedupe": "Not redo corrected page-level raw timeline rounding; exact model-output mechanism absent from open queue."
+    },
+    {
+      "id": "SCP004",
+      "rule": "diagnostic-measurement-format-rounding",
+      "severity": "medium",
+      "file": "web/src/lib/numberFormat.ts",
+      "line": 119,
+      "title": "Scientific-named formatter still rounds tiny nonzero measurements to displayed zero",
+      "mechanism": "fmtScientificNumber delegates fixed-fraction fmtNumber. Page min6 for raw table/ticks/tooltips and min3 for magnitude/noise. At default precision2, tiny evidence can display0; page test substitutes identity-like scientific:value mock.",
+      "citations": [
+        [
+          "web/src/lib/numberFormat.ts",
+          88,
+          105
+        ],
+        [
+          "web/src/lib/numberFormat.ts",
+          119,
+          122
+        ],
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          106,
+          117
+        ],
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.test.tsx",
+          40,
+          44
+        ]
+      ],
+      "source_repro": {
+        "status": "NOTRUN",
+        "steps": [
+          "Proposed raw0.0000001 with precision2 follows formatMeasurement to maxFractionDigits6; textual display reasons to rounded0 while cache/chart remains raw.",
+          "No formatter, test or application execution."
+        ],
+        "runtime_observation": null
+      },
+      "fix": "Existing formatter owner adds locale/preference-aware diagnostic scientific/significant fallback when fixed digits would erase nonzero values; no competing page formatter.",
+      "contract": [
+        "MDC-033",
+        "MDC-045"
+      ],
+      "owner_need": {
+        "files": [
+          "web/src/lib/numberFormat.ts",
+          "web/src/lib/numberFormat.test.ts"
+        ],
+        "owner": "Existing shared number-format module"
+      },
+      "dedupe": "Pending phase6-fix-evidence-sample-count-plurals concerns EvidencePanel/count catalog, not numberFormat.ts precision; distinct narrow objective."
+    },
+    {
+      "id": "SCP005",
+      "rule": "unsupported-statistical-interpretation",
+      "severity": "high",
+      "file": "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+      "line": 262,
+      "title": "Categorical no-alarm slow-ramp claim lacks algorithm support",
+      "mechanism": "Page says slow ramp would show no alarm here at all. Constant-increment series has first-difference MAD0, falling to1e-9 scale. Positive clipped deviations accumulate before min-length alarm check. Existing model tests have no slow-ramp case.",
+      "citations": [
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          260,
+          263
+        ],
+        [
+          "web/src/features/telemetry/lib/signalChangePoints.ts",
+          141,
+          148
+        ],
+        [
+          "web/src/features/telemetry/lib/signalChangePoints.ts",
+          176,
+          184
+        ],
+        [
+          "web/src/features/telemetry/lib/signalChangePoints.ts",
+          208,
+          229
+        ]
+      ],
+      "source_repro": {
+        "status": "NOTRUN",
+        "steps": [
+          "Proposed binary-exact ramp[0,1/8,2/8,...,15/8] at equally spaced times has identical first differences and MAD0.",
+          "Source recurrence gives lambda5e-9,delta0.5e-9 and accumulated positive clipped contributions at first index4 check, predicting an alarm. Exact runtime counts unmeasured."
+        ],
+        "runtime_observation": null
+      },
+      "fix": "Narrow statistical policy owner reconciles intended drift behavior and recurrence; at minimum remove categorical guarantee through page/canonical copy owner. Preserve robust/min-length/spike semantics and existing tests; do not silently replace algorithm.",
+      "contract": [
+        "MDC-026",
+        "MDC-033"
+      ],
+      "owner_need": {
+        "files": [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          "web/src/features/telemetry/pages/SignalChangePointsPage.test.tsx",
+          "web/src/features/telemetry/lib/signalChangePoints.ts",
+          "web/src/features/telemetry/lib/signalChangePoints.test.ts",
+          "web/src/i18n/en.json"
+        ],
+        "owner": "Split exclusive statistical review/copy/model scopes only if parent queues actual repairs"
+      },
+      "dedupe": "No exact slow-ramp/Page-Hinkley repair row; completed migration is not repeated."
+    },
+    {
+      "id": "SCP006",
+      "rule": "missing-i18n-catalog-key",
+      "severity": "medium",
+      "file": "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+      "line": 154,
+      "title": "Signal-selection explanatory help lacks canonical English key",
+      "mechanism": "HelpTooltip key help.signalChangePoints.pick has defaultValue but no compiled/canonical leaf in inspected English/help sources. Fallback prevents blank English help, not incomplete translation contract.",
+      "citations": [
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          152,
+          156
+        ],
+        [
+          "web/src/components/ui/HelpTooltip.tsx",
+          58,
+          62
+        ],
+        [
+          "web/src/i18n/en/locale-detail-help.json",
+          343,
+          346
+        ],
+        [
+          "web/src/i18n/en/locale-telemetry.json",
+          1889,
+          1892
+        ]
+      ],
+      "source_repro": {
+        "status": "NOTRUN",
+        "steps": [
+          "Source JSON lookup absent; help splits have count/iconLabel only. No Tooltip mount or catalog tool executed."
+        ],
+        "runtime_observation": null
+      },
+      "fix": "Parent serialized canonical English adds exactly existing fallback key then normally closes affected generated outputs. No source/catalog edits by audit.",
+      "exact_catalog_need": {
+        "key": "help.signalChangePoints.pick",
+        "fallback": "Delta and threshold are calibrated from the median absolute deviation of first differences, and each sample's contribution to the alarm statistic is capped — so one wild reading cannot alone trigger a false change point."
+      },
+      "contract": [
+        "MDC-044"
+      ],
+      "owner_need": {
+        "files": [
+          "web/src/i18n/en.json"
+        ],
+        "owner": "Orchestrator serialized canonical English; generated output closure normally, not manual extra keys"
+      },
+      "dedupe": "Completed phase5-current-source-catalog-closure does not satisfy this absent key; exact key not in queue. Serialize after pending en.json claims, including evidence-sample-count-plurals."
+    }
+  ],
+  "conditional_candidates": [
+    {
+      "id": "C001",
+      "status": "CONDITIONAL_NOTRUN",
+      "title": "SI identity/display preferences need API/domain proof",
+      "mechanism": "Names-only useSignals drops unit metadata; raw values/magnitudes have no unit label. Rich useAvailableSignals exists but normalizes unknown UnitKind to none. Never guess unit mapping or convert cache; integration metadata proof needed.",
+      "citations": [
+        [
+          "web/src/api/hooks/useTelemetry.ts",
+          78,
+          124
+        ],
+        [
+          "web/src/api/hooks/useSignals.ts",
+          130,
+          153
+        ],
+        [
+          "web/src/api/hooks/useSignals.ts",
+          215,
+          252
+        ],
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          106,
+          117
+        ]
+      ]
+    },
+    {
+      "id": "C002",
+      "status": "CONDITIONAL_NOTRUN",
+      "title": "Selection validity across deployment catalog changes",
+      "mechanism": "signalName nonempty is chosen; not revalidated against options. Normal backend catalog is protomodel independent of observed vehicle, so vehicle switch alone is not proof of invalid selection. Synthetic compatibility/catalog-change fixture remains needed.",
+      "citations": [
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          39,
+          47
+        ],
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          65,
+          68
+        ],
+        [
+          "internal/api/signalinspect/handler.go",
+          446,
+          459
+        ]
+      ]
+    },
+    {
+      "id": "C003",
+      "status": "CONDITIONAL_NOTRUN",
+      "title": "Palette/motion/composed presentation",
+      "mechanism": "Shared chartTokens/font accessors and FadeIn preference guards present; saved palette/Line animation, composed contrast and forced-color/table/mobile behavior need native review, not a source violation claim.",
+      "citations": [
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          108,
+          108
+        ],
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          224,
+          228
+        ],
+        [
+          "web/src/components/motion/FadeIn.tsx",
+          23,
+          38
+        ]
+      ]
+    },
+    {
+      "id": "C004",
+      "status": "CONDITIONAL_NOTRUN",
+      "title": "Malformed null envelopes/nonnumeric eligibility explanation",
+      "mechanism": "hasData is data!==undefined. Invalid/null samples safely rejected; successful null envelope violates declared type, and known enum selection can become numeric samples0/Not enough history. No such backend response observed.",
+      "citations": [
+        [
+          "web/src/api/dataState.ts",
+          190,
+          194
+        ],
+        [
+          "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+          70,
+          73
+        ],
+        [
+          "web/src/features/telemetry/lib/signalHistorySamples.ts",
+          20,
+          41
+        ]
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "name": "Signal picker",
+      "lines": [
+        146,
+        181
+      ],
+      "status": "PRESENT",
+      "mechanism": "Always-mounted GlassPanel; catalog fatal/skeleton/unknown/authoritative-empty/labelled Select branches. Technical identifiers literal, not translated. Title wraps. Select/useId association and mobile44px target.",
+      "actions": [
+        "choose literal signal",
+        "clear selection",
+        "preference-gated contextual help"
+      ]
+    },
+    {
+      "name": "KPI band",
+      "lines": [
+        110,
+        130,
+        183,
+        193
+      ],
+      "status": "PRESENT",
+      "mechanism": "Four metrics: change count, biggest magnitude/direction/confidence, segment count, numeric sample count. Insufficient/unknown values stay null/undefined. Scope/provenance/retained/source-bounds text; no alternate KPI engine.",
+      "actions": [
+        "Existing OperationalBrief details disclosure"
+      ]
+    },
+    {
+      "name": "Regime timeline",
+      "lines": [
+        75,
+        93,
+        195,
+        232
+      ],
+      "status": "PRESENT",
+      "mechanism": "Raw signed finite values and segment mean, numeric-ms axis/marker keys, exact ISO timestamps in alternative/tooltip; every detected marker,2 named series, stepAfter reference. Accessible columns time/value/level/change direction-confidence.",
+      "actions": [
+        "Default shared PNG/SVG/copy-image export when populated"
+      ],
+      "limits": "No exportData/fullscreen prop, so CSV/fullscreen not enabled; not claimed lost. No annotations, brush, replay or mutations."
+    },
+    {
+      "name": "Reading the result",
+      "lines": [
+        234,
+        276
+      ],
+      "status": "PRESENT",
+      "mechanism": "Persistent panel; skeleton/fatal/insufficient branches then responsive2-card interpretation/scope. Stable/shifted only after5 valid samples. Slow-ramp categorical statement remains finding.",
+      "actions": []
+    }
+  ],
+  "state_matrix": [
+    {
+      "state": "no vehicle",
+      "source": "Governed NoVehicleSelected wraps PageContainer; id0 disables both hooks. Legitimate prerequisite, not hidden-section regression."
+    },
+    {
+      "state": "unselected",
+      "source": "History disabled by empty signal. All4 shells remain, unknown metrics and choose guidance; no false measured change0."
+    },
+    {
+      "state": "catalog loading/fatal/empty",
+      "source": "Independent skeleton/QueryError/EmptyState; no all-page gate. Current backend supplies protomodel catalog, not records; no fresh stream evidence claimed."
+    },
+    {
+      "state": "history initial",
+      "source": "Chosen initial unblocked query drives summary/chart/reading loading; no fabricated readings."
+    },
+    {
+      "state": "successful empty",
+      "source": "Samples0 is measured from returned empty data, while change count remainsnull and no stable verdict; Not enough history distinguishes chosen from unchosen."
+    },
+    {
+      "state": "below minimum",
+      "source": "1-4 numeric samples plotted/counted but no stable verdict or measured change count."
+    },
+    {
+      "state": "stable/shifted",
+      "source": ">=5 numeric samples gates interpretation; zero detected shifts legitimate. Confidence is clamped effect-size/3, not a calibrated probability."
+    },
+    {
+      "state": "fatal history",
+      "source": "Only fatalError with no retained payload replaces that source. Other sections/picker remain; source-labelled shared retry, no duplicate section onRetry."
+    },
+    {
+      "state": "retained refreshing/refresh failed/stale",
+      "source": "DataState retains payload; page retained prop covers refreshing/stale/refreshError. All analysis continues without background wipe."
+    },
+    {
+      "state": "paused initial/retained",
+      "source": "No-data pause is unknown, not fake empty or infinite spinner. Retained pause derives stale; current DataSourceNotice recognizes paused regardless of hasData and surfaces recovery. Old historical paused-suppression issue corrected."
+    },
+    {
+      "state": "null/invalid/zero/negative/huge",
+      "source": "Normalizer rejects null/NaN/Infinity/text/enum/bool/invalid times, sorts and last-valid-row dedupes without cache mutation. Valid zero/negative SI preserved. Huge finite arithmetic overflow and malformed null envelopes remain unexecuted stress candidates."
+    }
+  ],
+  "actions_review": {
+    "picker": "onChange sets literal signalName; clear disables query; no mutation or auto-selection.",
+    "help": "Shared Tooltip and contextual-help preference; mobile44x44 trigger/md24x24.",
+    "retry": "DataSourceNotice named source aggregate/individual retries; offline disable/source labels. DataFreshnessAuto existing refresh affordance. Source inspect only, never clicked.",
+    "chart_export": "Default image menu for nonloading/nonerror/nonempty; no CSV/fullscreen supplied. No export executed.",
+    "details": "OperationalBrief summary/details keeps numeric captions and source status; no production action performed."
+  },
+  "preferences_scope_review": {
+    "vehicle": "useSelectedVehicle supplied to both keyed queries; null->0 disables; no duplicate local vehicle picker.",
+    "range": "Fixed72h request and10000cap remain SCP001; preserve inclusive backend/exclusive header semantics before integration.",
+    "SI": "Numeric raw cache preserved with no deprecated converters; physical unit identity not proved (C001), so no guessed useUnits mapping.",
+    "numbers_dates": "Subscribed useNumberFormatting locale/precision, useDateFormat locale/timezone plus exact ISO table/tooltip; font accessors read shared typography. Diagnostic rounding remains SCP004.",
+    "density_theme_motion": "Shared Select/UI/ChartContainer/OperationalBrief owners and restrained tokens used. FadeIn reduced-motion/low-bandwidth guard present. Saved custom modes/palette/density and composed/mobile native outcomes NOTRUN."
+  },
+  "statistics_review": {
+    "algorithm": "Pure two-sided Page-Hinkley; noise MAD(first differences)/sqrt2; delta.5/lambda5; clipped observation/baseline; fixed minimum5; after-mean lookahead bounded5; effect-size/3 confidence clamped0..1.",
+    "preserved_evidence": "Segments, markers, biggest, samples, noise, raw values, numeric chronology inspected; no algorithm executed.",
+    "limits": "10000 ascending rows may cap later observations; sampled numeric sequence not guaranteed whole72h coverage. Model rounding and slow-ramp assertion separate findings."
+  },
+  "existing_tests": {
+    "execution": "NOTRUN",
+    "files": [
+      {
+        "file": "web/src/features/telemetry/pages/SignalChangePointsPage.test.tsx",
+        "literal_it_declarations": 10,
+        "it_each_templates": 2,
+        "source_authored_cases": 14,
+        "limits": "Mocks layout/UI/charts/i18n/formatter, so source fixture assertions not real-catalog/native or tiny-value formatting proof."
+      },
+      {
+        "file": "web/src/features/telemetry/lib/signalChangePoints.test.ts",
+        "literal_it_declarations": 27,
+        "it_each_templates": 0,
+        "source_authored_cases": 27,
+        "limits": "No slow-ramp case inspected; no runtime pass claimed."
+      },
+      {
+        "file": "web/src/features/telemetry/lib/signalHistorySamples.test.ts",
+        "literal_it_declarations": 5,
+        "it_each_templates": 3,
+        "describe_each_templates": 1,
+        "source_authored_cases": 40,
+        "calculation": "3 top-level literals +4 numeric-kind rows +18 invalid rows +3 invalid-time rows +6 model readers x2 literals."
+      }
+    ],
+    "historical": "Queue historical parent14case source pass is historical only, not this attempt execution. Other existing matching support tests only referenced/inspected, never run."
+  },
+  "rule_greps": {
+    "scope": [
+      "web/src/features/telemetry/pages/SignalChangePointsPage.tsx",
+      "web/src/features/telemetry/lib/signalChangePoints.ts",
+      "web/src/features/telemetry/lib/signalHistorySamples.ts",
+      "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx"
+    ],
+    "per_file_candidate_matches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string-candidates": 0,
+      "fetch-useeffect": 0
+    },
+    "page_container": "PageLayout forwards to PageContainer; prerequisite NoVehicleSelected also uses PageContainer. Acceptable adapter, not missing wrapper.",
+    "hook_route": "useSignals/useSignalAnalysisHistory paths match mounted signals available/history routes; client prepends prefix. Correct lowercase hours/limit, encoded signalName, scope-keyed cache and AbortSignal.",
+    "exceptions": "Raw HTML in shared UI/charts and test mocks expected; FadeIn vendor import is shared building block. ChartTooltip dynamic swatch and Recharts props not static-inline violations.",
+    "backend_slice": "Handler grep shows constant parameterized history SQL and Pool.Query(ctx,...), no Println/panic/interpolation candidates. Not repository-wide backend audit.",
+    "limits": "Text grep only, no AST lint/compiler; six design/data/catalog findings remain."
+  },
+  "native_qa": {
+    "status": "NOTRUN",
+    "locks_held": 0,
+    "cases_executed": 0,
+    "acceptance": "UNACCEPTED",
+    "future_candidates": [
+      {
+        "area": "mobile",
+        "matrix": "320/375/390/430/768/1024/1280/1440/1920/2560px and narrow allocated containers; keep4sections/reflow/reachable export/help/retry."
+      },
+      {
+        "area": "a11y",
+        "matrix": "Keyboard select/typeahead/help/Escape/focus return/details/export/retry; headings/names/ISO table,44px touch, forced-colors and composed contrast."
+      },
+      {
+        "area": "i18n/preferences",
+        "matrix": "Long translations/RTL/200%text/custom themes/font/density/palette/date-zone/locale/contextual-help."
+      },
+      {
+        "area": "trust/statistics",
+        "matrix": "Synthetic initial/fatal/empty/insufficient/paused/retained recovery; zero/negative-valid/tiny/huge/null/nonnumeric/spike/ramp/gaps/duplicates/high-frequency/cap. No real signals/replay/vehicle actions."
+      }
+    ]
+  },
+  "i18n_check": {
+    "literal_occurrences": 62,
+    "unique_keys": 52,
+    "missing_keys_initial": [
+      "help.signalChangePoints.pick"
+    ],
+    "missing_key_revalidated_after_catalog_drift": true,
+    "current_catalog_sha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+    "fallback_differences": [
+      "signalChangePoints.subtitle: Signal trend vs signal trend",
+      "signalChangePoints.reading: Reading the Result vs Reading the result"
+    ],
+    "differences_disposition": "Editorial capitalization observations, not additional untranslated-string violations. Source tests use fake t.",
+    "canonical_owners": "dataSources labels exist in shell.json, not missing just because absent from telemetry split. Help pick absent in inspected detail-help and telemetry help. Generator/validator NOTRUN.",
+    "revalidated_at": "2026-10-14T02:57:09.049857+00:00"
+  },
+  "summary": {
+    "confirmed_source_findings": 6,
+    "conditional_candidates": 4,
+    "rule_totals": {
+      "workspace-range-integration": 1,
+      "requested-versus-observed-bounds": 1,
+      "statistical-output-rounding": 1,
+      "diagnostic-measurement-format-rounding": 1,
+      "unsupported-statistical-interpretation": 1,
+      "missing-i18n-catalog-key": 1
+    },
+    "files_with_most_issues": {
+      "web/src/features/telemetry/pages/SignalChangePointsPage.tsx": 3,
+      "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx": 1,
+      "web/src/features/telemetry/lib/signalChangePoints.ts": 1,
+      "web/src/lib/numberFormat.ts": 1
+    },
+    "sections": 4,
+    "metrics": 4,
+    "series": 2,
+    "page_lines": 280,
+    "source_authored_cases_not_runtime": 81,
+    "tests_executed": 0,
+    "native_executed": 0,
+    "before_pins": 53,
+    "after_pins": 53,
+    "matched_pins": 50,
+    "changed_pins": [
+      "docs/session-handoff.md",
+      "migration-queue.md",
+      "web/src/i18n/en.json"
+    ],
+    "priority": [
+      "Range authority",
+      "Requested/observed trust",
+      "Derived precision",
+      "Slow-ramp interpretation",
+      "Nonzero text precision",
+      "Exact help key closure"
+    ]
+  },
+  "finished_source_audit_at_utc": "2026-10-14T02:57:09.049857+00:00",
+  "release": {
+    "at": "2026-10-14T02:57:09.049857+00:00",
+    "artifacts": "RELEASE both authorized artifacts after this command completes; no further writes",
+    "commands": "RELEASE bounded commands; no browser/service/helper/action claim",
+    "source": "NONE acquired; readonly",
+    "native_page_acceptance": "UNACCEPTED"
+  },
+  "queue_disposition_continuation": {
+    "scope": "Disposition of the original six findings only; no repeated source audit, proven passes, or new QA campaign.",
+    "first_contract_check": "The original report is already DONE with six source findings, four conditional candidates, retained execution failures and native NOTRUN. No new audit is needed. Only an explicit current-queue disposition was missing.",
+    "queue_readonly": {
+      "path": "migration-queue.md",
+      "item_row_line": 325,
+      "item_status": "[ ]",
+      "attempts": 1,
+      "item_note": "Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot.",
+      "search_method": "Case-sensitive literal searches of the queue; no queue writes.",
+      "zero_match_terms": [
+        "signalChangePoints.ts",
+        "numberFormat.ts",
+        "SCP001",
+        "SCP002",
+        "SCP003",
+        "SCP004",
+        "SCP005",
+        "SCP006",
+        "help.signalChangePoints.pick",
+        "slow-ramp",
+        "scientific",
+        "returnedBounds"
+      ],
+      "related_completed_rows": [
+        {
+          "line": 1114,
+          "item": "audit-page-202",
+          "disposition": "Historical audit, not a repair of these findings."
+        },
+        {
+          "line": 1162,
+          "item": "namespace-signal-change-points",
+          "disposition": "Exact namespace-prefix migration only, not range/model/copy/help repair."
+        },
+        {
+          "line": 1172,
+          "item": "namespace-telemetry-summary",
+          "disposition": "Exact namespace-prefix migration only, not requested-versus-observed bounds repair."
+        },
+        {
+          "line": 1196,
+          "item": "regression-telemetry-brief-test",
+          "disposition": "Existing drawer-context assertions; not source-bounds repair."
+        },
+        {
+          "line": 2045,
+          "item": "phase3-telemetry-summary-brief",
+          "disposition": "Accepted original adapter remains closed; the later specific bounds-label finding is not duplicate implementation work."
+        },
+        {
+          "line": 2368,
+          "item": "phase5-page-telemetry-signal-change-points",
+          "disposition": "SOURCE ONLY acceptance and historical 14-case pass remain intact; neither closes these specific findings nor native acceptance."
+        }
+      ]
+    },
+    "original_findings_disposition": [
+      {
+        "id": "SCP001",
+        "disposition": "MISSING_CONFIRMED_FIX",
+        "need": "Existing typed history hook/cache bounds, workspace route registration and narrow page adoption; preserve exclusive-end semantics and cap/polling.",
+        "evidence": "Original citations retained. Narrow check of SignalChangePointsPage.tsx:31-44 still shows HOURS=72 passed directly to history hook. No exact repair row found."
+      },
+      {
+        "id": "SCP002",
+        "disposition": "MISSING_CONFIRMED_FIX",
+        "need": "Existing telemetry adapter distinguishes requested bounds from observed valid bounds and unknown completeness; preserve original payload/caveat.",
+        "evidence": "Original handler/page citations retained, not reread. TelemetrySummaryBrief.tsx:34-38 still labels supplied bounds as source bounds. Completed adapter and namespace objectives are not this repair."
+      },
+      {
+        "id": "SCP003",
+        "disposition": "MISSING_CONFIRMED_FIX",
+        "need": "Preserve unrounded derived outputs in the existing model and choose biggest change before display rounding.",
+        "evidence": "signalChangePoints.ts:250-262 still rounds means/magnitude/spread to three decimals; :272-278 compares those magnitudes. No exact model repair row found. Synthetic example remains NOTRUN."
+      },
+      {
+        "id": "SCP004",
+        "disposition": "MISSING_CONFIRMED_FIX",
+        "need": "Existing shared diagnostic formatter preserves nonzero evidence through locale/preference-aware significant/scientific fallback; no page-local formatter.",
+        "evidence": "numberFormat.ts:88-105 and :119-122 still delegate to fixed fraction digits. No formatter-owner repair row found. Existing mocked page tests are not formatter runtime proof."
+      },
+      {
+        "id": "SCP005",
+        "disposition": "MISSING_CONFIRMED_COPY_FIX_WITH_UNCERTAIN_MODEL_POLICY",
+        "need": "Remove or qualify the categorical slow-ramp no-alarm guarantee through page/canonical-copy ownership. Do not authorize a detector rewrite from this source-only prediction.",
+        "evidence": "SignalChangePointsPage.tsx:260-263 and the exact canonical signalChangePoints.shiftedText leaf still claim a slow ramp would show no alarm here at all. Original model recurrence citations retained; runtime reproduction and intended drift policy remain unproved.",
+        "not_confirmed": "Whether or how the detector should change; exact alarm counts for the proposed ramp. No new algorithm-fix campaign requested."
+      },
+      {
+        "id": "SCP006",
+        "disposition": "MISSING_CONFIRMED_FIX",
+        "need": "Serialized canonical English adds only the original help.signalChangePoints.pick fallback, followed by normal generated-output closure under parent authority.",
+        "evidence": "SignalChangePointsPage.tsx:152-156 still uses the exact key. Corrected read-only canonical lookup returns EXACT HELP PICK PRESENT: False. No exact queue key disposition found."
+      }
+    ],
+    "duplicates": {
+      "exact_original_finding_repairs_found": 0,
+      "rule": "Do not reopen completed migration, namespace, adapter or historical audit/pass objectives; their shared filenames do not establish repair equivalence."
+    },
+    "uncertain_candidates": {
+      "ids": ["C001", "C002", "C003", "C004"],
+      "disposition": "Retain original CONDITIONAL_NOTRUN status unchanged. No confirmed fix request, new audit, execution, or queue entry inferred."
+    },
+    "continuation_execution": {
+      "performed": "Existing report/log/orchestrator reads, queue literal cross-reference, narrowly cited existing source snippets and exact canonical leaf lookup only.",
+      "failure_preserved": "Shell4040 exit1: ConvertFrom-Json rejected differently cased subFSMs/subFsms keys. The catalog portion did not establish a result. Corrected shell4045 used -AsHashtable and exited0; exact help leaf absent and shifted copy printed.",
+      "tests": "NOTRUN",
+      "native": "NOTRUN",
+      "lint": "NOTRUN",
+      "compiler": "NOTRUN",
+      "browser_network_telemetry": "NOTRUN",
+      "Git_helpers_servers_install_Docker_nested_agents": "NOTRUN",
+      "limits": "No source hashes, fresh source audit, test passes, runtime proof, or whole-application acceptance fabricated. Original timestamps, pins, source/external evidence and native NOTRUN remain historical and unchanged."
+    },
+    "release": "Release only the exact report and matching ignored log after artifact validation. No source/catalog/queue claim acquired. Parent intake and narrowly scoped missing-fix scheduling are the remaining needs."
+  },
+  "validation": {
+    "at": "2026-10-14T02:57:09.049857+00:00",
+    "json_parse": "PASS",
+    "citation_ranges_checked": 37,
+    "invalid": 0,
+    "range_corrections": [
+      {
+        "id": "SCP003",
+        "file": "web/src/features/telemetry/lib/signalChangePoints.ts",
+        "old_end": 290,
+        "actual_end": 288
+      }
+    ],
+    "count_check": "PASS six unique findings/four candidates/six rule total/81 source-authored cases; tests/native NOTRUN",
+    "pins": 53,
+    "source_drift": false,
+    "operational_catalog_drift": [
+      "docs/session-handoff.md",
+      "migration-queue.md",
+      "web/src/i18n/en.json"
+    ],
+    "catalog_missing_key_revalidated": true,
+    "main_lines": [
+      {
+        "id": "SCP001",
+        "line": 31,
+        "raw": "const HOURS = 72;"
+      },
+      {
+        "id": "SCP002",
+        "line": 37,
+        "raw": "          ? t('telemetry.brief.returnedBounds', '{{signal}} source bounds: {{from}} → {{to}}', bound)"
+      },
+      {
+        "id": "SCP003",
+        "line": 255,
+        "raw": "        direction: afterMean >= before.mean ? 'up' : 'down',"
+      },
+      {
+        "id": "SCP004",
+        "line": 119,
+        "raw": "export function fmtScientificNumber(v: unknown, minimumDecimals: number, locale?: string): string {"
+      },
+      {
+        "id": "SCP005",
+        "line": 262,
+        "raw": "                    ? t('signalChangePoints.shiftedText', 'This signal stepped to a new stable level at least once — a different failure mode from a slow ramp, which would show no alarm here at all.')"
+      },
+      {
+        "id": "SCP006",
+        "line": 154,
+        "raw": "              i18nKey=\"help.signalChangePoints.pick\""
+      }
+    ]
+  }
+}

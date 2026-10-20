@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtInt } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
+
 import type {
   DestinationTransitionResult,
   TransitionMatrixCell,
@@ -11,6 +12,7 @@ import type {
 import { destinationPercent } from './labels';
 import { DestinationTransitionsSectionBody } from './DestinationTransitionsSectionBody';
 import type { DestinationTransitionsQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TopTransitionMatrixProps {
   model: DestinationTransitionResult;
@@ -23,7 +25,10 @@ export function TopTransitionMatrix({
   state,
   locale,
 }: TopTransitionMatrixProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const countLabel = (value: unknown) =>
+    isFiniteNumber(value) ? fmtInt(value, locale) : '—';
   const rows = model.topMatrix;
   const destinations = rows.map((row) => ({
     key: row.fromKey,
@@ -36,20 +41,20 @@ export function TopTransitionMatrix({
     cell.status === 'unsupported_origin'
       ? t(
           'destinationTransitions.matrix.cellUnsupportedAria',
-          '{{from}} to {{to}}: {{count}} observed; origin is below the support gate',
+          '{{from}} to {{to}}: {{value}} observed; origin is below the support gate',
           {
             from,
             to: cell.toLabel,
-            count: cell.count,
+            value: countLabel(cell.count),
           },
         )
       : t(
           'destinationTransitions.matrix.cellAria',
-          '{{from}} to {{to}}: {{count}} observed, {{share}} of accepted outgoing transitions',
+          '{{from}} to {{to}}: {{value}} observed, {{share}} of accepted outgoing transitions',
           {
             from,
             to: cell.toLabel,
-            count: cell.count,
+            value: countLabel(cell.count),
             share: destinationPercent(
               cell.observedConditionalShare,
               locale,
@@ -61,7 +66,7 @@ export function TopTransitionMatrix({
     <section data-testid="destination-transition-matrix">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <Grid3X3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Grid3X3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           {t(
             'destinationTransitions.matrix.title',
             'Top transition matrix',
@@ -112,12 +117,12 @@ export function TopTransitionMatrix({
                     className="flex w-36 shrink-0 flex-col justify-center rounded-lg bg-[var(--surface-2)] p-2"
                     role="rowheader"
                   >
-                    <Text variant="bodySm">{row.fromLabel}</Text>
-                    <Text variant="caption">
+                    <Text as="div" variant="bodySm">{row.fromLabel}</Text>
+                    <Text as="div" variant="caption">
                       {t(
                         'destinationTransitions.matrix.outgoing',
-                        '{{count}} outgoing',
-                        { count: row.outgoingTransitions },
+                        '{{value}} outgoing',
+                        { value: countLabel(row.outgoingTransitions) },
                       )}
                     </Text>
                   </div>
@@ -129,14 +134,14 @@ export function TopTransitionMatrix({
                         cell.status === 'unsupported_origin'
                           ? 'border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]'
                           : cell.status === 'observed'
-                            ? 'border-neon-cyan/20 bg-neon-cyan/5'
+                            ? 'border-[var(--border-default)] bg-[var(--surface-2)]'
                             : 'border-[var(--border-subtle)] bg-[var(--surface-1)]',
                       )}
                       role="cell"
                       aria-label={cellLabel(row.fromLabel, cell)}
                     >
                       <Text variant="bodySm" weight="semibold">
-                        {fmtInt(cell.count)}
+                        {countLabel(cell.count)}
                       </Text>
                       <Text variant="caption">
                         {destinationPercent(

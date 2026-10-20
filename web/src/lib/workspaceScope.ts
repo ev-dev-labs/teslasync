@@ -6,6 +6,7 @@ export interface WorkspaceRouteScope {
 }
 
 export type WorkspaceScopedControlKind = keyof WorkspaceRouteScope;
+export type WorkspaceQuickRangePreset = WorkspaceRangePreset | '6h' | 'ytd';
 
 export const WORKSPACE_SCOPED_CONTROL = Symbol('teslasync.workspace-scoped-control');
 
@@ -22,19 +23,27 @@ export type WorkspaceScopedComponent = {
  */
 export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/activity',
+  '/admin/audit-log',
   '/analytics',
   '/analytics/carbon',
   '/api-logs',
   '/automations/history',
+  '/battery-degradation',
+  '/cabin-thermal',
   '/charging',
+  '/charge-advisor',
   '/charging-curve',
   '/charging-heatmap',
   '/charging/costs',
   '/charging/curves',
+  '/climate',
+  '/climate-control',
   '/cold-start',
+  '/comfort-consistency',
   '/command-history',
   '/command-reliability',
   '/cost-analysis',
+  '/diagnostics/root-cause',
   '/drive-calendar',
   '/drive-score',
   '/drives',
@@ -44,7 +53,9 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/efficiency',
   '/energy',
   '/energy-flow',
+  '/explorer',
   '/fsd',
+  '/hvac-cycling',
   '/locations',
   '/logbook',
   '/media-player',
@@ -52,12 +63,17 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/notifications/archived',
   '/notifications/inbox',
   '/parking',
+  '/tesla-physics/ledger',
   '/power-flow',
+  '/preconditioning-effectiveness',
   '/range-buffer',
   '/regen-efficiency',
   '/route-efficiency',
   '/security-access',
   '/share-card',
+  '/signal-change-points',
+  '/signal-correlation',
+  '/signal-deadband',
   '/signal-explorer',
   '/signal-log',
   '/signals',
@@ -71,6 +87,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/tesla-charging-sessions',
   '/timeline',
   '/tire-pressure',
+  '/tire-differential-drift',
   '/trips',
   '/utilization',
   '/vehicle-systems/software',
@@ -79,14 +96,18 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
 const STANDARD_QUICK_PRESETS = ['24h', '7d', '30d', '90d'] as const;
 const CALENDAR_QUICK_PRESETS = ['7d', '30d', '90d', 'ytd'] as const;
 
-export function getWorkspaceQuickRangePresets(pathname: string): readonly (WorkspaceRangePreset | 'ytd')[] {
-  return normalizePathname(pathname) === '/drive-calendar'
+export function getWorkspaceQuickRangePresets(pathname: string): readonly WorkspaceQuickRangePreset[] {
+  const normalized = normalizePathname(pathname);
+  if (normalized === '/tesla-physics/ledger') return ['6h', '24h'];
+  return normalized === '/drive-calendar'
     ? CALENDAR_QUICK_PRESETS
     : STANDARD_QUICK_PRESETS;
 }
 
 export function isWorkspaceRangePresetAvailable(pathname: string, id: string): boolean {
-  if (normalizePathname(pathname) === '/drive-calendar') {
+  const normalized = normalizePathname(pathname);
+  if (id === '6h') return normalized === '/tesla-physics/ledger';
+  if (normalized === '/drive-calendar') {
     return id !== 'live' && id !== '24h' && id !== 'today' && id !== '1y';
   }
   return id !== '1y' && id !== 'ytd';
@@ -97,6 +118,7 @@ export const VEHICLE_DISABLED_PREFIXES = [
   '/admin',
   '/automations',
   '/benchmarks',
+  '/dev',
   '/docs',
   '/integrations',
   '/me',
@@ -107,6 +129,7 @@ export const VEHICLE_DISABLED_PREFIXES = [
 
 export const VEHICLE_DISABLED_PATHS: ReadonlySet<string> = new Set([
   '/action-center',
+  '/analytics',
   '/api-keys',
   '/api-logs',
   '/api-playground',
@@ -115,20 +138,26 @@ export const VEHICLE_DISABLED_PATHS: ReadonlySet<string> = new Set([
   '/data-repair',
   '/db-health',
   '/dev-tools',
+  '/energy-orchestrator',
+  '/energy-products',
   '/exports',
   '/fleet-api',
   '/fleet-operations',
+  '/gas-price',
   '/mqtt-inspector',
-  '/period-compare',
+  '/power/dashboards',
+  '/power/sql',
   '/power-flow',
   '/redis-signals',
   '/roadmap',
   '/search',
   '/signal-diff',
   '/system-status',
+  '/tesla-api-usage',
   '/tesla-charging-history',
   '/tesla-charging-sessions',
   '/tesla-account',
+  '/tesla-region',
   '/vehicle-comparison',
   '/vehicles',
 ]);

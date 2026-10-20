@@ -1,7 +1,9 @@
 import { ListOrdered } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, Badge, PanelTitle, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { StatStrip } from '@/components/data-display';
+import { Badge, Table, Text } from '@/components/ui';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonIntensityBand } from '../../lib/carbonIntelligence';
 import type { CarbonSectionProps } from './types';
@@ -53,14 +55,10 @@ export function CarbonHourlyDirectory({
         'Ranked backend model clock-hour intensity directory',
       )}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-2 flex items-center gap-2">
-          <ListOrdered
-            className="h-4 w-4 text-[var(--text-muted)]"
-            aria-hidden="true"
-          />
-          {t('carbon.directory.title', 'Ranked hourly directory and bands')}
-        </PanelTitle>
+      <LayoutCard
+        title={t('carbon.directory.title', 'Ranked hourly directory and bands')}
+        actions={<ListOrdered className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
         <Text as="p" variant="caption" className="mb-4">
           {stats.spanGPerKwh === 0
             ? t(
@@ -73,8 +71,11 @@ export function CarbonHourlyDirectory({
             )}
         </Text>
         <CarbonSectionBody state={states.intensity}>
-          <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {[
+          <StatStrip
+            id="carbon-curve-statistics"
+            variant="embedded"
+            period={{ kind: 'unknown', label: t('carbon.source.intensityScope', 'Built-in, admin-editable static 24-hour model') }}
+            metrics={[
               {
                 label: t('carbon.directory.minimum', 'Minimum'),
                 value: display.formatIntensity(stats.minGPerKwh),
@@ -95,44 +96,40 @@ export function CarbonHourlyDirectory({
                 label: t('carbon.directory.span', 'Observed span'),
                 value: display.formatIntensity(stats.spanGPerKwh),
               },
-            ].map((metric) => (
-              <div
-                key={metric.label}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-              >
-                <Text as="p" variant="metricLabel">{metric.label}</Text>
-                <Text as="p" variant="body" mono className="mt-1">
-                  {metric.value}
-                </Text>
-              </div>
-            ))}
-          </div>
-          <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            ].map((metric, index) => ({
+              metricId: 'text',
+              occurrenceId: `carbon-curve-statistic-${index}`,
+              label: metric.label,
+              rawValue: metric.value,
+            }))}
+          />
+          <Table aria-label={t('carbon.directory.title', 'Ranked hourly directory and bands')}>
+            <tbody>
             {analysis.curve.rankedRows.map((row) => {
               const band = bandPresentation(row.band, t);
               return (
-                <li
+                <tr
                   key={row.hour}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
-                  <div>
+                  <th scope="row">
                     <Text as="p" variant="label">
                       {t('carbon.directory.rank', 'Rank {{rank}} · {{hour}}', {
                         rank: row.rank,
                         hour: display.formatHour(row.hour),
                       })}
                     </Text>
-                    <Text as="p" variant="caption" mono>
+                  </th>
+                  <td className="text-right"><Text as="p" variant="caption" mono>
                       {display.formatIntensity(row.intensityGPerKwh)}
-                    </Text>
-                  </div>
-                  <Badge variant={band.variant}>{band.label}</Badge>
-                </li>
+                    </Text></td>
+                  <td><Badge variant={band.variant}>{band.label}</Badge></td>
+                </tr>
               );
             })}
-          </ol>
+            </tbody>
+          </Table>
         </CarbonSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

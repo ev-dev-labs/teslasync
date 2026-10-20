@@ -15,26 +15,24 @@
 //   - every visible label resolved through i18n (no raw English literals), and
 //   - a11y: every decorative glyph (panel + each card) is aria-hidden.
 //
-// react-i18next is mocked so `t(key, fallback)` returns the English fallback AND
-// records the exact key/fallback each string wires to (mirrors the sibling
-// TelemetryGrid / InfoTile tests). useUnits is mocked with an echo temperature
-// formatter so we can assert the precise Celsius value routed to it and its
-// null→placeholder behaviour, with no unit maths in the test. The real
-// GlassPanel + PanelTitle + MetricCard + EmptyState render, proving the cards
-// mount inside the shared panel shell. Nothing here touches the network —
-// ClimateSection receives its data as a prop.
+// Real OperationalBrief and canonical conversions render.
+// Converter spies observe raw Celsius, and successful empty sources retain
+// eight unknown metrics rather than hiding the summary.
 
 import type { ComponentProps, ReactNode } from 'react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { fireEvent, render, screen, cleanup, within } from '@testing-library/react'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 
 const { mockT, formatTemperature } = vi.hoisted(() => ({
-  mockT: vi.fn((_key: string, fallback?: string) => fallback ?? _key),
-  // Mirrors the real lib formatter: nullish/NaN → em-dash placeholder, else a
-  // "<value>°C" echo so the exact Celsius value routed to each card is provable.
-  formatTemperature: vi.fn((v: number | null | undefined) =>
-    v == null || Number.isNaN(v) ? '—' : `${v}°C`,
-  ),
+  mockT: vi.fn((_key: string, fallback?: unknown, values?: Record<string, unknown>) => {
+    let out = typeof fallback === 'string' ? fallback : _key
+    if (values) {
+      for (const [k, v] of Object.entries(values)) out = out.replace(`{{${k}}}`, String(v))
+    }
+    return out
+  }),
+  formatTemperature: vi.fn(),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -43,12 +41,18 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }))
 
-vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ formatTemperature }),
-}))
+vi.mock('@/lib/unitConversion', async importActual => {
+  const actual = await importActual<typeof import('@/lib/unitConversion')>()
+  return { ...actual,
+    convertTempFromSI: (...args: Parameters<typeof actual.convertTempFromSI>) => {
+      formatTemperature(args[0]); return actual.convertTempFromSI(...args)
+    },
+  }
+})
 
 import { ClimateSection } from './ClimateSection'
 import type { ClimateSnapshot } from '@/api/types'
+import { statText } from '../statstrip-vehicle-detail/testQueries'
 
 type Props = ComponentProps<typeof ClimateSection>
 
@@ -81,8 +85,6 @@ function renderSection(overrides: Partial<ClimateSnapshot> = {}) {
   return render(<ClimateSection {...props} />)
 }
 
-const dashes = () => screen.getAllByText('—')
-
 beforeEach(() => {
   mockT.mockClear()
   formatTemperature.mockClear()
@@ -98,20 +100,22 @@ describe('ClimateSection', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Climate' })).toBeInTheDocument()
 
     for (const label of [
-      'Inside Temp',
-      'Outside Temp',
-      'Driver Setpoint',
-      'Fan Speed',
-      'Seat Heater Left',
-      'Seat Heater Right',
+      'Inside temp',
+      'Outside temp',
+      'Driver setpoint',
+      'Fan speed',
+      'Seat heater left',
+      'Seat heater right',
       'Defrost',
-      'Climate On',
+      'Climate on',
     ]) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
 
     // Mounted inside the shared GlassPanel shell (data-print-card marker).
     expect(container.querySelector('[data-print-card]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="vehicle-climate-summary"][data-operational-brief]')).not.toBeNull()
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8)
     // No EmptyState placeholder when data is present.
     expect(screen.queryByRole('status')).toBeNull()
   })
@@ -125,26 +129,28 @@ describe('ClimateSection', () => {
     expect(empty).toHaveTextContent('No climate data available')
     expect(mockT).toHaveBeenCalledWith('vehicles.detail.noClimateData', 'No climate data available')
 
-    // None of the metric cards leak through in the empty branch.
-    expect(screen.queryByText('Inside Temp')).toBeNull()
+    // The source shell omits unknown measurements with a counted explanation, never synthetic zeros.
+    expect(screen.getByText('Inside temp')).toBeInTheDocument()
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0)
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-climate-summary'), 'Inside temp')
     expect(formatTemperature).not.toHaveBeenCalled()
   })
 
   it('treats undefined the same as null (empty state, no throw)', () => {
     expect(() => render(<ClimateSection climateData={undefined} />)).not.toThrow()
     expect(screen.getByRole('status')).toHaveTextContent('No climate data available')
-    expect(screen.queryByText('Fan Speed')).toBeNull()
+    expect(screen.getByText('Fan speed')).toBeInTheDocument()
   })
 
-  it('routes each temperature field through the useUnits formatter and renders the echo', () => {
+  it('routes each raw temperature through canonical conversion and renders the real value', () => {
     renderSection({ inside_temp_c: 21, outside_temp_c: 15, driver_setpoint_c: 22 })
 
     expect(formatTemperature).toHaveBeenCalledWith(21)
     expect(formatTemperature).toHaveBeenCalledWith(15)
     expect(formatTemperature).toHaveBeenCalledWith(22)
-    expect(screen.getByText('21°C')).toBeInTheDocument()
-    expect(screen.getByText('15°C')).toBeInTheDocument()
-    expect(screen.getByText('22°C')).toBeInTheDocument()
+    expect(screen.getByText(statText('21.00°C'))).toBeInTheDocument()
+    expect(screen.getByText(statText('15.00°C'))).toBeInTheDocument()
+    expect(screen.getByText(statText('22.00°C'))).toBeInTheDocument()
   })
 
   it('prefers the legacy temperature alias over the canonical column when present', () => {
@@ -152,8 +158,8 @@ describe('ClimateSection', () => {
     renderSection({ inside_temp: 18, inside_temp_c: 99 })
 
     expect(formatTemperature).toHaveBeenCalledWith(18)
-    expect(screen.getByText('18°C')).toBeInTheDocument()
-    expect(screen.queryByText('99°C')).toBeNull()
+    expect(screen.getByText(statText('18.00°C'))).toBeInTheDocument()
+    expect(screen.queryByText(statText('99.00°C'))).toBeNull()
   })
 
   it('renders a 0°C temperature verbatim — the ?? guard must not swallow the falsy 0', () => {
@@ -161,8 +167,8 @@ describe('ClimateSection', () => {
     renderSection({ inside_temp: 0, inside_temp_c: 99 })
 
     expect(formatTemperature).toHaveBeenCalledWith(0)
-    expect(screen.getByText('0°C')).toBeInTheDocument()
-    expect(screen.queryByText('99°C')).toBeNull()
+    expect(screen.getByText(statText('0.00°C'))).toBeInTheDocument()
+    expect(screen.queryByText(statText('99.00°C'))).toBeNull()
   })
 
   it('shows an em-dash for a missing temperature instead of "undefined" or a blank cell', () => {
@@ -174,12 +180,12 @@ describe('ClimateSection', () => {
       driver_setpoint_c: 22,
     })
 
-    expect(formatTemperature).toHaveBeenCalledWith(null)
-    // The nullish inside temp collapses to the em-dash placeholder…
-    expect(dashes().length).toBeGreaterThanOrEqual(1)
+    expect(formatTemperature).not.toHaveBeenCalledWith(null)
+    // The nullish inside temp is omitted with a counted explanation…
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-climate-summary'), 'Inside temp')
     // …never the literal "undefined°C", and the populated cards are unaffected.
     expect(screen.queryByText('undefined°C')).toBeNull()
-    expect(screen.getByText('15°C')).toBeInTheDocument()
+    expect(screen.getByText(statText('15.00°C'))).toBeInTheDocument()
   })
 
   it('prefers hvac_fan_status, falls back to fan_status, then an em-dash', () => {
@@ -195,8 +201,8 @@ describe('ClimateSection', () => {
     cleanup()
 
     renderSection({ hvac_fan_status: null, fan_status: null })
-    // Fan card falls to the em-dash placeholder.
-    expect(dashes().length).toBeGreaterThanOrEqual(1)
+    // Fan card is omitted with a counted explanation.
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-climate-summary'), 'Fan speed')
   })
 
   it('renders fan speed 0 verbatim (regression: != null guard, not a truthiness check)', () => {
@@ -206,20 +212,37 @@ describe('ClimateSection', () => {
     expect(screen.queryByText('9')).toBeNull()
   })
 
+  it('retains the existing fan status precedence and uses the actual fan-speed projection if neither status field reports', () => {
+    renderSection({ hvac_fan_status: null, fan_status: null, fan_speed: 3.84 })
+    expect(screen.getByText('Fan speed').closest('[data-operational-metric]')).toHaveTextContent('3.84')
+    cleanup()
+    renderSection({ hvac_fan_status: 0, fan_status: 9, fan_speed: 3.84 })
+    expect(screen.getByText('Fan speed').closest('[data-operational-metric]')).toHaveTextContent('0')
+    expect(screen.queryByText('3.84')).not.toBeInTheDocument()
+  })
+
   it('renders seat-heater levels including Level 0, and an em-dash when unset', () => {
     renderSection({ seat_heater_left: 3, seat_heater_right: 0 })
 
-    expect(screen.getByText('Level 3')).toBeInTheDocument()
-    // The falsy 0 must still render as "Level 0", not an em-dash.
-    expect(screen.getByText('Level 0')).toBeInTheDocument()
+    expect(screen.getByText('Seat heater left').closest('[data-operational-metric]')).toHaveTextContent('3')
+    // The falsy 0 must still render as "0", not an omission.
+    expect(screen.getByText('Seat heater right').closest('[data-operational-metric]')).toHaveTextContent('0')
+    const seatBrief = screen.getByTestId('vehicle-climate-summary')
+    fireEvent.click(within(seatBrief).getByRole('button', { name: 'Review details' }))
+    const seatDrawer = screen.getByRole('dialog')
+    expect(within(seatDrawer).getByRole('group', { name: 'Seat heater left' })).toHaveTextContent('Level')
+    expect(within(seatDrawer).getByRole('group', { name: 'Seat heater right' })).toHaveTextContent('Level')
+    fireEvent.keyDown(seatDrawer, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(mockT).toHaveBeenCalledWith('common.level', 'Level')
 
     cleanup()
     mockT.mockClear()
 
     renderSection({ seat_heater_left: null, seat_heater_right: null })
-    // Both seat cards fall to em-dash.
-    expect(dashes().length).toBeGreaterThanOrEqual(2)
+    // Both seat cards are omitted with a counted explanation.
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-climate-summary'), 'Seat heater left')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-climate-summary'), 'Seat heater right')
   })
 
   it('shows the defrost mode when active and the i18n "Off" label otherwise', () => {
@@ -236,9 +259,9 @@ describe('ClimateSection', () => {
 
     cleanup()
 
-    // Null mode → also the Off label, no crash.
+    // A null source mode is unknown, not Off.
     expect(() => renderSection({ defrost_mode: null })).not.toThrow()
-    expect(screen.getByText('Defrost')).toBeInTheDocument()
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-climate-summary'), 'Defrost')
   })
 
   it('drives "Climate On" from is_ac_on, falling back to is_climate_on only when AC is nullish', () => {
@@ -253,6 +276,7 @@ describe('ClimateSection', () => {
     // Explicit AC false must WIN over a truthy climate flag (`??`, not `||`).
     renderSection({ is_ac_on: false, is_climate_on: true })
     expect(screen.queryByText('On')).toBeNull()
+    expect(screen.getByText('Climate on').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value')
     expect(mockT).toHaveBeenCalledWith('common.off', 'Off')
 
     cleanup()
@@ -267,7 +291,7 @@ describe('ClimateSection', () => {
 
     renderSection({ is_ac_on: null, is_climate_on: null })
     expect(screen.queryByText('On')).toBeNull()
-    expect(mockT).toHaveBeenCalledWith('common.off', 'Off')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-climate-summary'), 'Climate on')
   })
 
   it('wires every card label to its i18n key (no raw English labels)', () => {
@@ -275,14 +299,14 @@ describe('ClimateSection', () => {
 
     const expected: ReadonlyArray<readonly [string, string]> = [
       ['vehicles.detail.climate', 'Climate'],
-      ['common.insideTemp', 'Inside Temp'],
-      ['common.outsideTemp', 'Outside Temp'],
-      ['vehicles.detail.driverSetpoint', 'Driver Setpoint'],
-      ['vehicles.detail.fanSpeed', 'Fan Speed'],
-      ['vehicles.detail.seatHeaterL', 'Seat Heater Left'],
-      ['vehicles.detail.seatHeaterR', 'Seat Heater Right'],
+      ['common.insideTemp', 'Inside temp'],
+      ['common.outsideTemp', 'Outside temp'],
+      ['vehicles.detail.driverSetpoint', 'Driver setpoint'],
+      ['vehicles.detail.fanSpeed', 'Fan speed'],
+      ['vehicles.detail.seatHeaterL', 'Seat heater left'],
+      ['vehicles.detail.seatHeaterR', 'Seat heater right'],
       ['vehicles.detail.defrost', 'Defrost'],
-      ['vehicles.detail.climateOn', 'Climate On'],
+      ['vehicles.detail.climateOn', 'Climate on'],
     ]
     for (const [key, fallback] of expected) {
       expect(mockT).toHaveBeenCalledWith(key, fallback)
@@ -292,11 +316,21 @@ describe('ClimateSection', () => {
   it('marks every decorative glyph (panel + each card icon) aria-hidden', () => {
     const { container } = renderSection()
 
-    const svgs = Array.from(container.querySelectorAll('svg'))
-    // One panel-title glyph + one per metric card = nine decorative icons.
-    expect(svgs.length).toBeGreaterThanOrEqual(9)
-    for (const svg of svgs) {
+    // The face keeps only the Review-details action glyph; metric glyphs moved into drawer groups.
+    const faceSvgs = Array.from(container.querySelectorAll('svg'))
+    expect(faceSvgs.length).toBe(1)
+    for (const svg of faceSvgs) {
       expect(svg).toHaveAttribute('aria-hidden', 'true')
     }
+    const brief = screen.getByTestId('vehicle-climate-summary')
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    const drawerSvgs = Array.from(drawer.querySelectorAll('[role="group"] svg'))
+    expect(drawerSvgs.length).toBe(8)
+    for (const svg of drawerSvgs) {
+      expect(svg).toHaveAttribute('aria-hidden', 'true')
+    }
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

@@ -3,6 +3,7 @@
     "preset": {
       "label": "Quick date range",
       "live": "Live",
+      "last6h": "Last 6 hours",
       "last24h": "Last 24 hours",
       "today": "Today",
       "yesterday": "Yesterday",
@@ -30,7 +31,8 @@
       "vsPrevious": "vs {{start}} – {{end}}",
       "summaryDays_one": "{{count}} day",
       "summaryDays_other": "{{count}} days",
-      "popoverLabel": "Date range picker"
+      "popoverLabel": "Date range picker",
+      "loadingCalendar": "Loading calendar…"
     }
   }
 }

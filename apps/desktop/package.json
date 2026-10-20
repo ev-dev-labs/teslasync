@@ -12,9 +12,11 @@
     "dist:dir": "electron-builder --dir",
     "build:web": "npm --prefix ../../web run build"
   },
-  "dependencies": {},
   "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron": "^44.9.0",
+    "electron-builder": "^26.15.3"
+  },
+  "overrides": {
+    "@electron/get": "^5.1.0"
   }
 }

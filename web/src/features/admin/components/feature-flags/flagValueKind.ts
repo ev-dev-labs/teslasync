@@ -1,7 +1,7 @@
 /**
- * Classify an arbitrary JSON feature-flag value into a display bucket.
+ * Classify a stored feature-flag value into a display bucket.
  *
- * Feature-flag values are stored as opaque JSON (`unknown`), so both the
+ * Feature-flag values are opaque strings, not parsed JSON, so both the
  * KPI band (FlagStatsBand) and the composition breakdown
  * (FlagCompositionPanel) need a single, shared rule for turning a value
  * into a stable kind label. Keeping the classifier here avoids two

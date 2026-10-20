@@ -92,7 +92,7 @@ describe('FlagCompositionPanel — states', () => {
     // The composition list must NOT render behind the error. (QueryError itself
     // renders a help-links list, so target the labelled composition list.)
     expect(
-      screen.queryByRole('list', { name: 'Flag value-type composition' }),
+      screen.queryByRole('list', { name: 'Returned flag value presentation; stored values are text' }),
     ).toBeNull();
 
     const retry = screen.getByRole('button', { name: 'Retry' });
@@ -105,14 +105,22 @@ describe('FlagCompositionPanel — states', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // Skeleton placeholder must not appear when there is an error.
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('renders the skeleton while loading with no flags yet', () => {
     const { container } = renderPanel({ loading: true, flags: [] });
 
-    // Skeleton(lines=5) renders five animated placeholder rows.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    // Skeleton(lines=5) retains five static, decorative source-shaped rows.
+    const skeleton = container.querySelector(':scope > div[aria-hidden="true"].space-y-2');
+    expect(skeleton).not.toBeNull();
+    const rows = skeleton?.querySelectorAll(':scope > div.bg-\\[var\\(--skeleton-bg\\)\\]');
+    expect(rows).toHaveLength(5);
+    rows?.forEach((row, index) => {
+      expect(row).toHaveClass('h-4', 'rounded');
+      expect(row).toHaveStyle({ height: '16px', width: index === 4 ? '60%' : '100%' });
+      expect(row).not.toHaveClass('animate-pulse');
+    });
     expect(screen.queryByRole('list')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
   });
@@ -223,14 +231,14 @@ describe('FlagCompositionPanel — composition breakdown', () => {
     expect(screen.getByRole('list')).toBeInTheDocument();
     expect(screen.getByText('Boolean')).toBeInTheDocument();
     // Stale-while-revalidate: no skeleton because data is already present.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('exposes the breakdown as an accessible, labelled list', () => {
     renderPanel({ flags: [flag('a', true), flag('b', 'x')] });
 
     const list = screen.getByRole('list', {
-      name: 'Flag value-type composition',
+      name: 'Returned flag value presentation; stored values are text',
     });
     expect(list).toBeInTheDocument();
     expect(within(list).getAllByRole('listitem')).toHaveLength(2);

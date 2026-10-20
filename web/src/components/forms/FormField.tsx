@@ -6,6 +6,7 @@ import {
 } from 'react'
 import { cn } from '@/lib/cn'
 import { Label } from '@/components/ui/Label'
+import { ErrorText, HelperText } from '@/components/ui/Typography'
 
 interface FieldControlProps {
   id?: string
@@ -85,23 +86,23 @@ export function FormField({
     : children
 
   return (
-    <div className={cn('space-y-1.5', className)}>
+    <div className={cn('min-w-0 space-y-1.5', className)}>
       <Label
         htmlFor={fieldId}
         required={required}
-        className="block text-xs font-medium text-[var(--text-secondary)]"
+        className="block"
       >
         {label}
       </Label>
       {control}
       {error ? (
-        <p id={errorId} role="alert" className="text-xs text-rose-300">
+        <ErrorText id={errorId} className="break-words">
           {error}
-        </p>
+        </ErrorText>
       ) : hint ? (
-        <p id={hintId} className="text-xs text-[var(--text-muted)]">
+        <HelperText id={hintId} className="break-words">
           {hint}
-        </p>
+        </HelperText>
       ) : null}
     </div>
   )

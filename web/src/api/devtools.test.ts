@@ -34,6 +34,7 @@ vi.mock('@/api/client', async () => {
 
 import { request, apiUrl, ApiError } from '@/api/client'
 import type { ChargingSession, Drive } from '@/api/types'
+import type { RedisSignalsResponse } from './devtools'
 import {
   getCaptureStats,
   getRedisSignals,
@@ -153,6 +154,123 @@ describe('getExtendedHealth', () => {
 // ---------------------------------------------------------------------------
 
 describe('Redis signal cache', () => {
+  it('preserves supported JSON shapes and the backend string fallback discriminator verbatim', async () => {
+    const payload = {
+      vehicle_id: 7,
+      signal_count: 3,
+      signals: {
+        Compound: { value: { nested: [0, false, '', null, { status: 'fixture' }] }, type: 'string' },
+        Array: { value: [false, null, 0], type: 'string' },
+        Null: {
+          value: null, type: 'string', source: 'redis', observed_at: null,
+          timestamp_provenance: 'unknown', freshness: 'unknown', read_availability: 'available',
+        },
+      },
+    } satisfies RedisSignalsResponse
+    mockedRequest.mockResolvedValueOnce(payload)
+    const controller = new AbortController()
+
+    const result = await getRedisSignals(7, { signal: controller.signal })
+
+    expect(result).toBe(payload)
+    expect(result.signals).toEqual(payload.signals)
+    expect(call()).toEqual(['/dev-tools/redis-signals?vehicle_id=7', { signal: controller.signal }])
+  })
+
+  it('preserves omitted Go metadata fields without inventing timestamps or VIN', async () => {
+    const payload = {
+      vehicle_id: 7,
+      signal_count: 0,
+      signals: {},
+      meta: {
+        live_signal_store_mode: 'local',
+        redis_key: 'vehicle:7:signals',
+        redis_field_count: 0,
+        l1_signal_count: 0,
+      },
+    } satisfies RedisSignalsResponse
+    mockedRequest.mockResolvedValueOnce(payload)
+
+    const result = await getRedisSignals(7)
+
+    expect(result).toBe(payload)
+    expect(result.meta).not.toHaveProperty('l1_last_seen_at')
+    expect(result.meta).not.toHaveProperty('l2_last_seen_at')
+    expect(result.meta).not.toHaveProperty('vehicle_vin')
+    expect(result.meta?.redis_field_count).toBe(0)
+    expect(result.meta?.l1_signal_count).toBe(0)
+  })
+
+  it('preserves a response with no metadata or measured signals', async () => {
+    const payload = {
+      vehicle_id: 7,
+      signal_count: 0,
+      signals: {},
+    } satisfies RedisSignalsResponse
+    mockedRequest.mockResolvedValueOnce(payload)
+
+    const result = await getRedisSignals(7)
+
+    expect(result).toBe(payload)
+    expect(result).not.toHaveProperty('meta')
+    expect(result.signals).not.toHaveProperty('Power')
+  })
+
+  it.each([0, -12, 12, -0.125, 0.125])(
+    'preserves the measured numeric signal %s without rounding or clamping',
+    async (value) => {
+      const payload = {
+        vehicle_id: 7,
+        signal_count: 1,
+        signals: { Power: { value, type: 'number' } },
+        meta: {
+          live_signal_store_mode: 'hybrid',
+          redis_key: 'vehicle:7:signals',
+          redis_field_count: 1,
+          l1_signal_count: 1,
+          l1_last_seen_at: '2026-10-14T16:00:00.123Z',
+          l2_last_seen_at: '2026-10-14T16:00:01.456Z',
+          vehicle_vin: 'test-vehicle-vin',
+        },
+      } satisfies RedisSignalsResponse
+      mockedRequest.mockResolvedValueOnce(payload)
+
+      const result = await getRedisSignals(7)
+
+      expect(result).toBe(payload)
+      expect(result.signals.Power.value).toBe(value)
+      expect(result.meta).toEqual(payload.meta)
+    },
+  )
+
+  it.each([null, undefined, '', 'not-a-number'])(
+    'does not replace missing or invalid boundary values (%s) with measured zero',
+    async (value) => {
+      const payload = {
+        vehicle_id: 7,
+        signal_count: 1,
+        signals: { Power: { value, type: 'number' } },
+        meta: {
+          live_signal_store_mode: 'hybrid',
+          redis_key: 'vehicle:7:signals',
+          redis_field_count: 1,
+          l1_signal_count: 0,
+          l1_last_seen_at: 'invalid-timestamp',
+        },
+      }
+      mockedRequest.mockResolvedValueOnce(payload)
+
+      const result = await getRedisSignals(7)
+
+      expect(result).toBe(payload)
+      expect(result.signals.Power.value).toBe(value)
+      expect(result.signals.Power.value).not.toBe(0)
+      expect(result.meta?.l1_last_seen_at).toBe('invalid-timestamp')
+      expect(result.meta).not.toHaveProperty('l2_last_seen_at')
+      expect(result.meta).not.toHaveProperty('vehicle_vin')
+    },
+  )
+
   it('getRedisSignals threads the vehicle id as a snake_case query param', async () => {
     mockedRequest.mockResolvedValueOnce({ vehicle_id: 7, signal_count: 0, signals: {} })
     await getRedisSignals(7)
@@ -229,6 +347,14 @@ describe('getAPICallLogs', () => {
     await getAPICallLogs({ start: '2026-09-19T07:00:00Z', endExclusive: '2026-09-26T07:00:00Z' })
     expect(call()[0]).toBe('/api-logs?start=2026-09-19T07%3A00%3A00Z&end_exclusive=2026-09-26T07%3A00%3A00Z')
   })
+
+  it('forwards the optional cancellation signal without changing the envelope', async () => {
+    const signal = new AbortController().signal
+    const payload = { data: [], total: 400, limit: 25, offset: 50 }
+    mockedRequest.mockResolvedValueOnce(payload)
+    expect(await getAPICallLogs({ limit: 25, offset: 50 }, { signal })).toBe(payload)
+    expect(call()).toEqual(['/api-logs?limit=25&offset=50', { signal }])
+  })
 })
 
 describe('getAPICallLogStats', () => {
@@ -241,6 +367,17 @@ describe('getAPICallLogStats', () => {
   it('rejects partial windows rather than sending unscoped stats', () => {
     expect(() => getAPICallLogStats('2026-09-19T07:00:00Z')).toThrow(/both start and endExclusive/)
     expect(mockedRequest).not.toHaveBeenCalled()
+  })
+
+  it('forwards signals for scoped and unbounded stats and runtime errors', async () => {
+    const signal = new AbortController().signal
+    mockedRequest.mockResolvedValue({})
+    await getAPICallLogStats(undefined, undefined, { signal })
+    await getAPICallLogStats('2026-09-19T07:00:00Z', '2026-09-26T07:00:00Z', { signal })
+    await getErrorStats({ signal })
+    expect(call(0)).toEqual(['/api-logs/stats', { signal }])
+    expect(call(1)).toEqual(['/api-logs/stats?start=2026-09-19T07%3A00%3A00Z&end_exclusive=2026-09-26T07%3A00%3A00Z', { signal }])
+    expect(call(2)).toEqual(['/system/errors/stats', { signal }])
   })
 })
 

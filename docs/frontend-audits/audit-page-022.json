@@ -1,0 +1,417 @@
+{
+  "item": "audit-page-022",
+  "page": "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx",
+  "routes": ["/security-access"],
+  "purpose": "Observe the selected vehicle's lock, Sentry, door/window and auxiliary security state alongside workspace-bounded security-event samples and derived changes.",
+  "primaryGoal": "Determine what is actually known about vehicle security, inspect individual windows and live signals, and review recorded security history without confusing unknown or retained evidence with a current measurement.",
+  "dataSources": [
+    {
+      "name": "Vehicle registry",
+      "hook": "useVehicles",
+      "endpoint": "GET /api/v1/vehicles",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "sourceOwnership": "Vehicle API registry; the page piggybacks the existing vehicles query to expose fleet-list failures, not to render a second picker.",
+      "citations": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:54", "web\\src\\api\\hooks\\useVehicles.ts:73-80", "internal\\api\\router.go:3319-3320"],
+      "behavior": "Preserve vehicleKeys.all, STALE_TIMES.FAST, safeArray and AbortSignal forwarding."
+    },
+    {
+      "name": "Latest security state",
+      "hook": "useLatestSecurityEvent(activeId)",
+      "endpoint": "GET /api/v1/security/latest?vehicle_id=<selected-id>",
+      "owner": "web\\src\\api\\hooks\\useAdmin.ts",
+      "sourceOwnership": "SecurityHandler.Latest projects the current signal.LiveStateReader result; missing signals are omitted. It does not return created_at or an observation-age envelope.",
+      "citations": ["web\\src\\api\\hooks\\useAdmin.ts:294-301", "internal\\api\\router.go:4121-4125", "internal\\api\\security\\handler.go:117-145"],
+      "behavior": "Enabled only with a selected vehicle, keyed by vehicle, polls every 5000ms, forwards AbortSignal and is independent of the history date range. Page derives live DataState and passes only fatal errors into panel replacements."
+    },
+    {
+      "name": "Security history",
+      "hook": "useSecurityEvents(activeId, startInstant, endInstantExclusive)",
+      "endpoint": "GET /api/v1/security?vehicle_id=<selected-id>&start=<inclusive-instant>&end=<exclusive-instant>",
+      "owner": "web\\src\\api\\hooks\\useAdmin.ts",
+      "sourceOwnership": "SecurityHandler.List reads StateReader.Timeline using the parsed range and forward-folded signal projections, aliases ts to created_at and assigns response-local numeric IDs.",
+      "citations": ["web\\src\\api\\hooks\\useAdmin.ts:41-44", "web\\src\\api\\hooks\\useAdmin.ts:304-311", "web\\src\\api\\scope.ts:133-135", "internal\\api\\security\\handler.go:81-115", "internal\\api\\router.go:4122-4124", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:63-106"],
+      "behavior": "Enabled only with a vehicle; both bounds enter the query key and request. safeArray guards the selected feed. The page additionally excludes missing/invalid timestamps and enforces start <= timestamp < end. The server implementation does not paginate here; underlying Timeline completeness, ordering and exact end-bound behavior remain unverified."
+    },
+    {
+      "name": "Workspace scope",
+      "hook": "useSelectedVehicle + useRangeState",
+      "endpoint": null,
+      "owner": "Existing workspace header and selection hooks",
+      "sourceOwnership": "The page consumes persisted vehicle scope and shared range instants without a competing local picker.",
+      "citations": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:49-50", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:63-64", "web\\src\\lib\\workspaceScope.ts:59"],
+      "behavior": "Keep workspace vehicle and rolling/custom range ownership, URL state and timezone semantics. Selection-hook internals were not inspected."
+    },
+    {
+      "name": "Presentation-derived security evidence",
+      "hook": "useMemo helper adapters and useOperationalMetrics",
+      "endpoint": null,
+      "owner": "web\\src\\features\\admin\\components\\security-access\\helpers.ts",
+      "sourceOwnership": "Existing page/feature calculations derive sample percentages, last lock observation, daily sample buckets, sample counts, twin props and semantic transition rows; no new backend analytics are implied.",
+      "citations": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:109-132", "web\\src\\features\\admin\\components\\security-access\\helpers.ts:143-252", "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityOperationalBrief.tsx:18-40", "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityStatisticsBrief.tsx:17-35"],
+      "behavior": "Sentry uptime is percentage of returned event samples, not time-weighted uptime. Daily buckets use the timestamp's first ten characters, not a proved workspace-local calendar. Preserve raw feeds and existing calculations pending a separately owned correctness change."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "kind": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "citations": ["web\\src\\components\\layout\\index.ts:8", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-15", "web\\src\\components\\layout\\PageContainer.tsx:216-255"],
+      "use": "Existing full-width container adapter forwards query and dataSources into canonical header freshness and per-source notices. Do not replace with a second page shell."
+    },
+    {
+      "name": "SecurityOperationalBrief / SecurityStatisticsBrief -> OperationalBrief",
+      "kind": "feature adapters / shared composite",
+      "owner": "web\\src\\features\\admin\\components\\operationalbrief-r-z",
+      "citations": ["web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityOperationalBrief.tsx:22-47", "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityStatisticsBrief.tsx:18-48"],
+      "use": "Four summary metrics and seven history statistics use the current operational metric pipeline, localized scope/provenance, retained/source-status labels and specialist formatters."
+    },
+    {
+      "name": "GlassPanel, PanelTitle, Text, Caption, Badge, Button",
+      "kind": "primitives",
+      "owner": "web\\src\\components\\ui",
+      "citations": ["web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx:3-63", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:5"],
+      "use": "Already adopted through category barrels. Feature StatusTile owns repeated tile presentation rather than six separate bespoke renderers."
+    },
+    {
+      "name": "SecurityStatusCards, LiveVehicleState, WindowStatusDetail, StatusTile",
+      "kind": "domain presentation",
+      "owner": "web\\src\\features\\admin\\components\\security-access",
+      "citations": ["web\\src\\features\\admin\\components\\security-access\\SecurityStatusCards.tsx:22-119", "web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.tsx:65-144", "web\\src\\features\\admin\\components\\security-access\\WindowStatusDetail.tsx:10-15"],
+      "use": "Six posture tiles, ten live-signal tiles and four individual windows; retain all three complementary representations."
+    },
+    {
+      "name": "DigitalTwinPanel -> VehicleTwin -> Tooltip",
+      "kind": "domain visual / shared vehicle owner",
+      "owner": "web\\src\\components\\vehicles\\VehicleTwin.tsx",
+      "citations": ["web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.tsx:32-49", "web\\src\\components\\vehicles\\VehicleTwin.tsx:276-301", "web\\src\\components\\vehicles\\VehicleTwin.tsx:1439-1468"],
+      "use": "Interactive means informational tooltip hotspots, not lock/door vehicle commands. Uses selected-vehicle paint resolution, measured-width sizing, photo-to-SVG fallback and shared motion preference."
+    },
+    {
+      "name": "SentryModeChart -> EmbeddedChart",
+      "kind": "domain chart / shared chart frame",
+      "owner": "web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx",
+      "citations": ["web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx:53-114"],
+      "use": "Shared category imports, persistent chartKey, localized title and data columns; stacked on/off sample counts, tooltip, legend and hidden-series handling. Canonical frame internals were not inspected."
+    },
+    {
+      "name": "EventHistoryTable -> DataTable",
+      "kind": "domain table / shared interaction owner",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "citations": ["web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:24-83", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:110-124", "web\\src\\components\\ui\\DataTable.tsx:873-916"],
+      "use": "Time/lock/Sentry/doors/windows columns, initial source ordering, Time sorting, value filters, compact local pagination, stable persistence ID and shared loaded-row export/search/density behavior."
+    },
+    {
+      "name": "EventTimeline / TimeStamp / feedback / FadeIn",
+      "kind": "domain list / shared display and feedback",
+      "owner": "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx",
+      "citations": ["web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx:104-155", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:147-275"],
+      "use": "Semantic list, localized change labels, timestamp renderer, bounded internal scrolling, retries and empty states. Existing motion and feedback owners must remain."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx",
+      "line": 32,
+      "rule": "MDC-002 reuse / mission 0.5",
+      "detail": "StatusTile already consolidates the posture, auxiliary-live and window grids. Similar-looking data is not duplicate functionality: aggregate windows, each window and physical twin convey different detail.",
+      "fix": "Reuse this domain owner and existing primitive tokens; do not create a new global status-card system or delete complementary sections.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.tsx",
+      "line": 37,
+      "rule": "MDC-026 independent asynchronous trust",
+      "detail": "The same latest-query retry/error/loading policy appears in four panels; history policy appears in chart, statistics, table and timeline. These are independently visible panels, not evidence for a new competing query-state engine.",
+      "fix": "Keep independent panel boundaries while adapting the existing DataState contract; consolidate only genuinely identical feature-level presentation if needed.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "runtime": "unverified",
+    "sourceStrategy": "Five named sections remain mounted; posture/live/analytics stack until xl, then use 1:2 or 2:1 columns; table/timeline split only at 2xl. Internal posture grid is 1/sm:2/3xl:3, live grid 2/sm:3/2xl:4 and individual windows remain 2 columns. Twin uses ResizeObserver and max-w-full, so a nominal 300px size alone is not proof of overflow.",
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx",
+        "line": 114,
+        "rule": "MDC-023 / MDC-043 no mobile detail loss",
+        "detail": "mobileColumns exposes only time, lock and Sentry. DataTable applies hidden md:table-cell to doors/windows; this caller supplies neither expandable details nor mobilePresentation. Historical per-row door/window values have no source-confirmed mobile detail surface.",
+        "fix": "Use the existing DataTable mobile/detail contract to retain all five fields, or retain all columns with deliberate contained scrolling. Preserve filters, export scope, row order, tableId and pagination.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\components\\ui\\DataTable.tsx:185-187", "web\\src\\components\\ui\\DataTable.tsx:715-725", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:110-124"]
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx",
+        "line": 51,
+        "rule": "MDC-043 / MDC-044 long-content preservation",
+        "detail": "Tile label, value and description all truncate without an explicit full-detail affordance. Two-column windows/live layouts can clip longer translated names and states. Timeline titles/subtitles also truncate beside a nonshrinking timestamp.",
+        "fix": "Allow sensible wrapping and min-w-0 composition or use the existing accessible detail/help mechanism; retain full source values at narrow allocated widths and 200% text.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx:51-63", "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx:122-143"]
+      }
+    ]
+  },
+  "accessibility": {
+    "runtime": "unverified",
+    "positiveSourceEvidence": ["Five localized aria-labeled section elements", "Decorative status/timeline icons hidden in aria-hidden wrappers", "Localized text accompanies color-coded state", "Shared table, feedback, Button and TimeStamp owners are reused", "Digital twin and posture initial-loading wrappers expose role=status and aria-busy"],
+    "issues": [
+      {
+        "file": "web\\src\\components\\vehicles\\VehicleTwin.tsx",
+        "line": 296,
+        "rule": "MDC-040 / MDC-044 keyboard and localized names",
+        "detail": "InteractiveHotspot supplies Tooltip an empty nonfocusable span; inspected Tooltip clones aria-describedby, not tabIndex or a semantic control. Twin also has a fixed English generic role=img label and hardcoded security tooltip labels. The page's duplicated text tiles do not prove equivalent keyboard access to every twin hotspot.",
+        "fix": "Have the existing VehicleTwin owner provide localized state-aware accessible names and focusable informational hotspots or an equivalent complete accessible description, reusing Tooltip rather than introducing another interaction engine. Do not turn tooltip inspection into vehicle commands.",
+        "owner": "shared",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\components\\ui\\Tooltip.tsx:215-234", "web\\src\\components\\vehicles\\VehicleTwin.tsx:1168-1189", "web\\src\\components\\vehicles\\VehicleTwin.tsx:1525-1527"]
+      }
+    ],
+    "acceptanceStillRequired": ["Keyboard and focus order", "Screen-reader state description and table interaction", "Real composed AA contrast in light/dark/custom themes", "44px targets or documented spacing exceptions", "Forced colors", "Reduced motion", "RTL and long localized text"]
+  },
+  "states": {
+    "runtime": "unverified",
+    "loading": "Latest twin/posture show localized initial-loading skeletons; live/windows and history panels have skeletons/frame loading. Summary metrics use source-specific loading suppression. Sections are not globally removed for missing data.",
+    "empty": "Twin, posture and live panels have no-data messages; windows keep four Unknown tiles. Chart, table, timeline and statistics retain explicit empty surfaces. Empty history shows zero total/sample uptime in the summary while the detailed statistics are missing; these meanings must not be silently merged.",
+    "error": "Page derives fatalError separately for latest/history and forwards independent retries; vehicle-registry failures participate in PageContainer's existing source notices. No new global fatal gating is added.",
+    "staleOffline": "deriveDataState retains usable payload on refresh failure/paused fetch. Both briefs expose retained evidence and PageContainer receives per-source query notices. The Live chip currently does not consume this trust state.",
+    "disabled": "Latest and history queries are disabled without activeId. No local selector or security mutation button is rendered.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx",
+        "line": 41,
+        "rule": "MDC-025 / MDC-026 unknown is not a measured negative",
+        "detail": "A null/absent locked field renders danger/Unlocked although its filter label preserves unknown. Sentry missing becomes Off; posture missing Sentry/HomeLink/guest become Inactive/Away/Disabled. doorClosed(null) returns true while unknown windows count as open/venting. Missing projected fields can therefore imply a measured secure/insecure state.",
+        "fix": "Use domain tri-state classification and existing neutral status primitives, consistently across summary, posture, history and derivations. Retain raw data and separately review changes to existing aggregate semantics; never silently fill unknowns with false/zero.",
+        "owner": "integration",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:37-60", "web\\src\\features\\admin\\components\\security-access\\SecurityStatusCards.tsx:76-111", "web\\src\\features\\admin\\components\\security-access\\helpers.ts:75-109", "web\\src\\features\\admin\\components\\security-access\\helpers.ts:136-169", "internal\\api\\security\\handler.go:137-142"]
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.tsx",
+        "line": 165,
+        "rule": "MDC-026 / MDC-046 source freshness is not renderability",
+        "detail": "The pulsing Live chip renders whenever latest is truthy, including retained failed/offline data and a successful empty object. The page supplies observedAt=latest.createdAt, but Latest returns only mapped fields and no created_at. Query-success time must not be presented as signal-observation time.",
+        "fix": "Pass the existing source trust state into this domain renderer and reuse canonical status/freshness presentation. Distinguish retained, blocked, partial and unknown; keep observation age unknown unless the existing backend contract supplies it. Any real freshness envelope belongs to an integration owner.",
+        "owner": "integration",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:59-60", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:171", "web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.tsx:165-170", "web\\src\\api\\dataState.ts:176-192", "internal\\api\\security\\handler.go:137-145"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx",
+      "line": 12,
+      "rule": "MDC-010 / MDC-012 / MDC-015 restrained semantic color",
+      "detail": "Local six-hue neon chip mapping, fixed 300-level value text, white-translucent tile surface/border and hover decoration compete with shared semantic tokens. Timeline has a parallel neon mapping and white row surface. This is source evidence of inconsistent theme ownership, not a measured contrast failure.",
+      "fix": "Use existing surface/border/text/severity tokens; keep semantic distinction and icon/text meaning, reduce decorative hue and remove hover treatment from noninteractive cards. Do not reset user theme/chart preferences or delete status information.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx:12-18", "web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx:40", "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx:21-24", "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx:122"]
+    },
+    {
+      "file": "web\\src\\components\\vehicles\\VehicleTwin.tsx",
+      "line": 978,
+      "rule": "MDC-010 / MDC-042 / mission 43 restrained noise",
+      "detail": "Shared twin includes glow filters and looping semantic lighting/Sentry effects. Shared reduced-motion helpers are present, but their source presence does not prove runtime motion compliance; not all visual glow is necessary security information.",
+      "fix": "Ask the existing VehicleTwin owner to subdue decorative glow/ambient emphasis while retaining meaningful hazards, turn signals, Sentry, lights and all physical-state cues. Reuse existing motion preferences; do not fork the renderer in this page.",
+      "owner": "shared",
+      "confidence": "medium",
+      "relatedEvidence": ["web\\src\\components\\vehicles\\VehicleTwin.tsx:978-998", "web\\src\\components\\vehicles\\VehicleTwin.tsx:1159-1172", "web\\src\\components\\vehicles\\VehicleTwin.tsx:1431-1448"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\types\\admin.ts",
+      "line": 199,
+      "rule": "MDC-045 / MDC-046 typed source contract",
+      "detail": "SecurityEvent requires string id and createdAt even for Latest, which emits neither. List emits numeric response-local IDs. Door/window response values can have runtime shapes wider than these declarations; helper paths already accept unknown. This undermines observation metadata and stable-row assumptions.",
+      "fix": "Integration owner should reconcile actual latest/history payload types, optional identity/timestamps and raw signal value shapes without introducing fabricated metadata or changing wire/cache values. Preserve existing scoped query keys and raw feeds.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["internal\\api\\security\\handler.go:107-113", "internal\\api\\security\\handler.go:137-145", "web\\src\\api\\hooks\\useAdmin.ts:298-308", "web\\src\\types\\admin.ts:199-223"]
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\security-access\\helpers.ts",
+      "line": 176,
+      "rule": "MDC-033 / MDC-045 preserve specialist calculations",
+      "detail": "findLastLockChange and lockEvents assume incoming ordering, while deriveTimeline explicitly sorts newest-first. Daily buckets slice source dates and uptime is sample-weighted. The handler inspection establishes no ordering or local-calendar guarantee for the underlying Timeline reader.",
+      "fix": "Keep the current explanations, sample semantics, full original inputs and fallback timestamp behavior during presentation work. Assign ordering/calendar correctness verification to integration rather than silently changing calculations or calling sample counts complete/time-weighted history.",
+      "owner": "integration",
+      "confidence": "medium",
+      "relatedEvidence": ["web\\src\\features\\admin\\components\\security-access\\helpers.ts:143-182", "web\\src\\features\\admin\\components\\security-access\\helpers.ts:189-213", "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityOperationalBrief.tsx:19-20"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "Security-critical unknown-state labels, retained-data Live presentation and hidden historical mobile detail need attention before cosmetic adoption. Existing shared layouts/briefs/chart/table owners already provide a strong baseline; no page replacement is justified.",
+    "sequence": ["Integration: source types, tri-state interpretation and trust metadata", "Page: full mobile detail and nontruncating localized content", "Page: token-driven restrained presentation", "Shared owner: twin localization, accessible hotspots and restrained semantic animation", "Parent: actual runtime/visual/accessibility acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "VehicleTwin accessible informational state presentation",
+      "existingOwnerFile": "web\\src\\components\\vehicles\\VehicleTwin.tsx",
+      "concretePropsVariantsStates": "Extend the existing interactive informational surface, not vehicle-command behavior: localized state-aware role=img description, focusable described informational hotspots or equivalent complete text, explicit unknown states; preserve size, measured-width behavior, selected vehicleId paint resolution, photo fallback and reduce preference.",
+      "usedBy": ["web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.tsx"],
+      "dependsOn": ["Existing Tooltip description/focus contract", "Canonical localization and shared motion preference", "Verified raw security-state interpretation"],
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.tsx:49", "web\\src\\components\\vehicles\\VehicleTwin.tsx:276-301", "web\\src\\components\\vehicles\\VehicleTwin.tsx:1525-1527"],
+      "scopeLimit": "Only this production consumer was inspected; no evidence-backed need for a new shared composite is claimed. Coordinate with the existing owner."
+    },
+    {
+      "name": "VehicleTwin restrained semantic rendering",
+      "existingOwnerFile": "web\\src\\components\\vehicles\\VehicleTwin.tsx",
+      "concretePropsVariantsStates": "Adjust the existing renderer's decorative glow/ambient treatment without a new palette, state registry or page-local twin variant; preserve active/inactive/unknown physical cues, photo/SVG fallback, motion preferences and informative tooltip content.",
+      "usedBy": ["web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.tsx"],
+      "dependsOn": ["Existing shared semantic color and motion owners", "Runtime review separating meaningful flashing from decorative loops"],
+      "evidence": ["web\\src\\components\\vehicles\\VehicleTwin.tsx:978-998", "web\\src\\components\\vehicles\\VehicleTwin.tsx:1159-1172"],
+      "scopeLimit": "Shared owner analysis only; no shared source edits authorized."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Status/surface palette",
+      "decision": "reuse/extend existing tokens locally",
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx:12-18", "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx:21-24"],
+      "detail": "Two local chip maps overlap the canonical token/severity ownership. Consolidate appearance without inventing a universal status meaning registry."
+    },
+    {
+      "pattern": "Legacy versus mounted security metric presentation",
+      "decision": "reuse OperationalBrief; do not restore old stat grids",
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\index.ts:3", "web\\src\\features\\admin\\components\\security-access\\index.ts:8", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:38-39", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:162", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:237"],
+      "detail": "The barrel still exports SummaryStatsRow and SecurityStatistics, but this mounted page explicitly uses SecurityOperationalBrief and SecurityStatisticsBrief. Export presence is not mounted coverage; older implementations were not semantically reviewed and must not replace the current metric owner."
+    },
+    {
+      "pattern": "Workspace vehicle/date controls, layouts, chart and table",
+      "decision": "reuse existing owners",
+      "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:49-64", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-15", "web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx:53", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:110-124"],
+      "detail": "No competing local picker, layout engine, chart frame or table pipeline is needed. Mobile detail is an adoption gap, not proof that DataTable needs replacement."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "D6AD757CFA86F323C8BA6887288F51991A54D1CC2C7DEF0C7E07E89068368EC6",
+    "sourceLineCount": 277,
+    "presentationLineCount": 1279,
+    "presentationLineCountScope": "Page plus the nine mounted domain renderers and StatusTile; excludes helpers, barrel, shared owners, tests and unmounted legacy metric components.",
+    "sectionCount": 5,
+    "sections": [
+      {"name": "Summary metrics", "line": 161, "components": ["SecurityOperationalBrief"], "metricCount": 4},
+      {"name": "Security posture", "line": 178, "components": ["DigitalTwinPanel", "SecurityStatusCards"], "tileCount": 6},
+      {"name": "Live vehicle state", "line": 203, "components": ["LiveVehicleState", "WindowStatusDetail"], "liveSignalCount": 10, "windowCount": 4},
+      {"name": "Security analytics", "line": 226, "components": ["SentryModeChart", "SecurityStatisticsBrief"], "seriesCount": 2, "metricCount": 7},
+      {"name": "Security event history", "line": 257, "components": ["EventHistoryTable", "EventTimeline"], "tableColumnCount": 5}
+    ],
+    "conditionalSections": ["Insecure-vehicle AlertBanner at page lines 147-158; retain its actual-data condition rather than making a warning unconditional."],
+    "counts": {"mountedDomainRenderers": 9, "GlassPanelOpenings": 7, "EmbeddedChartOpenings": 1, "OperationalBriefAdapters": 2, "summaryMetrics": 4, "statisticsMetrics": 7},
+    "actions": [
+      "Shared workspace vehicle and View settings range selection; do not add a second local owner.",
+      "Independent refetchLatest retries in twin/posture/live/window fatal-error surfaces.",
+      "Independent refetchHistory retries in chart/statistics/table/timeline, explicit statistics refresh button and timeline/statistics empty-state recovery.",
+      "Informational digital-twin tooltip inspection; no lock/unlock/door commands are present.",
+      "Time-column sorting, loaded-row value filtering, canonical table controls, local pagination starting at 50, column/paging preferences and loaded matching-row CSV/JSON exports through DataTable defaults.",
+      "Sentry legend/hidden-series callback, tooltip and frame data-column alternatives with chartKey admin-security-sentry-mode.",
+      "Shared header freshness/source notices and existing page copy-link composition; inherited runtime actions were not exercised."
+    ],
+    "dataBehavior": [
+      "Keep all three queries, vehicle enablement, 5000ms latest polling, cancellation and existing cache/retry policy.",
+      "Keep exact shared range bounds in history key/request and the frontend half-open timestamp guard.",
+      "Summary keeps status, last lock observation/fallback, sample Sentry percentage and total events.",
+      "Posture keeps lock, Sentry, doors, aggregate windows, HomeLink proximity and guest mode.",
+      "Live state keeps hazards, high beams, turn signal, driver-seat occupancy, paired keys, valet mode, service mode, speed-limit mode, HomeLink device count and center display; native bool/string states remain supported.",
+      "Window detail keeps front driver/passenger and rear driver/passenger positions including Unknown.",
+      "Twin adapter keeps door/window/frunk/trunk/lock/Sentry/lights/hazards/turn-signal/seat cues; keep selected-vehicle paint resolution and unknown unsupported cues.",
+      "Chart keeps source-date on/off sample buckets and shared palette/legend/data table contracts.",
+      "Statistics keep lock transitions, sample Sentry percentage, door/window-open sample counts, HomeLink, guest samples and total, with complete sample-not-time-weighted explanations.",
+      "Table keeps all five columns, raw source order until Time sorting and response row identities; do not replace scoped results with fixtures or export only the visible page.",
+      "Timeline keeps lock/Sentry/door semantic transitions, localized descriptions, newest-first sorting, existing approximate 50-event stop (one iteration may add several transitions), timestamps and scroll reachability.",
+      "Keep loading/empty/fatal-error/retry/retained/offline source behavior and independent neighboring panels.",
+      "Preserve raw wire/cache values and current specialist calculations; no SI conversion, authentication changes, backend invention or operational mutation is authorized by this inventory."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 source-only UI inventory",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "browserOrOperationalMutations": "none",
+    "routeEvidence": "Lazy SecurityAccess import at App.tsx:264 and route mount at App.tsx:794 establish source routing only, not authenticated reachability.",
+    "sourceChecks": {
+      "method": "Bounded PowerShell regex scan over page, nine mounted presentation components and StatusTile; read-only, no repository-wide scan.",
+      "command": "$files=@('web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx','web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.tsx','web\\src\\features\\admin\\components\\security-access\\SecurityStatusCards.tsx','web\\src\\features\\admin\\components\\security-access\\WindowStatusDetail.tsx','web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.tsx','web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx','web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx','web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx','web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx','web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityOperationalBrief.tsx','web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityStatisticsBrief.tsx'); $text=($files | ForEach-Object { Get-Content -Raw -LiteralPath $_ }) -join \"`n\"; $patterns=[ordered]@{rawControls='<(button|input|textarea|select|table)\\b';staticVariableInlineStyles='style=\\{\\{[^\\r\\n]*var\\(--';directLibraries='from [''\\\"](recharts|react-leaflet|framer-motion)[''\\\"]';oldApiImports='from [''\\\"]\\.\\./(?:\\.\\./)?api[''\\\"]';neonClassOccurrences='(?:bg|border|ring|text)-neon-[\\w/.-]+';fixedWhiteClassOccurrences='(?:bg|border|ring|text)-white[^\\s''\\\"]*';GlassPanelOpenings='<GlassPanel\\b';EmbeddedChartOpenings='<EmbeddedChart\\b';sectionOpenings='<section\\b'}; foreach ($entry in $patterns.GetEnumerator()) { \"{0}={1}\" -f $entry.Key,([regex]::Matches($text,$entry.Value).Count) }; 'presentationLineTotal='+ (($files | ForEach-Object { (Get-Content -LiteralPath $_).Count } | Measure-Object -Sum).Sum)",
+      "exitCode": 0,
+      "actualOutput": ["rawControls=0", "staticVariableInlineStyles=0", "directLibraries=0", "oldApiImports=0", "neonClassOccurrences=16", "fixedWhiteClassOccurrences=7", "GlassPanelOpenings=7", "EmbeddedChartOpenings=1", "sectionOpenings=5", "presentationLineTotal=1279"],
+      "interpretation": "Lexical occurrence counts only, not all-guidelines acceptance. Static-variable style scan is single-line. Shared implementation internals are excluded from page-pattern counts."
+    },
+    "reportVerification": {
+      "command": "$r=Get-Content -Raw -LiteralPath 'docs\\frontend-audits\\audit-page-022.json' | ConvertFrom-Json; if($r.page -cne 'web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx' -or $r.routes.Count -ne 1 -or $r.routes[0] -cne '/security-access'){throw 'Identity mismatch'}; if((Get-FileHash -LiteralPath $r.page -Algorithm SHA256).Hash -cne $r.preservation.sourceHash){throw 'Source hash drift'}; 'JSON identity and current SHA256 verified'",
+      "exitCode": 0,
+      "actualOutput": ["JSON identity and current SHA256 verified"],
+      "additionalExecutedChecks": ["20 required fields present", "11 issue objects contain file/line/rule/detail/fix/owner/confidence with existing in-range source citations", "All filesRead paths exist", "Current source line count is 277"]
+    },
+    "notRun": ["audit.sh (its final stage performs project-wide TypeScript)", "TypeScript", "lint", "build", "tests", "browser/runtime/visual/keyboard/contrast/viewport checks", "Git"],
+    "unknowns": [
+      "Actual authenticated route reachability and signal payloads were not exercised.",
+      "Underlying StateReader.Timeline ordering, complete interval coverage, date-bound implementation and local-day interpretation were not traced.",
+      "Shared table/frame controls were inspected only in the cited ranges; actual exports, fullscreen, focus and mobile interactions remain unverified.",
+      "Selection/range hook implementation and canonical request transform internals were not read; hook/router/scopedPath contracts were inspected.",
+      "Additional VehicleTwin production consumers were not inventoried; no speculative new shared component is proposed.",
+      "Some related tests were seen only as incidental bounded search excerpts; none were executed or borrowed as acceptance."
+    ],
+    "ownership": ["docs\\frontend-audits\\audit-page-022.json", ".agent-status\\audit-page-022.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\index.ts",
+    "web\\src\\features\\admin\\components\\security-access\\helpers.ts",
+    "web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\SecurityStatusCards.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\WindowStatusDetail.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityStatisticsBrief.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-r-z\\briefSource.ts",
+    "web\\src\\api\\hooks\\useAdmin.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\scope.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\admin.ts",
+    "web\\src\\lib\\vehicleState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\vehicles\\index.ts",
+    "web\\src\\components\\vehicles\\VehicleTwin.tsx",
+    "web\\src\\components\\ui\\Tooltip.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\security\\handler.go",
+    "web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.test.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.test.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\EventTimeline.test.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.test.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\SecurityStatistics.test.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\SecurityStatusCards.test.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\SentryModeChart.test.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\StatusTile.test.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\WindowStatusDetail.test.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\SummaryStatsRow.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\SummaryStatsRow.test.tsx",
+    "web\\src\\features\\admin\\components\\security-access\\SecurityStatistics.tsx"
+  ]
+}

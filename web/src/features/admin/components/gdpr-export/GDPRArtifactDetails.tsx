@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, CopyButton } from '@/components/ui';
-import { PanelTitle, Caption, Text, Code } from '@/components/ui/Typography';
+import { GlassPanel, CopyButton, PanelTitle, Caption, Text, Code, ErrorText, HelperText } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
@@ -37,52 +36,59 @@ export function GDPRArtifactDetails({ artifact, loading, className }: GDPRArtifa
           <MetaRow
             label={t('admin.gdprExport.metaId', 'ID')}
             className="md:col-span-2 2xl:col-span-3"
-            value={
-              <div className="flex items-center gap-2">
-                <Code className="break-all">{artifact.id}</Code>
-                <CopyButton text={artifact.id} iconOnly variant="ghost" size="sm" />
-              </div>
-            }
+            value={<CopyValue key={artifact.id} text={artifact.id} />}
           />
 
-          {artifact.user_id && (
-            <MetaRow
-              label={t('admin.gdprExport.metaUser', 'User')}
-              value={<Text variant="bodySm" className="break-all text-[var(--text-primary)]">{artifact.user_id}</Text>}
-            />
-          )}
+          <MetaRow
+            label={t('admin.gdprExport.metaExportJob', 'Export job ID')}
+            value={<Code className="select-text whitespace-pre-wrap break-all">{artifact.export_job_id ?? '—'}</Code>}
+          />
+
+          <MetaRow
+            label={t('admin.gdprExport.metaVehicle', 'Vehicle ID')}
+            value={<Code>{artifact.vehicle_id ?? '—'}</Code>}
+          />
 
           <MetaRow
             label={t('admin.gdprExport.metaCreated', 'Created')}
             value={<TimeValue iso={artifact.created_at} />}
           />
 
-          {artifact.completed_at && (
-            <MetaRow
-              label={t('admin.gdprExport.metaCompleted', 'Completed')}
-              value={<TimeValue iso={artifact.completed_at} />}
-            />
-          )}
+          <MetaRow
+            label={t('admin.gdprExport.metaDownloaded', 'Downloaded')}
+            value={<TimeValue iso={artifact.downloaded_at} />}
+          />
 
-          {artifact.expires_at && (
-            <MetaRow
-              label={t('admin.gdprExport.metaExpires', 'Expires')}
-              value={<TimeValue iso={artifact.expires_at} />}
-            />
-          )}
+          <MetaRow
+            label={t('admin.gdprExport.metaExpires', 'Expires')}
+            value={<TimeValue iso={artifact.expires_at} />}
+          />
 
-          {artifact.sha256 && (
-            <MetaRow
-              label={t('admin.gdprExport.metaSha256', 'SHA-256')}
-              className="md:col-span-2 2xl:col-span-3"
-              value={
-                <div className="flex items-center gap-2">
-                  <Code className="break-all text-[var(--text-secondary)]">{artifact.sha256}</Code>
-                  <CopyButton text={artifact.sha256} iconOnly variant="ghost" size="sm" />
-                </div>
-              }
-            />
-          )}
+          <MetaRow
+            label={t('admin.gdprExport.metaByteCount', 'Byte count')}
+            value={<Code>{artifact.byte_count ?? '—'}</Code>}
+          />
+
+          <MetaRow
+            label={t('admin.gdprExport.metaStorageKind', 'Storage kind')}
+            value={<Code className="select-text whitespace-pre-wrap break-all">{artifact.storage_kind ?? '—'}</Code>}
+          />
+
+          <MetaRow
+            label={t('admin.gdprExport.metaStoragePath', 'Storage path')}
+            value={<Code className="select-text whitespace-pre-wrap break-all">{artifact.storage_path ?? '—'}</Code>}
+          />
+
+          <MetaRow
+            label={t('admin.gdprExport.metaDownloadCount', 'Download count')}
+            value={<Code>{artifact.download_count ?? '—'}</Code>}
+          />
+
+          <MetaRow
+            label={t('admin.gdprExport.metaSha256', 'SHA-256')}
+            className="md:col-span-2 2xl:col-span-3"
+            value={<CopyValue key={artifact.sha256} text={artifact.sha256} />}
+          />
         </dl>
       ) : (
         // no-action: purely mirrors the parent's `artifact` prop — the
@@ -98,10 +104,43 @@ export function GDPRArtifactDetails({ artifact, loading, className }: GDPRArtifa
   );
 }
 
-function TimeValue({ iso }: { iso: string }) {
+function CopyValue({ text }: { text: string | null | undefined }) {
+  const { t } = useTranslation(['translation', 'settings']);
+  const [copyFailed, setCopyFailed] = useState(false);
+
+  return (
+    <div className="space-y-1">
+      <div className="flex min-w-0 items-center gap-2">
+        <Code className="min-w-0 select-text whitespace-pre-wrap break-all">{text ?? '—'}</Code>
+        {text != null && (
+          <CopyButton
+            text={text}
+            iconOnly
+            variant="ghost"
+            size="sm"
+            className="h-11 min-h-11 min-w-11 shrink-0 md:h-9 md:min-h-9 md:min-w-0"
+            onCopy={() => setCopyFailed(false)}
+            onCopyError={() => setCopyFailed(true)}
+          />
+        )}
+      </div>
+      {copyFailed && (
+        <div className="space-y-1">
+          <ErrorText>{t('common.copyButton.errorToast', 'Failed to copy')}</ErrorText>
+          <HelperText>{t('totp.copy.manualHint', {
+            ns: 'settings',
+            defaultValue: 'Clipboard unavailable. Select the displayed text and copy it manually.',
+          })}</HelperText>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TimeValue({ iso }: { iso: string | null | undefined }) {
   return (
     <>
-      <Text variant="bodySm" as="div" className="text-[var(--text-primary)]">
+      <Text variant="bodySm" as="div" title={iso ?? undefined}>
         {formatDateTime(iso)}
       </Text>
       <Caption>{formatRelative(iso)}</Caption>
@@ -120,8 +159,8 @@ function MetaRow({
 }) {
   return (
     <div className={cn('min-w-0', className)}>
-      <Caption>{label}</Caption>
-      <div className="mt-0.5 text-[var(--text-primary)]">{value}</div>
+      <Caption as="dt">{label}</Caption>
+      <Text as="dd" variant="bodySm" className="mt-0.5">{value}</Text>
     </div>
   );
 }

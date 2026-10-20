@@ -10,10 +10,12 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, RefreshCw } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { Badge, Button, SectionTitle } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { Badge, Button, Icon, SectionTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useNotificationChannels, useNotificationStats } from '@/api/hooks/useNotifications';
 import type { NotificationChannel } from '@/api/types';
 
@@ -29,6 +31,8 @@ export default function ChannelsPage() {
 
   const channelsQuery = useNotificationChannels();
   const statsQuery = useNotificationStats();
+  const channelsState = useDataState(channelsQuery);
+  const statsState = useDataState(statsQuery);
   const channels: NotificationChannel[] = channelsQuery.data ?? [];
   const dataSources = useMemo(
     () => [
@@ -54,50 +58,61 @@ export default function ChannelsPage() {
   const closeForm = () => { setShowForm(false); setEditingChannel(null); };
   const handleRefresh = () => { channelsQuery.refetch(); statsQuery.refetch(); };
 
-  const actions = (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        onClick={handleRefresh}
-        aria-label={t('common.refresh', 'Refresh')}
-      >
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
-      </Button>
-      <Button
-        variant="primary"
-        icon={<Plus className="h-4 w-4" aria-hidden="true" />}
-        onClick={openAdd}
-      >
-        {t('notifications.channels.add', 'Add Channel')}
-      </Button>
-    </div>
-  );
-
   return (
-    <PageContainer
+    <PageLayout
       title={t('notifications.channels.title', 'Notification channels')}
       subtitle={t('notifications.channels.subtitle', 'Where to send notifications: Discord, Slack, Telegram, email, ntfy, Pushover, or a custom webhook.')}
-      actions={actions}
+      secondaryActions={
+        <Button
+          type="button"
+          variant="ghost"
+          className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
+          onClick={handleRefresh}
+          aria-label={t('common.refresh', 'Refresh')}
+        >
+          <Icon icon={RefreshCw} />
+        </Button>
+      }
+      primaryAction={
+        <Button
+          type="button"
+          variant="primary"
+          className="min-h-11 md:min-h-10"
+          icon={<Icon icon={Plus} />}
+          wrapLabel
+          onClick={openAdd}
+        >
+          {t('notifications.channels.add', 'Add channel')}
+        </Button>
+      }
       query={[channelsQuery, statsQuery]}
       dataSources={dataSources}
       copyLink
     >
+      <StaleRefreshWarning state={channelsState} label={t('dataSources.labels.notificationChannels', 'Notification channels')} />
+      <StaleRefreshWarning state={statsState} label={t('dataSources.labels.notificationStats', 'Delivery statistics')} />
       {/* 1 — Delivery-health KPI band (full-width) */}
       <FadeIn>
         <section aria-label={t('notifications.channels.statsAria', 'Notification delivery summary')}>
-          <ChannelStatsBand
+          {statsState.status === 'initial' && statsState.isRefreshBlocked ? (
+            <Text as="p" role="status" color="secondary">
+              {t('dataSources.status.paused', 'Refresh paused')}
+            </Text>
+          ) : <ChannelStatsBand
             stats={statsQuery.data}
-            isLoading={statsQuery.isLoading}
-            error={statsQuery.error}
+            isLoading={statsState.status === 'initial'}
+            error={statsState.fatalError}
+            retained={statsState.status === 'stale'}
+            source={statsState}
             onRetry={() => statsQuery.refetch()}
-          />
+          />}
         </section>
       </FadeIn>
 
       {/* 2 — Configured channels (hero): auto-fit bento, 1 col → many on wide */}
       <FadeIn delay={0.1}>
         <section aria-labelledby="channels-heading" className="space-y-3 sm:space-y-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
             <SectionTitle id="channels-heading">
               {t('notifications.channels.listTitle', 'Delivery channels')}
             </SectionTitle>
@@ -107,9 +122,10 @@ export default function ChannelsPage() {
           </div>
           <ChannelsGrid
             channels={channels}
-            isLoading={channelsQuery.isLoading}
-            isError={channelsQuery.isError}
-            error={channelsQuery.error}
+            isLoading={!channelsState.hasData && channelsQuery.isLoading}
+            isError={channelsState.fatalError != null}
+            error={channelsState.fatalError}
+            source={channelsState}
             onRetry={() => channelsQuery.refetch()}
             onEdit={openEdit}
             onAdd={openAdd}
@@ -123,12 +139,12 @@ export default function ChannelsPage() {
           <SectionTitle id="devices-heading">
             {t('notifications.channels.devicesTitle', 'Devices & providers')}
           </SectionTitle>
-          <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3 xl:gap-5">
-            <div className="xl:col-span-1">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3 xl:gap-5">
+            <div className="min-w-0 xl:col-span-1">
               <BrowserPushChannelCard className="h-full p-4 sm:p-5" />
             </div>
-            <div className="xl:col-span-2">
-              <ChannelProvidersPanel channels={channels} />
+            <div className="min-w-0 xl:col-span-2">
+              <ChannelProvidersPanel channels={channels} source={channelsState} />
             </div>
           </div>
         </section>
@@ -141,6 +157,6 @@ export default function ChannelsPage() {
           onSaved={closeForm}
         />
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

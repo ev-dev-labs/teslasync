@@ -3,8 +3,11 @@ import { EmptyState } from '@/components/feedback';
 import { useTranslation } from 'react-i18next';
 
 import { JourneyFragmentationSectionProps } from './_types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { PendingEvidence } from './PendingEvidence';
 
-export function ChainLengthChart({ result, loading = false }: JourneyFragmentationSectionProps) {
+export function ChainLengthChart({ result, state, loading = false }: JourneyFragmentationSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const data = result.chainLengthDistribution.map((point) => ({
     fragments: String(point.fragments),
@@ -14,8 +17,8 @@ export function ChainLengthChart({ result, loading = false }: JourneyFragmentati
     'journeyFragmentation.chainLength.summary',
     'Median {{median}} fragments; p90 {{p90}} fragments.',
     {
-      median: result.chainFragmentSummary.median == null ? '—' : result.chainFragmentSummary.median.toFixed(1),
-      p90: result.chainFragmentSummary.p90 == null ? '—' : result.chainFragmentSummary.p90.toFixed(1),
+      median: result.chainFragmentSummary.median == null ? '—' : fmtNumber(result.chainFragmentSummary.median),
+      p90: result.chainFragmentSummary.p90 == null ? '—' : fmtNumber(result.chainFragmentSummary.p90),
     },
   );
   return (
@@ -24,15 +27,15 @@ export function ChainLengthChart({ result, loading = false }: JourneyFragmentati
       subtitle={`${t('journeyFragmentation.chainLength.subtitle', 'Observed journeys grouped by included drive count.')} ${summary}`}
       ariaLabel={t('journeyFragmentation.chainLength.aria', 'Bar chart of observed journey count by drive fragments')}
       loading={loading}
-      empty={!loading && data.length === 0}
-      data={data}
+      empty={(!state || state.hasData) && !loading && data.length === 0}
+      data={state && !state.hasData ? undefined : data}
       dataColumns={[
         { key: 'fragments', label: t('journeyFragmentation.chainLength.fragments', 'Drive fragments') },
         { key: 'journeys', label: t('journeyFragmentation.chainLength.journeys', 'Observed journeys') },
       ]}
       height={280}
     >
-      {data.length === 0 ? (
+      {state && !state.hasData ? <PendingEvidence state={state} loading={loading} /> : data.length === 0 ? (
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('journeyFragmentation.chart.noData', 'No included journey data is available yet.')} />
       ) : (
         <ResponsiveContainer width="100%" height="100%">

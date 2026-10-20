@@ -5,18 +5,21 @@
  */
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui';
-import { currentAppVersion, isAppVersionCompatible } from '../lib/compatibility';
+import { currentAppVersion, isAppVersionCompatible, parseSemver } from '../lib/compatibility';
 import type { PackAppCompatibility } from '../lib/manifestTypes';
 
 export function CompatibilityBadge({ compat, className }: { compat: PackAppCompatibility; className?: string }) {
   const { t } = useTranslation();
   const appVersion = currentAppVersion();
   const result = isAppVersionCompatible(compat, appVersion);
+  const checked = parseSemver(appVersion) !== null;
 
   return (
     <div className={className}>
-      <Badge variant={result.compatible ? 'success' : 'danger'} size="sm">
-        {result.compatible
+      <Badge variant={!checked ? 'neutral' : result.compatible ? 'success' : 'danger'} size="sm">
+        {!checked
+          ? t('intelPacks.verify.unknown', 'Not verified')
+          : result.compatible
           ? t('intelPacks.compat.compatible', 'Compatible')
           : t('intelPacks.compat.incompatible', 'Incompatible')}
       </Badge>

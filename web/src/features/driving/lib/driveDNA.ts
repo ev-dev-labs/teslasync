@@ -6,8 +6,8 @@
  * latest known values into each row. This model therefore describes sampled
  * emission evidence; it never treats row counts as elapsed-time weighting.
  *
- * The endpoint's legacy `power` field is kW (PackVoltage × PackCurrent / 1000).
- * It is lifted exactly once at this boundary into canonical watts. Every
+ * The endpoint's nullable `power` field is watts (PackVoltage × PackCurrent).
+ * It is preserved without rescaling at this boundary. Every
  * exported timeline, statistic, distribution, and art dimension uses SI.
  */
 import type { DriveTelemetryPoint } from '@/types/driving';
@@ -806,15 +806,13 @@ export function buildDriveDnaModel(
           : indexed.length > 1
             ? index / (indexed.length - 1)
             : 0;
-      const powerKw = finite(point.power);
-      const liftedPowerW = powerKw == null ? null : powerKw * 1_000;
       return {
         timestamp: new Date(timestampMs).toISOString(),
         timestampMs,
         elapsedS: Number.isFinite(elapsedS) ? elapsedS : 0,
         progress: clamp(progress, 0, 1),
         speedMps: finite(point.speed),
-        powerW: Number.isFinite(liftedPowerW) ? liftedPowerW : null,
+        powerW: finite(point.power),
         socPct: firstFinite(point.soc, point.batteryLevel, point.usableSoc),
         elevationM: finite(point.elevation),
         outsideTempC: finite(point.outsideTemp),

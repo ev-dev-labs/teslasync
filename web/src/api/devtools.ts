@@ -32,9 +32,24 @@ import type {
 export const getCaptureStats = () => request<CaptureStats>('/dev-tools/telemetry-capture/stats')
 
 // === Redis Signal Cache ===
+export type RedisSignalValue =
+  | number
+  | string
+  | boolean
+  | null
+  | RedisSignalValue[]
+  | { [key: string]: RedisSignalValue }
+
 export interface RedisSignalEntry {
-  value: number | string | boolean
+  value: RedisSignalValue
+  // The backend labels non-numeric, non-boolean JSON (including objects
+  // and null) as "string"; this is not a JSON-shape discriminator.
   type: 'number' | 'string' | 'boolean'
+  observed_at?: string | null
+  source?: 'redis'
+  timestamp_provenance?: 'observation' | 'unknown'
+  freshness?: 'fresh' | 'stale' | 'unknown'
+  read_availability?: 'available'
 }
 
 export interface RedisSignalsMeta {
@@ -42,9 +57,9 @@ export interface RedisSignalsMeta {
   redis_key: string
   redis_field_count: number
   l1_signal_count: number
-  l1_last_seen_at: string | null
-  l2_last_seen_at: string | null
-  vehicle_vin: string
+  l1_last_seen_at?: string | null
+  l2_last_seen_at?: string | null
+  vehicle_vin?: string
 }
 
 export interface RedisSignalsResponse {
@@ -66,11 +81,11 @@ export interface RedisSignalKeysResponse {
   total: number
 }
 
-export const getRedisSignals = (vehicleId: number) =>
-  request<RedisSignalsResponse>(`/dev-tools/redis-signals?vehicle_id=${vehicleId}`)
+export const getRedisSignals = (vehicleId: number, opts?: { signal?: AbortSignal }) =>
+  request<RedisSignalsResponse>(`/dev-tools/redis-signals?vehicle_id=${vehicleId}`, opts)
 
-export const getRedisSignalKeys = (limit = 50) =>
-  request<RedisSignalKeysResponse>(`/dev-tools/redis-signals/keys?limit=${limit}`)
+export const getRedisSignalKeys = (limit = 50, opts?: { signal?: AbortSignal }) =>
+  request<RedisSignalKeysResponse>(`/dev-tools/redis-signals/keys?limit=${limit}`, opts)
 
 export interface RedisSignalsPurgeResponse {
   vehicle_id: number
@@ -101,7 +116,7 @@ export const getTelemetryStatus = () =>
   request<TelemetryStatus>('/telemetry')
 
 // === API Call Logs ===
-export const getAPICallLogs = (params: {
+export interface APICallLogParams {
   limit?: number
   offset?: number
   method?: string
@@ -113,7 +128,9 @@ export const getAPICallLogs = (params: {
   start?: string
   end?: string
   endExclusive?: string
-} = {}) => {
+}
+
+export const getAPICallLogs = (params: APICallLogParams = {}, opts?: { signal?: AbortSignal }) => {
   const query = new URLSearchParams()
   if (params.limit) query.set('limit', String(params.limit))
   if (params.offset) query.set('offset', String(params.offset))
@@ -126,17 +143,17 @@ export const getAPICallLogs = (params: {
   if (params.start) query.set('start', params.start)
   if (params.end) query.set('end', params.end)
   if (params.endExclusive) query.set('end_exclusive', params.endExclusive)
-  return request<APICallLogResponse>(`/api-logs?${query.toString()}`)
+  return request<APICallLogResponse>(`/api-logs?${query.toString()}`, opts)
 }
 
-export const getAPICallLogStats = (start?: string, endExclusive?: string) => {
+export const getAPICallLogStats = (start?: string, endExclusive?: string, opts?: { signal?: AbortSignal }) => {
   if (start === undefined && endExclusive === undefined) {
-    return request<APICallLogStats>('/api-logs/stats')
+    return request<APICallLogStats>('/api-logs/stats', opts)
   }
   if (!start || !endExclusive) {
     throw new Error('API call log stats require both start and endExclusive')
   }
-  return request<APICallLogStats>(`/api-logs/stats?${new URLSearchParams({ start, end_exclusive: endExclusive })}`)
+  return request<APICallLogStats>(`/api-logs/stats?${new URLSearchParams({ start, end_exclusive: endExclusive })}`, opts)
 }
 
 // === System / Admin ===
@@ -151,7 +168,8 @@ export const getExtendedHealth = () =>
 
 export const getBackupStats = () => request<BackupStats>('/system/backup/stats')
 
-export const getErrorStats = () => request<ErrorStats>('/system/errors/stats')
+export const getErrorStats = (opts?: { signal?: AbortSignal }) =>
+  request<ErrorStats>('/system/errors/stats', opts)
 
 // === Workers Health ===
 /** Fetches health status of background worker services. */

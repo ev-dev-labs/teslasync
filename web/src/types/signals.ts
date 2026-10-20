@@ -22,6 +22,20 @@ export interface SignalCatalogEntry {
   last_seen_at: string;
 }
 
+export interface SignalCatalogRow {
+  field: string;
+  destination: string;
+  value_kind: string;
+  last_seen_at: string | null;
+  sample_count_total: number | null;
+  vehicle_count: number | null;
+}
+
+export interface SignalsCatalogResponse {
+  signals: SignalCatalogRow[];
+  generated_at: string;
+}
+
 // Discriminated children — exactly one value_* is populated
 export interface NumericSignalObservation extends SignalObservation {
   value_type: 'numeric';

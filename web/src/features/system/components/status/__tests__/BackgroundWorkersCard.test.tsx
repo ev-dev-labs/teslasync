@@ -1,9 +1,26 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 import { BackgroundWorkersCard } from '../BackgroundWorkersCard'
+
+/** Open the brief's Review-details drawer and return the dialog for group assertions. */
+function openDrawer(container: HTMLElement) {
+  const brief = container.querySelector('[data-operational-brief]')
+  if (!brief) throw new Error('Missing operational brief')
+  fireEvent.click(within(brief as HTMLElement).getByRole('button', { name: 'Review details' }))
+  return screen.getByRole('dialog')
+}
+
+function closeDrawer() {
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
 import type { WorkersHealth, WorkerStatus } from '@/api/types'
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 function harness(ui: React.ReactNode) {
   return render(<MemoryRouter>{ui}</MemoryRouter>)
@@ -30,12 +47,13 @@ function makeHealth(workers: WorkerStatus[]): WorkersHealth {
 describe('BackgroundWorkersCard', () => {
   it('renders an empty state when no workers are reporting', () => {
     harness(<BackgroundWorkersCard health={makeHealth([])} />)
-    expect(screen.getByText(/No background workers reporting/i)).toBeInTheDocument()
+    expect(screen.getByText(/No Background workers reporting/i)).toBeInTheDocument()
   })
 
-  it('renders an empty state when health is undefined', () => {
+  it('distinguishes an unavailable worker source from a confirmed empty set', () => {
     harness(<BackgroundWorkersCard health={undefined} />)
-    expect(screen.getByText(/No background workers reporting/i)).toBeInTheDocument()
+    expect(screen.getByText('Background worker health is unavailable.')).toBeInTheDocument()
+    expect(screen.queryByText(/No Background workers reporting/i)).not.toBeInTheDocument()
   })
 
   it('renders one row per worker for the single-instance default', () => {
@@ -44,7 +62,7 @@ describe('BackgroundWorkersCard', () => {
       makeInstance({ name: 'export-worker', host: 'http://export-worker:8082/healthz' }),
       makeInstance({ name: 'automation-worker', host: 'http://automation-worker:8083/healthz' }),
     ])
-    harness(<BackgroundWorkersCard health={health} />)
+    const { container } = harness(<BackgroundWorkersCard health={health} />)
 
     expect(screen.getByText('notification-worker')).toBeInTheDocument()
     expect(screen.getByText('export-worker')).toBeInTheDocument()
@@ -55,9 +73,14 @@ describe('BackgroundWorkersCard', () => {
     expect(labels.length).toBe(3)
 
     // Top-line summary uses unique phrasing ("of N types" / "of N instances")
-    // so it doesn't collide with the per-group "X / Y healthy" chips.
-    expect(screen.getByText('3 of 3 types')).toBeInTheDocument()
-    expect(screen.getByText('3 of 3 instances')).toBeInTheDocument()
+    // so it doesn't collide with the per-group "X / Y healthy" chips. The
+    // face carries the count values; the phrasing lives in the drawer groups.
+    expect(container.querySelector('[data-operational-metric="types"]')).toHaveTextContent('3/3')
+    expect(container.querySelector('[data-operational-metric="instances"]')).toHaveTextContent('3/3')
+    const dialog = openDrawer(container)
+    expect(within(dialog).getByRole('group', { name: 'Worker types' })).toHaveTextContent('3 of 3 types')
+    expect(within(dialog).getByRole('group', { name: 'Instances' })).toHaveTextContent('3 of 3 instances')
+    closeDrawer()
 
     // Hosts are rendered short (no http:// prefix and no /healthz suffix)
     expect(screen.getByText('notification-worker:8081')).toBeInTheDocument()
@@ -76,7 +99,7 @@ describe('BackgroundWorkersCard', () => {
       makeInstance({ name: 'export-worker', host: 'http://export-worker:8082/healthz' }),
       makeInstance({ name: 'automation-worker', host: 'http://automation-worker:8083/healthz' }),
     ])
-    harness(<BackgroundWorkersCard health={health} />)
+    const { container } = harness(<BackgroundWorkersCard health={health} />)
 
     // Each replica's host renders as a separate row
     expect(screen.getByText('nw-1:8081')).toBeInTheDocument()
@@ -90,12 +113,18 @@ describe('BackgroundWorkersCard', () => {
     // top-line summary uses different phrasing so this match is unique.
     expect(screen.getByText('3 / 3 healthy')).toBeInTheDocument()
 
-    // Top-line summary uses the unique phrasing
-    expect(screen.getByText('5 of 5 instances')).toBeInTheDocument()
-    expect(screen.getByText('3 of 3 types')).toBeInTheDocument()
+    // Top-line summary uses the unique phrasing. The face carries the count
+    // values; the phrasing lives in the drawer groups.
+    expect(container.querySelector('[data-operational-metric="instances"]')).toHaveTextContent('5/5')
+    expect(container.querySelector('[data-operational-metric="types"]')).toHaveTextContent('3/3')
+    expect(container.querySelector('[data-operational-metric="replicated"]')).toHaveTextContent('1/3')
+    const dialog = openDrawer(container)
+    expect(within(dialog).getByRole('group', { name: 'Instances' })).toHaveTextContent('5 of 5 instances')
+    expect(within(dialog).getByRole('group', { name: 'Worker types' })).toHaveTextContent('3 of 3 types')
 
     // Top-line "Replicated" badge counts the multi-instance groups
-    expect(screen.getByText(/1 of 3 type/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('group', { name: 'Replicated' })).toHaveTextContent(/1 of 3 type/)
+    closeDrawer()
 
     // The scale callout is hidden once at least one group is replicated
     expect(screen.queryByText(/Running multiple instances of a worker/i)).not.toBeInTheDocument()
@@ -176,5 +205,32 @@ describe('BackgroundWorkersCard', () => {
 
     expect(within(container).getByText('nw-a:8081')).toBeInTheDocument()
     expect(within(container).getByText('nw-b:8081')).toBeInTheDocument()
+  })
+
+  it('preserves full long host provenance, multiline errors and source instance order without truncating text', () => {
+    const host = `http://${'replica-with-a-long-name-'.repeat(8)}:8081/healthz`
+    const error = 'First diagnostic line\nSecond diagnostic line with complete remediation context'
+    harness(<BackgroundWorkersCard health={makeHealth([
+      makeInstance({ host, status: 'down', error }),
+      makeInstance({ host: 'http://second-replica:8081/healthz', latency_ms: 0 }),
+    ])} />)
+    const first = screen.getByText(host.replace(/^http:\/\//, '').replace(/\/healthz$/, ''))
+    expect(first).toHaveAttribute('title', host)
+    expect(first).toHaveClass('break-all')
+    expect(first).not.toHaveClass('truncate')
+    expect(screen.getByText(error.replace('\n', ' ')).textContent).toBe(error)
+    expect(screen.getByText('0 ms')).toBeInTheDocument()
+    const row = first.closest('li')!
+    expect(within(row).getByRole('img', { name: 'instance status: down' })).toBeInTheDocument()
+    expect(row.nextElementSibling).toHaveTextContent('second-replica:8081')
+    expect(screen.getByText('1 / 2 healthy')).toBeInTheDocument()
+  })
+
+  it('preserves exact environment identifiers as code and the existing API-logs destination', () => {
+    harness(<BackgroundWorkersCard health={makeHealth([makeInstance({})])} />)
+    for (const name of ['NOTIFICATION_WORKER_HOSTS', 'EXPORT_WORKER_HOSTS', 'AUTOMATION_WORKER_HOSTS']) {
+      expect(screen.getByText(name).tagName).toBe('CODE')
+    }
+    expect(screen.getByRole('link', { name: 'API logs' })).toHaveAttribute('href', '/api-logs')
   })
 })

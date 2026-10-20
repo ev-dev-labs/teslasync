@@ -80,7 +80,9 @@ type request struct {
 	// Optional; defaults to a generic "summarise the watch
 	// face" prompt when absent. Bounded by
 	// maxMessageLen.
-	Message string `json:"message,omitempty"`
+	Message      string `json:"message,omitempty"`
+	UnitOfLength string `json:"unit_of_length,omitempty"`
+	UnitOfTemp   string `json:"unit_of_temp,omitempty"`
 }
 
 // Handler is the HTTP handler for
@@ -154,7 +156,7 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 }
 
 // parseRequest drains the body. The
-// field is optional; the handler falls back to a deterministic
+// message field is optional; the handler falls back to a deterministic
 // "what is my watch face showing?" prompt when absent. An empty
 // body ({} or even a missing body) is acceptable. Unknown
 // fields are rejected so a future schema drift surfaces
@@ -186,6 +188,14 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (request, bool) {
 		return req, false
 	} else {
 		req.Message = m
+	}
+	if req.UnitOfLength != "" && req.UnitOfLength != "km" && req.UnitOfLength != "mi" {
+		httpx.WriteError(w, http.StatusBadRequest, "unit_of_length must be km or mi")
+		return req, false
+	}
+	if req.UnitOfTemp != "" && req.UnitOfTemp != "C" && req.UnitOfTemp != "F" {
+		httpx.WriteError(w, http.StatusBadRequest, "unit_of_temp must be C or F")
+		return req, false
 	}
 	return req, true
 }
@@ -268,7 +278,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// LLM a deterministic prompt that scopes to the watch
 	// envelope and instructs the tool sequence EXACTLY:
 	// query_watch_context first, then narration.
-	userMsg := buildUserMessage(req.Message)
+	userMsg := buildUserMessage(req)
 
 	// 9) Run the dispatcher.
 	in := strategy.StrategyInput{
@@ -293,24 +303,31 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // body's message is set, it is forwarded verbatim AFTER the
 // tool-sequence preamble so the LLM still respects the
 // query_watch_context-first directive.
-func buildUserMessage(message string) string {
-	message = strings.TrimSpace(message)
+func buildUserMessage(req request) string {
+	message := strings.TrimSpace(req.Message)
 	if message == "" {
 		message = "Give me a glance summary of my watch face right now — the most relevant one or two of: battery, range, charging status, locks, and climate."
 	}
-	return fmt.Sprintf(
+	prompt := fmt.Sprintf(
 		"The user has asked from their watch face: %q. "+
 			"Follow the tool sequence EXACTLY: "+
 			"(1) call query_watch_context with no arguments to fetch the deterministic typed envelope of the primary vehicle's state "+
 			"(vehicle_name, soc_percent, range_km AND range_mi, is_charging, time_to_full_min, is_locked, sentry_mode, inside_temp_c AND inside_temp_f, outside_temp_c AND outside_temp_f, is_climate_on, recent_alerts as {severity, age_seconds} pairs, last_updated). "+
 			"(2) Produce a SHORT 1-2 sentence reply (never more than 3) grounded strictly in the typed envelope. "+
-			"Quote ONLY values the envelope surfaced; choose km vs mi and °C vs °F based on the user's UnitOfLength / UnitOfTemp hint when supplied. "+
+			"Quote ONLY values the envelope surfaced; range_km and range_mi are display-only conversions of canonical range_m, never miles from the signal cache. Choose km vs mi and °C vs °F based on the user's UnitOfLength / UnitOfTemp hint when supplied. "+
 			"NEVER use markdown, lists, code blocks, or URLs — the watch panel renders plain text only and is roughly 40-45 mm wide. "+
 			"NEVER claim to have changed a setting, NEVER promise to send a vehicle command, NEVER say 'I have locked it' — refer the user to the watch-face tap icons or the phone app instead. "+
 			"If the envelope cannot answer the question (e.g. a navigation request, a request that needs a setting change), say so plainly in one sentence and direct the user to the tap icon or the phone app. "+
 			"If the user's request is ambiguous, ask ONE short clarifying question (single short sentence) rather than guessing.",
 		message,
 	)
+	if req.UnitOfLength != "" {
+		prompt += fmt.Sprintf(" User display preference: UnitOfLength=%s.", req.UnitOfLength)
+	}
+	if req.UnitOfTemp != "" {
+		prompt += fmt.Sprintf(" User display preference: UnitOfTemp=%s.", req.UnitOfTemp)
+	}
+	return prompt
 }
 
 // ---------------------------------------------------------------------------
@@ -409,8 +426,9 @@ func (a *ContextSource) LoadWatchContext(ctx context.Context) (*nl.WatchContextE
 // deterministic /watch/summary handler does:
 //
 //   - BatteryLevel → SOCPercent (int %)
-//   - RatedRange   → RangeMi (verbatim, miles canonical wire
-//     format) AND RangeKm (×1.60934)
+//   - RatedRange   → display-only range pair via
+//     nl.ProjectRangeDisplay (meters ÷1609.344 AND meters
+//     ÷1000); the cache remains SI.
 //   - InsideTemp   → InsideTempC (°C SI) AND InsideTempF
 //     (cToFPtr-style precomputed °F)
 //   - OutsideTemp  → OutsideTempC + OutsideTempF
@@ -427,8 +445,7 @@ func projectSignals(env *nl.WatchContextEnvelope, signals map[string]interface{}
 		env.SOCPercent = v
 	}
 	if v, ok := signalFloat(signals, "RatedRange"); ok {
-		env.RangeMi = v
-		env.RangeKm = v * 1.60934
+		nl.ProjectRangeDisplay(env, v)
 	}
 	if v, ok := signalFloat(signals, "InsideTemp"); ok {
 		env.InsideTempC = v

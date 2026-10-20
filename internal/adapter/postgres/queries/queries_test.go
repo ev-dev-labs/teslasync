@@ -64,9 +64,10 @@ func allQueries() []namedQuery {
 		// vehicle.go
 		{"GetVehicleByID", GetVehicleByID},
 		{"GetVehicleByVIN", GetVehicleByVIN},
-		{"GetVehiclesByUserID", GetVehiclesByUserID},
+		{"GetAllVehicles", GetAllVehicles},
 		{"GetVehicleByIDForUpdate", GetVehicleByIDForUpdate},
 		{"UpsertVehicle", UpsertVehicle},
+		{"UpdateVehicle", UpdateVehicle},
 		{"DeleteVehicle", DeleteVehicle},
 	}
 }
@@ -280,6 +281,12 @@ func TestPlaceholdersAreContiguous(t *testing.T) {
 		q := q
 		t.Run(q.name, func(t *testing.T) {
 			nums := placeholderNums(q.sql)
+			if q.name == "GetAllVehicles" {
+				if len(nums) != 0 {
+					t.Fatalf("shared fleet read must not accept a subject grant: %v", nums)
+				}
+				return
+			}
 			if len(nums) == 0 {
 				t.Fatalf("%s: expected at least one $N placeholder (parameterised SQL only)", q.name)
 			}
@@ -346,8 +353,11 @@ func TestParameterisedOnly(t *testing.T) {
 			if strings.Contains(q.sql, ";") {
 				t.Errorf("%s: contains ';' — statements must be single, terminator-free", q.name)
 			}
-			if !strings.Contains(q.sql, "$1") {
+			if q.name != "GetAllVehicles" && !strings.Contains(q.sql, "$1") {
 				t.Errorf("%s: no $1 bind parameter found", q.name)
+			}
+			if q.name == "GetAllVehicles" && strings.Contains(q.sql, "$") {
+				t.Error("shared fleet read unexpectedly has a bind parameter")
 			}
 		})
 	}
@@ -409,14 +419,20 @@ func TestWellFormed(t *testing.T) {
 
 // TestSICanonicalUnits enforces ADR-004 SI-on-disk for the migrated
 // SI-canonical statements (charging & trips): no imperial/legacy unit suffixes,
-// and the expected SI aliases are present. Vehicle statements are intentionally
-// excluded — odometer_miles / range_miles are grandfathered legacy columns.
+// and the expected SI aliases are present. Vehicle metadata contains no
+// measurements; retired live/imperial columns must not reappear there.
 func TestSICanonicalUnits(t *testing.T) {
 	siQueries := []namedQuery{
 		{"GetChargingSessionByID", GetChargingSessionByID},
 		{"UpsertChargingSession", UpsertChargingSession},
 		{"GetTripByID", GetTripByID},
 		{"UpsertTrip", UpsertTrip},
+		{"GetVehicleByID", GetVehicleByID},
+		{"GetVehicleByVIN", GetVehicleByVIN},
+		{"GetAllVehicles", GetAllVehicles},
+		{"GetVehicleByIDForUpdate", GetVehicleByIDForUpdate},
+		{"UpsertVehicle", UpsertVehicle},
+		{"UpdateVehicle", UpdateVehicle},
 	}
 	// Whole-word imperial/legacy unit endings that must never appear on disk.
 	forbidden := regexp.MustCompile(`(?i)(_mi|_mph|_kwh|_kw|_psi|_min|miles|_kmh)\b`)
@@ -464,7 +480,7 @@ func TestSelectColumnsMatchStructTags(t *testing.T) {
 	}{
 		{"GetVehicleByID", GetVehicleByID, vehicle.Vehicle{}},
 		{"GetVehicleByVIN", GetVehicleByVIN, vehicle.Vehicle{}},
-		{"GetVehiclesByUserID", GetVehiclesByUserID, vehicle.Vehicle{}},
+		{"GetAllVehicles", GetAllVehicles, vehicle.Vehicle{}},
 		{"GetVehicleByIDForUpdate", GetVehicleByIDForUpdate, vehicle.Vehicle{}},
 		{"GetChargingSessionByID", GetChargingSessionByID, charging.ChargingSession{}},
 		{"GetChargingSessionsByVehicleID", GetChargingSessionsByVehicleID, charging.ChargingSession{}},

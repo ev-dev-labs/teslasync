@@ -13,8 +13,8 @@
  *    Keys reached through indirection (`labelKey: 'nav.compactDrives'`) or a
  *    template literal (t(`palette.scope.${scope}`)) are discovered by AST
  *    analysis, not by a hand-curated list.
- * 2. Reachability — every leaf key in the catalog is emitted into exactly one
- *    artifact the runtime can load, so no translated string is orphaned.
+ * 2. Reachability — every leaf key has one authoritative fallback artifact;
+ *    feature bundles also carry shared keys reached by their source closure.
  * 3. Fallback locality — namespaces reachable from the shell or from generic
  *    shared components get a per-namespace `locale-detail-<ns>.json`. A toast
  *    string may never drag an unrelated battery or charging namespace along.
@@ -23,7 +23,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import ts from 'typescript'
-import { staticClosure, translationKeys, translationNamespaces } from './i18n-source-graph.mjs'
+import { resolveSourceImport, staticClosure, translationKeys } from './i18n-source-graph.mjs'
+import { parseRoutes } from './generate-route-registry.mjs'
 import {
   SHARED_GROUP,
   SHELL_GROUP,
@@ -52,7 +53,10 @@ const SHELL_RUNTIME_KEYS_PATH = join(I18N_ROOT, 'shell-runtime-keys.json')
 const KNOWN_MISSING_PATH = join(I18N_ROOT, 'known-missing-keys.json')
 // Shared controls used across dashboard, list, and detail routes should not
 // trigger a separate network request for each common label on first paint.
-const COMPLETE_SHELL_NAMESPACES = new Set(['nav', 'common', 'workspace', 'dataSources'])
+const COMPLETE_SHELL_NAMESPACES = new Set(['nav', 'common', 'workspace', 'dataSources', 'a11y', 'changelog'])
+// Driving spans independent analysis routes. Pack their source closure together,
+// but resolve undiscovered keys from the existing narrow namespace fallbacks.
+const DETAIL_FALLBACK_FEATURES = new Set(['driving'])
 /**
  * A per-namespace fallback chunk this small costs less to inline than the
  * request that fetches it costs in headers and round trips. Inlining also
@@ -82,11 +86,159 @@ function shellSourceClosure() {
     join(SOURCE_ROOT, 'App.tsx'),
     // The wildcard route is intentionally part of the cold shell contract.
     join(SOURCE_ROOT, 'features', 'system', 'pages', 'NotFoundPage.tsx'),
+    // This lazy root can auto-open on any route, including a cold NotFound.
+    // Only its translated UI is inlined; release-note content remains lazy.
+    join(SOURCE_ROOT, 'components', 'feedback', 'ChangelogModal.tsx'),
   ]
   // `import x from './en/shell.json'` resolves to a real file, so the raw
   // closure contains JSON assets. Parsing generated catalogs as TypeScript
   // would feed the generator its own output.
   return new Set([...staticClosure(SOURCE_ROOT, roots)].filter((file) => /\.(?:ts|tsx)$/.test(file)))
+}
+
+export function routeBundleSources(appSource, availableBundles, sharedSources = {}) {
+  const source = ts.createSourceFile('App.tsx', appSource, ts.ScriptTarget.Latest, true)
+  const lazyFeatures = new Map()
+  const namespaces = new Map()
+  const sharedLoaders = new Map()
+  const appFile = join(SOURCE_ROOT, 'App.tsx')
+  const fail = (name, reason) => {
+    throw new Error(`[i18n-split] App.tsx lazy loader ${name}: ${reason}`)
+  }
+  const literalImport = (loader, name) => {
+    const imports = []
+    const visit = (node) => {
+      if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+        const specifier = stringLiteralText(node.arguments[0])
+        if (!specifier || node.arguments.length !== 1) fail(name, 'expected exactly one literal import specifier')
+        imports.push(specifier)
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(loader)
+    if (imports.length !== 1) fail(name, 'expected exactly one literal module import')
+    return imports[0]
+  }
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue
+    const clause = statement.importClause
+    if (!clause?.namedBindings || !ts.isNamespaceImport(clause.namedBindings)) continue
+    const name = clause.namedBindings.name.text
+    if (namespaces.has(name)) fail(name, 'ambiguous namespace import')
+    namespaces.set(name, { module: statement.moduleSpecifier.text, typeOnly: clause.isTypeOnly })
+  }
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement)) continue
+    const clause = statement.importClause
+    const names = [
+      ...(clause?.name ? [clause.name.text] : []),
+      ...(clause?.namedBindings && ts.isNamedImports(clause.namedBindings)
+        ? clause.namedBindings.elements.map(element => element.name.text)
+        : []),
+    ]
+    for (const name of names) {
+      if (namespaces.has(name)) fail(name, 'ambiguous imported namespace binding')
+    }
+  }
+  const bindingNames = (name) => ts.isIdentifier(name)
+    ? [name.text]
+    : ts.isObjectBindingPattern(name) || ts.isArrayBindingPattern(name)
+    ? name.elements.flatMap(element => ts.isBindingElement(element) ? bindingNames(element.name) : [])
+    : []
+  const checkShadowing = (node) => {
+    if ((ts.isVariableDeclaration(node) || ts.isParameter(node)
+      || ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)
+      || ts.isFunctionExpression(node) || ts.isClassExpression(node)) && node.name) {
+      for (const name of bindingNames(node.name)) {
+        if (namespaces.has(name)) fail(name, 'ambiguous shadowed namespace')
+      }
+    }
+    ts.forEachChild(node, checkShadowing)
+  }
+  checkShadowing(source)
+  const sharedImport = (loader, name) => {
+    const namespace = namespaces.get(loader.expression.text)
+    if (!namespace || namespace.typeOnly) fail(name, 'unknown or type-only shared namespace')
+    const file = resolveSourceImport(SOURCE_ROOT, appFile, namespace.module)
+    if (!file) fail(name, `shared source does not resolve: ${namespace.module}`)
+    if (!sharedLoaders.has(file)) {
+      const text = Object.prototype.hasOwnProperty.call(sharedSources, namespace.module)
+        ? sharedSources[namespace.module]
+        : readFileSync(file, 'utf8')
+      const shared = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true)
+      if (shared.parseDiagnostics.length) fail(name, `shared source cannot be parsed: ${namespace.module}`)
+      const exports = new Map()
+      const modules = new Set()
+      for (const statement of shared.statements) {
+        if (!ts.isVariableStatement(statement)
+          || !statement.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword)
+          || !(statement.declarationList.flags & ts.NodeFlags.Const)) {
+          fail(name, `shared source ${namespace.module} must export const literal-import functions`)
+        }
+        for (const declaration of statement.declarationList.declarations) {
+          const initializer = declaration.initializer
+          if (!ts.isIdentifier(declaration.name) || !initializer || !ts.isArrowFunction(initializer)
+            || initializer.parameters.length !== 0 || !ts.isCallExpression(initializer.body)
+            || initializer.body.expression.kind !== ts.SyntaxKind.ImportKeyword) {
+            fail(name, `shared source ${namespace.module} contains a nonliteral loader`)
+          }
+          const specifier = literalImport(initializer, name)
+          const target = resolveSourceImport(SOURCE_ROOT, file, specifier)
+          if (!target) fail(name, `shared module does not resolve: ${specifier}`)
+          if (exports.has(declaration.name.text) || modules.has(target)) {
+            fail(name, `ambiguous shared export or module in ${namespace.module}`)
+          }
+          exports.set(declaration.name.text, target)
+          modules.add(target)
+        }
+      }
+      if (!exports.size) fail(name, `shared source ${namespace.module} contains no loaders`)
+      sharedLoaders.set(file, exports)
+    }
+    const target = sharedLoaders.get(file).get(loader.name.text)
+    if (!target) fail(name, `unknown shared export ${loader.expression.text}.${loader.name.text}`)
+    return target
+  }
+  if (source.parseDiagnostics.length) fail('<source>', 'App.tsx cannot be parsed')
+  const visit = (node) => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'lazy') {
+      let binding = node
+      while (!ts.isVariableDeclaration(binding) && binding.parent) binding = binding.parent
+      if (!ts.isVariableDeclaration(binding) || !ts.isIdentifier(binding.name) || node.arguments.length !== 1) {
+        fail('<unbound>', 'every lazy call needs one loader and a named component binding')
+      }
+      const name = binding.name.text
+      if (lazyFeatures.has(name)) fail(name, 'ambiguous component binding')
+      const loader = node.arguments[0]
+      let file
+      if (ts.isPropertyAccessExpression(loader) && ts.isIdentifier(loader.expression)) {
+        file = sharedImport(loader, name)
+      } else if (ts.isArrowFunction(loader) || ts.isFunctionExpression(loader)) {
+        const specifier = literalImport(loader, name)
+        file = resolveSourceImport(SOURCE_ROOT, appFile, specifier)
+        if (!file) fail(name, `inline module does not resolve: ${specifier}`)
+      } else {
+        fail(name, 'expected an inline literal-import function or a namespace shared-loader reference')
+      }
+      const feature = file.slice(SOURCE_ROOT.length + 1).replaceAll('\\', '/').match(/^features\/([^/]+)\//)?.[1]
+      lazyFeatures.set(name, { feature, file })
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  return parseRoutes(appSource).flatMap(({ path, name }) => {
+    const source = lazyFeatures.get(name)
+    if (!source || !availableBundles.has(source.feature)) return []
+    const bundle = DETAIL_FALLBACK_FEATURES.has(source.feature) && !/^\/drives(?:\/|$)/.test(path)
+      ? `${source.feature}-${name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`
+      : source.feature
+    return [{ path, bundle, ...source }]
+  })
+}
+
+export function routeBundlePaths(appSource, availableBundles, sharedSources = {}) {
+  return Object.fromEntries(routeBundleSources(appSource, availableBundles, sharedSources)
+    .map(({ path, bundle }) => [path, bundle]))
 }
 
 function sourceGroup(file, shellFiles) {
@@ -126,7 +278,7 @@ function stringLiteralText(node) {
  *   the prefix must ship with the shell because the suffix is only known at
  *   runtime.
  */
-function indirectTranslationKeys(file, catalogLeaves) {
+function indirectTranslationKeys(file, catalogLeaves, computedKeyBindings = false) {
   const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true)
   const indirect = new Set()
   const deferred = new Set()
@@ -140,6 +292,17 @@ function indirectTranslationKeys(file, catalogLeaves) {
   const addKeyBinding = (name, initializer) => {
     if (!name || !KEY_IDENTIFIER.test(name)) return
     addIfCatalogLeaf(indirect, initializer)
+    if (computedKeyBindings && initializer) {
+      // Vehicle metric formatters return computed reasonKey values through
+      // conditional expressions rather than calling t() at their definition.
+      const visitBinding = (node) => {
+        if (ts.isTemplateExpression(node) && node.head.text.includes('.')) {
+          prefixes.add(node.head.text)
+        }
+        ts.forEachChild(node, visitBinding)
+      }
+      visitBinding(initializer)
+    }
     if (initializer && ts.isArrayLiteralExpression(initializer)) {
       for (const element of initializer.elements) addIfCatalogLeaf(indirect, element)
     }
@@ -201,11 +364,30 @@ function usageManifest(catalog) {
   const shellInlineKeys = new Set()
   const shellDeferredKeys = new Set()
   const shellDynamicPrefixes = new Set()
+  const sourceKeyCache = new Map()
+  const literalKeyCache = new Map()
+  const dependencyCache = new Map()
+
+  const literalKeys = (file) => {
+    if (!literalKeyCache.has(file)) literalKeyCache.set(file, translationKeys(file))
+    return literalKeyCache.get(file)
+  }
+  const closureKeys = (file, computedKeyBindings = false) => {
+    const cacheKey = `${computedKeyBindings}:${file}`
+    if (!sourceKeyCache.has(cacheKey)) {
+      const { indirect, deferred, prefixes } = indirectTranslationKeys(file, catalogLeaves, computedKeyBindings)
+      sourceKeyCache.set(cacheKey, new Set([
+        ...literalKeys(file), ...indirect, ...deferred,
+        ...[...prefixes].flatMap(prefix => keysUnderPrefix(prefix, catalogLeaves)),
+      ]))
+    }
+    return sourceKeyCache.get(cacheKey)
+  }
 
   for (const file of sourceFiles) {
     const group = sourceGroup(file, shellFiles)
-    for (const key of translationKeys(file)) referencedKeys.add(key)
-    for (const namespace of translationNamespaces(file)) {
+    for (const key of literalKeys(file)) referencedKeys.add(key)
+    for (const namespace of new Set([...literalKeys(file)].map(key => key.split('.')[0]))) {
       if (!(namespace in catalog)) continue
       if (group === SHARED_GROUP && isGenericSharedSource(file)) sharedNamespaces.add(namespace)
       const counts = usage.get(namespace) ?? new Map()
@@ -214,7 +396,7 @@ function usageManifest(catalog) {
     }
   }
   for (const file of shellFiles) {
-    for (const key of translationKeys(file)) {
+    for (const key of literalKeys(file)) {
       if (key.split('.')[0] in catalog) shellInlineKeys.add(key)
     }
     const { indirect, deferred, prefixes } = indirectTranslationKeys(file, catalogLeaves)
@@ -257,15 +439,47 @@ function usageManifest(catalog) {
   for (const namespaces of Object.values(bundles)) namespaces.sort()
 
   // Shell- and shared-owned namespaces each get their own fallback chunk.
-  // Feature bundles stay grouped: a route legitimately needs the namespaces
-  // its own feature owns, and one request beats a dozen.
-  const detailNamespaces = [...new Set([...bundles[SHELL_GROUP], ...bundles[SHARED_GROUP]])].sort()
+  // Most feature bundles remain authoritative; multi-route driving only packs
+  // its discovered closure rather than every leaf of its winning namespaces.
+  const detailNamespaces = [...new Set([
+    ...bundles[SHELL_GROUP], ...bundles[SHARED_GROUP],
+    ...[...DETAIL_FALLBACK_FEATURES].flatMap(feature => bundles[feature] ?? []),
+  ])].sort()
   const detailSet = new Set(detailNamespaces)
   const namespaceFallbackBundles = {}
   for (const namespace of Object.keys(namespaceToBundle)) {
     namespaceFallbackBundles[namespace] = detailSet.has(namespace)
       ? `detail-${namespace}`
       : namespaceToBundle[namespace]
+  }
+  const featureRequiredKeys = {}
+  const featureBundles = new Set(Object.keys(bundles).filter(
+    bundle => ![SHELL_GROUP, SHARED_GROUP, UNREFERENCED_GROUP].includes(bundle),
+  ))
+  const routeSources = routeBundleSources(readFileSync(join(SOURCE_ROOT, 'App.tsx'), 'utf8'), featureBundles)
+  const routeRoots = new Map()
+  for (const { bundle, feature, file } of routeSources) {
+    if (!DETAIL_FALLBACK_FEATURES.has(feature)) continue
+    const roots = routeRoots.get(bundle) ?? new Set()
+    roots.add(file)
+    routeRoots.set(bundle, roots)
+    bundles[bundle] ??= []
+    featureBundles.add(bundle)
+  }
+  for (const bundle of featureBundles) {
+    const roots = routeRoots.has(bundle) ? [...routeRoots.get(bundle)] : sourceFiles.filter(file =>
+      file.slice(SOURCE_ROOT.length + 1).replaceAll('\\', '/').startsWith(`features/${bundle}/`),
+    )
+    const keys = new Set()
+    for (const file of staticClosure(SOURCE_ROOT, roots, dependencyCache)) {
+      if (!/\.(?:ts|tsx)$/.test(file)) continue
+      for (const key of closureKeys(file, bundle === 'vehicles')) {
+        for (const sibling of siblingKeys(catalog, key)) {
+          if (getNested(catalog, sibling) !== undefined) keys.add(sibling)
+        }
+      }
+    }
+    featureRequiredKeys[bundle] = [...keys].sort()
   }
   return {
     manifest: {
@@ -280,6 +494,8 @@ function usageManifest(catalog) {
       autoDiscoveredRuntimeKeys: [...autoDiscoveredRuntimeKeys].sort(),
       unreferencedNamespaces: bundles[UNREFERENCED_GROUP],
       namespaceFallbackBundles,
+      featureRequiredKeys,
+      routeBundles: Object.fromEntries(routeSources.map(({ path, bundle }) => [path, bundle])),
     },
     // Kept out of the serialized manifest: this is every literal `t()` key in
     // the tree and only feeds known-missing detection.
@@ -312,6 +528,7 @@ function expectedFiles(catalog) {
     if (!setNested(shellResource, key, value)) shadowedKeys.push(key)
   }
   for (const namespace of manifest.detailNamespaces) {
+    if (DETAIL_FALLBACK_FEATURES.has(manifest.namespaceToBundle[namespace])) continue
     const value = catalog[namespace]
     if (value === undefined) continue
     if (JSON.stringify(value).length <= TINY_NAMESPACE_BYTES) shellResource[namespace] = value
@@ -334,7 +551,15 @@ function expectedFiles(catalog) {
   for (const [bundle, namespaces] of Object.entries(manifest.bundles)) {
     if (bundle === SHELL_GROUP || bundle === SHARED_GROUP) continue
     const resource = {}
-    for (const namespace of namespaces) resource[namespace] = catalog[namespace]
+    for (const namespace of namespaces) {
+      if (manifest.namespaceFallbackBundles[namespace] === bundle) resource[namespace] = catalog[namespace]
+    }
+    for (const key of manifest.featureRequiredKeys[bundle] ?? []) {
+      if (getNested(shellResource, key) !== undefined || getNested(resource, key) !== undefined) continue
+      if (!setNested(resource, key, getNested(catalog, key))) shadowedKeys.push(key)
+    }
+    ;(manifest.composedNamespaces ??= {})[bundle] = Object.keys(resource)
+      .filter(namespace => manifest.namespaceFallbackBundles[namespace] !== bundle).sort()
     if (Object.keys(resource).length > 0) files.set(`locale-${bundle}.json`, serialized(resource))
   }
   files.set('runtime-manifest.json', serialized(runtimeManifestOf(manifest)))

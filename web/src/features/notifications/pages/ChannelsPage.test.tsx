@@ -34,7 +34,8 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { NotificationChannel, NotificationStats } from '@/api/types';
-import { ToastProvider } from '@/components/feedback/Toast';
+import type { DataState } from '@/api/dataState';
+import { ToastProvider } from '@/components/feedback';
 import ChannelsPage from './ChannelsPage';
 
 // <FadeIn> → framer-motion's useReducedMotion reads matchMedia, which jsdom
@@ -70,6 +71,7 @@ const H = vi.hoisted(() => ({
   stats: { current: null as unknown as StatsQuery },
   channelsRefetch: vi.fn(),
   statsRefetch: vi.fn(),
+  addLabel: undefined as string | undefined,
 }));
 
 // i18n → return the developer fallback string, interpolating {{vars}}. Supports
@@ -87,6 +89,9 @@ vi.mock('react-i18next', async () => {
       if (typeof (second as { defaultValue?: unknown }).defaultValue === 'string') {
         template = (second as { defaultValue: string }).defaultValue;
       }
+    }
+    if (key === 'notifications.channels.add' && H.addLabel !== undefined) {
+      template = H.addLabel;
     }
     if (!vars) return template;
     return template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
@@ -137,6 +142,7 @@ vi.mock('../components/channels/ChannelsGrid', () => ({
     isLoading: boolean;
     isError: boolean;
     error: unknown;
+    source: DataState<NotificationChannel[]>;
     onRetry: () => void;
     onEdit: (channel: NotificationChannel) => void;
     onAdd: () => void;
@@ -150,6 +156,8 @@ vi.mock('../components/channels/ChannelsGrid', () => ({
         data-error={String(isError)}
         data-errmsg={errMsg}
         data-count={String(channels.length)}
+        data-status={props.source.status}
+        data-blocked={String(props.source.isRefreshBlocked)}
       >
         <button type="button" onClick={onAdd}>
           grid-add
@@ -169,11 +177,12 @@ vi.mock('../components/channels/ChannelsGrid', () => ({
 
 vi.mock('../components/channels/ChannelProvidersPanel', () => ({
   ChannelProvidersPanel: function ChannelProvidersPanelMock({
-    channels,
+    channels, source,
   }: {
     channels: NotificationChannel[];
+    source?: DataState<NotificationChannel[]>;
   }) {
-    return <div data-testid="providers-panel" data-count={String(channels.length)} />;
+    return <div data-testid="providers-panel" data-count={String(channels.length)} data-source-status={source?.status} data-source-known={String(source?.hasData)} data-source-blocked={String(source?.isRefreshBlocked)} />;
   },
 }));
 
@@ -252,6 +261,8 @@ interface FakeQuery<T> {
   error: unknown;
   isStale: boolean;
   isFetching: boolean;
+  isPending: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   dataUpdatedAt: number;
   refetch: () => unknown;
 }
@@ -305,13 +316,16 @@ function renderPage() {
   );
 }
 
-/** The page's Refresh/Add cluster — scoped so the freshness-chip's own
- * "Refresh" affordance (a sibling `role="button"` span) is never matched. */
 function actionsCluster(): HTMLElement {
-  return screen.getByRole('button', { name: 'Add Channel' }).parentElement as HTMLElement;
+  const cluster = screen.getByRole('button', { name: H.addLabel ?? 'Add channel' })
+    .closest('[data-role="page-actions"]')
+    ?.querySelector<HTMLElement>('[data-action-group="secondary"]');
+  if (!cluster) throw new Error('Channel header secondary actions are missing');
+  return cluster;
 }
 
 beforeEach(() => {
+  H.addLabel = undefined;
   H.channelsRefetch.mockReset().mockResolvedValue(undefined);
   H.statsRefetch.mockReset().mockResolvedValue(undefined);
   setChannels({ data: [DISCORD, SLACK] });
@@ -364,6 +378,50 @@ describe('ChannelsPage — structure', () => {
 
 // ── 2. loading / error / empty ────────────────────────────────────────────────
 describe('ChannelsPage — loading / error / empty', () => {
+  it.each(['idle', 'paused'] as const)('consumes an initial %s query without inventing an error or dropping neighbors', (fetchStatus) => {
+    setChannels({ data: undefined, isPending: true, isLoading: false, fetchStatus });
+    renderPage();
+    const grid = screen.getByTestId('channels-grid');
+    expect(grid).toHaveAttribute('data-status', 'initial');
+    expect(grid).toHaveAttribute('data-blocked', String(fetchStatus === 'paused'));
+    expect(grid).toHaveAttribute('data-error', 'false');
+    expect(grid).toHaveAttribute('data-errmsg', '');
+    expect(screen.getByTestId('stats-band')).toHaveTextContent('sent:95');
+    expect(screen.getByTestId('providers-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('browser-push')).toBeInTheDocument();
+  });
+
+  it('shows unresolved statistics as loading even when isLoading is false', () => {
+    setStats({ data: undefined, isPending: true, isLoading: false, fetchStatus: 'idle' });
+    renderPage();
+    expect(screen.getByTestId('stats-band')).toHaveAttribute('data-loading', 'true');
+    expect(screen.getByTestId('channels-grid')).toHaveAttribute('data-count', '2');
+  });
+
+  it('shows paused initial statistics without fabricating zero outcomes or an outage', () => {
+    setStats({ data: undefined, isPending: true, isLoading: false, fetchStatus: 'paused' });
+    renderPage();
+    expect(screen.getAllByText('Refresh paused').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('stats-band')).not.toBeInTheDocument();
+    expect(screen.getByTestId('channels-grid')).toHaveAttribute('data-count', '2');
+    expect(screen.getByTestId('providers-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('browser-push')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('retains both independent sources and edit identity after failed background refreshes', () => {
+    setChannels({ data: [DISCORD, SLACK], isError: true, error: new Error('Channel refresh offline') });
+    setStats({ data: STATS, isError: true, error: new Error('Statistics refresh offline') });
+    const { container } = renderPage();
+    expect(container.querySelector('[data-layout-reference]')).not.toBeNull();
+    expect(screen.getByTestId('channels-grid')).toHaveAttribute('data-error', 'false');
+    expect(screen.getByTestId('channels-grid')).toHaveAttribute('data-count', '2');
+    expect(screen.getByTestId('stats-band')).toHaveTextContent('sent:95');
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'edit-Ops Slack' }));
+    expect(screen.getByTestId('modal-mode')).toHaveTextContent('edit:Ops Slack');
+  });
+
   it('propagates loading flags while keeping every section heading visible', () => {
     setChannels({ data: undefined, isLoading: true });
     setStats({ data: undefined, isLoading: true });
@@ -401,7 +459,7 @@ describe('ChannelsPage — create/edit modal', () => {
 
   it('opens the modal in create mode from the header Add action', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Add Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add channel' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByTestId('modal-mode')).toHaveTextContent('add');
   });
@@ -422,7 +480,7 @@ describe('ChannelsPage — create/edit modal', () => {
 
   it('dismisses the modal when the child calls onClose', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Add Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add channel' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'modal-close' }));
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -430,7 +488,7 @@ describe('ChannelsPage — create/edit modal', () => {
 
   it('dismisses the modal when the child calls onSaved', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Add Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add channel' }));
     fireEvent.click(screen.getByRole('button', { name: 'modal-save' }));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -443,13 +501,33 @@ describe('ChannelsPage — create/edit modal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'modal-close' }));
     expect(screen.queryByRole('dialog')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add channel' }));
     expect(screen.getByTestId('modal-mode')).toHaveTextContent('add');
   });
 });
 
 // ── 4. Header actions & accessibility ─────────────────────────────────────────
 describe('ChannelsPage — header actions & a11y', () => {
+  it('wraps long add labels while preserving mobile targets and decorative shared icons', () => {
+    const label = 'Add a notification delivery channel with a deliberately long localized label';
+    H.addLabel = label;
+    renderPage();
+
+    const add = screen.getByRole('button', { name: label });
+    const refresh = within(actionsCluster()).getByRole('button', { name: 'Refresh' });
+    expect(add).toHaveAttribute('type', 'button');
+    expect(add).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'max-w-full', 'whitespace-normal');
+    expect(within(add).getByText(label)).toHaveClass('min-w-0', 'break-words');
+    expect(refresh).toHaveAttribute('type', 'button');
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0');
+    for (const button of [add, refresh]) {
+      const icon = button.querySelector('svg');
+      expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+    }
+  });
+
   it('fans the refresh action out to both the channels and stats refetches', () => {
     renderPage();
     fireEvent.click(within(actionsCluster()).getByRole('button', { name: 'Refresh' }));
@@ -464,6 +542,32 @@ describe('ChannelsPage — header actions & a11y', () => {
 
   it('labels the add-channel action', () => {
     renderPage();
-    expect(screen.getByRole('button', { name: 'Add Channel' })).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { level: 1, name: 'Notification channels' });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    expect(heading).toHaveAttribute('tabindex', '-1');
+    expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
+    expect(screen.getByRole('button', { name: 'Add channel' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
+    expect(within(actionsCluster()).getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More info: Notification channels' }))
+      .toHaveAttribute('aria-describedby');
+  });
+});
+
+
+describe('ChannelsPage provider source forwarding', () => {
+  it.each([
+    { name: 'loading', query: { data: undefined, isLoading: true }, status: 'initial', known: 'false', blocked: 'false' },
+    { name: 'paused', query: { data: undefined, isPending: true, fetchStatus: 'paused' }, status: 'initial', known: 'false', blocked: 'true' },
+    { name: 'authoritative empty', query: { data: [] }, status: 'ok', known: 'true', blocked: 'false' },
+  ])('forwards the real $name registry state to the provider catalog', ({ query, status, known, blocked }) => {
+    setChannels(query as Parameters<typeof setChannels>[0]);
+    renderPage();
+    const panel = screen.getByTestId('providers-panel');
+    expect(panel).toHaveAttribute('data-source-status', status);
+    expect(panel).toHaveAttribute('data-source-known', known);
+    expect(panel).toHaveAttribute('data-source-blocked', blocked);
+    expect(screen.getByTestId('channels-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('stats-band')).toBeInTheDocument();
   });
 });

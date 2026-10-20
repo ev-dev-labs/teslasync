@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
-import { CopyButton } from '@/components/ui'
+import { CopyButton, Caption, ErrorText, HelperText, Text } from '@/components/ui'
 
 interface ResultPanelProps {
   title: string
@@ -9,6 +9,7 @@ interface ResultPanelProps {
   error?: string
   idle?: boolean
   idleMessage?: string
+  context?: string
 }
 
 /**
@@ -25,7 +26,7 @@ function safeStringify(value: unknown): string {
   }
 }
 
-export function ResultPanel({ title, data, error, idleMessage }: ResultPanelProps) {
+export function ResultPanel({ title, data, error, idleMessage, context }: ResultPanelProps) {
   const { t } = useTranslation()
   const hasData = data != null
   const hasError = Boolean(error)
@@ -42,25 +43,26 @@ export function ResultPanel({ title, data, error, idleMessage }: ResultPanelProp
     <div
       className={cn(
         'mt-3 rounded-lg p-3',
-        hasError ? 'bg-neon-red/5' : hasData ? 'bg-neon-green/5' : 'bg-white/[0.02]',
+        hasError ? 'bg-[var(--semantic-danger-bg)]' : 'bg-[var(--surface-2)]',
       )}
     >
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-medium text-[var(--text-secondary)]">{title}</span>
+        <Caption>{title}</Caption>
         {showData ? <CopyButton text={stringifiedData} /> : null}
       </div>
+      {context && (hasData || hasError) ? <HelperText>{context}</HelperText> : null}
       {hasError ? (
-        <p role="alert" className="text-sm text-rose-300">
+        <ErrorText>
           {error}
-        </p>
+        </ErrorText>
       ) : hasData ? (
-        <pre className="max-h-64 overflow-auto rounded bg-[var(--surface-overlay)] p-2 text-xs text-[var(--text-primary)]">
+        <Text as="pre" variant="code" className="max-h-64 overflow-auto rounded bg-[var(--surface-1)] p-2">
           {stringifiedData}
-        </pre>
+        </Text>
       ) : (
-        <p className="text-sm italic text-[var(--text-muted)]">
+        <HelperText className="italic">
           {idleMessage ?? t('devtools.resultPanel.noResult', 'No result yet')}
-        </p>
+        </HelperText>
       )}
     </div>
   )

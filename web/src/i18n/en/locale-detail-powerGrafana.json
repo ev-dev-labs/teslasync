@@ -1,0 +1,74 @@
+{
+  "powerGrafana": {
+    "title": "Grafana panel builder",
+    "summary": {
+      "panelTypes": "Panel types",
+      "datasources": "Datasources",
+      "tables": "Tables",
+      "columns": "Columns",
+      "aria": "Curated catalog summary"
+    },
+    "brief": {
+      "panelTypes": "Supported types in the bundled panel-builder catalog.",
+      "datasources": "Bundled datasource types with canonical UIDs; not a live connectivity check.",
+      "tables": "Curated tables allowed in postgres-target SQL.",
+      "columns": "Documented columns across all bundled curated tables.",
+      "eyebrow": "Panel-builder reference",
+      "description": "Counts describe the bundled builder catalog, not live Grafana panels, connected datasources or database rows.",
+      "status": "Static reference",
+      "scope": "Bundled builder catalog · all entries",
+      "freshness": "Reference data · no live measurement",
+      "provenance": "Counts come from the bundled panel types, datasource types and curated tables. The browser never pushes panels to Grafana; copy JSON into your own dashboard."
+    },
+    "editor": {
+      "copyUnavailable": "Clipboard access is not available in this browser. Select the text manually and copy with ctrl+C / cmd+C.",
+      "copyFailed": "Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.",
+      "copySuccess": "Copied. Paste the JSON into your Grafana dashboard editor (add panel â†’ edit JSON).",
+      "title": "Manual panel JSON editor",
+      "placeholder": "{\n  \"title\": \"Drives per day\",\n  \"type\": \"timeseries\",\n  \"datasource\": { \"type\": \"postgres\", \"uid\": \"tesla-postgres\" },\n  \"targets\": [],\n  \"grid_pos\": { \"x\": 0, \"y\": 0, \"w\": 12, \"h\": 8 }\n}",
+      "label": "Grafana panel JSON editor",
+      "copy": "Copy to clipboard",
+      "clear": "Clear"
+    },
+    "subtitle": "Build a Grafana panel JSON envelope against the curated catalog, then copy it into your own dashboard.",
+    "workflow": {
+      "title": "How it works",
+      "step1": "Draft with Helix or write / paste a Grafana panel JSON envelope in the editor.",
+      "step2": "Click copy to clipboard to grab the JSON.",
+      "step3": "In Grafana, choose add panel â†’ edit JSON and paste it in.",
+      "note": "The browser never pushes panels to Grafana directly â€” you stay in control of what lands on your dashboards."
+    },
+    "intro": "Build a Grafana panel JSON envelope against the curated panel-builder catalog below. The browser does not push the panel to Grafana; copy your JSON into your existing Grafana dashboard editor.",
+    "panelTypes": {
+      "title": "Curated panel types",
+      "intro": "These are the panel types the curated catalog exposes. The Helix natural-language drafter refuses any panel type outside this list.",
+      "empty": "No panel types available."
+    },
+    "datasourceTypes": {
+      "title": "Curated datasource types",
+      "intro": "These are the datasource types the curated catalog exposes, with their canonical UIDs. The Helix natural-language drafter refuses any datasource type outside this list.",
+      "empty": "No datasource types available."
+    },
+    "tables": {
+      "title": "Curated table catalog (postgres targets)",
+      "intro": "These tables are the only tables the curated catalog exposes for postgres-target rawSql. The Helix natural-language drafter refuses any postgres query referencing tables outside this list.",
+      "empty": "No tables available."
+    },
+    "aiDrafter": {
+      "badge": "Helix",
+      "applyButton": "Apply to editor",
+      "title": "Helix natural-language Grafana panel drafter",
+      "description": "Describe the panel you want in plain English (e.g. \"show me a daily time series of how far I drove this month\"). Helix proposes a typed Grafana panel JSON draft you can apply to the editor with one click; it never pushes the panel to Grafana directly.",
+      "button": "Draft panel",
+      "promptLabel": "Grafana panel request",
+      "promptPlaceholder": "e.g. show me a daily time series of how far I drove this month",
+      "applyTooltip": "Copy the proposed panel JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "previewLabel": "Proposed Grafana panel (review before applying)",
+      "previewUntitled": "Untitled panel",
+      "previewType": "Panel type:",
+      "previewDatasource": "Datasource:",
+      "previewTargets": "Query targets:",
+      "previewTables": "Referenced tables:"
+    }
+  }
+}

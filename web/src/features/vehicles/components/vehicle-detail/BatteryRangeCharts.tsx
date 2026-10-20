@@ -13,11 +13,13 @@ import {
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI } from '@/lib/unitConversion'
+import { isFiniteNumber } from '@/lib/numberFormat'
 import { formatDate } from '@/lib/dateFormat'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 import type { VehicleState, Drive } from '@/api/types'
 import { batteryColor } from './helpers'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryRangeChartsProps {
   state: VehicleState
@@ -27,19 +29,21 @@ interface BatteryRangeChartsProps {
 const valueClass = cn('block', typography.size.xl, typography.weight.bold, typography.color.primary)
 
 export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
+  const { precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs } = useUnits()
 
   // Runtime null-safety: `VehicleState` types these as `number`, but the Go
   // API can serialise a genuine `null` for a vehicle that has never reported
-  // battery/range. Coerce once so every downstream consumer (gauge, chart,
-  // headline) shares the same non-NaN value.
-  const batteryLevel = state.battery_level ?? 0
-  const ratedRange = state.rated_range ?? 0
+  // battery/range. Absent readings stay null so the gauge, chart, and
+  // headlines render their unknown state — never a fabricated zero and
+  // never NaN.
+  const batteryLevel = isFiniteNumber(state.battery_level) ? state.battery_level : null
+  const ratedRange = isFiniteNumber(state.rated_range) ? state.rated_range : null
 
   const batteryChartData = useMemo(() => [
     { name: t('common.current', 'Current'), value: batteryLevel },
-    { name: t('common.remaining', 'Remaining'), value: Math.max(0, 100 - batteryLevel) },
+    { name: t('common.remaining', 'Remaining'), value: batteryLevel == null ? null : Math.max(0, 100 - batteryLevel) },
   ], [batteryLevel, t])
 
   const driveChartData = useMemo(() =>
@@ -51,14 +55,14 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
   [drives, unitPrefs.distance])
 
   const ratedRangeDisplay = useMemo(
-    () => convertDistanceFromSI(ratedRange, unitPrefs.distance),
+    () => (ratedRange == null ? null : convertDistanceFromSI(ratedRange, unitPrefs.distance)),
     [ratedRange, unitPrefs.distance],
   )
 
   const batteryColumns = useMemo<ChartDataColumn[]>(
     () => [
       { key: 'name', label: t('common.category', 'Category') },
-      { key: 'value', label: t('common.percentage', '%'), format: (v) => `${v}%` },
+      { key: 'value', label: t('common.percentage', '%'), format: (v) => (v == null ? '—' : `${v}%`) },
     ],
     [t],
   );
@@ -86,7 +90,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
       <GlassPanel className="p-6">
         <PanelTitle className="mb-4 flex items-center gap-2">
           <Battery className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('vehicles.detail.batteryOverview', 'Battery Overview')}
+          {t('vehicles.detail.batteryOverview', 'Battery overview')}
         </PanelTitle>
         <div className="flex items-center gap-4 mb-4">
           <LinearGauge
@@ -94,20 +98,20 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
             max={100}
             label={t('common.battery', 'Battery')}
             unit="%"
-            color={batteryColor(batteryLevel)}
+            color={batteryColor(batteryLevel ?? NaN)}
             size={100}
             className="w-32 shrink-0"
           />
           <div className="flex-1">
-            <GlassPanel className="p-3 mb-2">
+            <GlassPanel variant="embedded" className="p-3 mb-2">
               <Text variant="caption">{t('common.battery', 'Battery')}</Text>
               <AnimatedNumber value={batteryLevel} suffix="%" className={valueClass} />
             </GlassPanel>
-            <GlassPanel className="p-3">
+            <GlassPanel variant="embedded" className="p-3">
               <Text variant="caption">{t('common.range', 'Range')}</Text>
               <AnimatedNumber
                 value={ratedRangeDisplay}
-                decimals={0}
+                decimals={displayPrecision}
                 suffix={` ${unitPrefs.distance}`}
                 className={valueClass}
               />
@@ -116,7 +120,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
         </div>
         <div className="h-48">
           <EmbeddedChart
-            title={t('vehicles.detail.batteryOverview', 'Battery Overview')}
+            title={t('vehicles.detail.batteryOverview', 'Battery overview')}
             ariaLabel={t('vehicles.detail.batteryAria', 'Battery current and remaining levels bar chart')}
             data={batteryChartData}
             dataColumns={batteryColumns}
@@ -139,13 +143,13 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
       <GlassPanel className="p-6">
         <PanelTitle className="mb-4 flex items-center gap-2">
           <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('vehicles.detail.driveTrend', 'Drive Distance Trend')}
+          {t('vehicles.detail.driveTrend', 'Drive distance trend')}
         </PanelTitle>
         {driveChartData.length > 0 ? (
           <div className="h-64">
             <EmbeddedChart
               chartKey="battery-drive-trend"
-              title={t('vehicles.detail.driveTrend', 'Drive Distance Trend')}
+              title={t('vehicles.detail.driveTrend', 'Drive distance trend')}
               ariaLabel={t('vehicles.detail.driveTrendAria', 'Recent drive distance and duration area chart')}
               data={driveChartData}
               dataColumns={driveColumns}

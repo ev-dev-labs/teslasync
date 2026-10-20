@@ -1,0 +1,189 @@
+{
+  "item": "audit-page-199",
+  "page": "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx",
+  "routes": ["/tesla-api-usage"],
+  "purpose": "Explain locally observed Tesla Fleet traffic, current and prior fixed UTC cycles, estimated spend, and independently selected historical costs without implying an invoice.",
+  "primaryGoal": "Understand observed usage and category costs, inspect historical distribution and trends, export the selected evidence, and reach API logs while retaining estimate limitations.",
+  "dataSources": [
+    {
+      "name": "useTeslaUsage",
+      "owner": "web\\src\\api\\hooks\\useTeslaUsage.ts",
+      "file": "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx",
+      "line": 20,
+      "endpoints": ["GET /system/api-usage?limit=12&offset=0"],
+      "sourceEvidence": "web\\src\\api\\hooks\\useTeslaUsage.ts:47-58; web\\src\\api\\types.ts:1714-1729",
+      "routeEvidence": "internal\\api\\router.go:4352,4377",
+      "behavior": "Query key system-status/api-usage; five-minute refetch, forwarded AbortSignal, finite-number cycle validation, non-retryable TeslaUsageContractError and fewer than three retries for other errors. Requires current, history array, rate_source and disclaimer. Page passes retained cycle payload through useDataState; current/prior cycles remain independent of historical selection.",
+      "verification": "Endpoint registration source-matched; mounted traffic, backend aggregation, deduplication and billing accuracy unverified. Backend handler/database implementation not inspected."
+    },
+    {
+      "name": "useTeslaUsageHistory",
+      "owner": "web\\src\\api\\hooks\\useTeslaUsage.ts",
+      "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx",
+      "line": 51,
+      "endpoints": ["GET /system/api-usage/history?start=<UTC ISO>&end=<exclusive UTC ISO>&bucket=<day|week>"],
+      "sourceEvidence": "web\\src\\api\\hooks\\useTeslaUsage.ts:61-74; web\\src\\api\\types.ts:1731-1745; TeslaApiUsageHistory.tsx:17-76",
+      "routeEvidence": "internal\\api\\router.go:4352,4378",
+      "behavior": "Independent query key includes both bounds and bucket; five-minute polling, AbortSignal and same contract-error retry policy. Initial inclusive UTC civil range is today minus 29 days through today; conversion produces [start,end) with one-day exclusive upper-bound adjustment, validates actual civil dates, ordering and maximum 366 days. Invalid bounds disable the request. Sparse points remain sparse; category USD is locally derived using 150000/1000/500/50 events per USD, while headline estimate uses source estimated_usd.",
+      "verification": "Frontend bounds and route registration inspected; server bound enforcement, weekly Monday alignment and actual payloads unverified."
+    },
+    {
+      "name": "Formatting and operational evidence",
+      "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+      "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx",
+      "line": 25,
+      "endpoints": [],
+      "sourceEvidence": "SystemSummaryBrief.tsx:25-64; TeslaApiUsageCard.tsx:19-43; TeslaApiUsageHistory.tsx:104-119",
+      "behavior": "Existing useOperationalMetrics bridge, useFormatting currency renderer and useNumberFormatting counts; no new unit engine. Explicit unknown observation-time message, loading/available/retained source labels and unscored confidence. Raw numeric counts and USD remain unchanged; currency conversion semantics in formatting hooks were not traced.",
+      "verification": "Source composition inspected; saved preferences and actual currency/locale rendering unverified."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout", "file": "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx", "line": 25, "role": "Existing category layout with localized title/subtitle; implementation not re-audited."},
+    {"name": "GlassPanel / Heading / Text / KVList", "owner": "web\\src\\components\\ui; web\\src\\components\\data-display", "file": "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx", "line": 33, "role": "Existing section surfaces, semantic typography and two-column pricing details; no new wrappers needed."},
+    {"name": "TeslaApiUsageCard", "owner": "web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx", "file": "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx", "line": 37, "props": ["apiUsage", "now", "loading", "error", "compact"], "role": "Domain evidence adapter over shared UsageCard and SystemSummaryBrief; mounted page uses full mode. now is accepted but unused."},
+    {"name": "TeslaApiUsageHistory", "owner": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "file": "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx", "line": 48, "role": "Domain historical query container, local UTC range conversion, grouping, selected summary, distribution and trend."},
+    {"name": "SystemSummaryBrief / OperationalBrief bridge", "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx", "line": 26, "props": ["title", "description", "scope", "metrics", "available", "loading", "retained", "statusLabel", "freshness"], "role": "Existing numeric-source summary and details narrative; preserve both cycle and selected-range contexts."},
+    {"name": "UsageCard", "owner": "web\\src\\components\\data-display\\UsageCard.tsx", "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx", "line": 80, "props": ["details", "topLists", "footer", "emptyMessage"], "role": "Existing spend/volume rendering owner, also used by AiUsageCard; shared typography, wrapping and navigation corrections belong here."},
+    {"name": "RangePicker / Select", "owner": "web\\src\\components\\forms; web\\src\\components\\ui", "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 83, "role": "Existing date and grouping primitives; the local scope bypass requires workspace-owner integration, not a replacement date picker."},
+    {"name": "ChartContainer / chart category barrel", "owner": "web\\src\\components\\charts\\ChartContainer.tsx", "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 130, "props": ["title", "subtitle", "ariaLabel", "loading", "error", "onRetry", "empty", "data", "dataColumns", "metadata", "exportable", "exportFilename", "exportData", "chartKey"], "role": "Canonical frame, chart semantics, accessible fallback table, export and trend legend-persistence pipeline; uses existing colors, axes, tooltip and animation helpers."},
+    {"name": "useDataState / StaleRefreshWarning / FadeIn", "owner": "web\\src\\hooks\\useDataState.ts; web\\src\\components\\feedback; web\\src\\components\\motion", "file": "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx", "line": 22, "role": "Current-cycle trust adapter and warning with three entrance wrappers; generic feedback/motion implementations not inspected."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 48, "rule": "MDC-032 / mission 33", "detail": "Historical date state is owned locally despite the canonical workspace owner; scope=local explicitly bypasses shared scope. This is arbitrary historical analysis, not fixed cycle navigation.", "fix": "Integrate existing useRangeState and header route scope with an explicit preservation mapping for UTC billing history, both bounds, 366-day validation and presets; retain independent day/week grouping.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx", "line": 23, "rule": "MDC-044", "detail": "Inline UTC date formatting bypasses the application's date-format preference owner while counts and currency already use shared formatting.", "fix": "Use the existing date formatting owner if it can explicitly preserve UTC civil dates; do not silently apply workspace timezone to fixed cycles.", "owner": "page", "confidence": "medium"}
+  ],
+  "responsive": {
+    "sourceEvidence": ["TeslaApiUsagePage.tsx:30-54 uses spaced independent sections and p-4/sm:p-6 panels", "TeslaApiUsageHistory.tsx:82 uses flex-wrap for controls", "UsageCard.tsx:294 details are two columns then four at md", "UsageCard.tsx:312 top lists stack then two columns at md", "TeslaApiUsageHistory.tsx:151-159,184-204 uses responsive chart containers"],
+    "issues": [
+      {"file": "web\\src\\components\\data-display\\UsageCard.tsx", "line": 321, "rule": "MDC-043 / preservation", "detail": "Top-list labels use truncate in a justify-between row, including full source/limitations prose and prior-cycle dates/event counts. rate_source value lacks a wrapping strategy; a long URL can crowd or overflow a narrow panel.", "fix": "Extend this existing owner with a wrap-capable long-form top-list presentation; retain full labels, counts, URLs and values at narrow widths rather than removing metadata.", "owner": "shared", "confidence": "high"}
+    ],
+    "verification": "Runtime unverified at 320/375/390/430/768/1024/1280/1440/1920/2560, allocated container widths, RTL, 200% text and long content. Source breakpoints do not establish viewport acceptance."
+  },
+  "accessibility": {
+    "sourceEvidence": ["TeslaApiUsagePage.tsx:32-45 localized section names and headings", "TeslaApiUsageHistory.tsx:92-101 localized Select label/options", "TeslaApiUsageHistory.tsx:133,164 provides descriptive chart names", "TeslaApiUsageHistory.tsx:140-145,173-177 supplies accessible data columns", "ChartContainer.tsx:791-850 renders captioned semantic fallback table"],
+    "issues": [
+      {"file": "web\\src\\components\\data-display\\UsageCard.tsx", "line": 357, "rule": "MDC-020 / MDC-040", "detail": "Footer navigation has custom cyan chrome and min-h-[36px], below the stronger 44px contract default; source classes do not include an explicit focus-visible treatment. ExternalLink icons at 370 and 377 are not hidden as decorative, including the internal API-logs link.", "fix": "Compose existing canonical button/link classes with native Link semantics, 44px targets, visible focus and aria-hidden decorative icons; preserve destination and label.", "owner": "shared", "confidence": "high"}
+    ],
+    "verification": "Keyboard, actual focus visibility, screen-reader output, hit-target measurement, contrast, forced colors, themes and reduced motion are unverified. Existing FadeIn/chartAnimationProps source usage is not motion acceptance."
+  },
+  "states": {
+    "initialLoading": "Current cycle renders summary and localized loading message without hiding history or methodology. History summary receives loading and both charts receive loading; no whole-page data gate.",
+    "empty": "Current absence renders unavailable copy; no prior cycles renders a specific list item. History points default to []; no observed traffic produces range guidance and chart emptiness. Zero estimated total makes the distribution empty while observed time-series points remain available.",
+    "error": "Contract mismatch gives explicit upgrade guidance; current fatal failure is text-only and has no inline retry action. Chart frames offer historical refetch. Invalid range disables fetch but passes a no-op retry callback. Existing retry policy avoids repeated incompatible payload requests.",
+    "staleOffline": "Current query uses useDataState and StaleRefreshWarning while retaining data. History only reads data/isLoading/error/refetch: summary labels retained after errors, but chart error prop replaces retained plots and disables exports. Fetch-pause/offline and freshness are not separately consumed by this history component.",
+    "successDisabled": "Day/week selection, selected totals, sparse series and exports are available on successful history. Invalid bounds disable the historical request. Chart export controls are disabled/hidden for loading/error/empty by existing owner; no mutations on this page.",
+    "issues": [
+      {"file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 135, "rule": "MDC-026", "detail": "Both chart frames receive raw refresh error even with retained totals/points. ChartContainer prioritizes error over children at 699-705 and disables controls at 428-429; retained historical plots and exports disappear while summary still shows retained data.", "fix": "Use the existing useDataState and StaleRefreshWarning/SourceContent pattern; pass fatalError only to the frame, retain usable plots and export scope on refresh failure, and expose source retry/freshness/offline state.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 70, "rule": "MDC-026 / MDC-045", "detail": "Missing totals produce four synthetic zero category USD rows. ChartContainer renders fallback data tables whenever nonempty data/dataColumns exist (448-453,791-850), regardless of loading/error; the supplied formatter also maps non-number cells to zero at 143.", "fix": "Provide absent or explicitly unknown distribution evidence when totals are unavailable and preserve valid measured zero; format missing cells as unknown, never fabricated currency zero.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx", "line": 58, "rule": "MDC-026 / mission 44", "detail": "Fatal cycle failure asks the user to refresh but exposes no current-cycle retry action; history retry cannot retry the independent cycle query.", "fix": "Pass the existing cycle refetch callback to shared source recovery at the page boundary, preserving upgrade guidance, independent history and method content.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\components\\data-display\\UsageCard.tsx", "line": 314, "rule": "MDC-010 / MDC-012 / MDC-013 / mission 43", "detail": "Mounted top lists use fixed-white background tint, per-element text-xs/tracking classes and monospace truncation for explanatory prose. Footer at 357-359 uses hardcoded cyan and white hover decoration rather than canonical theme-aware action chrome. The page itself uses role typography and has no direct neon/glow styling.", "fix": "Modernize the existing UsageCard owner with neutral surface tokens, role typography and canonical navigation classes; keep semantic warning hues and all explanatory content. Do not add another spend card or reset selected chart colors.", "owner": "shared", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\lib\\workspaceScope.ts", "line": 165, "rule": "MDC-030 / MDC-032", "detail": "getWorkspaceRouteScope returns vehicle=true for this route because it is not in VEHICLE_DISABLED_PATHS or disabled prefixes, yet neither page hook accepts selected vehicle. RANGE_ENABLED_PATHS at 23 also omits it, while history explicitly owns a local range.", "fix": "Have the existing workspace integration owner disable misleading vehicle scope for this fleet-wide usage surface and reconcile historical range with header ownership; no fabricated vehicle filtering or second scope store.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 39, "rule": "MDC-045 / mission 33", "detail": "Category costs and displayed pricing are fixed client ratios; APIUsage supplies rate_source/disclaimer but no per-category rate contract. API disclaimer is validated yet displayed explanations use localized local text. No source inspection establishes equivalence to every backend pricing adjustment.", "fix": "Preserve current math, original source fields, total estimated_usd and all caveats; verify pricing and disclaimer semantics with existing backend owner before changing derivation or claiming invoice equivalence. Do not invent a rates endpoint.", "owner": "integration", "confidence": "medium"}
+  ],
+  "priority": {
+    "level": "high",
+    "first": ["Remove synthetic missing-data zeroes from accessible evidence", "Keep retained historical charts and exports on refresh failure", "Reconcile fleet-wide vehicle and date scope with the shared header owner"],
+    "next": ["Improve shared UsageCard wrapping, restrained theme-aware presentation and accessible links", "Add current-cycle recovery without gating independent sections"],
+    "acceptance": "Phase0 source audit only; no implementation or runtime acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Extend existing UsageCard long-form detail presentation and navigation",
+      "owner": "web\\src\\components\\data-display\\UsageCard.tsx",
+      "file": "web\\src\\components\\data-display\\UsageCard.tsx",
+      "line": 312,
+      "rule": "MDC-010 / MDC-013 / MDC-020 / MDC-040 / MDC-043",
+      "detail": "Existing spend owner needs source-prose wrapping, URL reachability, typography roles, neutral surface tokens and accessible canonical link chrome.",
+      "fix": "Extend existing owner rather than introduce another card.",
+      "confidence": "high",
+      "propsVariantsStates": ["Preserve details/topLists/footer/emptyMessage contracts", "Add an opt-in full-label wrapping mode if existing compact consumers require truncation", "Internal/external footer navigation keeps destinations and native semantics; 44px target and visible focus", "Long URLs, long localized source limitations, current/prior history, narrow widths and both themes"],
+      "usedBy": ["TeslaApiUsageCard full mode:81-113", "TeslaApiUsageCard compact mode:69-76", "AiUsageCard.tsx:217"],
+      "dependsOn": ["Existing neutral surface and typography tokens", "Existing canonical Button/link classes", "Focused shared owner tests and parent-centralized browser acceptance"]
+    },
+    {
+      "name": "Workspace scope reconciliation for fleet-wide historical usage",
+      "owner": "web\\src\\lib\\workspaceScope.ts",
+      "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx",
+      "line": 90,
+      "rule": "MDC-032",
+      "detail": "Date header ownership and misleading vehicle scope require integration beyond a page item's allowed source paths.",
+      "fix": "Reuse existing workspace selection owners with preservation-tested UTC historical semantics.",
+      "confidence": "high",
+      "propsVariantsStates": ["Register /tesla-api-usage for shared date scope where agreed", "Consume startInstant/endInstantExclusive through the existing typed historical hook", "Disable irrelevant fleet-wide vehicle selection", "Preserve local bucket control, current-cycle independence, all presets or equivalent reachable selections, UTC civil-date semantics and 366-day validation"],
+      "usedBy": ["/tesla-api-usage", "Existing WorkspaceHeader scope resolution"],
+      "dependsOn": ["Existing useRangeState and workspace URL preferences", "Explicit compatibility mapping between workspace timezone/rolling instants and existing UTC historical API bounds", "Backend bound semantics verification without adding capabilities"]
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 48, "rule": "MDC-002 / MDC-032", "detail": "Local date ownership competes with the documented workspace owner, even though it reuses the existing RangePicker primitive.", "fix": "Integrate owner rather than replace picker or add scope engine.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx", "line": 80, "rule": "MDC-002 / MDC-033", "detail": "No competing spend-card, stats, chart, theme or query library found in inspected dependencies: UsageCard, SystemSummaryBrief and ChartContainer already own the recurring patterns.", "fix": "Reuse/extend these existing owners; keep domain cost derivation and UTC conversion outside presentation primitives.", "owner": "page", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceHash": "3F158A23770D6F77F7A3D096EC1E5D0AEB2F48E6B8582AD6B85D9CC0F3A06B01",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 76,
+    "pageSpecificComponentLineCounts": {"TeslaApiUsageCard.tsx": 117, "TeslaApiUsageHistory.tsx": 208},
+    "pagePlusPageSpecificComponentsLineCount": 401,
+    "sectionCount": 3,
+    "sections": [
+      {"name": "Current cycle and prior periods", "file": "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx", "line": 32, "preserve": ["Current estimated USD", "Streaming signal count and rate", "Billable API-call count and total observed events", "Commands/data/wakes counts and rates", "Next UTC cycle date", "Every returned prior cycle date span, combined event count and estimate", "Source/limitations and rate_source", "Open API logs"]},
+      {"name": "Tesla usage history", "file": "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx", "line": 44, "preserve": ["UTC bounds, validation and daily/weekly grouping", "Selected estimate, signal count/cost, combined API requests, observed bucket count", "All four category counts and costs", "Selected-range cost distribution", "Sparse stacked historical cost trend", "Chart names, metadata, legends, fallback tables and exports"]},
+      {"name": "How the estimate is calculated", "file": "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx", "line": 54, "preserve": ["Locally observed Fleet Telemetry emissions and qualifying outbound API responses", "Retransmission deduplication explanation", "Missing delivery/audit undercount and Tesla adjustment limitations", "All four pricing ratios", "Fixed UTC 30-day window caveat, no assumed credit/rounding/invoice adjustment", "Actual rate_source or existing fallback URL"]}
+    ],
+    "sourceElementCounts": {"pageGlassPanel": 2, "historyGlassPanel": 1, "totalGlassPanel": 3, "totalChartContainer": 2, "cycleUsageCardSuccess": 1, "historyUsageCard": 1, "SystemSummaryBriefMounted": 2, "FadeIn": 3, "namedNativeSections": 2},
+    "actions": [
+      {"name": "Change historical range", "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 83, "detail": "RangePicker presets 7d/30d/90d/1y and custom inclusive UTC civil dates; min 2015-01-01 and max today."},
+      {"name": "Choose daily/weekly UTC grouping", "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 92, "detail": "Default day; weekly visible label specifies Monday start."},
+      {"name": "Retry distribution/history fetch", "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 136, "detail": "Each chart retries the same independent history query; callback is no-op while range invalid. Second retry at 167."},
+      {"name": "Export both charts and full supplied selected-range datasets", "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 146, "detail": "Distribution and history export filenames and complete exportData; ChartContainer:130-146 provides PNG/SVG/copy-image and CSV contract. Successful runtime execution unverified."},
+      {"name": "Historical series visibility/persistence and tooltips", "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx", "line": 170, "detail": "chartKey=tesla-usage-history, ChartLegend and hiddenSeries.isHidden per category at 199; retain selected preferences and all series. No fullscreen or annotation prop is enabled here."},
+      {"name": "Open API logs", "file": "web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx", "line": 113, "detail": "Internal /api-logs navigation in full mode; compact usage-page navigation at 47 is part of existing adapter compatibility, not a second mounted-page action."},
+      {"name": "Operational summary details", "file": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "line": 37, "detail": "Keep existing OperationalBrief delegation, source context, unscored confidence and limitations; internal drawer implementation/actions not inspected."}
+    ],
+    "dataBehavior": ["Keep independent cycle and history queries; cycle errors never hide methodology/history", "Keep current limit=12/offset=0 returned history without silently dropping periods or inventing pagination UI", "Keep all raw API fields, query keys, polling, AbortSignal and contract-error semantics", "Keep fixed current/prior UTC cycles separate from selected historical range", "Preserve counts and USD source measurements; no physical-unit migration required", "Do not fill sparse historical gaps with zero or equate missing totals with measured zero", "Keep both source estimated_usd and original category-derived cost semantics pending backend reconciliation", "Preserve locale/number/currency preferences, chart colors and legend persistence", "No mutation/authentication/export dataset scope change", "Keep every caveat and pricing reference; do not relabel local estimates as billed invoices"]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "method": "Bounded source-only Phase0 audit. Exact mounted route declaration inspected at App.tsx:690; no browser, production requests or mutations.",
+    "validation": "No Git, source edits, project TypeScript, lint, build or tests executed. The loaded audit skill script was inspected but not run because it unconditionally invokes project TypeScript, outside the design-contract concurrent audit validation scope.",
+    "sourceChecks": {
+      "command": "$files=@('web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx','web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx','web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx'); foreach($f in $files){ $s=Get-Content -LiteralPath $f -Raw; $lines=(Get-Content -LiteralPath $f).Count; $glass=([regex]::Matches($s,'<GlassPanel\\b')).Count; $charts=([regex]::Matches($s,'<ChartContainer\\b')).Count; $raw=([regex]::Matches($s,'<(button|input|textarea|select|table)\\b')).Count; $style=([regex]::Matches($s,'style=\\{\\{')).Count; $direct=([regex]::Matches($s,'from [''\"](recharts|react-leaflet|framer-motion)[''\"]')).Count; Write-Output \"$f | lines=$lines GlassPanel=$glass ChartContainer=$charts rawControls=$raw inlineStyles=$style directLibraryImports=$direct\" }; Get-FileHash -Algorithm SHA256 $files[0]",
+      "exitCode": 0,
+      "output": ["TeslaApiUsagePage.tsx | lines=76 GlassPanel=2 ChartContainer=0 rawControls=0 inlineStyles=0 directLibraryImports=0", "TeslaApiUsageCard.tsx | lines=117 GlassPanel=0 ChartContainer=0 rawControls=0 inlineStyles=0 directLibraryImports=0", "TeslaApiUsageHistory.tsx | lines=208 GlassPanel=1 ChartContainer=2 rawControls=0 inlineStyles=0 directLibraryImports=0", "SHA256 3F158A23770D6F77F7A3D096EC1E5D0AEB2F48E6B8582AD6B85D9CC0F3A06B01"],
+      "limits": "Pattern counts only, not full violations or runtime acceptance. Initial PowerShell count attempt exited 1 for quoting syntax; corrected rerun succeeded."
+    },
+    "tests": "TeslaApiUsagePage.test.tsx inspected for existing independent-section/route intent; tests mock domain children and were not executed or borrowed as current proof.",
+    "unknowns": ["Actual backend aggregation, ordering, deduplication, currency/pricing semantics and weekly alignment", "Shared RangePicker, Select, PageLayout, motion, generic feedback and OperationalBrief internals not exhaustively traced", "Theme/locale/RTL, chart exports, legend interactions, fallback table accessibility and extremes not exercised", "Shared sources can change concurrently; citations describe the inspected snapshot"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "docs\\frontend-audits\\audit-page-197.json",
+    "web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx",
+    "web\\src\\features\\system\\pages\\TeslaApiUsagePage.test.tsx",
+    "web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx",
+    "web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx",
+    "web\\src\\features\\system\\components\\status\\AiUsageCard.tsx",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\components\\data-display\\UsageCard.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\api\\hooks\\useTeslaUsage.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

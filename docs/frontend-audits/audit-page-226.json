@@ -1,0 +1,312 @@
+{
+  "item": "audit-page-226",
+  "phase": 0,
+  "mode": "read-only-source-audit",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\SoftwareUpdatesPage.tsx",
+  "routes": ["/software-updates", "/vehicle-systems/software"],
+  "identity": {
+    "component": "SoftwareUpdatesPage",
+    "routeOwner": "web\\src\\App.tsx",
+    "routeLines": [182, 646, 653],
+    "mount": "Both supplied routes lazy-mount the same page through SafeRoute; source-confirmed, not browser-confirmed.",
+    "rootSha256": "40509c8346c22f6901aeb333c589c207c60719fb00e9c5c357425de56b891106"
+  },
+  "purpose": "Inspect a selected vehicle's reported firmware versions, update lifecycle history, monthly cadence and optional Helix narration.",
+  "primaryGoal": "Understand reported software update events and follow public version-specific release notes without mistaking loaded history for independently verified installed firmware.",
+  "dataSources": [
+    {
+      "hook": "useSoftwareUpdatesPage",
+      "file": "web\\src\\api\\hooks\\useSoftwareUpdatesPage.ts",
+      "line": 14,
+      "endpoint": "GET /api/v1/software-updates",
+      "routeEvidence": "internal\\api\\router.go:4164",
+      "sourceOwner": "internal\\api\\softwareupdate\\handler.go:42; internal\\database\\system\\software_update_repo.go:23",
+      "parameters": ["vehicle_id", "limit=50", "offset=(page-1)*50", "start", "end"],
+      "queryKey": ["software-updates", "vehicleId", "page", "start", "end"],
+      "behavior": "Enabled only with non-null selected vehicle; abort signal forwarded; inherits query policy. Typed array includes id, vehicle_id, version, status and nullable schedule/install dates. Server normalizes nil results to []. SQL sorts by created_at descending and filters created_at. Offset is sent but ignored by this handler/repository.",
+      "ownership": "Page orchestrates; hook fetches; server owns durable history. No full-range aggregation endpoint established."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "sourceOwner": "web\\src\\api\\hooks\\useVehicles.ts:73-76",
+      "behavior": "Shared workspace selection resolves vehicle ID and an always-array vehicle list; page maps display_name with VIN fallback. This page does not render another vehicle selector."
+    },
+    {
+      "hook": "useAiStream",
+      "file": "web\\src\\components\\ai\\AISoftwareUpdateChangelogSummarizer.tsx",
+      "line": 134,
+      "endpoint": "POST /api/v1/ai/software-updates/summarize",
+      "routeEvidence": "internal\\ai\\features\\spa_wiring.go:413; internal\\api\\router.go:5099",
+      "sourceOwner": "Existing AI feature scaffold and feature registry",
+      "behavior": "Explicit opt-in request with positive integer vehicle_id; feature HOC hides it when off. Vehicle scope is stream identity. Page range and pagination are not sent to narration. Actual backend AI response behavior and route guard were not exercised."
+    },
+    {
+      "hook": "useRangeState / useNumberFormatting",
+      "file": "web\\src\\features\\vehicle-systems\\pages\\SoftwareUpdatesPage.tsx",
+      "line": 58,
+      "endpoint": null,
+      "sourceOwner": "Existing workspace preference and formatter infrastructure",
+      "behavior": "Both routes registered for header-owned date scope; hook ignores this page's legacy all-time default on header-owned routes. Number formatting subscribes to saved preferences. Dates/month buckets currently use browser timezone/locale."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout -> PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "Existing full-width shell-compatible page adapter and freshness metadata"},
+    {"name": "CardGrid / LayoutCard / ChartCard", "owner": "web\\src\\components\\layout\\layout-reference", "role": "Existing container-aware placement and chart host; reuse rather than create parallel cards"},
+    {"name": "VehicleOperationalBrief -> OperationalBrief", "owner": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx", "role": "Six source-valued metrics with unknown period, coverage explanation and retained/error labels"},
+    {"name": "SoftwareCadenceCard", "owner": "web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\SoftwareCadenceCard.tsx", "role": "Monthly bar chart, accessible data columns, local loading/error/empty states"},
+    {"name": "SoftwareUpdateStatusBreakdown -> MetricBar", "owner": "web\\src\\features\\vehicle-systems\\components\\SoftwareUpdateStatusBreakdown.tsx", "role": "Known-status counts with all-row denominator and labeled progressbars"},
+    {"name": "SoftwareHistoryItem", "owner": "web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\SoftwareHistoryItem.tsx", "role": "Version-labeled listitem preserving grid placement"},
+    {"name": "VehicleSourceContent -> SourceContent", "owner": "web\\src\\features\\vehicle-systems\\components\\VehicleSourceContent.tsx", "role": "Persistent section body and non-blocking retained/paused recovery"},
+    {"name": "Badge / Button / Pagination / Text / Caption / Skeleton / EmptyState / QueryError / FadeIn", "owner": "Existing category barrels", "role": "Canonical primitives, feedback and motion; underlying browser behavior not accepted by this audit"},
+    {"name": "AISoftwareUpdateChangelogSummarizer", "owner": "web\\src\\components\\ai\\AISoftwareUpdateChangelogSummarizer.tsx", "role": "Conditional existing AIFeatureCard; baseline deterministic sections remain independent"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\SoftwareCadenceCard.tsx",
+      "line": 12,
+      "rule": "MDC-002; mission section 4",
+      "detail": "Chart margins, radius, cursor, columns, rows and BarChart internals closely duplicate SoftwareUpdateCadenceChart.tsx:45-111. Page imports the older file only for CadencePoint, so this is duplicate source implementation, not proof of two mounted charts.",
+      "fix": "Keep a single feature-owned cadence chart body/data contract with the current canonical ChartCard host; prove other consumers before deleting anything.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceObservations": [
+      "Page uses full-width PageLayout and half-width summary cards; timeline uses quarter CardGrid items.",
+      "CardGrid.tsx:25-40 measures allocated container width and delegates row packing; SoftwareHistoryItem.tsx:8-12 preserves placement.",
+      "Version cards use min-w-0, wrapping badges, break-words vehicle caption and a fixed 44px external-link target at page:295-312.",
+      "Loading timeline uses viewport-based md/2xl/3xl columns at page:267, while loaded cards use container packing; geometry equivalence not established."
+    ],
+    "issues": [],
+    "verification": "UNVERIFIED at 320/375/390/430/768/1024/1280/1440/1920/2560, allocated narrow containers, 200% text, RTL and long version strings."
+  },
+  "accessibility": {
+    "sourceObservations": [
+      "Refresh has localized aria-label and decorative icon is hidden; release-note anchors use version-specific names, focus ring, target=_blank and noopener noreferrer.",
+      "Timeline has list/listitem roles; CardGrid adds intervening group/grid wrappers. Actual accessibility-tree list semantics require browser/screen-reader verification.",
+      "ChartCard receives ariaLabel and equivalent month/count columns. Status rows carry text labels/counts, not color alone.",
+      "Shared SourceContent has polite retained warning and keyboard-addressable retry; underlying focus/motion/forced-colors behavior not exercised."
+    ],
+    "issues": [],
+    "verification": "Keyboard, focus restoration, screen reader, effective contrast, reduced motion, forced colors and actual target spacing UNVERIFIED."
+  },
+  "states": {
+    "initialLoading": "softwareSourceState suppresses initial metrics and cadence; status/timeline skeletons remain inside persistent cards.",
+    "empty": "Successful [] is an observed zero count; version/install/cadence remain missing. Cadence, status and timeline show localized empty feedback.",
+    "unavailable": "No selected vehicle disables history query and offers manage-vehicles navigation; non-array payload is coerced for derivations and marked unavailable by presenter.",
+    "fatalError": "No retained array: retry feedback replaces source body, not every page section.",
+    "refreshError": "Retained array preserved; summary and cadence show failure context, status/timeline use historical SourceContent retained banner and retry.",
+    "offline": "historySource detects paused refresh for status and timeline, but presenter omits pause/freshness for summary and cadence.",
+    "ai": "Off-mode absence is intentional existing feature policy, not an unauthorized hidden deterministic section. Positive vehicle required; explicit action streams narration.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\SoftwareUpdatesPage.tsx",
+        "line": 72,
+        "rule": "MDC-026; mission section 25",
+        "detail": "Summary/cadence use softwareSourceState(data,isLoading,isError), which cannot represent retained paused/offline refresh. historySource handles this for status/timeline via VehicleSourceContent.tsx:17. Trust presentation differs for the same source.",
+        "fix": "Derive retained/blocked context from the existing DataState for every source-backed section while preserving arrays, unavailable handling and independent recovery. Do not fabricate offline measurements or replace retained content.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\SoftwareUpdatesPage.tsx",
+      "line": 297,
+      "rule": "MDC-010/MDC-012; mission sections 5-7",
+      "detail": "Timeline icon chips use neonColorMap backgrounds/rings and fixed 300-level text from tokens.ts:21-26. This is not a new hex palette or a glow call, but retains saturated feature decoration and fixed light text whose composed light-theme contrast is unverified.",
+      "fix": "Use existing restrained semantic status variables for chip icon/background/border, retaining icon and localized Badge meaning; never reset saved chart/theme choices.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\SoftwareUpdateStatusBreakdown.tsx",
+      "line": 72,
+      "rule": "MDC-010/MDC-034; mission sections 7/27",
+      "detail": "Known status bars pass fixed hex colors from softwareUpdateStatus.ts:36-78 and use MetricBar's default gradient. Existing MetricBar supports solid fills and CSS variables, so a new progress primitive is unnecessary.",
+      "fix": "Adopt existing semantic variables with fill='solid', retaining counts, denominator, order and text labels. Evaluate actual rendered contrast centrally.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\api\\hooks\\useSoftwareUpdatesPage.ts",
+      "line": 26,
+      "rule": "MDC-046; preservation of actions/data",
+      "detail": "Frontend sends offset and exposes Pagination, but handler.go:43 discards apiparams.Pagination's offset. Repository signatures and SQL software_update_repo.go:23-35,53-65 accept only limit, no OFFSET. Subsequent pages request the same leading rows; a full page keeps yielding synthetic next-page availability.",
+      "fix": "Integration owner must thread validated offset through repository/handler with deterministic pagination and tests, preserving array contract and filters; do not merely remove the page action.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\SoftwareUpdatesPage.tsx",
+      "line": 65,
+      "rule": "MDC-032/MDC-045",
+      "detail": "Page sends calendar start/end instead of startInstant/endInstantExclusive. useRangeState.ts:656-682 exposes precise rolling and timezone bounds, while apiparams/params.go:65-82 documents date-only UTC parsing. Rolling 24h and local-day semantics are therefore not forwarded.",
+      "fix": "Pass shared hook RFC3339 instant bounds through the typed query; include precise bounds in query identity/reset behavior, retaining cancellation and current request policy. Server already documents support for instant bounds; validate boundary behavior in integration.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\SoftwareUpdatesPage.tsx",
+      "line": 177,
+      "rule": "MDC-032/MDC-026",
+      "detail": "Empty recovery advertises 'View all time' but calls resetRange. On these header-owned routes useRangeState.ts:301-317 overrides defaultPresetId='all' with product default; reset at :484 resolves that effective default. The advertised action need not select all time.",
+      "fix": "Use existing shared setPreset('all') when available and atomically reset pagination, or relabel reset to its actual workspace default. Preserve header ownership and avoid a second picker.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\softwareUpdateStatus.ts",
+      "line": 98,
+      "rule": "MDC-025/MDC-026",
+      "detail": "Unknown wire statuses resolve to known 'available' metadata, so timeline displays a false lifecycle claim. SoftwareUpdateStatusBreakdown.tsx:39 filters to known keys only, omitting unknown rows from visible distribution while keeping them in denominator.",
+      "fix": "Preserve raw unknown status with localized unknown/future-status presentation and explicit uncategorized count; reuse Badge neutral variant and keep all-row denominator. Do not silently recategorize or drop future statuses.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\SoftwareUpdatesPage.tsx",
+      "line": 46,
+      "rule": "MDC-044; mission section 26",
+      "detail": "monthLabel uses browser locale directly; formatDate calls omit supported locale/timezone options, while numeric formatting subscribes to saved locale. Calendar bucket timezone is also browser-local, not an explicitly selected display timezone.",
+      "fix": "Use existing date/locale/timezone presentation mechanisms consistently at the boundary, preserving raw ISO timestamps and monthly operands; do not create another formatter.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Ignored pagination offset", "Workspace rolling/timezone bounds", "Truthful all-time recovery", "Unknown-status and paused-data trust", "Restrained palette and duplicate cadence ownership"],
+    "reason": "Source-confirmed data/navigation and trust inconsistencies outrank presentation polish."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse existing presentation contracts; no new shared API required by this page",
+      "existingOwnerFile": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "propsVariantsStates": ["fill='solid'", "color accepts semantic CSS variables", "value/max retain measurements and missing states", "SourceContent state='retained' with existing recovery"],
+      "usedBy": ["SoftwareUpdateStatusBreakdown", "SoftwareUpdatesPage status/timeline"],
+      "dependsOn": ["Existing semantic tokens", "Existing DataState", "Parent centralized visual/accessibility validation"],
+      "changeNeeded": false
+    },
+    {
+      "name": "Software history pagination contract",
+      "existingOwnerFile": "internal\\api\\softwareupdate\\handler.go",
+      "propsVariantsStates": ["Validated limit/offset passed to GetByVehicle and GetAll", "Preserve typed array response", "Stable order and range filters", "Empty/end-of-results behavior"],
+      "usedBy": ["useSoftwareUpdatesPage", "SoftwareUpdatesPage both route aliases"],
+      "dependsOn": ["internal\\database\\system\\software_update_repo.go", "Integration-owned focused pagination tests"],
+      "changeNeeded": true,
+      "owner": "integration"
+    }
+  ],
+  "competingImplementations": [
+    {"name": "Cadence chart implementations", "files": ["web\\src\\features\\vehicle-systems\\components\\SoftwareUpdateCadenceChart.tsx", "web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\SoftwareCadenceCard.tsx"], "finding": "Duplicate chart configuration/body; canonical ChartCard host is already present. Do not add another chart library or wrapper."},
+    {"name": "Source presentation adapters", "files": ["web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\presenter.ts", "web\\src\\api\\dataState.ts"], "finding": "Local array-shape availability adapter and shared historical DataState coexist; preserve their distinct null/array semantics while harmonizing paused trust."}
+  ],
+  "preservation": {
+    "sourceSha256": "40509c8346c22f6901aeb333c589c207c60719fb00e9c5c357425de56b891106",
+    "currentLineCount": 355,
+    "sectionCount": 5,
+    "sectionNames": ["Software update summary", "Update cadence", "By status", "Helix changelog summarizer (conditional opt-in)", "Update timeline"],
+    "majorSourceBlocks": 4,
+    "metricCount": 6,
+    "metricNames": ["Current version", "Total updates", "Installed", "Pending", "Last installed", "Avg cadence"],
+    "chartCount": 1,
+    "directGlassPanelCount": 0,
+    "directChartContainerCount": 0,
+    "directLayoutCardCount": 2,
+    "actions": ["Refresh source", "Retry source", "Reset range recovery", "Manage vehicles prerequisite navigation", "Version-specific public release-note link", "History pagination", "Opt-in Helix summarize/stream scaffold"],
+    "dataBehavior": [
+      "Query key and enablement/cancellation remain intact.",
+      "Counts describe loaded rows, not fleet/full-range aggregate. Existing help explicitly explains this scope.",
+      "Latest version is first returned row, not independently verified installed firmware; preserve its explicit limitation.",
+      "Installed count uses exact installed status; pending is every non-installed row.",
+      "Cadence raw numeric measurement is seconds; only display formatter divides by 86400. No physical SI wire/cache fields are changed.",
+      "Monthly counts use installed_at with created_at fallback, whereas server range filtering uses created_at. Preserve and explain these distinct meanings.",
+      "Last installed selects latest nonempty installed date; cadence uses only finite installed timestamps.",
+      "Unknown data must remain missing, not fabricated zero; successful [] yields observed count zero.",
+      "Keep every version/date/vehicle identity/status/release-note action and specialist explanation.",
+      "AI remains opt-in and independent of deterministic history; no request was invoked."
+    ]
+  },
+  "sourceInventory": [
+    {"file": "web\\src\\features\\vehicle-systems\\pages\\SoftwareUpdatesPage.tsx", "lines": 355, "sha256": "40509c8346c22f6901aeb333c589c207c60719fb00e9c5c357425de56b891106", "role": "root"},
+    {"file": "web\\src\\api\\hooks\\useSoftwareUpdatesPage.ts", "lines": 34, "sha256": "27f1189c30007d5c81f10da6a3048bbdc7bdcde3c2dddb9bfa886ac7eaa68c84", "role": "page data"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\presenter.ts", "lines": 16, "sha256": "70a24889bb6bfee43c0706cca0dbb96bd41e1bfeb166488dd413a434da4cb4dd", "role": "page state"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\SoftwareCadenceCard.tsx", "lines": 65, "sha256": "701e0a1ef7950c79f98aafe2fcf2ebe2697d664fcaf67d813db41e7e7343b946", "role": "mounted cadence"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\SoftwareHistoryItem.tsx", "lines": 14, "sha256": "81b70e6ca9566b01585b402ca1add8b8b950d4630c1570395b4a303182c50020", "role": "timeline cards"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\SoftwareUpdateStatusBreakdown.tsx", "lines": 80, "sha256": "e66e08c7ccb19ee64f900e90d17024bb5edd62f4022c721fd7e0f2d1b757f2b5", "role": "status distribution"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\softwareUpdateStatus.ts", "lines": 103, "sha256": "521c5ada9c157ee37037a1a5202b7bca7d307d347677f09eb62b7f06f12fd285", "role": "domain status metadata"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\SoftwareUpdateCadenceChart.tsx", "lines": 114, "sha256": "a255dfe4e65d9bf99807aa7fb107a588d41c2b3f267feef260cae33eae00992a", "role": "imported type and competing chart implementation"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\VehicleSourceContent.tsx", "lines": 32, "sha256": "5c2b70575adbfb361351c0a075ed15165cdfd36894c7a009454c1fd55990379d", "role": "feature trust adapter"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx", "lines": 73, "sha256": "563533fb54b38e658e80cbc494990fc9ea91f57db57cf4bdc1b96e08f9a5b0c4", "role": "feature summary adapter"},
+    {"file": "web\\src\\components\\ai\\AISoftwareUpdateChangelogSummarizer.tsx", "lines": 187, "sha256": "b14c1f732631ade27f7b678e60f096f50d36fe292b99ce57368b7ae28d28c5b1", "role": "page-specific AI dependency"}
+  ],
+  "evidenceLimits": {
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "sourceOnly": true,
+    "excluded": "No Git, queue/source/shared edits, installs, mutation requests, TypeScript, lint, build or full gates. Skill audit.sh inspected but not executed because it unconditionally invokes prohibited full TypeScript.",
+    "checks": [
+      {"command": "Scoped rg for style/raw controls/direct chart-map-motion libraries/old API imports/fixed white or neon text/double prefix/camelCase query", "exitCode": 0, "output": "One match: SoftwareUpdatesPage.tsx:257 AISoftwareUpdateChangelogSummarizer vehicleId prop. This is a React prop, not a URL query violation. Zero prohibited-pattern matches in the scanned root, modernization helpers, breakdown and page query hook.", "limit": "Literal source scan only; not semantic or full dependency certification."},
+      {"command": "Get-FileHash -Algorithm SHA256 and Get-Content line counts for root plus ten page dependencies", "exitCode": 0, "output": "Root SHA256 40509c8346c22f6901aeb333c589c207c60719fb00e9c5c357425de56b891106; 355 lines. Eleven source inventory entries recorded.", "limit": "Concurrent repository; dependency hashes reflect inventory read time, not an atomic whole-app snapshot."}
+    ],
+    "protocolDeviation": "Start, investigation and release heartbeats were written; the final report drafting interval exceeded the requested three-minute heartbeat cadence. No intermediate heartbeat timestamps were fabricated.",
+    "unknowns": [
+      "No backend query or browser route was executed; backend conclusions are limited to inspected handlers/repository SQL.",
+      "AI registry endpoint is source evidence, not current POST/SSE guard or stream acceptance.",
+      "Underlying complete shared rendering graph, catalog translations, actual installed firmware truth and whole-app consumer coverage are not established.",
+      "No historical receipts are treated as current acceptance."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\SoftwareUpdatesPage.tsx",
+    "web\\src\\api\\hooks\\useSoftwareUpdatesPage.ts",
+    "web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\presenter.ts",
+    "web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\SoftwareCadenceCard.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\software-updates-modernization\\SoftwareHistoryItem.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\SoftwareUpdateStatusBreakdown.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\softwareUpdateStatus.ts",
+    "web\\src\\features\\vehicle-systems\\components\\SoftwareUpdateCadenceChart.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\VehicleSourceContent.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\components\\ai\\AISoftwareUpdateChangelogSummarizer.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\softwareupdate\\handler.go",
+    "internal\\database\\system\\software_update_repo.go",
+    "internal\\api\\apiparams\\params.go",
+    "internal\\ai\\features\\spa_wiring.go",
+    "internal\\ai\\features\\registry.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-226.json", ".agent-status\\audit-page-226.txt"]
+}

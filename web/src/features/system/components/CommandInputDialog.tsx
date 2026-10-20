@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Input, Button, Heading, HelperText } from '@/components/ui';
 import type { CommandDef } from '../commands';
@@ -10,6 +10,8 @@ interface CommandInputDialogProps {
   def: CommandDef;
   vehicle?: { display_name: string };
   loading?: boolean;
+  disabled?: boolean;
+  validationNotice?: ReactNode;
 }
 
 /**
@@ -38,8 +40,8 @@ export function validateField(
         ? null
         : { key: 'commands.input.pin', fallback: 'Enter a 4-digit PIN' };
     case 'number': {
-      const num = parseInt(trimmed, 10);
-      if (isNaN(num) || String(num) !== trimmed)
+      const num = Number(trimmed);
+      if (!/^[+-]?\d+$/.test(trimmed) || !Number.isSafeInteger(num))
         return { key: 'commands.input.wholeNumber', fallback: 'Enter a whole number' };
       if (min != null && num < min)
         return { key: 'commands.input.min', fallback: 'Minimum: {{min}}', values: { min } };
@@ -48,8 +50,10 @@ export function validateField(
       return null;
     }
     case 'decimal': {
-      const num = parseFloat(trimmed);
-      if (isNaN(num))
+      // Command inputs use ungrouped ASCII digits and a dot decimal separator
+      // in every locale; never interpret a comma or a numeric prefix as a value.
+      const num = Number(trimmed);
+      if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed) || !Number.isFinite(num))
         return { key: 'commands.input.decimal', fallback: 'Enter a valid number' };
       if (min != null && num < min)
         return { key: 'commands.input.min', fallback: 'Minimum: {{min}}', values: { min } };
@@ -69,6 +73,8 @@ export function CommandInputDialog({
   def,
   vehicle,
   loading,
+  disabled = false,
+  validationNotice,
 }: CommandInputDialogProps) {
   const { t } = useTranslation();
   const ic = def.inputConfig!;
@@ -129,6 +135,7 @@ export function CommandInputDialog({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (loading || disabled) return;
     const newErrors: Record<string, FieldValidationError | null> = {};
     const newTouched: Record<string, boolean> = {};
     let valid = true;
@@ -149,7 +156,18 @@ export function CommandInputDialog({
 
     setErrors(newErrors);
     setTouched(newTouched);
-    if (valid) onSubmit(values);
+    if (valid) {
+      const submittedValues = { ...values };
+      for (const [name, value] of Object.entries(values)) {
+        const validation = fields ? fields.find(f => f.name === name)?.validation : ic.validation;
+        if (validation === 'number' || validation === 'decimal') {
+          submittedValues[name] = String(Number(value.trim()));
+        } else if (validation === 'pin') {
+          submittedValues[name] = value.trim();
+        }
+      }
+      onSubmit(submittedValues);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -196,6 +214,7 @@ export function CommandInputDialog({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {validationNotice}
           {fields ? (
             fields.map((field, i) => (
               <Input
@@ -216,7 +235,9 @@ export function CommandInputDialog({
           ) : (
             <Input
               ref={firstInputRef}
-              label={def.sublabelFallback ? t(def.sublabelKey ?? '', def.sublabelFallback) : undefined}
+              label={def.sublabelFallback
+                ? t(def.sublabelKey ?? '', def.sublabelFallback)
+                : t(ic.promptKey, ic.promptFallback)}
               placeholder={ic.defaultValue ?? ''}
               type={resolveInputType(ic.validation)}
               inputMode={resolveInputMode(ic.validation)}
@@ -244,7 +265,7 @@ export function CommandInputDialog({
               variant="primary"
               size="sm"
               loading={loading}
-              disabled={!isFormValid}
+              disabled={disabled || !isFormValid}
               className="bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 border border-neon-cyan/30"
             >
               {t('common.send', 'Send')}

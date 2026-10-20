@@ -73,6 +73,7 @@ export interface CreateIncidentPayload {
 export function createIncident(p: CreateIncidentPayload) {
   return request<Incident>(INCIDENTS_BASE, {
     method: 'POST',
+    requiresLiveMode: true,
     body: JSON.stringify(p),
     headers: { 'Content-Type': 'application/json' },
   })
@@ -90,6 +91,7 @@ export interface PatchIncidentPayload {
 export function patchIncident(id: number, p: PatchIncidentPayload) {
   return request<Incident>(`${INCIDENTS_BASE}/${id}`, {
     method: 'PATCH',
+    requiresLiveMode: true,
     body: JSON.stringify(p),
     headers: { 'Content-Type': 'application/json' },
   })
@@ -103,13 +105,14 @@ export interface AppendIncidentUpdatePayload {
 export function appendIncidentUpdate(id: number, p: AppendIncidentUpdatePayload) {
   return request<Incident>(`${INCIDENTS_BASE}/${id}/updates`, {
     method: 'POST',
+    requiresLiveMode: true,
     body: JSON.stringify(p),
     headers: { 'Content-Type': 'application/json' },
   })
 }
 
 export function deleteIncident(id: number) {
-  return request<void>(`${INCIDENTS_BASE}/${id}`, { method: 'DELETE' })
+  return request<void>(`${INCIDENTS_BASE}/${id}`, { method: 'DELETE', requiresLiveMode: true })
 }
 
 // ── React Query hooks ────────────────────────────────────────────
@@ -157,6 +160,7 @@ function invalidateIncidents(qc: ReturnType<typeof useQueryClient>) {
 export function useCreateIncident() {
   const qc = useQueryClient()
   return useMutation({
+    networkMode: 'always',
     mutationFn: createIncident,
     onSuccess: () => invalidateIncidents(qc),
   })
@@ -165,6 +169,7 @@ export function useCreateIncident() {
 export function usePatchIncident() {
   const qc = useQueryClient()
   return useMutation({
+    networkMode: 'always',
     mutationFn: ({ id, payload }: { id: number; payload: PatchIncidentPayload }) =>
       patchIncident(id, payload),
     onSuccess: () => invalidateIncidents(qc),
@@ -174,6 +179,7 @@ export function usePatchIncident() {
 export function useAppendIncidentUpdate() {
   const qc = useQueryClient()
   return useMutation({
+    networkMode: 'always',
     mutationFn: ({ id, payload }: { id: number; payload: AppendIncidentUpdatePayload }) =>
       appendIncidentUpdate(id, payload),
     onSuccess: () => invalidateIncidents(qc),
@@ -183,6 +189,7 @@ export function useAppendIncidentUpdate() {
 export function useDeleteIncident() {
   const qc = useQueryClient()
   return useMutation({
+    networkMode: 'always',
     mutationFn: deleteIncident,
     onSuccess: () => invalidateIncidents(qc),
   })

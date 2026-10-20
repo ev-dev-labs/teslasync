@@ -39,7 +39,7 @@ describe('CollapsibleCommandGroup', () => {
 
   it('renders collapsed by default: label + count shown, panel hidden, aria-expanded=false, no aria-controls', () => {
     renderGroup({ count: 3 });
-    const button = screen.getByRole('button', { name: /security & access/i });
+    const button = screen.getByRole('button', { name: /Security & access/i });
     expect(button).toHaveAttribute('aria-expanded', 'false');
     expect(button).not.toHaveAttribute('aria-controls');
     expect(button.textContent).toContain('(3)');

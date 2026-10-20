@@ -31,7 +31,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -100,8 +100,8 @@ vi.mock('@/components/charts', async (importActual) => {
 // Timeline + health cards — prop-capturing stubs echo the threaded row so the
 // page's mapping (one card per anomaly / per health category) is assertable.
 vi.mock('../components/anomaly-dashboard', () => ({
-  AnomalyTimelineCard: ({ anomaly }: { anomaly: { signal: string; severity: string; message: string } }) => (
-    <li data-testid="anomaly-card">{`${anomaly.signal}|${anomaly.severity}|${anomaly.message}`}</li>
+  AnomalyTimelineCard: ({ anomaly }: { anomaly: { signal: string; severity: string; message: string; value: number; baseline: number; z_score: number } }) => (
+    <li data-testid="anomaly-card" data-value={anomaly.value} data-baseline={anomaly.baseline} data-z-score={anomaly.z_score}>{`${anomaly.signal}|${anomaly.severity}|${anomaly.message}`}</li>
   ),
   SystemHealthCard: ({ category, status }: { category: string; status: string }) => (
     <li data-testid="health-card">{`${category}:${status}`}</li>
@@ -139,6 +139,7 @@ import { request } from '@/api/client';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import type { AnomalyData, AnomalyEntry } from '@/api/hooks/useAnomalies';
 import type { Vehicle } from '@/types/vehicle';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import AnomalyDashboardPage from './AnomalyDashboardPage';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
@@ -199,10 +200,9 @@ function anomaliesPaths(): string[] {
     .filter((p) => typeof p === 'string' && p.startsWith('/analytics/anomalies'));
 }
 
-function renderPage() {
-  const client = new QueryClient({
+function renderPage(client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  })) {
   return render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
@@ -221,19 +221,97 @@ beforeEach(() => {
 });
 
 describe('AnomalyDashboardPage', () => {
+  it('opens the real operational review drawer with the independent detector and anomaly windows intact', async () => {
+    mockedRequest.mockResolvedValue(makeData());
+    renderPage();
+    const summary = screen.getByTestId('anomaly-summary');
+    await within(summary).findByText('42');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Signals monitored')).toBeInTheDocument();
+    expect(within(drawer).getByText('Anomalies (7d)')).toBeInTheDocument();
+    expect(within(drawer).getByText('Anomalies (24h)')).toBeInTheDocument();
+    expect(drawer).toHaveTextContent('Last 7 days');
+    expect(drawer).toHaveTextContent('Last 24 hours');
+    expect(drawer).toHaveTextContent('Current detector snapshot');
+    expect(drawer).toHaveTextContent('Coverage and health categories describe the current detector snapshot.');
+  });
+
+  it('uses four canonical typed counts with independent snapshot, seven-day and daily scopes', async () => {
+    mockedRequest.mockResolvedValue(makeData({ signals_monitored: 12345 }));
+    const { container } = renderPage();
+    const summary = screen.getByTestId('anomaly-summary');
+    await within(summary).findByText('12345');
+    expect(summary).toHaveAttribute('data-operational-brief');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    assertOperationalBriefDisclosure(summary, 'Current snapshot · last 7 days · last 24 hours');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getAllByText('Current detector snapshot')).toHaveLength(2);
+    expect(within(drawer).getByText('Last 7 days')).toBeInTheDocument();
+    expect(within(drawer).getByText('Last 24 hours')).toBeInTheDocument();
+    expect(container.querySelector('[data-role="metric-card"]')).toBeNull();
+    expect(container.querySelector('[data-stat-strip]')).toBeNull();
+    expect(screen.getAllByTestId('anomaly-card')).toHaveLength(3);
+    expect(screen.getAllByTestId('health-card')).toHaveLength(3);
+  });
+
+  it('distinguishes absent source counts from reported zero without removing any summary label', async () => {
+    selectVehicle(null, []);
+    const { unmount } = renderPage();
+    const emptySummary = screen.getByTestId('anomaly-summary');
+    expect(emptySummary).toHaveTextContent('No metric values are available yet.');
+    for (const label of ['Signals monitored', 'Anomalies (7d)', 'Anomalies (24h)', 'Health categories']) {
+      expect(within(emptySummary).getByText(label)).toBeInTheDocument();
+      assertOperationalMetricUnavailable(emptySummary, label);
+    }
+    unmount();
+    selectVehicle(7);
+    mockedRequest.mockResolvedValue(makeData({
+      signals_monitored: 0, anomalies_last_7d: 0, anomalies_last_24h: 0, health_summary: {},
+    }));
+    renderPage();
+    const summary = screen.getByTestId('anomaly-summary');
+    await waitFor(() => expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(4));
+    expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    for (const value of summary.querySelectorAll('[data-operational-value]')) expect(value).toHaveTextContent(/^0$/);
+  });
+
+  it('preserves frequency, health and diagnostic cards after a failed refresh', async () => {
+    mockedRequest.mockResolvedValueOnce(makeData()).mockRejectedValue(new Error('refresh failed'));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(client);
+    await screen.findByTestId('freq-bar-chart');
+    await act(async () => { await client.invalidateQueries({ queryKey: ['anomalies', '7', 7] }); });
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('freq-bar-chart')).toHaveAttribute('data-rows', '2');
+    expect(screen.getAllByTestId('health-card')).toHaveLength(3);
+    expect(screen.getAllByTestId('anomaly-card')).toHaveLength(3);
+    expect(within(screen.getByRole('region', { name: 'Summary metrics' })).getByText('42')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('anomaly-summary'), 'Showing retained measurements');
+
+    mockedRequest.mockResolvedValue(makeData({ signals_monitored: 43 }));
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(await within(screen.getByTestId('anomaly-summary')).findByText('43')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('anomaly-summary'), 'Detector snapshot available');
+    expect(screen.getAllByTestId('anomaly-card')).toHaveLength(3);
+    expect(screen.getAllByTestId('health-card')).toHaveLength(3);
+  });
+
   it('renders the shell — heading, subtitle, three labelled regions, and the page title — and issues no request when no vehicle is scoped', () => {
     selectVehicle(null, []);
 
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Anomaly Detection' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Anomaly detection' })).toBeInTheDocument();
     expect(
       screen.getByText('Automatic health monitoring and signal anomaly detection'),
     ).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Summary metrics' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'AI insights' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Anomaly overview' })).toBeInTheDocument();
-    expect(document.title).toContain('Anomaly Detection');
+    expect(document.title).toContain('Anomaly detection');
     // useAnomalies(null) is disabled — the network seam is never touched.
     expect(mockedRequest).not.toHaveBeenCalled();
   });
@@ -253,19 +331,23 @@ describe('AnomalyDashboardPage', () => {
 
     // KPI band never blanks — it renders its labels even with nothing scoped.
     const kpi = screen.getByRole('region', { name: 'Summary metrics' });
-    expect(within(kpi).getByText('Signals Monitored')).toBeInTheDocument();
+    expect(within(kpi).getByText('Signals monitored')).toBeInTheDocument();
 
     // `selectedId ?? undefined` is threaded to both AI cards.
     expect(screen.getByTestId('ai-explanations')).toHaveAttribute('data-vehicle-id', 'undefined');
     expect(screen.getByTestId('ai-baselines')).toHaveAttribute('data-vehicle-id', 'undefined');
   });
 
-  it('with a vehicle + a pending query: shows the stat-grid skeleton, no empty/chart content, and fires the request', async () => {
+  it('with a vehicle + a pending query: shows canonical strip loading tiles, no empty/chart content, and fires the request', async () => {
     mockedRequest.mockImplementation(() => new Promise(() => {})); // never resolves
 
     renderPage();
 
-    expect(screen.getByTestId('stat-grid-skeleton')).toBeInTheDocument();
+    const summary = screen.getByTestId('anomaly-summary');
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    assertOperationalBriefDisclosure(summary, 'Loading');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(summary.querySelector('[data-operational-value]')).toBeNull();
     expect(screen.queryByTestId('freq-bar-chart')).not.toBeInTheDocument();
     expect(screen.queryByTestId('anomaly-card')).not.toBeInTheDocument();
     // No empty state leaks in while loading.
@@ -284,7 +366,7 @@ describe('AnomalyDashboardPage', () => {
     // header freshness chip.
     const kpi = screen.getByRole('region', { name: 'Summary metrics' });
     expect(await within(kpi).findByText('42')).toBeInTheDocument(); // signals_monitored
-    expect(within(kpi).getByText('Signals Monitored')).toBeInTheDocument();
+    expect(within(kpi).getByText('Signals monitored')).toBeInTheDocument();
     expect(within(kpi).getByText('5')).toBeInTheDocument(); // anomalies_last_7d
     expect(within(kpi).getByText('3')).toBeInTheDocument(); // 3 health categories
 
@@ -361,7 +443,7 @@ describe('AnomalyDashboardPage', () => {
       screen.getByText('Health data will appear once telemetry is available.'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('No anomalies detected — all systems normal.'),
+      screen.getByText('No data available yet.'),
     ).toBeInTheDocument();
 
     expect(screen.queryByTestId('freq-bar-chart')).not.toBeInTheDocument();
@@ -370,6 +452,11 @@ describe('AnomalyDashboardPage', () => {
     expect(
       screen.queryByText('Select a vehicle to view its anomaly analysis.'),
     ).not.toBeInTheDocument();
+    const summary = screen.getByTestId('anomaly-summary');
+    assertOperationalBriefDisclosure(summary, 'Detector snapshot available');
+    expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    for (const value of summary.querySelectorAll('[data-operational-value]')) expect(value).toHaveTextContent(/^0$/);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
   });
 
   it('on query failure: shows a retryable error in all three data sections, keeps the KPI band, and refetches when Retry is clicked', async () => {
@@ -390,6 +477,43 @@ describe('AnomalyDashboardPage', () => {
     expect(mockedRequest).toHaveBeenCalledTimes(1);
     fireEvent.click(retries[0]);
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+  });
+
+  it('never infers category coverage from a nonzero monitored total or legacy normal statuses', async () => {
+    mockedRequest.mockResolvedValue(makeData({
+      anomalies: [], signals_monitored: 42, health_summary: { battery: 'normal', tires: 'unknown' },
+    }));
+    renderPage();
+    expect(await screen.findByText('battery:unknown')).toBeInTheDocument();
+    expect(screen.getByText('tires:unknown')).toBeInTheDocument();
+    expect(screen.queryByText(/all systems normal/i)).not.toBeInTheDocument();
+    for (const name of ['Most frequent anomalies', 'System health', 'Anomaly timeline']) {
+      expect(screen.getByRole('region', { name })).toBeInTheDocument();
+    }
+  });
+
+  it('preserves signed and fractional anomaly evidence', async () => {
+    mockedRequest.mockResolvedValue(makeData({
+      anomalies: [makeAnomaly({ signal: 'OutsideTemp', value: -0.125, baseline: 0, z_score: 3.25 })],
+    }));
+    renderPage();
+    expect(await screen.findByTestId('anomaly-card')).toHaveTextContent('OutsideTemp');
+    expect(screen.getByTestId('anomaly-card')).toHaveAttribute('data-value', '-0.125');
+    expect(screen.getByTestId('anomaly-card')).toHaveAttribute('data-baseline', '0');
+    expect(screen.getByTestId('anomaly-card')).toHaveAttribute('data-z-score', '3.25');
+    expect(screen.getByTestId('freq-row')).toHaveAttribute('data-count', '1');
+  });
+
+  it('keeps invalid source counts distinct from measured zero', async () => {
+    mockedRequest.mockResolvedValue(makeData({
+      signals_monitored: Number.NaN, anomalies_last_7d: -1, anomalies_last_24h: 0,
+    }));
+    renderPage();
+    const summary = screen.getByTestId('anomaly-summary');
+    await within(summary).findByText('0');
+    expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
+    assertOperationalMetricUnavailable(summary, 'Signals monitored');
+    assertOperationalMetricUnavailable(summary, 'Anomalies (7d)');
   });
 
   it('requests the SI anomalies endpoint with a snake_case vehicle_id, no /api/v1 prefix, and a days window', async () => {
@@ -419,5 +543,152 @@ describe('AnomalyDashboardPage', () => {
     expect(
       await screen.findByRole('img', { name: 'Bar chart of the most frequently anomalous signals' }),
     ).toBeInTheDocument();
+  });
+
+
+  it('keeps independently named diagnostic panels and level-two headings reachable without a vehicle', () => {
+    selectVehicle(null, []);
+    renderPage();
+
+    for (const name of ['Most frequent anomalies', 'System health', 'Anomaly timeline']) {
+      const panel = screen.getByRole('region', { name });
+      expect(within(panel).getByRole('heading', { level: 2, name })).toBeInTheDocument();
+      expect(within(panel).getByText('Select a vehicle to view its anomaly analysis.')).toBeInTheDocument();
+    }
+    expect(screen.getByRole('region', { name: 'AI insights' })).toBeInTheDocument();
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes initially paused acquisition from retained data and recovers the detector snapshot', async () => {
+    const { onlineManager } = await import('@tanstack/react-query');
+    const wasOnline = onlineManager.isOnline();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    mockedRequest.mockResolvedValue(makeData());
+    onlineManager.setOnline(false);
+    const view = renderPage(client);
+    try {
+      const timeline = screen.getByRole('region', { name: 'Anomaly timeline' });
+      expect(within(timeline).getByText('Refresh paused')).toBeInTheDocument();
+      const summary = screen.getByTestId('anomaly-summary');
+      assertOperationalBriefDisclosure(summary, 'Refresh paused');
+      expect(summary).not.toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByText('Showing retained measurements')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+      expect(screen.queryByText('No data available yet.')).not.toBeInTheDocument();
+      expect(screen.queryByText('No anomalies detected — all systems normal.')).not.toBeInTheDocument();
+      expect(screen.getByTestId('anomaly-summary')).toHaveTextContent('No metric values are available yet.');
+      for (const label of ['Signals monitored', 'Anomalies (7d)', 'Anomalies (24h)', 'Health categories']) {
+        assertOperationalMetricUnavailable(screen.getByTestId('anomaly-summary'), label);
+      }
+      expect(screen.getByRole('region', { name: 'Most frequent anomalies' })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'System health' })).toBeInTheDocument();
+      expect(mockedRequest).not.toHaveBeenCalled();
+      await act(async () => { onlineManager.setOnline(true); });
+      expect(await within(summary).findByText('42')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(summary, 'Detector snapshot available');
+      expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+      expect(within(timeline).getAllByTestId('anomaly-card')).toHaveLength(3);
+    } finally {
+      view.unmount();
+      client.clear();
+      onlineManager.setOnline(wasOnline);
+    }
+  });
+
+  it('retains the snapshot during a paused refresh without inventing an offline cause and recovers', async () => {
+    const { onlineManager } = await import('@tanstack/react-query');
+    const wasOnline = onlineManager.isOnline();
+    mockedRequest.mockResolvedValueOnce(makeData()).mockResolvedValueOnce(makeData({ signals_monitored: 43 }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = renderPage(client);
+    try {
+      await screen.findByTestId('freq-bar-chart');
+      act(() => {
+        onlineManager.setOnline(false);
+        void client.invalidateQueries({ queryKey: ['anomalies', '7', 7] });
+      });
+      const warning = await screen.findByTestId('stale-refresh-warning');
+      expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+      const summary = screen.getByTestId('anomaly-summary');
+      assertOperationalBriefDisclosure(summary, 'Showing retained measurements');
+      expect(within(summary).getByText('42')).toBeInTheDocument();
+      expect(summary).not.toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByTestId('freq-bar-chart')).toHaveAttribute('data-rows', '2');
+      expect(screen.getAllByTestId('health-card')).toHaveLength(3);
+      expect(screen.getAllByTestId('anomaly-card')).toHaveLength(3);
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+      expect(mockedRequest).toHaveBeenCalledTimes(1);
+
+      await act(async () => { onlineManager.setOnline(true); });
+      expect(await within(summary).findByText('43')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(summary, 'Detector snapshot available');
+      expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      expect(screen.queryByText('Showing retained measurements')).not.toBeInTheDocument();
+    } finally {
+      view.unmount();
+      client.clear();
+      onlineManager.setOnline(wasOnline);
+    }
+  });
+
+  it('keeps returned frequency and timeline evidence while an absent health payload remains unknown', async () => {
+    const partial: Partial<AnomalyData> = {
+      anomalies: [makeAnomaly({ signal: 'regen_power', value: -42000, baseline: -39000 })],
+      signals_monitored: 4,
+      anomalies_last_7d: 1,
+      anomalies_last_24h: 0,
+    };
+    mockedRequest.mockResolvedValue(partial);
+    renderPage();
+
+    const frequency = screen.getByRole('region', { name: 'Most frequent anomalies' });
+    expect(await within(frequency).findByTestId('freq-bar-chart')).toHaveAttribute('data-rows', '1');
+    expect(within(frequency).getByTestId('freq-row')).toHaveAttribute('data-signal', 'regen_power');
+    const health = screen.getByRole('region', { name: 'System health' });
+    expect(within(health).getByText('Health data will appear once telemetry is available.')).toBeInTheDocument();
+    expect(within(health).queryByTestId('health-card')).not.toBeInTheDocument();
+    const timeline = screen.getByRole('region', { name: 'Anomaly timeline' });
+    expect(within(timeline).getAllByTestId('anomaly-card')).toHaveLength(1);
+    expect(screen.getByTestId('anomaly-summary').querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
+    assertOperationalMetricUnavailable(screen.getByTestId('anomaly-summary'), 'Health categories');
+    expect(within(screen.getByTestId('anomaly-summary')).getByText('0')).toBeInTheDocument();
+  });
+
+  it('retains every populated diagnostic panel while a background detector refresh is pending', async () => {
+    let finishRefresh: (value: AnomalyData) => void = () => { throw new Error('Refresh has not started'); };
+    mockedRequest.mockResolvedValueOnce(makeData()).mockImplementationOnce(() => new Promise<AnomalyData>((resolve) => {
+      finishRefresh = resolve;
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(client);
+    await screen.findByTestId('freq-bar-chart');
+    act(() => { void client.invalidateQueries({ queryKey: ['anomalies', '7', 7] }); });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+
+    expect(within(screen.getByRole('region', { name: 'Most frequent anomalies' })).getByTestId('freq-bar-chart')).toHaveAttribute('data-rows', '2');
+    expect(within(screen.getByRole('region', { name: 'System health' })).getAllByTestId('health-card')).toHaveLength(3);
+    expect(within(screen.getByRole('region', { name: 'Anomaly timeline' })).getAllByTestId('anomaly-card')).toHaveLength(3);
+    expect(screen.getByTestId('anomaly-summary')).not.toHaveAttribute('aria-busy', 'true');
+    expect(within(screen.getByTestId('anomaly-summary')).getByText('42')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+
+    await act(async () => { finishRefresh(makeData({ signals_monitored: 43 })); });
+    expect(await within(screen.getByTestId('anomaly-summary')).findByText('43')).toBeInTheDocument();
+  });
+
+  it('recovers all diagnostic panels through the timeline retry without changing the selected vehicle or detector window', async () => {
+    mockedRequest.mockRejectedValueOnce(new Error('detector unavailable')).mockResolvedValueOnce(makeData());
+    renderPage();
+    const timeline = screen.getByRole('region', { name: 'Anomaly timeline' });
+    fireEvent.click(await within(timeline).findByRole('button', { name: 'Retry' }));
+    expect(await screen.findByTestId('freq-bar-chart')).toHaveAttribute('data-rows', '2');
+    expect(within(timeline).getAllByTestId('anomaly-card')).toHaveLength(3);
+    expect(within(screen.getByRole('region', { name: 'System health' })).getAllByTestId('health-card')).toHaveLength(3);
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(anomaliesPaths()).toEqual([
+      '/analytics/anomalies?vehicle_id=7&days=7',
+      '/analytics/anomalies?vehicle_id=7&days=7',
+    ]);
   });
 });

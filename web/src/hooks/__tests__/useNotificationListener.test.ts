@@ -18,14 +18,26 @@ const h = vi.hoisted(() => ({
   playSound: vi.fn(),
   getSoundPrefs: vi.fn(() => ({ master: true })),
   permission: 'granted' as NotificationPermission,
+  realWebPush: false,
 }))
 
 // ── Mock: useWebPush — control permission + capture sendNotification calls ──
-vi.mock('../useWebPush', () => ({
-  useWebPush: () => ({
+vi.mock('../useWebPush', async () => {
+  vi.stubGlobal('Notification', Object.assign(vi.fn(), {
+    permission: 'default' as NotificationPermission,
+    requestPermission: vi.fn(),
+  }))
+  const actual = await vi.importActual<typeof import('../useWebPush')>('../useWebPush')
+  return { useWebPush: () => h.realWebPush ? actual.useWebPush() : ({
     permission: h.permission,
     sendNotification: h.sendNotification,
-  }),
+  }) }
+})
+
+vi.mock('@/api/hooks/usePush', () => ({
+  usePushPublicKey: () => ({ data: undefined }),
+  useSubscribePush: () => ({ mutateAsync: vi.fn() }),
+  useUnsubscribePush: () => ({ mutateAsync: vi.fn() }),
 }))
 
 // ── Mock: react-router-dom — stub useNavigate (no Router context in renderHook) ──
@@ -69,7 +81,9 @@ vi.mock('@/lib/notificationSound', async () => {
   }
 })
 
-import { useNotificationListener } from '../useNotificationListener'
+import { useBrowserNotificationPrefs, useNotificationListener } from '../useNotificationListener'
+import { getNotificationSoundPrefs, setNotificationSoundPrefs } from '@/lib/notificationSound'
+import { useWebPush } from '../useWebPush'
 
 type SendArgs = [string, { body?: string; tag?: string }, (() => void)?]
 const sendCall = (i = 0) => h.sendNotification.mock.calls[i] as SendArgs
@@ -90,8 +104,11 @@ describe('useNotificationListener', () => {
     h.sendNotification.mockClear()
     h.navigate.mockClear()
     h.playSound.mockClear()
-    h.getSoundPrefs.mockClear()
+    h.getSoundPrefs.mockReset()
+    h.getSoundPrefs.mockImplementation(() => ({ master: true }))
     h.permission = 'granted'
+    h.realWebPush = false
+    vi.mocked(Notification.requestPermission).mockClear()
     localStorage.clear()
     // Notifications only fire while the tab is backgrounded.
     setHidden(true)
@@ -100,6 +117,7 @@ describe('useNotificationListener', () => {
   afterEach(() => {
     setHidden(false)
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   describe('preference loading + normalisation', () => {
@@ -139,6 +157,46 @@ describe('useNotificationListener', () => {
   })
 
   describe('setPrefs', () => {
+    it('shares updates with shell delivery after the settings instance unmounts', () => {
+      const shell = renderHook(() => useNotificationListener())
+      const settings = renderHook(() => useBrowserNotificationPrefs())
+      expect(h.sseListeners.get('alert')?.size).toBe(2)
+
+      act(() => settings.result.current.setPrefs((prev) => ({ ...prev, alerts: false })))
+      expect(shell.result.current.prefs.alerts).toBe(false)
+      settings.unmount()
+      act(() => fire('alert', { id: 1, severity: 'warning' }))
+      expect(h.sendNotification).not.toHaveBeenCalled()
+      expect(h.playSound).toHaveBeenCalledTimes(1)
+
+      act(() => shell.result.current.setPrefs((prev) => ({ ...prev, alerts: true })))
+      act(() => fire('alert', { id: 2, severity: 'warning' }))
+      expect(h.sendNotification).toHaveBeenCalledTimes(1)
+      expect(h.playSound).toHaveBeenCalledTimes(2)
+    })
+
+    it('shares other-tab changes and storage clearing across mounted instances', () => {
+      const shell = renderHook(() => useNotificationListener())
+      const settings = renderHook(() => useBrowserNotificationPrefs())
+      act(() => {
+        localStorage.setItem(PREFS_KEY, JSON.stringify({ alerts: false, exportStatus: false }))
+        window.dispatchEvent(new StorageEvent('storage', { key: PREFS_KEY, storageArea: localStorage }))
+      })
+      expect(shell.result.current.prefs).toEqual({ alerts: false, exportStatus: false })
+      expect(settings.result.current.prefs).toEqual(shell.result.current.prefs)
+      settings.unmount()
+      act(() => {
+        fire('alert', { id: 1 })
+        fire('export_status', { status: 'ready', filename: 'drives.csv' })
+      })
+      expect(h.sendNotification).not.toHaveBeenCalled()
+      act(() => {
+        localStorage.clear()
+        window.dispatchEvent(new StorageEvent('storage', { key: null, storageArea: localStorage }))
+      })
+      expect(shell.result.current.prefs).toEqual({ alerts: true, exportStatus: true })
+    })
+
     it('updates state and persists to localStorage', () => {
       const { result } = renderHook(() => useNotificationListener())
       act(() => {
@@ -176,6 +234,72 @@ describe('useNotificationListener', () => {
   })
 
   describe('SSE subscription lifecycle', () => {
+    it('shares user-requested permission with mounted delivery and device hooks', async () => {
+      h.realWebPush = true
+      Object.defineProperty(Notification, 'permission', { configurable: true, value: 'default' })
+      const request = vi.spyOn(Notification, 'requestPermission').mockImplementation(async () => {
+        Object.defineProperty(Notification, 'permission', { configurable: true, value: 'granted' })
+        return 'granted'
+      })
+      const shell = renderHook(() => useNotificationListener())
+      const settings = renderHook(() => useWebPush())
+      const device = renderHook(() => useWebPush())
+      expect(request).not.toHaveBeenCalled()
+      expect(h.sseListeners.get('export_status')?.size ?? 0).toBe(0)
+
+      await act(async () => { await settings.result.current.requestPermission() })
+      expect(request).toHaveBeenCalledTimes(1)
+      expect(device.result.current.permission).toBe('granted')
+      expect(h.sseListeners.get('export_status')?.size).toBe(1)
+      const notification = vi.mocked(Notification)
+      notification.mockClear()
+      act(() => fire('export_status', { status: 'ready', filename: 'drives.csv' }))
+      expect(notification).toHaveBeenCalledWith('Export Ready', expect.objectContaining({
+        body: 'drives.csv is ready for download',
+        tag: 'export-ready',
+      }))
+      settings.unmount()
+      act(() => {
+        Object.defineProperty(Notification, 'permission', { configurable: true, value: 'denied' })
+        window.dispatchEvent(new Event('focus'))
+      })
+      expect(device.result.current.permission).toBe('denied')
+      expect(h.sseListeners.get('export_status')?.size).toBe(0)
+      expect(h.sseListeners.get('alert')?.size).toBe(1)
+      notification.mockClear()
+      act(() => fire('export_status', { status: 'ready', filename: 'blocked.csv' }))
+      expect(notification).not.toHaveBeenCalled()
+      expect(request).toHaveBeenCalledTimes(1)
+      shell.unmount()
+      device.unmount()
+    })
+
+    it('observes browser settings changes without prompting and cleans up its shared poll', () => {
+      vi.useFakeTimers()
+      h.realWebPush = true
+      Object.defineProperty(Notification, 'permission', { configurable: true, value: 'granted' })
+      const request = vi.spyOn(Notification, 'requestPermission')
+      const shell = renderHook(() => useNotificationListener())
+      const device = renderHook(() => useWebPush())
+      expect(vi.getTimerCount()).toBe(1)
+      act(() => {
+        Object.defineProperty(Notification, 'permission', { configurable: true, value: 'denied' })
+        vi.advanceTimersByTime(1000)
+      })
+      expect(device.result.current.permission).toBe('denied')
+      expect(h.sseListeners.get('export_status')?.size).toBe(0)
+      expect(request).not.toHaveBeenCalled()
+      act(() => {
+        Object.defineProperty(Notification, 'permission', { configurable: true, value: 'granted' })
+        document.dispatchEvent(new Event('visibilitychange'))
+      })
+      expect(device.result.current.permission).toBe('granted')
+      expect(h.sseListeners.get('export_status')?.size).toBe(1)
+      shell.unmount()
+      device.unmount()
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
     it('subscribes the notification + sound alert handlers and export_status when permitted', () => {
       const { unmount } = renderHook(() => useNotificationListener())
       // One alert handler for OS notifications, one for the audio cue.
@@ -369,6 +493,31 @@ describe('useNotificationListener', () => {
   })
 
   describe('per-channel sound cues', () => {
+    it('keeps saved and cross-tab sound preferences live without the settings page', async () => {
+      const actual = await vi.importActual<typeof import('@/lib/notificationSound')>('@/lib/notificationSound')
+      h.getSoundPrefs.mockImplementation(actual.getNotificationSoundPrefs)
+      const shell = renderHook(() => useNotificationListener())
+      const settings = renderHook(() => useBrowserNotificationPrefs())
+      act(() => setNotificationSoundPrefs({ master: true, volume: 0.25 }))
+      settings.unmount()
+      act(() => fire('alert', { severity: 'warning' }))
+      expect(h.playSound).toHaveBeenCalledTimes(1)
+      expect(h.playSound).toHaveBeenLastCalledWith('warning_alert', expect.objectContaining({ master: true, volume: 0.25 }))
+
+      act(() => {
+        localStorage.setItem('teslasync:notification-sound-prefs:v1', JSON.stringify({
+          ...getNotificationSoundPrefs(),
+          master: false,
+          volume: 0.8,
+        }))
+        window.dispatchEvent(new StorageEvent('storage', { key: 'teslasync:notification-sound-prefs:v1' }))
+      })
+      act(() => fire('alert', { severity: 'warning' }))
+      expect(h.playSound).toHaveBeenCalledTimes(2)
+      expect(h.playSound).toHaveBeenLastCalledWith('warning_alert', expect.objectContaining({ master: false, volume: 0.8 }))
+      shell.unmount()
+    })
+
     it('plays the mapped sound even when the tab is visible and permission is denied', () => {
       h.permission = 'denied'
       setHidden(false)

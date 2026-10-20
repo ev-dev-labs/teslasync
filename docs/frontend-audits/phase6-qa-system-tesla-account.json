@@ -1,0 +1,1347 @@
+{
+  "item": "phase6-qa-system-tesla-account",
+  "attempt": 1,
+  "phase": 6,
+  "actor": "7f382960-6b4f-4de8-ba83-e23aeab73a4c",
+  "reportStatus": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "sourceAcceptance": "FAIL_WITH_FINDINGS",
+  "nativeAcceptance": "NOTRUN",
+  "runtimeAcceptance": "NOTRUN",
+  "applicationAcceptance": "NOTRUN",
+  "page": "web/src/features/system/pages/TeslaAccountPage.tsx",
+  "routes": [
+    "/tesla-account"
+  ],
+  "purpose": "Review cached Tesla profile identity, source sync timestamps and three existing lifecycle rows; explicitly refresh profile and recover reads without losing retained details.",
+  "mode": "Read-only source QA; all source reproduction traces are unexecuted. No tests/lint/compiler/build/helper/server/browser/network/API or real account/token/consent/permission/Fleet action.",
+  "clock": {
+    "reservationUtc": "2026-10-14T02:29:12.925Z",
+    "firstToolUtc": "2026-10-14T02:35:27.7896300Z",
+    "returnByUtc": "2026-10-14T02:49:12.925Z",
+    "hardByUtc": "2026-10-14T02:54:12.925Z",
+    "rule": "Reservation deadline wins over later first inspection; creation metadata earlier than reservation not available; no clock reset.",
+    "finalArtifactReleaseUtc": "2026-10-14T02:48:50.818672+00:00"
+  },
+  "writableFiles": [
+    "docs/frontend-audits/phase6-qa-system-tesla-account.json",
+    "web/logs/phase6-qa-system-tesla-account.log"
+  ],
+  "ownership": {
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "catalogWrites": 0,
+    "queueWrites": 0,
+    "gitActions": 0,
+    "subagents": 0,
+    "installs": 0,
+    "helpersCreated": 0,
+    "repositoryHelpersExecuted": 0,
+    "testsExecuted": 0,
+    "lintCompilerBuilds": 0,
+    "serversStarted": 0,
+    "browserActions": 0,
+    "networkApiActions": 0,
+    "realAccountTokenConsentPermissionFleetActions": 0,
+    "backgroundWork": 0,
+    "scopeVerificationLimit": "No Git status/diff permitted. Write operations in this worker target only the two authorized artifacts; current source/test pins compared. This does not claim global working-tree cleanliness or ownership of concurrent orchestrator changes."
+  },
+  "authority": {
+    "queueAtInitialRead": "migration-queue.md:197",
+    "queueAtLatestRead": "migration-queue.md:243",
+    "clockContract": "migration-queue.md:220-225 at 02:42 snapshot",
+    "duplicateCompletedObjectives": 0,
+    "objectiveRows": 1,
+    "historicalPhase5": "phase5-page-system-tesla-account completed at 60523013e78935c5798195d64f82d7a75666a85c; historic 26 scoped cases receipt, not rerun.",
+    "queueDrift": "Queue changed concurrently under orchestrator ownership; row numbers are snapshot citations. Exact objective and deadline unchanged; no queue edits by this worker.",
+    "queueAtFinalValidation": "migration-queue.md:268",
+    "finalQueueCapturedUtc": "2026-10-14T02:46:54.880846+00:00"
+  },
+  "instructionsRead": [
+    "docs/orchestrator-loop.md (fully)",
+    "docs/frontend-design-contract.md (fully; preservation/trust/MDC-040-046/060-070 applied)",
+    "docs/frontend-mission.md (fully; relevant 0/15-26/30-37/43-45)",
+    "docs/frontend-worker-conventions.md (fully)",
+    "docs/frontend-inventory.md authority/preservation/relevant audit-page-198/G027/G202 rows",
+    "docs/session-handoff.md current recovery/conventions; historical remainder not reread as fresh acceptance",
+    "docs/CONTRIBUTING.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md (legacy examples subordinate to canonical SI contract)",
+    "docs/I18N_GUIDELINES.md",
+    "docs/MOBILE_GUIDELINES.md",
+    "docs/A11Y_GUIDELINES.md"
+  ],
+  "dataSources": [
+    {
+      "hook": "useTeslaUserProfile",
+      "file": "web/src/api/hooks/useUser.ts",
+      "line": 205,
+      "endpoint": "GET /tesla/user/profile",
+      "finalPath": "/api/v1/tesla/user/profile",
+      "policy": "userKeys.teslaProfile, STALE_TIMES.SLOW, request forwards signal; cached snapshot not token/permission/consent status"
+    },
+    {
+      "hook": "useRefreshTeslaProfile",
+      "file": "web/src/api/hooks/useUser.ts",
+      "line": 213,
+      "endpoint": "POST /tesla/user/profile/refresh",
+      "finalPath": "/api/v1/tesla/user/profile/refresh",
+      "policy": "success invalidation and existing success/error toast, no optimistic data, live-only flag missing; NOT INVOKED"
+    }
+  ],
+  "components": [
+    "PageLayout -> PageContainer",
+    "GlassPanel/Button/Heading/Text/Label/Caption/HelperText/Badge/StatusPill/Icon",
+    "TeslaAccountStatStrip -> OperationalBrief/useOperationalMetrics",
+    "KVList/Avatar/Timeline",
+    "QueryError/EmptyState/Skeleton/StaleRefreshWarning",
+    "FadeIn",
+    "useDataState/dateFormat/useDateFormat/useOperationalMode existing owners"
+  ],
+  "preservation": {
+    "baseline": "docs/frontend-audits/audit-page-198.json",
+    "originalPageLines": 265,
+    "originalFeatureAdapterLines": 67,
+    "originalTotal": 332,
+    "currentPageLines": 273,
+    "currentFeatureAdapterLines": 67,
+    "currentTotal": 340,
+    "minimum70Percent": 232.4,
+    "lineCountStatus": "PASS_SOURCE_COUNT",
+    "sections": [
+      "Account summary",
+      "Profile",
+      "Sync",
+      "Account details",
+      "Activity"
+    ],
+    "sectionCount": 5,
+    "summaryMetricCount": 4,
+    "detailRowCount": 5,
+    "activityRowCount": 3,
+    "glassPanelCount": 4,
+    "fadeInCount": 3,
+    "pageSectionCount": 2,
+    "postEntryPoints": 3,
+    "actions": [
+      "Header Refresh from Tesla",
+      "Sync Refresh from Tesla",
+      "Empty Profile Refresh from Tesla",
+      "Initial GET retry in three panels and summary",
+      "Retained/stale GET retry",
+      "Existing OperationalBrief details/review accessibility through shared renderer"
+    ],
+    "keptData": [
+      "Raw numeric account identity including zero; full_name/email/profile_image_url",
+      "profile.fetched_at preferred over envelope fetched_at with nullish selection",
+      "Details retain original profile-level fetched_at",
+      "created_at/updated_at/fetchedAt rows kept in original causal order; accessible finite min/max bounds",
+      "No export/edit/unlink/OAuth/token/consent/permission editor in original/current page; no missing-feature claim"
+    ]
+  },
+  "checks": [
+    {
+      "id": "objective-and-duplicate",
+      "status": "PASS_SOURCE",
+      "detail": "One attempt-1 held objective, historical Phase5 done scope distinguished; audit artifact/log did not exist initially."
+    },
+    {
+      "id": "route-and-scope",
+      "status": "PASS_SOURCE",
+      "detail": "App lazy TeslaAccount mount and route loader/registry preserved; account route disables vehicle selection and is not a range-owning source."
+    },
+    {
+      "id": "section-action-preservation",
+      "status": "PASS_SOURCE",
+      "detail": "Five regions, four metrics, five detail rows and three causal activity rows; three POST entries and source GET retries retained."
+    },
+    {
+      "id": "initial-fetching",
+      "status": "PASS_SOURCE",
+      "detail": "queryLoading with no retained data renders profile-shaped skeletons and local skeleton bodies; not mounted proof."
+    },
+    {
+      "id": "unresolved-paused",
+      "status": "FAIL_SOURCE",
+      "detail": "TA-01: unanswered paused state reaches empty copy."
+    },
+    {
+      "id": "fatal-read-error",
+      "status": "PASS_SOURCE",
+      "detail": "Only fatalError replaces local body; persistent shells and shared QueryError preserve unauthorized/forbidden/other error presentation."
+    },
+    {
+      "id": "resolved-empty",
+      "status": "PASS_SOURCE_WITH_LIMIT",
+      "detail": "Resolved profile=null retains all five shells and three pending-aware POST entries. Meaning of empty envelope remains backend contract evidence, not current token/consent evidence."
+    },
+    {
+      "id": "retained-fetch-error-and-paused",
+      "status": "PASS_SOURCE",
+      "detail": "useDataState preserves envelope; stale warning and retained summary visible; no unknown value is fabricated as a physical zero."
+    },
+    {
+      "id": "sync-null-invalid-status",
+      "status": "FAIL_SOURCE",
+      "detail": "TA-02: truthiness conflicts with timestamp validity and existing unknown copy."
+    },
+    {
+      "id": "pending-success-error-mutation",
+      "status": "PASS_SOURCE_WITH_LIMIT",
+      "detail": "Three entry points share pending guard and Button disabled/busy behavior; hook success invalidates GET; error uses toast, no fabricated profile row. Immediate pre-render rapid duplicate race remains runtime unverified."
+    },
+    {
+      "id": "live-only-post",
+      "status": "FAIL_SOURCE",
+      "detail": "TA-05: opt-in request boundary missing; no attempted mutation or backend security assertion."
+    },
+    {
+      "id": "time-preferences",
+      "status": "FAIL_SOURCE",
+      "detail": "TA-03: eight page and nine summary formatter sites bypass effective options; hour-cycle acceptance NOTRUN."
+    },
+    {
+      "id": "mobile-source-minimum",
+      "status": "FAIL_SOURCE",
+      "detail": "TA-04: two controls only request shared md wrapping minimum; all native widths NOTRUN."
+    },
+    {
+      "id": "localization",
+      "status": "FAIL_SOURCE",
+      "detail": "51 used page/summary keys present; 2 actual toast keys absent (TA-06). Five raw JSX-string regex hits are generic TypeScript > request< fragments, not copy."
+    },
+    {
+      "id": "SI-identity-preferences",
+      "status": "PASS_SOURCE_WITH_LIMIT",
+      "detail": "No physical measurements, conversion or SI writes; identifier remains raw including zero; saved theme/density/chart/navigation settings not reset or renamed. Time preferences fail separately."
+    },
+    {
+      "id": "source-a11y-and-motion",
+      "status": "PASS_SOURCE_WITH_NATIVE_LIMIT",
+      "detail": "Shared PageContainer h1/route focus, local h2, labeled summary/Timeline, semantic KVList, icon/text statuses and Button busy behavior; FadeIn/Button honor existing motion preference. No contrast/keyboard/native acceptance."
+    },
+    {
+      "id": "account-token-permission-consent",
+      "status": "NOTRUN_INTEGRATION",
+      "detail": "Profile-only shape; no token/permission/consent actions performed or accepted. Permission failures have shared source presentation only."
+    },
+    {
+      "id": "test-declarations",
+      "status": "INSPECTED_NOT_EXECUTED",
+      "detail": "26 page, 5 summary and 24 useUser case declarations. All tests execution/pass/fail totals are zero because NOTRUN; these are not discovery or passing counts."
+    },
+    {
+      "id": "frontend-pattern-grep",
+      "status": "EXECUTED_SOURCE_SCAN",
+      "detail": "Nine literal regex checks executed across page, summary and useUser; raw output and false-positive classification retained. PageLayout is an acceptable PageContainer adapter."
+    },
+    {
+      "id": "backend-rule-scope",
+      "status": "NOT_APPLICABLE",
+      "detail": "No internal Go files in assigned frontend scope; no backend audit or endpoint/schema/security proof claimed."
+    }
+  ],
+  "findings": [
+    {
+      "id": "TA-01",
+      "rule": "unresolved-source-as-empty",
+      "priority": "P1",
+      "confidence": "high",
+      "owner": "page",
+      "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+      "line": 26,
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 24,
+          "endLine": 32
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 96,
+          "endLine": 101
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 136,
+          "endLine": 142
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 198,
+          "endLine": 200
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 269,
+          "endLine": 270
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 190,
+          "endLine": 217
+        },
+        {
+          "file": "web/src/components/layout/PageContainer.tsx",
+          "line": 244,
+          "endLine": 258
+        }
+      ],
+      "detail": "isLoading uses query.isLoading rather than unresolved status. With no data, isPending=true, isLoading=false and fetchStatus=paused, the Profile, Details and Activity bodies reach their empty branches. The Profile claims no profile synced yet before the read has answered. StaleRefreshWarning returns null without retained data. PageLayout query supplies freshness metadata only, not a pending body guard.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "inputs": "Pure hypothetical query shape: data=undefined, error=null, isPending=true, isLoading=false, isFetching=false, fetchStatus=paused. No mounted query or network request.",
+        "trace": "hasData=false -> isLoading=false -> fatalError=null -> hasProfile=false -> three empty bodies; summary unknown and Sync unknown coexist with asserted empty Profile."
+      },
+      "fix": "Use existing DataState initial/isRefreshBlocked to render unresolved or paused feedback in persistent shells. Reserve empty/never-synced copy for a successfully resolved empty envelope; keep GET retry and all POST actions.",
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "TA-02",
+      "rule": "sync-status-source-integrity",
+      "priority": "P1",
+      "confidence": "high",
+      "owner": "page/domain adapter",
+      "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+      "line": 123,
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 33
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 123,
+          "endLine": 127
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 162,
+          "endLine": 169
+        },
+        {
+          "file": "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+          "line": 21,
+          "endLine": 28
+        },
+        {
+          "file": "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+          "line": 52,
+          "endLine": 61
+        }
+      ],
+      "detail": "Truthiness of fetchedAt controls the Hero synced pill and summary sync metric/status, but validity is checked only for summary freshness. A populated profile with an empty fetch timestamp says Never synced in Hero/summary and Unknown in Sync. A nonempty invalid string says Synced with success-color dot while date text is an em dash and freshness is explicitly unknown. Missing/invalid source time cannot establish never synced or confirmed sync.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "inputs": "Synthetic description only: resolved populated profile, profile.fetched_at=\"\" and envelope.fetched_at=null; separately profile.fetched_at=\"not-a-date\". No identity, account, token or API input used.",
+        "trace": "Empty string is selected by ?? and is falsy -> Never synced, while hasProfile=true -> Sync Unknown. Invalid nonempty string is truthy -> Synced, Date.parse fails -> unknown freshness and date placeholder."
+      },
+      "fix": "Use one page-local/feature-local validity-aware classification across summary, Hero and Sync. Preserve authoritative empty-envelope behavior, retained values and timestamp precedence; unknown/invalid dates remain unknown without invented freshness.",
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "TA-03",
+      "rule": "date-preference-bypass",
+      "priority": "P2",
+      "confidence": "high",
+      "owner": "page/domain adapter",
+      "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+      "line": 16,
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 16,
+          "endLine": 40
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 162,
+          "endLine": 169
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 217
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 238,
+          "endLine": 258
+        },
+        {
+          "file": "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+          "line": 7
+        },
+        {
+          "file": "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+          "line": 26,
+          "endLine": 44
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 29,
+          "endLine": 63
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 74,
+          "endLine": 96
+        }
+      ],
+      "detail": "Eight page and nine summary formatter call sites invoke pure dateFormat helpers without locale/timezone options. Absolute timestamps therefore use browser locale/timezone instead of saved display preferences. Relative labels consult global locale but long-age fallback and all absolute contexts do not receive saved timezone. No hour-cycle preference support was established by the inspected adapter; do not claim it is preserved.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "inputs": "Hypothetical saved timezone UTC and saved locale differing from browser defaults, with an existing source timestamp. No preference mutation.",
+        "trace": "Page/summary -> formatDateTime(value) with opts omitted -> intlLocale(undefined) and no timeZone -> browser defaults; useDateFormat would supply effective locale/tz."
+      },
+      "fix": "Adopt existing useDateFormat in both feature owners or pass its existing options, retaining raw ISO instants, relative/full context and null placeholders. Separately verify existing 12/24-hour preference ownership rather than inventing a formatter.",
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "TA-04",
+      "rule": "mobile-minimum-target-contract",
+      "priority": "P2",
+      "confidence": "high for source minimum; native size unverified",
+      "owner": "page",
+      "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+      "line": 54,
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 54,
+          "endLine": 61
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 139,
+          "endLine": 141
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 170,
+          "endLine": 179
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 36,
+          "endLine": 48
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 62,
+          "endLine": 80
+        }
+      ],
+      "detail": "Header and empty-profile Refresh use default md Button with wrapLabel and no mobile min-h-11. The shared wrapping md variant guarantees only min-h-10 (40px at a 16px root); the Sync button explicitly requests min-h-11. This is a missing 44px source minimum, not a measured hit rectangle or asserted WCAG AA failure.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "inputs": "Hypothetical below-md viewport, default 16px root, one-line normal-scale translated label. No browser rendering.",
+        "trace": "Omitted size -> md -> wrapLabel -> h-auto min-h-10; no page override for header or empty CTA. Sync has min-h-11."
+      },
+      "fix": "Add existing below-md min-h-11 sizing at both page-owned controls with intended desktop restoration. Verify actual non-overlapping targets, wrapping and keyboard focus in separate authorized native QA.",
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "TA-05",
+      "rule": "refresh-not-live-only",
+      "priority": "P1",
+      "confidence": "high",
+      "owner": "hook integration then page adoption",
+      "file": "web/src/api/hooks/useUser.ts",
+      "line": 218,
+      "citations": [
+        {
+          "file": "web/src/api/hooks/useUser.ts",
+          "line": 213,
+          "endLine": 224
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 45,
+          "endLine": 59
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 139,
+          "endLine": 141
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 170,
+          "endLine": 179
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 350,
+          "endLine": 373
+        },
+        {
+          "file": "web/src/lib/operationalMode.ts",
+          "line": 66,
+          "endLine": 76
+        },
+        {
+          "file": "web/src/api/offlineCache.ts",
+          "line": 50,
+          "endLine": 75
+        },
+        {
+          "file": "web/src/api/offlineCache.ts",
+          "line": 101,
+          "endLine": 104
+        },
+        {
+          "file": "web/src/api/queryClient.ts",
+          "line": 67,
+          "endLine": 74
+        }
+      ],
+      "detail": "POST /tesla/user/profile/refresh omits requiresLiveMode. request defaults that flag false, so assertOperationalWriteAllowed returns early; the offline unsafe-path list does not cover this refresh. Page guards only pending state, not canWrite. A historical/read-only view can therefore attempt current Fleet profile refresh. This is a frontend guard bypass, not proof of backend permission bypass, queued replay or a performed Fleet request.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "inputs": "Hypothetical read-only as_of mode or offline operational snapshot; inspect the hook/request decision path only. No real mutation function invoked.",
+        "trace": "refresh handler sees isPending=false -> mutationFn request POST without requiresLiveMode -> operational guard sees false and returns; path has no offline unsafe match -> request boundary proceeds."
+      },
+      "fix": "Separately lease the existing hook/test pair to opt this operation into requiresLiveMode; then lease page/test to use existing canWrite/writeBlockReason and notice for all three POST entries. Preserve safe GET retries and mutation success-only invalidation/toast. No new universal write policy or client rewrite.",
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "TA-06",
+      "rule": "missing-canonical-i18n-key",
+      "priority": "P2",
+      "confidence": "high",
+      "owner": "catalog integration",
+      "file": "web/src/api/hooks/useUser.ts",
+      "line": 221,
+      "citations": [
+        {
+          "file": "web/src/api/hooks/useUser.ts",
+          "line": 221,
+          "endLine": 223
+        },
+        {
+          "file": "web/src/api/hooks/_toastHelpers.ts",
+          "line": 87,
+          "endLine": 103
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "line": 7780
+        }
+      ],
+      "detail": "Actual toast.user.teslaProfile.success and toast.user.teslaProfile.error keys are absent from parsed canonical English. useMutationToast falls back to English, so the messages are not canonical translatable entries. All 51 page/summary t keys exist. Two speculative equivalent-key probes also returned absent but are not counted as used-key defects. Canonical catalog changed concurrently before release; fresh final read still finds the listed actual keys absent.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "inputs": "Read-only canonical JSON key lookup only; hypothetical toast dispatch, no mutation or toast executed.",
+        "trace": "Hook supplies absent key -> toast helper t(key,{defaultValue:...}) -> English default remains the only supplied copy."
+      },
+      "affectedKeys": [
+        "toast.user.teslaProfile.success",
+        "toast.user.teslaProfile.error"
+      ],
+      "fix": "Catalog owner reserves only these two existing call-site keys and exact fallback defaults, plus only normally established generated outputs. Do not guess alternate keys, manually edit generated catalogs or broaden to all useUser toasts.",
+      "runtimeConfirmed": false
+    }
+  ],
+  "conditionalAndNativeCandidates": [
+    {
+      "id": "TA-C01",
+      "category": "backend-lifecycle-semantics",
+      "status": "CONDITIONAL_NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 243,
+          "endLine": 258
+        },
+        {
+          "file": "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+          "line": 35,
+          "endLine": 39
+        },
+        {
+          "file": "web/src/api/hooks/useUser.ts",
+          "line": 187,
+          "endLine": 195
+        }
+      ],
+      "detail": "created_at is labeled Account linked and Member since; updated_at is Profile updated. Frontend fields alone do not prove these are Tesla membership/connection lifecycle events rather than local row timestamps. Preserve existing three-row causal order; no timeline-sort violation is asserted because Timeline does not reorder and explicit finite summary bounds exist.",
+      "neededEvidence": "Authorized integration owner establishes producer semantics without exposing identity or using a real account."
+    },
+    {
+      "id": "TA-C02",
+      "category": "invalid-identity-input",
+      "status": "CONDITIONAL_NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 43
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 120,
+          "endLine": 122
+        },
+        {
+          "file": "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+          "line": 30,
+          "endLine": 33
+        },
+        {
+          "file": "web/src/hooks/useOperationalMetrics.tsx",
+          "line": 11,
+          "endLine": 23
+        }
+      ],
+      "detail": "Hero/details interpolate profile.id while summary uses identifier metric validation. Negative/nonfinite/unsafe identifiers may present differently, but actual wire identity constraints were not inspected. Real source ID zero is explicitly preserved.",
+      "neededEvidence": "Separate synthetic source-contract cases; no backend coercion or identity rewriting authorized."
+    },
+    {
+      "id": "TA-C03",
+      "category": "native-layout-accessibility-theme-motion",
+      "status": "NATIVE_NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 82,
+          "endLine": 95
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 109,
+          "endLine": 119
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 202,
+          "endLine": 203
+        },
+        {
+          "file": "web/src/components/data-display/KVList.tsx",
+          "line": 50,
+          "endLine": 53
+        },
+        {
+          "file": "web/src/components/data-display/Timeline.tsx",
+          "line": 97,
+          "endLine": 143
+        },
+        {
+          "file": "web/src/components/motion/FadeIn.tsx",
+          "line": 23,
+          "endLine": 35
+        }
+      ],
+      "detail": "Reflow/wrapping, semantic definitions/timeline, reduced-motion branches and named buttons exist. They do not prove measured overflow, targets, safe-area reachability, focus, screen-reader output, contrast, forced colors, long RTL translations or 200% text.",
+      "neededEvidence": "All mission widths 320/375/390/430/768/1024/1280/1440/1920/2560, narrow containers, dark/light/saved custom, RTL, 200% text, forced colors and reduced motion; authorized synthetic/native scope only."
+    },
+    {
+      "id": "TA-C04",
+      "category": "auth-token-permission-consent-trust",
+      "status": "RUNTIME_INTEGRATION_NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/api/hooks/useUser.ts",
+          "line": 187,
+          "endLine": 224
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 71,
+          "endLine": 72
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+          "line": 123,
+          "endLine": 127
+        },
+        {
+          "file": "web/src/components/feedback/_StatusAwareError.tsx",
+          "line": 91,
+          "endLine": 98
+        },
+        {
+          "file": "web/src/components/feedback/_StatusAwareError.tsx",
+          "line": 139,
+          "endLine": 174
+        }
+      ],
+      "detail": "This page has profile identity and sync state, no token validity/expiry/scopes, consent status/grant/revoke or permission mutation controls. Cached Synced and Account linked are not evidence of current token validity, permission eligibility or consent. QueryError has separate unauthorized/forbidden presentations; real server enforcement and successful refresh response are unverified.",
+      "neededEvidence": "Existing separately owned auth/consent integration acceptance. No new token dashboard, real account, token or Fleet action requested."
+    }
+  ],
+  "ownerNeeds": [
+    {
+      "id": "TA-N01",
+      "findingIds": [
+        "TA-01",
+        "TA-02"
+      ],
+      "owner": "existing TeslaAccount feature",
+      "files": [
+        "web/src/features/system/pages/TeslaAccountPage.tsx",
+        "web/src/features/system/pages/TeslaAccountPage.test.tsx",
+        "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+        "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.test.tsx"
+      ],
+      "need": "One narrow coherent unresolved/empty/valid/unknown/retained sync-state correction across the page and existing summary. Keep all fields/actions and original tests.",
+      "queueDedup": "No current Phase6 repair covering these mechanisms found. phase6-tesla-account-icon-jsx-syntax is completed syntax-only, not this objective; do not redispatch it.",
+      "prerequisites": "New explicit lease and page/summary test ownership; no source writes in this QA.",
+      "queueOverlapAtValidation": [
+        {
+          "line": 799,
+          "status": "[x]",
+          "item": "phase6-tesla-account-icon-jsx-syntax",
+          "scope": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx"
+        }
+      ]
+    },
+    {
+      "id": "TA-N02",
+      "findingIds": [
+        "TA-03"
+      ],
+      "owner": "existing page and summary date display adopters",
+      "files": [
+        "web/src/features/system/pages/TeslaAccountPage.tsx",
+        "web/src/features/system/pages/TeslaAccountPage.test.tsx",
+        "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+        "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.test.tsx"
+      ],
+      "need": "Preference-aware existing date-hook adoption only. No dateFormat/useDateFormat shared rewrite.",
+      "queueDedup": "phase6-fix-relative-future-dates and completed phase6-fix-advanced-evidence-date-preferences are different mechanisms/consumers, not duplicates.",
+      "prerequisites": "Serialize after any TA-N01 overlapping leases release; preserve accepted date helper and all raw source instants.",
+      "queueOverlapAtValidation": [
+        {
+          "line": 799,
+          "status": "[x]",
+          "item": "phase6-tesla-account-icon-jsx-syntax",
+          "scope": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx"
+        }
+      ]
+    },
+    {
+      "id": "TA-N03",
+      "findingIds": [
+        "TA-04"
+      ],
+      "owner": "page",
+      "files": [
+        "web/src/features/system/pages/TeslaAccountPage.tsx",
+        "web/src/features/system/pages/TeslaAccountPage.test.tsx"
+      ],
+      "need": "Only two page-owned Refresh minimum-size adoptions; do not globally resize Button.",
+      "queueDedup": "No current exact page mobile-target fix found.",
+      "prerequisites": "Serialize overlapping page/test lease after source trust/date adopters; native measurement remains separate.",
+      "queueOverlapAtValidation": [
+        {
+          "line": 799,
+          "status": "[x]",
+          "item": "phase6-tesla-account-icon-jsx-syntax",
+          "scope": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx"
+        }
+      ]
+    },
+    {
+      "id": "TA-N04",
+      "findingIds": [
+        "TA-05"
+      ],
+      "owner": "useUser hook integration, then page consumer",
+      "files": [
+        "web/src/api/hooks/useUser.ts",
+        "web/src/api/hooks/useUser.test.tsx"
+      ],
+      "consumerFiles": [
+        "web/src/features/system/pages/TeslaAccountPage.tsx",
+        "web/src/features/system/pages/TeslaAccountPage.test.tsx"
+      ],
+      "need": "One hook-level requiresLiveMode root for profile refresh; separate consumer canWrite/reason/notice adoption for all POST entry points. GET retry remains available.",
+      "queueDedup": "Actual Phase6 queue search for useUser.ts/profile-refresh/live-mode profile mechanisms found no matching hook repair. Neighbor Tesla source QA reports describe similar refresh patterns but do not grant this owner scope.",
+      "prerequisites": "Root before consumer; each pair separately leased, consumer waits overlapping page lease release. No shared request/offline-cache/backend change needed.",
+      "queueOverlapAtValidation": []
+    },
+    {
+      "id": "TA-N05",
+      "findingIds": [
+        "TA-06"
+      ],
+      "owner": "serialized canonical English integration",
+      "files": [
+        "web/src/i18n/en.json"
+      ],
+      "exactKeys": [
+        "toast.user.teslaProfile.success",
+        "toast.user.teslaProfile.error"
+      ],
+      "defaults": [
+        "Tesla profile refreshed",
+        "Failed to refresh Tesla profile"
+      ],
+      "need": "Only two known-missing canonical keys. Generated output paths must be established by existing normal catalog owner workflow, not guessed or hand-edited here.",
+      "queueDedup": "No exact profile toast key repair found in the current queue; unrelated TeslaFeatureConfig/Region/Orders messages remain outside this need.",
+      "prerequisites": "Explicit catalog lease; no dependency on this report becoming runtime accepted.",
+      "queueOverlapAtValidation": [
+        {
+          "line": 314,
+          "status": "[x]",
+          "item": "phase6-fix-charger-milestone-canonical-leaves",
+          "scope": "web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-charging.json; web\\src\\i18n\\en\\locale-analytics.json; web\\src\\i18n\\en\\locale-detail-help.json; web\\src\\i18n\\en\\usage-manifest.json"
+        },
+        {
+          "line": 628,
+          "status": "[ ]",
+          "item": "phase6-fix-gdpr-status-catalog",
+          "scope": "web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\usage-manifest.json; web\\src\\i18n\\gdprStatusCatalog.test.ts"
+        },
+        {
+          "line": 667,
+          "status": "[x]",
+          "item": "phase6-fix-causal-journey-hint-catalog",
+          "scope": "web\\src\\i18n\\en.json; web\\src\\i18n\\en\\ (normal185generatedJSON inventory); web\\src\\i18n\\known-missing-keys.json (byte-identical normal-generator rewrite only)"
+        },
+        {
+          "line": 760,
+          "status": "[x]",
+          "item": "phase6-native-drives-count-catalog-integration",
+          "scope": "web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-driving.json; web\\src\\i18n\\en\\locale-detail-operations.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\usage-manifest.json"
+        },
+        {
+          "line": 2063,
+          "status": "[x]",
+          "item": "phase6-driving-efficiency-excluded-plural",
+          "scope": "web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-driving.json; web\\src\\i18n\\en\\locale-detail-operations.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\usage-manifest.json; web\\src\\i18n\\drivesEfficiencyPlural.test.ts"
+        }
+      ]
+    }
+  ],
+  "tests": {
+    "declarationsOnly": true,
+    "bodyInspection": false,
+    "files": [
+      {
+        "file": "web/src/features/system/pages/TeslaAccountPage.test.tsx",
+        "caseDeclarations": 26
+      },
+      {
+        "file": "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.test.tsx",
+        "caseDeclarations": 5
+      },
+      {
+        "file": "web/src/api/hooks/useUser.test.tsx",
+        "caseDeclarations": 24,
+        "scopeNote": "24 declarations in full hook file; two refresh-profile and two profile-read cases identified, unrelated hook bodies not inspected"
+      }
+    ],
+    "totalStaticCaseDeclarations": 55,
+    "runnerDiscovery": "NOTRUN",
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": "NOTRUN; skip execution not determined from a runner"
+  },
+  "staticScan": {
+    "files": [
+      "web/src/features/system/pages/TeslaAccountPage.tsx",
+      "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+      "web/src/api/hooks/useUser.ts"
+    ],
+    "rawMatches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 5,
+      "fetch-useeffect": 0
+    },
+    "classification": "All five hardcoded-string regex candidates are TypeScript generics (> request<), not user-visible JSX. No rule-clean whole-app claim. Components raw HTML/vendor imports and computed Avatar/Timeline styles are acceptable building-block exceptions. PageLayout wraps real PageContainer.",
+    "canonicalActualKeys": {
+      "pageAndSummaryDistinct": 51,
+      "pageAndSummaryPresent": 51,
+      "mutationToastDistinct": 2,
+      "mutationToastPresent": 0,
+      "mutationToastAbsent": 2,
+      "speculativeAbsentKeyProbesNotCounted": 2
+    }
+  },
+  "nativeMatrix": {
+    "status": "NOTRUN",
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "additional": [
+      "narrow allocated containers",
+      "dark/light/saved custom themes",
+      "RTL and long translations",
+      "200% text/font preferences",
+      "keyboard and screen reader",
+      "forced colors/contrast",
+      "reduced motion/low bandwidth",
+      "mobile/native safe areas and final-content reachability"
+    ],
+    "reason": "Explicit source-only reservation: no browser/native/server/network/test grant."
+  },
+  "sourcePins": {
+    "algorithm": "SHA256",
+    "coreBeforeRead": "Page, page test, summary, summary test and useUser captured at 02:36:41 before detailed inspection; originals retained.",
+    "supportCaptureLimit": "Additional dependencies were pinned when resolved; some supports had been read before their first captured pin. Do not describe all support pins as pre-read snapshots.",
+    "files": {
+      "web/src/features/system/pages/TeslaAccountPage.tsx": {
+        "beforeSha256": "ef4f43212e09c09d940d0defdda7d52e0c934ce8d7e088a86875052a8eaade11",
+        "afterSha256": "ef4f43212e09c09d940d0defdda7d52e0c934ce8d7e088a86875052a8eaade11",
+        "bytes": 12741,
+        "lines": 273,
+        "unchanged": true
+      },
+      "web/src/features/system/pages/TeslaAccountPage.test.tsx": {
+        "beforeSha256": "fdbdd2d553f49c21e49a0a965bc97ae3ad41103977a979dfb6a2341af105c3d7",
+        "afterSha256": "fdbdd2d553f49c21e49a0a965bc97ae3ad41103977a979dfb6a2341af105c3d7",
+        "bytes": 25580,
+        "lines": 579,
+        "unchanged": true
+      },
+      "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx": {
+        "beforeSha256": "6b24c3a33d04a06b3014c7facb70c7f2f7e6f91d919fc6f8d6ea7e999de7f9d8",
+        "afterSha256": "6b24c3a33d04a06b3014c7facb70c7f2f7e6f91d919fc6f8d6ea7e999de7f9d8",
+        "bytes": 4743,
+        "lines": 67,
+        "unchanged": true
+      },
+      "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.test.tsx": {
+        "beforeSha256": "de9e2764e6dd466d4b9327ec264d1952c9bf58a314bddbeef1b49ae416b8cd77",
+        "afterSha256": "de9e2764e6dd466d4b9327ec264d1952c9bf58a314bddbeef1b49ae416b8cd77",
+        "bytes": 8721,
+        "lines": 123,
+        "unchanged": true
+      },
+      "web/src/api/hooks/useUser.ts": {
+        "beforeSha256": "15625474cf8c6c50b62468fad3e109d2973c78f068460ef48dbe8d909e4092b1",
+        "afterSha256": "15625474cf8c6c50b62468fad3e109d2973c78f068460ef48dbe8d909e4092b1",
+        "bytes": 8185,
+        "lines": 225,
+        "unchanged": true
+      },
+      "docs/frontend-audits/audit-page-198.json": {
+        "beforeSha256": "42dd21055766b47104bf568388c6423136c51c18f83cf6031dff1319a633e897",
+        "afterSha256": "42dd21055766b47104bf568388c6423136c51c18f83cf6031dff1319a633e897",
+        "bytes": 30824,
+        "lines": 245,
+        "unchanged": true
+      },
+      "web/src/components/layout/layout-reference/PageLayout.tsx": {
+        "beforeSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "afterSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "bytes": 658,
+        "lines": 17,
+        "unchanged": true
+      },
+      "web/src/hooks/useDataState.ts": {
+        "beforeSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "afterSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "bytes": 2035,
+        "lines": 65,
+        "unchanged": true
+      },
+      "web/src/api/dataState.ts": {
+        "beforeSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "afterSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "bytes": 15482,
+        "lines": 434,
+        "unchanged": true
+      },
+      "web/src/components/feedback/StaleRefreshWarning.tsx": {
+        "beforeSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "afterSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "bytes": 4093,
+        "lines": 115,
+        "unchanged": true
+      },
+      "web/src/lib/dateFormat.ts": {
+        "beforeSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "afterSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "bytes": 18863,
+        "lines": 462,
+        "unchanged": true
+      },
+      "web/src/components/ui/Button.tsx": {
+        "beforeSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "afterSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "bytes": 5174,
+        "lines": 93,
+        "unchanged": true
+      },
+      "web/src/components/data-display/KVList.tsx": {
+        "beforeSha256": "e25f2cadcaea2b802167668cb8d635c36ff89f8365e77bff00c79fed783e442b",
+        "afterSha256": "e25f2cadcaea2b802167668cb8d635c36ff89f8365e77bff00c79fed783e442b",
+        "bytes": 4123,
+        "lines": 124,
+        "unchanged": true
+      },
+      "web/src/components/data-display/Timeline.tsx": {
+        "beforeSha256": "1acf2206f830d56d2a8e7a9a329c34e92bae5d2eae6696a5d55dd18d4b9ac92b",
+        "afterSha256": "1acf2206f830d56d2a8e7a9a329c34e92bae5d2eae6696a5d55dd18d4b9ac92b",
+        "bytes": 5357,
+        "lines": 145,
+        "unchanged": true
+      },
+      "web/src/components/data-display/Avatar.tsx": {
+        "beforeSha256": "b5187cf09c8f449ff200c7f33ab8338e5d219fd81634e92c51387d5231f0b6c5",
+        "afterSha256": "b5187cf09c8f449ff200c7f33ab8338e5d219fd81634e92c51387d5231f0b6c5",
+        "bytes": 9900,
+        "lines": 265,
+        "unchanged": true
+      },
+      "web/src/components/ui/StatusPill.tsx": {
+        "beforeSha256": "6a8cf7e8357bad0d72965cbc689dedfd806003bd47f57b3bfe9fd0521c473091",
+        "afterSha256": "6a8cf7e8357bad0d72965cbc689dedfd806003bd47f57b3bfe9fd0521c473091",
+        "bytes": 930,
+        "lines": 34,
+        "unchanged": true
+      },
+      "web/src/hooks/useOperationalMetrics.tsx": {
+        "beforeSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+        "afterSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+        "bytes": 1161,
+        "lines": 24,
+        "unchanged": true
+      },
+      "web/src/App.tsx": {
+        "beforeSha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "afterSha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "bytes": 68125,
+        "lines": 919,
+        "unchanged": true
+      },
+      "web/src/lib/workspaceScope.ts": {
+        "beforeSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "afterSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "bytes": 4411,
+        "lines": 168,
+        "unchanged": true
+      },
+      "web/src/components/layout/PageContainer.tsx": {
+        "beforeSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "afterSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "bytes": 10783,
+        "lines": 259,
+        "unchanged": true
+      },
+      "web/src/hooks/useDateFormat.ts": {
+        "beforeSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "afterSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "bytes": 5230,
+        "lines": 148,
+        "unchanged": true
+      },
+      "web/src/components/motion/FadeIn.tsx": {
+        "beforeSha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "afterSha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "bytes": 1493,
+        "lines": 39,
+        "unchanged": true
+      },
+      "web/src/components/feedback/QueryError.tsx": {
+        "beforeSha256": "5dc7d6a24694c2f34411d8b042864c94a630be9fc0a516586c2596172f19e48a",
+        "afterSha256": "5dc7d6a24694c2f34411d8b042864c94a630be9fc0a516586c2596172f19e48a",
+        "bytes": 460,
+        "lines": 16,
+        "unchanged": true
+      },
+      "web/src/api/client.ts": {
+        "beforeSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "afterSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "bytes": 17825,
+        "lines": 458,
+        "unchanged": true
+      },
+      "web/src/api/hooks/_toastHelpers.ts": {
+        "beforeSha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+        "afterSha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+        "bytes": 5112,
+        "lines": 123,
+        "unchanged": true
+      },
+      "web/src/lib/operationalMode.ts": {
+        "beforeSha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+        "afterSha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+        "bytes": 2495,
+        "lines": 89,
+        "unchanged": true
+      },
+      "web/src/components/feedback/OperationalWriteNotice.tsx": {
+        "beforeSha256": "371eeaf2372dd3178dafb0dbb0768591bd08c0f3159dade5c9e184e4cb0af7c1",
+        "afterSha256": "371eeaf2372dd3178dafb0dbb0768591bd08c0f3159dade5c9e184e4cb0af7c1",
+        "bytes": 1028,
+        "lines": 40,
+        "unchanged": true
+      },
+      "web/src/api/hooks/useUser.test.tsx": {
+        "beforeSha256": "49b2982716bcd7cbd13e50b6d796185949b1eea48c047325b460ed5cb7ec94e7",
+        "afterSha256": "49b2982716bcd7cbd13e50b6d796185949b1eea48c047325b460ed5cb7ec94e7",
+        "bytes": 20083,
+        "lines": 498,
+        "unchanged": true
+      },
+      "web/src/i18n/en.json": {
+        "beforeSha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+        "afterSha256": "dc87a2c46dd3f82d84746b042d0c42d41e8a6d5b64487e543485f4aaaea35886",
+        "bytes": 1846735,
+        "lines": 39035,
+        "unchanged": false
+      },
+      "web/src/lib/routeRegistry.ts": {
+        "beforeSha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+        "afterSha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+        "bytes": 31836,
+        "lines": 289,
+        "unchanged": true
+      },
+      "web/src/api/offlineCache.ts": {
+        "beforeSha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+        "afterSha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+        "bytes": 6961,
+        "lines": 185,
+        "unchanged": true
+      },
+      "web/src/hooks/useOperationalMode.tsx": {
+        "beforeSha256": "d1c366956189eb4b6eb6af1a8f3a4f5ff3bbc1b4f7e1aa07849138fef08b277c",
+        "afterSha256": "d1c366956189eb4b6eb6af1a8f3a4f5ff3bbc1b4f7e1aa07849138fef08b277c",
+        "bytes": 3188,
+        "lines": 116,
+        "unchanged": true
+      },
+      "web/src/api/queryClient.ts": {
+        "beforeSha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+        "afterSha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+        "bytes": 3802,
+        "lines": 86,
+        "unchanged": true
+      },
+      "web/src/components/feedback/_StatusAwareError.tsx": {
+        "beforeSha256": "1b02ed9b09fd8befd1f0b38fa6b4957749874856ec6eedb5963b7601a6d23bcc",
+        "afterSha256": "1b02ed9b09fd8befd1f0b38fa6b4957749874856ec6eedb5963b7601a6d23bcc",
+        "bytes": 8280,
+        "lines": 280,
+        "unchanged": true
+      },
+      "web/src/lib/routeLoaders.ts": {
+        "beforeSha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+        "afterSha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+        "bytes": 11392,
+        "lines": 127,
+        "unchanged": true
+      },
+      "web/src/lib/routePrefetch.ts": {
+        "beforeSha256": "63cf77fe5b5687c3c7a8d7f0f188e38767c408b1b254da31c44859d289df82a2",
+        "afterSha256": "63cf77fe5b5687c3c7a8d7f0f188e38767c408b1b254da31c44859d289df82a2",
+        "bytes": 14417,
+        "lines": 340,
+        "unchanged": true
+      }
+    }
+  },
+  "summary": {
+    "confirmedFindings": 6,
+    "confirmedByRule": {
+      "unresolved-source-as-empty": 1,
+      "sync-status-source-integrity": 1,
+      "date-preference-bypass": 1,
+      "mobile-minimum-target-contract": 1,
+      "refresh-not-live-only": 1,
+      "missing-canonical-i18n-key": 1
+    },
+    "priorities": {
+      "P1": 3,
+      "P2": 3
+    },
+    "conditionalAndNativeCandidates": 4,
+    "ownerNeeds": 5,
+    "mostAffectedFiles": [
+      {
+        "file": "web/src/features/system/pages/TeslaAccountPage.tsx",
+        "findingIds": [
+          "TA-01",
+          "TA-02",
+          "TA-03",
+          "TA-04",
+          "TA-05"
+        ]
+      },
+      {
+        "file": "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+        "findingIds": [
+          "TA-02",
+          "TA-03"
+        ]
+      },
+      {
+        "file": "web/src/api/hooks/useUser.ts",
+        "findingIds": [
+          "TA-05",
+          "TA-06"
+        ]
+      }
+    ],
+    "countBasis": "One finding per deduplicated mechanism, not per repeated rendering site; TA-06 contains two used-key sites. Candidates excluded from confirmed counts.",
+    "priorityFixes": [
+      "Unresolved/unknown sync truth (TA-01/TA-02)",
+      "Live-only profile refresh root and page adoption (TA-05)",
+      "Time preference, mobile minima and exact toast catalog followups"
+    ]
+  },
+  "evidenceLimits": [
+    "Source/test hashes identify inspected bytes, not a Git commit or whole-tree freeze.",
+    "No executed source repro, tests, TypeScript, lint, build, helper, browser, native, network or Fleet request.",
+    "Frontend endpoint strings/client prefix inspected; backend router/handler/schema/security not audited in this scope.",
+    "No credentials/personal profile fixture values printed or persisted; only source identifiers/field names and hypothetical nonidentity status/timestamps.",
+    "Historical receipts and other QA reports are context/schema/dedup only, not fresh passing evidence.",
+    "Initial two broad probes were oversized; one Python probe failed with cp1252 UnicodeEncodeError. Bounded UTF-8 followups recovered necessary scope. Missing useOperationalMode.ts was a failed read, corrected to actual .tsx.",
+    "Artifact validator first failed exit1 on its own coordinate/row selector, then was corrected; no report acceptance was inferred from the failed attempt.",
+    "Canonical English drifted concurrently between 02:46:54 and 02:47:50. This worker did not edit it. First pin retained, after pin recorded and actual missing keys rechecked. Source/test pins remain unchanged; no stable whole-catalog or whole-tree claim.",
+    "Initial four exploratory transcripts are partly copied into artifact log; caller tool history retains exact commands/output. This receipt limit is explicit."
+  ],
+  "validation": {
+    "status": "PASS_SOURCE_DOCUMENT_WITH_EXTERNAL_CATALOG_DRIFT",
+    "validatedUtc": "2026-10-14T02:48:50.811512+00:00",
+    "json": "Independent json.loads successful",
+    "citationsChecked": 55,
+    "invalidCitations": 0,
+    "mechanismLiteralChecks": 10,
+    "mechanismErrors": 0,
+    "pinFilesChecked": 36,
+    "pinDriftCount": 1,
+    "findingCountsChecked": true,
+    "ownerReferenceCountsChecked": true,
+    "testDeclarationCountChecked": true,
+    "queueStatusRowsChecked": 1,
+    "scope": "Not a test/compiler/runtime pass. Prior failed checker attempts remain raw in log.",
+    "externalDriftFiles": [
+      "web/src/i18n/en.json"
+    ],
+    "finalCatalogActualKeysRechecked": true,
+    "shippingSourceAndTestPinDriftCount": 0
+  },
+  "release": {
+    "status": "RELEASE_ON_FINAL_COMMAND_EXIT",
+    "utc": "2026-10-14T02:48:50.818672+00:00",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-system-tesla-account.json",
+      "web/logs/phase6-qa-system-tesla-account.log"
+    ],
+    "commands": "Final synchronous command terminates; no background work, services, agents, browser locks, source/test writers or post-return writes. Releases only this worker artifacts and command ownership.",
+    "nativeRuntime": "NOTRUN"
+  },
+  "filesRead": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/A11Y_GUIDELINES.md",
+    "docs/CONTRIBUTING.md",
+    "docs/I18N_GUIDELINES.md",
+    "docs/MOBILE_GUIDELINES.md",
+    "docs/frontend-audits/audit-page-198.json",
+    "docs/frontend-audits/phase6-qa-admin-tesla-feature-flags.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "web/src/App.tsx",
+    "web/src/api/client.ts",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/_toastHelpers.ts",
+    "web/src/api/hooks/useUser.test.tsx",
+    "web/src/api/hooks/useUser.ts",
+    "web/src/api/offlineCache.ts",
+    "web/src/api/queryClient.ts",
+    "web/src/components/data-display/Avatar.tsx",
+    "web/src/components/data-display/KVList.tsx",
+    "web/src/components/data-display/Timeline.tsx",
+    "web/src/components/feedback/OperationalWriteNotice.tsx",
+    "web/src/components/feedback/QueryError.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/feedback/_StatusAwareError.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/StatusPill.tsx",
+    "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.test.tsx",
+    "web/src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.tsx",
+    "web/src/features/system/pages/TeslaAccountPage.test.tsx",
+    "web/src/features/system/pages/TeslaAccountPage.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useOperationalMode.tsx",
+    "web/src/i18n/en.json",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/operationalMode.ts",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/routePrefetch.ts",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/lib/workspaceScope.ts"
+  ],
+  "commandFailures": [
+    {
+      "shellId": "2712",
+      "exit": 1,
+      "kind": "read-probe UnicodeEncodeError",
+      "detail": "Default cp1252 stdout failed on arrow in inventory; UTF-8 recovery command exited0."
+    },
+    {
+      "tool": "view",
+      "exit": null,
+      "kind": "missing-path read",
+      "path": "web/src/hooks/useOperationalMode.ts",
+      "detail": "Actual owner is .tsx, later read and pinned; view tool has no numeric process exit."
+    },
+    {
+      "shellId": "3138",
+      "exit": 1,
+      "kind": "own artifact-validator selection failure",
+      "detail": "Incorrect Button literal coordinate47 instead46 plus actor map counted as objective status row; corrected check exited0, no source change."
+    },
+    {
+      "shellId": "3191",
+      "exit": 1,
+      "kind": "final artifact validator external pin drift",
+      "detail": "Concurrent canonical English change detected. Immutable first pin preserved; fresh final key lookup/citation and after pin recorded. Shipping source/tests unchanged."
+    }
+  ],
+  "commandLog": {
+    "file": "web/logs/phase6-qa-system-tesla-account.log",
+    "format": "Self-logged PowerShell checks include the exact inline Python command, raw stdout/stderr and actual EXIT number. Add-Content appends only this authorized log; no redirect or helper file.",
+    "initialProbeLimit": "First four pre-log exploratory calls are recorded separately at finalization; oversized tool output limits and failed Unicode probe remain explicit. Tool-view reads have no numeric process exit.",
+    "notRun": [
+      "tests",
+      "lint",
+      "compiler",
+      "build",
+      "existing repository helper CLIs",
+      "server",
+      "browser",
+      "network/API",
+      "native",
+      "real account/token/consent/permission/Fleet actions"
+    ],
+    "receiptCompleteness": "Initial four pre-log exploratory calls have partial copied transcripts; initial command receipts/limits appended to log. Complete exact inline commands/raw outputs/actual numeric exits from shell2759 onward. Oversized output/Unicode and own validator failures retained."
+  }
+}

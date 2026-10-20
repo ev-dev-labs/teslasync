@@ -1,0 +1,1850 @@
+{
+  "item": "phase6-qa-notifications-archived",
+  "attempt": 1,
+  "status": "SOURCE_QA_COMPLETE_WITH_FINDINGS",
+  "started_utc": "2026-10-14T02:00:05.5565943Z",
+  "queue_return_utc": "2026-10-14T02:17:57.687Z",
+  "queue_hard_utc": "2026-10-14T02:22:57.687Z",
+  "hash_algorithm": "sha256",
+  "before_pin_time_utc": "2026-10-14T02:01:13.678379+00:00",
+  "before_pins": {
+    "web/src/features/notifications/components/AlertDetailDrawer.test.tsx": {
+      "sha256": "b7a740f410c003ee5573d2f0ad7c39f4384934caddd2eed9c798c8d66d5ec21d",
+      "lines": 130
+    },
+    "web/src/features/notifications/components/AlertDetailDrawer.tsx": {
+      "sha256": "842059d12208b1585c3dcd6137d9d4a1a09ab7d170c20c41b478103eee2536bb",
+      "lines": 306
+    },
+    "web/src/features/notifications/components/InboxBody.test.tsx": {
+      "sha256": "2f2189a93cbaec607fd5d69f9f6f3a9a776564821cb4015b28e220e734688820",
+      "lines": 1156
+    },
+    "web/src/features/notifications/components/InboxBody.tsx": {
+      "sha256": "5e6ab221a751832e473457cf81a12571471198eb6d5ab92fb1e45e6dae16427a",
+      "lines": 889
+    },
+    "web/src/features/notifications/components/InboxSummary.test.tsx": {
+      "sha256": "24cfdbd67a8d1aa32367c8baed72e79523242d8186fc86e870129d14dc3042c7",
+      "lines": 327
+    },
+    "web/src/features/notifications/components/InboxSummary.tsx": {
+      "sha256": "ff9987b8bb9023fa6e6ce9a8b5671f5fa35e4cab4ff3dd6532f3f906fe240dee",
+      "lines": 156
+    },
+    "web/src/features/notifications/components/NotificationFilterBar.test.tsx": {
+      "sha256": "52da58f54e3498f68fd71a32e371fe11134efd0f3b6a0fbe31a734098d1d9d67",
+      "lines": 242
+    },
+    "web/src/features/notifications/components/NotificationFilterBar.tsx": {
+      "sha256": "32b4d0d1945f55c94747ce3a001a9df150b779732cd089082ec132bde2a782c7",
+      "lines": 283
+    },
+    "web/src/features/notifications/components/NotificationInboxDelivery.tsx": {
+      "sha256": "619258625a5ce341184dac031c48f7a22453f2b4cb6d8d57b08fe4797f14cdf0",
+      "lines": 15
+    },
+    "web/src/features/notifications/components/NotificationInboxDetails.tsx": {
+      "sha256": "31bb7269144ac0b3b016106de76007b9957c1a19a3266bcd30de198288286199",
+      "lines": 64
+    },
+    "web/src/features/notifications/components/NotificationInboxTable.tsx": {
+      "sha256": "39435fabca4953ae96d0003741797a1b0fc381a260b0685bd177aad0a64f0201",
+      "lines": 272
+    },
+    "web/src/features/notifications/pages/ArchivedPage.test.tsx": {
+      "sha256": "144bf9d803d4d5e65edaea25e710d23ecd5aef6039b2ddca777b83de44ca23c5",
+      "lines": 335
+    },
+    "web/src/features/notifications/pages/ArchivedPage.tsx": {
+      "sha256": "6cb31073d0eeb764a9448c3a55267d915819ea93e4e7b11e7c14e77cf65fb87d",
+      "lines": 74
+    },
+    "web/src/api/hooks/useNotifications.ts": {
+      "sha256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "lines": 1415
+    },
+    "web/src/api/hooks/useVehicles.ts": {
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "lines": 1898
+    },
+    "web/src/hooks/useRangeState.ts": {
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "lines": 694
+    },
+    "web/src/hooks/useSelectedVehicle.ts": {
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines": 174
+    },
+    "web/src/hooks/useNumberFormatting.ts": {
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines": 47
+    },
+    "web/src/hooks/useFormatting.ts": {
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "lines": 106
+    },
+    "web/src/lib/dateFormat.ts": {
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462
+    },
+    "web/src/lib/workspaceScope.ts": {
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168
+    },
+    "web/src/api/dataState.ts": {
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434
+    },
+    "web/src/hooks/useDataState.ts": {
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65
+    },
+    "web/src/components/layout/layout-reference/PageLayout.tsx": {
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17
+    },
+    "web/src/components/layout/PageContainer.tsx": {
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259
+    },
+    "web/src/components/layout/layout-reference/SourceContent.tsx": {
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines": 74
+    },
+    "docs/frontend-audits/audit-page-145.json": {
+      "sha256": "6e48460aaafb57fb84133dd9ece2c3ae5f0dd3e0aa9c2d2d5736f670460c7a4e",
+      "lines": 258
+    },
+    "web/src/components/ai/AIInboxAutoCategorization.tsx": {
+      "sha256": "eb8d26ff632e2209fbebb4908b18683ad09813311e18148abc38951702f1e4bb",
+      "lines": 310,
+      "captured_utc": "2026-10-14T02:02:04.167907+00:00"
+    },
+    "web/src/features/notifications/components/NotificationGroupRow.tsx": {
+      "sha256": "5c81bb9d540f08169fda7ac267beb20d7916cc829885ced26293f53a3878eb5d",
+      "lines": 276,
+      "captured_utc": "2026-10-14T02:02:04.168140+00:00"
+    },
+    "web/src/components/feedback/StaleRefreshWarning.tsx": {
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lines": 115,
+      "captured_utc": "2026-10-14T02:02:04.168308+00:00"
+    },
+    "web/src/api/client.ts": {
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lines": 458,
+      "captured_utc": "2026-10-14T02:02:04.168509+00:00"
+    },
+    "web/src/hooks/useProductPreferences.ts": {
+      "sha256": "2f6dd2ac3e6492fa0de6ab60ce1a0f5bf9b626551b1c3caf876b58781e10f276",
+      "lines": 38,
+      "captured_utc": "2026-10-14T02:02:04.168705+00:00"
+    },
+    "web/src/components/ui/DataTable.tsx": {
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines": 1707,
+      "captured_utc": "2026-10-14T02:02:04.169350+00:00"
+    },
+    "web/src/components/ui/Button.tsx": {
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lines": 93,
+      "captured_utc": "2026-10-14T02:02:04.169554+00:00"
+    },
+    "web/src/components/ui/Select.tsx": {
+      "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lines": 119,
+      "captured_utc": "2026-10-14T02:02:04.169687+00:00"
+    },
+    "web/src/hooks/useAiStream.ts": {
+      "sha256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "lines": 617,
+      "captured_utc": "2026-10-14T02:02:04.169892+00:00"
+    },
+    "web/src/features/admin/components/AlertDetailTimeline.tsx": {
+      "sha256": "40ae6048d8102b45adbdcdac340d46c16be153b0b42a94f5d63806b694b0120d",
+      "lines": 120,
+      "captured_utc": "2026-10-14T02:02:04.170084+00:00"
+    },
+    "web/src/hooks/useBulkSelection.ts": {
+      "sha256": "ddca90339b5b47824a0ed63d4b84dc04b8cd85dae5f4dece2057b92d9d9a5cf6",
+      "lines": 154,
+      "captured_utc": "2026-10-14T02:02:04.170226+00:00"
+    },
+    "web/src/hooks/useOperationalMetrics.tsx": {
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lines": 24,
+      "captured_utc": "2026-10-14T02:02:04.170339+00:00"
+    },
+    "web/src/components/data-display/EntityPreviewDrawer.tsx": {
+      "sha256": "815b8f2ab797b75d6d8d4a4e2e3d269621ca3eb24ed145bc3cae2a84cef9a60e",
+      "lines": 172,
+      "captured_utc": "2026-10-14T02:02:04.170462+00:00"
+    },
+    "web/src/api/types.ts": {
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "lines": 4194,
+      "captured_utc": "2026-10-14T02:02:04.171303+00:00"
+    },
+    "internal/api/router.go": {
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lines": 5363,
+      "captured_utc": "2026-10-14T02:02:04.172481+00:00"
+    },
+    "internal/port/repository/notification.go": {
+      "sha256": "6c57aa32efabcff9ae1eb833fc713236a2f653f18c0944e92aa74549e0083152",
+      "lines": 16,
+      "captured_utc": "2026-10-14T02:02:04.185594+00:00"
+    },
+    "web/src/api/hooks/useNotificationChannels.test.tsx": {
+      "sha256": "8931ac1d9a0a612bbb13a08c4130260a431894368196029c4e4018dd593dc309",
+      "lines": 216,
+      "captured_utc": "2026-10-14T02:02:04.185852+00:00"
+    },
+    "web/src/api/hooks/useNotificationDeliveryLogs.test.tsx": {
+      "sha256": "9f515a25fc6a22ec601bdf682c8a8865e05e3519723408c04d195dbb5cfdd348",
+      "lines": 73,
+      "captured_utc": "2026-10-14T02:02:04.185984+00:00"
+    },
+    "web/src/api/hooks/useNotificationReport.test.tsx": {
+      "sha256": "582e88b2ea35d8fee79162cc3ce8ba1ec3d0a661f40db2676c366a3058b03b7f",
+      "lines": 53,
+      "captured_utc": "2026-10-14T02:02:04.186093+00:00"
+    },
+    "internal/api/alerts/alerts.go": {
+      "sha256": "8b3a9329d4bbc2afd6eb493b4f353b92b8974f1dfa67b8d9b5ff6fa6512aaee8",
+      "lines": 324
+    },
+    "internal/api/notification/handler.go": {
+      "sha256": "3ec11b554e3b5a54570316f67cf0cc997b02adf43ef59f7abf733e6cafc815a7",
+      "lines": 978
+    },
+    "web/src/api/hooks/__tests__/useNotifications.test.tsx": {
+      "sha256": "03273d0d1aa44bc44dd342eff2b6bb1b6b16a7489010d83f7f3ea3ddd2a1a2c9",
+      "lines": 240
+    },
+    "web/src/components/data-display/format/DateTime.tsx": {
+      "sha256": "08b77196089a97bdf6f1fb37e17af36fa717c1bd7bc8b0d3f603c765c47e04a8",
+      "lines": 146
+    },
+    "web/src/components/ai/AIInboxAutoCategorization.test.tsx": {
+      "sha256": "ac665ee500225755b432d5c91acf0ea2f94c291450774964ff77f6ace8788604",
+      "lines": 683
+    },
+    "web/src/components/data-display/format/__tests__/DateTime.test.tsx": {
+      "sha256": "445fe0214ab023f2629d362e7f3fff5e0d0a95e87a05340f299211d5993fa3dc",
+      "lines": 210
+    },
+    "web/src/lib/numberFormat.ts": {
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "lines": 172
+    },
+    "web/src/lib/timezone.ts": {
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "lines": 51
+    },
+    "internal/database/notification/repo.go": {
+      "sha256": "e9286b66b8370f34ca33eb908c23081303b9f225f4f772c524cdbbc586b986db",
+      "lines": 1609
+    },
+    "internal/api/apiparams/params.go": {
+      "sha256": "5526c81eaff016243772398b88b003112f3d0c0921b484c0de3008b7d2656add",
+      "lines": 142
+    },
+    "web/src/lib/productPreferences.ts": {
+      "sha256": "78e8e94e131663e3eb7b9e231ce2ab47721e1becc890b2a449be7a317583b548",
+      "lines": 247
+    },
+    "web/src/lib/drivesAggregation.ts": {
+      "sha256": "5fcf90610a780f412b01e76b8e4ef7bfe620b2538f3bf14a8fb07df8058aa0a6",
+      "lines": 511
+    },
+    "web/src/lib/alertDrillthrough.ts": {
+      "sha256": "7c881180e8efba91e056bae7cee0cfd7a40ac56a068da86ab0c9c7c5ca89be47",
+      "lines": 129
+    },
+    "web/src/lib/contextNavigation.ts": {
+      "sha256": "f8f99848167df92589120d406b3bda5a9625b0576aa8f31cfbf719372d9a70a5",
+      "lines": 282
+    }
+  },
+  "source_scan": {
+    "method": "Installed TypeScript AST parse only; no compiler, tests, lint or helper file",
+    "files": [
+      "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+      "web/src/features/notifications/components/InboxBody.tsx",
+      "web/src/features/notifications/components/InboxSummary.tsx",
+      "web/src/features/notifications/components/NotificationFilterBar.tsx",
+      "web/src/features/notifications/components/NotificationInboxDelivery.tsx",
+      "web/src/features/notifications/components/NotificationInboxDetails.tsx",
+      "web/src/features/notifications/components/NotificationInboxTable.tsx",
+      "web/src/features/notifications/pages/ArchivedPage.tsx",
+      "web/src/features/notifications/components/NotificationGroupRow.tsx",
+      "web/src/api/hooks/useNotifications.ts"
+    ],
+    "candidate_counts": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 1,
+      "hardcoded-string": 0,
+      "missing-page-container": 0,
+      "fetch-useeffect": 4
+    },
+    "candidates": [
+      {
+        "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+        "line": 229,
+        "rule": "hidden-section",
+        "detail": "activeAlert?.acknowledgement_note && (\n        <GlassPanel className=\"p-4\">\n          <PanelTitle>{t('operations.alerts.responseNote', 'Response note')}</PanelTitle>\n          <Tex"
+      },
+      {
+        "file": "web/src/features/notifications/components/InboxBody.tsx",
+        "line": 201,
+        "rule": "fetch-useeffect",
+        "detail": "useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, source, search, startInstant, endInstantExclusive, readState, view, pageSize])"
+      },
+      {
+        "file": "web/src/features/notifications/components/InboxBody.tsx",
+        "line": 308,
+        "rule": "fetch-useeffect",
+        "detail": "useEffect(() => {\n    if (archived) return;\n    if (isGrouped) return;\n    if (autoMarkedRef.current) return;\n    if (isLoading) return;\n    if (!readPref(PREF_MARK_ON_OP"
+      },
+      {
+        "file": "web/src/features/notifications/components/InboxBody.tsx",
+        "line": 388,
+        "rule": "fetch-useeffect",
+        "detail": "useEffect(() => { clearSelection(); }, [filters, clearSelection])"
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationInboxTable.tsx",
+        "line": 56,
+        "rule": "fetch-useeffect",
+        "detail": "useEffect(() => { clear(); }, [archived, rowIds, clear])"
+      }
+    ]
+  },
+  "test_source_inventory": {
+    "files": [
+      {
+        "file": "web/src/features/notifications/components/AlertDetailDrawer.test.tsx",
+        "declaration_count": 3,
+        "statically_expanded_cases": 8,
+        "unresolved_each": 0,
+        "declarations": [
+          {
+            "line": 75,
+            "title": "'classifies signal %s and type %s as %s'",
+            "multiplier": 6
+          },
+          {
+            "line": 88,
+            "title": "'shows lifecycle, owner, signal evidence, response guidance, note, and audit history'",
+            "multiplier": 1
+          },
+          {
+            "line": 117,
+            "title": "'keeps cached audit evidence visible when a background refresh fails'",
+            "multiplier": 1
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/InboxBody.test.tsx",
+        "declaration_count": 43,
+        "statically_expanded_cases": 45,
+        "unresolved_each": 0,
+        "declarations": [
+          {
+            "line": 279,
+            "title": "'pages through older notifications instead of stopping at the first 50'",
+            "multiplier": 1
+          },
+          {
+            "line": 295,
+            "title": "'opens and marks read a channel-less system event without a rule'",
+            "multiplier": 1
+          },
+          {
+            "line": 318,
+            "title": "'filters rule-triggered history and opens the full text of a legacy delivery'",
+            "multiplier": 1
+          },
+          {
+            "line": 342,
+            "title": "'renders a column table, the count label, and fetches the SI-clean flat path by default'",
+            "multiplier": 1
+          },
+          {
+            "line": 368,
+            "title": "'shows a current-day Slack delivery without an alert rule and opens its detail'",
+            "multiplier": 1
+          },
+          {
+            "line": 391,
+            "title": "'shows five loading skeletons (never a blank panel) while the flat query is in flight'",
+            "multiplier": 1
+          },
+          {
+            "line": 405,
+            "title": "'surfaces a retryable error and re-fires the request on Retry'",
+            "multiplier": 1
+          },
+          {
+            "line": 415,
+            "title": "'renders an honest empty state with a \"Configure alert rules\" CTA'",
+            "multiplier": 1
+          },
+          {
+            "line": 428,
+            "title": "'renders threads when requested and keeps the flat query disabled'",
+            "multiplier": 1
+          },
+          {
+            "line": 457,
+            "title": "'shows the thread-specific empty copy when there are no groups'",
+            "multiplier": 1
+          },
+          {
+            "line": 468,
+            "title": "'exports selected flat rows while retaining visible-scope controls'",
+            "multiplier": 1
+          },
+          {
+            "line": 492,
+            "title": "'exports grouped view as thread summaries with delivery metadata'",
+            "multiplier": 1
+          },
+          {
+            "line": 528,
+            "title": "'exposes accessible grouped/flat toggles and switches the rendered list'",
+            "multiplier": 1
+          },
+          {
+            "line": 554,
+            "title": "'hides the view toggle and swaps the bulk action set to Restore'",
+            "multiplier": 1
+          },
+          {
+            "line": 570,
+            "title": "'uses the archived-specific empty copy when there are no archived rows'",
+            "multiplier": 1
+          },
+          {
+            "line": 581,
+            "title": "'distinguishes selected loaded IDs from the filtered server total'",
+            "multiplier": 1
+          },
+          {
+            "line": 596,
+            "title": "'reports unknown result totals without inventing a loaded-row denominator'",
+            "multiplier": 1
+          },
+          {
+            "line": 610,
+            "title": "'uses member IDs, never thread totals or group keys, for grouped bulk selection'",
+            "multiplier": 1
+          },
+          {
+            "line": 634,
+            "title": "'drives the select-all header checkbox through none → some (indeterminate) → all'",
+            "multiplier": 1
+          },
+          {
+            "line": 665,
+            "title": "'bulk \"Mark read\" posts exactly the selected ids'",
+            "multiplier": 1
+          },
+          {
+            "line": 689,
+            "title": "'marks the unread rows read on open (flat, non-archived) by default'",
+            "multiplier": 1
+          },
+          {
+            "line": 707,
+            "title": "'respects the markOnOpen=false opt-out (no auto mark-read)'",
+            "multiplier": 1
+          },
+          {
+            "line": 722,
+            "title": "'fires the { all: true } variant from the header action'",
+            "multiplier": 1
+          },
+          {
+            "line": 743,
+            "title": "'honors the shared seven-day workspace range instead of querying all-time history'",
+            "multiplier": 1
+          },
+          {
+            "line": 767,
+            "title": "'respects an explicit inbox date range'",
+            "multiplier": 1
+          },
+          {
+            "line": 775,
+            "title": "'threads URL filters into the request as snake_case params without the /api/v1 prefix'",
+            "multiplier": 1
+          },
+          {
+            "line": 791,
+            "title": "'opens a per-row context menu with mark-read + delete items on right-click'",
+            "multiplier": 1
+          },
+          {
+            "line": 807,
+            "title": "'preserves bulk $label for the selected server-page rows'",
+            "multiplier": 2
+          },
+          {
+            "line": 820,
+            "title": "'retains confirmation-gated bulk delete'",
+            "multiplier": 1
+          },
+          {
+            "line": 832,
+            "title": "'retains rule inspection, server acknowledgement/reopen and view-context affordances'",
+            "multiplier": 1
+          },
+          {
+            "line": 866,
+            "title": "'retains cached rows and selection after a failed refresh, but reports initial failures locally'",
+            "multiplier": 1
+          },
+          {
+            "line": 879,
+            "title": "'sends server-owned search, severity, vehicle, rule, source and read conditions to both rows and count'",
+            "multiplier": 1
+          },
+          {
+            "line": 897,
+            "title": "'offers persistent keyboard resize, reorder and visibility without exhaustive page-local value filters'",
+            "multiplier": 1
+          },
+          {
+            "line": 916,
+            "title": "'exposes full metadata and every row action in a touch/keyboard expansion, with unknown distinct from zero'",
+            "multiplier": 1
+          },
+          {
+            "line": 938,
+            "title": "'restores archived evidence and marks a read row unread through expanded actions'",
+            "multiplier": 1
+          },
+          {
+            "line": 950,
+            "title": "'does not turn missing delivery latency into zero in full inspection'",
+            "multiplier": 1
+          },
+          {
+            "line": 960,
+            "title": "'keeps notification evidence usable when the independent period report fails'",
+            "multiplier": 1
+          },
+          {
+            "line": 980,
+            "title": "'keeps server-owned filters in headers and resets pagination (archived=%s)'",
+            "multiplier": 2
+          },
+          {
+            "line": 1038,
+            "title": "'changes server-owned page size and resets the notification offset'",
+            "multiplier": 1
+          },
+          {
+            "line": 1054,
+            "title": "'keeps all filters and reset available from the visible mobile Notification header'",
+            "multiplier": 1
+          },
+          {
+            "line": 1104,
+            "title": "'preserves usable header filters during initial request failure'",
+            "multiplier": 1
+          },
+          {
+            "line": 1116,
+            "title": "'confirm-gates the single-row delete from the context menu'",
+            "multiplier": 1
+          },
+          {
+            "line": 1139,
+            "title": "'does not delete when the single-row confirm is cancelled'",
+            "multiplier": 1
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/InboxSummary.test.tsx",
+        "declaration_count": 17,
+        "statically_expanded_cases": 17,
+        "unresolved_each": 0,
+        "declarations": [
+          {
+            "line": 102,
+            "title": "'retains compact metrics after a failed cached refresh'",
+            "multiplier": 1
+          },
+          {
+            "line": 113,
+            "title": "'renders a six-card skeleton grid inside the labelled region on first load'",
+            "multiplier": 1
+          },
+          {
+            "line": 125,
+            "title": "'keeps the KPI cards on screen during a background refetch that has data'",
+            "multiplier": 1
+          },
+          {
+            "line": 139,
+            "title": "'renders a QueryError alert and retries on demand when the query fails'",
+            "multiplier": 1
+          },
+          {
+            "line": 154,
+            "title": "'counts accepted warning aliases without changing source rows or unknown severity'",
+            "multiplier": 1
+          },
+          {
+            "line": 171,
+            "title": "'does not reinterpret other unknown active severity values as confirmed critical or info'",
+            "multiplier": 1
+          },
+          {
+            "line": 183,
+            "title": "'keeps archive timestamps, normalized counts and bounded all-time provenance'",
+            "multiplier": 1
+          },
+          {
+            "line": 201,
+            "title": "'retains cached metrics and explicit paused trust instead of claiming a loaded fresh sample'",
+            "multiplier": 1
+          },
+          {
+            "line": 210,
+            "title": "'preserves the active empty-state action destination'",
+            "multiplier": 1
+          },
+          {
+            "line": 216,
+            "title": "'preserves the archived empty-state action destination'",
+            "multiplier": 1
+          },
+          {
+            "line": 225,
+            "title": "'shows an empty-state placeholder when the backlog is empty'",
+            "multiplier": 1
+          },
+          {
+            "line": 233,
+            "title": "'treats an idle query with undefined data as empty (null-safety)'",
+            "multiplier": 1
+          },
+          {
+            "line": 243,
+            "title": "'aggregates totals, unread count, severity buckets and last-received time'",
+            "multiplier": 1
+          },
+          {
+            "line": 266,
+            "title": "'reports a fully-read backlog as zero unread while keeping the total'",
+            "multiplier": 1
+          },
+          {
+            "line": 281,
+            "title": "'handles unknown severities and missing timestamps without miscounting'",
+            "multiplier": 1
+          },
+          {
+            "line": 299,
+            "title": "'exposes the band as a labelled region with decorative icons'",
+            "multiplier": 1
+          },
+          {
+            "line": 311,
+            "title": "'reviews the bounded sample, unread denominator, full timestamp, and severity uncertainty in the real drawer'",
+            "multiplier": 1
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationFilterBar.test.tsx",
+        "declaration_count": 17,
+        "statically_expanded_cases": 19,
+        "unresolved_each": 0,
+        "declarations": [
+          {
+            "line": 54,
+            "title": "'renders a labelled severity group with pressed state driven by filters'",
+            "multiplier": 1
+          },
+          {
+            "line": 63,
+            "title": "'adds a severity when an inactive chip is clicked'",
+            "multiplier": 1
+          },
+          {
+            "line": 72,
+            "title": "'removes only the toggled severity when several are active'",
+            "multiplier": 1
+          },
+          {
+            "line": 80,
+            "title": "'clears the severity key entirely when the last active chip is toggled off'",
+            "multiplier": 1
+          },
+          {
+            "line": 92,
+            "title": "'reflects the active vehicle and emits a single-element vehicle_id on change'",
+            "multiplier": 1
+          },
+          {
+            "line": 104,
+            "title": "'clears vehicle_id when \"All vehicles\" is chosen'",
+            "multiplier": 1
+          },
+          {
+            "line": 112,
+            "title": "'labels a vehicle with no display name using its #id'",
+            "multiplier": 1
+          },
+          {
+            "line": 118,
+            "title": "'emits a single-element rule_id when a rule is selected'",
+            "multiplier": 1
+          },
+          {
+            "line": 129,
+            "title": "'emits the typed query after the debounce window'",
+            "multiplier": 1
+          },
+          {
+            "line": 140,
+            "title": "'treats a whitespace-only query as cleared'",
+            "multiplier": 1
+          },
+          {
+            "line": 153,
+            "title": "'does not duplicate the header date control'",
+            "multiplier": 1
+          },
+          {
+            "line": 160,
+            "title": "'renders chips and removing one clears just that key, preserving the rest'",
+            "multiplier": 1
+          },
+          {
+            "line": 180,
+            "title": "'clears optional filters while preserving the shared date range'",
+            "multiplier": 1
+          },
+          {
+            "line": 204,
+            "title": "'falls back to a #id chip when the filtered vehicle is unknown'",
+            "multiplier": 1
+          },
+          {
+            "line": 212,
+            "title": "'renders no active-filter chips and no pressed severity when filters are empty'",
+            "multiplier": 1
+          },
+          {
+            "line": 222,
+            "title": "'renders only the requested %s controls without a second chip rail'",
+            "multiplier": 3
+          },
+          {
+            "line": 230,
+            "title": "'clears mobile read-state along with business filters without changing workspace bounds or archive scope'",
+            "multiplier": 1
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/pages/ArchivedPage.test.tsx",
+        "declaration_count": 7,
+        "statically_expanded_cases": 7,
+        "unresolved_each": 0,
+        "declarations": [
+          {
+            "line": 166,
+            "title": "'renders the header, back-link, KPI band, and forwards archived+lookups to the inbox body'",
+            "multiplier": 1
+          },
+          {
+            "line": 211,
+            "title": "'shows the summary skeleton while the archived query is in flight, without blanking the page'",
+            "multiplier": 1
+          },
+          {
+            "line": 228,
+            "title": "'surfaces a retryable error for a failed archived query and keeps the page usable'",
+            "multiplier": 1
+          },
+          {
+            "line": 248,
+            "title": "'renders an empty state (not a blank panel) when there are no archived notifications'",
+            "multiplier": 1
+          },
+          {
+            "line": 261,
+            "title": "'forwards empty arrays (never undefined) when the vehicle/rule lookups fail and sets the title'",
+            "multiplier": 1
+          },
+          {
+            "line": 287,
+            "title": "'keeps a native named back link with theme focus, mobile targets, and wrapping text'",
+            "multiplier": 1
+          },
+          {
+            "line": 313,
+            "title": "'preserves the independent archived sample and performs only catalog and summary reads on mount'",
+            "multiplier": 1
+          }
+        ]
+      }
+    ],
+    "execution_status": "NOTRUN; static declarations only, not runner discovery/pass evidence",
+    "total_primary_static_declarations": 87,
+    "total_primary_static_expanded_cases": 96,
+    "counting_note": "Five fully read feature suites, includes inbox-only cases; AST literal each expansion, not runner discovery/pass."
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "classification": "confirmed-source",
+      "rule": "source-trust",
+      "file": "web/src/features/notifications/pages/ArchivedPage.tsx",
+      "line": 33,
+      "end_line": 34,
+      "title": "Catalog trust discarded",
+      "mechanism": "useVehicles/useAlertRules are reduced to data=[]; only arrays reach InboxBody. Pending/paused/fatal/retained refresh errors, updatedAt and retries cannot reach catalog filters/metadata. FilterBar constructs All-only options while catalogs are unresolved.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Logs resolve while either catalog is pending/paused/fails; source forwards the same [] as authoritative empty. Retained catalog names survive refresh error without a catalog warning."
+      },
+      "fix": "Pass existing query/DataState descriptors to domain consumers; retain evidence and unknown IDs with independent loading/error/retained warning/retry.",
+      "owner": "notifications.catalog-trust",
+      "related_evidence": [
+        "InboxBody.tsx:136-139,267-276",
+        "NotificationFilterBar.tsx:102-115",
+        "ArchivedPage.tsx:69"
+      ],
+      "test_source_limit": "ArchivedPage.test.tsx:261 expects [] after lookup errors; :63-76 stubs InboxBody and cannot assert catalog notices.",
+      "priority": "P1",
+      "confidence": "high"
+    },
+    {
+      "id": "F02",
+      "classification": "confirmed-source",
+      "rule": "initial-paused-as-empty",
+      "file": "web/src/features/notifications/components/InboxSummary.tsx",
+      "line": 78,
+      "end_line": 79,
+      "title": "Initial paused/unresolved queries claim empty archive",
+      "mechanism": "firstLoad uses isLoading rather than unresolved state.hasData/status. Initial pending+paused has isLoading=false, rows=[] and stats.total=0, so :112 renders No archived notifications yet. StaleRefreshWarning :60 returns null without data. InboxBody :258 similarly gates initialLoading by isLoading and :814-830 chooses archive-empty without a successful payload.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Synthetic snapshot data=undefined,status=pending,fetchStatus=paused,isLoading=false,error=null; summary and list choose authoritative-empty copy rather than unresolved/paused evidence."
+      },
+      "fix": "Use existing trust state to distinguish unresolved initial/paused from successful []; keep shells and blocked-refresh explanation, never invent zero or a server error.",
+      "owner": "notifications.initial-trust",
+      "related_evidence": [
+        "InboxSummary.tsx:112-128",
+        "InboxBody.tsx:258,794-830",
+        "api/dataState.ts:191-217",
+        "feedback/StaleRefreshWarning.tsx:60"
+      ],
+      "test_source_limit": "Summary test :201 covers paused WITH rows only; :233 explicitly expects undefined idle query as empty. No initial-paused archive assertion in the five fully read suites.",
+      "priority": "P1",
+      "confidence": "high"
+    },
+    {
+      "id": "F03",
+      "classification": "confirmed-source",
+      "rule": "missing-source-retry",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 869,
+      "end_line": 869,
+      "title": "Count failure removes pagination without count-local recovery",
+      "mechanism": "Count fatalError is text-only; paginationControls :784-791 exists only with countData. PullToRefresh :716 and list Retry :808 refetch only logs, not count. Without retained count, StaleRefreshWarning has no retry.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Synthetic rows GET succeeds with50 rows; count_only fails after automatic retries. Total becomes unavailable, pagination disappears, list refresh does not explicitly refetch count."
+      },
+      "fix": "Add countQuery.refetch via existing source-local retry feedback; retain loaded rows/unknown total, no fabricated denominator.",
+      "owner": "notifications.count-recovery",
+      "related_evidence": [
+        "InboxBody.tsx:237-240,716,784-793",
+        "useNotifications.ts:850-865"
+      ],
+      "test_source_limit": "InboxBody.test.tsx:596 asserts unknown total after failure, not count retry/pagination recovery.",
+      "priority": "P1",
+      "confidence": "high"
+    },
+    {
+      "id": "F04",
+      "classification": "confirmed-source",
+      "rule": "filtered-empty-semantics",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 814,
+      "end_line": 830,
+      "title": "Filtered no-match is described as globally empty archive",
+      "mechanism": "Archive rows=[] always shows No archived notifications / Archived notifications will appear here, independent of q/severity/vehicle/rule/read/source/date. actionTo is undefined for archive; empty content offers no reset. Header filters remain reachable.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Synthetic archive has records but q=nomatch or a date window excludes them; filtered [] still describes no archive records."
+      },
+      "fix": "Use localized scope-aware no-match copy and an existing clear-business-filters action; preserve header date range and archived scope.",
+      "owner": "notifications.filtered-empty",
+      "related_evidence": [
+        "InboxBody.tsx:187-198,207-222",
+        "NotificationFilterBar.tsx:182-191"
+      ],
+      "test_source_limit": "Tests :570 and :1054 expect same copy for empty and heavily filtered archive.",
+      "priority": "P2",
+      "confidence": "high"
+    },
+    {
+      "id": "F05",
+      "classification": "confirmed-source",
+      "rule": "severity-normalization",
+      "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+      "line": 109,
+      "end_line": 118,
+      "title": "Canonical warn is downgraded to info tone",
+      "mechanism": "Drawer checks critical then warning, not canonical warn. Filters/API accept warn and table recognizes warn/warning; unacknowledged warn falls through to info while severity still says warn.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Synthetic alert/detail severity=warn,acknowledged_at=null selects statusTone=info; warning selects warning."
+      },
+      "fix": "Presentation-only agreed warn/warning normalization; preserve raw source values, unknown values and lifecycle.",
+      "owner": "notifications.severity-presentation",
+      "related_evidence": [
+        "NotificationInboxTable.tsx:177-179",
+        "InboxSummary.tsx:57-63",
+        "useNotifications.ts:131"
+      ],
+      "test_source_limit": "Drawer tests use acknowledged critical; InboxBody :832 warn fixture checks action wiring, not tone.",
+      "priority": "P2",
+      "confidence": "high"
+    },
+    {
+      "id": "F06",
+      "classification": "confirmed-source",
+      "rule": "date-preference-bypass",
+      "file": "web/src/features/notifications/components/InboxSummary.tsx",
+      "line": 82,
+      "end_line": 83,
+      "title": "Summary/drawer/audit dates bypass saved locale and timezone",
+      "mechanism": "Summary calls pure formatRelativeTime/formatDateTime without options/settings subscription. Drawer Triggered :139 and AlertDetailTimeline :53 do likewise; pure formatter defaults browser locale/zone. Drawer localDayKey :73 also derives browser day. Table/detail DateTime in=user instead resolves saved settings.locale/timezone_user.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Synthetic browser UTC with saved America/Los_Angeles/de-DE, instant2026-05-02T01:00:00Z: table/details use saved zone; summary/drawer/audit and related-day links use browser locale/day. No settings or browser mutation performed."
+      },
+      "fix": "Adopt existing preference-aware display and consistent day-boundary zone, including memo dependencies; retain canonical instant and raw exports.",
+      "owner": "notifications.preference-aware-evidence",
+      "related_evidence": [
+        "lib/dateFormat.ts:37-62",
+        "data-display/format/DateTime.tsx:84-94",
+        "AlertDetailDrawer.tsx:73,137-140,177-208",
+        "admin/components/AlertDetailTimeline.tsx:53,58",
+        "lib/timezone.ts:29-37"
+      ],
+      "test_source_limit": "Summary assertions compare with the same pure formatter; page tests stub i18n/settings. No saved-zone/locale acceptance.",
+      "priority": "P2",
+      "confidence": "high"
+    },
+    {
+      "id": "F07",
+      "classification": "confirmed-source",
+      "rule": "hardcoded-string",
+      "file": "web/src/lib/dateFormat.ts",
+      "line": 323,
+      "end_line": 326,
+      "title": "Relative age contains authored unlocalized English",
+      "mechanism": "formatRelativeTime returns Just now, `${diffMin}m ago`, `${diffHrs}h ago`; InboxSummary displays the returned text directly. Outer localized labels cannot translate phrases or preference-format the embedded numbers. Three literal-producing branches are exact sites.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Synthetic last archived timestamp30 seconds/5 minutes/2 hours old in non-English locale returns Just now/5m ago/2h ago."
+      },
+      "fix": "Use existing locale-aware relative-time mechanism at shared owner; preserve public API/null/invalid/future behavior. Coordinate with held dateFormat owner; no competing formatter.",
+      "owner": "shared.date-format",
+      "related_evidence": [
+        "InboxSummary.tsx:82,100-102",
+        "lib/dateFormat.ts:318-327",
+        "queue:phase6-fix-relative-future-dates"
+      ],
+      "test_source_limit": "Summary tests assert /ago/i, not localization. Existing formatter queue item holds the same source file; this observation is not permission to rerun its objective.",
+      "priority": "P2",
+      "confidence": "high"
+    },
+    {
+      "id": "F08",
+      "classification": "confirmed-source",
+      "rule": "mobile-target-declaration",
+      "file": "web/src/features/notifications/components/NotificationInboxTable.tsx",
+      "line": 94,
+      "end_line": 125,
+      "title": "Inspection controls declare36px mobile minimum",
+      "mechanism": "Both title/message Buttons use !h-auto !min-h-9 !py-1 with no md boundary. Below-md declaration allows2.25rem instead of contract44px for single-line controls; no spacing exception is documented. The back-link min-h11 fix is already present.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Synthetic single-line title/message at default16px root and375px viewport permits36px minimum. Actual composed rectangles/spacing exception are NOTRUN."
+      },
+      "fix": "Use below-md min-h11 with compact desktop boundary, preserve names/wrapping/activation, then authorized native measurement.",
+      "owner": "notifications.table-controls",
+      "related_evidence": [
+        "NotificationInboxTable.tsx:90-101,122-130",
+        "ArchivedPage.tsx:56",
+        "ui/Button.tsx:35-45",
+        "contract:MDC-040/043"
+      ],
+      "test_source_limit": "Tests check names/mobile columns/activation, not hit rectangles.",
+      "priority": "P2",
+      "confidence": "high"
+    },
+    {
+      "id": "F09",
+      "classification": "confirmed-source",
+      "rule": "invalid-url-id",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 173,
+      "end_line": 181,
+      "title": "ID sanitizer accepts fractional/unsafe IDs rejected by backend",
+      "mechanism": "Number(value) with finite && >0 allows fractions and unsafe large values. Serializer forwards them as CSV; handler parseInt64List uses strconv.ParseInt base10 and rejects1.5. Unsafe numbers may also lose record identity or become exponent notation.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Source-trace URL /notifications/archived?vehicle_id=1.5 or rule_id=1.5 survives sanitizer then handler returns400 not an int64. No request issued."
+      },
+      "fix": "Validate positive safe integer ID strings at existing URL boundary; explain or safely remove invalid conditions without inventing IDs or silently changing valid scope.",
+      "owner": "notifications.url-filter-identity",
+      "related_evidence": [
+        "useNotifications.ts:151-152",
+        "internal/api/notification/handler.go:479-493,597-605"
+      ],
+      "test_source_limit": "URL source tests cover valid integer IDs only.",
+      "priority": "P2",
+      "confidence": "high"
+    },
+    {
+      "id": "F10",
+      "classification": "confirmed-source",
+      "rule": "filter-scope-disclosure",
+      "file": "web/src/features/notifications/components/NotificationFilterBar.tsx",
+      "line": 134,
+      "end_line": 155,
+      "title": "Multi-ID deep links display only first ID",
+      "mechanism": "Controller/hooks/backend preserve complete vehicle_id/rule_id arrays, but chips and Select values :223,235 take[0]. UI discloses only first ID while requests filter all IDs; chip removal drops entire array.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Synthetic vehicle_id=1,2&rule_id=10,20 with catalogs: both arrays reach rows/count but chips/selects show Model1/Rule10 without second value/cardinality."
+      },
+      "fix": "Accurately show all IDs or N-selected and retain multi-ID/removal semantics through existing controls; never silently drop additional URL scope.",
+      "owner": "notifications.filter-disclosure",
+      "related_evidence": [
+        "InboxBody.tsx:173-181,190-191",
+        "NotificationFilterBar.tsx:223,235",
+        "useNotifications.ts:151-152",
+        "internal/database/notification/repo.go:718-719,780-785",
+        "hooks/__tests__/useNotifications.test.tsx:42-52"
+      ],
+      "test_source_limit": "FilterBar tests use one ID/unknown fallback; serializer tests explicitly preserve arrays.",
+      "priority": "P2",
+      "confidence": "high"
+    },
+    {
+      "id": "F11",
+      "classification": "confirmed-source",
+      "rule": "hidden-section",
+      "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+      "line": 229,
+      "end_line": 237,
+      "title": "Response-note panel hidden when note absent",
+      "mechanism": "Entire GlassPanel/Response note is guarded by activeAlert?.acknowledgement_note &&, rather than retaining shell with absent/unknown fallback. This is single scoped AST data-panel match; view/dialog lifecycle gates are separate.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Synthetic acknowledgement_note=null or empty string omits the whole note panel while evidence/audit remains."
+      },
+      "fix": "Keep localized note shell while drawer open, distinguish pending/unknown from no note recorded using existing feedback/Text.",
+      "owner": "notifications.alert-evidence",
+      "related_evidence": [
+        "AlertDetailDrawer.tsx:70-71,229-237"
+      ],
+      "test_source_limit": "Drawer test harness supplies note by default; no absent-note shell assertion.",
+      "priority": "P2",
+      "confidence": "high"
+    },
+    {
+      "id": "F12",
+      "classification": "confirmed-source",
+      "rule": "typography-role",
+      "file": "web/src/features/notifications/components/NotificationInboxDetails.tsx",
+      "line": 46,
+      "end_line": 47,
+      "title": "Metadata duplicates local typography classes",
+      "mechanism": "dt/dd use local text-xs/text-sm instead of prescribed Caption/Text roles despite Text already imported. Historical audit identifies same still-present sites. This is role-adoption source evidence, not measured font-scale failure.",
+      "repro": {
+        "status": "Synthetic source-trace specification, NOT executed",
+        "condition": "Inspect rendered metadata source: label/value presentation owned by local size classes rather than semantic Text/Caption as=dt/dd."
+      },
+      "fix": "Reuse existing semantic roles preserving dl/dt/dd, all fields, units/wrapping and user font/density choices.",
+      "owner": "notifications.detail-typography",
+      "related_evidence": [
+        "audit-page-145.json:duplicatedPatterns",
+        "contract:MDC-013"
+      ],
+      "test_source_limit": "Metadata tests assert content/unknown/zero/actions, not role adoption or scaled native typography.",
+      "priority": "P2",
+      "confidence": "high"
+    }
+  ],
+  "page": "web/src/features/notifications/pages/ArchivedPage.tsx",
+  "routes": [
+    "/notifications/archived"
+  ],
+  "actor_id_observed_queue_mapping": "08175529-e2ca-467d-a1cc-2d6fa4daf790",
+  "commands_log": "web/logs/phase6-qa-notifications-archived.log",
+  "conditional_candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/components/data-display/EntityPreviewDrawer.tsx",
+      "line": 67,
+      "end_line": 69,
+      "mechanism": "onClose before fire-and-forget action; source proves order, not a falsely committed lifecycle. Hooks retain rollback/toasts.",
+      "condition": "Synthetic delayed/rejected ack/reopen; determine required open-evidence/pending recovery contract. No mutation.",
+      "owner": "shared.entity-preview-lifecycle"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 243,
+      "related_lines": [
+        201,
+        388,
+        692
+      ],
+      "mechanism": "Filter changes reset page/selection, not openedLog.",
+      "condition": "Change scope with detail open; confirm record-centric retention versus invalidated-scope policy. No browser.",
+      "owner": "notifications.inspection-identity"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 199,
+      "related_lines": [
+        201,
+        403,
+        463,
+        784
+      ],
+      "mechanism": "No explicit page clamp after count shrinks; row mutation invalidates data not scope.",
+      "condition": "Future safe synthetic fixture page2,total51 shrinks to50; inspect shared Pagination correction before confirming stranded paging. No restore/delete.",
+      "owner": "notifications.pagination"
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/notifications/components/NotificationInboxDetails.tsx",
+      "line": 28,
+      "mechanism": "Null guard preserves unknown/0 but no caller negative/non-finite duration validation.",
+      "condition": "Only if invalid backend latency payload is possible; verify invariant before defect claim. No payload fetched.",
+      "owner": "notifications.delivery-duration"
+    }
+  ],
+  "native_acceptance_candidates": [
+    {
+      "id": "N01",
+      "file": "web/src/features/notifications/components/NotificationInboxTable.tsx",
+      "line": 253,
+      "needs": "All10mission widths/narrow containers; mobile/RTL200%/long labels, filters, paging, exports/selection, expansion and overlays; measure hit areas/no page overflow. Explicit text-left also needs RTL review.",
+      "status": "NOTRUN; no browser grant"
+    },
+    {
+      "id": "N02",
+      "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+      "line": 93,
+      "needs": "Native keyboard/focus return, screen reader/ARIA/live outcomes, Escape/nesting/confirmation, reduced motion/low bandwidth.",
+      "status": "NOTRUN; no browser/action/axe"
+    },
+    {
+      "id": "N03",
+      "file": "web/src/features/admin/components/AlertDetailTimeline.tsx",
+      "line": 24,
+      "end_line": 29,
+      "needs": "Source raw cyan/green/amber/purple and unknown-kind created-color fallback; confirm semantic intent/effective Timeline rendering and composed dark/light/custom/forced-color contrast.",
+      "status": "Source palette candidate only; no visual failure fabricated"
+    }
+  ],
+  "summary": {
+    "confirmed_source_issue_groups": 12,
+    "by_rule_deduplicated_mechanisms": {
+      "source-trust": 1,
+      "initial-paused-as-empty": 1,
+      "missing-source-retry": 1,
+      "filtered-empty-semantics": 1,
+      "severity-normalization": 1,
+      "date-preference-bypass": 1,
+      "hardcoded-string": 1,
+      "mobile-target-declaration": 1,
+      "invalid-url-id": 1,
+      "filter-scope-disclosure": 1,
+      "hidden-section": 1,
+      "typography-role": 1
+    },
+    "conditional_candidates": 4,
+    "native_acceptance_candidates": 3,
+    "priority_P1": 3,
+    "counting_policy": "One distinct mechanism per finding; not raw grep matches. Multi-site mechanisms list exact related lines (F02two consumers,F06three consumers,F07three literal branches,F08two controls,F09/F10two ID families). Owner needs deduplicated; no new queue claim.",
+    "overall": "Source QA findings, NOT native/page/application acceptance"
+  },
+  "authority_read": {
+    "loop": "docs/orchestrator-loop.md fully read",
+    "contract": "docs/frontend-design-contract.md base1-654 and relevant final focus addendum2481-2539",
+    "mission": "docs/frontend-mission.md sections14-26,30-37,43-45",
+    "inventory": "docs/frontend-inventory.md authority1-49 and Archived row196; original audit-page-145.json",
+    "handoff": "docs/session-handoff.md current recovery1-48 and conventions/acceptance2186-2342",
+    "queue": "exact phase6-qa-notifications-archived attempt1 row initially67/current88 and source-QA contract394ff; Phase5 prerequisite completed; actor mapping observed08175529-e2ca-467d-a1cc-2d6fa4daf790",
+    "instructions": [
+      ".github/copilot-instructions.md relevant integrity/frontend/security/testing",
+      ".github/instructions/react-frontend.instructions.md fully read",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      "docs/frontend-worker-conventions.md"
+    ],
+    "write_override": "Only exact JSON and log; no heartbeat/source/test/catalog/queue/Git writes."
+  },
+  "writable_files": [
+    "docs/frontend-audits/phase6-qa-notifications-archived.json",
+    "web/logs/phase6-qa-notifications-archived.log"
+  ],
+  "section_action_coverage": [
+    {
+      "section": "Header/back/copy-link/title",
+      "file": "ArchivedPage.tsx:30-65; PageLayout.tsx:9-15",
+      "assessment": "Native localized Back to inbox, shared Button tokens, min-h11/min-w11 wrapping/RTL icon; PageLayout actually wraps PageContainer. Historical back-link defect closed. Header freshness summary-only, not all source health."
+    },
+    {
+      "section": "Backlog brief",
+      "file": "InboxSummary.tsx:45-156",
+      "assessment": "Total/unread/critical/warn/info, Last archived, unknown severity attention, review drawer/provenance, source retry/retained warning and Go to inbox empty action preserved. Independent bounded latest50 all-time sample, not workspace/server total. Warning alias counts fixed. F02,F06,F07 remain."
+    },
+    {
+      "section": "Evidence/filter/scope/pagination",
+      "file": "InboxBody.tsx:144-258,716-835; NotificationInboxTable.tsx:61-271",
+      "assessment": "archived=true always-flat; URL severity/vehicle/rule/source/q/read; header range both instants; server25/50/100 limit/offset and same-filter independent count; loaded/selected/unknown-total distinctions; persistent notifications:archive tableId, column reorder/resize/visibility/density. No duplicate range control; global vehicle picker deliberately disabled for notifications, local business filter remains. F01-F04,F08-F10."
+    },
+    {
+      "section": "Export",
+      "file": "InboxBody.tsx:101-118,339-386",
+      "assessment": "CSV/JSON selected or visible LOADED rows, never claimed full result; canonical raw timestamps, IDs/status/channel/read/archive/latency/error retained. Filename UTC date is filename convention, not displayed measurement. No export/download."
+    },
+    {
+      "section": "Full mobile/row detail",
+      "file": "NotificationInboxDetails.tsx:17-62; NotificationInboxTable.tsx:253-269",
+      "assessment": "Mobile title-only columns keep full expansion: message/error and received/sent/scheduled/read/archived/type/rule/vehicle/channel/severity/status/latency/actions. DateTime in=user and reactive numeric formatting; missing latency dash versus0 retained. F12/C04."
+    },
+    {
+      "section": "Alert evidence/remediation/related/audit/note",
+      "file": "InboxBody.tsx:243-246,517-529,692-704; AlertDetailDrawer.tsx:70-285",
+      "assessment": "Verified server identity log.id, not rule_id; lifecycle/owner/signal/remediation, vehicle/drives/charging/locations/service/telemetry/investigate, audit fatal/loading/retained warning/retry preserved. F05,F06,F11; conditional lifecycle/identity separate."
+    },
+    {
+      "section": "All bulk/row actions and confirmations",
+      "file": "InboxBody.tsx:289-304,397-509,533-604,730-749",
+      "assessment": "Bulk Restore and confirmed Delete; row read/unread/restore/delete/context; archive bulk mark-read/mark-all/view controls intentionally absent; bulk clears selection after success, restore announcement retained. Auto-mark-on-open exits archived; opening unread archive still marks read if preference allows(:511-513), so browser opening was prohibited. No mutation."
+    },
+    {
+      "section": "Assistant/refresh",
+      "file": "InboxBody.tsx:716,876-881; AIInboxAutoCategorization.tsx:83-101,172-200,247-310",
+      "assessment": "Propose-only gated assistant explicitly discloses independent recent-history/default7day window, not archive/exact dates/search/read; vehicle/severity/rule props, content-key cancellation and explicit user Apply-to-rule-filter preserved. Historical missing disclosure CLOSED. No AI POST/toggle. List pull refresh lacks initial-count retry(F03)."
+    }
+  ],
+  "scope_semantics": {
+    "both_bounds": "InboxBody187-198 serializes from inclusive and to_exclusive exclusive; handler464-582 parses bounds; database/notification/repo708-789 applies created_at >=/< in shared builder. Archived date window is CREATED date, not archive-action date.",
+    "count": "useNotifications850-865 strips limit/offset, keeps same filters; handler429-458 and repo792-824 use same matching predicates. No loaded-row full count invented.",
+    "summary": "GET /notifications/logs?archived=true default50 via apiparams/params25-38, ordered created_at DESC,id DESC(repo859); Last archived=max archived_at IN SAMPLE, not most recently archived across all history.",
+    "pagination": "Server limit/offset25/50/100; page resets for filters/view/size; result shrink C03 remains conditional.",
+    "filter_semantics": "Rule IDs match nl.alert_id; vehicle filter intentionally includes unbound/no-rule/all-vehicle rows; q title/message; read_at presence; archived_at presence. Multiple IDs preserved, but UI F10. Invalid fraction F09.",
+    "source_identity": "internal/api/alerts/alerts.go23-27 and GetAlert71-85 explicitly use notification_logs.id. Source rule map log.alert_id is rule ID; prior uncertainty closed.",
+    "query_routes": "router4072 logs,4076-4080 read/unread/archive/unarchive/delete; router3812 rules,3840-3843 alert detail/ack/reopen. Hooks use client/no added api prefix, signal cancellation retained.",
+    "timezone_dates": "Range hook uses shared header defaults and calendarRangeToInstants or rolling timestamps; backend applies instants. Actual DST/zone/header behavior NOTRUN. Table/detail uses saved user zone/locale; F06 others bypass. No saved12/24h field established from scoped Settings/FormatOptions; do not invent one.",
+    "numbers": "Latency reactive useNumberFormatting; OperationalBrief numeric counts formatter present; raw exported units unchanged. Source-interpolated textual counts do not prove complete locale formatting.",
+    "loading_fatal_retained_unknown": "Summary/list fatal independent, retained rows/metrics/selection and refresh warning/retry remain. Count unknown not0. Missing severity/date/latency honest dash/unknown. Catalog trust missingF01; initial-paused emptyF02. Audit without payload has retry, not evidence of loaded timeline."
+  },
+  "deduplicated_owner_needs": [
+    {
+      "owner": "notifications.catalog-trust",
+      "findings": [
+        "F01"
+      ],
+      "files": [
+        "ArchivedPage.tsx",
+        "InboxPage.tsx",
+        "InboxBody.tsx",
+        "NotificationFilterBar.tsx"
+      ],
+      "need": "One coordinated descriptor forwarding root; merge with sibling inbox QA, no duplicate competing implementation."
+    },
+    {
+      "owner": "notifications.inbox-controller",
+      "findings": [
+        "F02(list)",
+        "F03",
+        "F04",
+        "F09"
+      ],
+      "files": [
+        "InboxBody.tsx",
+        "InboxBody.test.tsx"
+      ],
+      "need": "Separate narrow initial-trust/count-retry/filter-empty/URL-ID fixes under exclusive file writer."
+    },
+    {
+      "owner": "notifications.summary",
+      "findings": [
+        "F02(summary)",
+        "F06(summary)"
+      ],
+      "files": [
+        "InboxSummary.tsx",
+        "InboxSummary.test.tsx"
+      ],
+      "need": "Unresolved-vs-empty and preference-aware timestamp adoption, preserve sample counts/actions."
+    },
+    {
+      "owner": "notifications.alert-evidence",
+      "findings": [
+        "F05",
+        "F06(drawer)",
+        "F11"
+      ],
+      "files": [
+        "AlertDetailDrawer.tsx",
+        "AlertDetailDrawer.test.tsx"
+      ],
+      "need": "Warning tone, user-zone date/day scope and missing-note shell; no API contract invention."
+    },
+    {
+      "owner": "notifications.filter-disclosure",
+      "findings": [
+        "F10"
+      ],
+      "files": [
+        "NotificationFilterBar.tsx",
+        "NotificationFilterBar.test.tsx"
+      ],
+      "need": "Accurate multi-ID UI/removal preserving full server scope."
+    },
+    {
+      "owner": "notifications.table-controls",
+      "findings": [
+        "F08"
+      ],
+      "files": [
+        "NotificationInboxTable.tsx",
+        "InboxBody.test.tsx"
+      ],
+      "need": "Below-md target declarations; serialize overlapping controller test ownership."
+    },
+    {
+      "owner": "notifications.detail-typography",
+      "findings": [
+        "F12"
+      ],
+      "files": [
+        "NotificationInboxDetails.tsx",
+        "InboxBody.test.tsx"
+      ],
+      "need": "Semantic typography with complete metadata parity; shared test overlap serialized."
+    },
+    {
+      "owner": "shared.date-format",
+      "findings": [
+        "F07"
+      ],
+      "files": [
+        "web/src/lib/dateFormat.ts"
+      ],
+      "existing_queue_owner": "phase6-fix-relative-future-dates",
+      "need": "Coordinate additional formatRelativeTime localization observation; no simultaneous writer or automatic retry of completed objectives."
+    },
+    {
+      "owner": "alerts.timeline-date-adoption",
+      "findings": [
+        "F06(timeline)"
+      ],
+      "files": [
+        "web/src/features/admin/components/AlertDetailTimeline.tsx"
+      ],
+      "need": "Preference-reactive audit dates preserving event/actor/note identities."
+    }
+  ],
+  "rule_review": {
+    "raw_grep_and_AST_in_log": true,
+    "exceptions": [
+      "var(--*) matches are Tailwind classes, not inline styles. CaseSensitive refined style/raw HTML/camelcase checks0.",
+      "PowerShell coarse default case-insensitive grep matched Button/Select/lowercase params; refined output and AST retained honestly.",
+      "Four real useEffect calls reset page, inbox-only mark-on-open, selection or expansion; no data loading fetch; grep fetch match is a comment.",
+      "PageLayout wraps PageContainer. Shared UI/native test fixture elements are building blocks, not production raw-HTML violations.",
+      "View modes/dialog mounting/field adornments are not hidden data sections; F11 note-panel is data-gated.",
+      "Server status/event text is source content, not authored English; F07 shared returned relative phrases are authored.",
+      "SQL fixed clauses/placeholder-number formatting bind user values; no interpolation defect inferred. Backend support trace is not global Go audit."
+    ],
+    "not_claimed": [
+      "Whole-repository0 violations",
+      "TypeScript/tests/lint/build pass",
+      "Native/visual/a11y/page/application acceptance"
+    ]
+  },
+  "tests": {
+    "status": "NOTRUN",
+    "discovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "primary_feature_static_cases": 96,
+    "note": "96 static cases across5fully read feature suites, includes inbox-only cases. NOT runner discovery/pass. AI/hook test source selected boundary assertions inspected separately."
+  },
+  "notrun_limits": [
+    "Fresh tests/Vitest/passing reruns; no test helper",
+    "ESLint/style helper/lint/build/full suites/global npx tsc --noEmit/compiler",
+    "Browser/API/network/server readiness/auth/session/real notification/user/delivery access",
+    "No row-opening read mutation, restore/delete/ack/reopen/AI POST/export/preference mutations",
+    "Screenshots/visual/all10widths/composed contrast/forced-colors/RTL200%/screenreader/axe/keyboard/focus/performance",
+    "No baseline regeneration, code/test/catalog/Git writes, subagents, installs or servers"
+  ],
+  "inspection_failures": [
+    {
+      "shell": 1970,
+      "exit": 1,
+      "error": "rg not recognized, no install; fallback read search"
+    },
+    {
+      "shell": 1990,
+      "exit": 1,
+      "error": "cp1252 UnicodeEncodeError emitting arrow; failed inspection repeated UTF8, not tests"
+    },
+    {
+      "kind": "view",
+      "path": "web/src/components/data-display/DateTime.tsx",
+      "error": "Path absent; resolved through barrel to format/DateTime.tsx, no numeric process exit"
+    },
+    {
+      "shell": 2365,
+      "exit": 1,
+      "error": "The filename or extension is too long. (os error206); oversized inline report assembly did not launch; split allowed artifact writes"
+    }
+  ],
+  "commands": [
+    {
+      "shell": 1960,
+      "command": "Get-Date -Format o; git --no-pager status --short; Get-ChildItem root -Force; Get-ChildItem docs/frontend-audits -File",
+      "exit": 0
+    },
+    {
+      "shell": 1970,
+      "command": "Get-ChildItem root; rg --files docs -g governing document patterns; Get-ChildItem notifications -Recurse",
+      "exit": 1
+    },
+    {
+      "shell": 1983,
+      "command": "python - stdin: Path.rglob document/notification inventory",
+      "exit": 0
+    },
+    {
+      "shell": 1990,
+      "command": "python - stdin: document headings and queue matches (cp1252)",
+      "exit": 1
+    },
+    {
+      "shell": 1999,
+      "command": "python - stdin: exact queue/mission/handoff matches UTF8",
+      "exit": 0
+    },
+    {
+      "shell": 2029,
+      "command": "python - stdin: SHA256/line counts and permitted artifact initialization",
+      "exit": 0
+    },
+    {
+      "shell": 2055,
+      "command": "python - stdin: targeted source/test/router/queue search",
+      "exit": 0
+    },
+    {
+      "shell": 2070,
+      "command": "python - stdin: extend before pins/producer contract search",
+      "exit": 0
+    },
+    {
+      "shell": 2086,
+      "command": "python - stdin: handler/date/table/formatter ownership",
+      "exit": 0
+    },
+    {
+      "shell": 2095,
+      "command": "python - stdin: GetLogs/DateTime/covering hook test search",
+      "exit": 0
+    },
+    {
+      "shell": 2105,
+      "command": "python - stdin: exact function identity resolution and hook test source",
+      "exit": 0
+    },
+    {
+      "shell": 2133,
+      "command": "python - stdin: preference/AI pins and existing owner search",
+      "exit": 0
+    },
+    {
+      "shell": 2152,
+      "command": "node - stdin: installed TypeScript createSourceFile AST scan and literal it.each source enumeration (no compiler/tests)",
+      "exit": 0
+    },
+    {
+      "shell": 2160,
+      "command": "python - stdin: backend bounds/count/order and route/mobile/preference ranges",
+      "exit": 0
+    },
+    {
+      "shell": 2177,
+      "command": "python - stdin: timezone/client guards/AI tests/queue search",
+      "exit": 0
+    },
+    {
+      "shell": 2182,
+      "command": "python - stdin: bounded prior raw output and narrow Phase6 owner rows",
+      "exit": 0
+    },
+    {
+      "shell": 2210,
+      "command": "Select-String -LiteralPath scoped files -Pattern each10rule patterns; Add-Content exact permitted log",
+      "exit": 0
+    },
+    {
+      "shell": 2227,
+      "command": "python - stdin: hook/timeline/preference source and sibling audit inspection",
+      "exit": 0
+    },
+    {
+      "shell": 2235,
+      "command": "Select-String -CaseSensitive scoped files: style/raw tags/camelCase/fetch; relative phrase/min-h9 exact sites",
+      "exit": 0
+    },
+    {
+      "shell": 2365,
+      "command": "python - stdin: oversized report assembly (failed to launch)",
+      "exit": 1
+    },
+    {
+      "shell": 2405,
+      "command": "python - stdin: bounded exact findings/candidates assembly and failure record",
+      "exit": 0
+    },
+    {
+      "shell": 2440,
+      "command": "python - stdin: section/action/scope/owner ledger and before-after SHA256",
+      "exit": 0
+    },
+    {
+      "command": "python - stdin: json.loads, exact item/attempt/allowed paths, finding line/count assertions, SHA256(before==after==current), reload final JSON",
+      "exit": 0
+    }
+  ],
+  "command_note": "All running check raw streams are printed and stored in exact log; view reads are not executed tests. Initial Git STATUS READ ran before worker no-Git conventions were read; no Git write or subsequent Git command.",
+  "evidence_limits": {
+    "source_only": true,
+    "all_repros_unexecuted": true,
+    "large_supports_bounded_sections_only": true,
+    "catalog_runtime_not_loaded": true,
+    "historical_receipts_not_fresh_passes": true,
+    "pinned_unread_support_bytes_not_full_audit": true,
+    "sibling_inbox_report_at_inspection": "IN_PROGRESS, no delivered findings; merge shared keys on parent intake"
+  },
+  "preservation": {
+    "source_writes": [],
+    "test_writes": [],
+    "catalog_writes": [],
+    "historical_baselines_replaced": false,
+    "core_source_line_count": 2059,
+    "section_action_data_coverage": "source declarations above, no visual/runtime parity claim"
+  },
+  "after_pins": {
+    "web/src/features/notifications/components/AlertDetailDrawer.test.tsx": {
+      "sha256": "b7a740f410c003ee5573d2f0ad7c39f4384934caddd2eed9c798c8d66d5ec21d",
+      "lines": 130
+    },
+    "web/src/features/notifications/components/AlertDetailDrawer.tsx": {
+      "sha256": "842059d12208b1585c3dcd6137d9d4a1a09ab7d170c20c41b478103eee2536bb",
+      "lines": 306
+    },
+    "web/src/features/notifications/components/InboxBody.test.tsx": {
+      "sha256": "2f2189a93cbaec607fd5d69f9f6f3a9a776564821cb4015b28e220e734688820",
+      "lines": 1156
+    },
+    "web/src/features/notifications/components/InboxBody.tsx": {
+      "sha256": "5e6ab221a751832e473457cf81a12571471198eb6d5ab92fb1e45e6dae16427a",
+      "lines": 889
+    },
+    "web/src/features/notifications/components/InboxSummary.test.tsx": {
+      "sha256": "24cfdbd67a8d1aa32367c8baed72e79523242d8186fc86e870129d14dc3042c7",
+      "lines": 327
+    },
+    "web/src/features/notifications/components/InboxSummary.tsx": {
+      "sha256": "ff9987b8bb9023fa6e6ce9a8b5671f5fa35e4cab4ff3dd6532f3f906fe240dee",
+      "lines": 156
+    },
+    "web/src/features/notifications/components/NotificationFilterBar.test.tsx": {
+      "sha256": "52da58f54e3498f68fd71a32e371fe11134efd0f3b6a0fbe31a734098d1d9d67",
+      "lines": 242
+    },
+    "web/src/features/notifications/components/NotificationFilterBar.tsx": {
+      "sha256": "32b4d0d1945f55c94747ce3a001a9df150b779732cd089082ec132bde2a782c7",
+      "lines": 283
+    },
+    "web/src/features/notifications/components/NotificationInboxDelivery.tsx": {
+      "sha256": "619258625a5ce341184dac031c48f7a22453f2b4cb6d8d57b08fe4797f14cdf0",
+      "lines": 15
+    },
+    "web/src/features/notifications/components/NotificationInboxDetails.tsx": {
+      "sha256": "31bb7269144ac0b3b016106de76007b9957c1a19a3266bcd30de198288286199",
+      "lines": 64
+    },
+    "web/src/features/notifications/components/NotificationInboxTable.tsx": {
+      "sha256": "39435fabca4953ae96d0003741797a1b0fc381a260b0685bd177aad0a64f0201",
+      "lines": 272
+    },
+    "web/src/features/notifications/pages/ArchivedPage.test.tsx": {
+      "sha256": "144bf9d803d4d5e65edaea25e710d23ecd5aef6039b2ddca777b83de44ca23c5",
+      "lines": 335
+    },
+    "web/src/features/notifications/pages/ArchivedPage.tsx": {
+      "sha256": "6cb31073d0eeb764a9448c3a55267d915819ea93e4e7b11e7c14e77cf65fb87d",
+      "lines": 74
+    },
+    "web/src/api/hooks/useNotifications.ts": {
+      "sha256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "lines": 1415
+    },
+    "web/src/api/hooks/useVehicles.ts": {
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "lines": 1898
+    },
+    "web/src/hooks/useRangeState.ts": {
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "lines": 694
+    },
+    "web/src/hooks/useSelectedVehicle.ts": {
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines": 174
+    },
+    "web/src/hooks/useNumberFormatting.ts": {
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines": 47
+    },
+    "web/src/hooks/useFormatting.ts": {
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "lines": 106
+    },
+    "web/src/lib/dateFormat.ts": {
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462
+    },
+    "web/src/lib/workspaceScope.ts": {
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168
+    },
+    "web/src/api/dataState.ts": {
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434
+    },
+    "web/src/hooks/useDataState.ts": {
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65
+    },
+    "web/src/components/layout/layout-reference/PageLayout.tsx": {
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17
+    },
+    "web/src/components/layout/PageContainer.tsx": {
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259
+    },
+    "web/src/components/layout/layout-reference/SourceContent.tsx": {
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines": 74
+    },
+    "docs/frontend-audits/audit-page-145.json": {
+      "sha256": "6e48460aaafb57fb84133dd9ece2c3ae5f0dd3e0aa9c2d2d5736f670460c7a4e",
+      "lines": 258
+    },
+    "web/src/components/ai/AIInboxAutoCategorization.tsx": {
+      "sha256": "eb8d26ff632e2209fbebb4908b18683ad09813311e18148abc38951702f1e4bb",
+      "lines": 310
+    },
+    "web/src/features/notifications/components/NotificationGroupRow.tsx": {
+      "sha256": "5c81bb9d540f08169fda7ac267beb20d7916cc829885ced26293f53a3878eb5d",
+      "lines": 276
+    },
+    "web/src/components/feedback/StaleRefreshWarning.tsx": {
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lines": 115
+    },
+    "web/src/api/client.ts": {
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lines": 458
+    },
+    "web/src/hooks/useProductPreferences.ts": {
+      "sha256": "2f6dd2ac3e6492fa0de6ab60ce1a0f5bf9b626551b1c3caf876b58781e10f276",
+      "lines": 38
+    },
+    "web/src/components/ui/DataTable.tsx": {
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines": 1707
+    },
+    "web/src/components/ui/Button.tsx": {
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lines": 93
+    },
+    "web/src/components/ui/Select.tsx": {
+      "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lines": 119
+    },
+    "web/src/hooks/useAiStream.ts": {
+      "sha256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "lines": 617
+    },
+    "web/src/features/admin/components/AlertDetailTimeline.tsx": {
+      "sha256": "40ae6048d8102b45adbdcdac340d46c16be153b0b42a94f5d63806b694b0120d",
+      "lines": 120
+    },
+    "web/src/hooks/useBulkSelection.ts": {
+      "sha256": "ddca90339b5b47824a0ed63d4b84dc04b8cd85dae5f4dece2057b92d9d9a5cf6",
+      "lines": 154
+    },
+    "web/src/hooks/useOperationalMetrics.tsx": {
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lines": 24
+    },
+    "web/src/components/data-display/EntityPreviewDrawer.tsx": {
+      "sha256": "815b8f2ab797b75d6d8d4a4e2e3d269621ca3eb24ed145bc3cae2a84cef9a60e",
+      "lines": 172
+    },
+    "web/src/api/types.ts": {
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "lines": 4194
+    },
+    "internal/api/router.go": {
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lines": 5363
+    },
+    "internal/port/repository/notification.go": {
+      "sha256": "6c57aa32efabcff9ae1eb833fc713236a2f653f18c0944e92aa74549e0083152",
+      "lines": 16
+    },
+    "web/src/api/hooks/useNotificationChannels.test.tsx": {
+      "sha256": "8931ac1d9a0a612bbb13a08c4130260a431894368196029c4e4018dd593dc309",
+      "lines": 216
+    },
+    "web/src/api/hooks/useNotificationDeliveryLogs.test.tsx": {
+      "sha256": "9f515a25fc6a22ec601bdf682c8a8865e05e3519723408c04d195dbb5cfdd348",
+      "lines": 73
+    },
+    "web/src/api/hooks/useNotificationReport.test.tsx": {
+      "sha256": "582e88b2ea35d8fee79162cc3ce8ba1ec3d0a661f40db2676c366a3058b03b7f",
+      "lines": 53
+    },
+    "internal/api/alerts/alerts.go": {
+      "sha256": "8b3a9329d4bbc2afd6eb493b4f353b92b8974f1dfa67b8d9b5ff6fa6512aaee8",
+      "lines": 324
+    },
+    "internal/api/notification/handler.go": {
+      "sha256": "3ec11b554e3b5a54570316f67cf0cc997b02adf43ef59f7abf733e6cafc815a7",
+      "lines": 978
+    },
+    "web/src/api/hooks/__tests__/useNotifications.test.tsx": {
+      "sha256": "03273d0d1aa44bc44dd342eff2b6bb1b6b16a7489010d83f7f3ea3ddd2a1a2c9",
+      "lines": 240
+    },
+    "web/src/components/data-display/format/DateTime.tsx": {
+      "sha256": "08b77196089a97bdf6f1fb37e17af36fa717c1bd7bc8b0d3f603c765c47e04a8",
+      "lines": 146
+    },
+    "web/src/components/ai/AIInboxAutoCategorization.test.tsx": {
+      "sha256": "ac665ee500225755b432d5c91acf0ea2f94c291450774964ff77f6ace8788604",
+      "lines": 683
+    },
+    "web/src/components/data-display/format/__tests__/DateTime.test.tsx": {
+      "sha256": "445fe0214ab023f2629d362e7f3fff5e0d0a95e87a05340f299211d5993fa3dc",
+      "lines": 210
+    },
+    "web/src/lib/numberFormat.ts": {
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "lines": 172
+    },
+    "web/src/lib/timezone.ts": {
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "lines": 51
+    },
+    "internal/database/notification/repo.go": {
+      "sha256": "e9286b66b8370f34ca33eb908c23081303b9f225f4f772c524cdbbc586b986db",
+      "lines": 1609
+    },
+    "internal/api/apiparams/params.go": {
+      "sha256": "5526c81eaff016243772398b88b003112f3d0c0921b484c0de3008b7d2656add",
+      "lines": 142
+    },
+    "web/src/lib/productPreferences.ts": {
+      "sha256": "78e8e94e131663e3eb7b9e231ce2ab47721e1becc890b2a449be7a317583b548",
+      "lines": 247
+    },
+    "web/src/lib/drivesAggregation.ts": {
+      "sha256": "5fcf90610a780f412b01e76b8e4ef7bfe620b2538f3bf14a8fb07df8058aa0a6",
+      "lines": 511
+    },
+    "web/src/lib/alertDrillthrough.ts": {
+      "sha256": "7c881180e8efba91e056bae7cee0cfd7a40ac56a068da86ab0c9c7c5ca89be47",
+      "lines": 129
+    },
+    "web/src/lib/contextNavigation.ts": {
+      "sha256": "f8f99848167df92589120d406b3bda5a9625b0576aa8f31cfbf719372d9a70a5",
+      "lines": 282
+    }
+  },
+  "pin_check": {
+    "time_utc": "2026-10-14T02:17:06.754627+00:00",
+    "pinned_files": 60,
+    "changed": [],
+    "unchanged": 60,
+    "status": "PASS",
+    "note": "Auditor changed no sources; shared concurrent drift if any invalidates exact-snapshot claims."
+  },
+  "completed_utc": "2026-10-14T02:17:06.754655+00:00",
+  "release": {
+    "source_write_claims": [],
+    "source_tests_catalog_released": true,
+    "command_release": "All own commands bounded/synchronous and complete; no service/helper started",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-notifications-archived.json",
+      "web/logs/phase6-qa-notifications-archived.log"
+    ],
+    "final_validation": {
+      "json_parse": "PASS",
+      "exact_item_attempt": "PASS",
+      "finding_counts_and_line_ranges": "PASS",
+      "allowed_artifact_paths": "PASS",
+      "before_after_current_pins": "PASS",
+      "pinned_files": 60,
+      "source_test_drift": 0,
+      "primary_static_cases": 96,
+      "executed_tests": 0,
+      "tests_lint_build_tsc_browser_api": "NOTRUN",
+      "confirmed_mechanisms": 12,
+      "conditional_candidates": 4,
+      "native_candidates": 3,
+      "timestamp_utc": "2026-10-14T02:17:34.207910+00:00"
+    },
+    "status": "RELEASED"
+  }
+}

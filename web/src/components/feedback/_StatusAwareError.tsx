@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useInRouterContext, useNavigate } from 'react-router-dom'
 import {
   AlertCircle,
   CircleSlash2,
@@ -12,7 +12,7 @@ import {
   ShieldX,
   TimerOff,
   TriangleAlert,
-  WifiOff,
+  CloudOff,
 } from 'lucide-react'
 // Direct module path, NOT the `@/components/ui` category barrel. The barrel
 // pulls in `ui/SignalConfigModal`, which imports the feedback barrel, so a
@@ -37,6 +37,16 @@ export interface StatusAwareErrorProps {
   message?: string
 }
 
+/** Client-side navigation when a router is mounted (portals/bare renders may lack one). */
+function RouterListButton({ href, label }: { href: string; label: string }) {
+  const navigate = useNavigate()
+  return (
+    <Button type="button" onClick={() => navigate(href)} variant="secondary" size="sm" wrapLabel>
+      {label}
+    </Button>
+  )
+}
+
 export function StatusAwareError({
   error,
   onRetry,
@@ -47,7 +57,7 @@ export function StatusAwareError({
   message,
 }: StatusAwareErrorProps) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
+  const inRouter = useInRouterContext()
   const online = useOnlineStatus()
   const kind = classifyError(error, online)
 
@@ -66,7 +76,7 @@ export function StatusAwareError({
   if (!error) return null
 
   const retryAction = onRetry ? (
-    <Button type="button" onClick={onRetry} variant="secondary" size="sm">
+    <Button type="button" onClick={onRetry} variant="secondary" size="sm" wrapLabel>
       {t('error.retry', 'Retry')}
     </Button>
   ) : undefined
@@ -87,7 +97,7 @@ export function StatusAwareError({
    * table rows where a multi-line link list would be worse than nothing.
    */
   const footer = compact ? undefined : (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3 break-words">
       {(kind === 'unauthorized' || kind === 'forbidden') && (
         <PermissionGuidanceNotice
           kind={kind === 'unauthorized' ? 'unauthenticated' : 'forbidden'}
@@ -104,10 +114,13 @@ export function StatusAwareError({
         role: 'status',
         tone: 'info',
         title: t('error.waiting.title', 'Waiting for upstream'),
-        message: t(
-          'error.waiting.message',
-          "We're pausing requests briefly. Data will refresh automatically.",
-        ),
+        message: onRetry
+          ? t('error.waiting.retryMessage', 'Requests are paused briefly. Wait before retrying.')
+          : t(
+            'error.waiting.message',
+            "We're pausing requests briefly. Data will refresh automatically.",
+          ),
+        action: retryAction,
       }
       break
     case 'not_found': {
@@ -120,14 +133,19 @@ export function StatusAwareError({
           'It may have been deleted or the link is wrong.',
         ),
         action: listHref ? (
-          <Button
-            type="button"
-            onClick={() => navigate(listHref)}
-            variant="secondary"
-            size="sm"
-          >
-            {t('error.notFound.cta', 'Back to list')}
-          </Button>
+          inRouter
+            ? <RouterListButton href={listHref} label={t('error.notFound.cta', 'Back to list')} />
+            : (
+              <Button
+                type="button"
+                onClick={() => window.location.assign(listHref)}
+                variant="secondary"
+                size="sm"
+                wrapLabel
+              >
+                {t('error.notFound.cta', 'Back to list')}
+              </Button>
+            )
         ) : undefined,
       }
       break
@@ -148,6 +166,7 @@ export function StatusAwareError({
             }}
             variant="secondary"
             size="sm"
+            wrapLabel
           >
             {t('error.unauthorized.cta', 'Sign in')}
           </Button>
@@ -228,7 +247,7 @@ export function StatusAwareError({
       break
     case 'offline':
       state = {
-        Icon: WifiOff,
+        Icon: CloudOff,
         role: 'status',
         tone: 'warning',
         title: t('error.network.offlineTitle', "You're offline"),
@@ -241,6 +260,7 @@ export function StatusAwareError({
             type="button"
             variant="secondary"
             size="sm"
+            wrapLabel
             disabled
             aria-disabled="true"
           >

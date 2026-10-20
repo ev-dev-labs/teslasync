@@ -2,11 +2,14 @@ package drives
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	"github.com/rs/zerolog/log"
@@ -37,7 +40,12 @@ func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	limit, offset := pagination(r)
-	startTime, endTime := parseDateRange(r)
+	startTime, endTime, err := apiparams.ParseDateRangeValues(r.URL.Query().Get("start"), r.URL.Query().Get("end"))
+	if err != nil {
+		span.RecordError(err)
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	drives, err := h.driveRepo.GetByVehicle(ctx, vehicleID, limit, offset, startTime, endTime)
 	if err != nil {
 		span.RecordError(err)
@@ -66,121 +74,104 @@ const (
 	driveStatsSpeedLimitMps  = 130.0 * driveStatsMpsPerMph   // ~58.1152 m/s
 )
 
-// Stats returns aggregate driving statistics for a vehicle.
+// Stats returns full completed-drive statistics scoped by started_at in [start, end).
 func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.drives.stats")
+	defer span.End()
+
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
+		span.RecordError(errMissingVehicleID)
 		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
 	vehicleID, err := parseInt64(vehicleIDStr)
-	if err != nil {
+	if err != nil || vehicleID <= 0 {
+		span.RecordError(errInvalidVehicleID)
 		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
-	ctx := r.Context()
-
-	// SI canonical drives schema (migration 000185): distance in
-	// meters, duration in seconds, speeds in m/s, power in W. Convert to
-	// the legacy display units (mi, min, mph, kW) in Go before populating
-	// the response so the JSON shape consumed by the frontend is preserved.
-	var totalDrives int
-	var totalDistMeters, totalDurSec, avgSpeedMpsVal, topSpeedMpsVal *float64
-	err = h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*),
-		       SUM(distance_m),
-		       SUM(duration_s)::float8,
-		       AVG(CASE WHEN duration_s > 0 THEN distance_m / duration_s ELSE NULL END),
-		       MAX(max_speed_mps)
-		FROM drives
-		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`, vehicleID,
-	).Scan(&totalDrives, &totalDistMeters, &totalDurSec, &avgSpeedMpsVal, &topSpeedMpsVal)
+	start, endExclusive, err := parseDrivingStatsRange(r)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("drive stats: failed to query")
+		span.RecordError(err)
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var stats drivedb.DrivingStats
+	if start.IsZero() && endExclusive.IsZero() {
+		reader := h.statsRepo
+		if reader == nil {
+			reader = h.driveRepo
+		}
+		stats, err = reader.GetStats(ctx, vehicleID)
+	} else {
+		reader := h.statsRangeRepo
+		if reader == nil {
+			reader = h.driveRepo
+		}
+		stats, err = reader.GetStatsInRange(ctx, vehicleID, start, endExclusive)
+	}
+	if err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to get driving statistics")
 		writeError(w, http.StatusInternalServerError, "failed to get driving stats")
 		return
 	}
 
-	// Convert selected SI aggregates only where existing compatibility fields
-	// intentionally remain unchanged. Duration and regen are exposed in SI
-	// canonical fields.
-	totalDistMi := scaleNullable(totalDistMeters, 1.0/driveStatsMetersPerMile)
-	avgSpeedMph := scaleNullable(avgSpeedMpsVal, 1.0/driveStatsMpsPerMph)
-	topSpeedMph := scaleNullable(topSpeedMpsVal, 1.0/driveStatsMpsPerMph)
+	writeJSON(w, http.StatusOK, drivingStatsResponse(stats))
+}
 
-	// Efficiency: battery % used per 100 km → approximate Wh/km.
-	// SoC delta is REAL percent in SI; distance converted from meters to
-	// miles inline so the original formula stays one expression.
-	var avgEfficiency *float64
-	err = h.db.Pool.QueryRow(ctx, `
-		SELECT AVG(
-			CASE WHEN distance_m > $2 AND start_soc_pct IS NOT NULL AND end_soc_pct IS NOT NULL
-			THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $3) * 100 * 0.75
-			ELSE NULL END
-		)
-		FROM drives
-		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`,
-		vehicleID, driveStatsTwoMilesMeters, driveStatsMetersPerMile,
-	).Scan(&avgEfficiency)
+// The legacy shared parser shifts RFC3339 ends and truncates date-only ends
+// for inclusive SQL. This aggregate uses a genuinely exclusive SQL bound.
+func parseDrivingStatsRange(r *http.Request) (time.Time, time.Time, error) {
+	parse := func(raw, name string, upper bool) (time.Time, error) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return time.Time{}, nil
+		}
+		if instant, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+			return instant, nil
+		}
+		date, err := time.Parse("2006-01-02", raw)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("%s must be an RFC3339 timestamp or YYYY-MM-DD date", name)
+		}
+		if upper {
+			date = date.AddDate(0, 0, 1)
+		}
+		return date, nil
+	}
+	start, err := parse(r.URL.Query().Get("start"), "start", false)
 	if err != nil {
-		log.Debug().Err(err).Msg("drive stats: efficiency query")
+		return time.Time{}, time.Time{}, err
 	}
-
-	// Regen: estimate from negative average-power readings.
-	// avg_power_w * duration_s / 3600 = Watt-hours.
-	var totalRegenWh *float64
-	err = h.db.Pool.QueryRow(ctx, `
-		SELECT SUM(CASE WHEN avg_power_w IS NOT NULL AND avg_power_w < 0
-		           THEN ABS(avg_power_w) * duration_s / 3600.0 ELSE 0 END)
-		FROM drives
-		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`, vehicleID,
-	).Scan(&totalRegenWh)
+	endExclusive, err := parse(r.URL.Query().Get("end"), "end", true)
 	if err != nil {
-		log.Debug().Err(err).Msg("drive stats: regen query")
+		return time.Time{}, time.Time{}, err
 	}
-	totalRegenEnergyWh := scaleNullable(totalRegenWh, 1.0)
-
-	sf := func(v *float64) float64 {
-		if v == nil {
-			return 0
-		}
-		if math.IsNaN(*v) || math.IsInf(*v, 0) {
-			return 0
-		}
-		return math.Round(*v*100) / 100
+	if err := apiparams.ValidateDateRange(start, endExclusive, 0); err != nil {
+		return time.Time{}, time.Time{}, err
 	}
+	return start, endExclusive, nil
+}
 
-	totalDist := sf(totalDistMi)
-	regenEnergyWh := sf(totalRegenEnergyWh)
-
-	// CO2 saved: ~120g CO2/km for an average ICE car, minus ~50g/km for EV
-	co2SavedKg := totalDist * 0.070 // net 70g/km saved
-
-	// Regen ratio (fraction of energy recovered)
-	regenRatio := 0.0
-	if totalDist > 0 {
-		// Approximate total energy used: ~150 Wh/km average
-		totalEnergyWh := totalDist * 150
-		if totalEnergyWh > 0 {
-			regenRatio = regenEnergyWh / totalEnergyWh
-			if regenRatio > 1 {
-				regenRatio = 1
-			}
-		}
+func drivingStatsResponse(stats drivedb.DrivingStats) map[string]any {
+	// Retain the existing metric response contract; Settings owns rounding.
+	return map[string]any{
+		"total_drives":         stats.Count,
+		"total_distance_km":    stats.DistanceM / 1000,
+		"total_duration_s":     stats.DurationS,
+		"avg_efficiency_wh_km": scaleNullable(stats.EfficiencyWhPerM, 1000),
+		"avg_speed_kmh":        scaleNullable(stats.AvgSpeedMps, 3.6),
+		"top_speed_kmh":        scaleNullable(stats.MaxSpeedMps, 3.6),
+		"regen_ratio":          stats.RegenRatio,
+		"regen_energy_wh":      stats.RegenEnergyWh,
+		// Existing net emissions estimate: 70 g/km, not measured emissions.
+		"co2_saved_kg": stats.DistanceM * 0.00007,
 	}
-
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"total_drives":         totalDrives,
-		"total_distance_km":    math.Round(totalDist*100) / 100,
-		"total_duration_s":     sf(totalDurSec),
-		"avg_efficiency_wh_km": sf(avgEfficiency),
-		"avg_speed_kmh":        sf(avgSpeedMph),
-		"top_speed_kmh":        sf(topSpeedMph),
-		"regen_ratio":          math.Round(regenRatio*1000) / 1000,
-		"regen_energy_wh":      math.Round(regenEnergyWh*100) / 100,
-		"co2_saved_kg":         math.Round(co2SavedKg*100) / 100,
-	})
 }
 
 // scaleNullable applies a multiplicative factor to a nullable float pointer.

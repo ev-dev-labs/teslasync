@@ -69,8 +69,10 @@ describe('LiveStatusPill', () => {
     renderPill({ state: 'offline', lastUpdateAt: null })
     const pill = screen.getByRole('status')
 
-    expect(within(pill).getByText('—')).toBeInTheDocument()
+    // The update age lives in the tooltip + accessible name, not as visible text.
+    expect(pill).toHaveAttribute('title', 'Updated —')
     expect(pill.getAttribute('aria-label')).toContain('updated —')
+    expect(pill.textContent).not.toMatch(/[0-9]/)
   })
 
   it('formats the relative label across every duration bucket', () => {
@@ -83,14 +85,18 @@ describe('LiveStatusPill', () => {
 
     for (const [deltaMs, expected] of cases) {
       const { unmount } = renderPill({ state: 'live', lastUpdateAt: NOW - deltaMs })
-      expect(within(screen.getByRole('status')).getByText(expected)).toBeInTheDocument()
+      const pill = screen.getByRole('status')
+      expect(pill).toHaveAttribute('title', `Updated ${expected}`)
+      expect(pill.getAttribute('aria-label')).toContain(`updated ${expected}`)
       unmount()
     }
   })
 
   it('clamps a future timestamp (clock skew) to "just now" instead of a negative age', () => {
     renderPill({ state: 'live', lastUpdateAt: NOW + 10_000 })
-    expect(within(screen.getByRole('status')).getByText('just now')).toBeInTheDocument()
+    const pill = screen.getByRole('status')
+    expect(pill).toHaveAttribute('title', 'Updated just now')
+    expect(pill.getAttribute('aria-label')).toContain('updated just now')
   })
 
   it('exposes an accessible live region describing the state and freshness', () => {
@@ -103,15 +109,14 @@ describe('LiveStatusPill', () => {
     expect(label).toContain('42s ago')
   })
 
-  it('keeps the dot, icon and separator out of the accessibility tree', () => {
+  it('keeps the decorative dot out of the accessibility tree', () => {
     renderPill({ state: 'live' })
     const pill = screen.getByRole('status')
 
-    const hidden = pill.querySelectorAll('[aria-hidden]')
-    // dot + lucide icon + "·" separator are all decorative.
-    expect(hidden.length).toBeGreaterThanOrEqual(3)
-    // The lucide icon renders as an inline svg.
-    expect(pill.querySelector('svg')).not.toBeNull()
+    // The face carries only the tone word; the state dot is decorative.
+    const hidden = pill.querySelectorAll('[aria-hidden="true"]')
+    expect(hidden.length).toBe(1)
+    expect(pill.textContent).toBe('Live')
   })
 
   it('degrades to the offline tone without throwing when given an unknown state', () => {

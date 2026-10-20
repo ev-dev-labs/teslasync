@@ -44,4 +44,28 @@ describe('TeslaAuthCard', () => {
     withRouter(<TeslaAuthCard authenticated={true} expiresAt={undefined} now={NOW} />)
     expect(screen.getByText('Unknown')).toBeInTheDocument()
   })
+
+  it('keeps unknown authentication separate from confirmed disconnection and preserves management navigation', () => {
+    withRouter(<TeslaAuthCard authenticated={undefined} expiresAt={undefined} now={NOW} />)
+    expect(screen.getByRole('heading', { name: 'Tesla account' })).toBeInTheDocument()
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
+    expect(screen.queryByText('Not connected')).not.toBeInTheDocument()
+    expect(screen.getByText('Token expiry unknown — re-authenticate to refresh.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Manage' })).toHaveAttribute('href', '/tesla-account')
+  })
+
+  it.each([
+    { days: 7, label: 'Expires soon', detail: 'Token expires in 7 days.' },
+    { days: 1, label: 'Expires soon', detail: 'Token expires in 1 day.' },
+    { days: 0.5, label: 'Expires soon', detail: 'Token expires later today.' },
+    { days: -0.5, label: 'Token expired', detail: 'Expired today — re-authenticate to resume Fleet API calls.' },
+  ])('preserves the token-expiry boundary and complete explanation at $days days', ({ days, label, detail }) => {
+    withRouter(<TeslaAuthCard
+      authenticated
+      expiresAt={new Date(NOW + days * 24 * 60 * 60 * 1000).toISOString()}
+      now={NOW}
+    />)
+    expect(screen.getByText(label)).toBeInTheDocument()
+    expect(screen.getByText(detail)).toBeInTheDocument()
+  })
 })

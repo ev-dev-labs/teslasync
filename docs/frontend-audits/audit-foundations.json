@@ -1,0 +1,273 @@
+{
+  "item": "audit-foundations",
+  "page": "Application-wide foundations; source-only Phase 0 audit",
+  "routes": {
+    "owner": "web\\src\\App.tsx",
+    "registry": "web\\src\\lib\\routeRegistry.ts",
+    "scope": "All production routes inherit these foundations where mounted; not a per-route rendering audit.",
+    "standalone": ["/connect", "/s/:token", "/watch", "/onboarding", "/quick-stats", "/glance", "/year-review/:year"],
+    "evidence": "web\\src\\App.tsx:562-576; web\\src\\main.tsx:24-28,129-185",
+    "developmentOnly": "/dev/shared-library and /dev/grid-states, /dev/layout, /dev/stats are DEV-gated references, not production-page acceptance."
+  },
+  "purpose": "Identify shared modernization dependencies without replacing the existing source migrations, library, query stack or persisted preferences.",
+  "primaryGoal": "One restrained, semantic, theme-aware presentation system with complete data/action preservation and centrally verified acceptance.",
+  "dataSources": [
+    {
+      "hook": "useSettings",
+      "file": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 27,
+      "endpoints": ["GET /api/v1/settings", "PUT /api/v1/settings"],
+      "sourceOwner": "settingsHandler via internal\\api\\router.go:3659-3660",
+      "behavior": "Shared ['settings'] cache; request signal forwarded; save invalidates locally and broadcasts. ThemeProvider separately hydrates raw GET settings before auth context; chart palette consumes this query.",
+      "verification": "Route declarations inspected; actual backend payload, auth and persistence round trips unverified."
+    },
+    {
+      "hook": "useVehicles",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 76,
+      "endpoints": ["GET /api/v1/vehicles", "GET /api/v1/vehicles/{vehicleID}/state"],
+      "sourceOwner": "vehicleHandler.List and CurrentState, internal\\api\\router.go:3319-3333",
+      "behavior": "Existing vehicle-picker source; state request at useVehicles.ts:531. Live/history semantics and all uninspected vehicle hooks require domain-worker evidence.",
+      "verification": "Selected declarations only; not an all-hook URL audit."
+    },
+    {
+      "hook": "useChartAnnotationsAsData and annotation mutations",
+      "file": "web\\src\\api\\hooks\\useAnnotations.ts",
+      "line": 85,
+      "endpoints": ["GET /api/v1/annotations", "POST /api/v1/annotations", "PATCH /api/v1/annotations/{id}", "DELETE /api/v1/annotations/{id}"],
+      "sourceOwner": "chartAnnotationHandler, internal\\api\\router.go:3707-3713",
+      "behavior": "ChartContainer retains canonical annotation controls and source-state adapter.",
+      "verification": "Paths/methods agree with grouped router declarations; slash normalization and mounted behavior untested."
+    },
+    {
+      "hook": "useRangeState / selected vehicle provider",
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "line": 1,
+      "endpoints": [],
+      "sourceOwner": "Workspace preferences + URL; web\\src\\lib\\workspaceScope.ts:22-77; web\\src\\main.tsx:165",
+      "behavior": "URL/shared preference ownership; calendar timezone, rolling instants and exclusive end exposed. This is client scope, not a new backend source.",
+      "verification": "Page-specific propagation of both bounds/server aggregate filtering is outside this foundation sample."
+    }
+  ],
+  "components": [
+    {"family": "Tokens and theme", "owners": ["web\\src\\index.css", "web\\tailwind.config.js", "web\\src\\lib\\tokens.ts", "web\\src\\components\\ui\\ThemeProvider.tsx", "web\\src\\components\\ui\\themePresets.ts"], "decision": "Extend existing owners; retain theme IDs/custom colors/font/density preferences."},
+    {"family": "Surfaces and actions", "owners": ["web\\src\\components\\ui\\Card.tsx", "web\\src\\components\\ui\\GlassPanel.tsx", "web\\src\\components\\ui\\Button.tsx"], "decision": "Reuse shared panel/control/focus/elevation contract; no ModernCard replacement."},
+    {"family": "Layout and source trust", "owners": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx", "web\\src\\components\\layout\\index.ts"], "decision": "Production owners are exported from category barrel; reference directory naming is not a reason to replace or exclude."},
+    {"family": "Charts", "owners": ["web\\src\\components\\charts\\ChartContainer.tsx", "web\\src\\components\\charts\\ChartBrush.tsx", "web\\src\\lib\\colors.ts", "web\\src\\hooks\\useChartPalette.ts"], "decision": "Reuse canonical frame/embedded chain and all annotations, hidden-series, table, export and fullscreen capabilities."},
+    {"family": "Icons", "owners": ["web\\src\\lib\\icons.ts", "web\\src\\components\\ui\\Icon.tsx", "web\\src\\components\\ui\\IconBox.tsx"], "decision": "Lucide remains the sole inspected general-purpose family; preserve route-local chunking rather than force-grouping the registry."},
+    {"family": "Shell scope", "owners": ["web\\src\\components\\layout\\WorkspaceHeader.tsx", "web\\src\\lib\\workspaceScope.ts", "web\\src\\hooks\\useRangeState.ts"], "decision": "Header/mobile shell remains workspace owner; do not add a second date or vehicle picker."}
+  ],
+  "duplicatedPatterns": [
+    {"pattern": "Parallel color owners", "evidence": "tokens.ts:22-27,266-300,340-350,401; colors.ts:31-68,102-110; Tailwind:24-44", "disposition": "Converge shared semantic presentation mappings, not domain meanings or user series preferences."},
+    {"pattern": "Route declaration vs generated registry vs manual preload map", "evidence": "App.tsx:562-583,852-855; routeRegistry.ts:1-6; routePrefetch.ts:17-21,29-179", "disposition": "Retain App source of truth and generation; extend existing drift checks to preload coverage."},
+    {"pattern": "Icon size map duplicated", "evidence": "tokens.ts:49-59; Icon.tsx:21-27", "disposition": "Reuse iconSize in the existing renderer after focused compatibility tests; do not add another icon wrapper."},
+    {"pattern": "Transport policy constants alongside volatility policies", "evidence": "constants.ts:29-73; queryPolicy.ts:116-185; useSettings.ts:5,27-31", "disposition": "Document explicit ownership/adoption; preserve existing retry/stale-time/query-key behavior, not a cosmetic policy rewrite."}
+  ],
+  "responsive": {
+    "status": "Source evidence only; every viewport, overflow, gesture and hit-target result is UNVERIFIED.",
+    "existingSupport": ["Tailwind containerQueries plugin: tailwind.config.js:244-248", "PageLayout @container and full width: layout-reference\\PageLayout.tsx:11-14", "WorkspaceHeader xl:grid and minmax tracks: WorkspaceHeader.tsx:41", "Density row heights 32/44/56px: index.css:209-229"],
+    "issues": [
+      {"file": "web\\playwright.config.ts", "line": 10, "rule": "MDC-043 / mission section 15", "detail": "Default quality matrix covers 390,768,1024,1440,1920, not the full required ten-width matrix. This is a configuration coverage gap, not proof of overflow.", "fix": "Extend existing quality projects or documented bounded sweeps for 320,375,430,1280,2560 and narrow allocated containers; retain complete mobile content.", "owner": "integration", "confidence": "high"}
+    ]
+  },
+  "accessibility": {
+    "status": "Keyboard, screen-reader, effective composed contrast, forced-colors and native behavior UNVERIFIED.",
+    "existingSupport": ["ThemeProvider accessibleMutedForeground checks four opaque surfaces:99-114", "Forced-colors important token remap: index.css:1649-1709", "Reduced-motion global and skeleton rules: index.css:1404-1446", "Icon decorative/meaningful semantics: Icon.tsx:59-76", "ChartContainer accessible table and semantics contract:135 and surrounding props", "App RouteAnnouncer/RouteFocusManager:542-551"],
+    "issues": [
+      {"file": "web\\src\\components\\ui\\Button.tsx", "line": 38, "rule": "MDC-040 touch reachability", "detail": "Preserved sm/md fixed heights are 36/40px; compact density is 32px. These are not automatically a WCAG failure because spacing exceptions and caller hit-area extensions exist, but source sizing does not prove 44px nonoverlapping mobile reachability.", "fix": "Test actual compact/narrow toolbars with long labels and existing touch-target utilities; retain sizes/defaults and apply existing target extension only where required.", "owner": "integration", "confidence": "high"},
+      {"file": "web\\src\\components\\ui\\ThemeProvider.tsx", "line": 99, "rule": "MDC-012 composed contrast", "detail": "Muted contrast helper evaluates opaque mode surfaces, not every translucent/control/hover/composed background or chart series. No runtime AA claim follows from this helper.", "fix": "Reuse helper; verify effective text/UI contrast across open states/custom accents/light/dark and forced colors after restrained palette integration.", "owner": "integration", "confidence": "high"}
+    ],
+    "historicalDebt": "web\\e2e\\README.md:78-86 describes tracked contrast and definition-list debt; current selectors/results were not independently exercised."
+  },
+  "states": {
+    "owner": "web\\src\\api\\dataState.ts",
+    "supported": ["initial", "ok", "stale", "partial", "unavailable", "initialFailure", "paused/offline via isRefreshBlocked", "unknown provenance/value"],
+    "presentationOwner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:9-33,41-69",
+    "preserve": ["Retained payload survives refresh failure", "fatalError only replaces an initial source", "Independent source recovery", "last-success timestamp and provenance", "Known zero distinct from null/nonfinite/unknown", "Custom loading/empty slots retain specialist prerequisites and actions"],
+    "issues": [
+      {"file": "web\\src\\api\\queryPolicy.ts", "line": 279, "rule": "MDC-026 / scope integrity", "detail": "paginatedQueryPolicy uses keepPreviousData and explicitly requires same-scope adoption. A scope-bearing key prevents cache contamination but placeholderData may still show previous-scope rows if callers use the helper indiscriminately. No offending consumer is established in this sample.", "fix": "Keep existing helper; require targeted scope-change tests for adopting lists and guard same-scope placeholder reuse at caller boundaries before changing shared behavior.", "owner": "integration", "confidence": "medium"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\lib\\tokens.ts", "line": 22, "rule": "Latest user restrained-palette mandate; MDC-010", "detail": "neonColorMap still supplies colored 15px glows, neon rings/borders/dots and maps neutral to blue via semanticToNeon. IconBox uses cyan by default; saturation is shared default vocabulary, not just user opt-in.", "fix": "Extend existing map with restrained semantic foreground/tint/border treatment and no decorative glow; keep export/API compatibility and data-state labels; neutral must read as neutral.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\tailwind.config.js", "line": 46, "rule": "Latest user restrained-palette mandate; mission visual intensity", "detail": "Global utilities expose glow-cyan/purple/blue backgrounds, mesh gradient, glow shadows and infinite glow-pulse/border-flow animations. Neutral e1/e2/e3 alternatives already exist.", "fix": "Design architect specifies restrained replacements/compatibility aliases in the existing config; audit real consumers before removing utilities; use neutral elevation rather than halo decoration.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\components\\feedback\\Spinner.tsx", "line": 60, "rule": "Latest user no decorative glow; MDC-042", "detail": "Every spinner SVG applies spinner-bolt-glow. CSS has two theme-colored drop shadows; reduced-motion branch stops drawing but intentionally retains glow.", "fix": "Keep loading role/name/size and meaningful static reduced-motion state; remove decorative drop-shadow stack through existing Spinner/CSS owner.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\index.css", "line": 524, "rule": "Latest user restrained visual intensity", "detail": "pulse-glow and glow-line remain global ambient halo/gradient-loop APIs although glass-glow classes at598-602 already resolve neutral panel shadows.", "fix": "Inventory mounted callers and replace ambient decoration with static neutral emphasis; retain legitimate loading/state feedback and reduced-motion behavior.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\lib\\tokens.ts", "line": 65, "rule": "MDC-010 / MDC-015 theme-aware surfaces", "detail": "glassCardClasses still chooses bg-white and border-white literal alpha chrome instead of --panel/--surface/--border variables used by Card/GlassPanel.", "fix": "Route existing convenience classes through current panel tokens without changing padding, shape or public exports.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\lib\\tokens.ts", "line": 408, "rule": "MDC-034 chart chrome; latest user white/neon reduction", "detail": "Chart brush stroke is fixed cyan; brush fill and synced cursor are fixed white alpha. ChartBrush consumes the brush map directly, so these are live shared presentation paths, not merely unused examples.", "fix": "Use existing theme-aware semantic chart/control/border variables for brush and cursor; preserve selection dimensions, callbacks, index semantics and visible contrast.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\lib\\colors.ts", "line": 301, "rule": "Latest user reduce saturation; MDC-034", "detail": "Theme-derived chart series clamp saturation to at least0.5 and as high as0.95. Separate static and preference palettes also exist; existing subdued brand CSS alone cannot restrain all series.", "fix": "Coordinate one chart-presentation policy with existing palette owners; reduce nonessential chroma while preserving distinguishable series/semantic meanings/user preference IDs and accessible alternatives.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\index.css", "line": 193, "rule": "Latest user reduce pure-white decoration", "detail": "--control-thumb is pure white; on-accent white at60 is contrast-driven, unlike ornamental emphasis. Generated presets also include white primary text, e.g.themePresets.ts:24.", "fix": "Architect distinguishes necessary readable on-fill/system/print whites from decoration; subdue thumb/decorative emphasis with existing tokens and measured contrast, never blindly replace all white or reset presets.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\index.css", "line": 1977, "rule": "MDC-010 / MDC-032 centralized calendar presentation", "detail": "rdp-tesla still uses --accent fallback blue, literal white selected text and white-alpha navigation hover rather than current theme/control/on-primary owners.", "fix": "Retheme existing RangePicker calendar through current semantic controls and readable foreground; preserve range geometry, day selection, focus and workspace ownership.", "owner": "shared", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\lib\\routePrefetch.ts", "line": 17, "rule": "MDC-047 route drift/performance", "detail": "HAND-MAINTAINED preload map lacks /day-log, /battery-passport and /vehicle-management, declared in App.tsx:852,855,583. Missing entries silently skip speculation; this is not a broken navigation claim.", "fix": "Extend existing prefetch map and bounded route/preload drift checks; preserve literal dynamic imports, bandwidth gate, failed-download eviction and DEV boundaries.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\lib\\colors.ts", "line": 31, "rule": "MDC-034 one chart presentation policy", "detail": "CHART_COLORS CB-safe, neon preference, theme-derived series and chartTokens.series use different series owners; the latter is a different eight-color palette despite its CB-safe comment.", "fix": "Document intentional semantic-vs-categorical distinctions and unify shared series selection at existing hooks/tokens without removing persisted preferences or changing domain color meaning.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\scripts\\auditChartPalette.mjs", "line": 31, "rule": "Executable gate must inspect actual palette", "detail": "Validator checks duplicated arrays and only four anchor literals in production source at124-129. A changed interior source color can escape adjacency validation; comment claiming other-entry drift trips adjacency is unsupported.", "fix": "Use existing dependency/tooling to validate every ordered production entry against the audited palette or load one canonical data representation. Also cover chartTokens and theme-derived results after policy clarification.", "owner": "integration", "confidence": "high"},
+    {"file": "docs\\ICON_GUIDELINES.md", "line": 100, "rule": "MDC-016 / MDC-047 coherent icon policy", "detail": "Allowed-direct-import table says only four owners may import Lucide, but CLEAN-08 text at118 onward says per-route direct imports preserve locality. icons.ts:4 repeats unconditional registry-only rule; Vite intentionally avoids vendor-icons grouping.", "fix": "Architect/tooling owner reconciles concept routing with lazy icon locality; do not bulk-rewrite feature imports into an eager registry or add another icon library.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\api\\scope.ts", "line": 39, "rule": "MDC-032 precise date-bound semantics", "detail": "QueryScope.end is documented inclusive while useRangeState.ts:120-125 exposes endInstantExclusive. Transport names alone cannot prove server interpretation.", "fix": "Document exact per-endpoint boundary mapping and add existing scope/range/domain contract tests; do not change backend filter semantics or infer units during palette work.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\components\\ui\\ThemeProvider.tsx", "line": 372, "rule": "MDC-046 existing provider boundaries", "detail": "Pre-auth raw settings fetch and provider-local theme persistence coexist with TanStack useSettings. This is an explicitly documented bootstrap exception, not authorization to replace the provider with a second theme engine.", "fix": "Preserve bootstrap/localStorage/custom-color behavior and audit hydration/cross-tab/persistence races only in a separately scoped integration item.", "owner": "integration", "confidence": "high"}
+  ],
+  "priority": {
+    "P0": ["Design-architect decision on latest restrained-palette mandate versus historical opt-in neon exceptions", "One coordinated shared token/theme/chart policy before source adoption"],
+    "P1": ["Spinner/global glow removal", "Chart chrome and convenience surface token alignment", "Production palette validation rather than duplicated audit arrays", "Full ten-width and retained-source scope-change acceptance"],
+    "P2": ["Prefetch coverage drift", "Icon policy/documentation coherence", "Inclusive/exclusive scope documentation", "Inventory historical-status reconciliation"],
+    "note": "No demonstrated runtime crash or verified contrast failure is asserted by this source audit."
+  },
+  "requiredSharedChanges": [
+    {"name": "Restrained semantic palette contract", "existingOwner": "web\\src\\lib\\tokens.ts + web\\src\\index.css + web\\tailwind.config.js", "propsVariantsStates": ["Keep NeonColor/SemanticColor public APIs until reviewed migration", "Neutral foreground/tint/border/ring", "No decorative glow", "Preserve success/warn/critical/unknown meanings", "Light/dark/custom/forced-color states"], "usedBy": ["IconBox", "Badge-style token consumers", "Card/GlassPanel", "Button/control chrome", "gaugeTone/severity consumers"], "dependsOn": ["Design architect resolves MDC-011 exceptions and visual-intensity policy", "ThemeProvider persistence compatibility", "Measured effective contrast"]},
+    {"name": "Existing theme presentation refinement", "existingOwner": "web\\src\\components\\ui\\ThemeProvider.tsx + web\\src\\components\\ui\\themePresets.ts", "propsVariantsStates": ["Retain theme/mode/custom IDs and storage keys", "Preserve auto and custom-color behavior", "Restrained appearance separate from stored preference identity", "Required readable on-fill whites are not decoration"], "usedBy": ["Application shell", "All token consumers", "Theme-derived charts"], "dependsOn": ["Design-architect decision", "Existing generated-theme owner and freshness gate", "No forced-colors important inline writes"]},
+    {"name": "Shared loading mark without glow", "existingOwner": "web\\src\\components\\feedback\\Spinner.tsx + web\\src\\index.css:588-595", "propsVariantsStates": ["sm/md/lg", "Optional localized label", "role=status", "Static meaningful reduced-motion/low-bandwidth state", "No drop shadows"], "usedBy": ["main bootstrap", "Shared loading surfaces"], "dependsOn": ["Existing useMotionPreference", "Loading accessibility regressions"]},
+    {"name": "Canonical chart palette/chrome convergence", "existingOwner": "web\\src\\lib\\colors.ts + web\\src\\hooks\\useChartPalette.ts + web\\src\\lib\\tokens.ts", "propsVariantsStates": ["Categorical vs semantic color policy", "cb_safe/neon persisted IDs retained pending architect decision", "Theme-derived primary/accent semantics", "Theme-aware brush/cursor chrome", "Legend/table alternatives and unchanged series IDs"], "usedBy": ["ChartContainer/ChartCard/EmbeddedChart", "ChartBrush", "Existing shared chart consumers"], "dependsOn": ["Palette exception decision", "Full ordered-entry adjacency validation", "Actual light/dark/custom chart contrast"]},
+    {"name": "Existing palette gate accuracy", "existingOwner": "web\\scripts\\auditChartPalette.mjs", "propsVariantsStates": ["Read/verify every actual source palette entry/order", "Fail interior-entry drift", "Retain adjacency checks", "No new dependencies"], "usedBy": ["npm run audit:palette", "npm run lint"], "dependsOn": ["Canonical chart policy", "Existing culori dependency"]},
+    {"name": "Route/preload coverage and icon locality", "existingOwner": "web\\src\\lib\\routePrefetch.ts + web\\src\\lib\\routeRegistry.test.ts + docs\\ICON_GUIDELINES.md", "propsVariantsStates": ["Production versus DEV route coverage", "Literal import identity", "saveData/2g gate", "Dynamic patterns", "Retry failed preload", "Lazy route-local icons"], "usedBy": ["PrefetchLink", "Shell navigation", "Route registry suggestion consumers"], "dependsOn": ["App.tsx retained routes/aliases", "Existing generated registry/check commands", "Production startup icon budget"]},
+    {"name": "Centralized acceptance matrix closure", "existingOwner": "web\\playwright.config.ts + web\\e2e\\README.md", "propsVariantsStates": ["Ten required widths", "Allocated narrow containers", "RTL/200% text/long labels", "Dark/light/custom/forced colors/reduced motion", "Open overlays", "Retained/offline/partial/unknown and scope-switch states"], "usedBy": ["All mounted production surfaces"], "dependsOn": ["Stable source batch", "Parent-owned validation baton", "Existing fixtures kept outside real app", "No production mutations"]}
+  ],
+  "competingImplementations": [
+    {"owners": ["neonColorMap", "severityTokens", "gaugeTone", "COLOR/STATUS_COLORS/BATTERY_COLORS"], "evidence": "tokens.ts:22-45,266-300,340-350; colors.ts:84-110", "risk": "Presentation differs despite overlapping semantics; preserve domain thresholds and state labels."},
+    {"owners": ["CHART_COLORS", "CHART_COLORS_NEON", "chartTokens.series", "buildChartPalette"], "evidence": "colors.ts:31-68,290-320; tokens.ts:401; useChartPalette.ts:8-22", "risk": "Different saturation/default/preference pathways; no fifth palette engine."},
+    {"owners": ["CSS/React panel tokens", "glassCardClasses", "Tailwind literal surface/glass/glow utilities"], "evidence": "index.css:160-171,314-339; tokens.ts:65-69; tailwind.config.js:33-70", "risk": "Neutral canonical surfaces coexist with fixed-white and decorative legacy utility paths."},
+    {"owners": ["App.tsx", "generated routeRegistry", "manual PRELOADERS", "workspaceScope opt-in set"], "evidence": "App.tsx:562-583; routeRegistry.ts:1; routePrefetch.ts:17; workspaceScope.ts:22", "risk": "Separate lists can drift; workspace scope intentionally differs from navigation coverage and must not be blindly generated for every route."},
+    {"owners": ["QueryClient defaults", "queryPolicy tiers", "STALE_TIMES/INTERVALS"], "evidence": "queryClient.ts:46-82; queryPolicy.ts:116-185; constants.ts:29-73", "risk": "Adoption drift possible; differing defaults are not sufficient evidence of a bug or permission to change existing data behavior."}
+  ],
+  "preservation": {
+    "sourceSnapshot": "Read-only live snapshot at approximately 2026-10-07T07:06:30Z; concurrent writers may change unowned files afterward.",
+    "sources": [
+      {"file": "web\\package.json", "lineCount": 185, "sha256": "E77A389F5BFD60B1A9E532EC065F5CBD7CE73AE80AABE7EEB1131A30741514A2"},
+      {"file": "web\\tailwind.config.js", "lineCount": 250, "sha256": "9539C6C3DA4F52BEDBF9E8993ADC4E5AE076B289353420C0ED7972350505B00B"},
+      {"file": "web\\src\\index.css", "lineCount": 2044, "sha256": "710F4FEAF72A4B71AD94C9367CEA106A13B9CE57B1F4AE4AD963750A763531AA"},
+      {"file": "web\\src\\lib\\tokens.ts", "lineCount": 441, "sha256": "E5178C85697F9913646670F8023668B9574B6F5A281C947DDB51141CDBA5A5C9"},
+      {"file": "web\\src\\lib\\colors.ts", "lineCount": 341, "sha256": "158B8058728E7AE5B5E83DD5E236B15C23B1A398B56C7ABEC91A629C160FF444"},
+      {"file": "web\\src\\App.tsx", "lineCount": 918, "sha256": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3"},
+      {"file": "web\\src\\lib\\routeRegistry.ts", "lineCount": 289, "sha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97"},
+      {"file": "web\\src\\lib\\routePrefetch.ts", "lineCount": 338, "sha256": "63D3E2D9CFEC499C5B4848EB4F9D1477701D31A30DF5B2B53EE24EFD9B43A339"},
+      {"file": "web\\src\\api\\queryPolicy.ts", "lineCount": 294, "sha256": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524"},
+      {"file": "web\\src\\api\\dataState.ts", "lineCount": 434, "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"},
+      {"file": "web\\src\\lib\\workspaceScope.ts", "lineCount": 168, "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"},
+      {"file": "docs\\frontend-component-inventory.md", "lineCount": 364, "sha256": "D8F64423277A822C282C62205C1E6E5A200686427B7B2EC1CFD48A9C8DE95192"}
+    ],
+    "sections": [
+      {"file": "web\\src\\index.css", "count": 7, "names": ["Typography/density", "Neutral panel/control/elevation/shape", "Legacy utility compatibility", "Light-mode overrides", "Reduced motion", "Print/forced colors/RTL/fullscreen", "Calendar/PWA overlay"], "countKind": "Audit concern groups, not exhaustive lexical or rendered section count"},
+      {"file": "web\\src\\App.tsx", "count": 2, "names": ["Standalone routes", "Layout-owned routes and aliases"], "countKind": "Source routing families; mounted route count not established"}
+    ],
+    "actions": ["Navigation/aliases/prefetch", "Theme/mode/custom-color/font/density settings", "Workspace range and vehicle selection", "Annotation CRUD", "Chart zoom/hidden-series/export/fullscreen", "Source retry/recovery", "Table/export scope, copy and specialist controls retained from accepted inventory"],
+    "dataBehavior": ["Raw SI wire/cache remains unchanged", "Unknown is not zero", "Retained data is never blanked by refresh error", "Query keys, cancellation, retry inheritance and hidden-tab polling preserved", "Writes never queued for later replay", "Public/native/demo/auth/consent boundaries preserved", "Do not erase accepted 20-contract library or source migrations"],
+    "scopeLimit": "No source edited; preservation records only selected foundation hashes, not a complete application frozen baseline."
+  },
+  "tooling": {
+    "packageOwner": "web\\package.json",
+    "declaredRuntime": "Node >=26; React18.3.1; Vite6.4.3; Tailwind3.4.1; TypeScript5.4.2; TanStack Query5.101.4; React Router7.18.0",
+    "declaredPresentation": "Recharts2.12.3, Lucide0.363.0, Leaflet1.9.4/react-leaflet4.2.1, framer-motion12.38.0",
+    "declaredQuality": "Vitest4.1.11 + jsdom30 + Testing Library; Playwright1.62.1 + axe4.13; culori4.0.2; existing custom audit scripts",
+    "dependencyRequirements": {"newDependencies": [], "removalsRequested": [], "reuse": ["Existing culori for palette validation", "Existing Tailwind CSS variables/container queries", "Existing chart/icon/motion category boundaries", "Existing test/build/audit tooling"], "installedVersions": "Not inspected; declared ranges are not installed-version proof."},
+    "cssArchitecture": "Four source CSS files enumerated: index.css, stat-reference\\statReference.module.css, ui\\mobile-grid-reference\\mobile-grid-reference.css, settings\\components\\fontPreview.css. Only index.css bodies were sampled; other files were enumeration evidence, not semantic review.",
+    "buildOwner": "web\\vite.config.ts:358-445; hidden optional production source maps, cyclic cross-chunk re-export promoted to error, separate charts/map/motion chunks, no forced Lucide vendor chunk",
+    "testOwner": "web\\vite.config.ts:358-377 uses jsdom, src test glob and shared setup; web\\playwright.config.ts uses default hermetic API fixtures",
+    "inventory": "docs\\frontend-component-inventory.md:1-61 records accepted20 contracts and separate historical receipts; later historical sections still contain paused/pending language. Those receipts are context, not current whole-app/runtime acceptance.",
+    "gateCommands": [
+      {"cwd": "web", "command": "npx tsc --noEmit", "status": "NOTRUN", "purpose": "Centralized app typecheck"},
+      {"cwd": "web", "command": "npm run typecheck:sw", "status": "NOTRUN", "purpose": "Existing separate service-worker typecheck"},
+      {"cwd": "web", "command": "npm run lint", "status": "NOTRUN", "purpose": "Full orchestrator-owned ESLint/i18n/audit chain; prohibited in this audit"},
+      {"cwd": "web", "command": "npm run build", "status": "NOTRUN", "purpose": "Existing prebuild changelog check; tsc + SW typecheck + Vite; postbuild bundle/PWA/source-map gates; prohibited in this audit"},
+      {"cwd": "web", "command": "npm test", "status": "NOTRUN", "purpose": "Existing full Vitest runner, centralized after stable source"},
+      {"cwd": "web", "command": "npm test -- src/api/dataState.test.ts src/api/queryPolicy.test.ts src/api/queryClient.test.ts src/api/scope.test.ts src/lib/routeRegistry.test.ts src/components/ui/Icon.test.tsx src/components/ui/IconBox.test.tsx", "status": "NOTRUN", "purpose": "Exact existing targeted foundation selectors, future validation baton only"},
+      {"cwd": "web", "command": "npm run audit:palette", "status": "NOTRUN", "purpose": "Existing palette adjacency validator; source-input weakness noted"},
+      {"cwd": "web", "command": "npm run audit:chart-frame", "status": "NOTRUN", "purpose": "Runs focused Node parser tests then shared chart-frame audit"},
+      {"cwd": "web", "command": "npm run audit:query-signal", "status": "NOTRUN", "purpose": "Request cancellation source gate"},
+      {"cwd": "web", "command": "npm run audit:a11y-static", "status": "NOTRUN", "purpose": "Existing static forced-color/name/landmark/reduced-motion/touch chain"},
+      {"cwd": "web", "command": "npm run audit:chunk-cycles", "status": "NOTRUN", "purpose": "Existing category-barrel chunk cycle guard"},
+      {"cwd": "web", "command": "npm run check:generated", "status": "NOTRUN", "purpose": "Existing generation freshness check"},
+      {"cwd": "web", "command": "npm run perf:check", "status": "NOTRUN", "purpose": "Strict bundle, PWA, i18n runtime/closure, duplication, source-map ratchets; requires real build artifacts"},
+      {"cwd": "web", "command": "npm run e2e:routes", "status": "NOTRUN", "purpose": "Critical route registry consistency"},
+      {"cwd": "web", "command": "npm run e2e:quality", "status": "NOTRUN", "purpose": "Existing mocked responsive/smoke suite wrapper; builds preview"},
+      {"cwd": "web", "command": "npm run e2e:a11y", "status": "NOTRUN", "purpose": "Existing axe suite, not proof of keyboard/contrast everywhere"},
+      {"cwd": "web", "command": "npm run e2e:cross-browser", "status": "NOTRUN", "purpose": "Existing Firefox/WebKit smoke wrapper"},
+      {"cwd": "web", "command": "npm run e2e:visual", "status": "NOTRUN", "purpose": "Existing reviewed Windows visual baselines; never rewrite to hide unexplained failures"},
+      {"cwd": "web", "command": "npx playwright test --config=playwright.shared-library.config.ts", "status": "NOTRUN", "purpose": "Existing reference-library suite requires parent-owned responsive dev preview at5240; config does not start server"},
+      {"cwd": "repository root", "command": "node web\\scripts\\check-modernization-preservation.mjs check --root F:\\github\\TeslaSync --baseline <reviewed-baseline.json> --report <owned-report.json>", "status": "NOTRUN", "purpose": "Existing bounded SOURCE checker; placeholders require assigned reviewed files; exit2 means unresolved, not clean"},
+      {"cwd": "repository root", "command": "bash .github/skills/audit-violations/audit.sh [path]", "status": "NOTRUN", "purpose": "Skill script inspected, not executed: includes global TypeScript and writes no foundation-specific evidence; no validation baton granted"}
+    ],
+    "executedChecks": "Only direct source searches/reads, CSS enumeration and selected SHA256/line counts; no lint/build/tests/browser/production actions.",
+    "validationNote": "Gate existence is source evidence, not pass/fail. No gate output or exit code is fabricated."
+  },
+  "themeFindings": {
+    "canonicalOwners": "index.css neutral panel/control/focus variables; ThemeProvider applies existing themes/modes/custom values; FontProvider/density bootstrap retained by main.tsx.",
+    "contractConflicts": [
+      {"file": "docs\\frontend-design-contract.md", "line": 164, "rule": "Latest user restraint overrides historical visual tolerance", "detail": "MDC-011 explicitly retains Matrix Green/neon chart choices; latest user requires reducing neon/glow/saturation even where historical contract tolerates them. Palette IDs/preferences must survive, but appearance exceptions need a design-architect decision.", "fix": "Architect records how restrained rendering applies to explicit saved neon choices without resetting IDs/preferences or sacrificing chart distinguishability.", "owner": "shared", "confidence": "high"},
+      {"file": "web\\src\\lib\\colors.ts", "line": 45, "rule": "No stylistic-surface exception without current design decision", "detail": "Comment authorizes original neon for intentionally stylistic surfaces; tokens.ts:10 similarly reserves saturation for rings/glows/dots. These permissions conflict with the latest restraint request.", "fix": "Update canonical contract and directly coupled guidance as one architect-owned decision; do not let feature workers retain noisy styling merely because old comments permit it.", "owner": "shared", "confidence": "high"}
+    ],
+    "preserveExceptions": "OS system colors, necessary readable on-fill text, real-series meaning and print white must not be mistaken for gratuitous white decoration."
+  },
+  "reportValidation": {
+    "command": "Get-Content docs\\frontend-audits\\audit-foundations.json -Raw | ConvertFrom-Json; check required keys and issue citation file/line bounds",
+    "exitCode": 0,
+    "rawOutput": ["JSON valid; required fields missing: 0; inspected files: 53", "Issue citation bounds valid: 21"],
+    "scope": "Owned JSON structure only; not product tests or runtime acceptance."
+  },
+  "evidenceLimits": [
+    "Source inspection only. No browser mounted, screenshot captured, keyboard exercised, effective contrast measured, viewport tested or backend request issued.",
+    "No Git, full-repository lint/build, dependency install, agent delegation or production action performed.",
+    "Report and heartbeat are the only owned writes; no UI/source/docs-contract/inventory edits.",
+    "Existing component inventory receipts and acceptance summaries were read as history; none rerun or upgraded into current acceptance.",
+    "Only selected hook endpoints/router declarations checked; exhaustive route/auth/backend filtering and full query adoption remain unverified.",
+    "No assumption that fixed-white or small heights alone are WCAG violations; findings distinguish presentation gaps from untested behavior.",
+    "Four source CSS paths enumerated, but secondary stylesheet bodies and complete ThemeProvider/theme preset catalog were not semantically reviewed.",
+    "Main, App, CSS, tokens and large hooks were read in bounded relevant ranges; filesRead does not mean every line or every transitive dependency was inspected.",
+    "One batched source query exited1 because a canonical adapter was initially sought at the wrong path; actual layout-reference owners were then located and read. This is not a failed product gate.",
+    "Source SHA256 is a point-in-time receipt under concurrent activity, not a lock or final whole-app source baseline."
+  ],
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-component-inventory.md",
+    "docs\\ICON_GUIDELINES.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\package.json",
+    "web\\tailwind.config.js",
+    "web\\vite.config.ts",
+    "web\\playwright.config.ts",
+    "web\\playwright.shared-library.config.ts",
+    "web\\e2e\\README.md",
+    "web\\src\\main.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\index.css",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\icons.ts",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\lib\\routeRegistry.test.ts",
+    "web\\src\\lib\\routePrefetch.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\queryBroadcast.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\queryClient.ts",
+    "web\\src\\api\\queryPolicy.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\scope.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useAnnotations.ts",
+    "web\\src\\hooks\\useChartPalette.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\components\\ui\\ThemeProvider.tsx",
+    "web\\src\\components\\ui\\themePresets.ts",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Card.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\ui\\Icon.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\components\\feedback\\Spinner.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\ChartBrush.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\WorkspaceHeader.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\scripts\\auditChartPalette.mjs",
+    "web\\scripts\\generate-route-registry.mjs",
+    "web\\scripts\\check-modernization-preservation.mjs",
+    "internal\\api\\router.go"
+  ]
+}

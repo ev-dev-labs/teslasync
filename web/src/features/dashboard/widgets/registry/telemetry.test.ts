@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Wifi, Activity, BookOpen, ScrollText } from 'lucide-react';
+import { Radio, Activity, BookOpen, ScrollText } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { TELEMETRY_WIDGETS } from './telemetry';
 import { WIDGET_REGISTRY, getWidgetDef } from './index';
@@ -49,7 +49,7 @@ const EXPECTED_NAMES: Record<string, string> = {
 /** The exact icon each widget binds — locks the id→icon mapping the picker
  *  renders via `<w.icon />`. Activity is intentionally shared by two widgets. */
 const EXPECTED_ICONS: Record<string, LucideIcon> = {
-  'live-signals': Wifi,
+  'live-signals': Radio,
   'live-signal-sparklines': Activity,
   'signal-health': Activity,
   'signal-catalog': BookOpen,

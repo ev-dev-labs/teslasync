@@ -1,0 +1,278 @@
+{
+  "item": "audit-page-211",
+  "page": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx",
+  "routes": ["/signals"],
+  "purpose": "Vehicle-scoped signal catalog, manually submitted history, live chart/tail and two-snapshot comparison workspace.",
+  "primaryGoal": "Inspect selected signals over time or between snapshots while retaining source identity, raw values, explanations, pinning and export actions.",
+  "dataSources": [
+    {
+      "name": "Available names",
+      "hook": "useSignals(vehicleId)",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 98,
+      "endpoint": "GET /signals/{vehicleID}/available",
+      "routeEvidence": "internal\\api\\router.go:4911,4929",
+      "behavior": "Name normalization; vehicle > 0 enablement; STANDARD staleTime; AbortSignal forwarded. Page consumes at line 117."
+    },
+    {
+      "name": "Typed catalog and leaf previews",
+      "hook": "useAvailableSignals; useSignalHistory",
+      "owner": "web\\src\\api\\hooks\\useSignals.ts",
+      "line": 237,
+      "endpoints": ["GET /signals/{vehicleID}/available", "GET /signals/{vehicleID}/{signalName}/history"],
+      "routeEvidence": "internal\\api\\router.go:4911,4914,4929,4932",
+      "behavior": "Tree independently requests typed descriptors at SignalCategoryTree.tsx:90. Expanded/searching leaves mount previews at 135-143; preview query parameters hours/limit at SignalSparklinePreview.tsx:151-154. Typed history preserves returned from/to/count at useSignals.ts:358-365."
+    },
+    {
+      "name": "Manual multi-signal history",
+      "hook": "Page-local useQuery",
+      "owner": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx",
+      "line": 224,
+      "endpoint": "GET /signals/{vehicleID}/{signalName}/history?from={fromIso}&to={toIso}&limit={perSignalLimit}",
+      "routeEvidence": "internal\\api\\router.go:4914,4932",
+      "behavior": "Run timestamp controls query enablement; six-request concurrency; per-signal limit min(perPage * 10, 1000); Promise.all; adapted descending rows, ascending timestamp-grouped chart, numeric-only stats, loaded-row client pagination.",
+      "unknowns": "Handler inclusivity, truncation metadata, retention and full-range completeness not inspected or exercised."
+    },
+    {
+      "name": "Snapshot diff",
+      "hook": "useSignalDiffServer",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 380,
+      "endpoint": "GET /signals/{vehicleID}/diff?at_a={ISO}&at_b={ISO}&signals={catalogNames}",
+      "routeEvidence": "internal\\api\\router.go:4910,4928",
+      "behavior": "Compare/vehicle/valid-window enablement; parameterized key and cancellation; page filters names/categories. Server omission/fallback semantics remain unverified."
+    },
+    {
+      "name": "Live SSE",
+      "hook": "useLiveSignalStream -> useRealtimeEvents",
+      "owner": "web\\src\\features\\telemetry\\hooks\\useLiveSignalStream.ts",
+      "line": 285,
+      "endpoint": "GET /api/v1/events",
+      "routeEvidence": "internal\\api\\router.go:4345",
+      "sourceEvidence": "web\\src\\hooks\\useRealtimeEvents.ts:6,68",
+      "behavior": "Shared SSE manager; vehicle_update handler; five-minute chart window/500ms flush; session aggregates; one-second tail rate; newest-first bounded 500-entry tail; pause affects tail. Vehicle changes reset buffers. Actual payload/delivery/freshness/replay not tested."
+    },
+    {
+      "name": "Pins",
+      "hook": "usePinned('widget', context); useTogglePin('widget')",
+      "owner": "web\\src\\api\\hooks\\usePinned.ts",
+      "line": 61,
+      "endpoints": ["GET /pinned?type=widget&context={context}", "POST /pinned", "DELETE /pinned/{id}"],
+      "routeEvidence": "internal\\api\\router.go:3718-3723",
+      "behavior": "Context signal-diff:vehicle:{vehicleId}; item signal:{name}; sequential bulk pin/unpin skips already-correct states. No mutation executed."
+    },
+    {
+      "name": "Workspace, URL state and summaries",
+      "hook": "useSelectedVehicle; useRangeState; useProductPreferences; useUrlArray/useUrlString/useUrlNumber/useUrlBoolean; useSavedViewUrl; useOperationalMetrics",
+      "owner": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx",
+      "line": 106,
+      "endpoints": [],
+      "behavior": "Shell vehicle/range selection; existing URL and saved-view state; shared OperationalBrief adapters. Saved-view/preference backing endpoints not inspected. REST paths above omit the client's /api/v1 prefix; SSE explicitly includes it."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / SourceContent", "owner": "@/components/layout", "file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 39, "role": "Existing layout/source framing; shared internals not audited."},
+    {"name": "GlassPanel / Badge / Button / Select / HelpTooltip / CopyButton / TabNav / Accordion / Label / Caption / GlossaryTerm", "owner": "@/components/ui", "file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 40, "role": "Existing primitive owners."},
+    {"name": "OperationalBrief / BulkActionsToolbar / SavedViewMenu", "owner": "@/components/data-display", "file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 42, "role": "Summary, bulk actions and persisted URL views."},
+    {"name": "EmptyState / EmptyStateGuidanceDetails / AlertBanner / Skeleton / StaleRefreshWarning; FadeIn", "owner": "@/components/feedback; @/components/motion", "file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 43, "role": "Existing states/motion; no runtime acceptance."},
+    {"name": "SignalCategoryTree / SignalSparklinePreview", "owner": "web\\src\\features\\telemetry\\components\\SignalCategoryTree.tsx", "line": 76, "role": "Controlled categorized selection, expansion/search and lazy previews."},
+    {"name": "SignalChartPanel", "owner": "web\\src\\features\\telemetry\\components\\SignalChartPanel.tsx", "line": 107, "role": "Auto/overlay/grid; EmbeddedChart/SmallMultiplesChart; accessible source rows, series visibility and dual axes. Frame internals not inspected."},
+    {"name": "SignalStatsPanel", "owner": "web\\src\\features\\telemetry\\components\\SignalStatsPanel.tsx", "line": 64, "role": "Min/max/avg/count, missing samples, hide-empty and DataTable."},
+    {"name": "SignalHistoryTable", "owner": "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx", "line": 66, "role": "Timestamp/signal/value/type, expanded adapted JSON copy, column menu and pagination."},
+    {"name": "LiveSignalTail", "owner": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx", "line": 48, "role": "Filter, pause/resume, autoscroll, clear, freshness and TelemetrySummaryBrief adapter. Adapter internals not inspected this retry."},
+    {"name": "SignalCompareControls / SignalDiffTable", "owner": "web\\src\\features\\telemetry\\components\\SignalCompareControls.tsx", "line": 89, "role": "A/B windows, five presets, category/search; selectable diff table with pin/source/age/delta/percentage."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 117, "rule": "MDC-002 single query ownership", "detail": "Name catalog and tree typed catalog request the same endpoint under different query families and staleTimes (useTelemetry.ts:100,122; useSignals.ts:239,251; SignalCategoryTree.tsx:90). They can disagree.", "fix": "Derive names from the existing typed catalog owner; preserve metadata, order, enablement, cancellation and intentional cache compatibility.", "owner": "integration", "confidence": "high"}
+  ],
+  "responsive": {
+    "sourceEvidence": ["Page:492 toolbar stacks then wraps at sm.", "Page:637 explorer stacks until xl; chart uses xl/3xl spans and min-w-0.", "Page:486 catalog and 701 tail have 55vh bounds.", "SignalCompareControls.tsx:119 window inputs stack until md.", "SignalStatsPanel.tsx:201, LiveSignalTail.tsx:206 and SignalDiffTable.tsx:240 declare mobile columns; history declares visibleOnMobile at 130,158,164."],
+    "issues": [],
+    "unverified": "320/375/390/430/768/1024/1280/1440/1920/2560 viewports, allocated shell width, long names, omitted mobile detail reachability, touch targets, RTL, zoom and clipping. Source reflow declarations are not responsive acceptance."
+  },
+  "accessibility": {
+    "sourceEvidence": ["Page:442 and 635 named sections.", "SignalCompareControls.tsx:132,149 named datetime inputs and 160-162 named preset group.", "SignalHistoryTable.tsx:178 named region and 198 loading status.", "LiveSignalTail.tsx:165,175 supplies aria-pressed; chart supplies data/dataColumns at SignalChartPanel.tsx:227-231."],
+    "issues": [
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 514, "rule": "MDC-040 explicit toggle state", "detail": "Live and Compare Buttons omit aria-pressed although they toggle local mutually exclusive states. Labels change, but explicit pressed state is not supplied.", "fix": "Pass aria-pressed for each state; retain historical mode when neither is active, labels and disabled behavior.", "owner": "page", "confidence": "high"}
+    ],
+    "unverified": "Keyboard order/reachability/focus, open tooltip states, announcements, screen-reader charts/tables, effective contrast, target size and OS forced colors."
+  },
+  "states": {
+    "loading": "Historical chart/stats/table receive loading; Compare has six-row skeletons at page:595; Run shows fetching at 508; catalog delegates to tree.",
+    "empty": "No vehicle at 419; pre-run guidance at 716; comparison no-change at 598; live/chart/history/stats delegate to domain components.",
+    "error": "Fatal aggregate banner at 409; historical retry passed to three panels; diff SourceContent receives error/retry at 586-592.",
+    "retained": "Catalog/history StaleRefreshWarning at 414-416; comparison summary labels retained at 569-572 and SourceContent state at 587. Whether SourceContent itself supplies adequate refresh recovery is unverified.",
+    "offline": "Live connected/disconnected badge at 394-396; stream connection is not proof of signal freshness. Offline behavior not exercised.",
+    "unknown": "Diff counts use null without a response at 375-378; inactive live rate is null in signalsSummary.ts:38. Pin trust exception recorded below.",
+    "issues": [
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 231, "rule": "MDC-026 independent source trust", "detail": "Promise.all rejects the aggregate on one signal request failure; successful neighbors and individual pending/failed identities are not exposed by this query.", "fix": "Integrate per-signal evidence with retained payloads and independent retry; preserve Run boundary, six-request cap and selected missing-sample placeholders. Existing useSignalHistoryBatch also uses Promise.all and is not by itself a partial-failure fix.", "owner": "integration", "confidence": "high"},
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 173, "rule": "MDC-026 unknown is not zero", "detail": "Pin query loading/error is discarded in favor of data default []; pinnedSignals.size is sent as zero to both summaries before a successful pin response.", "fix": "Keep the query state and represent unknown/loading/failure separately from a measured zero; retain pin identities/actions and context.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 522, "rule": "MDC-010/MDC-042 restrained live cue", "detail": "Saturated bg-red-500 animate-pulse adds ambient visual noise; SignalChartPanel.tsx:175,182 repeats red pulses. LiveSignalTail.tsx:146 has a motion-reduce override but still pulses by default.", "fix": "Use existing subdued semantic live cues and static status; keep labels/connection meaning and saved chart preferences. Verify global reduced-motion behavior separately.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\components\\SignalSparklinePreview.tsx", "line": 83, "rule": "MDC-010/MDC-034 palette ownership", "detail": "Default preview accent is hardcoded cyan #22d3ee, independent of the shared palette/theme. Actual composed contrast not measured.", "fix": "Resolve default through existing chart palette owner while preserving color override and samples; do not introduce another palette or reset saved preferences.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\components\\SignalStatsPanel.tsx", "line": 140, "rule": "MDC-012 restrained body text", "detail": "Signal-name body text inherits full CHART_COLORS; SignalHistoryTable.tsx:151 does likewise. Saturation/contrast depends on resolved palette.", "fix": "Keep series swatches/identity but use canonical primary/secondary body text; preserve data and saved chart colors.", "owner": "shared", "confidence": "medium"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 431, "rule": "MDC-013 typography owner", "detail": "Glossary p/span uses ad-hoc text-xs rather than role typography. Its muted color already uses a theme variable.", "fix": "Compose Text/Caption with semantic as overrides; retain translated lead, glossary terms, wrapping and test ID.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 137, "rule": "MDC-032 canonical workspace instants", "detail": "Page rebuilds browser-local calendar midnight/inclusive end instead of using startInstant/endInstantExclusive. useRangeState.ts:656-673 explicitly supports rolling live/24h and selected timezone calendar boundaries.", "fix": "Use canonical instants in a committed typed Run request; verify handler bound semantics before changing inclusivity. Keep shared header owner and independent A/B business windows.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 225, "rule": "MDC-002/MDC-046 query identity/cancellation", "detail": "Key omits selected signals, bounds and fetch limit; queryFn reads changing values and does not accept/forward signal. Refetch can reuse one key with changed scope.", "fix": "Integrate existing typed history/batch owner with immutable submitted parameters, keyed scope and AbortSignal; retain manual Run, cache/retry policy and bounded concurrency.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 230, "rule": "MDC-045 loaded scope is not full-range proof", "detail": "Per-signal row cap drives aggregates and totalTableRows at 295. Adaptation drops returned range/count metadata; loaded total is not proven full server total.", "fix": "Keep returned bounds/limits/source evidence and explain loaded scope; preserve currently loaded rows, sorting and pagination. Do not fabricate completeness or change calculations silently.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 146, "rule": "MDC-046 deep-link parity", "detail": "Live/Compare are local state while permalink and saved views serialize currentQuery at 363-367,402-404. Mode itself cannot be restored from those query parameters.", "fix": "Use existing URL-state mechanism for validated mutually exclusive mode, retaining historical fallback and every existing URL key.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\components\\SignalCompareControls.tsx", "line": 49, "rule": "MDC-045 no invented event boundaries", "detail": "Before/after last charge computes now minus four hours; last drive computes now minus 90/5 minutes. These are not source-backed event boundaries.", "fix": "Preserve preset actions and accurately localize their relative-window meaning unless an existing verified event source is integrated; do not invent capabilities.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 745, "rule": "MDC-026 source-backed refresh description", "detail": "Footer says catalog refreshes every 5s; inspected available hooks show staleTime but no refetchInterval. Inherited policy has not been inspected, so a definite polling mismatch is not established.", "fix": "Verify effective canonical query policy then align localized explanation; do not add polling simply to justify the text.", "owner": "integration", "confidence": "medium"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 61, "rule": "MDC-002 data/presentation boundary", "detail": "Page imports data adaptation/type directly from root components/SignalQueryControls and owns request/aggregation logic. The adapter creates timestamp/name/typed scalar rows but drops envelope metadata.", "fix": "Reuse typed signal query/adapter ownership outside UI modules; retain numeric/string/boolean/null semantics and provide truthful metadata detail without silently deleting current adapted JSON.", "owner": "integration", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Canonical range and immutable query identity", "Independent history and pin trust", "Accurate presets and deep links", "Restrained presentation and explicit toggle state"],
+    "reason": "Source-proven data-scope/trust risks take precedence over cosmetic changes. This is an audit, not acceptance or permission for source edits."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Extend existing typed history submission ownership",
+      "owner": "web\\src\\api\\hooks\\useSignals.ts",
+      "props": ["batch: { revision, vehicleId, signals, from, to, limit } | null", "per-source identity/payload/error/retry", "concurrency: 6"],
+      "variants": ["manual submitted historical request"],
+      "states": ["pending", "empty/unavailable", "partial", "fatal", "retained", "independent retry", "returned bounds/limit"],
+      "usedBy": ["web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx"],
+      "dependsOn": ["Existing useSignalHistory/useSignalHistoryBatch keys and normalization", "Canonical useRangeState instants", "Verified backend bounds/truncation contract"],
+      "constraint": "Existing batch owner at useSignals.ts:375 is keyed/cancellable but still Promise.all with no six-request limit. Extend/integrate rather than claiming it already solves partial trust or creating a competing engine."
+    },
+    {
+      "name": "One available catalog source",
+      "owner": "web\\src\\api\\hooks\\useSignals.ts",
+      "props": ["vehicleId", "typed descriptors", "derived names", "catalog DataState"],
+      "variants": ["tree descriptors", "comparison signal names"],
+      "states": ["loading", "empty", "fatal", "retained"],
+      "usedBy": ["web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "web\\src\\features\\telemetry\\components\\SignalCategoryTree.tsx"],
+      "dependsOn": ["Existing useAvailableSignals", "Cache compatibility and catalog order"],
+      "constraint": "Reuse owner; preserve cancellation/metadata and avoid changing query policy without evidence."
+    },
+    {
+      "name": "Restrained domain signal presentation",
+      "owner": "web\\src\\features\\telemetry\\components\\SignalChartPanel.tsx",
+      "relatedOwners": ["web\\src\\features\\telemetry\\components\\SignalSparklinePreview.tsx", "web\\src\\features\\telemetry\\components\\SignalStatsPanel.tsx", "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx", "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx"],
+      "props": ["isLive", "chartMode", "selectedSignals", "data", "stats", "color override", "signalIndex"],
+      "variants": ["overlay/grid/auto", "live/historical", "catalog preview", "table signal identity"],
+      "states": ["loading", "empty", "fatal", "retained", "reduced motion"],
+      "usedBy": ["web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx"],
+      "dependsOn": ["Existing semantic text/status tokens", "Existing chart palette and persisted preferences", "Canonical frames"],
+      "constraint": "Existing domain owners only, no new composite/palette. Other production consumers not independently audited."
+    },
+    {
+      "name": "Accurate compare preset semantics",
+      "owner": "web\\src\\features\\telemetry\\components\\SignalCompareControls.tsx",
+      "props": ["atA", "atB", "onChangeA", "onChangeB", "DIFF_PRESETS"],
+      "variants": ["all five current presets"],
+      "states": ["valid", "invalid/empty windows"],
+      "usedBy": ["web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx"],
+      "dependsOn": ["Existing signalDiff preset localization keys", "Verified event source only if event lookup is actually intended"],
+      "constraint": "Preserve actions/calculations unless explicitly correcting business semantics; catalog edits belong to catalog owner."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 224, "rule": "MDC-002 reuse typed query owner", "detail": "Page-local history duplicates typed signal history/batch responsibility; duplicate catalog reads are recorded under duplicatedPatterns.", "fix": "Integrate existing typed owners while preserving Run and independent source evidence, not another query/chart/formatting library.", "owner": "integration", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceHash": "32C0A9DB4656B4A746AF2C4BF45726B532AE7F78FA81D90C23DF7BB8DD14871E",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 750,
+    "routeEvidence": "web\\src\\App.tsx:211,733",
+    "aliases": [],
+    "aliasEvidence": "Inspected App.tsx telemetry registration block 728-740: /signals mounts SignalsWorkspace; /signal-explorer, /signal-log, /live-monitor and /signal-diff mount distinct pages, not aliases. No alias to this lazy component found in inspected App.tsx references. Not a whole-router redirect audit.",
+    "workspaceEvidence": "web\\src\\lib\\workspaceScope.ts:63 enables shared range for /signals.",
+    "sectionCount": 14,
+    "sectionNames": [
+      {"name": "Header, live connection status, saved views and Share", "line": 385},
+      {"name": "Fatal and retained-source notices", "line": 409},
+      {"name": "No vehicle guidance", "line": 419},
+      {"name": "Freshness/SOC glossary strip", "line": 431},
+      {"name": "Workspace summary", "line": 443},
+      {"name": "Add signals Accordion/tree", "line": 462},
+      {"name": "Per-page/Run/Live/Compare/help toolbar", "line": 491},
+      {"name": "Compare A/B, presets and filters", "line": 547},
+      {"name": "Diff summary", "line": 559},
+      {"name": "Bulk actions, diff table and pinned chips", "line": 576},
+      {"name": "Explorer chart layout selector/chart", "line": 635},
+      {"name": "Per-signal stats rail", "line": 677},
+      {"name": "Live tail OR history table OR pre-run guidance", "line": 692},
+      {"name": "Catalog refresh explanation", "line": 743}
+    ],
+    "sectionCountingMethod": "Logical source regions including mutually exclusive modes, not mounted counts. Direct page JSX: 2 section, 3 GlassPanel, 2 OperationalBrief, 0 ChartContainer; chart delegation is not a missing-chart finding.",
+    "actions": [
+      "Shared shell vehicle/range; catalog signal/group selection, search, expansion, Accordion open state.",
+      "Save/apply /signals views and copy permalink.",
+      "25/50/100/500 row size; Run resets page; mutually exclusive Live/Compare or neither.",
+      "Auto/Overlay/Grid chart layout; keep series/axes/legend identity and accessible data supplied to existing frames. Frame export/fullscreen behavior not inspected.",
+      "Stats hide-empty, table filters and missing numeric samples.",
+      "Historical client pagination/column menu, expand and copy adapted row JSON.",
+      "Tail filter, pause/resume, autoscroll and clear.",
+      "A/B edits, five presets, search/category filtering and clear category.",
+      "Diff pin/multiselect, bulk pin/unpin, selected filtered CSV download, clear selection, /alert-studio navigation with signals/from query.",
+      "Existing glossary/help/guidance and source retry actions."
+    ],
+    "dataBehavior": [
+      "Preserve raw wire/cache SI and source identity; display formatting/localization remains in existing owners. Do not guess signal units or introduce legacy conversion helpers.",
+      "Adapter preserves timestamp/name and finite numeric/boolean/string/null values; expanded JSON currently represents adapted rows, not the complete original envelope.",
+      "History row order descending; chart timestamp grouping/ascending order and boolean 1/0 versus null; history stats numeric-only.",
+      "Six-request limit, per-signal cap 1000, loaded-row pagination and all loaded values must survive; expose limits truthfully rather than asserting full-range totals.",
+      "Live chart five-minute window/500ms flush; aggregates are cumulative until reset, not necessarily window-only; tail rate one-second, buffer 500, pause tail only, separate full event tail and selected chart.",
+      "Keep table IDs telemetry:signal-stats, telemetry:signal-history, telemetry:live-signal-tail and signal-diff-table.",
+      "Diff retains A/B values, source/age, numeric delta/percentage and pinned-first alphabetical ordering.",
+      "Export columns signal/window_a/window_b/source_a/source_b and filename signal-diff-vehicle-{vehicleId}.csv; current Copy CSV label triggers download.",
+      "Pin type widget, signal:{name}, signal-diff:vehicle:{vehicleId}; preserve saved-view identity and URL keys signals,catq,cats,catopen,chart,page,size,a,b,q,cat plus existing range state.",
+      "Retain every translated label/explanation and setting. Unknown/failure/pending is not measured zero; mode visibility is not permission to remove capabilities."
+    ]
+  },
+  "evidenceLimits": {
+    "scope": "Atomic read-only retry; immutable attempt-one evidence reconciled against current page and bounded dependencies. Mutable original report/heartbeat not read or edited.",
+    "reconciliation": "Current page SHA256 equals preserved hash and 750-line count. Refreshed shifted citations (notably summary section 442 rather than prior 455; pulse 522 rather than prior 534). Removed unsupported explicit comparison refresh-warning finding pending SourceContent inspection. Existing typed batch still uses Promise.all, so it is not represented as a ready-made partial-source solution.",
+    "runtime": "UNVERIFIED: mounted route, browser, screenshots, viewport, keyboard, screen reader, contrast, forced colors and actual backend requests. Source inspection is not acceptance.",
+    "validation": "No Git, source edits, full-repository TypeScript/lint/build, tests or subagents. Targeted source patterns/hash and JSON/schema validation only.",
+    "auditScript": "Read audit.sh; not executed because it unconditionally invokes full-project npx tsc --noEmit, expressly prohibited for this item.",
+    "sourceCounts": {"staticInlineStyles": 0, "rawRestrictedHtmlElements": 0, "neonGlowPureWhiteClassMatches": 0, "GlassPanelJsx": 3, "OperationalBriefJsx": 2, "ChartContainerJsx": 0, "sectionJsx": 2},
+    "countMethod": "Targeted regex counts on assigned page only. Zero neon/glow/pure-white matches does not establish composed noise-free presentation; explicit saturated/pulsing and dependency color findings remain.",
+    "unknowns": ["Backend bound inclusivity/truncation/retention", "Effective inherited catalog polling policy", "Saved-view/preference backing endpoints", "Current live event payload/freshness/replay", "Shared table mobile detail/export/focus", "Resolved palette contrast", "Shared SourceContent retained recovery"],
+    "filesWritten": ["docs\\frontend-audits\\audit-page-211-attempt-2.json", ".agent-status\\audit-page-211-attempt-2.txt"],
+    "validationReceipt": {
+      "method": "PowerShell ConvertFrom-Json with required-field/identity assertions, Get-FileHash -Algorithm SHA256, Get-Content line/citation checks and targeted regex counts; no runtime acceptance claimed.",
+      "exitCode": 0,
+      "output": [
+        "PASS: JSON; 20 required fields; exact item/page/route; SHA256 unchanged; 750 lines; 14 sections; issue schema/ranges.",
+        "{\"sectionJsx\":2,\"GlassPanelJsx\":3,\"neonGlowPureWhiteClassMatches\":0,\"staticInlineStyles\":0,\"rawRestrictedHtmlElements\":0,\"ChartContainerJsx\":0,\"OperationalBriefJsx\":2}",
+        "ROUTE: 4886: r.Route(\"/signals/{vehicleID}\", func(r chi.Router) {",
+        "LIVE: 285: const { connected } = useRealtimeEvents({"
+      ],
+      "corrections": "Readback exposed toggle citation on closing branch at 513; corrected to Button opening at 514. Live subscription anchor corrected to 285. These are citation corrections, not source edits."
+    }
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\audit-page-211-attempt1-preserved.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\features\\telemetry\\components\\SignalCategoryTree.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalCompareControls.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalSparklinePreview.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalStatsPanel.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalChartPanel.tsx",
+    "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalDiffTable.tsx",
+    "web\\src\\features\\telemetry\\hooks\\useLiveSignalStream.ts",
+    "web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\signalsSummary.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\hooks\\useSignals.ts",
+    "web\\src\\api\\hooks\\usePinned.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useRealtimeEvents.ts",
+    "web\\src\\components\\SignalQueryControls.tsx",
+    "internal\\api\\router.go"
+  ]
+}

@@ -2,7 +2,7 @@
  * BatteryLinearGaugeWidget — behaviour + hardening coverage.
  *
  * The widget renders a battery state-of-charge gauge whose arc colour is
- * driven by `getBatteryColor` (green > 50 %, amber > 20 %, else red), an
+ * driven by the shared battery color mapping (green > 50 %, amber > 20 %, else red), an
  * optional charge-limit overlay ring + "Limit" stat (only when the extended
  * `charge_limit_soc` field is a finite number), a compact 1×1 variant, and a
  * "⚡ Charging" indicator. There is a single public export (the default
@@ -74,7 +74,7 @@ function limitMarker(container: HTMLElement): HTMLElement | null {
 }
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -156,9 +156,14 @@ describe('BatteryLinearGaugeWidget — level → gauge colour', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 })));
     const { container } = renderWidget();
 
-    expect(circleStrokes(container)).toContain(GREEN);
-    expect(circleStrokes(container)).not.toContain(AMBER);
-    expect(circleStrokes(container)).not.toContain(RED);
+    const semanticColors: Record<string, string> = {
+      [GREEN]: 'var(--semantic-success)',
+      [AMBER]: 'var(--semantic-warning)',
+      [RED]: 'var(--semantic-danger)',
+    };
+    expect(circleStrokes(container)).toContain(semanticColors[GREEN]);
+    expect(circleStrokes(container)).not.toContain(semanticColors[AMBER]);
+    expect(circleStrokes(container)).not.toContain(semanticColors[RED]);
     // Not a blank panel: the LinearGauge label renders in the large variant.
     expect(screen.getAllByText('Battery').length).toBeGreaterThan(0);
   });
@@ -167,43 +172,43 @@ describe('BatteryLinearGaugeWidget — level → gauge colour', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 35 })));
     const { container } = renderWidget();
 
-    expect(circleStrokes(container)).toContain(AMBER);
-    expect(circleStrokes(container)).not.toContain(GREEN);
+    expect(circleStrokes(container)).toContain('var(--semantic-warning)');
+    expect(circleStrokes(container)).not.toContain('var(--semantic-success)');
   });
 
   it('renders a red arc at or below 20%', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 10 })));
     const { container } = renderWidget();
 
-    expect(circleStrokes(container)).toContain(RED);
-    expect(circleStrokes(container)).not.toContain(AMBER);
+    expect(circleStrokes(container)).toContain('var(--semantic-danger)');
+    expect(circleStrokes(container)).not.toContain('var(--semantic-warning)');
   });
 
   it('treats the 50% and 20% thresholds as exclusive upper bounds', () => {
     // Exactly 50 is NOT > 50 → amber, not green.
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 50 })));
     const at50 = renderWidget();
-    expect(circleStrokes(at50.container)).toContain(AMBER);
-    expect(circleStrokes(at50.container)).not.toContain(GREEN);
+    expect(circleStrokes(at50.container)).toContain('var(--semantic-warning)');
+    expect(circleStrokes(at50.container)).not.toContain('var(--semantic-success)');
     at50.unmount();
 
     // Exactly 20 is NOT > 20 → red, not amber.
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 20 })));
     const at20 = renderWidget();
-    expect(circleStrokes(at20.container)).toContain(RED);
-    expect(circleStrokes(at20.container)).not.toContain(AMBER);
+    expect(circleStrokes(at20.container)).toContain('var(--semantic-danger)');
+    expect(circleStrokes(at20.container)).not.toContain('var(--semantic-warning)');
   });
 
-  it('falls back to a 0% (red) gauge when battery_level is missing', () => {
+  it('shows an unknown readout without a fabricated 0% gauge when battery_level is missing', () => {
     // battery_level omitted at runtime → widget coalesces to 0.
     mockUseVehicleState.mockReturnValue(
       stateQuery({ ...makeState(), battery_level: undefined as unknown as number }),
     );
     const { container } = renderWidget();
 
-    expect(circleStrokes(container)).toContain(RED);
-    // The numeric readout shows 0, never NaN/undefined.
-    expect(screen.getAllByText('0').length).toBeGreaterThan(0);
+    expect(circleStrokes(container)).not.toContain('var(--semantic-danger)');
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).toBeNull();
   });
 });
 
@@ -260,8 +265,12 @@ describe('BatteryLinearGaugeWidget — charging indicator', () => {
     const { container } = renderWidget();
 
     expect(screen.getByText(/Charging/)).toBeInTheDocument();
+    const bolt = screen.getByText(/Charging/).querySelector('span[aria-hidden="true"]');
+    expect(bolt).not.toBeNull();
+    expect(bolt).toHaveTextContent('⚡');
+    expect(bolt).toHaveAttribute('aria-hidden', 'true');
     // Gauge still renders alongside the indicator.
-    expect(circleStrokes(container)).toContain(GREEN);
+    expect(circleStrokes(container)).toContain('var(--semantic-success)');
   });
 
   it('hides the charging indicator when not charging', () => {
@@ -271,7 +280,7 @@ describe('BatteryLinearGaugeWidget — charging indicator', () => {
     const { container } = renderWidget();
 
     expect(screen.queryByText(/Charging/)).not.toBeInTheDocument();
-    expect(circleStrokes(container)).toContain(GREEN);
+    expect(circleStrokes(container)).toContain('var(--semantic-success)');
   });
 });
 
@@ -282,12 +291,12 @@ describe('BatteryLinearGaugeWidget — layout variants', () => {
     );
     const { container } = renderWidget({ size: { cols: 1, rows: 1 } });
 
-    // Compact: no header title, no gauge label, and no stat row.
+    // Compact: no header title or duplicate stat row; the gauge keeps its label.
     expect(screen.queryByText('Battery')).not.toBeInTheDocument();
-    expect(screen.queryByText('Level')).not.toBeInTheDocument();
+    expect(screen.getByText('Level')).toBeInTheDocument();
     expect(screen.queryByText('Limit')).not.toBeInTheDocument();
     // The gauge fill itself is still drawn.
-    expect(circleStrokes(container)).toContain(GREEN);
+    expect(circleStrokes(container)).toContain('var(--semantic-success)');
   });
 
   it('renders the stat row only for the large (≥2×2) variant', () => {
@@ -301,7 +310,8 @@ describe('BatteryLinearGaugeWidget — layout variants', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 })));
     renderWidget({ size: { cols: 2, rows: 1 } });
     expect(screen.getByRole('heading', { name: 'Battery' })).toBeInTheDocument();
-    expect(screen.queryByText('Level')).not.toBeInTheDocument();
+    expect(screen.getByText('Level')).toBeInTheDocument();
+    expect(screen.getAllByText('80.00')).toHaveLength(1);
   });
 });
 
@@ -310,7 +320,14 @@ describe('BatteryLinearGaugeWidget — loading / empty / error', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(undefined, { data: undefined, isLoading: true }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const shell = container.querySelector('[data-data-state="initial"]');
+    expect(shell).toHaveAttribute('aria-busy', 'true');
+    expect(shell?.querySelector('[aria-hidden="true"].min-h-24')).toHaveClass(
+      'h-full', 'min-h-24', 'rounded-xl', 'bg-[var(--skeleton-bg)]',
+    );
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
+    expect(screen.queryByRole('meter')).toBeNull();
     expect(screen.queryByText('No battery data')).not.toBeInTheDocument();
     expect(circleStrokes(container)).toHaveLength(0);
   });
@@ -343,7 +360,25 @@ describe('BatteryLinearGaugeWidget — loading / empty / error', () => {
 
     // Data present → error is a subtle freshness signal, not a full panel.
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    expect(circleStrokes(container)).toContain(GREEN);
+    expect(circleStrokes(container)).toContain('var(--semantic-success)');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
+
+  it('keeps a known charge limit visible even when the battery reading is unknown', () => {
+    mockUseVehicleState.mockReturnValue(stateQuery(stateWithLimit(90, { battery_level: Number.NaN })));
+    renderWidget();
+    expect(screen.queryByRole('meter')).toBeNull();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Limit')).toBeInTheDocument();
+    expect(screen.getByText('90')).toBeInTheDocument();
+  });
+
+  it('rejects an unreachable limit rather than displaying a misleading edge marker', () => {
+    mockUseVehicleState.mockReturnValue(stateQuery(stateWithLimit(120)));
+    const { container } = renderWidget();
+    expect(limitMarker(container)).toBeNull();
+    expect(screen.queryByText('Limit')).toBeNull();
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuemax', '100');
   });
 });
 

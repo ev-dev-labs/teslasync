@@ -18,7 +18,7 @@ import {
 } from '@/components/charts';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useChartPalette } from '@/hooks/useChartPalette';
-import { isDcSession, avg } from './helpers';
+import { isDcSession, availableAverage } from './helpers';
 import { convertPowerFromSI } from '@/lib/unitConversion';
 import type { MonthlySpeed } from './types';
 
@@ -37,19 +37,25 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
     const byMonth = new Map<string, { dc: number[]; ac: number[] }>();
     rows.forEach((s) => {
       const month = (s.started_at ?? '').slice(0, 7);
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) || !Number.isFinite(Date.parse(s.started_at))) return;
       if (!byMonth.has(month)) byMonth.set(month, { dc: [], ac: [] });
       const group = byMonth.get(month)!;
-      const power = convertPowerFromSI(s.peak_power_w ?? 0, 'kW');
+      if (typeof s.peak_power_w !== 'number' || !Number.isFinite(s.peak_power_w)) return;
+      const power = convertPowerFromSI(s.peak_power_w, 'kW');
       if (isDcSession(s)) group.dc.push(power);
       else group.ac.push(power);
     });
     return Array.from(byMonth.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, { dc, ac }]) => ({
-        month,
-        dcAvgKw: Math.round(avg(dc) * 10) / 10,
-        acAvgKw: Math.round(avg(ac) * 10) / 10,
-      }));
+      .map(([month, { dc, ac }]) => {
+        const dcAvg = availableAverage(dc);
+        const acAvg = availableAverage(ac);
+        return {
+          month,
+          dcAvgKw: dcAvg == null ? null : Math.round(dcAvg * 10) / 10,
+          acAvgKw: acAvg == null ? null : Math.round(acAvg * 10) / 10,
+        };
+      });
   }, [sessions]);
 
   const tableData = useMemo(
@@ -79,12 +85,13 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
         'Monthly average DC vs AC charge rate',
       )}
       ariaLabel={t(
-        'charging.curve.speedTrend.aria',
+        'charging.curve.speedTrendAria',
         'Monthly average DC and AC charging speed line chart',
       )}
       data={tableData}
+      exportData={tableData}
       dataColumns={dataColumns}
-      empty={monthlyTrend.length === 0}
+      empty={!monthlyTrend.some(m => m.dcAvgKw != null || m.acAvgKw != null)}
       height={280}
       exportable
       exportFilename="charging-speed-trend"
@@ -103,7 +110,7 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
               value: t('charging.curve.avgKw', 'Avg kW'),
               angle: -90,
               position: 'insideLeft',
-              style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+              style: axisTickSm,
             }}
           />
           <Tooltip content={<ChartTooltip />} />

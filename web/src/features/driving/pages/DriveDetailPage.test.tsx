@@ -1,31 +1,11 @@
 /**
  * DriveDetailPage contract tests.
  *
- * DriveDetailPage is the orchestration layer for a single drive: it pulls the
- * drive + derived stats from `useDriveDetailData`, owns the page-level loading
- * skeleton, error surface and (new) not-found empty state, computes the route
- * title + vehicle meta line, gates the numeric-summary panels behind a
- * "does this drive have meaningful telemetry?" heuristic, and drives the share
- * dialog. These tests exercise every branch a user can reach by controlling the
- * hook's return value and stubbing the heavy chart / map / AI leaf components
- * (each has its own suite) so the assertions target the page's own logic:
- *
- *   1. Loading   → the skeleton renders and nothing else (no page chrome).
- *   2. Error     → PageContainer's error surface shows the message; every
- *                  section is withheld.
- *   3. Not found → drive is null with no error → an explicit empty state, never
- *                  a blank page (the hardening this elevation adds).
- *   4. Rich drive→ the route-title heading, the vehicle meta line, and all
- *                  gated + always-on sections render; no telemetry-gap banner.
- *   5. Empty drive→ all-zero aggregates → the numeric panels collapse to a
- *                  single telemetry-gap banner while the always-on sections
- *                  (timeline, map, why-ended) still render; the title falls
- *                  back to the generic label.
- *   6. Telemetry rows keep the numeric panels alive even with zero aggregates.
- *   7. Zero-energy meaningful drive hides ONLY the cost-savings panel.
- *   8. The Share action opens + closes the (stubbed) share dialog.
- *   9. Back / Replay / Print controls are accessible and replay links to the id.
- *  10. Id-scoped controls disappear when the route carries no drive id.
+ * Query readiness separates active loading, cold pause and resolved absence.
+ * Retained reports survive refresh failures, and independently paused FSD
+ * evidence gets its own notice. Report anchors and section shells remain
+ * available through loading, failure, empty/zero data and recovery.
+ * Heavy chart, map and AI leaves are stubbed to test page orchestration.
  *
  * `useSettings` / `useTimezone` come from the global stubs in
  * src/test-setup.ts; react-i18next is stubbed locally so the English fallbacks
@@ -35,7 +15,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
+import type { DataStateSource } from '@/api/dataState'
+import type { FsdDriveAnalytics } from '@/types/fsd'
+import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
 import type { DriveDetail } from '@/types/driving'
 import type { Vehicle } from '@/types/vehicle'
 import type { LatLngExpression } from '@/components/maps'
@@ -79,6 +62,7 @@ vi.mock('react-i18next', async () => {
 interface HookReturn {
   drive: DriveDetail | null
   vehicle: Vehicle | null
+  timezone?: string
   isLoading: boolean
   error: Error | null
   /**
@@ -87,14 +71,7 @@ interface HookReturn {
    * one from `drive` + `error`, which keeps every pre-existing case working
    * while letting a test model "retained rows + failed refresh" explicitly.
    */
-  driveQuery?: {
-    data?: DriveDetail
-    error?: unknown
-    isError?: boolean
-    isFetching?: boolean
-    dataUpdatedAt?: number
-    refetch?: () => unknown
-  }
+  driveQuery?: DataStateSource<DriveDetail | null>
   chartData: ChartDataPoint[]
   stats: DriveStats | null
   trail: LatLngExpression[]
@@ -110,28 +87,40 @@ const hookState: { current: HookReturn } = { current: emptyState() }
 /** Mirrors what `useDrive()` would return for the current controlled state. */
 function synthesiseDriveQuery(state: HookReturn): NonNullable<HookReturn['driveQuery']> {
   return state.driveQuery ?? {
-    data: state.drive ?? undefined,
+    data: state.drive ?? (state.isLoading || state.error ? undefined : null),
     error: state.error ?? undefined,
     isError: state.error != null,
-    isFetching: false,
+    isPending: state.isLoading,
+    isFetching: state.isLoading,
+    isSuccess: !state.isLoading && !state.error,
+    fetchStatus: state.isLoading ? 'fetching' : 'idle',
     dataUpdatedAt: state.drive != null ? 1_000 : 0,
     refetch: () => {},
   }
 }
 
-vi.mock('../components/drive-detail', () => {
+vi.mock('../components/drive-detail', async () => {
+  const { SupervisedDrivingPanel } = await vi.importActual<
+    typeof import('../components/drive-detail/SupervisedDrivingPanel')
+  >('../components/drive-detail/SupervisedDrivingPanel')
   const stub = (testid: string) => () => <div data-testid={testid} />
   return {
     useDriveDetailData: () => ({
       ...hookState.current,
+      timezone: hookState.current.timezone ?? 'UTC',
       driveQuery: synthesiseDriveQuery(hookState.current),
     }),
     DriveDetailSkeleton: () => <div data-testid="drive-skeleton" />,
-    HeroGauges: stub('hero-gauges'),
+    // The Overview hero renders the embedded route map it is handed.
+    HeroGauges: ({ map }: { map?: ReactNode }) => <div data-testid="hero-gauges">{map}</div>,
     DrivePhysicsDebriefPanel: stub('physics-debrief'),
     DriveTimeline: stub('drive-timeline'),
     DriveStatCards: stub('stat-cards'),
-    SupervisedDrivingPanel: stub('fsd-panel'),
+    SupervisedDrivingPanel: (props: ComponentProps<typeof SupervisedDrivingPanel>) => (
+      <div data-testid="fsd-panel" data-loading={String(props.isLoading)}>
+        <SupervisedDrivingPanel {...props} />
+      </div>
+    ),
     GearTheaterPanel: stub('gear-theater'),
     SilentCounterPanel: stub('silent-counter'),
     DriveLedgerCompactPanel: stub('drive-ledger-compact'),
@@ -152,7 +141,9 @@ vi.mock('../components/drive-detail', () => {
   }
 })
 
-const useFsdInsightsForDriveMock = vi.hoisted(() => vi.fn(() => ({
+const useFsdInsightsForDriveMock = vi.hoisted(() => vi.fn((): DataStateSource<{
+  drive_analytics: Pick<FsdDriveAnalytics, 'contributing_drives'>
+}> => ({
     data: {
       drive_analytics: {
         contributing_drives: [],
@@ -320,20 +311,16 @@ function loadedState(
 
 const GATED_NUMERIC_SECTIONS = [
   'hero-gauges',
-  'stat-cards',
   'more-details',
-  'energy-summary',
   'cost-savings',
 ] as const
 
 const ALWAYS_ON_SECTIONS = [
   'physics-debrief',
-  'drive-timeline',
   'gear-theater',
   'fsd-panel',
   'silent-counter',
   'route-map',
-  'journey-details',
   'overview-chart',
   'soc-chart',
   'elevation-chart',
@@ -342,6 +329,7 @@ const ALWAYS_ON_SECTIONS = [
   'power-profile',
   'tire-pressure',
   'why-ended',
+  'road-anomalies',
   'ai-coaching',
   'ai-speed-insights',
 ] as const
@@ -351,13 +339,15 @@ const NOT_FOUND_COPY =
   'This drive could not be found. It may have been deleted, or the link is incorrect.'
 
 function renderPage(path = '/drives/42', routePath = '/drives/:id') {
-  return render(
+  const page = () => (
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path={routePath} element={<DriveDetailPage />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+  const result = render(page())
+  return { ...result, rerenderPage: () => result.rerender(page()) }
 }
 
 beforeEach(() => {
@@ -368,18 +358,158 @@ beforeEach(() => {
 
 /* ── Tests ───────────────────────────────────────────────────────────────── */
 describe('DriveDetailPage', () => {
-  it('renders only the loading skeleton while telemetry is loading', () => {
+  it('uses the loaded drive business timezone for FSD evidence, not workspace scope', () => {
+    hookState.current = { ...loadedState(), timezone: 'Pacific/Auckland' }
+    renderPage()
+    expect(useFsdInsightsForDriveMock).toHaveBeenCalledWith('1', '42', 'Pacific/Auckland', true)
+  })
+
+  it('does not announce absence for an unresolved idle drive source', () => {
+    hookState.current = { ...emptyState(), driveQuery: { isPending: true, fetchStatus: 'idle' } }
+    renderPage()
+
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+    expect(screen.queryByTestId('drive-skeleton')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument()
+  })
+
+  it('uses source readiness rather than the aggregate loading flag', () => {
+    hookState.current = {
+      ...emptyState(),
+      driveQuery: { isPending: true, isFetching: true, fetchStatus: 'fetching' },
+    }
+    renderPage()
+
+    expect(screen.getByTestId('drive-skeleton')).toBeInTheDocument()
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+  })
+
+  it('discloses a cold paused drive and recovers without claiming it is missing', () => {
+    const refetch = vi.fn()
+    hookState.current = {
+      ...emptyState(),
+      isLoading: true,
+      driveQuery: { isPending: true, fetchStatus: 'paused', refetch },
+    }
+    const { rerenderPage } = renderPage()
+
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+    expect(screen.queryByTestId('drive-skeleton')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Drive details' }))
+    expect(refetch).toHaveBeenCalledOnce()
+
+    hookState.current = loadedState()
+    rerenderPage()
+    expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+  })
+
+  it('discloses independently paused FSD without treating it as loading or hiding the drive', () => {
+    hookState.current = loadedState()
+    const refetch = vi.fn()
+    useFsdInsightsForDriveMock.mockReturnValueOnce({
+      isPending: true, fetchStatus: 'paused', refetch,
+    })
+    const { rerenderPage } = renderPage()
+
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    expect(screen.getByTestId('fsd-panel')).toHaveAttribute('data-loading', 'false')
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Supervised driving' }))
+    expect(refetch).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: 'Retry supervised-driving evidence' })).toBeNull()
+    rerenderPage()
+    expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+  })
+
+  it('does not disclose paused FSD before its drive prerequisite exists', () => {
+    useFsdInsightsForDriveMock.mockReturnValueOnce({
+      isPending: true, fetchStatus: 'paused',
+    })
+    renderPage()
+
+    expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('fsd-panel')).toHaveAttribute('data-loading', 'false')
+  })
+
+  it('distinguishes active FSD loading from successfully empty evidence', () => {
+    hookState.current = loadedState()
+    useFsdInsightsForDriveMock.mockReturnValueOnce({
+      isPending: true, isFetching: true, fetchStatus: 'fetching',
+    })
+    const { rerenderPage } = renderPage()
+    expect(screen.getByTestId('fsd-panel')).toHaveAttribute('data-loading', 'true')
+
+    rerenderPage()
+    expect(screen.getByTestId('fsd-panel')).toHaveAttribute('data-loading', 'false')
+    expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retry supervised-driving evidence' })).toBeNull()
+  })
+
+  it('retries a cold FSD failure without refetching the drive and recovers', () => {
+    const driveRefetch = vi.fn()
+    const fsdRefetch = vi.fn()
+    const loaded = loadedState()
+    hookState.current = {
+      ...loaded,
+      driveQuery: { data: loaded.drive, isSuccess: true, fetchStatus: 'idle', refetch: driveRefetch },
+    }
+    useFsdInsightsForDriveMock.mockReturnValueOnce({
+      isError: true, error: new Error('FSD failed'), fetchStatus: 'idle', refetch: fsdRefetch,
+    })
+    const { rerenderPage } = renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry supervised-driving evidence' }))
+    expect(fsdRefetch).toHaveBeenCalledOnce()
+    expect(driveRefetch).not.toHaveBeenCalled()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument()
+
+    rerenderPage()
+    expect(screen.queryByText(/could not be loaded/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Retry supervised-driving evidence' })).toBeNull()
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+  })
+
+  it('clears a retained refresh failure after recovery without losing report sections', () => {
+    const loaded = loadedState()
+    hookState.current = {
+      ...loaded,
+      driveQuery: {
+        data: loaded.drive, isError: true, error: new Error('refresh failed'),
+        fetchStatus: 'idle', dataUpdatedAt: 1_000,
+      },
+    }
+    const { rerenderPage } = renderPage()
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+
+    hookState.current = loaded
+    rerenderPage()
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+  })
+
+  it('keeps report context and section placeholders while telemetry is loading', () => {
     hookState.current = { ...emptyState(), isLoading: true }
     renderPage()
 
     expect(screen.getByTestId('drive-skeleton')).toBeInTheDocument()
     // No page chrome or sections while the skeleton owns the screen.
-    expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: 'Drive details' })).toBeInTheDocument()
     expect(screen.queryByTestId('hero-gauges')).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+    expect(screen.getByText('No Overview data is available for this drive.')).toBeInTheDocument()
   })
 
-  it('surfaces the query error and withholds every drive section', () => {
+  it('surfaces the query error without hiding independent evidence or report shells', () => {
     hookState.current = { ...emptyState(), error: new Error('drive fetch exploded') }
     renderPage()
 
@@ -387,12 +517,15 @@ describe('DriveDetailPage', () => {
     // raw error.message — status-less errors fall into the network branch.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument()
     // The generic title still anchors the page…
-    expect(screen.getByRole('heading', { level: 1, name: 'Drive Detail' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Drive details' })).toBeInTheDocument()
     // …but the error surface replaces the sections, and the empty state is NOT
     // shown (error takes precedence over the not-found branch).
     expect(screen.queryByTestId('hero-gauges')).toBeNull()
     expect(screen.queryByTestId('drive-timeline')).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+    expect(screen.getByText('No Overview data is available for this drive.')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument()
+    expect(screen.getByTestId('drive-ledger-compact')).toBeInTheDocument()
     expect(screen.queryByTestId('drive-skeleton')).toBeNull()
   })
 
@@ -416,9 +549,8 @@ describe('DriveDetailPage', () => {
     }
     renderPage()
 
-    // Sections survive…
-    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
-    expect(screen.getByTestId('drive-timeline')).toBeInTheDocument()
+    // Sections survive… (the journey and route live inside the Overview hero)
+    expect(screen.getByTestId('hero-gauges')).toContainElement(screen.getByTestId('route-map'))
     // …the page-level error surface never fires…
     expect(screen.queryByText("Can't reach server")).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
@@ -428,6 +560,7 @@ describe('DriveDetailPage', () => {
 
   it('warns when retained FSD evidence could not be refreshed', () => {
     hookState.current = loadedState()
+    const refetch = vi.fn()
     useFsdInsightsForDriveMock.mockReturnValueOnce({
       data: {
         drive_analytics: {
@@ -440,14 +573,22 @@ describe('DriveDetailPage', () => {
       isFetching: false,
       fetchStatus: 'idle',
       dataUpdatedAt: 1_000,
-      refetch: vi.fn(),
+      refetch,
       isStale: true,
     })
 
-    renderPage()
+    const { rerenderPage } = renderPage()
 
     expect(screen.getByText('Supervised driving may be out of date')).toBeInTheDocument()
     expect(screen.getByTestId('fsd-panel')).toBeInTheDocument()
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
+    expect(screen.queryByText(/could not be loaded/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(refetch).toHaveBeenCalledOnce()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    rerenderPage()
+    expect(screen.queryByText('Supervised driving may be out of date')).toBeNull()
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
   })
 
   it('still loads drive-scoped FSD analytics for an in-progress drive', () => {
@@ -503,7 +644,7 @@ describe('DriveDetailPage', () => {
     expect(screen.queryByText(NO_TELEMETRY_BANNER)).toBeNull()
   })
 
-  it('collapses the numeric panels into a telemetry-gap banner for an all-zero drive', () => {
+  it('retains all canonical and drilldown shells with a telemetry-gap notice for an all-zero drive', () => {
     hookState.current = loadedState(
       { distanceM: 0, startAddress: null, endAddress: null, telemetry: [], positions: [] },
       { maxSpd: 0, energyWh: 0 },
@@ -513,14 +654,13 @@ describe('DriveDetailPage', () => {
     expect(screen.getByText(NO_TELEMETRY_BANNER)).toBeInTheDocument()
     // Every numeric-summary section is withheld…
     for (const id of GATED_NUMERIC_SECTIONS) {
-      expect(screen.queryByTestId(id)).toBeNull()
+      expect(screen.getByTestId(id)).toBeInTheDocument()
     }
     // …while the always-on sections (which self-gate internally) still render.
-    expect(screen.getByTestId('drive-timeline')).toBeInTheDocument()
-    expect(screen.getByTestId('route-map')).toBeInTheDocument()
+    expect(screen.getByTestId('hero-gauges')).toContainElement(screen.getByTestId('route-map'))
     expect(screen.getByTestId('why-ended')).toBeInTheDocument()
     // With no addresses the title falls back to the generic label.
-    expect(screen.getByRole('heading', { level: 1, name: 'Drive Detail' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Drive details' })).toBeInTheDocument()
   })
 
   it('keeps the numeric panels alive when only raw telemetry rows exist (zero aggregates)', () => {
@@ -536,19 +676,19 @@ describe('DriveDetailPage', () => {
     // Telemetry rows count as "meaningful" → no banner, panels render.
     expect(screen.queryByText(NO_TELEMETRY_BANNER)).toBeNull()
     expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
-    expect(screen.getByTestId('stat-cards')).toBeInTheDocument()
+    expect(screen.queryByTestId('stat-cards')).toBeNull()
   })
 
-  it('hides only the cost-savings panel when energy is zero but the drive is otherwise meaningful', () => {
+  it('does not hide cost evidence for a recorded zero-energy drive', () => {
     hookState.current = loadedState({ distanceM: 20000 }, { energyWh: 0, maxSpd: 90 })
     renderPage()
 
     // Meaningful via distance → energy summary shows, cost savings gated off.
-    expect(screen.getByTestId('energy-summary')).toBeInTheDocument()
-    expect(screen.queryByTestId('cost-savings')).toBeNull()
+    expect(screen.getByTestId('more-details')).toBeInTheDocument()
+    expect(screen.getByTestId('cost-savings')).toBeInTheDocument()
     // The rest of the numeric band is unaffected.
     expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
-    expect(screen.getByTestId('stat-cards')).toBeInTheDocument()
+    expect(screen.queryByTestId('stat-cards')).toBeNull()
     expect(screen.queryByText(NO_TELEMETRY_BANNER)).toBeNull()
   })
 
@@ -572,7 +712,7 @@ describe('DriveDetailPage', () => {
     renderPage()
 
     // Icon-only back button must carry an accessible name.
-    expect(screen.getByRole('button', { name: 'Back to drives' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to drives' })).toHaveAttribute('href', '/drives')
     expect(screen.getByRole('button', { name: 'Print' })).toBeInTheDocument()
     const replay = screen.getByRole('link', { name: /Replay/i })
     expect(replay).toHaveAttribute('href', '/drives/42/replay')
@@ -583,10 +723,73 @@ describe('DriveDetailPage', () => {
     renderPage('/drives', '/drives')
 
     // Back-to-drives is always available…
-    expect(screen.getByRole('button', { name: 'Back to drives' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to drives' })).toHaveAttribute('href', '/drives')
     // …but replay / share / why-ended are gated on the :id param.
     expect(screen.queryByRole('link', { name: /Replay/i })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Share' })).toBeNull()
     expect(screen.queryByTestId('why-ended')).toBeNull()
+  })
+
+  it('renders back and replay as single native links with shared neutral chrome and decorative icons', () => {
+    hookState.current = loadedState()
+    renderPage()
+
+    const back = screen.getByRole('link', { name: 'Back to drives' })
+    const replay = screen.getByRole('link', { name: 'Replay' })
+    expect(back).toHaveClass(...BUTTON_BASE.split(' '), ...BUTTON_VARIANTS.ghost.split(' '))
+    expect(replay).toHaveClass(...BUTTON_BASE.split(' '), ...BUTTON_VARIANTS.secondary.split(' '))
+    for (const link of [back, replay]) {
+      expect(link.tagName).toBe('A')
+      expect(link.querySelector('button, a, [tabindex]')).toBeNull()
+      expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+      expect(link.querySelector('svg')).toHaveAttribute('focusable', 'false')
+    }
+    expect(screen.queryByRole('button', { name: 'Back to drives' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Replay' })).toBeNull()
+  })
+
+  it('keeps every header action touch-sized below md without changing destinations or share ownership', () => {
+    hookState.current = loadedState()
+    renderPage()
+
+    for (const action of [
+      screen.getByRole('link', { name: 'Back to drives' }),
+      screen.getByRole('link', { name: 'Replay' }),
+      screen.getByRole('button', { name: 'Share' }),
+      screen.getByRole('button', { name: 'Print' }),
+    ]) {
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9')
+    }
+    expect(screen.getByRole('link', { name: 'Replay' })).toHaveAttribute('href', '/drives/42/replay')
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(screen.getByRole('dialog', { name: 'Share drive' })).toHaveAttribute('data-drive-id', '42')
+  })
+
+  it.each([
+    { name: 'missing record', loaded: false },
+    { name: 'retained rich record', loaded: true },
+  ])('preserves all nineteen report sections and six jump destinations for $name', ({ loaded }) => {
+    hookState.current = loaded ? loadedState() : emptyState()
+    const { container } = renderPage()
+
+    // Journey and route are anchors inside the Overview hero, not report sections.
+    const sectionIds = [
+      'overview', 'energy-evidence', 'cost-estimate',
+      'fsd-evidence', 'silent-counter', 'telemetry', 'battery-trace',
+      'speed-distribution', 'power-trace', 'elevation-trace', 'temperature-trace',
+      'tire-trace', 'speed-insights', 'physics-debrief', 'physics-ledger',
+      'coaching', 'gear-theater', 'road-analysis', 'why-ended',
+    ]
+    for (const id of sectionIds) {
+      expect(container.querySelector(`section#${id}`)).toBeInTheDocument()
+    }
+    expect(container.querySelectorAll('section[id][aria-label]')).toHaveLength(19)
+    const navigation = screen.getByRole('navigation', { name: 'Drive report sections' })
+    expect(Array.from(navigation.querySelectorAll('a'), link => link.getAttribute('href'))).toEqual([
+      '#overview', '#energy', '#telemetry', '#supervised', '#physics', '#diagnostics',
+    ])
+    expect(screen.getByTestId('drive-ledger-compact')).toBeInTheDocument()
+    expect(screen.getByTestId('gear-theater')).toBeInTheDocument()
+    expect(screen.getByTestId('silent-counter')).toBeInTheDocument()
   })
 })

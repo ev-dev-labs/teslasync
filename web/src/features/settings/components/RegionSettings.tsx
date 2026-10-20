@@ -1,6 +1,7 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { useTranslation } from 'react-i18next'
 import { useTeslaUserRegion, useRefreshTeslaRegion } from '@/api/hooks/useUser'
-import { GlassPanel, Button, IconBox } from '@/components/ui'
+import { GlassPanel, IconBox } from '@/components/ui'
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
@@ -35,18 +36,10 @@ export function RegionSettings() {
                 {t('region.lastSynced', 'Synced')} {formatDateTime(regionConfig.fetched_at)}
               </span>
             )}
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<RefreshCw className={cn('h-3.5 w-3.5', regionRefresh.isPending && 'animate-spin')} aria-hidden="true" />}
-              onClick={() => regionRefresh.mutate(undefined, {
+            <IconButton icon={<RefreshCw className={cn('h-3.5 w-3.5', regionRefresh.isPending && 'animate-spin')} aria-hidden="true" />} label={t('region.refresh', 'Refresh')} onClick={() => regionRefresh.mutate(undefined, {
                 onSuccess: () => toast.success(t('toast.regionRefreshed', 'Region info refreshed')),
                 onError: (err: Error) => toast.error(t('toast.regionFailed', 'Failed to refresh region'), err.message),
-              })}
-              disabled={regionRefresh.isPending}
-            >
-              {t('region.refresh', 'Refresh')}
-            </Button>
+              })} disabled={regionRefresh.isPending} />
           </div>
         </div>
 
@@ -76,11 +69,11 @@ export function RegionSettings() {
         ) : region ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4">
-              <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{t('region.regionCode', 'Region')}</p>
+              <p className="text-xs text-[var(--text-muted)] mb-1 tracking-wider">{t('region.regionCode', "Region code")}</p>
               <p className="text-lg font-semibold text-[var(--text-primary)]">{region}</p>
             </div>
             <div className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4">
-              <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{t('region.fleetApiUrl', 'Fleet API Base URL')}</p>
+              <p className="text-xs text-[var(--text-muted)] mb-1 tracking-wider">{t('region.fleetApiUrl', 'Fleet API base URL')}</p>
               <p className="text-sm font-mono text-[var(--text-primary)] break-all">{regionConfig?.data?.fleet_api_base_url ?? '—'}</p>
             </div>
           </div>
@@ -88,7 +81,7 @@ export function RegionSettings() {
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-10 w-10" aria-hidden="true" />} message={
             regionConfig?.fetched_at
               ? t('region.noRegion', 'Tesla did not return a region for this account.')
-              : t('region.noData', 'No region data yet. Click Refresh to fetch from Tesla.')
+              : t('region.noData', "No region data yet. Click refresh to fetch from Tesla.")
           } />
         )}
       </GlassPanel>

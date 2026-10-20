@@ -1,0 +1,1190 @@
+{
+  "item": "phase6-qa-ownership-jurisdiction-compliance",
+  "attempt": 1,
+  "status": "COMPLETED_SOURCE_ONLY_WITH_FINDINGS",
+  "started_at_utc": "2026-10-14T02:12:47.0378155Z",
+  "return_deadline_utc": "2026-10-14T02:30:36.129Z",
+  "hard_deadline_utc": "2026-10-14T02:35:36.129Z",
+  "pin_capture_utc": "2026-10-14T02:14:28.452511+00:00",
+  "source_pins": [
+    {
+      "path": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+      "sha256_before": "811f281e7d1a5c372597253c8c37e549c3a5ac6c39d81735e323464ddf3d121a",
+      "lines_before": 774,
+      "sha256_after": "811f281e7d1a5c372597253c8c37e549c3a5ac6c39d81735e323464ddf3d121a",
+      "lines_after": 774,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/ownership/pages/JurisdictionCompliancePage.test.tsx",
+      "sha256_before": "24c79797ee57ee7f66e1615f16138ac21cd786538683be8546af4815f6a822d1",
+      "lines_before": 528,
+      "sha256_after": "24c79797ee57ee7f66e1615f16138ac21cd786538683be8546af4815f6a822d1",
+      "lines_after": 528,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/ownership/components/index.ts",
+      "sha256_before": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "lines_before": 8,
+      "sha256_after": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "lines_after": 8,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "sha256_before": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "lines_before": 88,
+      "sha256_after": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "lines_after": 88,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+      "sha256_before": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "lines_before": 193,
+      "sha256_after": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "lines_after": 193,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "sha256_before": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "lines_before": 194,
+      "sha256_after": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "lines_after": 194,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/ownership/components/MoneyInput.tsx",
+      "sha256_before": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+      "lines_before": 52,
+      "sha256_after": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+      "lines_after": 52,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/ownership/components/MutationError.tsx",
+      "sha256_before": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "lines_before": 22,
+      "sha256_after": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "lines_after": 22,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/ownership/components/statstrip-compliance/complianceSummaryMetrics.ts",
+      "sha256_before": "fc9d5740d19eb1471a54211a99064b352abd29cdc21861d5d15d9214e96dc1b6",
+      "lines_before": 112,
+      "sha256_after": "fc9d5740d19eb1471a54211a99064b352abd29cdc21861d5d15d9214e96dc1b6",
+      "lines_after": 112,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/ownership/components/statstrip-compliance/complianceSummaryMetrics.test.ts",
+      "sha256_before": "de938287e0f59769efb11c148cb1b5c831d1e162400ddefb6b5d97655f9b1982",
+      "lines_before": 105,
+      "sha256_after": "de938287e0f59769efb11c148cb1b5c831d1e162400ddefb6b5d97655f9b1982",
+      "lines_after": 105,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/ownership/formatters.ts",
+      "sha256_before": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "lines_before": 148,
+      "sha256_after": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "lines_after": 148,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/useOwnership.ts",
+      "sha256_before": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "lines_before": 801,
+      "sha256_after": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "lines_after": 801,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/types/ownership.ts",
+      "sha256_before": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "lines_before": 1106,
+      "sha256_after": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "lines_after": 1106,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256_before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines_before": 65,
+      "sha256_after": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines_after": 65,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256_before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines_before": 434,
+      "sha256_after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines_after": 434,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useConfirm.ts",
+      "sha256_before": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "lines_before": 118,
+      "sha256_after": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "lines_after": 118,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256_before": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lines_before": 24,
+      "sha256_after": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lines_after": 24,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256_before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines_before": 17,
+      "sha256_after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines_after": 17,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256_before": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines_before": 74,
+      "sha256_after": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines_after": 74,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256_before": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines_before": 1707,
+      "sha256_after": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines_after": 1707,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/Input.tsx",
+      "sha256_before": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "lines_before": 116,
+      "sha256_after": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "lines_after": 116,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256_before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lines_before": 93,
+      "sha256_after": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lines_after": 93,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/Select.tsx",
+      "sha256_before": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lines_before": 119,
+      "sha256_after": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lines_after": 119,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/ConfirmDialog.tsx",
+      "sha256_before": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "lines_before": 219,
+      "sha256_after": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "lines_after": 219,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256_before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines_before": 47,
+      "sha256_after": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines_after": 47,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256_before": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines_before": 194,
+      "sha256_after": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines_after": 194,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256_before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines_before": 462,
+      "sha256_after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines_after": 462,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256_before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines_before": 168,
+      "sha256_after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines_after": 168,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256_before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines_before": 259,
+      "pin_capture_utc": "2026-10-14T02:16:47.209140+00:00",
+      "sha256_after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines_after": 259,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/_toastHelpers.ts",
+      "sha256_before": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "lines_before": 123,
+      "pin_capture_utc": "2026-10-14T02:16:47.209319+00:00",
+      "sha256_after": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "lines_after": 123,
+      "unchanged": true
+    }
+  ],
+  "writable_files": [
+    "docs\\frontend-audits\\phase6-qa-ownership-jurisdiction-compliance.json",
+    "web\\logs\\phase6-qa-ownership-jurisdiction-compliance.log"
+  ],
+  "lexical_check": {
+    "scope": [
+      "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+      "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "web/src/features/ownership/components/EvidencePanel.tsx",
+      "web/src/features/ownership/components/MoneyInput.tsx",
+      "web/src/features/ownership/components/MutationError.tsx",
+      "web/src/features/ownership/components/statstrip-compliance/complianceSummaryMetrics.ts",
+      "web/src/features/ownership/formatters.ts",
+      "web/src/api/hooks/useOwnership.ts"
+    ],
+    "patterns": {
+      "static-inline-style": "style\\s*=\\s*\\{\\{.*var\\(--",
+      "raw-html": "<(?:button|input|textarea|select|table)\\b",
+      "direct-library-import": "from\\s*['\"](?:recharts|react-leaflet|framer-motion)['\"]",
+      "old-api-import": "from\\s*['\"](?:\\.\\./)+api['\"]",
+      "double-prefix": "(?:['\"`])/api/v1/",
+      "camelcase-param": "(?:[?&]|[\"\\s])(?:vehicleId|driveId|windowDays|startDate|endDate)=",
+      "hidden-section": "\\b\\w+\\s*&&\\s*<(?:GlassPanel|OwnershipPanel|EvidencePanel)\\b",
+      "hardcoded-string": ">\\s*[A-Za-z][^<>{}]*<",
+      "missing-page-container": "PageContainer|PageLayout",
+      "fetch-useeffect": "\\bfetch\\s*\\(|\\buseEffect\\s*\\("
+    },
+    "raw_match_counts": {
+      "static-inline-style": 0,
+      "raw-html": 1,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 8,
+      "missing-page-container": 3,
+      "fetch-useeffect": 0
+    },
+    "classification": "candidate search only; manually traced findings separate",
+    "exit_code": 0
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "rule": "source-coverage",
+      "severity": "medium",
+      "title": "Only first 50 sealed records reachable",
+      "owner": "page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 82,
+          "line_end": 82
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 106,
+          "line_end": 106
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 720,
+          "line_end": 736
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line_start": 30,
+          "line_end": 35
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line_start": 650,
+          "line_end": 656
+        }
+      ],
+      "mechanism": "Fixed limit=50, offset=0; only items consumed, not typed total/offset. Local table pagination cannot fetch omitted server records.",
+      "source_only_repro": "Statically assume total=51 with 50 loaded items; no handler requests offset=50. No request made.",
+      "needed_fix": "Reuse existing server-pagination/table owner, consume total/limit/offset; explicitly identify incomplete coverage.",
+      "history": "Previously recorded filing-coverage debt.",
+      "runtime_observed": false
+    },
+    {
+      "id": "F02",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "rule": "declaration-behavior-mismatch",
+      "severity": "medium",
+      "title": "Four sortable declarations lack controlled sorting",
+      "owner": "page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 146,
+          "line_end": 155
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 173,
+          "line_end": 202
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 322,
+          "line_end": 331
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 440,
+          "line_end": 458
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 720,
+          "line_end": 736
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line_start": 196,
+          "line_end": 198
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line_start": 1571,
+          "line_end": 1594
+        }
+      ],
+      "mechanism": "Three apportionment columns plus filing period declare sortable:true, but neither table supplies onSort/sortKey/sortDir. Shared header requires sortable AND onSort.",
+      "source_only_repro": "Follow onSort undefined: static labels, no sort control. No clicks.",
+      "needed_fix": "Wire existing controlled typed sort contract or remove unsupported declarations.",
+      "history": "Previously recorded sorting debt.",
+      "runtime_observed": false
+    },
+    {
+      "id": "F03",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "rule": "export-fidelity",
+      "severity": "medium",
+      "title": "Default CSV loses full filing seal/canonical field shape",
+      "owner": "page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 322,
+          "line_end": 365
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 440,
+          "line_end": 458
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 627,
+          "line_end": 649
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 720,
+          "line_end": 736
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line_start": 82,
+          "line_end": 109
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line_start": 890,
+          "line_end": 935
+        }
+      ],
+      "mechanism": "No exportRow/exportValue override. CSV prefers rendered text, so digest.slice(0,16) plus ellipsis exports; title ignored. Alias keys select display strings rather than SI/minor-unit/instant fields. Hidden columns omitted. JSON retains FULL digest when visible because key matches raw property. Loaded/selected-row scope wording is honest, not a full-server claim.",
+      "source_only_repro": "Trace long synthetic digest through CSV rendered-text branch and alias period/distance through raw-key miss. No export/download.",
+      "needed_fix": "Use existing export adapter for full digest and explicit canonical units/currency/instants plus display labels; clarify worksheet scope.",
+      "history": "Historical export debt refined to exact CSV mechanism.",
+      "runtime_observed": false
+    },
+    {
+      "id": "F04",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "rule": "coupled-validation",
+      "severity": "medium",
+      "title": "Editor bounds/dates lack coupled guards",
+      "owner": "page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 110,
+          "line_end": 121
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 570,
+          "line_end": 617
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 684,
+          "line_end": 708
+        }
+      ],
+      "mechanism": "Individual spatial bounds and required dates exist; no min<=max pair or start<=end check/field feedback before mutate. Backend acceptance is NOT established.",
+      "source_only_repro": "Evaluate min_lat=10,max_lat=0 or valid-format reversed dates through handlers: no guard. No submission.",
+      "needed_fix": "Reuse current form/field validation and localized errors, preserve drafts; do not add competing form owners.",
+      "history": "Source omission only; backend/native rejection NOTRUN.",
+      "runtime_observed": false
+    },
+    {
+      "id": "F05",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "rule": "source-disabled-copy",
+      "severity": "medium",
+      "title": "No-vehicle copy infers searched-source emptiness",
+      "owner": "page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 80,
+          "line_end": 82
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 426,
+          "line_end": 438
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 655,
+          "line_end": 665
+        },
+        {
+          "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+          "line_start": 45,
+          "line_end": 69
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line_start": 124,
+          "line_end": 140
+        }
+      ],
+      "mechanism": "Without selected vehicle, hooks disabled; sourceEnabled=false plus empty chooses No drives with usable coordinates/No periods sealed yet despite no vehicle query.",
+      "source_only_repro": "Set vehicleId=null in source branches; empty normalized arrays select those messages. No interaction.",
+      "needed_fix": "Use existing empty-state copy distinguishing select vehicle/source not queried from authoritative empty results.",
+      "history": "Confirmed disabled-source copy path.",
+      "runtime_observed": false
+    },
+    {
+      "id": "F06",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "title": "Known quality statuses are untranslated",
+      "owner": "EvidencePanel",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line_start": 71,
+          "line_end": 72
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line_start": 12,
+          "line_end": 12
+        }
+      ],
+      "mechanism": "Closed sufficient/limited/insufficient union rendered directly as quality.status. One expression, three known values, one normalized violation.",
+      "source_only_repro": "Follow status=sufficient with non-English locale: no t path. No locale change executed.",
+      "needed_fix": "Localize known status map in existing shared EvidencePanel; preserve safe unknown fallback.",
+      "history": "Inventory G149 shared-owner requirement.",
+      "runtime_observed": false
+    },
+    {
+      "id": "F07",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "rule": "preference-locale",
+      "severity": "medium",
+      "title": "Saved locale not forwarded to date displays",
+      "owner": "page-and-summary",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 328,
+          "line_end": 328
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 419,
+          "line_end": 420
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 726,
+          "line_end": 726
+        },
+        {
+          "file": "web/src/features/ownership/components/statstrip-compliance/complianceSummaryMetrics.ts",
+          "line_start": 12,
+          "line_end": 12
+        },
+        {
+          "file": "web/src/features/ownership/components/statstrip-compliance/complianceSummaryMetrics.ts",
+          "line_start": 48,
+          "line_end": 48
+        },
+        {
+          "file": "web/src/hooks/useUnits.ts",
+          "line_start": 118,
+          "line_end": 144
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line_start": 44,
+          "line_end": 61
+        }
+      ],
+      "mechanism": "Seven date calls across four locations omit locale: summary endpoints 2, filing desktop 2/mobile 2, freshness 1. Helper defaults to browser locale although saved number/unit locale is available. Summary explicitly uses UTC.",
+      "source_only_repro": "Assume saved locale differs from browser; all cited options omit locale. No rendered formatting observed.",
+      "needed_fix": "Forward saved locale at callers, preserve timezone/interval contract; do not globally change helper default.",
+      "history": "Price-locale forwarding already fixed; this finding is dates only.",
+      "runtime_observed": false
+    },
+    {
+      "id": "F08",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "rule": "workspace-range-contract",
+      "severity": "medium",
+      "title": "Page-local analysis days lack workspace integration",
+      "owner": "workspace-integration",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 43,
+          "line_end": 53
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 80,
+          "line_end": 80
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 378,
+          "line_end": 388
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line_start": 602,
+          "line_end": 607
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line_start": 23,
+          "line_end": 76
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line_start": 145,
+          "line_end": 166
+        }
+      ],
+      "mechanism": "Local windowDays 30/90/180/365; no useRangeState. Route absent from RANGE_ENABLED_PATHS; hook only window_days. Business filing dates intentionally independent, not a defect. Arbitrary-bound endpoint support unknown.",
+      "source_only_repro": "Trace workspace range: no subscription/parameter path into query. No control/request executed.",
+      "needed_fix": "Existing scope/API owners must establish capability and compatible translation before integration.",
+      "history": "Accepted recorded range debt, not unilateral remigration.",
+      "runtime_observed": false
+    },
+    {
+      "id": "F09",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "title": "Delete confirmation inherits untranslated Cancel",
+      "owner": "ConfirmDialog",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 87,
+          "line_end": 97
+        },
+        {
+          "file": "web/src/hooks/useConfirm.ts",
+          "line_start": 26,
+          "line_end": 79
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line_start": 77,
+          "line_end": 78
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line_start": 166,
+          "line_end": 173
+        }
+      ],
+      "mechanism": "Page overrides localized title/message/Delete, not cancelLabel. Shared default Cancel rendered directly despite t available. Default Confirm is overridden and NOT another scoped finding.",
+      "source_only_repro": "Trace omitted cancelLabel to literal Cancel under non-English locale; no dialog opened.",
+      "needed_fix": "Translate shared default in existing ConfirmDialog owner or caller override; deduplicate shared fix.",
+      "history": "Shared default mechanism confirmed.",
+      "runtime_observed": false
+    }
+  ],
+  "inspection_failures": [
+    {
+      "exit": 1,
+      "failure": "rg unavailable; filesystem/Python reads substituted"
+    },
+    {
+      "exit": 1,
+      "failure": "Early document search failed after output; exact cause not conclusively isolated, no success inferred"
+    },
+    {
+      "shell": "2526",
+      "exit": 1,
+      "failure": "FileNotFoundError guessed web/src/api/types/ownership.ts; actual pinned path web/src/types/ownership.ts; failed buffered reads not emitted"
+    },
+    {
+      "shell": "2561",
+      "exit": 1,
+      "failure": "<error: The filename or extension is too long. (os error 206)>; finalization command did not execute; split into bounded artifact-write commands, not a test rerun"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "classification": "CONDITIONAL_OR_NATIVE_NOT_CONFIRMED",
+      "title": "Separate sealing review/confirmation requirement",
+      "owner": "page-product",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 115,
+          "line_end": 121
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 709,
+          "line_end": 715
+        }
+      ],
+      "source_observation": "Explicit Seal period submit sends confirmed:true without separate review dialog; explicit submit might meet product contract.",
+      "required_authorized_followup": "Product/legal authority must define requirements; no real filing/confirmation authorized.",
+      "executed": false,
+      "included_in_confirmed_count": false
+    },
+    {
+      "id": "C02",
+      "classification": "CONDITIONAL_OR_NATIVE_NOT_CONFIRMED",
+      "title": "Vehicle draft and late-success context races",
+      "owner": "page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 43,
+          "line_end": 76
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 115,
+          "line_end": 121
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 655,
+          "line_end": 708
+        }
+      ],
+      "source_observation": "Filing draft persists on vehicle change; current vehicle used at submit; success closes local editor without generation guard. Global rates are not vehicle-scoped.",
+      "required_authorized_followup": "Decide retention semantics; future authorized synthetic scope-switch/close-reopen/late-success tests, not real writes.",
+      "executed": false,
+      "included_in_confirmed_count": false
+    },
+    {
+      "id": "C03",
+      "classification": "CONDITIONAL_OR_NATIVE_NOT_CONFIRMED",
+      "title": "Copy/engine/legal facts not verified",
+      "owner": "product-engine-contract",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 391,
+          "line_end": 398
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 430,
+          "line_end": 432
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 660,
+          "line_end": 663
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 741,
+          "line_end": 769
+        }
+      ],
+      "source_observation": "Bounding-box split/confidence, snapshot/dispute and unsupported-capability text are declarations. Digest/payload is not legal/cryptographic/identity/location verification. Permanent worksheet warning exists.",
+      "required_authorized_followup": "Validate or weaken claims only using separately authorized engine/product evidence; no business actions.",
+      "executed": false,
+      "included_in_confirmed_count": false
+    },
+    {
+      "id": "C04",
+      "classification": "CONDITIONAL_OR_NATIVE_NOT_CONFIRMED",
+      "title": "Native mobile/a11y and effective input targets",
+      "owner": "shared-a11y-page",
+      "evidence": [
+        {
+          "file": "web/src/components/ui/Input.tsx",
+          "line_start": 32,
+          "line_end": 44
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 489,
+          "line_end": 617
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 684,
+          "line_end": 708
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 364,
+          "line_end": 364
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 440,
+          "line_end": 454
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 720,
+          "line_end": 731
+        }
+      ],
+      "source_observation": "Buttons declare touch minima, labels/disclosure IDs and three mobile adapters exist. Default md Input min-h-10 is 40px; effective geometry unmeasured. Full seal title-only accessibility, focus/keyboard/screenreader/RTL/zoom/contrast/forced-colors/motion unobserved. Synthetic 375 ResizeObserver is not native proof.",
+      "required_authorized_followup": "Separate authorized viewport/a11y matrix and shared Input review; not a measured failure.",
+      "executed": false,
+      "included_in_confirmed_count": false
+    },
+    {
+      "id": "C05",
+      "classification": "CONDITIONAL_OR_NATIVE_NOT_CONFIRMED",
+      "title": "Unknown filing-status/interval semantics",
+      "owner": "api-product",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 349,
+          "line_end": 365
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 726,
+          "line_end": 729
+        },
+        {
+          "file": "web/src/features/ownership/components/statstrip-compliance/complianceSummaryMetrics.ts",
+          "line_start": 45,
+          "line_end": 50
+        }
+      ],
+      "source_observation": "Filing status arbitrary backend string rendered raw; known vocabulary unresolved. Summary declares UTC/endExclusive; filing date helper uses browser defaults. Inclusivity/business-timezone contract not established.",
+      "required_authorized_followup": "Establish typed known-status mapping plus unknown fallback and date semantics before changing values.",
+      "executed": false,
+      "included_in_confirmed_count": false
+    },
+    {
+      "id": "C06",
+      "classification": "CONDITIONAL_OR_NATIVE_NOT_CONFIRMED",
+      "title": "Live/offline mutation readiness and feedback privacy",
+      "owner": "shared-query-feedback-page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 110,
+          "line_end": 121
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 619,
+          "line_end": 625
+        },
+        {
+          "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+          "line_start": 709,
+          "line_end": 717
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line_start": 618,
+          "line_end": 676
+        }
+      ],
+      "source_observation": "Pending/vehicle gates, inline errors, translated hook success/error toasts declared. No actual offline policy, duplicate settlement, provider announcements or real error-detail privacy exercised.",
+      "required_authorized_followup": "Separately authorized synthetic/native checks only; no network/API/business actions.",
+      "executed": false,
+      "included_in_confirmed_count": false
+    }
+  ],
+  "authority": {
+    "sole_loop": "docs/orchestrator-loop.md fully read; supersedes obsolete root loops",
+    "queue_file": "migration-queue.md",
+    "exact_queue_line": 110,
+    "attempt": 1,
+    "dependency": "phase5-page-ownership-jurisdiction-compliance",
+    "historical_acceptance_line": 2116,
+    "historical_commit": "93b7c06bfc8ab292cf66a0a289a8bf01e70625bb",
+    "read": "Full frontend mission/worker conventions/React instructions; relevant design-contract foundations/trust/numeric/i18n/SI/mobile/a11y/evidence/ownership strength, inventory, handoff, historical audit-page-158 and SI/unit instructions. Historical acceptance is source-only, not runtime/legal proof."
+  },
+  "scope": {
+    "mode": "SOURCE_ONLY_READONLY",
+    "primary": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+    "pinned_source_support_test_files": 30,
+    "allowed_writes": [
+      "docs/frontend-audits/phase6-qa-ownership-jurisdiction-compliance.json",
+      "web/logs/phase6-qa-ownership-jurisdiction-compliance.log"
+    ],
+    "full_primary_reads": "Page 774 lines and page test 528 lines, full OwnershipPanel/test, EvidencePanel, MoneyInput, MutationError, summary/test, formatters, confirm hook, Input/Button/Select and small support hooks/barrel.",
+    "targeted_reads": "Large shared types/query/data-state/table/container/preferences/date/workspace/toast mechanisms; pinning is not full-file semantic audit. No backend algorithm/Go audit.",
+    "direct_test_path_limit": "Exactly named useOwnership/useConfirm/useDataState/formatters .test.ts and EvidencePanel.test.tsx absent; alternate filenames not globally disproved."
+  },
+  "section_coverage": [
+    {
+      "section": "Permanent worksheet warning",
+      "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+      "lines": [
+        391,
+        399
+      ],
+      "observed_source": "Always rendered outside panels; not a tax return, entered rates and simple box caveats.",
+      "limits": "C03 engine/legal declarations only"
+    },
+    {
+      "section": "Period liability",
+      "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+      "lines": [
+        401,
+        423
+      ],
+      "observed_source": "Six raw-metric summaries, recorded window/provenance/freshness, details; persistent unknown display via preserveSummary, mixed/unknown currency withheld and true zero retained.",
+      "limits": "F07 and native details NOTRUN"
+    },
+    {
+      "section": "Apportionment",
+      "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+      "lines": [
+        426,
+        458
+      ],
+      "observed_source": "Nine columns, confidence percentage text plus color, mobile fields/quick view and shared controls.",
+      "limits": "F02/F03/F05; native NOTRUN"
+    },
+    {
+      "section": "Rate table/editor",
+      "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+      "lines": [
+        461,
+        652
+      ],
+      "observed_source": "Global source, six columns, ten authored fields including MoneyInput, individual limits, retained draft, disclosure IDs; label-specific danger delete confirmation and only pending row disabled.",
+      "limits": "F04/F09/C06; no mutations"
+    },
+    {
+      "section": "Sealed records/editor",
+      "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+      "lines": [
+        655,
+        738
+      ],
+      "observed_source": "Selected-vehicle source, six columns/mobile adapter, two required dates; pending/vehicle gate, confirmed:true, success-only close; independent business period.",
+      "limits": "F01/F02/F03/F04/F05/F07; C01/C02/C03/C05"
+    },
+    {
+      "section": "Period digest",
+      "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+      "lines": [
+        741,
+        751
+      ],
+      "observed_source": "Persistent report panel, full breakable digest when available, no bare data&& shell.",
+      "limits": "Algorithm/immutability NOTRUN"
+    },
+    {
+      "section": "Evidence/quality/limitations/unsupported",
+      "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.tsx",
+      "lines": [
+        754,
+        770
+      ],
+      "observed_source": "Report-owned evidence and caveats, neutral semantic status styling, unsupported-capability copy.",
+      "limits": "F06/C03; source arrays not verified capabilities"
+    }
+  ],
+  "action_coverage": [
+    {
+      "family": "Analysis select",
+      "source_observation": "Local 30/90/180/365 changes report query; F08 workspace gap.",
+      "limits": "All interactions NOTRUN; declarations/mechanisms only."
+    },
+    {
+      "family": "Summary review/details",
+      "source_observation": "Existing OperationalBrief specialist/unit/source display mechanisms.",
+      "limits": "All interactions NOTRUN; declarations/mechanisms only."
+    },
+    {
+      "family": "Rate open/cancel/submit",
+      "source_observation": "Translated labels, stable disclosure IDs, retained draft, pending submit/inline errors, success-only close.",
+      "limits": "All interactions NOTRUN; declarations/mechanisms only."
+    },
+    {
+      "family": "Delete confirm/cancel",
+      "source_observation": "Danger dialog names row; mutate only after ok, row-specific pending; F09 shared Cancel.",
+      "limits": "All interactions NOTRUN; declarations/mechanisms only."
+    },
+    {
+      "family": "Filing open/cancel/submit",
+      "source_observation": "Disclosure IDs, retained dates, vehicle/pending gate, confirmed:true and inline errors; C01/C02.",
+      "limits": "All interactions NOTRUN; declarations/mechanisms only."
+    },
+    {
+      "family": "Source retry",
+      "source_observation": "Shared fatal/retained per-source refetch mechanism, not global blanking.",
+      "limits": "All interactions NOTRUN; declarations/mechanisms only."
+    },
+    {
+      "family": "Table search/filter/visibility/density/local pages",
+      "source_observation": "Existing shared DataTable with stable IDs; loaded rows only; F01/F02.",
+      "limits": "All interactions NOTRUN; declarations/mechanisms only."
+    },
+    {
+      "family": "CSV/JSON export",
+      "source_observation": "Honest loaded/selected scope, visible projection, rendered/raw branches; F03.",
+      "limits": "All interactions NOTRUN; declarations/mechanisms only."
+    },
+    {
+      "family": "Mobile quick-view/actions",
+      "source_observation": "All three tables supply adapters; full shared detail fields and rate delete mechanism.",
+      "limits": "All interactions NOTRUN; declarations/mechanisms only."
+    }
+  ],
+  "state_coverage": {
+    "source_count": 3,
+    "persistent_panel_shells": 6,
+    "presentation_sections": 7,
+    "sources": "Vehicle+days report; independent global rates; vehicle first-50 filings.",
+    "loading": "Shells/status/skeleton retained; unknown summary preserved.",
+    "fatal": "Own SourceContent error/retry; other sources not globally replaced; unknown summary preserved.",
+    "retained": "Shared state keeps payload on refresh failure, marks stale with warning/updatedAt/retry, not fresh success.",
+    "initial_paused": "Initial/blocked copy without cached-data claim; summary remains unknown.",
+    "cached_paused": "Retained values with paused/stale warning, not authoritative empty.",
+    "resolved_null": "data!==undefined counts null as authoritative absence; disproves infinite-loading suspicion.",
+    "empty": "Source-owned empty states; disabled-scope copy F05.",
+    "editing": "Independent editors deliberately stay usable without loaded read data; not itself a violation.",
+    "unknown_zero": "Unknown numeric/currency values withheld, real zero kept; authored form defaults are not telemetry.",
+    "readiness": "Hook positive-vehicle gating/AbortSignal, filing null-vehicle/pending submit gates, matching-delete pending; actual network/offline safety NOTRUN."
+  },
+  "preferences_i18n_mobile_a11y": {
+    "units": "Raw SI/minor units preserved; display preferences, currency fraction digits, grams-to-kg display boundary. Price saved-locale issue resolved.",
+    "i18n": "Known quality/default Cancel/date locale F06/F09/F07; arbitrary filing-status contract conditional C05.",
+    "mobile": "Three adapters, responsive editor grids and wrapLabel/touch-min page actions exist; prior missing-mobile fields fixed in source.",
+    "a11y": "Input IDs/labels/required, disclosure expanded/controls IDs, shared status/polite warnings/dialog and percentage text declarations; native C04 NOTRUN."
+  },
+  "test_evidence": {
+    "execution": "NOTRUN",
+    "executed_cases": 0,
+    "it_call_sites": 39,
+    "source_expanded_authored_cases": 40,
+    "sources": [
+      {
+        "file": "web/src/features/ownership/pages/JurisdictionCompliancePage.test.tsx",
+        "call_sites": 15,
+        "authored_cases": 15,
+        "lines": [
+          192,
+          212,
+          233,
+          273,
+          310,
+          373,
+          399,
+          426,
+          435,
+          454,
+          464,
+          479,
+          492,
+          507,
+          521
+        ]
+      },
+      {
+        "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+        "call_sites": 18,
+        "authored_cases": 18,
+        "lines": [
+          20,
+          27,
+          34,
+          48,
+          61,
+          70,
+          77,
+          91,
+          108,
+          118,
+          127,
+          134,
+          143,
+          152,
+          158,
+          165,
+          177,
+          183
+        ]
+      },
+      {
+        "file": "web/src/features/ownership/components/statstrip-compliance/complianceSummaryMetrics.test.ts",
+        "call_sites": 6,
+        "authored_cases": 7,
+        "lines": [
+          33,
+          51,
+          61,
+          71,
+          89,
+          98
+        ],
+        "matrix": "line51 two JPY/BHD rows"
+      }
+    ],
+    "strength": "Static declarations, not runner discovery/pass receipts. Page mocks query/mutations/vehicle/i18n; synthetic 375 ResizeObserver is not native proof.",
+    "gaps": "Coverage/sort/export, coupled validation, locale/quality/cancel, review/scope/late settlement and native/provider feedback.",
+    "historical_only": "Queue 2116 records 15 discovered/13 passed/2 failed; not this attempt. Exact old receipt paths absent in root logs and web/logs; no rerun or current passing claim."
+  },
+  "deduplicated_needs": [
+    {
+      "owner": "page caller/summary",
+      "findings": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F07"
+      ],
+      "priority": "Coverage/export and coupled validation first, existing table/form/empty/format owners."
+    },
+    {
+      "owner": "existing shared EvidencePanel",
+      "findings": [
+        "F06"
+      ]
+    },
+    {
+      "owner": "existing shared ConfirmDialog",
+      "findings": [
+        "F09"
+      ]
+    },
+    {
+      "owner": "workspace/API integration",
+      "findings": [
+        "F08"
+      ],
+      "priority": "Establish endpoint/range compatibility before implementation."
+    }
+  ],
+  "deduplication_limits": "Adjacent QA artifacts inspected were IN_PROGRESS scaffolds without completed findings. Owner normalization is internal, not completed cross-worker reconciliation.",
+  "preserved_or_resolved": "Persistent trust shells, initial/retained paused distinctions, mobile adapters, editor disclosures, price locale and hook success/error toasts exist. Dynamic styles exempt; resolved null is not perpetual loading. Page size 774>300 is accepted recorded architecture debt, not an additional finding or remigration demand.",
+  "command_provenance_limits": "Raw numbered reads, regex candidate counts and observed outputs/exits retained in log. Some earlier inspection commands were descriptive rather than byte-for-byte; full reconstruction not claimed. Final artifact/verification scripts verbatim. All known failures explicit, no compiler/test success claim.",
+  "not_run": [
+    "fresh tests/passing test reruns",
+    "lint/build",
+    "npx tsc --noEmit/global TSC/compilers",
+    "QA helper scripts",
+    "browser/native interactions",
+    "installs/servers/watchers",
+    "network/API",
+    "compliance/identity/location/legal/business actions",
+    "code/tests/catalog/Git/queue/handoff writes"
+  ],
+  "pin_check": {
+    "pinned_files": 30,
+    "unchanged_files": 30,
+    "changed_files": [],
+    "captured_after_utc": "2026-10-14T02:29:42.340420+00:00"
+  },
+  "summary": {
+    "confirmed_findings": 9,
+    "conditional_native_candidates": 6,
+    "counts_by_rule": {
+      "source-coverage": 1,
+      "declaration-behavior-mismatch": 1,
+      "export-fidelity": 1,
+      "coupled-validation": 1,
+      "source-disabled-copy": 1,
+      "hardcoded-string": 2,
+      "preference-locale": 1,
+      "workspace-range-contract": 1
+    },
+    "counts_by_severity": {
+      "medium": 9
+    },
+    "owner_need_groups": 4,
+    "page_related_normalized_findings": 7,
+    "shared_owner_findings": 2,
+    "executed_cases": 0,
+    "authored_cases": 40
+  },
+  "completed_at_utc": "2026-10-14T02:29:42.340501+00:00",
+  "release": {
+    "artifact": "RELEASED",
+    "command": "RELEASED",
+    "at_utc": "2026-10-14T02:30:19.633476+00:00",
+    "before_return_deadline": true,
+    "ongoing_services_started": 0,
+    "remaining_assigned_work": null,
+    "runtime_approval": false
+  },
+  "final_verification": {
+    "at_utc": "2026-10-14T02:30:19.633476+00:00",
+    "json_parse": "PASS",
+    "live_pins": "PASS",
+    "counts_citation_bounds_paths": "PASS",
+    "errors": [],
+    "return_deadline_met": true,
+    "method": "Independent JSON parse, exact counts/owner IDs/citation bounds/allowed paths, SHA-256 raw bytes and line counts of all 30 live pins; not tests/lint/compiler/browser."
+  }
+}

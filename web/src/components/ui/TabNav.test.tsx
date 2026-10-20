@@ -145,6 +145,80 @@ describe('TabNav — container, a11y label, focus + className', () => {
     expect(group.className).toContain('rounded-shape-lg');
   });
 
+  describe('TabNav — preserved keyboard, scope and restrained presentation', () => {
+    it('retains native focus order without turning the group into an arrow-key tablist', () => {
+      const onChange = vi.fn();
+      render(<TabNav tabs={TABS} active="overview" onChange={onChange} />);
+      const buttons = screen.getAllByRole('button');
+      for (const button of buttons) {
+        expect(button.tabIndex).toBe(0);
+        button.focus();
+        expect(button).toHaveFocus();
+        fireEvent.keyDown(button, { key: 'ArrowRight' });
+        expect(button).toHaveFocus();
+      }
+      expect(onChange).not.toHaveBeenCalled();
+      fireEvent.click(buttons[1], { detail: 0 });
+      expect(onChange).toHaveBeenCalledWith('driving');
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    });
+
+    it('keeps selection controlled and focus intact when the parent updates active', () => {
+      const onChange = vi.fn();
+      const { rerender } = render(<TabNav tabs={TABS} active="overview" onChange={onChange} />);
+      const driving = screen.getByRole('button', { name: 'Driving' });
+      driving.focus();
+      fireEvent.click(driving);
+      expect(driving).toHaveAttribute('aria-pressed', 'false');
+      rerender(<TabNav tabs={TABS} active="driving" onChange={onChange} />);
+      expect(driving).toHaveAttribute('aria-pressed', 'true');
+      expect(driving).toHaveFocus();
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('preserves long translated labels and source order inside an RTL scroll region', () => {
+      const tabs: TabNavItem[] = [
+        { key: 'history', label: 'سجل عمليات الشحن والقيادة خلال الفترة المحددة بالكامل' },
+        { key: 'details', label: 'Ausführliche Fahrzeugzustandsinformationen und Benachrichtigungen' },
+      ];
+      render(
+        <div dir="rtl">
+          <TabNav tabs={tabs} active="history" onChange={() => {}} ariaLabel="الأقسام" />
+        </div>,
+      );
+      const group = screen.getByRole('group', { name: 'الأقسام' });
+      expect(group.parentElement).toHaveAttribute('dir', 'rtl');
+      expect(group.className).toContain('overflow-x-auto');
+      expect(screen.getAllByRole('button').map(button => button.textContent)).toEqual(
+        tabs.map(tab => tab.label),
+      );
+      for (const button of screen.getAllByRole('button')) {
+        expect(button.className).toContain('shrink-0');
+        expect(button.className).toContain('whitespace-nowrap');
+        expect(button).not.toHaveAttribute('title');
+      }
+    });
+
+    it('uses readable mobile targets, restrained selection, reduced motion and system focus colors', () => {
+      render(<TabNav tabs={TABS} active="overview" onChange={() => {}} />);
+      for (const button of screen.getAllByRole('button')) {
+        expect(button.className).toContain('min-h-11');
+        expect(button.className).toContain('min-w-11');
+        expect(button.className).toContain('text-sm');
+        expect(button.className).toContain('motion-reduce:transition-none');
+        expect(button.className).toContain('focus-visible:ring-offset-2');
+        expect(button.className).toContain('forced-colors:focus-visible:outline-[Highlight]');
+        expect(button.className).not.toContain('shadow');
+      }
+      expect(screen.getByRole('button', { pressed: true }).className).toContain(
+        'forced-colors:text-[HighlightText]',
+      );
+      expect(screen.getByRole('button', { name: 'Driving' }).className).toContain(
+        'forced-colors:text-[ButtonText]',
+      );
+    });
+  });
+
   it('labels the group when ariaLabel is provided', () => {
     render(
       <TabNav tabs={TABS} active="overview" onChange={() => {}} ariaLabel="Analytics sections" />,

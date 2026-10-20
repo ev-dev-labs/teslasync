@@ -1,0 +1,433 @@
+{
+  "item": "audit-page-074",
+  "page": "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+  "routes": ["/sleep-efficiency"],
+  "purpose": "Historical vehicle sleep evidence workspace separating FSM destination counts, withheld dwell derivations, Sentry comparison, drain-event validation and exact source accounting.",
+  "primaryGoal": "Understand what the selected vehicle and reporting window actually support without mistaking placeholder zeros, count composition or context projections for measured sleep health.",
+  "dataSources": [
+    {
+      "hook": "useSleepEfficiency",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 146,
+      "endpoint": "GET /api/v1/analytics/sleep",
+      "requestPath": "/analytics/sleep",
+      "parameters": ["vehicle_id", "days", "start", "end"],
+      "routeEvidence": "internal\\api\\router.go:3874",
+      "owner": "internal\\api\\sleep\\handler.go",
+      "sourceOwnership": "internal\\api\\sleep\\repo.go:47-58 counts fsm_transitions.to_state for fsm_name='vehicle'; vehicles supplies capacity estimation context; settings supplies base_cost_per_kwh.",
+      "queryBehavior": "useEnergy.ts:167-174 retains vehicle/days/start/end query identity, AbortSignal forwarding and vehicle-null disablement; no per-hook retry/stale override is introduced.",
+      "knownBackendLimits": "repo.go:52 pins total_minutes=0. handler.go:144-167 emits empty Sentry and event arrays and placeholder scalar metrics. Capacity/price enrichment falls back to estimates/defaults. This is current source evidence, not an exercised response."
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState",
+      "file": "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+      "line": 44,
+      "endpoint": null,
+      "owner": "existing workspace vehicle/range controls",
+      "sourceOwnership": "useRangeState.ts:110-124 distinguishes calendar strings from timezone-aware/rolling instants; workspaceScope.ts:64 registers /sleep-efficiency.",
+      "queryBehavior": "Page passes calendar start/end, not startInstant/endInstantExclusive. See architecture issue RANGE-INSTANTS."
+    },
+    {
+      "hook": "analyzeSleepRange / analyzeSleepEfficiency",
+      "file": "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts",
+      "line": 983,
+      "endpoint": null,
+      "owner": "battery sleep domain analysis",
+      "sourceOwnership": "Pure derived analysis of SleepEfficiencyData, selected dates and frozen mount clock; never a replacement server-state cache.",
+      "queryBehavior": "Null-safe collection normalization, validation, first-valid deduplication, all-valid-row aggregates, 50-row directories, explicit evidence gates and recursively frozen output."
+    },
+    {
+      "hook": "useUnits / useFormatting / useNumberFormatting / useOperationalMetrics",
+      "file": "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+      "line": 74,
+      "endpoint": null,
+      "owner": "existing preference-aware display formatting",
+      "sourceOwnership": "Page supplies temperature, energy and currency formatters; section components use number formatting; BatteryEvidenceBrief.tsx:24 adapts source metrics with useOperationalMetrics.",
+      "queryBehavior": "Formatting helpers were not traced to their own preference endpoints; no endpoint capability or unit conversion beyond inspected source is asserted."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / CardGrid / SleepSectionPlacement",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": ["SleepEfficiencyPage.tsx:103-191", "CardGrid.tsx:26-40", "SleepSectionPlacement.tsx:13-18"],
+      "props": ["title", "subtitle", "query", "items:{id,size,content}[]", "label", "children", "delay"],
+      "behavior": "Existing PageContainer adapter and allocated-width layout policy retain stable order; page-specific placement wraps actual specialists rather than replacing chart frames."
+    },
+    {
+      "name": "OperationalBrief through BatteryEvidenceBrief",
+      "owner": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "evidence": ["BatteryEvidenceBrief.tsx:19-54", "sleep-efficiency-modernization\\SleepEvidenceOverview.tsx:25-92"],
+      "props": ["id", "title", "metrics", "period", "loading", "retained"],
+      "behavior": "Seven source-aware overview metrics and existing operational review surface, not a fabricated KPI grid."
+    },
+    {
+      "name": "ChartContainer and chart barrel",
+      "owner": "existing @/components/charts category",
+      "evidence": ["TransitionDestinationChart.tsx:75-137", "DwellDurationChart.tsx:72-135", "SentryComparisonChart.tsx:95-175"],
+      "props": ["title", "subtitle", "ariaLabel", "height", "data", "dataColumns", "exportData", "chartKey"],
+      "behavior": "Three real chart frames retain accessible data contracts and export inputs; Sentry chart forwards hiddenSeries into both bars. Shared toolbar/fullscreen/annotation implementations were not exercised."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "evidence": ["DataTable.tsx:184-188,237-248,714-725,1385-1415", "sleep-efficiency-modernization\\StateEvidenceDirectory.tsx:64-85", "sleep-efficiency-modernization\\DrainEventDirectory.tsx:97-119"],
+      "props": ["tableId", "columns", "data", "keyExtractor", "mobileColumns", "mobilePresentation", "variant", "density", "pagination", "enableValueFilters"],
+      "behavior": "Four stable table identities. State/event directories adopt embedded mobile presentation; availability/accounting tables retain legacy mobile column hiding."
+    },
+    {
+      "name": "GlassPanel / LayoutCard / PanelTitle / Text / Badge / MetricCard / MetricBar",
+      "owner": "existing ui, layout and data-display categories",
+      "evidence": ["SleepMethodologyPanel.tsx:15-133", "SleepEfficiencyDiagnostics.tsx:22-141", "TransitionCompositionPanel.tsx:23-103", "LayoutCard.tsx:17-61"],
+      "props": ["title", "children", "label", "value", "subtitle", "color", "variant", "size"],
+      "behavior": "Eight GlassPanels, three LayoutCards and three ChartContainers retain fourteen independently mounted sections; metric cards still use per-card decorative color choices."
+    },
+    {
+      "name": "SleepEfficiencySectionBody / feedback / FadeIn",
+      "owner": "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEfficiencySectionBody.tsx",
+      "evidence": ["SleepEfficiencySectionBody.tsx:20-74", "SleepEfficiencyPage.tsx:111-137", "FadeIn.tsx:24-36"],
+      "props": ["state", "children", "skeletonHeight", "onRetry", "delay"],
+      "behavior": "One feature state gate retains headings, passive no-vehicle/error/pending explanations and loading geometry; shared motion primitive uses existing reduced-motion preference."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEfficiencyDiagnostics.tsx",
+      "line": 40,
+      "rule": "MDC-033 / one stats owner",
+      "detail": "Diagnostics, diversity, projections, event profile and coverage repeat grids of colored MetricCards with local string formatting while the overview already adapts OperationalBrief.",
+      "fix": "Reuse the existing stats presentation contracts where specialist equivalence is proven; retain all labels, compound values, numeric precision, unavailable reasons and projection disclaimers. Do not collapse sections.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEvidenceBand.tsx",
+      "line": 23,
+      "rule": "mission 0.6 / competing feature renderers",
+      "detail": "Legacy overview and two legacy directory renderers remain barrel exports alongside mounted modernization counterparts. The assigned page imports only the modernization overview/directories.",
+      "fix": "Treat mounted versions as this page's owners; investigate other consumers before any consolidation or removal. Do not delete the legacy exports on this audit's evidence.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport behavior unverified",
+    "strengths": [
+      "CardGrid measures allocated width and packs full/half items without changing source order (CardGrid.tsx:26-40).",
+      "SleepSectionPlacement retains min-w-0 and existing FadeIn (SleepSectionPlacement.tsx:13-18).",
+      "State/event directories map every column into mobile presentation roles rather than deleting columns (StateEvidenceDirectory.tsx:72-84; DrainEventDirectory.tsx:107-118).",
+      "Specialist cards stack at one column, then use sm/xl grids; methodology keeps both text blocks (SleepMethodologyPanel.tsx:32-113)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\DataAvailabilityMatrix.tsx",
+        "line": 98,
+        "rule": "MDC-043 / preservation of mobile information",
+        "detail": "mobileColumns keeps source/status but hides evidence-rule reason below md. No mobilePresentation or expanded detail is supplied and columnVisibility is disabled at line 94. DataTable.tsx:724-725 applies hidden md:table-cell.",
+        "fix": "Adopt the existing mobilePresentation adapter with source title, status badge and full reason metadata/detail; keep the same tableId, ordering and disabling policy.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\RangeSourceCoverage.tsx",
+        "line": 279,
+        "rule": "MDC-043 / exact accounting must remain reachable",
+        "detail": "mobileColumns keeps source/category but omits the count, the essential accounting measurement. No mobilePresentation or row detail is passed; shared legacy branch hides count below md.",
+        "fix": "Use existing DataTable mobile roles with source title, category metadata and numeric count primary; preserve all eleven mutually exclusive categories, locale formatting and export scope.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "requiredReview": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "allocated-width changes", "long unknown state names", "RTL", "200% text"]
+  },
+  "accessibility": {
+    "status": "keyboard, focus, screen reader, effective contrast and touch targets unverified",
+    "sourceEvidence": [
+      "Charts provide localized ariaLabel and dataColumns (TransitionDestinationChart.tsx:84-91; DwellDurationChart.tsx:81-88; SentryComparisonChart.tsx:104-112).",
+      "Loading bodies expose role=status and a localized name; decorative Moon icons are aria-hidden (SleepEfficiencySectionBody.tsx:20-44).",
+      "Directory icons are decorative and localized badges provide meaning beyond color (DrainEventDirectory.tsx:70-86).",
+      "Shared FadeIn disables initial animation under the existing reduce preference (FadeIn.tsx:24-36).",
+      "The mobile omissions above also remove source explanations/counts from the hidden table-cell branch; desktop data presence is not mobile accessibility acceptance."
+    ],
+    "issues": [],
+    "requiredReview": ["Tab/Shift+Tab", "initial error retry", "paused refresh", "OperationalBrief review drawer", "chart export/fullscreen/legend", "table filters/pagination/mobile details", "light/dark/forced colors", "reduced motion"]
+  },
+  "states": {
+    "initialLoading": "Selected vehicle and unresolved query produce skeleton section bodies; overview forwards loading to BatteryEvidenceBrief (page:78-85; SectionBody:33-44; overview:113).",
+    "noVehicle": "Hook is disabled; overview displays select-vehicle guidance and each specialist retains its heading plus passive EmptyState (useEnergy.ts:173; SectionBody:20-31).",
+    "initialError": "Overview owns QueryError retry; specialist headings remain and their bodies point to that surface (overview:99-101; SectionBody:46-57).",
+    "initialPausedOffline": "No cache plus blocked refresh shows explicit paused explanation and Refresh button (page:125-137).",
+    "retainedRefreshError": "Retained payload continues through analysis and section bodies; page displays StaleRefreshWarning (page:61,77-98,111-123).",
+    "staleOffline": "Retained non-ok data produces shared warning; exact offline/freshness implementation not traced or exercised. Overview retained label depends only on refreshError.",
+    "empty": "Resolved zero/empty collections preserve all fourteen sections, distinguish unavailable duration/Sentry/event evidence from valid count/row zeros and keep methodology visible.",
+    "partial": "One count-bearing Sentry group and excluded event collections can be partial in availability/breadth without inventing full comparison (analysis:899-932).",
+    "success": "Valid counts, positive dwell and count-bearing comparisons independently unlock their specialist views.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepEvidenceOverview.tsx",
+        "line": 114,
+        "rule": "MDC-026 / consistent source trust",
+        "detail": "Overview calls retained only for refreshError while the page warns for every retained non-ok sleepState. Cached paused/stale/offline source readings may therefore have an 'Available source readings' brief alongside a source warning (BatteryEvidenceBrief.tsx:39-46). Actual composed status unverified.",
+        "fix": "Pass an explicit source-derived trust/retained state through the existing feature brief adapter; preserve usable data and distinguish stale, paused and refresh failure without fabricated freshness.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "runtimeAcceptance": "unverified"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionDestinationChart.tsx",
+      "line": 119,
+      "rule": "MDC-010 / MDC-034 / mission 43 reduced visual noise",
+      "detail": "Hardcoded fluorescent cyan fill #00f0ff bypasses the existing palette owner. Additional literal purple/amber fills occur at DwellDurationChart.tsx:113 and SentryComparisonChart.tsx:141,151. Source-confirmed palette bypass; rendered contrast unverified.",
+      "fix": "Use the current shared chart palette and retained user choices; prefer restrained default series while preserving series names, values, axes, legend IDs and accessible/export data.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepMethodologyPanel.tsx",
+      "line": 33,
+      "rule": "MDC-010 / MDC-015 / theme-aware surfaces",
+      "detail": "Two nested methodology blocks hardcode border-white/[0.06] and bg-white/[0.02] (also line 72), rather than neutral theme-aware surface tokens.",
+      "fix": "Reuse existing surface/border roles while retaining both headings, all eight explanation bullets and warnings; measure resulting light/dark contrast.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryProjectionContext.tsx",
+      "line": 60,
+      "rule": "mission 43 / restrained semantic colors",
+      "detail": "Context/projection metric cards rotate blue, green, amber, purple, red and cyan independent of an explicit severity model. Similar decorative assignments recur in diagnostics, event profile, diversity and coverage.",
+      "fix": "Adopt existing neutral stats presentation and reserve semantic accents for actual warning/availability meaning. Preserve metric details and user chart palette preferences.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+      "line": 46,
+      "rule": "RANGE-INSTANTS / MDC-032",
+      "detail": "Page consumes start/end calendar strings and passes them at lines 55-60; shared range hook exposes rolling/timezone-aware instants (useRangeState.ts:110-124,656-668). A 24h selection cannot retain its exact rolling instant semantics through this call. Backend SQL currently uses (from,to] (repo.go:48-58), so an exclusive-upper instant migration also needs boundary agreement.",
+      "fix": "Integration owner must forward startInstant/endInstantExclusive through the typed hook and verify backend half-open boundary semantics, timezone/DST, rolling presets and coverage labels. Preserve the current inclusive UTC disclosure until the contract is actually changed; do not silently relabel calendar data as precise instants.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepEvidenceOverview.tsx",
+      "line": 2,
+      "rule": "MDC-002 / production category imports",
+      "detail": "Feature imports StatMetric from data-display/stat-reference and LayoutCard from layout/layout-reference (line 5). Directory components similarly import layout-reference at line 5; SleepSectionPlacement imports layout-reference at line 2.",
+      "fix": "Use existing public category barrels for available types/components; coordinate useCardPlacement export availability rather than guessing a new shared API. No replacement adapters or component library.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\types\\energy.ts",
+      "line": 271,
+      "rule": "MDC-045 / existing sleep endpoint unit debt",
+      "detail": "Sleep wire shape still includes total_minutes, time_to_sleep_avg_min, duration_hours and sentry_monthly_kwh, confirmed by handler.go:69-95,174-195. Capacity is Wh and temperatures are Celsius. This audit must not invent SI replacements or treat existing price-per-kWh context as energy.",
+      "fix": "Report to the integration/SI owner for a coordinated typed endpoint migration if authorized; preserve current raw payload/query behavior and every derivation meanwhile. Presentation-only workers must not rename wire fields or change projection arithmetic.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Existing architecture and evidence gating are strong, but source-confirmed mobile information omissions and calendar-only workspace scope need integration attention. Palette/surface noise is P2; no runtime blocker has been verified.",
+    "implementationOrder": ["Resolve workspace instant/boundary contract", "Restore mobile reason/count reachability using existing DataTable", "Align source trust labels", "Reduce palette/surface noise without information loss", "Consolidate category imports and evidence-backed duplicate owners"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "workspace-range-sleep-boundary-contract",
+      "existingOwnerFile": "web\\src\\hooks\\useRangeState.ts",
+      "owner": "integration",
+      "changeNeeded": "Sleep hook/backend integration, not a second range selector",
+      "props": ["startInstant", "endInstantExclusive", "timezone", "vehicleId", "query AbortSignal"],
+      "variants": ["calendar", "24h", "live", "custom"],
+      "states": ["invalid/reversed range", "timezone/DST", "rolling-clock advance", "cached scope changes"],
+      "usedBy": ["/sleep-efficiency"],
+      "dependsOn": ["web\\src\\api\\hooks\\useEnergy.ts", "internal\\api\\sleep\\handler.go", "internal\\api\\sleep\\repo.go", "existing shared header range preference"],
+      "constraint": "Preserve all full-range aggregates and exact boundary disclosure; backend and labels must agree before adopting exclusive instants."
+    },
+    {
+      "name": "existing-datatable-mobile-details",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "owner": "page",
+      "changeNeeded": "Reuse existing props; no shared implementation extension established",
+      "props": ["mobilePresentation.roles", "mobilePresentation.displayValue", "tableId", "columns", "data", "variant=embedded"],
+      "variants": ["allocated width below 640 mobile adapter", "legacy tablet branch", "desktop"],
+      "states": ["empty", "long reason", "zero counts", "filter/export", "full detail"],
+      "usedBy": ["DataAvailabilityMatrix", "RangeSourceCoverage", "StateEvidenceDirectory", "DrainEventDirectory"],
+      "dependsOn": ["localized source reason labels", "unchanged DataTable controller/persistence", "mobile and tablet reachability review"],
+      "constraint": "Adapter reuse must cover every hidden column; test 640-767 legacy branch rather than assuming opt-in phone cards cover all widths."
+    },
+    {
+      "name": "existing-chart-palette",
+      "existingOwnerFile": "web\\src\\lib\\colors.ts",
+      "owner": "page",
+      "changeNeeded": "Adopt shared palette; no new palette owner",
+      "props": ["existing palette series colors", "ChartContainer.dataColumns", "exportData", "chartKey", "hiddenSeries"],
+      "variants": ["restrained default", "retained explicit user palette"],
+      "states": ["unavailable", "valid zero", "hidden series", "light/dark/forced colors"],
+      "usedBy": ["TransitionDestinationChart", "DwellDurationChart", "SentryComparisonChart", "TransitionCompositionPanel"],
+      "dependsOn": ["existing palette preference bridge", "canonical chart frames"],
+      "constraint": "Do not reset saved neon/Matrix choices or remove a data series to reduce noise."
+    },
+    {
+      "name": "existing-operational-metric-and-trust-presentation",
+      "existingOwnerFile": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "owner": "page",
+      "changeNeeded": "Reuse adapter and shared metric formatter; source trust mapping may need a bounded feature prop extension",
+      "props": ["metrics with rawValue/display formatter/context", "period", "loading", "retained", "source-derived trust"],
+      "variants": ["overview brief", "specialist diagnostics kept where equivalence is unknown"],
+      "states": ["unknown", "valid zero", "partial", "retained refresh error", "paused/offline"],
+      "usedBy": ["SleepEvidenceOverview", "SleepEfficiencyDiagnostics", "TransitionDiversityDiagnostics", "SentryProjectionContext", "DrainEventProfile", "RangeSourceCoverage"],
+      "dependsOn": ["useDataState source truth", "existing OperationalBrief/useOperationalMetrics", "specialist precision and compound metric preservation"],
+      "constraint": "No speculative new stats component or wholesale adoption before each specialist value and explanation is proven equivalent."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\index.ts",
+      "line": 2,
+      "rule": "mission 0.6 / deduplicated domain ownership",
+      "detail": "Barrel exports legacy DrainEventDirectory, StateEvidenceDirectory and SleepEvidenceBand while sleep-efficiency-modernization/index.ts exports the mounted replacement directories/overview. Other-consumer usage is outside this page audit.",
+      "fix": "Canonicalize ownership only after bounded consumer/preservation review; preserve this page's current table IDs, overview occurrence IDs and all source detail.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "7477fcf06395b89c85d20ab7516b6de37361bd70d7e747b2bf953af2a9967313",
+    "hashAlgorithm": "SHA-256 of current page bytes",
+    "currentLineCount": 195,
+    "pagePlusMountedSectionFilesLineCount": 2332,
+    "lineCountScope": "Page + fourteen mounted section renderer files + SleepSectionPlacement; excludes analysis, shared primitives, SectionBody, tests and unmounted legacy variants.",
+    "sectionCount": 14,
+    "sectionNames": [
+      "Evidence overview",
+      "Transition destination count distribution",
+      "Transition composition profile",
+      "Dwell-duration distribution",
+      "Sleep-efficiency diagnostics",
+      "Transition diversity and concentration",
+      "Sentry on/off comparison",
+      "State evidence directory",
+      "Sentry projection and context",
+      "Drain-event profile",
+      "Recent drain-event directory",
+      "Data-availability matrix",
+      "Range, source coverage, and exact accounting",
+      "Methodology and interpretation limits"
+    ],
+    "sectionEvidence": "SleepEfficiencyPage.tsx:145-190 supplies fourteen stable CardGrid item IDs in the recorded order.",
+    "sectionRendererCounts": {"section": 14, "GlassPanel": 8, "ChartContainer": 3, "LayoutCard": 3},
+    "actions": [
+      "Existing workspace vehicle and header range selection; no competing local selectors.",
+      "Initial error retry through QueryError; paused initial request Refresh calls sleepQuery.refetch.",
+      "OperationalBrief existing review surface; implementation/runtime drawer interactions not exercised.",
+      "Three ChartContainer export/data-table/fullscreen/annotation surfaces must survive; actual shared action availability unverified.",
+      "Sentry legend hidden-series state and chartKey sleep-efficiency-sentry-comparison.",
+      "Four DataTable controllers, persisted identities, existing export/column/filter behavior; drain-event pagination and value filters.",
+      "Existing reduced-motion-aware section entrances and all loading/error/empty/source warnings."
+    ],
+    "stableIdentities": [
+      "sleep-efficiency.range",
+      "sleep-efficiency-evidence",
+      "sleep-window",
+      "sleep-destinations",
+      "sleep-asleep-count-share",
+      "sleep-duration-efficiency",
+      "sleep-average-time-to-sleep",
+      "sleep-sentry-comparison",
+      "sleep-evidence-breadth",
+      "battery:sleep-state-evidence",
+      "battery:sleep-drain-events",
+      "battery:sleep-availability",
+      "battery:sleep-source-accounting",
+      "sleep-efficiency-sentry-comparison"
+    ],
+    "dataBehavior": [
+      "Counts describe FSM destination transitions, never occupancy or duration.",
+      "All optional collections normalize safely; unknown nonempty state labels remain visible.",
+      "Nonnegative valid counts/minutes, positive dwell gate and reported/recomputed percentage distinctions.",
+      "Unavailable duration/time-to-sleep/Sentry/event placeholders never become measured zero.",
+      "Positive sample count gates each Sentry group; valid zero rates remain evidence; both groups gate comparison.",
+      "Capacity in Wh, Celsius temperature and currency/display preferences remain; price is context, not observed drain or a bill.",
+      "730-hour monthly projection and clamped nonnegative extra drain calculation stay unchanged pending authorized integration.",
+      "Frozen mount clock, timestamp/future/battery/duration validation, event recency and exact exclusion accounting remain disclosed.",
+      "First valid normalized state row/event ID wins; events sort newest first with ID tie-break; both directories cap at 50.",
+      "All validated rows, not capped directories, contribute to aggregates; all eleven exclusion/inclusion categories remain.",
+      "Seven availability sources award 1 available / 0.5 partial in source breadth; this is not confidence.",
+      "Current inclusive UTC calendar disclosure and backend placeholders remain until a coordinated boundary contract change.",
+      "No source, route, hook, payload, action, section or preference was modified by this audit."
+    ],
+    "baselineComparison": "Current source baseline only; no historical source or Git comparison performed."
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only source audit; only assigned report and heartbeat written",
+    "missionSectionsRead": [0, 1, 15, 33, 43, 44],
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendExecution": "unverified; route/handler/repo source inspected, no database or request exercised",
+    "validation": [
+      "Bounded PowerShell Select-String source audit exit 0: inlineStyles=0, caseSensitiveRawControls=0, directLibraries=0, oldApiImports=0, fixedWhite=2, hexColors=4.",
+      "Initial case-insensitive raw-controls probe reported Button as a false positive; corrected case-sensitive result is 0.",
+      "Get-Content source counts exit 0: pageLines=195; pagePlusMountedSectionFilesLines=2332; mountedSectionTags=14; mountedGlassPanelTags=8; mountedChartContainerTags=3; mountedLayoutCardTags=3.",
+      "Get-FileHash -Algorithm SHA256 used for current page byte baseline.",
+      "Skill audit.sh inspected but not executed because it unconditionally invokes project TypeScript; assignment disallows full build/lint and contract centralizes project validation.",
+      "No Git, build, lint, TypeScript, tests or browser checks run. Source pattern results are not runtime acceptance."
+    ],
+    "coverage": "Mounted assigned page and its presentation/analysis dependencies, narrow hook/router/backend and shared layout/table/motion/color references. Shared toolbar, shell, query-client and formatter internals not fully inspected. Legacy variants identified via exports; not audited as mounted sections.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-074.json", ".agent-status\\audit-page-074.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\index.ts",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\types.ts",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\labels.ts",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEvidenceBand.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEfficiencySectionBody.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionDestinationChart.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionCompositionPanel.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\DwellDurationChart.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEfficiencyDiagnostics.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionDiversityDiagnostics.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryComparisonChart.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryProjectionContext.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\DrainEventProfile.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\DataAvailabilityMatrix.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\RangeSourceCoverage.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepMethodologyPanel.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\index.ts",
+    "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepEvidenceOverview.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepSectionPlacement.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\StateEvidenceDirectory.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\DrainEventDirectory.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts",
+    "web\\src\\api\\hooks\\useEnergy.ts",
+    "web\\src\\types\\energy.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\sleep\\handler.go",
+    "internal\\api\\sleep\\repo.go"
+  ]
+}

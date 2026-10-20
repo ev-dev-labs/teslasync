@@ -10,14 +10,16 @@ import { Badge, DataTable, type Column } from '@/components/ui';
 import { MetricCard, StatCard } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import { formatDateTime } from '@/lib/dateFormat';
 import { getCompressionStats, getExportJobs as getDevtoolsExportJobs } from '@/api/devtools';
 import type { ExportJobSummary } from '@/api/types';
 import { AccordionSection } from './AccordionSection';
 import { getStatusIcon, statusTextClass, formatBytes } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function DataPipelineSection() {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   const {
@@ -47,6 +49,7 @@ export function DataPipelineSection() {
   const exportColumns = useMemo<Column<ExportJobSummary>[]>(() => [
     {
       key: 'status', header: t('common.status', 'Status'),
+      filterValue: (row) => row.status ?? null,
       render: (row) => (
         <div className="flex items-center gap-2">
           {getStatusIcon(row.status)}
@@ -54,15 +57,16 @@ export function DataPipelineSection() {
         </div>
       ),
     },
-    { key: 'type', header: t('systemStatus.pipeline.type', 'Type'), render: (row) => row.type },
-    { key: 'format', header: t('systemStatus.pipeline.format', 'Format'), render: (row) => <Badge variant="neutral" size="sm">{row.format}</Badge> },
+    { key: 'type', filterValue: (row) => row.type ?? null, header: t('systemStatus.pipeline.type', 'Type'), render: (row) => row.type },
+    { key: 'format', filterValue: (row) => row.format ?? null, header: t('systemStatus.pipeline.format', 'Format'), render: (row) => <Badge variant="neutral" size="sm">{row.format}</Badge> },
     {
       key: 'file_name', header: t('systemStatus.pipeline.file', 'File'),
+      filterValue: (row) => row.file_name ?? null,
       render: (row) => <span className="font-mono text-xs truncate max-w-[200px] block">{row.file_name}</span>,
     },
-    { key: 'record_count', header: t('systemStatus.pipeline.records', 'Records'), sortable: true, render: (row) => fmtInt(row.record_count) },
-    { key: 'created_at', header: t('systemStatus.pipeline.created', 'Created'), render: (row) => formatDateTime(row.created_at) },
-  ], [t]);
+    { key: 'record_count', filterValue: (row) => row.record_count ?? null, align: 'right', header: t('systemStatus.pipeline.records', 'Records'), sortable: true, render: (row) => fmtInt(row.record_count) },
+    { key: 'created_at', filterValue: (row) => row.created_at ?? null, filterValueLabel: (_value, row) => formatDateTime(row.created_at), header: t('systemStatus.pipeline.created', 'Created'), render: (row) => formatDateTime(row.created_at) },
+  ], [t, fmtInt]);
 
   const { pendingJobs, processingJobs, completedJobs, failedJobs } = useMemo(() => {
     const list = exportJobs ?? [];
@@ -79,7 +83,7 @@ export function DataPipelineSection() {
   return (
     <AccordionSection
       icon={<Archive className="h-5 w-5" />}
-      title={t('systemStatus.pipeline.title', 'Data Pipeline')}
+      title={t('systemStatus.pipeline.title', 'Data pipeline')}
       description={t('systemStatus.pipeline.desc', 'Compression statistics and export job queue')}
       badges={
         <>
@@ -100,15 +104,15 @@ export function DataPipelineSection() {
       ) : (
         <div className="space-y-6">
           <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.pipeline.compressionTitle', 'Compression Statistics')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.pipeline.compressionTitle', 'Compression statistics')}</h4>
             {compError ? (
               <QueryError error={compError} onRetry={() => refetchCompression()} />
             ) : compression ? (
               <>
                 <Grid cols={{ default: 2, md: 4 }} gap={3}>
-                  <MetricCard label={t('systemStatus.pipeline.ratio', 'Compression Ratio')} value={fmtPercent(compression.savings_percent)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
-                  <MetricCard label={t('systemStatus.pipeline.estSavings', 'Estimated Savings')} value={formatBytes(compression.estimated_saved_bytes)} icon={<HardDrive className="h-4 w-4" />} color="cyan" />
-                  <MetricCard label={t('systemStatus.pipeline.totalPositions', 'Total Positions')} value={fmtInt(compression.total_positions)} icon={<BarChart3 className="h-4 w-4" />} color="purple" />
+                  <MetricCard label={t('systemStatus.pipeline.ratio', 'Compression ratio')} value={fmtPercent(compression.savings_percent)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
+                  <MetricCard label={t('systemStatus.pipeline.estSavings', 'Estimated savings')} value={formatBytes(compression.estimated_saved_bytes)} icon={<HardDrive className="h-4 w-4" />} color="cyan" />
+                  <MetricCard label={t('systemStatus.pipeline.totalPositions', 'Total positions')} value={fmtInt(compression.total_positions)} icon={<BarChart3 className="h-4 w-4" />} color="purple" />
                   <MetricCard label={t('systemStatus.pipeline.compressed', 'Compressed')} value={fmtInt(compression.compressed_positions)} icon={<Archive className="h-4 w-4" />} color="cyan" />
                 </Grid>
                 <div className="mt-4 flex justify-center">
@@ -131,7 +135,7 @@ export function DataPipelineSection() {
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.pipeline.queueTitle', 'Export Job Queue')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.pipeline.queueTitle', 'Export job queue')}</h4>
             {exportError ? (
               <QueryError error={exportError} onRetry={() => refetchExportJobs()} />
             ) : hasJobs ? (
@@ -147,6 +151,7 @@ export function DataPipelineSection() {
                   columns={exportColumns}
                   mobileColumns={['status', 'file_name']}
                   data={exportJobs ?? []}
+                  enableValueFilters
                   keyExtractor={(j) => j.id}
                   compact
                   pagination

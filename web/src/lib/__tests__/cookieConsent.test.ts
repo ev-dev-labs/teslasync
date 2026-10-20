@@ -54,6 +54,39 @@ describe('cookieConsent storage round-trip', () => {
 })
 
 describe('cookieConsent storage failures are non-fatal', () => {
+  it('handles a throwing localStorage getter while preserving privacy and subscriptions', () => {
+    setConsent('accepted')
+    const callback = vi.fn()
+    const unsubscribe = subscribeConsent(callback)
+    const getter = vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+      throw new DOMException('Storage access denied', 'SecurityError')
+    })
+
+    try {
+      expect(getConsent()).toBe('unknown')
+      expect(isReportingAllowed(true)).toBe(false)
+      expect(isReportingAllowed(false)).toBe(true)
+      expect(() => setConsent('declined')).not.toThrow()
+      expect(callback).toHaveBeenLastCalledWith('declined')
+      expect(() => clearConsent()).not.toThrow()
+      expect(callback).toHaveBeenLastCalledWith('unknown')
+
+      window.dispatchEvent(new StorageEvent('storage', { key: CONSENT_STORAGE_KEY }))
+      expect(callback).toHaveBeenCalledTimes(3)
+      expect(callback).toHaveBeenLastCalledWith('unknown')
+      unsubscribe()
+      setConsent('accepted')
+      expect(callback).toHaveBeenCalledTimes(3)
+    } finally {
+      getter.mockRestore()
+      unsubscribe()
+    }
+
+    expect(getConsent()).toBe('accepted')
+    setConsent('declined')
+    expect(getConsent()).toBe('declined')
+  })
+
   it('returns "unknown" when getItem throws', () => {
     const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('quota')

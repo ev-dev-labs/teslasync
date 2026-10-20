@@ -26,16 +26,29 @@ import { requireSubtleCrypto } from './cryptoAvailability';
 import {
   isIndexedDbAvailable,
   openVaultDb,
-  idbPut,
   idbGet,
   idbGetAll,
-  idbDelete,
   STORE_SIGNING_KEYS,
   STORE_KEY_REGISTRY,
 } from './vaultDb';
 import type { EcPublicJwk, SigningKeyRecord, VaultKeyCapability } from './types';
 
 const EC_PARAMS: EcKeyGenParams = { name: 'ECDSA', namedCurve: 'P-256' };
+
+function commitWrite(db: IDBDatabase, stores: string[], write: (tx: IDBTransaction) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(stores, 'readwrite');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error('Signing key transaction failed'));
+    tx.onabort = () => reject(tx.error ?? new Error('Signing key transaction aborted'));
+    try {
+      write(tx);
+    } catch (err) {
+      tx.abort();
+      reject(err);
+    }
+  });
+}
 
 interface StoredKeyPairRow {
   key_id: string;
@@ -49,6 +62,25 @@ const memoryKeyPairs = new Map<string, { privateKey: CryptoKey; publicKey: Crypt
 let memoryRegistry: SigningKeyRecord[] = [];
 let hydrated = false;
 let capabilityCache: VaultKeyCapability | null = null;
+const listeners = new Set<() => void>();
+
+export function subscribeSigningKeys(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+export function getSigningKeysSnapshot(): readonly SigningKeyRecord[] {
+  return memoryRegistry;
+}
+
+export function getSigningKeyCapabilitySnapshot(): VaultKeyCapability | null {
+  return capabilityCache;
+}
+
+function publishRegistry(records: SigningKeyRecord[]): void {
+  memoryRegistry = records;
+  for (const listener of listeners) listener();
+}
 
 function newKeyId(): string {
   const bytes = new Uint8Array(9);
@@ -88,16 +120,19 @@ async function probeIndexedDbCryptoKeyPersistence(): Promise<boolean> {
     const pair = await generateEcdsaKeyPair();
     const db = await openVaultDb();
     try {
-      await idbPut<StoredKeyPairRow>(db, STORE_SIGNING_KEYS, {
+      await commitWrite(db, [STORE_SIGNING_KEYS], (tx) => tx.objectStore(STORE_SIGNING_KEYS).put({
         key_id: probeId,
         private_key: pair.privateKey,
         public_key: pair.publicKey,
-      });
+      }));
       const readBack = await idbGet<StoredKeyPairRow>(db, STORE_SIGNING_KEYS, probeId);
       return !!readBack && typeof readBack.private_key === 'object' && readBack.private_key !== null;
     } finally {
-      await idbDelete(db, STORE_SIGNING_KEYS, probeId).catch(() => undefined);
-      db.close();
+      try {
+        await commitWrite(db, [STORE_SIGNING_KEYS], (tx) => tx.objectStore(STORE_SIGNING_KEYS).delete(probeId));
+      } finally {
+        db.close();
+      }
     }
   } catch {
     return false;
@@ -154,7 +189,7 @@ async function hydrateFromIndexedDbIfNeeded(): Promise<void> {
     const registryRows = await idbGetAll<SigningKeyRecord>(db, STORE_KEY_REGISTRY);
     const keyRows = await idbGetAll<StoredKeyPairRow>(db, STORE_SIGNING_KEYS);
     db.close();
-    memoryRegistry = registryRows.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    publishRegistry(registryRows.sort((a, b) => a.created_at.localeCompare(b.created_at)));
     for (const row of keyRows) {
       if (row.key_id.startsWith('__probe__')) continue;
       memoryKeyPairs.set(row.key_id, { privateKey: row.private_key, publicKey: row.public_key });
@@ -165,33 +200,51 @@ async function hydrateFromIndexedDbIfNeeded(): Promise<void> {
   }
 }
 
-async function persistRegistryEntry(record: SigningKeyRecord): Promise<void> {
+async function persistRegistryEntry(record: SigningKeyRecord): Promise<boolean> {
   const capability = await detectKeyPersistenceCapability();
-  if (!capability.supported) return;
+  if (!capability.supported || !record.persisted) return false;
   try {
     const db = await openVaultDb();
-    await idbPut<SigningKeyRecord>(db, STORE_KEY_REGISTRY, record);
-    db.close();
-  } catch {
-    // Non-fatal: the in-memory registry (source of truth for this session)
-    // already has the record; a failed mirror write just means the next
-    // reload starts fresh, same as the "unsupported" case.
+    try {
+      await commitWrite(db, [STORE_KEY_REGISTRY], (tx) => tx.objectStore(STORE_KEY_REGISTRY).put(record));
+      return true;
+    } finally {
+      db.close();
+    }
+  } catch (err) {
+    downgradePersistence(err);
+    return false;
   }
 }
 
-async function persistKeyPair(keyId: string, pair: { privateKey: CryptoKey; publicKey: CryptoKey }): Promise<boolean> {
+function downgradePersistence(err: unknown): void {
+  capabilityCache = {
+    supported: false,
+    reason: `Signing key persistence failed: ${err instanceof Error ? err.message : String(err)}. ` +
+      'Changes are session-only and will be lost on reload.',
+  };
+}
+
+async function persistKeyPair(record: SigningKeyRecord, pair: CryptoKeyPair): Promise<boolean> {
   const capability = await detectKeyPersistenceCapability();
   if (!capability.supported) return false;
   try {
     const db = await openVaultDb();
-    await idbPut<StoredKeyPairRow>(db, STORE_SIGNING_KEYS, {
-      key_id: keyId,
-      private_key: pair.privateKey,
-      public_key: pair.publicKey,
-    });
-    db.close();
-    return true;
-  } catch {
+    try {
+      await commitWrite(db, [STORE_SIGNING_KEYS, STORE_KEY_REGISTRY], (tx) => {
+        tx.objectStore(STORE_SIGNING_KEYS).put({
+          key_id: record.key_id,
+          private_key: pair.privateKey,
+          public_key: pair.publicKey,
+        } satisfies StoredKeyPairRow);
+        tx.objectStore(STORE_KEY_REGISTRY).put({ ...record, persisted: true });
+      });
+      return true;
+    } finally {
+      db.close();
+    }
+  } catch (err) {
+    downgradePersistence(err);
     return false;
   }
 }
@@ -203,8 +256,6 @@ export async function generateSigningKey(): Promise<SigningKeyRecord> {
   const keyId = newKeyId();
   const publicJwk = await exportPublicJwk(pair.publicKey);
   memoryKeyPairs.set(keyId, { privateKey: pair.privateKey, publicKey: pair.publicKey });
-  const persisted = await persistKeyPair(keyId, pair);
-
   const record: SigningKeyRecord = {
     key_id: keyId,
     public_jwk: publicJwk,
@@ -212,10 +263,10 @@ export async function generateSigningKey(): Promise<SigningKeyRecord> {
     revoked_at: null,
     revoked_reason: null,
     rotated_from: null,
-    persisted,
+    persisted: false,
   };
-  memoryRegistry = [...memoryRegistry, record];
-  await persistRegistryEntry(record);
+  record.persisted = await persistKeyPair(record, pair);
+  publishRegistry([...memoryRegistry, record]);
   return record;
 }
 
@@ -253,8 +304,8 @@ async function markRevoked(keyId: string, reason: string): Promise<SigningKeyRec
   const idx = memoryRegistry.findIndex((k) => k.key_id === keyId);
   if (idx === -1) return null;
   const updated: SigningKeyRecord = { ...memoryRegistry[idx]!, revoked_at: new Date().toISOString(), revoked_reason: reason };
-  memoryRegistry = [...memoryRegistry.slice(0, idx), updated, ...memoryRegistry.slice(idx + 1)];
-  await persistRegistryEntry(updated);
+  updated.persisted = await persistRegistryEntry(updated);
+  publishRegistry([...memoryRegistry.slice(0, idx), updated, ...memoryRegistry.slice(idx + 1)]);
   return updated;
 }
 
@@ -279,7 +330,7 @@ export async function rotateSigningKey(reason = 'rotated'): Promise<SigningKeyRe
   if (!current) return next;
   const linked: SigningKeyRecord = { ...next, rotated_from: current.key_id };
   const idx = memoryRegistry.findIndex((k) => k.key_id === next.key_id);
-  if (idx !== -1) memoryRegistry = [...memoryRegistry.slice(0, idx), linked, ...memoryRegistry.slice(idx + 1)];
-  await persistRegistryEntry(linked);
+  linked.persisted = await persistRegistryEntry(linked);
+  if (idx !== -1) publishRegistry([...memoryRegistry.slice(0, idx), linked, ...memoryRegistry.slice(idx + 1)]);
   return linked;
 }

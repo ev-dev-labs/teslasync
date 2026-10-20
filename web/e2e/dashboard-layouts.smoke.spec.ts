@@ -22,7 +22,7 @@ for (const theme of ['dark', 'light'] as const) {
       expect((await gallery.boundingBox())?.height).toBeLessThanOrEqual(900)
       await page.screenshot({ path: testInfo.outputPath(`layout-packs-${width}-${theme}.png`), animations: 'disabled' })
 
-      await gallery.getByRole('button', { name: /Blank Dashboard/ }).click()
+      await gallery.getByRole('button', { name: /Blank dashboard/ }).click()
       await gallery.getByRole('button', { name: 'Create layout' }).click()
       await expect(gallery).toHaveCount(0)
       await expect(page.getByText('No widgets yet')).toBeVisible()
@@ -75,9 +75,9 @@ test('creates a populated layout and restores its widgets in a new browser', asy
   await page.getByRole('button', { name: 'Switch dashboard layout' }).click()
   await page.getByRole('menuitem', { name: 'New from template…' }).click()
   const gallery = page.getByRole('dialog', { name: 'Create a layout' })
-  await gallery.getByRole('button', { name: /Daily Commuter/ }).click()
+  await gallery.getByRole('button', { name: /Daily commuter/ }).click()
   await gallery.getByRole('button', { name: 'Create layout' }).click()
-  await expect(page.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Daily Commuter')
+  await expect(page.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Daily commuter')
 
   const saved = await page.evaluate(() => ({
     dashboards: JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as unknown[],
@@ -104,7 +104,7 @@ test('creates a populated layout and restores its widgets in a new browser', asy
       return route.fallback()
     })
     await restored.goto(page.url(), { waitUntil: 'domcontentloaded' })
-    await expect(restored.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Daily Commuter')
+    await expect(restored.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Daily commuter')
     await waitForHarnessReady(restored, restoredMockApi)
     const hydrated = await restored.evaluate(() =>
       JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as Array<{ id: string; widgets: unknown[] }>,
@@ -133,11 +133,11 @@ test('mobile New Layout creates populated Operations Desk without mixing templat
   await page.getByRole('button', { name: 'Switch dashboard layout' }).click()
   await page.getByRole('menuitem', { name: 'New from template…' }).click()
   const gallery = page.getByRole('dialog', { name: 'Create a layout' })
-  await expect(gallery.getByRole('button', { name: /Blank Dashboard/ })).toBeVisible()
-  await gallery.getByRole('button', { name: /Operations Desk/ }).click()
+  await expect(gallery.getByRole('button', { name: /Blank dashboard/ })).toBeVisible()
+  await gallery.getByRole('button', { name: /Operations desk/ }).click()
   await expect(gallery).toContainText('Fleet Posture')
   await gallery.getByRole('button', { name: 'Create layout' }).click()
-  await expect(page.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Operations Desk')
+  await expect(page.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Operations desk')
   const widgets = await page.evaluate(() => {
     const dashboards = JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as
       Array<{ id: string; widgets: Array<{ widgetId: string }>; layouts: Record<string, unknown[]> }>

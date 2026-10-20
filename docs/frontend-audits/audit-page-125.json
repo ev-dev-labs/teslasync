@@ -1,0 +1,341 @@
+{
+  "item": "audit-page-125",
+  "page": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+  "routes": ["/speed-profile"],
+  "purpose": "Historical vehicle speed distribution, speed-envelope statistics and drive-based energy-efficiency analysis.",
+  "primaryGoal": "Understand the selected vehicle's driving-speed pattern and compare measured drive energy intensity across the selected workspace window.",
+  "dataSources": [
+    {
+      "hook": "useSpeedProfile",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 270,
+      "endpoint": "GET /api/v1/analytics/speed-profile?vehicle_id=<id>&start=<date>&end=<date>",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 3880},
+      "sourceOwner": "internal\\api\\speedprofile\\handler.go",
+      "behavior": "Vehicle-enabled TanStack Query; vehicle and both date values in key; request receives cancellation signal. Aggregate distribution and SI speed heroes come from drives. Backend additionally returns categories and points, which this page does not consume. Fixed distribution labels correspond to mph thresholds, not the viewer speed preference.",
+      "sourceEvidence": [
+        {"file": "web\\src\\api\\hooks\\useDriving.ts", "line": 272},
+        {"file": "internal\\api\\speedprofile\\handler.go", "line": 118},
+        {"file": "internal\\api\\speedprofile\\handler.go", "line": 401}
+      ]
+    },
+    {
+      "hook": "useDrives",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 104,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<id>",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 3463},
+      "sourceOwner": "driveHandler.ListByVehicle; underlying repository and default result cap not inspected",
+      "behavior": "This page supplies vehicle only, despite the hook supporting start/end/limit. Query is vehicle-enabled, forwards signal, uses safeArray and FAST staleTime. Page filters the returned sample locally and derives scatter and bucket averages; complete server-range coverage is not established.",
+      "sourceEvidence": [
+        {"file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx", "line": 77},
+        {"file": "web\\src\\api\\hooks\\useDriving.ts", "line": 118}
+      ]
+    },
+    {
+      "hook": "useRangeState / useSelectedVehicle",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 68,
+      "endpoint": null,
+      "sourceOwner": "Existing workspace header selection and web\\src\\hooks\\useRangeState.ts",
+      "behavior": "No local vehicle/date picker. Route is range-enabled at workspaceScope.ts:66. Page uses speed-profile.range with default all and date-only start/end, not the shared precise startInstant/endInstantExclusive outputs.",
+      "sourceEvidence": [
+        {"file": "web\\src\\lib\\workspaceScope.ts", "line": 66},
+        {"file": "web\\src\\hooks\\useRangeState.ts", "line": 656}
+      ]
+    },
+    {
+      "hook": "useUnits / useNumberFormatting / useDataState",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 89,
+      "endpoint": null,
+      "sourceOwner": "Existing display preferences, number formatting and historical data-trust adapters",
+      "behavior": "SI speed is converted only at display; getEfficiency derives Wh/km from canonical distanceM and energyUsedWh, rejecting short or invalid drives. Wh/mi display multiplies by 1.609344. Independent trust wrappers preserve retained profile and drive data.",
+      "sourceEvidence": [
+        {"file": "web\\src\\lib\\drivesAggregation.ts", "line": 49},
+        {"file": "web\\src\\hooks\\useDataState.ts", "line": 30},
+        {"file": "web\\src\\api\\dataState.ts", "line": 225}
+      ]
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "role": "Existing PageContainer adapter; full-width min-w-0 container; shell remains navigation/scope owner.", "decision": "reuse"},
+    {"name": "DrivingSummaryBrief", "owner": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx", "line": 21, "role": "Domain adapter to OperationalBrief and useOperationalMetrics, preserving typed SI metrics, provenance, context, source status and unknown observation time.", "decision": "reuse"},
+    {"name": "EmbeddedChart", "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx", "line": 19, "role": "Canonical ChartContainer adapter; fluid embedded presentation, export/fullscreen off by default.", "decision": "reuse"},
+    {"name": "ChartContainer", "owner": "web\\src\\components\\charts\\ChartContainer.tsx", "line": 171, "role": "Owns accessible data/dataColumns alternatives, chart framing and optional controls.", "decision": "reuse existing data alternative API"},
+    {"name": "GlassPanel / PanelTitle / SectionTitle / Text / Caption", "owner": "Existing @/components/ui category barrel", "line": 6, "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx", "role": "Panels and theme-aware semantic typography; avoid replacement wrappers.", "decision": "reuse"},
+    {"name": "LinearGauge / ChartTooltip / chart primitives", "owner": "Existing @/components/charts category barrel", "line": 7, "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx", "role": "Speed envelope and histogram/scatter rendering.", "decision": "reuse; runtime implementation not inspected"},
+    {"name": "Skeleton / EmptyState / QueryError / StaleRefreshWarning / FadeIn", "owner": "Existing feedback and motion category barrels", "line": 15, "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx", "role": "Source-local loading/recovery/retained data and entrance behavior.", "decision": "reuse; keyboard and reduced-motion acceptance unverified"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 248,
+      "rule": "MDC-026 / mission 33",
+      "detail": "Profile error/loading/empty branches repeat across distribution, envelope, buckets and insight; drive scatter correctly has a separate source boundary.",
+      "fix": "Reuse existing source-state composition if adopted, or extract page-specific presentation components without merging independent source boundaries. Preserve every recovery link and skeleton geometry.",
+      "owner": "page",
+      "confidence": "high",
+      "sharedExtraction": "No new shared abstraction warranted by this single-page evidence."
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 36,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Bucket and scatter helpers establish parallel literal color mappings while tokens already own semantic accents. ScatterLegend is local; no independent cross-page duplication was established.",
+      "fix": "Use canonical palette/semantic tokens for presentation; retain domain thresholds and explicitly review the color-meaning mismatches rather than silently changing calculations.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; runtime unverified",
+    "strategy": "Hero and secondary grids stack below xl, then split 2:1. Buckets reflow from two to three/four/five/six columns. Chart heights vary across sm/xl. Speed envelope remains three fixed-size gauges.",
+    "widthsUnverified": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+        "line": 300,
+        "rule": "MDC-043 / mission 15",
+        "detail": "Three size=96 gauges stay in three columns inside a padded narrow panel. At 320px and constrained shell allocation, labels, units and gauge widths require mounted overflow review; clipping is a risk, not a measured failure.",
+        "fix": "Use shared gauge sizing/orientation capabilities or page-local reflow at narrow allocated width; keep all three gauges, labels and units reachable.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+        "line": 354,
+        "rule": "MDC-043 / MDC-044",
+        "detail": "Two-column narrow bucket cards contain flex label/value pairs and unit-bearing averages. Long localized labels and 200% text may exceed available width.",
+        "fix": "Review 320/375 widths, RTL and 200% text; allow label/value wrapping or one-column cards rather than removing bucket details.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, focus, contrast, screen reader, touch and reduced-motion unverified",
+    "positives": "Localized chart ariaLabels, decorative icons hidden, bucket details use dl/dt/dd, named bucket section and existing feedback/navigation primitives.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+        "line": 260,
+        "rule": "MDC-034 / MDC-040",
+        "detail": "Both charts intentionally omit data/dataColumns using no-table comments (scatter at line 439). Variable histogram rows and one point per drive remain meaningful data. Bucket cards expose histogram values, but scatter has no equivalent accessible per-drive list.",
+        "fix": "Use existing ChartContainer data/dataColumns support or an equivalent textual list for scatter and establish the histogram cards as its complete alternative. Keep exact converted coordinates and independent source states.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+        "line": 270,
+        "rule": "MDC-013 / MDC-040",
+        "detail": "Histogram and scatter ticks use hard-coded fontSize=10 (scatter lines 453/459). Effective readability and composed-background contrast are not measured.",
+        "fix": "Reuse canonical chart typography/axis styling and verify zoom, theme and forced-color readability with all data preserved.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "loading": "Profile sections use profile initial loading; scatter separately uses drive initial loading. Five bucket skeletons and section-specific chart/gauge/insight skeletons are retained.",
+    "empty": "Distribution, buckets, envelope, scatter and insight each provide contextual EmptyState with /drives navigation. Absent selected vehicle disables both queries; no explicit selection-required explanation is present.",
+    "error": "fatalError, not raw query.error, drives source-local QueryError with retries. Profile error is also passed as summary action; drive failure does not replace profile panels.",
+    "staleOffline": "Both source states receive StaleRefreshWarning and retained data remains displayed. Summary retained flag checks isRefreshBlocked, not refreshError. Exact offline interaction and warning behavior remain unverified.",
+    "success": "All four macro sections and six content regions remain mounted. Per-bucket efficiency rows require effData and are omitted otherwise.",
+    "partialUnknown": "Summary explicitly calls drive evidence a returned sample and observation time unknown. Backend hero degradation uses numeric zeros, so page cannot distinguish unavailable aggregates from measured zero.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+        "line": 389,
+        "rule": "MDC-026 / mission 0 preservation",
+        "detail": "Average-speed and efficiency rows disappear when no valid drive sample matches a bucket. A drive loading/failure can remove these fields while profile cards remain successful.",
+        "fix": "Keep both field labels and show missing/loading/source-error semantics with drive-source recovery where appropriate; never invent zero.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+        "line": 239,
+        "rule": "MDC-026",
+        "detail": "Brief retained state uses isRefreshBlocked only. dataState.ts distinguishes refreshError from blocked fetching, so a failed refresh can leave brief status saying Source available while stale warnings appear.",
+        "fix": "Pass refresh-error-aware source status through the existing DrivingSummaryBrief sourceStatus/retained props; keep profile and drive trust separate.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 38,
+      "rule": "MDC-010 / MDC-034 / mission 43",
+      "detail": "Literal fluorescent cyan #00f0ff joins green/amber/red histogram and scatter fills. Every bucket also applies neon backgrounds/rings from neonColorMap. No glow class is used and text is toned 300-level, but categorical decoration remains unusually saturated.",
+      "fix": "Adopt existing restrained palette and neutral bucket surfaces; retain meaningful efficiency severity cues, saved chart/theme preferences, every bucket and series. Do not create a page palette or alter global tokens.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 154,
+      "rule": "MDC-025 / MDC-034 / MDC-045",
+      "detail": "Scatter has four colors with thresholds 140/200/260 applied after display conversion, but legend shows three categories at lines 472-474 and has no cyan entry. Bucket efficiency uses different 160/220 raw Wh/km thresholds. Presentation meaning changes when switching Wh/km to Wh/mi.",
+      "fix": "Keep SI-domain classification independent from display units and reconcile all threshold/legend mappings under driving-domain ownership. Preserve plotted coordinates and document any reviewed semantic correction.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 77,
+      "rule": "MDC-032 / mission 33",
+      "detail": "Drive sample request is unbounded by the selected window, then only returned rows are filtered using browser-local calendar dates at lines 108-114. Profile receives date-only bounds at line 76. Rolling 24h instants and complete server-range drive coverage are not preserved by this composition.",
+      "fix": "Consume startInstant/endInstantExclusive and existing typed drive window options. Confirm profile backend bound parsing and drive completeness/pagination with integration owner; do not claim loaded-page filtering represents full-range data or add local pickers.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 169,
+      "rule": "MDC-045",
+      "detail": "Page asserts bucket labels are in user display speed units and compares converted avgSpeedMps to numeric labels. Backend actually assigns 0-15/15-30/etc using fixed mph-equivalent SI thresholds (handler.go:118-139). km/h viewers can place valid drives into the wrong bucket.",
+      "fix": "Integration owner should expose canonical SI bucket bounds or establish a typed SI mapping while formatting labels only at display. Preserve source bucket identity/order/count and fix comparison semantics without changing stored values.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 378,
+      "rule": "MDC-045 / MDC-025",
+      "detail": "Time share label divides distribution readings, while inspected backend uses COUNT(*) of eligible drives (handler.go:132), not duration/time samples. Samples summary similarly counts drives from this aggregate.",
+      "fix": "Clarify existing count-based source semantics in localized captions with integration owner; retain counts and percentages and do not invent a duration-weighted endpoint.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 490,
+      "rule": "MDC-026 / mission 0",
+      "detail": "Insight claims reducing highway speed could improve efficiency by ~15%, but no source field supports that improvement estimate. It interpolates a backend optimal-speed hero, which is a bucket midpoint rather than an exact measured optimum.",
+      "fix": "Preserve the insight region and explanation but source-label the best observed bucket estimate; retain the existing claim for explicit product review rather than silently treating it as measured or replacing it with fabricated analytics.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": {"file": "internal\\api\\speedprofile\\handler.go", "line": 343}
+    },
+    {
+      "file": "internal\\api\\speedprofile\\handler.go",
+      "line": 388,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "Missing or failed hero aggregates become zero; nil DB produces all zero heroes at lines 421-423. UI uses data presence to present available measurements and gauges, so source degradation cannot be distinguished from measured zero.",
+      "fix": "Integration owner should add explicit nullable/availability provenance for hero aggregates and align frontend types. Keep distribution when hero query fails; no backend edit authorized in this audit.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Canonical bucket semantics, precise shared-range coverage and unknown-versus-zero trust issues precede purely visual modernization.",
+    "sequence": ["Resolve integration data semantics and bounds", "Preserve missing bucket fields and trust states", "Use existing chart accessible alternatives", "Subdue literal/neon decoration and validate responsive layout"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Typed precise speed-profile range and canonical bucket evidence",
+      "existingOwner": "web\\src\\api\\hooks\\useDriving.ts",
+      "relatedOwner": "internal\\api\\speedprofile\\handler.go",
+      "propsVariantsStates": "Existing start/end cancellation-aware query; consume precise inclusive/exclusive bounds, canonical bucket lower/upper SI bounds, nullable hero source availability and retained/partial failure semantics. Do not add a competing hook or infer backend parser support.",
+      "usedBy": ["web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx"],
+      "dependsOn": ["Integration review of ParseDateRange and drive result completeness", "Canonical SI bucket and hero availability contract"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 36,
+      "rule": "MDC-002 / MDC-010",
+      "detail": "Local literal color helpers overlap existing token ownership; local range filtering overlaps server-window support. No new theme, table, modal, query store or selector is instantiated.",
+      "fix": "Reuse tokens and existing typed hooks; leave specialist source calculations under domain ownership. No speculative shared card, legend or formatting system.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "D30AFDA523A540E5C6300E4199B5C61FC2824B892A5C64B360786A9B02781672",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 518,
+    "sectionCount": 4,
+    "contentRegionCount": 6,
+    "sections": [
+      {"name": "Speed summary metrics", "line": 221, "content": "Average speed, peak speed, optimal speed, samples; drive sample count/unknown coverage, range, source provenance and observation-time fallback."},
+      {"name": "Hero bento", "line": 243, "regions": ["Speed Distribution", "Speed Envelope"], "content": "Histogram readings and bucket colors; all three nullable speed gauges and units."},
+      {"name": "Speed Buckets", "line": 331, "content": "Every returned bucket, icon, range, share percentage, reading count, drive-based average speed and energy intensity."},
+      {"name": "Secondary bento", "line": 419, "regions": ["Efficiency vs Speed", "Efficiency Insight"], "content": "All eligible drive points, axis units, tooltip, severity legend and optimal-speed narrative; no replacement by empty-only scaffold."}
+    ],
+    "sourceCounts": {"GlassPanel": 7, "EmbeddedChart": 2, "ChartContainer": 0, "sectionElements": 3, "DrivingSummaryBrief": 1, "LinearGauge": 3},
+    "countCaveat": "Static JSX call-site counts, not mounted panels. Seven GlassPanel sites include mutually exclusive bucket error/empty branches and a per-bucket repeated panel.",
+    "actions": [
+      {"name": "Retry speed profile", "lines": [240, 249, 289, 337, 483], "behavior": "Existing profile refetch; preserve all source-local recovery surfaces."},
+      {"name": "Retry drive evidence", "line": 428, "behavior": "Drive refetch independently from profile."},
+      {"name": "Browse drives", "lines": [256, 296, 350, 435, 500], "to": "/drives"},
+      {"name": "Inspect chart tooltips", "lines": [272, 461], "behavior": "Preserve histogram readings and converted per-drive coordinates."},
+      {"name": "Workspace vehicle/range settings", "line": 68, "behavior": "External shell-owned selection; preserve URL/persistence/rolling/custom semantics."},
+      {"name": "Summary shared interaction", "file": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx", "line": 36, "behavior": "Keep OperationalBrief delegation and metric context; exact mounted drawer interaction not exercised."}
+    ],
+    "dataBehavior": [
+      "Keep two independent queries, vehicle enablement, query keys, cancellation and retry inheritance; do not replace hooks with component fetch.",
+      "Keep raw speed m/s, distance meters and energy Wh in source/cache; display through useUnits and number-format preferences only.",
+      "Preserve getEfficiency exclusion of drives shorter than 1000m, invalid/missing energy and non-positive energy.",
+      "Preserve all distribution source identities, counts, order, percentages and sparse outcomes; review misleading time-share label separately.",
+      "Preserve scatter eligibility and every valid point; current display rounding to integer coordinates and threshold meanings require explicit review, not silent loss.",
+      "Preserve per-bucket arithmetic means and missing evidence, resolving fixed-source versus viewer-unit bucket mismatch explicitly.",
+      "Keep retained data under background errors/offline and separate profile/drive recovery.",
+      "Keep all localized titles, captions, ariaLabels, units, descriptions, source provenance and explanatory content.",
+      "No page-authored exports, fullscreen, zoom or mutations found; EmbeddedChart opts export/fullscreen out by default. Do not invent these as existing page capabilities."
+    ],
+    "sourceEdited": false
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "viewport": "unverified",
+    "keyboardFocus": "unverified",
+    "contrastForcedColors": "unverified",
+    "screenReader": "unverified",
+    "reducedMotion": "unverified",
+    "backendExecution": "unverified; handler source inspected only; actual rows, auth, default list cap and ParseDateRange runtime semantics not tested",
+    "route": "Source mount confirmed by web\\src\\App.tsx:125,902; not navigated",
+    "checks": [
+      "Get-FileHash web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx -Algorithm SHA256: succeeded; hash recorded.",
+      "(Get-Content web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx).Count: 518.",
+      "Scoped Select-String source inspection: 7 GlassPanel, 2 EmbeddedChart, 3 section call sites; zero matches for style=, raw button/input/textarea/select/table and direct recharts/react-leaflet/framer-motion imports in the page.",
+      "Source hook URL inspection confirms analytics/speed-profile and drives routes; snake_case vehicle_id and no duplicated /api/v1 prefix in inspected query functions.",
+      "Full audit.sh not run because it invokes project-wide TypeScript, prohibited for this Phase0 audit. No TypeScript, lint, test, build, git or browser commands run."
+    ],
+    "scope": "Only assigned page and its directly relevant source/presentation dependencies. No application-wide inventory, other page audit or inferred acceptance.",
+    "writeScope": ["docs\\frontend-audits\\audit-page-125.json", ".agent-status\\audit-page-125.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\lib\\drivesAggregation.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\speedprofile\\handler.go"
+  ]
+}

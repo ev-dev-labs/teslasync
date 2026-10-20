@@ -2,11 +2,12 @@
  * FsdWeeklyWidget — this week vs last week FSD, with null remaining null.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { fsdInsights } from '@/features/driving/components/fsd-insights/__tests__/fixtures';
 import type { WidgetSize } from './types';
+import { fmtNumber } from '@/lib/numberFormat';
 
 const { fsdRangeMock, vehiclesMock, unitsMock } = vi.hoisted(() => ({
   fsdRangeMock: vi.fn(),
@@ -26,8 +27,10 @@ vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => unitsMock(),
 }));
 
-vi.mock('@/lib/timezone', () => ({
+vi.mock('@/lib/timezone', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
   browserTimezone: () => 'UTC',
+  useTimezone: () => 'UTC',
 }));
 
 vi.mock('react-i18next', async () => {
@@ -44,9 +47,21 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-vi.mock('@/hooks/useDateFormat', () => ({
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (() => ({
   useDateFormat: () => ({ formatTime: (v: unknown) => String(v) }),
-}));
+}))();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
+    }),
+  };
+});
 vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: false, durationMs: 250 }),
 }));
@@ -69,8 +84,9 @@ function renderWidget(over: Partial<{ vehicleId: number; cols: number }> = {}) {
 beforeEach(() => {
   vehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
   unitsMock.mockReturnValue({
-    formatDistance: (meters: number | null, options?: { precision?: number }) =>
-      meters == null ? '—' : `${(meters / 1000).toFixed(options?.precision ?? 1)} km`,
+    unitPrefs: { distance: 'km', locale: 'en-US' },
+    formatDistance: (meters: number | null) =>
+      meters == null ? '—' : `${fmtNumber(meters / 1000)} km`,
   });
   fsdRangeMock.mockReturnValue({
     data: fsdInsights({
@@ -98,14 +114,71 @@ beforeEach(() => {
 });
 
 describe('FsdWeeklyWidget', () => {
+  describe.each([1, 2, 3])('identifying heading at cols=%i', (cols) => {
+    it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
+      'keeps exactly one visible shell heading when %s',
+      (state) => {
+        if (state === 'loading') fsdRangeMock.mockReturnValue({ ...fsdRangeMock(), data: undefined, isLoading: true });
+        if (state === 'empty') fsdRangeMock.mockReturnValue({ ...fsdRangeMock(), data: undefined });
+        if (state === 'initial failure' || state === 'retained failure') {
+          fsdRangeMock.mockReturnValue({
+            ...fsdRangeMock(),
+            ...(state === 'initial failure' ? { data: undefined } : {}),
+            isError: true,
+            error: new Error('offline'),
+          });
+        }
+        const { container } = renderWidget({ cols, ...(state === 'empty' ? { vehicleId: 0 } : {}) });
+        const headings = screen.getAllByRole('heading', { name: 'FSD this week', level: 3 });
+        expect(headings).toHaveLength(1);
+        expect(headings[0]).toBeVisible();
+        if (state === 'populated' || state === 'retained failure') {
+          expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.00 km');
+          expect(screen.getByText('40.00%')).toBeInTheDocument();
+          if (cols > 1) expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd');
+        }
+        if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+        if (state === 'empty') expect(screen.getByText('Select a vehicle')).toBeInTheDocument();
+        if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
+        if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      },
+    );
+  });
+
+  it('keeps measured values and drill-through links when refreshing fails', () => {
+    fsdRangeMock.mockReturnValue({
+      ...fsdRangeMock(),
+      isError: true,
+      error: new Error('offline'),
+      fetchStatus: 'paused',
+    });
+    renderWidget();
+    expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.00 km');
+    expect(screen.getByText('40.00%')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'FSD insights' })).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
   it('shows this week FSD, share, last-week change, and drill-through links', () => {
     renderWidget();
 
-    expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.0 km');
-    expect(screen.getByTestId('fsd-weekly-share')).toHaveTextContent('40.0%');
-    expect(screen.getByTestId('fsd-weekly-change')).toHaveTextContent('+3.0 pts');
-    expect(screen.getByRole('link', { name: 'FSD Insights' })).toHaveAttribute('href', '/fsd');
+    expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.00 km');
+    expect(screen.getByText('40.00%')).toBeInTheDocument();
+    expect(screen.getByText('+3.00 pts')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd');
     expect(screen.getByRole('link', { name: 'Weekly digest' })).toHaveAttribute('href', '/weekly-digest');
+  });
+
+  it('reviews source-backed FSD metrics and exact exclusive bounds without replacing drill-through links', () => {
+    renderWidget();
+    const brief = screen.getByTestId('fsd-weekly-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer.querySelector('[data-drawer-header]')).toHaveTextContent('exclusive · UTC');
+    expect(within(drawer).getByText('16.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByText('+3.00 pts')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not a percent growth rate/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Weekly digest' })).toBeInTheDocument();
   });
 
   it('renders an em dash instead of zero when FSD was not measured', () => {
@@ -135,9 +208,11 @@ describe('FsdWeeklyWidget', () => {
 
     renderWidget();
 
-    expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('—');
-    expect(screen.getByTestId('fsd-weekly-share')).toHaveTextContent('—');
-    expect(screen.getByTestId('fsd-weekly-change')).toHaveTextContent('—');
-    expect(screen.queryByText('0.0 km')).not.toBeInTheDocument();
+    expect(screen.getByTestId('fsd-weekly-distance')).not.toHaveTextContent('—');
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const unmeasuredBrief = screen.getByTestId('fsd-weekly-operational-brief');
+    fireEvent.click(within(unmeasuredBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
   });
 });

@@ -11,8 +11,8 @@
 // file_size, and can't have a counter corrupted by a prototype-colliding
 // status string.
 //
-// Pure module: no DOM, no providers, no network. exportStats.ts imports only
-// types (erased at compile time), so the unit under test is dependency-free.
+// Pure module: no DOM, no providers, no network. Status paint comes from the
+// existing semantic tokens; calculations remain independent of presentation.
 
 import { describe, it, expect } from 'vitest';
 
@@ -64,13 +64,14 @@ describe('STATUS_ORDER', () => {
 });
 
 describe('statusColor', () => {
-  it('maps every ordered status onto a 6-digit hex colour', () => {
-    // MetricBar/status dots take a raw CSS colour string, so each entry must
-    // be a literal hex — a token class or an undefined lookup would break the
-    // dynamic gradient MetricBar composes from it.
-    for (const status of STATUS_ORDER) {
-      expect(statusColor[status]).toMatch(/^#[0-9a-f]{6}$/i);
-    }
+  it('maps every ordered status to the existing semantic CSS palette', () => {
+    expect(statusColor).toEqual({
+      ready: 'var(--semantic-success)',
+      processing: 'var(--semantic-info)',
+      queued: 'var(--semantic-info)',
+      failed: 'var(--semantic-danger)',
+      expired: 'var(--text-secondary)',
+    });
   });
 
   it('keys exactly the STATUS_ORDER statuses (no missing / stray colours)', () => {
@@ -78,8 +79,8 @@ describe('statusColor', () => {
   });
 
   it('pins the semantic anchors: ready is green, failed is rose', () => {
-    expect(statusColor.ready).toBe('#10b981');
-    expect(statusColor.failed).toBe('#f43f5e');
+    expect(statusColor.ready).toBe('var(--semantic-success)');
+    expect(statusColor.failed).toBe('var(--semantic-danger)');
   });
 });
 
@@ -98,6 +99,14 @@ describe('statusBadgeVariant', () => {
     for (const status of STATUS_ORDER) {
       expect(allowed.has(statusBadgeVariant(status))).toBe(true);
     }
+  });
+
+  it('keeps an unrecognised status unpainted with a neutral Badge', () => {
+    const status = 'archived' as ExportJobSummary['status'];
+
+    expect(statusColor[status]).toBeUndefined();
+    expect(statusBadgeVariant(status)).toBe('neutral');
+    expect(statusBadgeVariant('toString' as ExportJobSummary['status'])).toBe('neutral');
   });
 });
 
@@ -244,5 +253,89 @@ describe('deriveExportStats', () => {
     for (const status of STATUS_ORDER) {
       expect(Number.isFinite(stats.byStatus[status])).toBe(true);
     }
+  });
+
+  it('preserves exact counts and bytes across unequal status partitions and unknown rows', () => {
+    const jobs = [
+      makeJob({ id: 'ready-zero', status: 'ready', file_size: 0 }),
+      makeJob({ id: 'ready-fraction', status: 'ready', file_size: 1_024.5 }),
+      makeJob({ id: 'processing-missing', status: 'processing' }),
+      makeJob({ id: 'processing-sized', status: 'processing', file_size: 128 }),
+      makeJob({ id: 'processing-invalid', status: 'processing', file_size: Number.NaN }),
+      makeJob({ id: 'queued-zero', status: 'queued', file_size: 0 }),
+      makeJob({ id: 'failed-negative', status: 'failed', file_size: -1 }),
+      makeJob({ id: 'expired-sized', status: 'expired', file_size: 256 }),
+      makeJob({ id: 'unknown-sized', status: 'archived' as ExportJobSummary['status'], file_size: 64 }),
+      makeJob({ id: 'prototype-sized', status: 'toString' as ExportJobSummary['status'], file_size: 1 }),
+      makeJob({ id: 'prototype-invalid', status: 'hasOwnProperty' as ExportJobSummary['status'], file_size: Number.POSITIVE_INFINITY }),
+    ];
+    const originalJobs = jobs.map((job) => ({ ...job }));
+
+    expect(deriveExportStats(jobs)).toEqual({
+      total: 11,
+      ready: 2,
+      inProgress: 4,
+      failed: 1,
+      expired: 1,
+      totalBytes: 1_473.5,
+      byStatus: {
+        ready: 2,
+        processing: 3,
+        queued: 1,
+        failed: 1,
+        expired: 1,
+      },
+    });
+    expect(jobs).toEqual(originalJobs);
+  });
+
+  it('preserves zero storage without coercing absent or malformed sizes', () => {
+    const jobs = [
+      makeJob({ id: 'missing' }),
+      makeJob({ id: 'null', file_size: null as unknown as number }),
+      makeJob({ id: 'not-a-number', file_size: Number.NaN }),
+      makeJob({ id: 'positive-infinity', file_size: Number.POSITIVE_INFINITY }),
+      makeJob({ id: 'negative-infinity', file_size: Number.NEGATIVE_INFINITY }),
+      makeJob({ id: 'negative', file_size: -1 }),
+      makeJob({ id: 'numeric-string', file_size: '512' as unknown as number }),
+      makeJob({ id: 'measured-zero', file_size: 0 }),
+    ];
+
+    expect(deriveExportStats(jobs)).toEqual({
+      total: 8,
+      ready: 8,
+      inProgress: 0,
+      failed: 0,
+      expired: 0,
+      totalBytes: 0,
+      byStatus: {
+        ready: 8,
+        processing: 0,
+        queued: 0,
+        failed: 0,
+        expired: 0,
+      },
+    });
+  });
+
+  it.each([
+    { name: 'null source', jobs: null },
+    { name: 'undefined source', jobs: undefined },
+  ])('returns exact empty statistics for $name', ({ jobs }) => {
+    expect(deriveExportStats(jobs)).toEqual({
+      total: 0,
+      ready: 0,
+      inProgress: 0,
+      failed: 0,
+      expired: 0,
+      totalBytes: 0,
+      byStatus: {
+        ready: 0,
+        processing: 0,
+        queued: 0,
+        failed: 0,
+        expired: 0,
+      },
+    });
   });
 });

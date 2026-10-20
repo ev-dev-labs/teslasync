@@ -23,17 +23,25 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * page tests.
  */
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { Car, Shield, Snowflake, Zap } from 'lucide-react';
+import { AnnouncerRegion } from '@/components/a11y';
+import { __resetAnnouncePolicyForTests } from '@/lib/announcePolicy';
+import { __resetStatusAnnouncerForTests } from '@/hooks/useStatusAnnouncer';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return { ...actual, ...chartTestDoubles };
+});
+vi.mock('@/components/charts/EmbeddedChart', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { EmbeddedChart: chartTestDoubles.EmbeddedChart };
 });
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) reads it at module load for
@@ -193,20 +201,23 @@ function makeProjection(overrides: Partial<RangeProjection> = {}): RangeProjecti
 interface QueryOverrides {
   data?: unknown;
   isLoading?: boolean;
+  isFetching?: boolean;
   error?: unknown;
   refetch?: () => void;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
 }
 
 function makeQuery(overrides: QueryOverrides = {}) {
   return {
     data: overrides.data,
     isLoading: overrides.isLoading ?? false,
-    isFetching: false,
+    isFetching: overrides.isFetching ?? false,
     isStale: false,
     isError: overrides.error != null,
     error: overrides.error ?? null,
     dataUpdatedAt: overrides.data != null ? Date.now() : 0,
     refetch: overrides.refetch ?? vi.fn(),
+    fetchStatus: overrides.fetchStatus ?? 'idle',
   };
 }
 
@@ -275,24 +286,29 @@ function miSettings(): SettingsMockShape {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const content = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
+        <AnnouncerRegion />
         <ProjectedRangePage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(content());
+  return { ...view, rerenderPage: () => view.rerender(content()) };
 }
 
-/** Read a MetricCard's value text by its (unique) label. */
+/** Read the canonical stat tile's complete displayed value by its label. */
 function metricValue(label: string): string {
   const labelSpan = screen.getByText(label);
-  const card = labelSpan.closest('[data-role="metric-card"]');
-  return card?.querySelector('[data-role="metric-value"]')?.textContent ?? '';
+  const card = labelSpan.closest('[data-operational-metric]');
+  return card?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  __resetAnnouncePolicyForTests();
+  __resetStatusAnnouncerForTests();
   selectedVehicleMock.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
@@ -378,6 +394,95 @@ describe('ProjectedRangePage · pure helpers', () => {
 /* ── Component: gating & async states ─────────────────────────────── */
 
 describe('ProjectedRangePage · states', () => {
+  it('keeps every section mounted while announcing initial projection completion', () => {
+    rangeMock.mockReturnValue(makeQuery({ isLoading: true, isFetching: true }));
+    const view = renderPage();
+    const page = screen.getByRole('heading', { level: 1, name: 'Projected Range' })
+      .closest('[data-role="page-container"]');
+
+    expect(page).toHaveAttribute('aria-busy', 'true');
+    for (const name of [
+      'Efficiency', 'Range Projection Curve', 'Range Scenarios',
+      'Personal Efficiency Matrix (Wh/km)', 'What If Calculator',
+      'Range Factors', 'Tips to Maximize Range',
+    ]) {
+      expect(screen.getByRole('heading', { name, exact: true })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('region', { name: 'Range summary metrics' })).toBeInTheDocument();
+    expect(screen.getByTestId('ai-range-prediction')).toBeInTheDocument();
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+
+    rangeMock.mockReturnValue(makeQuery({ data: makeProjection() }));
+    view.rerenderPage();
+
+    expect(page).not.toHaveAttribute('aria-busy');
+    expect(metricValue('Your Estimate')).toBe('300.00 km');
+    expect(screen.getByTestId('announcer-polite')).toHaveTextContent('Projected Range loaded');
+    expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
+  });
+
+  it('announces an initial failure without hiding tips or the independent AI surface', () => {
+    rangeMock.mockReturnValue(makeQuery({ isLoading: true }));
+    const view = renderPage();
+    rangeMock.mockReturnValue(makeQuery({ error: new Error('Network down') }));
+    view.rerenderPage();
+
+    expect(screen.getByTestId('announcer-assertive')).toHaveTextContent('Could not refresh Projected Range');
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+    expect(screen.getAllByText("Can't reach server").length).toBeGreaterThan(0);
+    expect(screen.getByText('Keep speed under 110 km/h for optimal efficiency.')).toBeInTheDocument();
+    expect(screen.getByTestId('ai-range-prediction')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Projected Range' })
+      .closest('[data-role="page-container"]')).not.toHaveAttribute('aria-busy');
+  });
+
+  it('retains projection readings while marking a background refresh busy without load announcements', () => {
+    const view = renderPage();
+    rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), isFetching: true }));
+    view.rerenderPage();
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Projected Range' })
+      .closest('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true');
+    expect(metricValue('Your Estimate')).toBe('300.00 km');
+    expect(screen.getByText('Winter City')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Rated versus projected range across battery level' })).toBeInTheDocument();
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
+
+    rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), error: new Error('refresh failed') }));
+    view.rerenderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(metricValue('Your Estimate')).toBe('300.00 km');
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+  });
+
+  it('does not announce a successful projection when initial work pauses without measurements', () => {
+    rangeMock.mockReturnValue(makeQuery({ isLoading: true }));
+    const view = renderPage();
+    rangeMock.mockReturnValue(makeQuery({ fetchStatus: 'paused' }));
+    view.rerenderPage();
+
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Range summary metrics' }), 'Your Estimate');
+    expect(screen.getByRole('heading', { level: 1, name: 'Projected Range' })
+      .closest('[data-role="page-container"]')).not.toHaveAttribute('aria-busy');
+    expect(screen.getByText('Range Scenarios')).toBeInTheDocument();
+    expect(screen.getByTestId('ai-range-prediction')).toBeInTheDocument();
+  });
+
+  it('does not announce success for an unresolved projection after loading', () => {
+    rangeMock.mockReturnValue(makeQuery({ isLoading: true }));
+    const view = renderPage();
+    rangeMock.mockReturnValue(makeQuery());
+    view.rerenderPage();
+
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Range summary metrics' }), 'Your Estimate');
+    expect(screen.getByText('Efficiency data unavailable yet.')).toBeInTheDocument();
+  });
+
   it('shows the select-a-vehicle guard (not the dashboard) when no vehicle is scoped', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: null, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
     renderPage();
@@ -392,12 +497,17 @@ describe('ProjectedRangePage · states', () => {
 
   it('renders skeletons (never KPI numbers) while the projection query is in flight', () => {
     rangeMock.mockReturnValue(makeQuery({ isLoading: true }));
-    const { container } = renderPage();
+    renderPage();
 
     // Panel shells stay visible; only the data slots are skeletoned.
     expect(screen.getByText('Range Scenarios')).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Your Estimate')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Range Scenarios', exact: true }).closest('[data-card]')!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0);
+    // The estimate label persists, but its measurement slot is not ready.
+    const summary = screen.getByRole('region', { name: 'Range summary metrics' });
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    expect(within(summary).getByText('Your Estimate').closest('[data-operational-metric]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelector('[data-operational-value]')).not.toBeInTheDocument();
   });
 
   it('surfaces a retryable error banner in every data section on failure', () => {
@@ -418,8 +528,11 @@ describe('ProjectedRangePage · states', () => {
     rangeMock.mockReturnValue(makeQuery({ data: undefined }));
     renderPage();
 
-    // KPI shell still renders (with safe zeros), proving no whole-section hiding.
-    expect(metricValue('Your Estimate')).toContain('0');
+    // No measurement is not a measured zero (MDC-026 / dataState contract).
+    // The KPI shell remains, with the tile omitted.
+    const nullSummary = screen.getByRole('region', { name: 'Range summary metrics' });
+    assertOperationalMetricUnavailable(nullSummary, 'Your Estimate');
+    expect(within(nullSummary).queryByText('0.00 km')).not.toBeInTheDocument();
     // The `!data` branches of the gauge, curve and what-if calculator.
     expect(screen.getByText('Efficiency data unavailable yet.')).toBeInTheDocument();
     expect(screen.getByText('Range projection curve will appear once this vehicle logs drives.')).toBeInTheDocument();
@@ -477,12 +590,12 @@ describe('ProjectedRangePage · dashboard render', () => {
     // Efficiency matrix: bucket labels + populated cells (samples in parens).
     expect(screen.getByText('Suburban')).toBeInTheDocument();
     expect(screen.getByText('Freezing')).toBeInTheDocument();
-    expect(screen.getByText('190')).toBeInTheDocument();
-    expect(screen.getByText('210')).toBeInTheDocument();
+    expect(screen.getByText('190.00')).toBeInTheDocument();
+    expect(screen.getByText('210.00')).toBeInTheDocument();
 
     // Factors: signed impact badges + descriptions.
-    expect(screen.getByText('-8.5%')).toBeInTheDocument();
-    expect(screen.getByText('+4.2%')).toBeInTheDocument();
+    expect(screen.getByText('-8.50%')).toBeInTheDocument();
+    expect(screen.getByText('+4.20%')).toBeInTheDocument();
     expect(screen.getByText('Cold weather reduces range')).toBeInTheDocument();
 
     // Static tips always render.
@@ -516,7 +629,7 @@ describe('ProjectedRangePage · what-if calculator', () => {
     // Default: speed 80 (suburban) + temp 20 (mild) → heuristic 177.5 Wh/km,
     // 75 000 Wh × 72% ÷ 177.5 ≈ 304 km.
     expect(screen.getByText('177.50 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('304 km')).toBeInTheDocument();
+    expect(screen.getByText('304.20 km')).toBeInTheDocument();
 
     // Drag the temperature slider down to −10 °C (freezing): the heater penalty
     // pushes efficiency to 222.5 Wh/km and range down to ~243 km.
@@ -524,9 +637,9 @@ describe('ProjectedRangePage · what-if calculator', () => {
     fireEvent.change(tempSlider, { target: { value: '-10' } });
 
     expect(screen.getByText('222.50 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('243 km')).toBeInTheDocument();
+    expect(screen.getByText('242.70 km')).toBeInTheDocument();
     expect(screen.queryByText('177.50 Wh/km')).not.toBeInTheDocument();
-    expect(screen.queryByText('304 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('304.20 km')).not.toBeInTheDocument();
   });
 });
 
@@ -541,8 +654,8 @@ describe('ProjectedRangePage · mile units', () => {
     // … as do the matrix cells (whole-number, unit in the title): fixture
     // highway/mild 190 Wh/km → 306, city/cold 210 Wh/km → 338.
     const matrix = screen.getByRole('region', { name: 'Personal Efficiency Matrix (Wh/mi)' });
-    expect(within(matrix).getByText('306')).toBeInTheDocument();
-    expect(within(matrix).getByText('338')).toBeInTheDocument();
+    expect(within(matrix).getByText('305.78')).toBeInTheDocument();
+    expect(within(matrix).getByText('337.96')).toBeInTheDocument();
 
     // … the what-if readout (177.5 Wh/km → Wh/mi) …
     expect(screen.getByText('285.66 Wh/mi')).toBeInTheDocument();
@@ -553,5 +666,80 @@ describe('ProjectedRangePage · mile units', () => {
 
     // No efficiency figure anywhere on the page may keep the km unit.
     expect(screen.queryAllByText(/Wh\/km/)).toHaveLength(0);
+  });
+
+  describe('ProjectedRangePage · modernization trust regressions', () => {
+    it('keeps every loaded data section and slider calculation after a refresh failure', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), error: new Error('refresh failed') }));
+      renderPage();
+
+      expect(metricValue('Your Estimate')).toContain('300');
+      expect(screen.getByText('Winter City')).toBeInTheDocument();
+      expect(screen.getByText('190.00')).toBeInTheDocument();
+      expect(screen.getByText('-8.50%')).toBeInTheDocument();
+      expect(screen.getByText('Based on 42 recent drives')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Rated versus projected range across battery level' })).toBeInTheDocument();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Temperature'), { target: { value: '-10' } });
+      expect(screen.getByText('242.70 km')).toBeInTheDocument();
+    });
+
+    it('keeps a retained projection visible when its refresh is paused offline', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), fetchStatus: 'paused' }));
+      renderPage();
+
+      const notice = screen.getByTestId('stale-refresh-warning');
+      expect(notice).toHaveAttribute('role', 'status');
+      expect(notice).toHaveAttribute('data-data-state', 'stale');
+      expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(notice).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+      expect(notice).not.toHaveTextContent(/offline|failed/i);
+      assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Range summary metrics' }), 'Retained source evidence');
+      expect(metricValue('Battery')).toContain('72');
+      expect(screen.getByText('177.50 Wh/km')).toBeInTheDocument();
+      expect(screen.getByText('Range Factors')).toBeInTheDocument();
+    });
+
+    it('distinguishes measured zero from missing range and battery measurements', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: makeProjection({
+        your_estimate_km: 0, tesla_estimate_km: 0, current_battery_pct: 0,
+      }) }));
+      renderPage();
+
+      expect(metricValue('Your Estimate')).toBe('0.00 km');
+      expect(metricValue('Tesla Estimate')).toBe('0.00 km');
+      expect(metricValue('Battery')).toContain('0.00');
+      const calculator = screen.getByRole('heading', { name: 'What If Calculator', exact: true })
+        .closest('[data-card]') as HTMLElement;
+      expect(within(calculator).getByText('0.00 km')).toBeInTheDocument();
+      for (const label of ['Your Estimate', 'Tesla Estimate', 'Battery']) {
+        expect(screen.getByText(label).closest('[data-operational-metric]'))
+          .toHaveAttribute('data-value-state', 'value');
+      }
+    });
+
+    it('does not invent a 75 kWh usable capacity for incomplete calculator inputs', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: {
+        ...makeProjection(), usable_capacity_wh: null,
+      } }));
+      renderPage();
+
+      assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Range summary metrics' }), 'Usable Capacity');
+      expect(screen.getByText('Measured battery level and usable capacity are required to calculate a range.')).toBeInTheDocument();
+      expect(screen.queryByText('304.20 km')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Speed')).toBeInTheDocument();
+      expect(screen.getByText('Range Scenarios')).toBeInTheDocument();
+    });
+
+    it('retains all temperature and speed cells without a forced matrix minimum width', () => {
+      renderPage();
+      const matrix = screen.getByRole('region', { name: 'Personal Efficiency Matrix (Wh/km)' });
+
+      expect(within(matrix).getByLabelText('Mild, Highway')).toHaveTextContent('190.00');
+      expect(within(matrix).getByLabelText('Cold, City')).toHaveTextContent('210.00');
+      expect(matrix.querySelectorAll('[aria-label*=", "]')).toHaveLength(12);
+      expect(matrix.querySelector('[class*="min-w-["]')).toBeNull();
+    });
   });
 });

@@ -37,7 +37,7 @@ import type { TeslaEnergyHistoryEntry } from '@/types/energy';
 export type ForecastQuality = 'none' | 'low' | 'medium' | 'high';
 
 export interface ForecastResult {
-  /** Forecast power, watts, one entry per requested horizon slot. */
+  /** Forecast power in watts; missing load evidence yields an empty series unless zero load is explicitly assumed. */
   seriesW: number[];
   /** 0–1 confidence in the forecast; 0 when no usable history was supplied. */
   confidence: number;
@@ -46,6 +46,8 @@ export interface ForecastResult {
   sourceSampleCount: number;
   /** Most recent history timestamp used, or `null` if none. */
   latestSampleIso: string | null;
+  /** Always set by these adapters; optional for existing externally supplied forecasts. */
+  sourceQuality?: 'missing' | 'measured' | 'assumed-zero';
 }
 
 const MINUTES_PER_DAY = 1440;
@@ -80,6 +82,7 @@ function buildDayShape(
   history: TeslaEnergyHistoryEntry[],
   extract: (entry: TeslaEnergyHistoryEntry) => number | null | undefined,
   slotMinutes: number,
+  allowSigned: boolean,
 ): DayShape {
   const perDay = slotsPerDay(slotMinutes);
   const whSum = new Array<number>(perDay).fill(0);
@@ -97,7 +100,7 @@ function buildDayShape(
   for (let i = 0; i < sorted.length; i++) {
     const entry = sorted[i];
     const whRaw = extract(entry);
-    if (whRaw == null || !Number.isFinite(whRaw) || whRaw < 0) continue;
+    if (whRaw == null || !Number.isFinite(whRaw) || (!allowSigned && whRaw < 0)) continue;
 
     const tMs = Date.parse(entry.timestamp);
     const nextMs = i + 1 < sorted.length ? Date.parse(sorted[i + 1].timestamp) : NaN;
@@ -164,14 +167,20 @@ export interface ForecastOptions {
   horizonSlots: number;
 }
 
+export interface LoadForecastOptions extends ForecastOptions {
+  /** Explicit modeling assumption, used only when no usable load observations exist. */
+  assumeZeroLoad?: boolean;
+}
+
 function buildForecast(
   history: TeslaEnergyHistoryEntry[] | null | undefined,
   extract: (entry: TeslaEnergyHistoryEntry) => number | null | undefined,
   options: ForecastOptions,
+  allowSigned = false,
 ): ForecastResult {
   const slotMinutes = options.slotMinutes > 0 ? options.slotMinutes : 15;
   const horizonSlots = options.horizonSlots > 0 ? Math.floor(options.horizonSlots) : 0;
-  const shape = buildDayShape(Array.isArray(history) ? history : [], extract, slotMinutes);
+  const shape = buildDayShape(Array.isArray(history) ? history : [], extract, slotMinutes, allowSigned);
   const filled = fillGaps(shape.avgPowerW, shape.sampleCount);
   const seriesW = horizonSlots > 0 ? tileToHorizon(filled, options.startTimeIso, slotMinutes, horizonSlots) : [];
   const { confidence, quality } = scoreConfidence(shape.sampleCount, shape.totalSamples);
@@ -181,6 +190,7 @@ function buildForecast(
     quality,
     sourceSampleCount: shape.totalSamples,
     latestSampleIso: shape.latestIso,
+    sourceQuality: shape.totalSamples > 0 ? 'measured' : 'missing',
   };
 }
 
@@ -193,7 +203,16 @@ export function buildSolarForecast(history: TeslaEnergyHistoryEntry[] | null | u
  * Builds a household load forecast (watts) from Tesla energy-site history.
  * See the module doc comment: this cannot be cleanly separated from
  * historical vehicle charging load measured on the same circuit.
+ * Finite signed readings retain their sign and precision. Missing evidence
+ * produces no load series, unless the caller explicitly assumes zero load;
+ * that scenario retains zero confidence and no source samples.
  */
-export function buildLoadForecast(history: TeslaEnergyHistoryEntry[] | null | undefined, options: ForecastOptions): ForecastResult {
-  return buildForecast(history, (e) => e.consumer_energy_wh, options);
+export function buildLoadForecast(history: TeslaEnergyHistoryEntry[] | null | undefined, options: LoadForecastOptions): ForecastResult {
+  const result = buildForecast(history, (e) => e.consumer_energy_wh, options, true);
+  if (result.sourceSampleCount > 0) return result;
+  return {
+    ...result,
+    seriesW: options.assumeZeroLoad === true ? result.seriesW : [],
+    sourceQuality: options.assumeZeroLoad === true ? 'assumed-zero' : 'missing',
+  };
 }

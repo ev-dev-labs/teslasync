@@ -1,0 +1,452 @@
+{
+  "item": "audit-page-090",
+  "page": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+  "routes": ["/tesla-charging-sessions"],
+  "purpose": "Review synchronized Tesla Fleet Charging business-account sessions, costs, energy, charging sites and independent site wait forecasts.",
+  "primaryGoal": "Scope fleet charging history, understand cost and energy evidence, inspect session records and export them without losing source identity, currency or missing-data semantics.",
+  "dataSources": [
+    {
+      "name": "Fleet sessions and lifetime summary",
+      "hook": "useTeslaChargingSessions",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 323,
+      "endpoint": "GET /api/v1/tesla/charging/sessions?vin=<optional VIN>",
+      "routeEvidence": "internal\\api\\router.go:3541,3549-3550",
+      "behavior": "VIN query key, SLOW staleTime, enabled after vehicle loading, AbortSignal forwarded; response supplies sessions and an independent summary. No date bounds in read hook.",
+      "backendLimits": "Router matches the hook path. Backend filtering, result completeness, ordering, units of legacy power/rate fields and summary calculations were not inspected or exercised."
+    },
+    {
+      "name": "Business-account import",
+      "hook": "useRefreshTeslaChargingSessions",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 408,
+      "endpoint": "POST /api/v1/tesla/charging/sessions/refresh",
+      "routeEvidence": "internal\\api\\router.go:3551",
+      "behavior": "Hook accepts vin/date_from/date_to; page passes only VIN at lines 218-219. Invalidates existing session keys and emits success/error toasts. Page additionally identifies 403.",
+      "backendLimits": "No mutation performed. Router declares a five-per-minute IP rate limit; actual account/auth/import behavior unverified."
+    },
+    {
+      "name": "Vehicle scope",
+      "hook": "useVehicles and useVehicleVinFilter",
+      "owner": "web\\src\\hooks\\useVehicleVinFilter.ts",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "behavior": "Existing VIN bridge consumes shared selected vehicle; vin=* provides fleet override and legacy VIN bookmarks are reconciled. Required local Select remains because this route disables the header vehicle selector.",
+      "scopeEvidence": "web\\src\\lib\\workspaceScope.ts:71,131,156-167"
+    },
+    {
+      "name": "Wait sites",
+      "hook": "useWaitOracleSites",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 374,
+      "endpoint": "GET /api/v1/waitoracle/sites?q=<optional search>",
+      "routeEvidence": "internal\\api\\router.go:3982-3983",
+      "behavior": "Independent historical query with cancellation; mounted WaitOraclePanel supplies no session VIN or analysis-window scope."
+    },
+    {
+      "name": "Wait forecast",
+      "hook": "useWaitOracleForecast",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 388,
+      "endpoint": "GET /api/v1/waitoracle/forecast?site=<site>&arrive_at=<optional RFC3339>",
+      "routeEvidence": "internal\\api\\router.go:3982,3984",
+      "behavior": "Independent historical query enabled for a nonempty site. Arrival defaults to now; local datetime is converted to ISO; forecast displays UTC hour evidence."
+    },
+    {
+      "name": "Display preferences, range and trust",
+      "hook": "useRangeState, useSettings, useUnits, useFormatting, useNumberFormatting, useDataState, useOperationalMetrics",
+      "owner": "existing application hooks",
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 126,
+      "endpoint": null,
+      "behavior": "Header-owned range, user currency/locale/precision, SI energy display and historical trust adapter. Preference endpoint internals were not traversed; no additional endpoint claimed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout and LayoutCard",
+      "owner": "@/components/layout",
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 667,
+      "role": "Existing page orchestration, query context and four titled detail panels; preserve contextActions and primaryAction."
+    },
+    {
+      "name": "OperationalBrief, ChargingSummaryBrief and useOperationalMetrics",
+      "owner": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 685,
+      "role": "Two intentionally different evidence scopes: four analysis-window metrics and five lifetime-summary metrics; both reuse canonical OperationalBrief."
+    },
+    {
+      "name": "DataTable",
+      "owner": "@/components/ui",
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 944,
+      "role": "Sole table pipeline: nine columns, mobile cards/full details, filtering, sorting, column preferences, pagination, virtualization, export and multiselection."
+    },
+    {
+      "name": "ChartContainer and chart category components",
+      "owner": "@/components/charts",
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 797,
+      "role": "Monthly cost chart, accessible data-column input, retry and export; WaitOraclePanel separately uses this frame."
+    },
+    {
+      "name": "MetricBar",
+      "owner": "@/components/data-display",
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 850,
+      "role": "Existing reusable charger-energy and top-site-cost breakdown renderer; no replacement composite needed."
+    },
+    {
+      "name": "WaitOraclePanel",
+      "owner": "web\\src\\features\\charging\\components\\WaitOraclePanel.tsx",
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 786,
+      "role": "Independent site and arrival selection, forecast summary, evidence and hourly chart."
+    },
+    {
+      "name": "TeslaChargingSessionsMap",
+      "owner": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsMap.tsx",
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 894,
+      "role": "Lazy, finite-coordinate-filtered clustered map with centroid, tile layer, popup content and marker labels."
+    },
+    {
+      "name": "UI, feedback and motion primitives",
+      "owner": "@/components/ui, @/components/feedback, @/components/motion",
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 8,
+      "role": "Badge, GlassPanel, Button, Select, Text, Code, skeletons, QueryError, EmptyState, StaleRefreshWarning, DataStateNotice and FadeIn are existing owners; shared internals not audited."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 943,
+      "rule": "MDC-002 / mission 33",
+      "detail": "Table renderers, mobile displayValue and selected-row export repeat field formatting/mapping (columns 423-533, mobile 947-965, CSV 575-607). Native data export and display export are not equivalent and must remain distinct.",
+      "fix": "Extract a feature-local typed presentation adapter only for identical display mappings; retain all raw export schemas and canonical DataTable ownership.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 631,
+      "rule": "MDC-033",
+      "detail": "Lifetime-summary and scoped operational metric definitions overlap, but their periods and sources differ explicitly at lines 773-778.",
+      "fix": "Reuse existing metrics/brief owners and share only genuinely identical formatter definitions; do not merge scopes or discard either brief.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "Page context Select is w-full/min-w-0 then sm:w-56 at line 616; Refresh Button wraps its label at line 623.",
+      "Business note stacks then uses sm:flex-row at line 740.",
+      "Cost and locations sections stack then use xl:grid-cols-3 with a two-column hero at lines 794-796 and 874-876.",
+      "DataTable uses mobile cards with roles and allDetails at lines 945-985; nine fields remain represented, including normally hidden VIN/rate.",
+      "Oracle controls reflow at md and forecast columns at lg in WaitOraclePanel.tsx:108,171; map height remains 350px in TeslaChargingSessionsMap.tsx:114."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+        "line": 442,
+        "rule": "MDC-043 / mission 15",
+        "detail": "Location text is truncated to max-w-[200px]; long site identification must remain reachable through table details/map rather than relying on visible cell width. Cost hero lacks explicit min-w-0 unlike map hero.",
+        "fix": "Review long localized/site content and allocated-width overflow using existing layout/table mechanisms; preserve full details and add local min-w-0 if rendered overflow is demonstrated.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "validation": "All requested viewport widths, 200% text, RTL, actual wrapping/clipping and mobile interactions are unverified."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Six section aria-labels, localized Select accessible name, decorative-icon aria-hidden, ChartContainer ariaLabel/dataColumns and source retry controls are present.",
+      "Table rowLabel includes site and date at lines 1012-1019; mobile details mask VIN and retain native diagnostic labels at lines 976-983.",
+      "Map supplies application label and per-marker labels at TeslaChargingSessionsMap.tsx:103-107,115-116."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsMap.tsx",
+        "line": 115,
+        "rule": "MDC-040",
+        "detail": "role=application introduces a specialist keyboard/screen-reader interaction obligation. Map-local popup access, focus and full point alternatives have not been exercised; the page table is a useful parallel record view, not proof of map accessibility.",
+        "fix": "Validate existing map/cluster keyboard and popup ownership with real assistive interaction; use ordinary semantics unless application-mode behavior is demonstrated, preserving all points and popup data.",
+        "owner": "integration",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\WaitOraclePanel.tsx",
+        "line": 179,
+        "rule": "MDC-044",
+        "detail": "Forecast verdict is rendered as raw API enum text; the duration helper on the page emits literal h/m suffixes at lines 78-80 rather than locale-aware duration labels.",
+        "fix": "Localize displayed verdicts and duration units through existing catalogs/formatters while preserving source enum values, UTC evidence and duration behavior.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ],
+    "validation": "Keyboard, focus restoration, target dimensions, screen-reader output, effective contrast, reduced motion and forced colors are unverified."
+  },
+  "states": {
+    "sourceEvidence": [
+      "Session trust uses historical useDataState, fatalError and retained-data-aware loading at lines 148-152.",
+      "StaleRefreshWarning and unavailable/offline-blocked DataStateNotice remain above sections at lines 675-681; fatal QueryError has refetch at lines 683-684.",
+      "Each chart/breakdown/map/table section has initial skeleton, error/retry and empty/unresolved messaging; lazy map has Suspense geometry at lines 887-893.",
+      "Summary brief receives retained and independent lifetime scope at lines 773-778.",
+      "Refresh action exposes mutation pending; business-account 403 has attention and visible account note. Other mutation errors are handled by the hook toast, not a claimed inline error panel.",
+      "Oracle site and forecast have independent loading/fatal retries and no-sites empty state at WaitOraclePanel.tsx:148-170."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\WaitOraclePanel.tsx",
+        "line": 148,
+        "rule": "MDC-026",
+        "detail": "Independent sites/forecast states only surface initial loading and fatalError; no refreshError/isRefreshBlocked/stale warning is rendered beside retained forecast. A successful null forecast ends in null at line 244.",
+        "fix": "Reuse StaleRefreshWarning/DataStateNotice for each independent oracle source and give resolved-unavailable forecast an explicit nonzero-preserving state. Do not replace retained forecast on refresh failure.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+        "line": 236,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Energy/cost aggregation and narrative energy coalesce absent measurements to zero (groupSessions 117-119, monthly cost 94, totals 236-238, evidence 313). Missing cost counts are flagged, but all-missing energy/cost can still produce measured-looking zero; oracle absent wait similarly becomes zero at WaitOraclePanel.tsx:90,176.",
+        "fix": "Retain valid zero, track coverage separately and mark unknown/partial totals and hourly values. Preserve every record and existing formulas pending explicit domain review rather than inventing missing measurements.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+        "line": 697,
+        "rule": "MDC-026",
+        "detail": "Operational status falls through to Awaiting data when source is unresolved but not loading/fatal (e.g. refresh blocked); narrative still derives zero sessions/energy/cost and no-immediate-response wording from absent payload.",
+        "fix": "Use actual unavailable/offline/retained/partial trust state in brief status and narrative; retain surrounding sections and independent oracle rather than blanket-gating the page.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "validation": "No source loading, retained refresh, offline, 403, mutation, null payload or extreme-data scenario was executed."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 821,
+      "rule": "MDC-010 / MDC-034 / mission 43",
+      "detail": "Monthly chart fixes a bright cyan #22d3ee gradient instead of current palette. Companion map fixes the same marker color at TeslaChargingSessionsMap.tsx:127.",
+      "fix": "Use existing theme-aware restrained chart/map palette at the caller boundary; preserve gradient/frame/series and saved explicit palette preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 465,
+      "rule": "MDC-010 / MDC-012 / mission 43",
+      "detail": "Ordinary energy, peak and cost body values are assigned cyan/amber/emerald-300 at lines 465,477,502, regardless of severity. Cyan decorative icons repeat at lines 840,878,907. These are subdued relative to neon but remain unnecessary fixed saturated accents across themes.",
+      "fix": "Use canonical primary/secondary typography for ordinary measurements and reserve semantic hue for actual warning/status; keep business prerequisite warning meanings and user chart palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\WaitOraclePanel.tsx",
+      "line": 45,
+      "rule": "MDC-010 / MDC-025 / MDC-034",
+      "detail": "Four hardcoded saturated rose/amber/blue/green chart fills express busyness thresholds without theme palette ownership; thresholds have meaning and cannot simply be flattened away.",
+      "fix": "Map the existing four busyness bands to restrained canonical severity/chart tokens; preserve thresholds, badges, numeric evidence and non-color alternatives.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsMap.tsx",
+      "line": 96,
+      "rule": "MDC-013 / MDC-015",
+      "detail": "Popup HTML contains ad-hoc text-xs/font-semibold and literal inline line-height/margin, outside typography roles. Site/charger/date strings are escaped in current source.",
+      "fix": "Retain popup fields and escaping, styling through the existing map popup owner/tokens; do not create a second HTML/popup engine.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 157,
+      "rule": "MDC-032 / mission 33",
+      "detail": "Header range is registered, but the page consumes only date strings and constructs local inclusive day bounds at lines 162-168. Exact rolling startInstant/endInstantExclusive are ignored, and sessions read hook supplies no server bounds. This cannot preserve a true rolling 24h/live window or prove full-range result completeness.",
+      "fix": "Consume precise shared instants, pass both through the existing typed session hook/query key, and coordinate real backend support before claiming full-range filtering. Keep lifetime summary explicitly independent and retain local VIN selection on this vehicle-disabled route.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 237,
+      "rule": "MDC-045 / MDC-033",
+      "detail": "Costs from rows with distinct currency_code are summed without grouping/conversion and displayed in user currency. Table correctly uses row currency at lines 503-505, but monthly cost, narrative, top locations and map popup use user formatting; monthly accessible column says Total ($) at line 802. Actual mixed-currency payload was not observed.",
+      "fix": "Preserve source currency identity and flag unsupported mixed-currency aggregation; use existing currencyFormat for per-record values. Coordinate authoritative aggregate currency semantics without inventing exchange rates or deleting analytics.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 288,
+      "rule": "MDC-045 / Phase-48 SI canonical",
+      "detail": "Current typed session/summary contract still contains peak_power_kw, max_charge_rate_kw and per_kwh_rate/avg_cost_per_kwh. Page multiplies summary peak kW by 1000 for metric rawValue at line 645, but table/CSV retain source fields. Backend semantic unit truth is unverified.",
+      "fix": "Coordinate SI contract owner before any rename/conversion; preserve raw current values and export units until the authoritative wire/cache migration is established. Do not cosmetically rename fields or add a dual-shape adapter.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "line": 74,
+      "rule": "mission 33 / MDC-002",
+      "detail": "1046-line orchestrator exports pure duration/group/monthly derivations and embeds narrative, aggregate, table and export logic. Existing shared presentation owners already cover frames/stats/table.",
+      "fix": "Extract feature-local typed derivations and presentation adapters without changing grouping/top-six/monthly/date/export semantics; use existing owners rather than new universal wrappers.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Resolve exact date scope, currency identity and unavailable/partial trust before presentation adoption; palette and orchestration cleanup are P2. No runtime defect or visual acceptance claim is made.",
+    "order": ["Precise range and backend completeness", "Currency/SI source ownership", "Independent source and partial measurement trust", "Restrained palette and locale", "Local decomposition and responsive/accessibility validation"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing fleet-session read scope contract",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useCharging.ts",
+      "props": ["Keep existing vin and enabled semantics", "Add typed start/end-exclusive RFC3339 bounds only with confirmed backend contract", "Include bounds in existing query keys and forward AbortSignal", "Keep raw SI/source payload and separate lifetime summary period"],
+      "variants": ["single VIN", "fleet vin=* bridge", "rolling window", "custom calendar window"],
+      "states": ["initial loading", "empty", "retained refresh failure", "offline/unavailable", "independent lifetime summary"],
+      "usedBy": ["web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx"],
+      "dependsOn": ["web\\src\\hooks\\useRangeState.ts:startInstant/endInstantExclusive", "GET session handler/store backend completeness and bounds support: not inspected"],
+      "evidence": "TeslaChargingSessionsPage.tsx:157-169; useCharging.ts:323-330; workspaceScope.ts:71",
+      "ownerKind": "integration",
+      "confidence": "high"
+    },
+    {
+      "name": "Existing wait-oracle independent source trust and palette",
+      "owner": "web\\src\\features\\charging\\components\\WaitOraclePanel.tsx",
+      "existingOwnerFile": "web\\src\\features\\charging\\components\\WaitOraclePanel.tsx",
+      "props": ["Keep no-props independent site/arrival contract", "Pass existing sitesState and forecastState to canonical trust feedback", "Reuse canonical palette/severity bands, not a new registry"],
+      "variants": ["now", "+1h", "+2h", "+3h", "custom arrival"],
+      "states": ["no sites", "sites unavailable", "forecast unavailable", "retained forecast refresh error", "offline blocked", "partial hourly measurement"],
+      "usedBy": ["web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx"],
+      "dependsOn": ["useWaitOracleSites/useWaitOracleForecast", "useDataState and existing StaleRefreshWarning/DataStateNotice", "existing design-contract chart/severity tokens"],
+      "evidence": "WaitOraclePanel.tsx:45-49,70-90,148-176,237-244",
+      "ownerKind": "integration",
+      "confidence": "high"
+    },
+    {
+      "name": "Existing session-map presentation and source-currency correction",
+      "owner": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsMap.tsx",
+      "existingOwnerFile": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsMap.tsx",
+      "props": ["Keep sessions: TeslaChargingSession[]", "Preserve finite-coordinate guard, cluster IDs, centroid, zoom, tiles and popup fields", "Use source currency/locale and existing restrained map palette"],
+      "variants": ["clustered located sessions", "empty/invalid-coordinate source requires explicit review"],
+      "states": ["lazy loading", "valid points", "no finite points", "keyboard popup/focus unverified"],
+      "usedBy": ["web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx"],
+      "dependsOn": ["existing maps category and MarkerCluster popup contract", "existing currencyFormat and locale hooks", "authoritative session currency/unit semantics"],
+      "evidence": "TeslaChargingSessionsMap.tsx:27-33,68-109,115-129",
+      "ownerKind": "integration",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "notes": [
+      "Both summaries reuse OperationalBrief and existing metrics formatter; different source periods are intentional, not competing systems.",
+      "MetricBar already owns both ranked breakdown patterns; DataTable remains the sole table owner.",
+      "Route explicitly hides the header vehicle picker: local VIN Select is required, not duplicate workspace chrome.",
+      "Oracle custom arrival is an independent business date, not a second workspace date picker.",
+      "No application-wide consumer search performed and no new shared composite proposed; owner requirements above are deduplicated existing-owner extensions."
+    ]
+  },
+  "preservation": {
+    "sourceHash": "48363A49C739CF503D58DE885DD9748A1E757E6CB7A71F211B8E748247576CFC",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 1046,
+    "sectionCount": 6,
+    "sectionNames": ["Fleet charging info", "Summary metrics", "Wait forecast", "Cost analysis", "Session locations", "Charging sessions table"],
+    "additionalTopLevelContent": ["Scoped OperationalBrief and narrative", "source stale/unavailable/fatal notices", "page title/subtitle and VIN/import actions"],
+    "contentBlockCount": 9,
+    "contentBlocks": [
+      {"name": "Scoped charging posture/narrative", "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx", "line": 685, "count": 1},
+      {"name": "Business-account note, 403 and last sync", "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx", "line": 738, "count": 1},
+      {"name": "Lifetime summary brief: count, energy, cost, cost/kWh, peak", "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx", "line": 773, "count": 1},
+      {"name": "Wait forecast: controls, prediction, verdict/confidence, probability/stalls, best-hour saving, evidence and hourly curve", "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx", "line": 785, "count": 1},
+      {"name": "Monthly cost chart/data/export", "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx", "line": 797, "count": 1},
+      {"name": "Energy by charger type", "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx", "line": 839, "count": 1},
+      {"name": "Clustered session map/popups", "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx", "line": 877, "count": 1},
+      {"name": "Top six locations by cost", "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx", "line": 906, "count": 1},
+      {"name": "Full session table/mobile diagnostic details", "file": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx", "line": 939, "count": 1}
+    ],
+    "sourceComponentCounts": {"PageLayout": 1, "OperationalBrief": 1, "ChargingSummaryBrief": 1, "GlassPanel": 1, "ChartContainer": 1, "LayoutCard": 4, "WaitOraclePanel": 1, "DataTable": 1, "FadeIn": 6},
+    "pageSpecificDependencyLineCounts": {
+      "web\\src\\features\\charging\\components\\WaitOraclePanel.tsx": 247,
+      "web\\src\\features\\charging\\pages\\TeslaChargingSessionsMap.tsx": 133,
+      "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx": 73
+    },
+    "actions": [
+      "Vehicle VIN selection, All vehicles override and bookmark/shared-selection bridge",
+      "Header-owned analysis range and scope badges",
+      "Refresh from Tesla with pending state, 403 prerequisite and mutation toast",
+      "Independent session query refetch and retained/offline notices",
+      "Oracle site, Now/+1/+2/+3-hour presets and custom arrival; independent sites/forecast retries",
+      "Chart data alternatives and monthly export",
+      "Map zoom, tiles, cluster/marker popup access",
+      "Table value filters; date/energy/peak/cost sorting; multirow selection and named row checkboxes",
+      "Page sizes 25/50/100; column visibility/reorder persistence; sticky header, 600px max height, virtualization and 56px row height",
+      "Table export, selected-row CSV and mobile full raw details"
+    ],
+    "dataBehavior": [
+      "Nine table columns: date, location, masked VIN, energy, peak power, duration, cost, rate and charger type.",
+      "Preserve summary's explicitly separate lifetime/unknown period and all five metrics; scoped brief keeps four metrics, attention, five-record evidence, confidence basis, limitations and provenance.",
+      "Preserve raw session identifiers, source dates, currency, fees, charging type, coordinates, fetched_at/created_at and raw fields in mobile allDetails; mobile VIN remains masked while existing exports contain full VIN.",
+      "Preserve existing data/query keys, cancellation and stale/retry behavior; queries remain in hooks and no production mutations are performed by audit.",
+      "Preserve monthly chronological grouping, charger energy ranking, top-six cost ranking and tie-breaking; flag scope/currency/missingness corrections explicitly rather than silently changing domain math.",
+      "Preserve selected CSV headers date/location/vin/energy_wh/peak_power_kw/duration_seconds/cost/currency/per_kwh_rate/charger_type, quoting, filename and loaded selection scope.",
+      "Preserve DataTable exportRow field schema separately from selected CSV, native raw values, mobile diagnostic names and stable tableId tesla-charging-sessions.",
+      "Keep empty, loading, fatal and retained content independently reachable; do not gate unrelated oracle or drop sections.",
+      "No source edits occurred; section and line counts are baseline evidence, not modernization/parity acceptance."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 source-only audit",
+    "runtime": "Unverified; no mounted route, network traffic, account mutation or browser run.",
+    "visual": "Unverified; source classes/literals establish styling risks, not rendered screenshots or contrast.",
+    "keyboardContrastViewport": "Unverified at all ten mission widths, themes, RTL, forced colors, reduced motion, touch and 200% text.",
+    "backend": "Only scoped router registrations read. No handler/store/query, result completeness, aggregate currency or legacy field semantic unit proof.",
+    "sharedInternals": "Global primitive/layout/palette/query implementations not traversed; existing owner categories cited from page imports and design contract, not certified.",
+    "validation": [
+      "Scoped PowerShell Select-String source counts executed: static style={{ 0; raw lowercase button/input/textarea/select/table 0 (case-sensitive correction); direct chart/map/motion library imports 0; old relative API imports 0; literal neon/glow/text-white/bg-white 0; hard cyan literal 1; sections 6; GlassPanel 1; ChartContainer 1; LayoutCard 4. Counts are textual scans, not AST/runtime guarantees.",
+      "First case-insensitive raw-control scan yielded 3 shared Select/TableSkeleton matches; corrected with -CaseSensitive and obtained no raw-control matches. One combined heartbeat/check command had PowerShell quote parser failure (exit 1), then heartbeat and checks were successfully rerun (exit 0).",
+      "The skill audit script was read but not executed because its mandatory project-wide tsc step violates this task's source-only/no-full-gates scope. TypeScript, full lint/build/tests and skill script results are NOTRUN, not passed.",
+      "Report JSON shape, exact path/routes and final current SHA256 are checked before release; only owned report/heartbeat written."
+    ],
+    "assumptions": ["Assigned routes array is authoritative for this audit; route mounting/reachability is not independently proven.", "No additional production consumers of proposed owner changes were inferred."],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-090.json", ".agent-status\\audit-page-090.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+    "web\\src\\features\\charging\\pages\\TeslaChargingSessionsMap.tsx",
+    "web\\src\\features\\charging\\components\\WaitOraclePanel.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\hooks\\useVehicleVinFilter.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go"
+  ]
+}

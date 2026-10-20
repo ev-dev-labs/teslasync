@@ -47,7 +47,7 @@ export function HelpLinkCard({ link }: HelpLinkCardProps) {
     <Link
       to={link.to}
       data-testid={`help-baseline-link-${link.id}`}
-      className="group block h-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+      className="group block h-full rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]"
     >
       <GlassPanel
         hover

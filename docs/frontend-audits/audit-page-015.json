@@ -1,0 +1,338 @@
+{
+  "item": "audit-page-015",
+  "page": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx",
+  "routes": ["/gas-price"],
+  "purpose": "Configure EIA US-average gas-price auto-polling, inspect its current status and equivalent price, and review historical prices.",
+  "primaryGoal": "Inspect current prices and polling recency, run an immediate poll, and control automatic polling without losing historical context.",
+  "dataSources": [
+    {
+      "id": "gas-status",
+      "hooks": ["useGasPriceStatus"],
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 152,
+      "endpoint": "GET /api/v1/gas-price/status",
+      "routeEvidence": "internal\\api\\router.go:3753-3756",
+      "consumers": ["GasPriceBrief", "GasConfiguration"],
+      "behavior": "Query key gas-price-status; enabled by default; cancellation signal forwarded; retry false; periodic INTERVALS.STANDARD refetch. Page derives DataState independently.",
+      "contract": "GasPriceStatus at web\\src\\api\\types.ts:2021-2027: enabled, poll_interval, last_poll_time, current_price, current_price_kwh_eq.",
+      "limits": "Routes are conditional on opt.GasPriceWorker. Actual worker availability, source denomination/currency and runtime responses are unverified."
+    },
+    {
+      "id": "gas-history",
+      "hooks": ["useGasPriceHistory"],
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 162,
+      "endpoint": "GET /api/v1/gas-price/history",
+      "routeEvidence": "internal\\api\\router.go:3755-3760",
+      "consumers": ["GasTrendChart", "GasHistoryTable"],
+      "behavior": "Query key gas-price-history; cancellation signal forwarded; retry false; STALE_TIMES.STANDARD; safeArray select; no page date or vehicle filter. Chart reverses returned rows; table sorts its own copy.",
+      "contract": "GasPriceHistory at web\\src\\api\\types.ts:2029-2037: id, price_per_unit, unit, efficiency_mpg, effective_from, effective_to, created_at.",
+      "limits": "Server ordering, completeness, mixed-unit history and price currency are not established by these frontend declarations."
+    },
+    {
+      "id": "gas-mutations",
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 173,
+      "operations": [
+        {"hook": "usePollGasPrice", "endpoint": "POST /api/v1/gas-price/poll", "line": 177, "body": "No body", "effect": "Invalidates status and history; localized success/error toast."},
+        {"hook": "useToggleGasPrice", "endpoint": "POST /api/v1/gas-price/toggle", "line": 192, "body": "{ enabled: boolean }", "effect": "Invalidates status; localized enabled/disabled/error toast."},
+        {"hook": "useUpdateGasPriceConfig", "endpoint": "PUT /api/v1/gas-price/config", "line": 213, "body": "{ poll_interval: string }", "effect": "Invalidates status; localized success/error toast."}
+      ],
+      "routeEvidence": "internal\\api\\router.go:3757-3759",
+      "limits": "No mutations were executed; worker scheduling, authorization and concurrent mutation behavior are unverified."
+    },
+    {
+      "id": "presentation-preferences",
+      "hooks": ["useSettings", "useFormatting", "useNumberFormatting", "useChartPalette"],
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 1,
+      "endpoint": "Not traced for this secondary source; only gas-specific hook endpoints were verified.",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx:13-16",
+        "web\\src\\hooks\\useFormatting.ts:39-57",
+        "web\\src\\hooks\\useChartPalette.ts:18-21,39-41",
+        "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:15-16"
+      ],
+      "behavior": "Summary denomination uses saved gas_unit; currency display uses currency_symbol, decimal_precision and locale; chart resolves saved neon or color-blind-safe palette without resetting it.",
+      "limits": "Number/date utility internals, settings hydration and locale/timezone runtime behavior were not separately audited."
+    }
+  ],
+  "components": [
+    {
+      "name": "GasPriceAutoPollPage",
+      "kind": "page orchestrator",
+      "owner": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx",
+      "line": 30,
+      "uses": ["PageLayout", "Button", "FadeIn", "GasPriceBrief", "GasConfiguration", "GasTrendChart", "GasHistoryTable"],
+      "contract": "Independent status/history query descriptors and DataState props; localized title/subtitle; pending Poll now action; no global error/loading gate supplied."
+    },
+    {
+      "name": "GasPriceBrief / AdminSummary",
+      "kind": "domain summary adapter",
+      "owner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx",
+      "line": 11,
+      "adapterOwner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx:19-43",
+      "uses": ["OperationalBrief", "useOperationalMetrics", "Text", "StaleRefreshWarning", "QueryError"],
+      "contract": "Four StatMetric occurrences; explicit source/scope explanations; initial loading; sourceStatus mapping; status-source retry and retained-data warning. Canonical OperationalBrief internals were not audited."
+    },
+    {
+      "name": "GasConfiguration",
+      "kind": "domain configuration",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx",
+      "line": 12,
+      "uses": ["LayoutCard", "FormSection", "Toggle", "HelpIcon", "Select", "Text", "Caption", "Skeleton", "AdminSourceContent"],
+      "contract": "DataState<GasPriceStatus>; explicit gas-auto-poll ID and help target; pending/no-data disabling; daily/7d/15d/30d interval choices; EIA source caption."
+    },
+    {
+      "name": "GasTrendChart",
+      "kind": "domain chart",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+      "line": 11,
+      "uses": ["ChartCard", "AreaChart", "Area", "XAxis", "YAxis", "CartesianGrid", "Tooltip", "ResponsiveContainer", "ChartTooltip", "AREA_DEFAULTS", "areaGradient"],
+      "contract": "DataState<GasPriceHistory[]>; compact fluid canonical frame; date/price rows and accessible dataColumns; loading/fatal/empty/retry props; palette-preserving area series.",
+      "frameOwner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:13-45",
+      "dependsOn": ["web\\src\\components\\charts\\EmbeddedChart.tsx:19-41"]
+    },
+    {
+      "name": "GasHistoryTable",
+      "kind": "domain table",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx",
+      "line": 13,
+      "uses": ["LayoutCard", "DataTable", "useSortToggle", "Badge", "Text", "Skeleton", "AdminSourceContent"],
+      "contract": "Stable tableId admin:gas-price-history; row ID identity; five columns; four sortable fields; value filters; pagination; three-column mobile allow-list.",
+      "tableOwner": "web\\src\\components\\ui\\DataTable.tsx:715-725"
+    },
+    {
+      "name": "AdminSourceContent",
+      "kind": "existing shared feature state adapter",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-2\\AdminSourceContent.tsx",
+      "line": 19,
+      "uses": ["SourceContent", "QueryError"],
+      "contract": "Fatal permission/auth-aware QueryError; loadingContent; retained data and retry; existing generic source adapter, not a new competing implementation.",
+      "sourceOwner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:36-77"
+    },
+    {
+      "name": "PageLayout / PageContainer",
+      "kind": "existing shared layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "uses": ["PageContainer"],
+      "contract": "Full-width min-w-0 container; forwards header/actions and independent dataSources. PageContainer:243-255 preserves children when no explicit loading/error/empty gate is passed.",
+      "dependsOn": ["web\\src\\components\\layout\\PageContainer.tsx"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx",
+      "line": 35,
+      "rule": "MDC-002 reuse",
+      "detail": "Status/history are queried once at page level and shared with two consumers each. State shells, chart framing, table pipeline, formatting and operational summary reuse existing owners; no confirmed competing local pipeline.",
+      "fix": "Retain existing owners and props; do not extract another state, chart, formatting or table implementation.",
+      "owner": "page",
+      "confidence": "high",
+      "isIssue": false
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "Page:69-74 uses single-column stack below xl; xl chart spans two of three columns with adjacent configuration.",
+      "Configuration:22 uses flex-wrap for toggle/status; chart uses ResponsiveContainer and compact fluid ChartCard.",
+      "History:56 keeps effective_from, price_per_unit and effective_to below md; shared DataTable:725 hides other columns."
+    ],
+    "testedWidths": [],
+    "unverifiedWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx",
+        "line": 56,
+        "rule": "MDC-023 / MDC-043 preserve full mobile details",
+        "detail": "mobileColumns excludes unit and efficiency_mpg; DataTable:715-725 hides excluded cells below md. Price includes unit, but efficiency has no caller-provided expanded detail or mobilePresentation alternative.",
+        "fix": "Use existing DataTable mobilePresentation detail contract or existing expandable row detail to retain efficiency and all historical fields; keep tableId, ordering, filters and pagination.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Page:45 gives decorative action icon aria-hidden; Button owns action semantics and pending state.",
+      "GasPriceBrief:35 gives summary section a localized aria-label.",
+      "GasConfiguration:24-27 explicitly links gas-auto-poll toggle/help identity; Select:34-42 supplies localized label/help; status icons:30 are decorative with adjacent text.",
+      "GasTrendChart:21,24-26 supplies localized chart name and date/price table columns; shared ChartCard forwards these.",
+      "GasHistoryTable:35-51 provides localized column names and text/status labels."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx",
+        "line": 44,
+        "rule": "MDC-040 touch targets",
+        "detail": "Primary action explicitly uses size sm; actual target dimensions, shell composition and spacing exception are unmeasured.",
+        "fix": "Measure Poll now and configuration controls at narrow widths and 200% text; retain canonical Button and use its existing appropriate sizing if reachability is insufficient.",
+        "owner": "page",
+        "confidence": "low"
+      }
+    ],
+    "unverified": ["Keyboard order", "Focus visibility/restoration", "Screen-reader announcements", "Effective contrast", "Forced colors", "Touch target dimensions", "Reduced-motion execution", "RTL and long translations"]
+  },
+  "states": {
+    "initialLoading": "Brief forwards loading; configuration has two 64px skeletons; history has 240px skeleton; chart loading prop uses initial DataState.",
+    "empty": "History DataTable and chart have explicit localized empty messages; brief uses unknown price values and Never/Awaiting first poll for the zero-time sentinel. Status payload absence is not replaced with fabricated values.",
+    "fatalError": "Brief and configuration/table expose QueryError and retry; chart receives only fatalError and retry. Page source descriptors retain independently successful neighboring sections.",
+    "retainedError": "deriveDataState retains bytes on refresh error or paused refresh. Brief renders StaleRefreshWarning; configuration/table render retained SourceContent message/retry.",
+    "mutationPending": "Poll Button loading; toggle disabled during its mutation; interval disabled during its mutation or absent status. Hooks provide success/error toasts.",
+    "offline": "Retained paused reads become stale. Initial paused reads remain initial with isRefreshBlocked; individual page consumers do not explicitly branch on this flag. Shared header notice behavior not fully traced.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+        "line": 22,
+        "rule": "MDC-026 source-specific retained/offline trust",
+        "detail": "Chart consumes loading/fatalError/empty but not source.status stale, isRefreshing, refreshError, isRefreshBlocked or updatedAt. History table retains a warning, and page-level dataSources may give general notice, but chart itself cannot explain retained price-series freshness.",
+        "fix": "Compose existing StaleRefreshWarning beside the chart or current SourceContent retained state; retain chart bytes, independent retry, dataColumns and frame. Do not turn refresh failure into fatal error.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+      "line": 15,
+      "rule": "MDC-010 / mission 43 restrained color",
+      "detail": "Chart has a hardcoded saturated amber fallback #f59e0b outside the canonical palette. Saved neon palette is deliberately supported by useChartPalette:18-21 and must not be reset. No explicit fixed-white, neon text, glow classes or raw controls were found in the five assigned page/domain source files.",
+      "fix": "Use canonical palette/token fallback; assess areaGradient intensity on actual themes without reducing data meaning or overriding explicit neon preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+      "line": 32,
+      "rule": "MDC-013 typography / MDC-040 readability",
+      "detail": "Both chart axes set fontSize 10 directly, bypassing shared typography preferences; actual readability and clipping are unverified.",
+      "fix": "Reuse existing chart typography tokens/preferences while retaining axes, tick currency formatting and compact chart geometry.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx",
+      "line": 7,
+      "rule": "MDC-002 accurate source ownership",
+      "detail": "Header comment claims all sections live under ../components/gas-price and own their data states; actual imports use operationalbrief-a-g and continuation-admin-2, with page-owned queries.",
+      "fix": "Update only the stale architectural comment during assigned implementation; preserve current typed page/query ownership.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+      "line": 16,
+      "rule": "MDC-045 source denomination preservation",
+      "detail": "Chart maps history to date/price, dropping each row's unit and efficiency metadata. Table displays explicit source unit, but chart axis/dataColumns supply only saved-symbol currency. Whether returned history can mix denominations is unknown; no backend conversion guarantee was inspected.",
+      "fix": "Resolve source unit/currency guarantees with integration owner before changing measurements; retain raw values and surface existing row denomination in chart context/table/tooltip when needed. Do not invent FX or volume conversion.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "reason": "Already uses canonical layouts, summary, chart, table and independent typed sources. Highest source-confirmed gap is hidden mobile efficiency; source trust, chart typography and denomination context need bounded follow-up.",
+    "order": ["Preserve mobile efficiency/full row details", "Expose chart retained-source trust", "Resolve source denomination guarantees", "Use canonical chart typography/color fallback", "Refresh stale ownership comment"]
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "confirmed": [],
+    "reuse": [
+      {"name": "Operational summary", "owner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx", "dependsOn": ["OperationalBrief", "useOperationalMetrics"], "usedBy": ["GasPriceBrief"]},
+      {"name": "Source state shell", "owner": "web\\src\\features\\admin\\components\\continuation-admin-2\\AdminSourceContent.tsx", "dependsOn": ["SourceContent", "QueryError"], "usedBy": ["GasConfiguration", "GasHistoryTable"]},
+      {"name": "Mobile detail preservation", "owner": "web\\src\\components\\ui\\DataTable.tsx", "dependsOn": ["Existing mobilePresentation or expandable/renderExpanded API"], "usedBy": ["GasHistoryTable"]}
+    ],
+    "limits": "Only direct gas-price consumers and bounded shared-owner API slices inspected. No evidence for a new shared component or an application-wide duplication claim."
+  },
+  "preservation": {
+    "sourceHash": "E6194FB042B05F757D804C12B79BA57A1CA9768736623A949A8EDDE2D8D96975",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 82,
+    "pageAndDirectSectionLineCount": 281,
+    "sectionCount": 4,
+    "sections": [
+      {"name": "Gas price summary", "component": "GasPriceBrief", "file": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx", "line": 65, "metricCount": 4},
+      {"name": "Price trend", "component": "GasTrendChart", "file": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx", "line": 71, "seriesCount": 1, "accessibleColumnCount": 2},
+      {"name": "Configuration", "component": "GasConfiguration", "file": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx", "line": 73, "fieldCount": 2},
+      {"name": "Price history", "component": "GasHistoryTable", "file": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx", "line": 78, "columnCount": 5}
+    ],
+    "sourceComponentCounts": {"pageGlassPanel": 0, "pageChartContainer": 0, "directDomainChartCard": 1, "directDomainLayoutCard": 2, "directDomainAdminSummary": 1, "pageFadeIn": 3},
+    "actions": [
+      {"name": "Poll now", "evidence": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:42-49"},
+      {"name": "Enable/disable auto-poll", "evidence": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx:24-25"},
+      {"name": "Change daily/weekly/bi-weekly/monthly polling interval", "evidence": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx:34-42"},
+      {"name": "Contextual field help", "evidence": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx:26-27,42"},
+      {"name": "Sort effective date, price, unit and efficiency", "evidence": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:17-33,35-47"},
+      {"name": "History value filters and pagination", "evidence": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:56-58"},
+      {"name": "Independent failed/retained source retry", "evidence": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx:43-44; web\\src\\features\\admin\\components\\continuation-admin-2\\AdminSourceContent.tsx:22-33; web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:22"}
+    ],
+    "dataBehavior": [
+      "Retain status enabled/running versus stopped, current per-volume price, current per-kWh-equivalent price, and both relative/absolute last-poll text.",
+      "Retain zero-time sentinel Never/Awaiting first poll and current >0 price gating unless a separately verified domain correction authorizes change; unknown is not a measured zero.",
+      "Retain all history raw fields including source unit, efficiency_mpg, effective_from/effective_to, created_at and row ID; source-unit contract is not permission to guess SI conversion.",
+      "Retain ascending chart transformation of the returned order and independent descending initial table sort; backend order unknown.",
+      "Keep null effective_to as Current; missing cell text as em dash; preserve price/unit labels and localized efficiency labels.",
+      "Preserve currency precision/symbol, gas-unit and chart-palette preferences, source explanation, scope limits, responsive stacking and all pending/error/empty behavior.",
+      "Keep query keys, cancellation, retry/stale-time/refetch policies, toast feedback and exact mutation invalidations.",
+      "No page-specific chart export/fullscreen props are enabled; EmbeddedChart defaults these off. Do not claim new enabled capabilities or remove the shared chart data alternative.",
+      "Do not introduce workspace vehicle/date filters for these currently global status/config/history hooks without an actual server contract."
+    ],
+    "sectionLineCounts": {
+      "GasPriceBrief.tsx": 46,
+      "GasConfiguration.tsx": 51,
+      "GasTrendChart.tsx": 40,
+      "GasHistoryTable.tsx": 62
+    }
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 atomic source audit only",
+    "runtimeVerified": false,
+    "visualVerified": false,
+    "keyboardVerified": false,
+    "contrastVerified": false,
+    "viewportVerified": false,
+    "routeMountVerified": false,
+    "routeIdentity": "Assigned /gas-price identity preserved verbatim; application router mounting not independently inspected.",
+    "backendLimits": "Gas endpoints match inspected router paths and verbs but are optional-worker-gated. Handler, worker, scheduling, source currency/units, server bounds and authorization behavior not inspected or invoked.",
+    "dependencyLimits": "Shared components read only as directly used API/source slices; styles, token definitions, underlying chart controller, OperationalBrief, Input/Toggle/Select and motion internals were not comprehensively audited.",
+    "validation": [
+      {"command": "Get-FileHash -LiteralPath 'web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx' -Algorithm SHA256", "exitCode": 0, "output": "E6194FB042B05F757D804C12B79BA57A1CA9768736623A949A8EDDE2D8D96975"},
+      {"command": "Case-sensitive Select-String on assigned page only for style={{, raw controls, neon/glow/white noise, direct library imports and old API imports", "exitCode": 0, "output": "staticInline=0; rawControls=0; noise=0; directLibraries=0; oldApi=0", "limits": "Text-pattern evidence only, not comprehensive lint or runtime proof. Direct section chart fallback and axis issues recorded separately."},
+      {"command": "bash .github\\skills\\audit-violations\\audit.sh <assigned-page>", "exitCode": null, "output": "NOT RUN: script includes project-wide TypeScript; prohibited by atomic source-only assignment."},
+      {"command": "npx tsc --noEmit / lint / tests / build / browser QA", "exitCode": null, "output": "NOT RUN: source-only audit; centralized acceptance remains pending."}
+    ],
+    "ownership": ["docs\\frontend-audits\\audit-page-015.json", ".agent-status\\audit-page-015.txt"],
+    "sourceEdits": false,
+    "gitCommandsRun": false
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\AdminSourceContent.tsx",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "internal\\api\\router.go",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\hooks\\useChartPalette.ts"
+  ]
+}

@@ -1,0 +1,438 @@
+{
+  "item": "phase6-qa-vehicle-systems-climate-control",
+  "attempt": 1,
+  "actor": "8e0606f8-60b4-43de-8dff-c34b59e0d336",
+  "status": "PARTIAL_SOURCE_QA_FINDINGS_PRESERVED",
+  "page": "web/src/features/vehicle-systems/pages/ClimateControlPage.tsx",
+  "routes": [
+    "/climate-control",
+    "/climate"
+  ],
+  "acceptedSourceCommitFromQueue": "35a858ab52c2b0f5b4de1b37c8e0d800cb457d8b",
+  "acceptedCommitIndependentlyCompared": false,
+  "purpose": "Read-only source QA, not remigration, native acceptance or a current test pass.",
+  "clock": {
+    "firstObservedUtc": "2026-10-14T01:27:58.4092558Z",
+    "reservationUtc": "2026-10-14T01:24:50.678Z",
+    "returnByUtc": "2026-10-14T01:44:50.678Z",
+    "hardStopUtc": "2026-10-14T01:49:50.678Z",
+    "actualCreationAvailable": false,
+    "earlierActualCreationLimitStillApplies": true
+  },
+  "writableFiles": [
+    "docs/frontend-audits/phase6-qa-vehicle-systems-climate-control.json",
+    "web/logs/phase6-qa-vehicle-systems-climate-control.log"
+  ],
+  "summary": {
+    "confirmedFindingGroups": 9,
+    "unprovedCandidateGroups": 5,
+    "confirmedEngineeringRuleOccurrences": {
+      "hardcoded-string": 3
+    },
+    "groupCountsByRule": {
+      "wrong-semantic-source": 1,
+      "nil-zero-aggregate": 1,
+      "unknown-denominator": 1,
+      "missing-workspace-range": 1,
+      "date-display-preferences": 1,
+      "hardcoded-string": 1,
+      "inconsistent-level-presentation": 1,
+      "read-action-readiness": 1,
+      "loading-announcement": 1
+    },
+    "primaryFindingFiles": {
+      "ClimateControlPage.tsx": 8,
+      "ClimateSourceBoundary.tsx": 1
+    },
+    "priority": "HVAC identity, nil/zero and unknown aggregate semantics first; bounds/preferences, accessible loading/read readiness, enum localization and fractional levels next.",
+    "nativePageAcceptance": false
+  },
+  "findings": [
+    {
+      "id": "CC-001",
+      "severity": "high",
+      "rule": "wrong-semantic-source",
+      "file": "web/src/features/vehicle-systems/pages/ClimateControlPage.tsx",
+      "line": 942,
+      "relatedLines": [
+        746,
+        751,
+        752,
+        949,
+        950
+      ],
+      "mechanism": "HVAC power metric/banner use isAcOn; hvacPower is only the State subtitle. Handler.go36-37 maps HvacPower and HvacACEnabled independently.",
+      "repro": "Synthetic latest={hvacPower:true,isAcOn:false} makes HVAC power=Off, State: On, banner=Off. Reverse booleans gives On/State: Off. Source evaluation only, not executed.",
+      "fix": "Use verified HVAC power for HVAC identity or explicitly relabel AC-only status. Retain both independent fields/nulls; never invent watts.",
+      "owner": "page/domain review",
+      "confidence": "high-source",
+      "runtimeReproduced": false,
+      "testEvidence": "ClimateModernization.test.tsx171-182 pins On/State: Off; preservation is not domain correctness."
+    },
+    {
+      "id": "CC-002",
+      "severity": "high",
+      "rule": "nil-zero-aggregate",
+      "file": "web/src/features/vehicle-systems/pages/ClimateControlPage.tsx",
+      "line": 686,
+      "relatedLines": [
+        687,
+        688,
+        689,
+        690,
+        1329,
+        1338,
+        1347
+      ],
+      "mechanism": "fanSpeed>0 removes known zero; withFan empty returns null for all statistics, including independently known AC. Average label does not disclose active-only sampling.",
+      "repro": "History fan0/4 with ACfalse/true yields avg4 rather than2. History fan0/ACfalse yields unknown average/peak/AC instead of0/0/0%. Null fans with known AC also suppress AC. Not executed.",
+      "fix": "Preserve finite zero or explicitly label conditional active-fan average; compute independent AC evidence separately. Keep missing distinct fromzero.",
+      "owner": "page/domain aggregate",
+      "confidence": "high-source",
+      "runtimeReproduced": false,
+      "dedup": "Distinct fromCC-003 denominator."
+    },
+    {
+      "id": "CC-003",
+      "severity": "high",
+      "rule": "unknown-denominator",
+      "file": "web/src/features/vehicle-systems/pages/ClimateControlPage.tsx",
+      "line": 692,
+      "relatedLines": [
+        691,
+        617,
+        1347,
+        1350,
+        1352
+      ],
+      "mechanism": "Truthy AC numerator divided by all rows includes null/undefined as effectively Off; chart correctly preserves missing AC as null.",
+      "repro": "Two positive-fan rows ACtrue/null yield50% although no Off measured; known-state share100%, coverage1/2. All unknown AC with positive fans yields0%. Source evaluation only.",
+      "fix": "Expose known-state denominator/unknown coverage or label share of all returned rows known On. Do not silently substitute elapsed-duration duty cycle.",
+      "owner": "page/domain aggregate",
+      "confidence": "high-source",
+      "runtimeReproduced": false,
+      "dedup": "Residual audit-page-218 oldline603; no matching active repair. Support test445 pins original expression; preserve scenario meaning when correcting."
+    },
+    {
+      "id": "CC-004",
+      "severity": "medium",
+      "rule": "missing-workspace-range",
+      "file": "web/src/features/vehicle-systems/pages/ClimateControlPage.tsx",
+      "line": 454,
+      "mechanism": "useClimateHistory has only vehicle key/request (hook15,37-43); workspaceScope23-77 omits bothaliases. Handler.go86-93 defaults7days and supports start/end. History/table/charts/aggregates ignore analysis bounds.",
+      "repro": "Trace custom from/to on either alias: range=false, request remains /climate?vehicle_id=<id>. No API request sent.",
+      "fix": "Coordinate page useRangeState, both route registrations, typed bounds/query keys/cancellation and whole-result server filtering; keep live reads separate, no local picker.",
+      "owner": "parent-scoped page/hook/workspace integration",
+      "confidence": "high-source",
+      "runtimeReproduced": false,
+      "dedup": "Original audit-page-218 architecture range residual, not a new migration."
+    },
+    {
+      "id": "CC-005",
+      "severity": "medium",
+      "rule": "date-display-preferences",
+      "file": "web/src/features/vehicle-systems/pages/ClimateControlPage.tsx",
+      "line": 527,
+      "relatedLines": [
+        464,
+        626,
+        654,
+        1419,
+        1498
+      ],
+      "mechanism": "All formatDateTime/formatTime calls omit preferences. dateFormat.ts44-61/112-116 explicitly uses browser locale/timezone when options absent; saved locale/timezone/12-24h never supplied. Fallback timestamps memoized only on convertedChartData.",
+      "repro": "Host en-US/UTC plus saved de-DE/different timezone/24h: source calls still use host defaults. Keep history/tempunit stable to expose timestamp memo limitation. Not browser-tested.",
+      "fix": "Reuse preference-aware date boundary/options and effective-preference memo dependencies; retain UTC source timestamps and contextual timezone.",
+      "owner": "page display integration",
+      "confidence": "high-source",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "CC-006",
+      "severity": "medium",
+      "rule": "hardcoded-string",
+      "file": "web/src/features/vehicle-systems/pages/ClimateControlPage.tsx",
+      "line": 1071,
+      "relatedLines": [
+        768,
+        1182
+      ],
+      "confirmedOccurrenceCount": 3,
+      "mechanism": "Known English non-Off defrost mode renders raw in metric/banner, overheatProtection renders raw. Translated labels do not translate Normal/Max/On values; unlike identifiers these are domain-state labels.",
+      "repro": "Non-English t() plus latest.defrostMode=Max/overheatProtection=On still shows Max in two render sites and On in protection. Not executed.",
+      "fix": "Canonical localized known enum labels; keep unmapped raw state explicit/unknown. Parent owns any required catalog leaves.",
+      "owner": "page plus parent catalog if needed",
+      "confidence": "high-source",
+      "runtimeReproduced": false,
+      "dedup": "One group/three expressions; fallback constants passed to t() are exceptions."
+    },
+    {
+      "id": "CC-007",
+      "severity": "medium",
+      "rule": "inconsistent-level-presentation",
+      "file": "web/src/features/vehicle-systems/pages/ClimateControlPage.tsx",
+      "line": 385,
+      "relatedLines": [
+        159,
+        165,
+        172,
+        386,
+        411
+      ],
+      "mechanism": "Style rounds/clamps level; badge severity compares raw exact1/2, heater fraction prints raw.1.6 becomes Medium icon/label, danger badge, Medium(1.6/3). Cooling rounds numerator.",
+      "repro": "Existing ClimateControlPage.test.tsx592-607 fractional1.6 fixture declares Medium(2/3), contradicting current source expression. Not run: no actual test failure claimed.",
+      "fix": "Use consistent bounded presentation index while retaining raw signal separately; do not weaken original regression assertion.",
+      "owner": "page/colocated regression test",
+      "confidence": "high-source",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "CC-008",
+      "severity": "medium",
+      "rule": "read-action-readiness",
+      "file": "web/src/features/vehicle-systems/pages/ClimateControlPage.tsx",
+      "line": 716,
+      "relatedLines": [
+        445,
+        446,
+        480,
+        486,
+        710
+      ],
+      "mechanism": "Refresh always calls latest refetch with no vehicle guard. enabled=false prevents automatic loading, not manual refetch; hook28-33 still constructs empty ID query. Registry omits disabled prerequisites without select-vehicle explanation.",
+      "repro": "vehicleId=null/idle reads leaves Refresh enabled; handler calls refetch for /climate/latest?vehicle_id=. Backend handler118-121 rejects400. No request actually executed.",
+      "fix": "Guard/disable Refresh until valid vehicle and explain prerequisite, preserving latest-only Refresh and independent retries. This is a read action, not vehicle mutation.",
+      "owner": "page",
+      "confidence": "high-source",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "CC-009",
+      "severity": "medium",
+      "rule": "loading-announcement",
+      "file": "web/src/features/vehicle-systems/components/climate-modernization/ClimateSourceBoundary.tsx",
+      "line": 25,
+      "mechanism": "Initial loading maps ready. Skeleton.tsx25/43 aria-hides placeholders; PageLayout703-722 supplies no loading/busy; DataSourceNotice117 returns null when all delayed and no usable source. Existing SourceContent44-55 loading role/status branch bypassed.",
+      "repro": "All queries dataundefined/isLoadingtrue/isFetchingtrue/fetchStatusfetching/noerrors: boundaries ready, notice null, no page busy/loading transition. Source-traced, not screen-reader-tested.",
+      "fix": "Source-local loadingContent/status or existing non-gating busy announcement; never all-page gate away independent usable neighbors. Retain fatal-only replacement/retained behavior.",
+      "owner": "climate boundary/direct callers",
+      "confidence": "high-source",
+      "runtimeReproduced": false,
+      "dedup": "Original audit-page-218 loading residual; completed charging registry repair not reopened."
+    }
+  ],
+  "unprovedCandidates": [
+    {
+      "confirmed": false,
+      "topic": "Native mobile/theme/a11y/retained184px geometry",
+      "id": "C-001"
+    },
+    {
+      "confirmed": false,
+      "topic": "Backend observation and charging freshness",
+      "id": "C-002"
+    },
+    {
+      "confirmed": false,
+      "topic": "Actual unknown enum vocabulary",
+      "id": "C-003"
+    },
+    {
+      "confirmed": false,
+      "topic": "AI8h departure/21C default disclosure and retained inputs",
+      "id": "C-004"
+    },
+    {
+      "confirmed": false,
+      "topic": "Advisory confirmation/cancel/auth feedback contract",
+      "id": "C-005"
+    }
+  ],
+  "sectionCoverage": [
+    "climate-ai728: opt-in advisory/SI/defaults",
+    "climate-status739: latest/independent charging boundaries",
+    "climate-temperature797: all3 gauges, loading/null/zero/C-F",
+    "climate-comfort840: score/delta/status rawC thresholds/Fdelta offset",
+    "climate-systems931: all13 state metrics",
+    "climate-protection1171: all4 protection/passenger metrics",
+    "climate-seats1221:5heaters/2cooling/auto/ventilation/legend",
+    "climate-efficiency1316: historical3 plus independent livecomfort",
+    "climate-temperature-history1378:3series/alternative/legend",
+    "climate-hvac-history1458:ACnull gaps/fanzero/alternative",
+    "climate-history-table1543:7fields/sort/filter/page/mobile allColumns details"
+  ],
+  "actionCoverage": [
+    "Latest-only Refresh716; no-vehicle guard gap",
+    "Source-local retries via ClimateSourceBoundary31",
+    "Named/aggregate enabled-source retries DataSourceNotice199",
+    "OperationalBrief review details, native focusNOTRUN",
+    "DataTable sorting/filtering/paging/loaded exports",
+    "Mobile quick view/Close/full details",
+    "5series legend visibility/keys; fullscreen/export intentionallyfalse",
+    "Ask Helix manual advisory-only POST; no climate application/control commands"
+  ],
+  "hashPins": [
+    {
+      "file": "web/src/features/vehicle-systems/pages/ClimateControlPage.tsx",
+      "beforeSha256": "AE80D23BF52459DB54A64B8F233FA90869183F4879727BC67730FC4AF5B7E6BA",
+      "afterSha256": "AE80D23BF52459DB54A64B8F233FA90869183F4879727BC67730FC4AF5B7E6BA",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/vehicle-systems/pages/ClimateControlPage.test.tsx",
+      "beforeSha256": "59BDFCDAA830C0BB3F2D709DAE01D5CA0B1F13ADFA4AC69A09B2170B065F1E18",
+      "afterSha256": "59BDFCDAA830C0BB3F2D709DAE01D5CA0B1F13ADFA4AC69A09B2170B065F1E18",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/feedback/Skeleton.tsx",
+      "beforeSha256": "B968EC500FBB95B92595C2CFD0B7EBEDCFDB7BFE9FBE9C68846304F6482DBBF7",
+      "afterSha256": "B968EC500FBB95B92595C2CFD0B7EBEDCFDB7BFE9FBE9C68846304F6482DBBF7",
+      "unchanged": true
+    }
+  ],
+  "verification": {
+    "finalDiskParse": "PASS",
+    "complete38PinGate": "FAILED-reconstruction",
+    "finalPinRecheck": "PASS scoped3; remaining35 NOTRUN",
+    "pinnedFiles": 3,
+    "pinMismatches": 0
+  },
+  "testReceipt": {
+    "status": "NOTRUN",
+    "pageDeclaredItStatements": 28,
+    "directSupportDeclaredItStatements": 15,
+    "totalInspectedItStatements": 43,
+    "runnerDiscovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "historicalOnly": "Queue records parent28 executed/0failed at Phase5 source acceptance. Not a current run or pin-equivalent current proof.",
+    "limits": "Tests mock hooks/AI/charts and echo English fallbacks. Source/class/adapter assertions are not real localization, plotted data, mobile, keyboard, backend or authentication proof. Relevant e2e declarations install response mocks; not native acceptance, never executed."
+  },
+  "preservation": {
+    "lineCount": 1583,
+    "sectionCount": 11,
+    "layoutCards": 10,
+    "embeddedCharts": 2,
+    "metricRenderSites": 21,
+    "gaugeCells": 3,
+    "tableColumns": 7,
+    "heatedSeatPositions": 5,
+    "cooledSeatPositions": 2,
+    "sourceWriteLeaseAcquired": false
+  },
+  "deduplication": {
+    "priorAudit": "docs/frontend-audits/audit-page-218.json",
+    "existingResiduals": [
+      "CC-003 AC denominator",
+      "CC-004 historical bounds",
+      "CC-009 source loading",
+      "CC-008 prerequisite context"
+    ],
+    "completedNotRedispatched": [
+      "phase4-climate-source-registry-repair at9e74912f13: all3 sources now registered independently",
+      "phase3-aipreheat-precool-recommender: corrected truthful command-center/manual7AM copy",
+      "phase5-page-vehicle-systems-climate-control: mobile all-column details, chart alternatives, container grids and neutral decorative icons now declared"
+    ],
+    "activeExactRepairOwnerMatches": [],
+    "limits": "Exact climate/direct-support queue names and paths searched; generic Carbon/Behavioral source repairs do not own these mechanisms. Parent must reconcile newer queue changes and create narrow fixes, never redispatch completed migration."
+  },
+  "guidelineChecks": {
+    "pageMatchedLineCounts": {
+      "style=": 0,
+      "raw-lowercase-controls": 0,
+      "direct-vendor-import": 0,
+      "old-api-import": 0,
+      "api-v1-prefix": 0,
+      "camelcase-url-param": 0,
+      "fetch-or-useEffect": 0,
+      "PageLayout-or-PageContainer": 1,
+      "conditional-and-render": 3
+    },
+    "exceptions": [
+      "PageLayout delegates PageContainer: not missing wrapper",
+      "Three conditional badges are supplemental flags; all panel shells persist, not hidden-section",
+      "Sanctioned AI-off gate hides only opt-in advisory UI",
+      "Fallback English seat/constants are passed through t()",
+      "Recharts API and palette-index colors are not static-inline-style",
+      "Shared building-block raw HTML is expected",
+      "useAiStream manual typed advisory POST is not page ad-hoc loading"
+    ],
+    "backendHandler": {
+      "sql-interpolationGrepMatches": 0,
+      "fmt-log-printlnGrepMatches": 0,
+      "panicGrepMatches": 0,
+      "contextCandidates": 2,
+      "disposition": "Both matches are URL.Query(), not DB calls. Timeline(r.Context()) at95 and LiveState(r.Context()) at124 preserve context."
+    },
+    "rawOutput": "Exact command patterns/counts/lines pasted in ignored log; static scans not compiler/lint/native proof."
+  },
+  "evidenceLimits": {
+    "notRun": [
+      "scoped/Vitest tests",
+      "npx tsc --noEmit/global compiler",
+      "lint/build/full suites",
+      "official audit/preservation helper",
+      "browser/Playwright/API/AI stream/vehicle commands",
+      "screenshots/axe/keyboard/focus/contrast/forced-colors/motion",
+      "servers/installs/subagents"
+    ],
+    "parentShared5173Untouched": true,
+    "applicationTestsCatalogGitWrites": false,
+    "failures": [
+      {
+        "shellId": "1302",
+        "hostExit": 0,
+        "subcommandFailures": 2,
+        "error": "Get-FileHash and Select-String guessed chartUtils.ts: FileNotFound. Correct owner chartDefaults.tsx subsequently pinned/read. Nonterminating errors not hidden by shell exit0."
+      },
+      {
+        "shellId": "1490",
+        "hostExit": 1,
+        "error": "Windows os206 command too long; artifact command did not launch; bounded artifact-only retry."
+      },
+      {
+        "hostExit": 1,
+        "error": "Pin manifest reconstruction recovered3/38; explicit assertion failed; no source drift found among3, other35 finalpins NOTRUN",
+        "shellId": "1566"
+      }
+    ],
+    "rawLog": "web/logs/phase6-qa-vehicle-systems-climate-control.log",
+    "snapshotLimit": "Pins cover read source/test/support files only, not unrelated dirty worktree files or changing parent docs. Navigation-only charts barrel pin followed initial export grep."
+  },
+  "documentsRead": [
+    "docs/orchestrator-loop.md ENTIRE sole authority",
+    "docs/frontend-design-contract.md applicable1-655,879-1064; unrelated append-only geometry/annotation addenda not fully read",
+    "docs/frontend-mission.md relevant0/1, responsive/state/SI/date/a11y/extreme and43-45 gates",
+    "docs/frontend-inventory.md climate row269 and P428/G007 excerpt",
+    "docs/session-handoff.md1-145,1585-1625,2273-2300",
+    "migration-queue.md1-75,280-328, exact attempt/source acceptance/direct-owner matches; not full2.5MB history",
+    "docs/frontend-audits/audit-page-218.json ENTIRE",
+    "docs/frontend-worker-conventions.md ENTIRE",
+    ".github/copilot-instructions.md ENTIRE split reads",
+    ".github/instructions/react-frontend.instructions.md ENTIRE split reads",
+    ".github/instructions/frontend-si-cutover.instructions.md ENTIRE",
+    ".github/instructions/unit-conversion.instructions.md ENTIRE; SI-only current contract overrides old examples",
+    "Historical agent-loop-playbook.md/shared-library-loop.md fully read and .agents/state.md startup excerpt before locating sole current authority; not competing queue"
+  ],
+  "needs": [
+    "Parent queue bounded domain identity/aggregate fixes forCC-001/002/003, preserving original tests/scenarios",
+    "Parent-exclusive page/hook/workspace bounds integrationCC-004; both aliases; no local picker",
+    "Scoped date/enum/fractional/readiness/loading fixesCC-005..009; only parent catalog owner adds required leaves",
+    "Authorized synthetic native/backend-contract review for candidates; deduplicate inherited geometry/native owners and do not reset helper budgets",
+    "PARTIAL: final38-support pin manifest/recheck could not be reconstructed before return boundary. Only page/test/Skeleton3pins finally verified; other initial SHA256 outputs remain tool receipts, not a completed final pin check."
+  ],
+  "release": {
+    "reportWriteOwnershipReleased": true,
+    "sourceWriteOwnershipReleased": true,
+    "commandOwnershipReleased": true,
+    "logWriteOwnershipReleased": true,
+    "noBackgroundAuditCommands": true,
+    "noSourceWriteLeaseWasAcquired": true,
+    "noFurtherWrites": true
+  },
+  "createdAtUtc": "2026-10-14T01:42:33.8022747Z",
+  "returnedAtUtc": "2026-10-14T01:45:01.5663690Z"
+}

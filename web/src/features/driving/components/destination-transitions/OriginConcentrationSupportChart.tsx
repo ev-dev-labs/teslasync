@@ -50,6 +50,23 @@ export function OriginConcentrationSupportChart({
         })),
     [model.states, t],
   );
+  // CSV keeps the complete origin population with unrounded source values;
+  // missing indices stay empty rather than becoming zero.
+  const exportRows = useMemo(
+    () =>
+      model.states
+        .filter((origin) => origin.outgoingTransitions > 0)
+        .map((origin) => ({
+          origin: origin.label,
+          transition_concentration_index: origin.transitionConcentrationIndex ?? null,
+          leading_successor_observed_share: origin.leadingSuccessorObservedShare ?? null,
+          outgoing_transitions: origin.outgoingTransitions,
+          distinct_observed_successors: origin.distinctObservedSuccessors,
+          support_index: origin.support.index,
+          evidence_band: origin.support.band,
+        })),
+    [model.states],
+  );
   const ready = state.isResolved && !state.error && rows.length > 0;
   const concentrationName = t(
     'destinationTransitions.originChart.concentrationSeries',
@@ -83,6 +100,7 @@ export function OriginConcentrationSupportChart({
         chartKey="destination-origin-concentration"
         exportable={ready}
         exportFilename="destination-origin-concentration"
+        exportData={ready ? exportRows : undefined}
         data={ready ? rows : []}
         dataColumns={[
           {

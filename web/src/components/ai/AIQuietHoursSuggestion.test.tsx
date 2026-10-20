@@ -532,7 +532,9 @@ describe('AIQuietHoursSuggestion — proposal capture + apply', () => {
     expect(root).toHaveTextContent('07:30')
     expect(root).toHaveTextContent('America/Los_Angeles')
     expect(root).toHaveTextContent(/Weekday bitmask:\s*127/)
-    expect(root).toHaveTextContent(/Bypass severities:\s*critical/)
+    // Severities render through the localized display labels
+    // (quietHours.severity.*, e.g. 'Critical'), not the raw enum.
+    expect(root).toHaveTextContent(/Bypass severities:\s*Critical/)
 
     // Apply is enabled once the stream has completed (isBusy false) and
     // forwards the exact scalar patch — enabled:true + the five window

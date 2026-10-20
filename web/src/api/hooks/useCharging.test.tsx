@@ -357,6 +357,29 @@ describe('useChargeTelemetry', () => {
     expect(result.current.data).toHaveLength(2);
   });
 
+  it('adapts endpoint timestamps and thermal operands to SI without double-counting', async () => {
+    mockedRequest.mockResolvedValueOnce([
+      { ts: '2026-10-01T10:00:00Z', created_at: '2026-10-01T09:00:00Z', power_w: 11000, energy_added: 2.5 },
+      { created_at: '2026-10-01T11:00:00Z', ac_charging_power_w: 7000, battery_heater_power_w: null },
+    ]);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useChargeTelemetry(42), {
+      wrapper: Wrapper,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const [merged, split] = result.current.data!;
+    // Endpoint ts wins over created_at; merged power_w feeds AC only (DC stays null: no double count).
+    expect(merged.ts).toBe('2026-10-01T10:00:00Z');
+    expect(merged.ac_charging_power_w).toBe(11000);
+    expect(merged.dc_charging_power_w).toBeNull();
+    // Legacy kWh counter converts to canonical Wh.
+    expect(merged.ac_charging_energy_in_wh).toBe(2500);
+    // created_at fallback; explicit AC wins; unsupported heater power stays unknown.
+    expect(split.ts).toBe('2026-10-01T11:00:00Z');
+    expect(split.ac_charging_power_w).toBe(7000);
+    expect(split.battery_heater_power_w).toBeNull();
+  });
+
   it('is disabled when sessionId is null', async () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useChargeTelemetry(null), {
@@ -512,6 +535,7 @@ describe('useRefreshTeslaChargingHistory', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/tesla/charging/history/refresh');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: teslaChargingHistoryKeys.all,
     });
@@ -645,6 +669,7 @@ describe('useOptimizeCharge', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/charge-planner/optimize');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual(optimizeReq);
     expect(successToast).toHaveBeenCalledWith(
       'toast.charging.optimize.success',

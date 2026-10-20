@@ -6317,6 +6317,16 @@ components:
           format: int64
           description: Drive duration in seconds (SI canonical).
           example: 3312
+        start_odometer_m:
+          type: number
+          nullable: true
+          description: Recorded odometer at departure in meters; null when unavailable.
+          example: 120000000
+        end_odometer_m:
+          type: number
+          nullable: true
+          description: Recorded odometer at arrival in meters; null while unavailable or in progress.
+          example: 120124761
         avg_speed_mps:
           type: number
           description: Average speed in meters per second (SI canonical).

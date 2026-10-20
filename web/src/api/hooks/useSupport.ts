@@ -5,6 +5,7 @@ import { request } from '../client'
 import { useMutationToast } from './_toastHelpers'
 import { useVersionInfo } from './useSettings'
 import { useSystemHealth } from './useAdmin'
+import { deriveDataState, type DataState, type DataStateSource } from '@/api/dataState'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { detectMissingFeatures } from '@/lib/browserCompat'
 import { getRecentReportsForFeedback } from '@/lib/errorReporter'
@@ -47,8 +48,44 @@ export interface UseSupportBundleResult {
   /** True while version/health are still resolving. The bundle is still
    *  usable: unresolved fields read `unknown` rather than blocking. */
   isLoading: boolean
+  /** Query trust is independent of successful local bundle construction.
+   *  updatedAt is receipt time, not backend observation time. */
+  sources: {
+    version: SupportBundleSourceState
+    health: SupportBundleSourceState
+  }
   /** Triggers a client-side download of the bundle. */
   download: () => void
+}
+
+export interface SupportBundleSourceState extends Omit<DataState<unknown>, 'data'> {
+  isLoading: boolean
+  isPending: boolean
+  /** Neither endpoint supplies a source observation timestamp. */
+  observedAt: null
+}
+
+function projectSource<T>(query: DataStateSource<T>): SupportBundleSourceState {
+  const state = deriveDataState({
+    ...query,
+    data: query.data ?? undefined,
+    dataUpdatedAt: Number.isFinite(query.dataUpdatedAt) ? query.dataUpdatedAt : 0,
+  })
+  return {
+    hasData: state.hasData,
+    status: state.hasData && query.isStale && state.status === 'ok' ? 'stale' : state.status,
+    provenance: state.provenance,
+    isRefreshing: state.isRefreshing,
+    isRefreshBlocked: state.isRefreshBlocked,
+    refreshError: state.refreshError,
+    fatalError: state.fatalError,
+    updatedAt: state.updatedAt,
+    ageMs: state.ageMs,
+    retry: state.retry,
+    isLoading: query.isLoading === true,
+    isPending: !state.hasData && (query.isPending === true || state.status === 'initial'),
+    observedAt: null,
+  }
 }
 
 /**
@@ -58,8 +95,14 @@ export interface UseSupportBundleResult {
  * and redacts — this hook never hands raw API objects to the bundle.
  */
 export function useSupportBundle(): UseSupportBundleResult {
-  const { data: version, isLoading: versionLoading } = useVersionInfo()
-  const { data: health, isLoading: healthLoading } = useSystemHealth()
+  const versionQuery = useVersionInfo()
+  const healthQuery = useSystemHealth()
+  const version = versionQuery.data
+  const health = healthQuery.data
+  const sources = {
+    version: projectSource(versionQuery),
+    health: projectSource(healthQuery),
+  }
   const online = useOnlineStatus()
 
   const bundle = useMemo(() => {
@@ -117,7 +160,8 @@ export function useSupportBundle(): UseSupportBundleResult {
     bundle,
     json,
     filename,
-    isLoading: versionLoading || healthLoading,
+    isLoading: versionQuery.isLoading || healthQuery.isLoading,
+    sources,
     download,
   }
 }

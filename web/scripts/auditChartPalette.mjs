@@ -13,10 +13,9 @@
 // non-zero and the gate fails. Hue distance uses circular distance so wraps
 // like 354° → 25° measure the true 31° gap rather than a naive 329°.
 //
-// The palettes are duplicated here (kept in sync with `web/src/lib/colors.ts`)
-// so this script does not need a TypeScript loader to import the source. A
-// guard at the bottom greps the source file for both arrays' opening lines so
-// drift is caught on the next CI run.
+// Read the exported constant arrays from the canonical TypeScript AST, not
+// duplicated palettes or incidental literals in comments/unrelated constants.
+// Missing, malformed, or unsupported initializers fail closed.
 //
 // Run via: `node scripts/auditChartPalette.mjs`
 // `npm run audit:palette`
@@ -25,33 +24,43 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { converter } from 'culori';
+import ts from 'typescript';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const COLORS_SRC = join(__dirname, '..', 'src', 'lib', 'colors.ts');
 
-/** Must match `CHART_COLORS_CB_SAFE` in web/src/lib/colors.ts. */
-const CHART_COLORS_CB_SAFE = [
-  '#0072B2',
-  '#E69F00',
-  '#009E73',
-  '#F0E442',
-  '#56B4E9',
-  '#D55E00',
-  '#CC79A7',
-  '#4B4B4B',
-];
+const PALETTE_NAMES = ['CHART_COLORS_CB_SAFE', 'CHART_COLORS_NEON'];
 
-/** Must match `CHART_COLORS_NEON` in web/src/lib/colors.ts. */
-const CHART_COLORS_NEON = [
-  '#00f0ff',
-  '#10b981',
-  '#a855f7',
-  '#f59e0b',
-  '#4f46e5',
-  '#ef4444',
-  '#ec4899',
-  '#14b8a6',
-];
+export function readCanonicalPalettes(source) {
+  const file = ts.createSourceFile(COLORS_SRC, source, ts.ScriptTarget.Latest, true);
+  if (file.parseDiagnostics.length) {
+    throw new Error('canonical palette source has TypeScript syntax errors');
+  }
+  return Object.fromEntries(PALETTE_NAMES.map((name) => {
+    const declarations = file.statements
+      .filter((statement) => ts.isVariableStatement(statement)
+        && statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+        && (statement.declarationList.flags & ts.NodeFlags.Const))
+      .flatMap((statement) => [...statement.declarationList.declarations])
+      .filter((declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === name);
+    if (declarations.length !== 1) throw new Error(`${name}: expected one canonical exported const`);
+    let initializer = declarations[0].initializer;
+    while (initializer && (ts.isAsExpression(initializer)
+      || ts.isSatisfiesExpression(initializer) || ts.isParenthesizedExpression(initializer))) {
+      initializer = initializer.expression;
+    }
+    if (!initializer || !ts.isArrayLiteralExpression(initializer) || initializer.elements.length !== 8) {
+      throw new Error(`${name}: expected eight canonical colors (seven adjacent pairs)`);
+    }
+    const palette = initializer.elements.map((element, index) => {
+      if (!ts.isStringLiteral(element) || !/^#[\da-f]{6}$/i.test(element.text)) {
+        throw new Error(`${name}[${index}]: expected a resolved six-digit hex color`);
+      }
+      return element.text;
+    });
+    return [name, palette];
+  }));
+}
 
 const MIN_DELTA_L = 0.1;
 const MIN_DELTA_H_DEG = 30;
@@ -71,7 +80,7 @@ function adjacentDistance(a, b) {
   return { dL, dH };
 }
 
-function check(name, palette) {
+function check(palette, logger) {
   let failed = 0;
   for (let i = 0; i < palette.length - 1; i++) {
     const a = palette[i];
@@ -81,10 +90,10 @@ function check(name, palette) {
     const status = ok ? 'pass' : 'FAIL';
     const line = `  [${i}] ${a} -> ${b}  dL=${dL.toFixed(3)}  dH=${dH.toFixed(1)}°  ${status}`;
     if (ok) {
-      console.log(line);
+      logger.log(line);
     } else {
-      console.error(line);
-      console.error(
+      logger.error(line);
+      logger.error(
         `        adjacent pair too similar — need dL >= ${MIN_DELTA_L} OR dH >= ${MIN_DELTA_H_DEG}°`,
       );
       failed += 1;
@@ -93,44 +102,29 @@ function check(name, palette) {
   return failed;
 }
 
-function checkSourceContains(literal, label) {
-  let src = '';
+export function auditCanonicalPalettes(source, logger = console) {
+  let palettes;
   try {
-    src = readFileSync(COLORS_SRC, 'utf8');
+    palettes = readCanonicalPalettes(source);
+  } catch (err) {
+    logger.error(`drift guard: ${err.message}`);
+    return 1;
+  }
+  let failed = 0;
+  logger.log(`=== canonical drift guard: ${COLORS_SRC} ===`);
+  for (const name of PALETTE_NAMES) {
+    logger.log(`=== ${name} ===`);
+    failed += check(palettes[name], logger);
+  }
+  if (failed === 0) logger.log('OK — both canonical palettes pass adjacency thresholds.');
+  return failed === 0 ? 0 : 1;
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  try {
+    process.exitCode = auditCanonicalPalettes(readFileSync(COLORS_SRC, 'utf8'));
   } catch (err) {
     console.error(`drift guard: cannot read ${COLORS_SRC}: ${err.message}`);
-    return 1;
+    process.exitCode = 1;
   }
-  if (!src.includes(literal)) {
-    console.error(
-      `drift guard: ${label} hex "${literal}" not found in ${COLORS_SRC}.`,
-    );
-    console.error(
-      '              Update both this script and web/src/lib/colors.ts together.',
-    );
-    return 1;
-  }
-  return 0;
 }
-
-let exitCode = 0;
-
-console.log('=== CHART_COLORS_CB_SAFE ===');
-exitCode += check('CB_SAFE', CHART_COLORS_CB_SAFE);
-
-console.log('=== CHART_COLORS_NEON ===');
-exitCode += check('NEON', CHART_COLORS_NEON);
-
-console.log('=== drift guard ===');
-// Pick a representative anchor hex from each palette. Drift on any other
-// entry trips the adjacency check above; these guards catch wholesale
-// rename / removal of either palette.
-exitCode += checkSourceContains(CHART_COLORS_CB_SAFE[0], 'CB_SAFE[0]');
-exitCode += checkSourceContains(CHART_COLORS_CB_SAFE[CHART_COLORS_CB_SAFE.length - 1], 'CB_SAFE[last]');
-exitCode += checkSourceContains(CHART_COLORS_NEON[0], 'NEON[0]');
-exitCode += checkSourceContains(CHART_COLORS_NEON[CHART_COLORS_NEON.length - 1], 'NEON[last]');
-
-if (exitCode === 0) {
-  console.log('OK — both palettes pass adjacency thresholds.');
-}
-process.exit(exitCode === 0 ? 0 : 1);

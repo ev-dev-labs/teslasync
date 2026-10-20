@@ -1,0 +1,431 @@
+{
+  "item": "phase6-qa-advanced-behavioral-sentinel",
+  "phase": 6,
+  "reviewType": "read-only-finished-page-source-QA",
+  "status": "DONE_SOURCE_REVIEW_WITH_FINDINGS",
+  "pageAcceptance": "NOT_ESTABLISHED",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+  "routes": ["/intelligence/behavioral-sentinel"],
+  "purpose": "Explain command, identity-pattern and telemetry-integrity anomalies without attributing behavior to a person.",
+  "primaryGoal": "Review scoped findings, their confidence, evidence, quality and limitations without mistaking anomalies for attribution or proof of compromise.",
+  "scope": {
+    "acceptedSourceOnly": true,
+    "priorPhase6ReportsRead": false,
+    "remigrationPerformed": false,
+    "ownedFiles": [
+      "docs\\frontend-audits\\phase6-qa-advanced-behavioral-sentinel.json",
+      "web\\logs\\phase6-qa-advanced-behavioral-sentinel.log"
+    ],
+    "applicationWrites": 0,
+    "sourceScope": [
+      "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx"
+    ],
+    "supportingReadScope": "Directly relevant shared primitives, formatting/trust hooks, canonical English keys, workspace policy and route composition were inspected read-only. They are contract context, not runtime/API evidence."
+  },
+  "guidanceRead": [
+    "migration-queue.md:159-169,224: rolling finished-page source-QA contract and this existing item",
+    "docs\\frontend-worker-conventions.md: ownership, audit reporting, evidence limits",
+    "docs\\frontend-mission.md: principles; responsive/mobile; empty/error/offline; accessibility; sections 43-45",
+    "docs\\frontend-design-contract.md: MDC-001/002/010-016/020-026/031-032/040-046/060-070",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\prompts\\audit-pages.prompt.md",
+    ".github\\prompts\\modern-ui\\0000-design-language.md",
+    ".github\\prompts\\modern-ui\\personas\\4-accessibility-auditor.md",
+    ".github\\prompts\\modern-ui\\personas\\5-qa-consistency-reviewer.md"
+  ],
+  "guidanceResolution": "The explicit source-only assignment and current finished-page/design contract govern. Older full-suite/Git/browser audit instructions were not executed; legacy source-unit conversion examples do not supersede SI-canonical rules.",
+  "preservation": {
+    "snapshotObservedAt": "2026-10-13T18:16:22.3767309Z",
+    "sources": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+        "lines": 172,
+        "sha256": "ad174f1c72843bec62e5c83c4e0f8363c4f656efb87f5eb5e16e4b0083a99782"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "lines": 95,
+        "sha256": "9cc182a39da7697644c2d06dedaa20e50697bc130401e47983ccd3b43bd501be"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "lines": 132,
+        "sha256": "68336512c44aca2575339906b1f016eb180a30a1abcb96e42ba0fc27fe0c39b4"
+      }
+    ],
+    "composedReviewedLines": 399,
+    "originalComparison": "NOTRUN: no Git or original-baseline reconstruction; no source was changed. Current composed line count is not a preservation percentage.",
+    "sections": [
+      "Persistent anomaly-is-not-attribution warning",
+      "Explainable findings panel, including per-finding identity/type, time, severity, confidence and explanation",
+      "Per-finding evidence and limitations",
+      "Conditional exact-total pagination",
+      "Evidence, quality and limitations panel: quality, evidence sources, limitations and explicitly unsupported attribution/intent"
+    ],
+    "counts": {
+      "topLevelDataPanelInstances": 2,
+      "persistentWarning": 1,
+      "summarySemanticSections": 3,
+      "perFindingArticleTemplate": 1,
+      "paginationTemplate": 1,
+      "directGlassPanelOrChartContainerMarkers": 0
+    },
+    "countInterpretation": "InsightPanel delegates to existing LayoutCard/SourceContent. Zero direct GlassPanel/ChartContainer tags does not mean sections were removed.",
+    "actions": [
+      "Shared pagination: previous/next, available first/last/page slots and validated direct jump",
+      "Initial-failure retry through InsightPanel/SourceContent",
+      "Retained-error/paused recovery through the existing trust warning",
+      "Authoritative-empty refresh through the existing empty-state action",
+      "Global vehicle selection remains shell-owned; the page resets pagination when vehicle scope changes"
+    ],
+    "privacy": "The page makes no mutation and has no attribution/person-identity action. Its persistent warning and explicitly unsupported identity/intent statements must survive any future fix."
+  },
+  "dataSources": [
+    {
+      "hook": "useBehavioralSentinel(vehicleId,20,(page-1)*20)",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "lines": [29, 48, 72, 98, 103],
+      "method": "GET",
+      "hookPath": "/advanced-intelligence/behavioral-sentinel?vehicle_id=<selected>&limit=20&offset=<page offset>",
+      "sourceOwner": "Existing advanced-intelligence typed TanStack Query hook",
+      "routeAgreement": {
+        "status": "SOURCE_MATCH",
+        "router": "internal\\api\\router.go:3960",
+        "mount": "internal\\handler\\v1\\advancedintelligence\\handler.go:69-76",
+        "mechanism": "router.go invokes MountRoutes; its /advanced-intelligence group registers GET /behavioral-sentinel.",
+        "parameters": ["vehicle_id", "limit", "offset"],
+        "cancellation": "The hook forwards its AbortSignal to request().",
+        "enabled": "Only a non-null positive selected vehicle enables the query.",
+        "liveApiProof": "NOTRUN"
+      }
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "hookPath": "/vehicles",
+      "hookCitation": "web\\src\\api\\hooks\\useVehicles.ts:73-79",
+      "routeCitation": "internal\\api\\router.go:3362-3363",
+      "routeAgreement": "SOURCE_MATCH_ONLY",
+      "note": "This is transitive workspace-selection context; no vehicle or identity was requested."
+    }
+  ],
+  "components": [
+    "PageLayout -> existing PageContainer",
+    "AlertBanner",
+    "FadeIn",
+    "InsightPanel -> LayoutCard, SourceContent, DataFreshness, StaleRefreshWarning",
+    "EvidencePanel -> InsightPanel, KVList, EmptyState",
+    "Text, Badge, Icon and Pagination from category barrels"
+  ],
+  "states": {
+    "noVehicle": "Upper panel receives no query and shows the vehicle prerequisite, not a sentinel-result claim. The lower panel still renders; its dynamic-result claims are covered by BS001.",
+    "initialFetching": "Upper query-aware panel resolves to loading and shared source skeletons. Lower panel is query-unaware: BS001.",
+    "initialPaused": "Upper panel explicitly says evidence query is paused and no empty result is inferred. Lower panel is query-unaware: BS001.",
+    "initialUnresolvedIdle": "Upper panel says evidence availability has not resolved yet. Lower panel is query-unaware: BS001.",
+    "initialFatal": "Upper panel uses fatalError with retry without deleting neighboring shells. Lower panel still implies returned-result absence: BS001.",
+    "resolvedEmpty": "Upper panel presents the supported no-findings message with refresh; lower quality and page limitations can still render. Empty items are not silently converted into measured zero.",
+    "populated": "Finding cards, nested evidence/limitations and summary render from the selected query payload.",
+    "backgroundRefresh": "Upper panel exposes data freshness and retains payload.",
+    "retainedFailureOrPaused": "Upper panel retains content and displays nonblocking trust/recovery. Lower panel retains data but does not receive local query/freshness state: part of BS001; no claim that the entire page lacks a warning.",
+    "pageClamp": "The effect clamps only a successful non-placeholder response with a valid exact total and matching requested offset.",
+    "vehicleChange": "Render-time guarded scope comparison resets page to one before calculating the new offset; the hook key includes vehicle, limit and offset."
+  },
+  "nullSafety": {
+    "sourceReviewed": [
+      "query.data?.items ?? [] before length/map/flatMap",
+      "Finding evidence and limitations use nullish-array guards",
+      "EvidencePanel normalizes optional top-level arrays and handles missing quality",
+      "Missing/null/invalid dates use the shared date placeholder",
+      "Confidence is checked with Number.isFinite",
+      "Total must be a nonnegative safe integer before pagination and page clamping"
+    ],
+    "limitations": "These guards do not validate malformed object/array-element shapes. No malformed real response, fixture or runtime exception was observed; see BS-C02."
+  },
+  "SIAndFormatting": {
+    "SI": "The sentinel renderer handles percentages, counts and timestamps, not distance/speed/energy/pressure measurements. No legacy converter, inline unit factor or guessed SI conversion occurs in the three reviewed files.",
+    "numbers": "Finding confidence and quality coverage use useNumberFormatting; quality sample counts use fmtInt. Evidence sample captions bypass fmtInt and have singular/plural debt: BS004.",
+    "time": "Finding cards use useDateFormat. Evidence summary dates call the unbound library formatter: BS002.",
+    "workspace": {
+      "route": "/intelligence/behavioral-sentinel",
+      "sourceDerivedScope": { "range": false, "vehicle": true },
+      "citation": "web\\src\\lib\\workspaceScope.ts:23-69,95-131,156-170",
+      "result": "The route is not range-enabled and is not vehicle-disabled. The page consumes selected vehicle and has no duplicate range/vehicle picker. No missing date-bound defect is inferred for this endpoint."
+    }
+  },
+  "confirmedIssueCount": 4,
+  "confirmedIssues": [
+    {
+      "id": "BS001",
+      "severity": "medium",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+      "line": 160,
+      "related": [
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:13-18,40-46,70-72,94-100,113-119",
+        "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx:39-47,83-89"
+      ],
+      "rule": "MDC-026: unresolved/failed data is not an authoritative empty or unsupported result",
+      "detail": "The summary panel receives only data fields, not the sentinel query state. Its own InsightPanel defaults to ready. Before any response, or after an initial failure, it says quality metadata is unsupported, no supporting evidence was returned and no additional limitations were returned. The upper panel correctly distinguishes these states, but the lower source-bound assertions do not.",
+      "mechanism": "query.data is undefined -> quality/limitations are undefined and findings is [] -> EvidencePanel normalizes absent data -> its query-free InsightPanel renders result-like absence messages. Retained summary data likewise has no local freshness/retry context even though the upper panel does.",
+      "sourceDerivedRepro": [
+        "Trace an enabled sentinel query with no retained payload and fetchStatus paused, fetching, or an initial fatal error.",
+        "At page lines160-163 the summary still mounts with undefined quality/limitations and an empty evidence list.",
+        "Trace EvidencePanel's false/empty branches and its query-free InsightPanel: absence messages render independently of the upper loading/paused/error state."
+      ],
+      "reproExecution": "NOTRUN; deterministic source-path derivation only, no query fixture or request created",
+      "fix": "A separately assigned fix can thread the existing structural query/source-state through EvidencePanel and its InsightPanel, preserving the shell and static unsupported-attribution explanations while distinguishing dynamic loading, unresolved/paused, fatal, authoritative empty and retained states.",
+      "owner": "feature-shared EvidencePanel integration plus this page caller",
+      "confidence": "high-source"
+    },
+    {
+      "id": "BS002",
+      "severity": "medium",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 62,
+      "related": [
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:6,90,92",
+        "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx:35,93",
+        "web\\src\\hooks\\useDateFormat.ts:79-98",
+        "web\\src\\lib\\dateFormat.ts:29-60"
+      ],
+      "rule": "MDC-044: consistent user locale/timezone at the display boundary",
+      "detail": "The same page uses settings-bound locale/timezone for finding timestamps but browser-default locale/timezone for observation-window and evidence-source timestamps.",
+      "mechanism": "EvidencePanel imports formatDateTime from lib/dateFormat and passes no FormatOptions. That helper uses browser defaults when opts are absent. The page instead calls useDateFormat, which binds settings locale and the effective user/vehicle/UTC mode.",
+      "sourceDerivedRepro": [
+        "Choose any legitimate settings locale or effective timezone different from browser defaults.",
+        "Follow the finding timestamp through the page hook and an evidence/window timestamp through EvidencePanel's no-options call.",
+        "Both receive timestamps but resolve different display contexts; changing user preferences cannot bind the latter calls."
+      ],
+      "reproExecution": "NOTRUN; no settings were changed and no displayed timestamps were captured",
+      "fix": "Use the existing useDateFormat hook within EvidencePanel, or pass the already bound formatter through its existing feature interface. Preserve null/invalid placeholders and raw timestamps.",
+      "owner": "feature-shared EvidencePanel",
+      "confidence": "high-source"
+    },
+    {
+      "id": "BS003",
+      "severity": "low",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 57,
+      "related": [
+        "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx:26-30,97",
+        "web\\src\\types\\advancedIntelligence.ts:9-18"
+      ],
+      "rule": "MDC-044 and frontend i18n instructions: localize UI status labels",
+      "detail": "The quality badge renders the wire enum directly. The finding badge similarly renders severity tokens that the page already interprets as known UI statuses. Neither presentation calls t(), so these labels remain unchanged when the UI language changes.",
+      "mechanism": "Badge children are quality.status and finding.severity. Quality is a closed sufficient/limited/insufficient enum; severityVariant recognizes several English status tokens but only changes color.",
+      "sourceDerivedRepro": [
+        "For a supported quality status, trace its value through the Badge children expression.",
+        "A language change re-renders translated surrounding labels, but these children remain the original enum strings because no localized presentation mapping is used."
+      ],
+      "reproExecution": "NOTRUN; no locale was switched or browser label observed",
+      "fix": "Localize known status labels using existing suitable verdict/severity catalog ownership, retaining raw wire/cache values and explicit fallback handling for unknown severities. Do not translate arbitrary user/server prose as though it were a UI enum.",
+      "owner": "EvidencePanel and sentinel badge presentation; catalog integration only if a verified key is missing",
+      "confidence": "high-source"
+    },
+    {
+      "id": "BS004",
+      "severity": "low",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 88,
+      "related": [
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:32,59,87-92",
+        "web\\src\\i18n\\index.ts:136",
+        "web\\src\\i18n\\en.json: advancedIntelligence.evidence.sampleLine (exact-key read-only receipt)"
+      ],
+      "rule": "MDC-044: localized counts and correct singular/plural copy",
+      "detail": "Evidence sample captions interpolate a raw numeric count into '{{count}} samples · {{date}}'. The inspected canonical key has no sampleLine_one/sampleLine_other variants. This differs from the same panel's quality sample count, which uses fmtInt.",
+      "mechanism": "count: item.sample_count is passed directly; the template has no number-format directive, and inspected interpolation configuration only disables escaping. A count of one falls back to the base plural noun; counts do not use the user's existing numeric formatter.",
+      "sourceDerivedRepro": [
+        "Follow any supported evidence sample_count equal to one through the existing sampleLine branch; its base English template says '1 samples'.",
+        "For a user numeric locale requiring grouping or different digits, compare the quality Samples fmtInt call with the evidence caption's raw count interpolation."
+      ],
+      "reproExecution": "NOTRUN; no synthetic evidence object, fixture, i18next execution or API response was created",
+      "fix": "A separately assigned source/catalog fix can preserve numeric count for plural selection, interpolate a separate fmtInt-formatted value, and add normal singular/other variants at the existing canonical/projection owner.",
+      "owner": "feature-shared EvidencePanel plus explicitly assigned catalog owner",
+      "confidence": "high-source; no fresh i18next/runtime proof"
+    }
+  ],
+  "candidateCount": 2,
+  "candidates": [
+    {
+      "id": "BS-C01",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+      "line": 92,
+      "detail": "finding_type is displayed verbatim as a title. It may be an intentional source identifier or may require a localized domain label.",
+      "reasonNotConfirmed": "The accepted TypeScript contract is an unrestricted string, and no source/API evidence here establishes the product's code-to-label policy. Do not recase or invent translations for unknown server identities.",
+      "requiredEvidence": "A bounded domain/integration decision on known finding identifiers and display ownership"
+    },
+    {
+      "id": "BS-C02",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+      "line": 85,
+      "detail": "The renderer relies on typed finding/evidence objects; confidence is finite-checked but not range-checked, and individual null array elements are not normalized.",
+      "reasonNotConfirmed": "No inspected contract allows null finding/evidence members, and no actual response establishes malformed members or out-of-range confidence. The absence of defensive validation alone is not a confirmed production crash.",
+      "requiredEvidence": "Read-only verified boundary contract or a supplied genuine failing response; no request or fixture was manufactured"
+    }
+  ],
+  "responsive": {
+    "sourceObservations": [
+      "Finding headers and badges wrap with min-w-0/max-w-full and break-words.",
+      "Per-finding evidence/limitations stack at base and become two columns at md.",
+      "Summary uses min-w-0/break-words and three columns at lg.",
+      "The existing Pagination source has mobile h-11/min-w-11 controls, contained adaptive slots and a direct-jump form.",
+      "PageLayout delegates to the existing full-width PageContainer rather than applying a page-wide max-width cap."
+    ],
+    "nativeGeometry": "NOTRUN",
+    "viewportMatrix": "320/375/390/430/768/1024/1280/1440/1920/2560, narrow allocated containers and 200% text: NOTRUN",
+    "conclusion": "Source strategies are present; no overflow, clipping, computed size or touch-target pass/failure is asserted."
+  },
+  "accessibility": {
+    "sourceObservations": [
+      "Findings use article elements and Text as h3; lower sections have translated aria-labels.",
+      "Severity has visible text as well as color.",
+      "Icon defaults decorative icons to aria-hidden and focusable false.",
+      "Shared Pagination uses a named nav, localized action names, aria-current, disabled boundaries and validation feedback.",
+      "InsightPanel delegates loading/fatal/retained handling to existing source/trust owners."
+    ],
+    "keyboardFocusScreenReader": "NOTRUN",
+    "headingTree": "Mounted heading-order verification NOTRUN",
+    "contrastForcedColors": "NOTRUN; no composed colors or contrast ratios measured",
+    "reducedMotion": "NOTRUN; existing FadeIn boundary retained, preference behavior not exercised",
+    "conclusion": "No native accessibility acceptance or geometry assertion follows from source presence."
+  },
+  "i18n": {
+    "canonicalKeyCheck": {
+      "status": "READONLY_STATIC_CHECK",
+      "uniqueStaticTKeys": 33,
+      "missingCanonicalKeys": 0,
+      "scope": "The three accepted source files against the current canonical en.json",
+      "projectionOtherLocaleCoverage": "NOTRUN",
+      "coldRuntimeNamespaceResolution": "NOTRUN",
+      "note": "A zero missing-key count does not fix BS003/BS004 or establish localization acceptance. Catalogs were read only and may be concurrently owned."
+    },
+    "serverProse": "Explanation, evidence summaries, limitations and source identifiers remain API-owned strings; no backend localization capability is inferred.",
+    "RTL": "Source includes logical ps-4 list padding; mounted RTL and long-label wrapping NOTRUN."
+  },
+  "duplicatedPatterns": "Existing InsightPanel and EvidencePanel are reused; no new competing implementation was created.",
+  "architectureIssues": ["BS001: lower panel loses the same query's trust state", "BS002: lower panel bypasses settings-bound date context"],
+  "visualIssues": "Native visual review NOTRUN. No source class scan is reported as visual acceptance.",
+  "priority": "Address BS001/BS002 in bounded assigned fixes, then BS003/BS004 through existing presentation/catalog ownership. Retain all native/page acceptance work as unverified.",
+  "requiredSharedChanges": [
+    {
+      "name": "EvidencePanel source/formatter integration",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Thread the existing query/trust state; use the existing settings-bound date formatter; preserve ready/empty/fatal/paused/retained distinctions and shell.",
+      "usedBy": ["BehavioralSentinelPage (reviewed caller; other consumers not enumerated)"],
+      "dependsOn": ["Existing DataStateSource/InsightPanel/useDateFormat contracts"],
+      "authorization": "PROPOSED_ONLY; no implementation authorized or performed by this report worker"
+    },
+    {
+      "name": "Localized evidence counts/status presentation",
+      "existingOwner": "EvidencePanel, BehavioralSentinelPage and existing canonical i18n owner",
+      "propsVariantsStates": "Known statuses, unknown fallback, singular/other counts and separately formatted numeric interpolation",
+      "usedBy": ["BehavioralSentinelPage via EvidencePanel"],
+      "dependsOn": ["Existing useNumberFormatting and normal i18next plural conventions"],
+      "authorization": "PROPOSED_ONLY; all source/catalog files stayed readonly"
+    }
+  ],
+  "competingImplementations": [],
+  "verification": {
+    "receipt": "web\\logs\\phase6-qa-advanced-behavioral-sentinel.log",
+    "sourceSnapshot": "RUN: three SHA-256 values and line counts recorded",
+    "patternScan": {
+      "runner": "Native PowerShell Select-String against exactly the three accepted source files",
+      "status": "RUN",
+      "exitCode": 0,
+      "rawOutput": [
+        "RULE static_inline_variable match_lines=0",
+        "RULE raw_controls match_lines=0",
+        "RULE direct_vendor_imports match_lines=0",
+        "RULE legacy_api_imports match_lines=0",
+        "RULE direct_fetch match_lines=0",
+        "RULE double_prefix match_lines=0",
+        "RULE camel_query_params match_lines=0",
+        "RULE unsafe_any match_lines=0",
+        "RULE neon_body_classes match_lines=0",
+        "RULE adhoc_typography match_lines=0"
+      ],
+      "limitations": "Lexical source checks only; no all-rules/whole-feature/full-audit pass. Semantic state/localization findings remain."
+    },
+    "initialScanFailure": {
+      "exitCode": 1,
+      "rawError": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+      "resolution": "Used native Select-String without installing tools. The failed rg command ran no pattern checks; subsequent fallback output is separately recorded."
+    },
+    "sectionMarkers": "RUN: current page markers and three EvidencePanel semantic sections recorded; original comparison NOTRUN",
+    "staticRouteAgreement": "RUN: main hook path and delegated mounted route source agree; transitive /vehicles source also agrees",
+    "typeScript": "NOTRUN: explicitly prohibited global TSC",
+    "auditScript": "NOTRUN: audit.sh invokes a prohibited request helper and global npx tsc --noEmit",
+    "freshTests": "NOTRUN",
+    "testCounts": { "discovered": null, "executed": 0, "passed": null, "failed": null, "skipped": null },
+    "lintBuildSuites": "NOTRUN",
+    "browserNativeFullPage": "NOTRUN",
+    "liveApiAuthenticationFixtures": "NOTRUN",
+    "gitDockerInstallServerExtensionsSubagents": "NOTRUN"
+  },
+  "evidenceLimits": [
+    "All repros are source-derived paths, not executed tests, created fixtures or observed runtime incidents.",
+    "No browser, request, real identity, mutation, server, Docker, installation, Git operation or delegation was used.",
+    "No current/prior phase6 page report was read.",
+    "Tests were not read or executed; no historical test receipt is presented as fresh proof.",
+    "No native geometry, contrast, keyboard, focus, responsive, locale or timezone acceptance is claimed.",
+    "No backend data-window, confidence bound, authorization, result-total correctness or live payload proof is claimed beyond inspected source contracts.",
+    "Four confirmed source defects do not establish that the whole page fails at runtime; lexical zero counts do not establish that the page passes."
+  ],
+  "filesRead": [
+    "migration-queue.md (finished-page guidance and assigned row only)",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md (relevant sections only)",
+    "docs\\frontend-design-contract.md (relevant sections only)",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\prompts\\audit-pages.prompt.md",
+    ".github\\prompts\\modern-ui\\0000-design-language.md",
+    ".github\\prompts\\modern-ui\\personas\\4-accessibility-auditor.md",
+    ".github\\prompts\\modern-ui\\personas\\5-qa-consistency-reviewer.md",
+    ".gitignore (log ignore patterns only)",
+    "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:1-108 and relevant route excerpts",
+    "web\\src\\api\\hooks\\useVehicles.ts (useVehicles excerpt only)",
+    "web\\src\\api\\client.ts (URL-prefix excerpt only)",
+    "web\\src\\types\\advancedIntelligence.ts (quality/evidence/sentinel contract excerpts)",
+    "web\\src\\api\\dataState.ts:1-280",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts:1-155",
+    "web\\src\\lib\\dateFormat.ts (relevant excerpts and lines1-83)",
+    "web\\src\\lib\\workspaceScope.ts:1-170",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\ui\\Icon.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\i18n\\en.json (relevant excerpts and exact-key readonly scan)",
+    "web\\src\\i18n\\ar.json and he.json (bounded search only; no locale-coverage conclusion)",
+    "web\\src\\i18n\\index.ts (interpolation excerpt only)",
+    "internal\\api\\router.go (route/composition excerpts only)",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go:67-105",
+    "internal\\handler\\v1\\advancedintelligence\\doc.go (bounded search context)",
+    "internal\\handler\\v1\\advancedintelligence\\handler_test.go (incidental bounded search matches only; not test evidence)"
+  ],
+  "release": {
+    "status": "ALL_WORKER_CLAIMS_RELEASED",
+    "sourceClaims": "RELEASED; application files were readonly throughout",
+    "reportLogClaims": "RELEASED_ON_TERMINAL_RETURN",
+    "commandClaims": "RELEASED; only bounded synchronous commands were used",
+    "browserClaims": "NONE_ACQUIRED",
+    "parentQueueOrActorClaims": "Parent-owned metadata was not modified; this terminal handoff releases this worker's ownership",
+    "postReturnWrites": false,
+    "followParentLoopsOrSchedules": false
+  }
+}

@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Play, Pause, Square, SkipBack, Keyboard } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { Text } from '@/components/ui/Typography';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { ReplaySpeed } from '@/hooks/useTripReplay';
 import { PlaybackSpeedMenu, shiftSpeed } from './PlaybackSpeedMenu';
 import {
@@ -15,7 +17,8 @@ import { useShortcut, type ShortcutDefinition } from '@/hooks/useShortcutRegistr
 
 export interface PlaybackControlsProps {
   isPlaying: boolean;
-  speed: ReplaySpeed;
+  /** Speed selection is shown only when both speed and onSpeedChange are supplied. */
+  speed?: ReplaySpeed;
   /** 0..1 normalized playback position. */
   progress: number;
   /** Pre-formatted elapsed time (e.g. "1:23"). */
@@ -24,8 +27,11 @@ export interface PlaybackControlsProps {
   total: string;
   onPlay: () => void;
   onPause: () => void;
-  onStop: () => void;
-  onSpeedChange: (speed: ReplaySpeed) => void;
+  /** Legacy callers also use this callback for Reset when onRestart is absent. */
+  onStop?: () => void;
+  /** Explicit restart capability, independent of stopping playback. */
+  onRestart?: () => void;
+  onSpeedChange?: (speed: ReplaySpeed) => void;
   onSeek: (progress: number) => void;
   /** Optional notable moments rendered as tick marks on the scrubber. */
   markers?: TimelineMarker[];
@@ -52,6 +58,8 @@ export interface PlaybackControlsProps {
   onSpeedRelative?: (delta: number) => void;
   /** Step the playhead by N positions (frames). */
   onStepFrame?: (delta: number) => void;
+  /** Remove the outer surface, border and padding when embedded in a caller's frame. */
+  framed?: boolean;
   className?: string;
 }
 
@@ -69,10 +77,10 @@ interface ShortcutToast {
 /* ------------------------------------------------------------------ */
 
 /**
- * Playback control bar for trip replay.
+ * Caller-controlled playback transport; owns no media lifecycle or clock.
  *
  * Composes:
- *   - Reset / Play-Pause / Stop buttons
+ *   - Play-Pause with optional Restart / Stop (legacy Reset invokes Stop)
  *   - {@link PlaybackSpeedMenu} for cycling through {1, 10, 25, 50, 100}×
  *   - {@link TimelineScrubber} with marker ticks, hover preview, and drag-to-scrub
  *   - Optional keyboard shortcuts (toggleable via `enableKeyboardShortcuts`)
@@ -89,6 +97,7 @@ export function PlaybackControls({
   onPlay,
   onPause,
   onStop,
+  onRestart,
   onSpeedChange,
   onSeek,
   markers,
@@ -99,11 +108,17 @@ export function PlaybackControls({
   onSeekBy,
   onSpeedRelative,
   onStepFrame,
+  framed = true,
   className,
 }: PlaybackControlsProps) {
   const { t } = useTranslation();
+  const { fmtPercent } = useNumberFormatting();
   const [shortcutToast, setShortcutToast] = useState<ShortcutToast | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restart = onRestart ?? onStop;
+  const canSeekBy = Boolean(onSeekBy) || (Number.isFinite(durationMs) && (durationMs ?? 0) > 0);
+  const canChangeSpeed = speed !== undefined && Boolean(onSpeedChange);
+  const canStepSpeed = Boolean(onSpeedRelative) || canChangeSpeed;
 
   const showShortcutToast = useCallback((label: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -127,14 +142,15 @@ export function PlaybackControls({
 
     const handler = (e: KeyboardEvent) => {
       // Don't hijack typing in form fields.
-      const target = e.target as HTMLElement | null;
+      const target = e.target instanceof HTMLElement ? e.target : null;
       if (target) {
         const tag = target.tagName;
         if (
           tag === 'INPUT' ||
           tag === 'TEXTAREA' ||
           tag === 'SELECT' ||
-          target.isContentEditable
+          target.isContentEditable ||
+          target.closest('button, a, [role="slider"], [contenteditable="true"]')
         ) {
           return;
         }
@@ -160,6 +176,7 @@ export function PlaybackControls({
           showShortcutToast(isPlaying ? t('replay.shortcuts.pause', 'Pause') : t('replay.shortcuts.play', 'Play'));
           break;
         case 'ArrowLeft':
+          if (!canSeekBy) break;
           e.preventDefault();
           seekBySeconds(
             e.shiftKey ? -30 : -5,
@@ -167,6 +184,7 @@ export function PlaybackControls({
           );
           break;
         case 'ArrowRight':
+          if (!canSeekBy) break;
           e.preventDefault();
           seekBySeconds(
             e.shiftKey ? 30 : 5,
@@ -210,11 +228,12 @@ export function PlaybackControls({
           e.preventDefault();
           const pct = Number(e.key) / 10;
           onSeek(pct);
-          showShortcutToast(`${Math.round(pct * 100)}%`);
+          showShortcutToast(fmtPercent(pct * 100));
           break;
         }
         case 'j':
         case 'J':
+          if (!canSeekBy) break;
           e.preventDefault();
           seekBySeconds(-10, t('replay.shortcuts.seekBack', '⏪ −{{n}}s', { n: 10 }));
           break;
@@ -227,21 +246,24 @@ export function PlaybackControls({
           break;
         case 'l':
         case 'L':
+          if (!canSeekBy) break;
           e.preventDefault();
           seekBySeconds(10, t('replay.shortcuts.seekForward', '⏩ +{{n}}s', { n: 10 }));
           break;
         case '+':
         case '=':
+          if (!canStepSpeed) break;
           e.preventDefault();
           if (onSpeedRelative) onSpeedRelative(1);
-          else onSpeedChange(shiftSpeed(speed, 1));
+          else if (onSpeedChange && speed !== undefined) onSpeedChange(shiftSpeed(speed, 1));
           showShortcutToast(t('replay.shortcuts.speedUp', 'Faster'));
           break;
         case '-':
         case '_':
+          if (!canStepSpeed) break;
           e.preventDefault();
           if (onSpeedRelative) onSpeedRelative(-1);
-          else onSpeedChange(shiftSpeed(speed, -1));
+          else if (onSpeedChange && speed !== undefined) onSpeedChange(shiftSpeed(speed, -1));
           showShortcutToast(t('replay.shortcuts.speedDown', 'Slower'));
           break;
         case 'm':
@@ -255,6 +277,8 @@ export function PlaybackControls({
     return () => window.removeEventListener('keydown', handler);
   }, [
     enableKeyboardShortcuts,
+    canSeekBy,
+    canStepSpeed,
     durationMs,
     isPlaying,
     onPause,
@@ -267,6 +291,7 @@ export function PlaybackControls({
     showShortcutToast,
     speed,
     t,
+    fmtPercent,
   ]);
 
   useEffect(() => {
@@ -283,29 +308,41 @@ export function PlaybackControls({
   // the tooltip's text colour keeps the labels readable in both themes.
   const helpContent = useMemo(
     () => (
-      <div className="space-y-2 text-xs">
-        <div className="font-semibold">
+      <Text as="div" size="xs" className="space-y-2">
+        <Text as="div" weight="semibold">
           {t('replay.shortcuts.title', 'Trip replay shortcuts')}
-        </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 opacity-90">
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">Space / K</kbd>
+        </Text>
+        <div className="grid grid-cols-replay-shortcuts gap-x-3 gap-y-1">
+          <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">Space / K</Text>
           <span>{t('replay.shortcuts.playPause', 'Play / Pause')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">← / →</kbd>
-          <span>{t('replay.shortcuts.skip5', 'Skip ±5s (Shift = ±30s)')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">J / L</kbd>
-          <span>{t('replay.shortcuts.skip10', 'Skip ±10s')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">, / .</kbd>
-          <span>{t('replay.shortcuts.frame', 'Previous / next frame')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">Home / End</kbd>
+          {canSeekBy && (
+            <>
+              <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">← / →</Text>
+              <span>{t('replay.shortcuts.skip5', 'Skip ±5s (Shift = ±30s)')}</span>
+              <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">J / L</Text>
+              <span>{t('replay.shortcuts.skip10', 'Skip ±10s')}</span>
+            </>
+          )}
+          {onStepFrame && (
+            <>
+              <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">, / .</Text>
+              <span>{t('replay.shortcuts.frame', 'Previous / next frame')}</span>
+            </>
+          )}
+          <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">Home / End</Text>
           <span>{t('replay.shortcuts.startEnd', 'Jump to start / end')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">0 – 9</kbd>
+          <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">0 – 9</Text>
           <span>{t('replay.shortcuts.percent', 'Jump to N×10%')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">+ / −</kbd>
-          <span>{t('replay.shortcuts.speed', 'Speed up / slow down')}</span>
+          {canStepSpeed && (
+            <>
+              <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">+ / −</Text>
+              <span>{t('replay.shortcuts.speed', 'Speed up / slow down')}</span>
+            </>
+          )}
         </div>
-      </div>
+      </Text>
     ),
-    [t],
+    [t, canSeekBy, canStepSpeed, onStepFrame],
   );
 
   /* Keyboard shortcut cheatsheet. */
@@ -327,76 +364,95 @@ export function PlaybackControls({
     });
     return [
       make('playPause', ['Space'], t('replay.shortcuts.playPause', 'Play / Pause')),
-      make('skip5', ['←', '→'], t('replay.shortcuts.skip5', 'Skip ±5s (Shift = ±30s)')),
-      make('skip10', ['J', 'L'], t('replay.shortcuts.skip10', 'Skip ±10s')),
-      make('frame', [',', '.'], t('replay.shortcuts.frame', 'Previous / next frame')),
+      ...(canSeekBy ? [
+        make('skip5', ['←', '→'], t('replay.shortcuts.skip5', 'Skip ±5s (Shift = ±30s)')),
+        make('skip10', ['J', 'L'], t('replay.shortcuts.skip10', 'Skip ±10s')),
+      ] : []),
+      ...(onStepFrame ? [make('frame', [',', '.'], t('replay.shortcuts.frame', 'Previous / next frame'))] : []),
       make('startEnd', ['Home', 'End'], t('replay.shortcuts.startEnd', 'Jump to start / end')),
       make('percent', ['0', '–', '9'], t('replay.shortcuts.percent', 'Jump to N×10%')),
-      make('speed', ['+', '−'], t('replay.shortcuts.speed', 'Speed up / slow down')),
+      ...(canStepSpeed ? [make('speed', ['+', '−'], t('replay.shortcuts.speed', 'Speed up / slow down'))] : []),
     ];
-  }, [enableKeyboardShortcuts, t]);
+  }, [enableKeyboardShortcuts, t, canSeekBy, canStepSpeed, onStepFrame]);
   useShortcut(replayShortcutDefs);
 
   return (
     <div
       className={cn(
-        'relative flex flex-col gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 backdrop-blur-sm',
+        'relative min-w-0',
+        framed && 'rounded-panel border border-[var(--border-default)] bg-[var(--panel-bg)] px-4 py-3 shadow-panel',
         className,
       )}
     >
       {/* Inline shortcut feedback */}
       {shortcutToast && (
-        <div
+        <Text
+          as="div"
+          variant="code"
           aria-live="polite"
-          className="pointer-events-none absolute -top-7 right-3 z-10 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2 py-1 text-xs font-mono text-[var(--text-primary)] shadow-lg backdrop-blur-md"
+          className="pointer-events-none absolute -top-7 end-3 z-10 max-w-full break-words rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1 shadow-e2"
         >
           {shortcutToast.label}
-        </div>
+        </Text>
       )}
 
-      <div className="flex items-center gap-2">
-        {/* Reset (rewind to start) */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onStop}
-          aria-label={t('replay.controls.reset', 'Reset')}
-          className="h-8 w-8 p-0"
-        >
-          <SkipBack className="h-4 w-4" />
-        </Button>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {restart && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={restart}
+            aria-label={onRestart
+              ? t('replay.controls.restart', 'Restart')
+              : t('replay.controls.reset', 'Reset')}
+            className="h-11 w-11 shrink-0 p-0"
+          >
+            <SkipBack className="h-4 w-4" aria-hidden />
+          </Button>
+        )}
 
         {/* Play / Pause */}
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={isPlaying ? onPause : onPlay}
           aria-label={isPlaying
             ? t('replay.controls.pause', 'Pause')
             : t('replay.controls.play', 'Play')}
-          className="h-8 w-8 p-0"
+          className="h-11 w-11 shrink-0 p-0"
         >
           {isPlaying
-            ? <Pause className="h-4 w-4" />
-            : <Play className="h-4 w-4" />}
+            ? <Pause className="h-4 w-4" aria-hidden />
+            : <Play className="h-4 w-4" aria-hidden />}
         </Button>
 
         {/* Stop */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onStop}
-          aria-label={t('replay.controls.stop', 'Stop')}
-          className="h-8 w-8 p-0"
-        >
-          <Square className="h-3.5 w-3.5" />
-        </Button>
+        {onStop && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onStop}
+            aria-label={t('replay.controls.stop', 'Stop')}
+            className="h-11 w-11 shrink-0 p-0"
+          >
+            <Square className="h-3.5 w-3.5" aria-hidden />
+          </Button>
+        )}
 
         {/* Speed */}
-        <PlaybackSpeedMenu speed={speed} onChange={onSpeedChange} />
+        {speed !== undefined && onSpeedChange && (
+          <PlaybackSpeedMenu
+            speed={speed}
+            onChange={onSpeedChange}
+            className="flex h-11 min-w-11 shrink-0 items-center gap-0.5 px-2 text-xs font-mono"
+          />
+        )}
 
         {/* Scrubber takes the remaining space */}
-        <div className="mx-2 flex-1">
+        <div className="min-w-0 flex-replay-scrubber">
           <TimelineScrubber
             progress={progress}
             duration={durationMs ? durationMs / 1000 : 0}
@@ -408,20 +464,22 @@ export function PlaybackControls({
         </div>
 
         {/* Time display */}
-        <span className="min-w-[90px] text-right font-mono text-xs text-[var(--text-secondary)]">
+        <Text variant="caption" mono className="min-w-0 break-all text-end">
           {elapsed ?? '—'} / {total ?? '—'}
-        </span>
+        </Text>
 
         {/* Keyboard help */}
         {enableKeyboardShortcuts && (
           <Tooltip content={helpContent} side="top" multiline>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               aria-label={t('replay.shortcuts.help', 'Show keyboard shortcuts')}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+              className="h-11 w-11 shrink-0 p-0"
             >
               <Keyboard className="h-3.5 w-3.5" aria-hidden />
-            </button>
+            </Button>
           </Tooltip>
         )}
       </div>

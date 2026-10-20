@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { ListExportMenu } from '../ListExportMenu';
+import { ListExportMenu, type ListExportMenuProps } from '../ListExportMenu';
 import { ToastProvider } from '@/components/feedback/Toast';
 
 vi.mock('react-i18next', () => ({
@@ -17,12 +17,12 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('ListExportMenu', () => {
-  let onExportCsv: ReturnType<typeof vi.fn>;
-  let onExportJson: ReturnType<typeof vi.fn>;
+  let onExportCsv: Mock<ListExportMenuProps['onExportCsv']>;
+  let onExportJson: Mock<ListExportMenuProps['onExportJson']>;
 
   beforeEach(() => {
-    onExportCsv = vi.fn();
-    onExportJson = vi.fn();
+    onExportCsv = vi.fn<ListExportMenuProps['onExportCsv']>();
+    onExportJson = vi.fn<ListExportMenuProps['onExportJson']>();
   });
 
   it('renders the trigger button (closed by default)', () => {
@@ -253,6 +253,81 @@ describe('ListExportMenu', () => {
       fireEvent.keyDown(document, { key: 'Escape' });
     });
     expect(screen.queryByTestId('le-menu')).toBeNull();
+    expect(screen.getByTestId('le-trigger')).toHaveFocus();
+  });
+
+  it('uses menu scope semantics and navigates actions with arrows and Home/End', () => {
+    render(
+      <ListExportMenu onExportCsv={onExportCsv} onExportJson={onExportJson}
+        selectedCount={2} visibleCount={0} testId="le" />,
+    );
+    const trigger = screen.getByTestId('le-trigger');
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    expect(screen.getByRole('menu', { name: 'Export list' })).toBeInTheDocument();
+    const visible = screen.getByRole('menuitemradio', { name: 'Visible (0)' });
+    expect(visible).toHaveFocus();
+    fireEvent.keyDown(visible, { key: 'ArrowDown' });
+    expect(screen.getByTestId('le-scope-selected')).toHaveFocus();
+    fireEvent.keyDown(screen.getByTestId('le-scope-selected'), { key: 'End' });
+    expect(screen.getByTestId('le-json')).toHaveFocus();
+    fireEvent.keyDown(screen.getByTestId('le-json'), { key: 'ArrowDown' });
+    expect(visible).toHaveFocus();
+    fireEvent.keyDown(visible, { key: 'ArrowUp' });
+    expect(screen.getByTestId('le-json')).toHaveFocus();
+    fireEvent.keyDown(screen.getByTestId('le-json'), { key: 'Home' });
+    expect(visible).toHaveFocus();
+    fireEvent.keyDown(visible, { key: 'Escape' });
+    expect(trigger).toHaveFocus();
+    fireEvent.keyDown(trigger, { key: 'ArrowUp' });
+    expect(screen.getByTestId('le-json')).toHaveFocus();
+  });
+
+  it('closes on outside pointer interaction without exporting or taking outside focus', () => {
+    render(
+      <ListExportMenu onExportCsv={onExportCsv} onExportJson={onExportJson} testId="le" />,
+    );
+    fireEvent.click(screen.getByTestId('le-trigger'));
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByTestId('le-menu')).toBeNull();
+    expect(onExportCsv).not.toHaveBeenCalled();
+    expect(onExportJson).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('le-trigger'));
+    act(() => { document.body.focus(); });
+    fireEvent.blur(screen.getByTestId('le-csv'), { relatedTarget: document.body });
+    expect(screen.queryByTestId('le-menu')).toBeNull();
+  });
+
+  it('retains unknown visible counts, caller attributes and wrapping touch-safe actions', () => {
+    render(
+      <ListExportMenu onExportCsv={onExportCsv} onExportJson={onExportJson}
+        selectedCount={1} className="caller-class" testId="le" />,
+    );
+    expect(screen.getByTestId('le')).toHaveClass('caller-class');
+    expect(screen.getByTestId('le-trigger')).toHaveClass('min-h-11', 'min-w-11');
+    fireEvent.click(screen.getByTestId('le-trigger'));
+    expect(screen.getByRole('menuitemradio', { name: 'Visible' })).toBeInTheDocument();
+    for (const id of ['scope-visible', 'scope-selected', 'csv', 'json']) {
+      expect(screen.getByTestId(`le-${id}`)).toHaveClass('min-h-11', 'whitespace-normal', 'text-start');
+    }
+    fireEvent.click(screen.getByTestId('le-scope-visible'));
+    fireEvent.click(screen.getByTestId('le-json'));
+    expect(onExportJson).toHaveBeenCalledExactlyOnceWith('visible');
+  });
+
+  it('reports synchronous export failure and enables retry', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    onExportCsv.mockImplementationOnce(() => { throw new Error('serialization failed'); });
+    render(
+      <ToastProvider>
+        <ListExportMenu onExportCsv={onExportCsv} onExportJson={onExportJson} testId="le" />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByTestId('le-trigger'));
+    fireEvent.click(screen.getByTestId('le-csv'));
+    expect(screen.getByText('Could not prepare the CSV export.')).toBeInTheDocument();
+    expect(screen.getByTestId('le-trigger')).toBeEnabled();
+    expect(onExportCsv).toHaveBeenCalledExactlyOnceWith('visible');
+    consoleError.mockRestore();
   });
 
   it('does not open while disabled', () => {

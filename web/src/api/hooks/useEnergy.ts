@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { validateAnalyticalHistory } from '@/lib/analyticalHistory';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
@@ -11,7 +12,6 @@ import type {
   BatteryHealthAnalytics,
   BatteryCellSummary,
   DegradationData,
-  EnergyFlowData,
   VampireDrainStats,
   VampireDrainEvent,
   VampireDrainEventsResponse,
@@ -30,6 +30,18 @@ import type {
 
 export type EnergyStatsWindow = number | { start: string };
 
+/** Live-state power is already normalized to watts; EnergyRemaining has no verified unit. */
+export interface EnergyFlowSnapshot {
+  dc_charging_power_w: number | null;
+  ac_charging_power_w: number | null;
+  /** Raw stored reading, intentionally not labeled or converted to Wh/kWh. */
+  energy_remaining: number | null;
+  pack_voltage: number | null;
+  pack_current: number | null;
+  soc: number | null;
+  charge_state: string | null;
+}
+
 export function useEnergyStats(
   vehicleId: string | null,
   window: EnergyStatsWindow = 30,
@@ -41,7 +53,14 @@ export function useEnergyStats(
 
   return useQuery({
     queryKey: ['energy-stats', vehicleId, windowKey],
-    queryFn: ({ signal }) => request<EnergyStats>(`/vehicles/${vehicleId}/energy?${query}`, { signal }),
+    queryFn: async ({ signal }) => {
+      const stats = await request<EnergyStats>(`/vehicles/${vehicleId}/energy?${query}`, { signal });
+      if (!stats || typeof stats !== 'object' || Array.isArray(stats)) {
+        throw new Error('Invalid energy history response: expected statistics');
+      }
+      validateAnalyticalHistory(stats.daily_breakdown, 'energy');
+      return stats;
+    },
     enabled: vehicleId !== null,
     staleTime: STALE_TIMES.STANDARD,
   });
@@ -73,10 +92,22 @@ export function useBatteryCells(vehicleId: string | null) {
   });
 }
 
-export function useBatteryHealthAnalytics(vehicleId: string | null) {
+export interface BatteryHealthWindow {
+  start: string;
+  end: string;
+}
+
+export function useBatteryHealthAnalytics(vehicleId: string | null, window?: BatteryHealthWindow) {
+  const params = new URLSearchParams({ vehicle_id: vehicleId ?? '' });
+  if (window) {
+    params.set('start', window.start);
+    params.set('end', window.end);
+  }
   return useQuery({
-    queryKey: ['battery-health-analytics', vehicleId],
-    queryFn: ({ signal }) => request<BatteryHealthAnalytics>(`/analytics/battery-health?vehicle_id=${vehicleId}`, { signal }),
+    queryKey: window
+      ? ['battery-health-analytics', vehicleId, window.start, window.end]
+      : ['battery-health-analytics', vehicleId],
+    queryFn: ({ signal }) => request<BatteryHealthAnalytics>(`/analytics/battery-health?${params.toString()}`, { signal }),
     enabled: vehicleId !== null,
     staleTime: STALE_TIMES.ANALYTICS,
     retry: false,
@@ -94,7 +125,7 @@ export function useBatteryDegradation(vehicleId: string | null) {
 export function useEnergyFlow(vehicleId: string | null) {
   return useQuery({
     queryKey: ['energy-flow', vehicleId],
-    queryFn: ({ signal }) => request<EnergyFlowData>(`/vehicles/${vehicleId}/energy/flow`, { signal }),
+    queryFn: ({ signal }) => request<EnergyFlowSnapshot>(`/vehicles/${vehicleId}/energy/flow`, { signal }),
     enabled: vehicleId !== null,
     refetchInterval: INTERVALS.REALTIME,
     retry: false,
@@ -103,21 +134,36 @@ export function useEnergyFlow(vehicleId: string | null) {
 }
 
 /** Fetches 90-day parked, non-charging drain statistics derived from canonical history. */
-export function useVampireDrainStats(vehicleId: string | null) {
+export function useVampireDrainStats(vehicleId: string | null, staleTime: number = STALE_TIMES.STANDARD) {
   return useQuery({
     queryKey: ['vampire-drain-stats', vehicleId],
     queryFn: ({ signal }) => request<VampireDrainStats>(`/vampire-drain/stats?vehicle_id=${vehicleId}`, { signal }),
-    enabled: vehicleId !== null,
-    staleTime: STALE_TIMES.STANDARD,
+    enabled: vehicleId !== null && vehicleId !== '',
+    staleTime,
+  });
+}
+
+function vampireDrainEventsQuery(vehicleId: string | null, limit: number) {
+  return {
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      request<VampireDrainEventsResponse>(`/vampire-drain?vehicle_id=${vehicleId}&limit=${limit}`, { signal }),
+    enabled: vehicleId !== null && vehicleId !== '',
+  };
+}
+
+/** Preserves the drain page's 200-window envelope and historical cache identity. */
+export function useVampireDrainHistory(vehicleId: string) {
+  return useQuery({
+    ...vampireDrainEventsQuery(vehicleId, 200),
+    queryKey: ['vampire-drain-events', vehicleId],
   });
 }
 
 /** Fetches parked, non-charging drain windows and unwraps the API envelope. */
 export function useVampireDrainEvents(vehicleId: string | null, limit = 50) {
   return useQuery({
+    ...vampireDrainEventsQuery(vehicleId, limit),
     queryKey: ['vampire-drain-events', vehicleId, limit],
-    queryFn: ({ signal }) => request<VampireDrainEventsResponse>(`/vampire-drain?vehicle_id=${vehicleId}&limit=${limit}`, { signal }),
-    enabled: vehicleId !== null,
     staleTime: STALE_TIMES.STANDARD,
     select: (response): VampireDrainEvent[] => safeArray(response?.events),
   });

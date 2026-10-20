@@ -13,7 +13,7 @@ export function PhysicsInvestigationNav({ activeSlug, t }: { activeSlug?: Physic
   const navigate = useNavigate();
   return <GlassPanel className="space-y-4 p-4 sm:p-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <PanelTitle>{t('teslaOnly.workbench.navigation', 'Tesla Physics investigations')}</PanelTitle>
+      <PanelTitle>{t('teslaOnly.workbench.navigation', 'Tesla physics investigations')}</PanelTitle>
       <Link to="/tesla-physics" aria-current={activeSlug ? undefined : 'page'}
         className="rounded-lg px-3 py-2 text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
         {t('teslaOnly.workbench.overview', 'Start here')}
@@ -49,10 +49,10 @@ export function PhysicsInvestigationNav({ activeSlug, t }: { activeSlug?: Physic
     </div>
     <div className="flex flex-wrap gap-4 border-t border-[var(--glass-border)] pt-3">
       <Link to="/tesla-physics/ledger" className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
-        {t('teslaOnly.feature.ledger.title', 'Physics Ledger')} →
+        {t('teslaOnly.feature.ledger.title', 'Physics ledger')} →
       </Link>
       <Link to="/science" className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
-        {t('teslaOnly.scienceLab', 'Science Lab')} →
+        {t('teslaOnly.scienceLab', 'Science lab')} →
       </Link>
     </div>
   </GlassPanel>;

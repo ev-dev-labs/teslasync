@@ -16,7 +16,7 @@
  *   - `react-i18next` is stubbed to resolve the developer fallback string and
  *     interpolate `{{vars}}`, so assertions read the real English copy.
  *   - The global test-setup already mocks `useSettings` (km / °C) and
- *     `useTimezone` (UTC), which the transitive <DataFreshness> header needs.
+ *     `useTimezone` (UTC), which the transitive <FreshnessDot> header needs.
  *   - Renders are wrapped in <MemoryRouter> because <QueryError> (shown on the
  *     error branch) calls `useNavigate`.
  *
@@ -25,12 +25,12 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
 // jsdom lacks matchMedia; framer-motion (read transitively by
-// useMotionPreference inside <DataFreshness>) touches it on first paint.
+// useMotionPreference inside <FreshnessDot>) touches it on first paint.
 // Install a no-op before any import runs.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
@@ -73,6 +73,23 @@ const { batteryCellsMock, vehiclesMock } = vi.hoisted(() => ({
 
 vi.mock('@/api/hooks/useEnergy', () => ({ useBatteryCells: batteryCellsMock }));
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vehiclesMock }));
+let temperatureUnit: '°C' | '°F' = '°C';
+vi.mock('@/hooks/useUnits', async () => {
+  const { formatTemperature } = await import('@/lib/unitConversion');
+  return {
+    useUnits: () => ({
+      unitPrefs: {
+        distance: 'km', speed: 'km/h', temperature: temperatureUnit,
+        pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US',
+      },
+      formatTemperature: (value: number | null | undefined, options?: { precision?: number }) =>
+        formatTemperature(value, {
+          distance: 'km', speed: 'km/h', temperature: temperatureUnit,
+          pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US',
+        }, options),
+    }),
+  };
+});
 
 import BatteryCellsWidget, { cellStatus } from './BatteryCellsWidget';
 import type { BatteryCellSummary } from '@/types/energy';
@@ -132,11 +149,17 @@ function renderWidget(node: ReactElement) {
 }
 
 beforeEach(() => {
+  temperatureUnit = '°C';
   batteryCellsMock.mockReset();
   vehiclesMock.mockReset();
   // Sensible defaults; individual tests override as needed.
   vehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
   batteryCellsMock.mockReturnValue(makeQuery(makeSummary()));
+});
+
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget(<BatteryCellsWidget size={{ cols, rows: 4 }} />);
+  expect(screen.getByRole('heading', { name: 'Battery cells', level: 3 })).toBeVisible();
 });
 
 // ── cellStatus (pure) ────────────────────────────────────────────────────────
@@ -155,16 +178,73 @@ describe('cellStatus', () => {
     expect(cellStatus(Number.NaN, 3.7)).toBe('unknown');
     expect(cellStatus(Number.POSITIVE_INFINITY, 3.7)).toBe('unknown');
     expect(cellStatus(Number.NEGATIVE_INFINITY, 3.7)).toBe('unknown');
+    expect(cellStatus(3.7, null)).toBe('unknown');
+    expect(cellStatus(3.7, Number.NaN)).toBe('unknown');
   });
 });
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('BatteryCellsWidget', () => {
+  it('converts cell and summary temperatures at the display boundary for Fahrenheit', () => {
+    temperatureUnit = '°F';
+    renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
+    expect(screen.getByText('3.701 V / 75.2°F')).toBeInTheDocument();
+    expect(screen.getByText('73.6°F')).toBeInTheDocument();
+    expect(screen.getByText('76.1°F')).toBeInTheDocument();
+    expect(screen.getByText('78.8°F')).toBeInTheDocument();
+  });
+  it('shows localized cell states as visible text, not just colors', () => {
+    renderWidget(<BatteryCellsWidget size={SIZE_MEDIUM} />);
+    expect(screen.getByText('Healthy')).toBeInTheDocument();
+    expect(screen.getByText('Warning')).toBeInTheDocument();
+    expect(screen.getByText('Error')).toBeInTheDocument();
+  });
+
+  it('keeps seven raw summary operands, signed temperatures and measured zero in the real wide brief', () => {
+    batteryCellsMock.mockReturnValue(makeQuery(makeSummary({
+      min_voltage: 0, voltage_spread: 0, min_temperature: -5,
+    })));
+    renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
+    const brief = screen.getByTestId('dashboard-battery-cells-brief');
+    expect(brief).toHaveTextContent('Returned cell measurements');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const scopeDrawer = screen.getByRole('dialog');
+    expect(scopeDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('recording coverage is unknown');
+    fireEvent.keyDown(scopeDrawer, { key: 'Escape' });
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(7);
+    expect(brief).toHaveTextContent('0.000 V');
+    expect(brief).toHaveTextContent('0.00 mV');
+    expect(brief).toHaveTextContent('-5.0°C');
+    expect(screen.getByText('Cell 1 · M1')).toBeInTheDocument();
+    expect(screen.getByText('Cell 2 · M1')).toBeInTheDocument();
+    expect(screen.getByText('Cell 3 · M2')).toBeInTheDocument();
+  });
+
+  it('retains cell readings and summary during a cached refresh failure', () => {
+    batteryCellsMock.mockReturnValue(makeQuery(makeSummary(), { error: new Error('transient'), isError: true }));
+    renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
+    expect(screen.getByText('Cell 1 · M1')).toBeInTheDocument();
+    expect(screen.getByText('17.00 mV')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('keeps missing voltage and temperature readings unknown', () => {
+    batteryCellsMock.mockReturnValue(makeQuery(makeSummary({
+      avg_voltage: Number.NaN,
+      cells: [{ cell_id: 1, module: 1, voltage: Number.NaN, temperature: Number.NaN }],
+      min_temperature: Number.NaN,
+    })));
+    renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('— / —')).toBeInTheDocument();
+    expect(screen.queryByText(/NaN/)).toBeNull();
+  });
   it('renders cells and the min/max/avg/spread summary at medium size', () => {
     renderWidget(<BatteryCellsWidget size={SIZE_MEDIUM} />);
 
     // Title header (visible above compact).
-    expect(screen.getByText('Battery Cells')).toBeInTheDocument();
+    expect(screen.getByText('Battery cells')).toBeInTheDocument();
 
     // Compact cell labels + per-cell voltage values.
     expect(screen.getByText('C1')).toBeInTheDocument();
@@ -180,10 +260,10 @@ describe('BatteryCellsWidget', () => {
     expect(screen.getByText('Avg V')).toBeInTheDocument();
     expect(screen.getByText('3.700 V')).toBeInTheDocument();
     expect(screen.getByText('Spread')).toBeInTheDocument();
-    expect(screen.getByText('17.0 mV')).toBeInTheDocument();
+    expect(screen.getByText('17.00 mV')).toBeInTheDocument();
 
     // The temperature summary is a wide-only row — absent here.
-    expect(screen.queryByText('Min Temp')).not.toBeInTheDocument();
+    expect(screen.queryByText('Min temp')).not.toBeInTheDocument();
   });
 
   it('falls back to the first vehicle when no vehicleId prop is supplied', () => {
@@ -211,26 +291,24 @@ describe('BatteryCellsWidget', () => {
 
     // Wide labels include module + a combined voltage/temperature value.
     expect(screen.getByText('Cell 1 · M1')).toBeInTheDocument();
-    expect(screen.getByText('3.701 V / 24.0°')).toBeInTheDocument();
+    expect(screen.getByText('3.701 V / 24.0°C')).toBeInTheDocument();
 
     // Wide-only temperature summary row.
-    expect(screen.getByText('Min Temp')).toBeInTheDocument();
-    expect(screen.getByText('23.1°')).toBeInTheDocument();
-    expect(screen.getByText('Avg Temp')).toBeInTheDocument();
-    expect(screen.getByText('24.5°')).toBeInTheDocument();
-    expect(screen.getByText('Max Temp')).toBeInTheDocument();
-    expect(screen.getByText('26.0°')).toBeInTheDocument();
+    expect(screen.getByText('Min temp')).toBeInTheDocument();
+    expect(screen.getByText('23.1°C')).toBeInTheDocument();
+    expect(screen.getByText('Avg temp')).toBeInTheDocument();
+    expect(screen.getByText('24.5°C')).toBeInTheDocument();
+    expect(screen.getByText('Max temp')).toBeInTheDocument();
+    expect(screen.getByText('26.0°C')).toBeInTheDocument();
   });
 
-  it('hides the title and per-cell values in compact layout', () => {
+  it('keeps per-cell values readable with the compact heading', () => {
     renderWidget(<BatteryCellsWidget size={SIZE_COMPACT} />);
 
-    // 1×1 widget: the title chrome is suppressed by design.
-    expect(screen.queryByText('Battery Cells')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Battery cells', level: 3 })).toBeVisible();
     // Labels still render...
     expect(screen.getByText('C1')).toBeInTheDocument();
-    // ...but the compact grid omits the per-cell voltage value.
-    expect(screen.queryByText('3.701 V')).not.toBeInTheDocument();
+    expect(screen.getByText('3.701 V')).toBeInTheDocument();
   });
 
   it('shows the "no cell data" grid placeholder while still rendering the summary when cells are empty', () => {
@@ -243,13 +321,17 @@ describe('BatteryCellsWidget', () => {
     expect(screen.getByText('Min V')).toBeInTheDocument();
   });
 
-  it('renders the empty state (and no summary) when data is null', () => {
+  it('keeps summary placeholders alongside the empty cells section when data is absent', () => {
     batteryCellsMock.mockReturnValue(makeQuery(undefined));
 
     renderWidget(<BatteryCellsWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByText('No battery cell data')).toBeInTheDocument();
-    expect(screen.queryByText('Min V')).not.toBeInTheDocument();
+    expect(screen.getByText('Min V')).toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const emptyBrief = screen.getByTestId('dashboard-battery-cells-brief');
+    fireEvent.click(within(emptyBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('renders a loading skeleton without any content while fetching the first time', () => {
@@ -257,9 +339,21 @@ describe('BatteryCellsWidget', () => {
 
     const { container } = renderWidget(<BatteryCellsWidget size={SIZE_MEDIUM} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    const shell = container.querySelector('[aria-busy="true"][data-data-state="initial"]');
+    expect(shell).toBeInTheDocument();
+    const skeletons = shell?.querySelectorAll('.h-full.min-h-24.rounded-xl[aria-hidden="true"]');
+    expect(skeletons).toHaveLength(1);
+    expect(skeletons?.[0]).toHaveClass('w-full', 'bg-[var(--skeleton-bg)]');
+    expect(skeletons?.[0]).not.toHaveClass('animate-pulse');
+    expect(skeletons?.[0].childElementCount).toBe(0);
     expect(screen.queryByText('Min V')).not.toBeInTheDocument();
     expect(screen.queryByText('No battery cell data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Max V')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg V')).not.toBeInTheDocument();
+    expect(screen.queryByText('Spread')).not.toBeInTheDocument();
+    expect(screen.queryByText('No cell data')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dashboard-battery-cells-brief')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-value]')).not.toBeInTheDocument();
   });
 
   it('surfaces an error state instead of the panel body when the query fails', () => {

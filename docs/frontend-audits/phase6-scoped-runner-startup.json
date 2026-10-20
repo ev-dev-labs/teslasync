@@ -1,0 +1,420 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-fix-scoped-runner-startup",
+  "status": "DIAGNOSIS_COMPLETE_CAUSE_UNRESOLVED",
+  "scope": {
+    "versionedWrite": "docs\\frontend-audits\\phase6-scoped-runner-startup.json",
+    "ignoredWrite": "logs\\phase6-fix-scoped-runner-startup.log",
+    "applicationConfigTests": "READ_ONLY",
+    "queueEdited": false,
+    "applicationConfigTestEdits": 0,
+    "leafRepairs": 0,
+    "leafTestReruns": 0,
+    "existingRunnerDiscoveryProbes": 1,
+    "gitCommands": 0,
+    "subagents": 0,
+    "installs": 0,
+    "dockerOrServerCommands": 0,
+    "customHelpersExtensionsOrSpawnWrappers": 0,
+    "unrelatedProcessesTerminated": 0
+  },
+  "queue": {
+    "readFrom": "migration-queue.md",
+    "observedStatus": "[ ]",
+    "observedAttempts": 0,
+    "type": "repeated-failure-root-diagnosis",
+    "dependencies": [],
+    "contract": "Cause UNKNOWN; one guarded direct discovery probe <=120s; no infrastructure exemption, leaf repair/retry, source/config edits or full suite.",
+    "statusAndCommitOwner": "Parent; this report does not mark leaf acceptance or repair the runner."
+  },
+  "timing": {
+    "creationUtc": "2026-10-13T16:20:08.144Z",
+    "diagnosticsMeasuredThroughUtc": "2026-10-13T16:31:33.1648482Z",
+    "diagnosticsElapsedSeconds": 685.0208482,
+    "returnTargetUtc": "2026-10-13T16:40:08.144Z",
+    "hardDeadlineUtc": "2026-10-13T16:45:08.144Z",
+    "finalTimingAuthority": "FINAL_VERIFICATION_UTC and ELAPSED_SINCE_CREATION_SECONDS in logs\\phase6-fix-scoped-runner-startup.log",
+    "probeWaitLimitSeconds": 100,
+    "probeHardBudgetSeconds": 120,
+    "probeStopPolicy": "stop_powershell called immediately after the sole 100-second wait reported still running; no additional waiting or retry.",
+    "probeNaturalElapsedMilliseconds": null,
+    "probeStopExactTimestamp": null,
+    "probeTimingLimitation": "The stop tool confirms termination but supplies neither an exact termination timestamp nor a native exit. The later process-census timestamp is NOT substituted for the stop timestamp."
+  },
+  "instructionsRead": [
+    "docs\\orchestrator-loop.md",
+    "migration-queue.md: Current Phase6 dispatch contract and exact root/affected rescue rows",
+    "docs\\session-handoff.md: current Phase6 and retained rescue/gate evidence",
+    "docs\\frontend-mission.md: non-negotiable principles and audit/design scope",
+    "docs\\frontend-design-contract.md: authority, worker boundaries and evidence definitions",
+    "docs\\frontend-inventory.md: authority and preservation boundaries",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md"
+  ],
+  "supportedRuntime": {
+    "executable": "C:\\Users\\AtulM\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64\\node.exe",
+    "rawVersionCommand": "& 'C:\\Users\\AtulM\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64\\node.exe' --version",
+    "rawStdout": "v26.11.1",
+    "numericNativeExit": 0,
+    "packageEngine": ">=26.0.0",
+    "installedPackages": [
+      { "name": "vitest", "version": "4.1.11", "nodeEngine": "^20.0.0 || ^22.0.0 || >=24.0.0" },
+      { "name": "vite", "version": "6.4.3", "nodeEngine": "^18.0.0 || ^20.0.0 || >=22.0.0" },
+      { "name": "jsdom", "version": "30.1.0", "nodeEngine": "^22.22.2 || ^24.15.0 || >=26.0.0" }
+    ],
+    "nestedVitestVitePackagePresent": false,
+    "limitation": "The Vite config comment describes nested Vite 8, but the inspected installation has root Vite 6.4.3 and no node_modules\\vitest\\node_modules\\vite\\package.json. This comment/install difference is not evidence of the stall's cause."
+  },
+  "configurationFacts": [
+    {
+      "location": "web\\vite.config.ts:59-70,146",
+      "fact": "The normal config always registers verify-english-catalog-split. buildStart sequentially executes the same process.execPath with scripts/split-i18n-catalog.mjs --check and scripts/audit-i18n-namespaces.mjs --strict, stdio inherited.",
+      "provenBlindSpot": "Neither execFileSync call specifies a timeout or logs its start. Silence can include an in-progress guard; absence of guard output does not prove that guard execution was never entered."
+    },
+    {
+      "location": "web\\scripts\\split-i18n-catalog.mjs:615-653",
+      "fact": "The check computes expectedFiles, differences, manifest validation and missing-key reconciliation before its final OK output. --check returns before writeFiles and baseline writes.",
+      "limitation": "Its elapsed time in the failed receipts and current discovery was not measured separately."
+    },
+    {
+      "location": "web\\scripts\\audit-i18n-namespaces.mjs:27-38,73-110",
+      "fact": "The namespace audit recursively reads production TS/TSX source before printing inventory totals. --strict rejects new dotted misses; no --write-baseline was requested.",
+      "limitation": "No guard was disabled, regenerated or separately rerun here."
+    },
+    {
+      "location": "web\\vite.config.ts:357-372; web\\src\\test-setup.ts:1-3,47-49,119-121,143-145",
+      "fact": "The existing test environment is jsdom with ./src/test-setup.ts, --no-experimental-webstorage and 30000ms test/hook timeouts. Setup imports resilience and registers async importActual mocks for settings, Toast and timezone.",
+      "limitation": "Configured per-test/hook timeouts do not establish a bound on config loading, synchronous buildStart guards or initial worker/module collection."
+    },
+    {
+      "location": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.test.tsx:43-45,79-89",
+      "fact": "Dynamic discovery evaluates real dependency graphs through importOriginal for metrics and shared charts/layout/motion barrels.",
+      "limitation": "No import deadlock or expensive specific module is proven; no mocks or assertions were changed."
+    },
+    {
+      "location": "web\\node_modules\\vitest\\dist\\chunks\\cac.uFydS1Z4.js:1310-1317,2267,2359-2381; chunks\\cli-api.CnMVyzaz.js:13458-13480",
+      "fact": "Installed list supports --json and dynamic collection. Without --filesOnly or --staticParse it calls ctx.collect and the ordinary worker collection path before producing collected output.",
+      "limitation": "The chosen probe is collection, not execution, and emits JSON to stdout rather than a separate report file."
+    },
+    {
+      "location": "web\\node_modules\\vitest\\dist\\chunks\\index.UpGiHP7g.js:3522,3538,3613,3620-3623",
+      "fact": "The JSON test-run reporter writes its result from onTestRunEnd.",
+      "provenBlindSpot": "Absent final JSON does not distinguish config startup, worker bootstrap, module collection, test execution or shutdown."
+    }
+  ],
+  "retainedFailureReceipts": [
+    {
+      "item": "phase6-rescue-analytics-period-compare",
+      "log": "web\\logs\\phase6-rescue-analytics-period-compare.log",
+      "sha256": "3C4CD699419EC5CC946FEA45164241BCE381B9E9D9D07DAC137B3B1D1A263E08",
+      "rawCommand": "node node_modules/vitest/vitest.mjs run src/features/analytics/pages/PeriodComparePage.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=logs/phase6-rescue-analytics-period-compare-20261013T1546.json",
+      "rawEvidence": "STOPPED 2026-10-13T08:55:12.0204079-07:00 original task20min budget exceeded; tool stop_powershell terminated process tree; native exit not returned; discovery/executed/pass/fail/skip UNKNOWN; no further retry.",
+      "runnerOutputObserved": false,
+      "naturalNumericExit": null,
+      "terminationNumericExit": null,
+      "boundedInvocationExit": null,
+      "freshNativeJsonPresent": false,
+      "counts": { "discovered": null, "executed": null, "passed": null, "failed": null, "skipped": null }
+    },
+    {
+      "item": "phase6-rescue-telemetry-signal-entropy",
+      "log": "web\\logs\\phase6-rescue-telemetry-signal-entropy.log",
+      "sha256": "FF48E8868357153B9AA5B225A1C090D128BC13B23CE9C4097B4A83200317A755",
+      "rawCommand": "node node_modules/vitest/vitest.mjs run src/features/telemetry/pages/SignalEntropyPage.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=D:\\repos\\teslasync\\web\\logs\\phase6-rescue-telemetry-signal-entropy.20261013T154433297Z.vitest.json",
+      "rawEvidence": "[i18n-split] OK — 57 grouped locale bundles, 177 per-namespace fallbacks, 1239 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)\n[i18n-namespace-audit] 2 known dotted misses, 24 dotless labels, 0 new dotted, 2 new dotless, 49 newly resolved\nRUN v4.1.11 D:/repos/teslasync/web",
+      "runnerOutputObserved": true,
+      "caseNamesObserved": false,
+      "naturalNumericExit": null,
+      "terminationNumericExit": null,
+      "boundedInvocationExit": null,
+      "freshNativeJsonPresent": false,
+      "correction": "The queue's no-stdout shorthand is contradicted by the retained log. This run reached guard output and the RUN banner, but no cases or final report.",
+      "counts": { "discovered": null, "executed": null, "passed": null, "failed": null, "skipped": null }
+    },
+    {
+      "item": "phase6-rescue-telemetry-signal-gap-detector",
+      "log": "web\\logs\\phase6-rescue-telemetry-signal-gap-detector.log",
+      "sha256": "7F2701DC21781A1CC46E596E1C6D04F76C4F451667F9D624F70B7E043780F4C7",
+      "rawCommand": "node node_modules/vitest/vitest.mjs run src/features/telemetry/pages/SignalGapDetectorPage.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=logs/phase6-rescue-telemetry-signal-gap-detector-20261013T154423912Z.json",
+      "rawEvidence": "RUN v4.1.11 D:/repos/teslasync/web\nVITEST NUMERIC EXIT 1 SIGNAL null TIMEOUT true ELAPSED_MS 451201\nEXITS Vitest child after own termination=1; bounded covering invocation=124",
+      "runnerOutputObserved": true,
+      "caseNamesObserved": false,
+      "naturalNumericExit": null,
+      "terminationNumericExit": 1,
+      "boundedInvocationExit": 124,
+      "elapsedMillisecondsFromReceipt": 451201,
+      "freshNativeJsonPresent": false,
+      "correction": "The child exit 1 followed explicit termination and is not evidence of a failed test case. This log also contains catalog guard output.",
+      "counts": { "discovered": null, "executed": null, "passed": null, "failed": null, "skipped": null }
+    },
+    {
+      "item": "phase6-rescue-trips-trip-list",
+      "log": "web\\logs\\phase6-rescue-trips-trip-list.log",
+      "sha256": "0E4C9AC564C5F35384BB39EB004DE6E724BF0FE02E02BDA7F825FDDD10BEC47F",
+      "rawCommand": "C:\\Users\\AtulM\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64\\node.exe node_modules/vitest/vitest.mjs run src/features/trips/pages/TripListPage.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=D:\\repos\\teslasync\\web\\logs\\phase6-rescue-trips-trip-list-53177c47-ad95-4aaf-8cd3-4aed7f9c6aa3.json",
+      "rawEvidence": "VITEST_NUMERIC_EXIT unavailable: tool termination returned no process exit code; not EXIT0.\nCOUNTS reported discovery=0 execution=0 pass=0 fail=0 skip=0; actual runner counts unavailable without fresh JSON, NOT a pass.",
+      "runnerOutputObserved": false,
+      "naturalNumericExit": null,
+      "terminationNumericExit": null,
+      "boundedInvocationExit": null,
+      "freshNativeJsonPresent": false,
+      "correction": "Reported zeros describe absence of observed results, not proven native discovery/execution counts. Preserve UNKNOWN.",
+      "counts": { "discovered": null, "executed": null, "passed": null, "failed": null, "skipped": null }
+    },
+    {
+      "item": "phase6-rescue-battery-energy",
+      "log": "web\\logs\\phase6-rescue-battery-energy.log",
+      "sha256": "C5AB0D94A8F8B8130CD0F79F178A59C4FE91C7B75640A2B35DFD1557668CE020",
+      "rawCommand": "node node_modules/vitest/vitest.mjs run src/features/battery/pages/EnergyPage.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=logs\\phase6-rescue-battery-energy-20261013T155004557872Z.json",
+      "rawEvidence": "RAW_STDOUT_STDERR_BEGIN\n\nRAW_STDOUT_STDERR_END\nNUMERIC_EXIT=124\nELAPSED_SECONDS=243.464\nJSON_EXISTS=False",
+      "runnerOutputObserved": false,
+      "naturalNumericExit": null,
+      "terminationNumericExit": null,
+      "boundedInvocationExit": 124,
+      "elapsedSecondsFromReceipt": 243.464,
+      "freshNativeJsonPresent": false,
+      "counts": { "discovered": null, "executed": null, "passed": null, "failed": null, "skipped": null }
+    },
+    {
+      "item": "phase6-rescue-battery-energy-ledger",
+      "log": "web\\logs\\phase6-rescue-battery-energy-ledger.log",
+      "sha256": "6DAB4B6DEFDE6D3C9019B7100400C4DA9048F1B853B30965CFF2980D422395C7",
+      "rawCommand": "node node_modules/vitest/vitest.mjs run src/features/battery/pages/EnergyLedgerPage.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=D:\\repos\\teslasync\\web\\logs\\phase6-rescue-battery-energy-ledger-20261013T154759823Z.json",
+      "rawEvidence": "STOPPED_BY=stop_powershell shellId=phase6-rescue-energy-ledger-proof\nNUMERIC_VITEST_EXIT=UNAVAILABLE (process tree stopped; no natural exit captured)\nRESULT=UNVERIFIED startup produced no test output; no pass claimed",
+      "runnerOutputObserved": false,
+      "naturalNumericExit": null,
+      "terminationNumericExit": null,
+      "boundedInvocationExit": null,
+      "freshNativeJsonPresent": false,
+      "counts": { "discovered": null, "executed": null, "passed": null, "failed": null, "skipped": null }
+    }
+  ],
+  "retainedControls": [
+    {
+      "item": "phase6-rescue-power-user-grafana-panel",
+      "json": "web\\logs\\phase6-rescue-power-user-grafana-panel-20261013T084215339.json",
+      "sha256": "CC79438E8FA4CCCD9C49259BC2B49876B94A77F1331EF6E00CF320A688DBF2AF",
+      "rawCommand": "node node_modules/vitest/vitest.mjs run src/features/power-user/pages/GrafanaPanelPage.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=D:\\repos\\teslasync\\web\\logs\\phase6-rescue-power-user-grafana-panel-20261013T084215339.json",
+      "naturalNumericExitFromRawLog": 0,
+      "actualAssertionResults": 20,
+      "statusPassed": 20,
+      "statusFailed": 0,
+      "statusPending": 0,
+      "sampleActualCaseNames": [
+        "GrafanaPanelPage associates the visible editor label and manual-copy guidance across draft edits",
+        "GrafanaPanelPage retains every catalog identifier and ordered column on neutral reference surfaces"
+      ],
+      "rawTiming": "START_UTC=2026-10-13T15:42:15.3433535Z; JSON startTime=1791906519071; Duration49.50s; END_UTC=2026-10-13T15:49:29.1655099Z",
+      "nativeStartUtc": "2026-10-13T15:48:39.071Z",
+      "preNativeStartMilliseconds": 383727.646,
+      "totalInvocationMilliseconds": 433822.156,
+      "inference": "A same-version normal-config direct runner did execute cases and finish; a universal broken Node/Vitest installation is not established. Approximately384s preceded Vitest's native start clock.",
+      "limitation": "The pre-native-start interval is not attributed to a specific guard, config import, process dispatch or resource condition. Historical receipt only; not rerun."
+    },
+    {
+      "item": "phase6-rescue-battery-battery-cells",
+      "json": "web\\logs\\phase6-rescue-battery-battery-cells-20261013T1544118690Z.json",
+      "sha256": "682B741ED2FA44D47345B124742B475A03200705CE3469B4F23488B8E4A84EC0",
+      "actualAssertionResults": 20,
+      "statusPassed": 20,
+      "statusFailed": 0,
+      "limitation": "Retained command used --import with a historical raw logger; not an identical plain-runner control. No logger reused or recreated; not rerun."
+    },
+    {
+      "item": "phase5-page-telemetry-signal-entropy-attempt2",
+      "json": "web\\logs\\phase5-page-telemetry-signal-entropy-attempt2.vitest.json",
+      "sha256": "FFD987B7430C762932C38610903EE4D6A3471632E2445223B3910ECFDE8B13FB",
+      "actualAssertionResults": 15,
+      "statusPassed": 15,
+      "statusFailed": 0,
+      "limitation": "Old case evidence does not complete the stopped rescue or the current discovery. Not rerun."
+    },
+    {
+      "item": "phase5-page-analytics-period-compare-attempt2",
+      "json": "web\\logs\\phase5-page-analytics-period-compare-attempt2-report.json",
+      "sha256": "F53F07C4FDEE97C9CF963677A3FEB1357C7EE19BD1A50A46C04B90AC0BC39786",
+      "actualAssertionResults": 23,
+      "statusPassed": 22,
+      "statusFailed": 1,
+      "limitation": "Historical failing evidence retained; later changed selector remains unverified. No current test pass inferred and no repair/retry performed."
+    }
+  ],
+  "resourceFacts": {
+    "observedUtc": "2026-10-13T16:24:05.1455515Z",
+    "logicalProcessors": 16,
+    "totalPhysicalBytes": 137143607296,
+    "freePhysicalKB": 83721888,
+    "totalVirtualKB": 142317912,
+    "freeVirtualKB": 85730324,
+    "nodeProcesses": 11,
+    "postStopObservedUtc": "2026-10-13T16:29:33.2345858Z",
+    "postStopFreePhysicalKB": 83595552,
+    "postStopFreeVirtualKB": 85634724,
+    "historicalConcurrentDispatch": "The read queue/handoff records32 worker dispatches. That is context, not a measured count of simultaneous Vitest children.",
+    "historicalCpuLoad": null,
+    "historicalMemoryPressure": null,
+    "probeCpuLoad": null,
+    "oomEvidenceObserved": false,
+    "limitation": "Available memory now neither establishes nor excludes contention at the historical failure times. No CPU starvation, OS fault, antivirus interference, deadlock or tool-platform fault is proven."
+  },
+  "discoveryProbe": {
+    "shellId": "phase6-scoped-runner-discovery-20261013",
+    "cwd": "D:\\repos\\teslasync\\web",
+    "ownedPowerShellPid": 29820,
+    "startedUtc": "2026-10-13T16:27:09.5698292Z",
+    "rawCommand": "& 'C:\\Users\\AtulM\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64\\node.exe' '.\\node_modules\\vitest\\vitest.mjs' list '.\\src\\features\\telemetry\\pages\\SignalEntropyPage.test.tsx' --pool=forks --maxWorkers=2 --json 2>&1 | Tee-Object -FilePath 'D:\\repos\\teslasync\\logs\\phase6-fix-scoped-runner-startup.log' -Append",
+    "ephemeralEnvironment": {
+      "PATH": "Supported Node26 directory prepended for this fresh PowerShell only.",
+      "VITE_GIT_SHA": "dev",
+      "reason": "Existing build-identity fixture prevents vite.config.ts from invoking Git. It skips neither catalog check nor namespace audit; repository files remain unchanged."
+    },
+    "inheritedRelevantEnvironment": {
+      "VITEST": null,
+      "NODE_OPTIONS": null,
+      "VITE_GIT_SHA": null,
+      "VITE_APP_VERSION": null,
+      "VITE_RELEASE_BUILD": null,
+      "CI": null,
+      "VITE_PWA_DEV": null
+    },
+    "guards": "ON; normal vite.config.ts and setupFiles; no --config, --filesOnly, --staticParse, setup override, guard-bypass flag or custom wrapper.",
+    "rawToolResult": "command with shellId: phase6-scoped-runner-discovery-20261013 is still running after100 seconds",
+    "rawRunnerStdoutStderrObserved": "",
+    "guardOutputObserved": false,
+    "collectedJsonObserved": false,
+    "separateJsonFileRequested": false,
+    "result": "STOPPED_UNVERIFIED",
+    "rawStopToolCall": "stop_powershell({\"shellId\":\"phase6-scoped-runner-discovery-20261013\"})",
+    "rawStopToolResult": "<command with id: phase6-scoped-runner-discovery-20261013 stopped>",
+    "naturalNumericExit": null,
+    "terminationNumericExit": null,
+    "syntheticTimeoutExitAssigned": false,
+    "counts": {
+      "discovered": null,
+      "executedTestBodies": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "countExplanation": "Dynamic list collection is not a test-body execution. No collected names were returned; unknown discovery is not zero discovery or a passing case result.",
+    "ownedPowerShellAndDirectChildrenRemainingAtCensus": 0,
+    "ownershipCensusCommand": "Get-CimInstance Win32_Process -Filter 'ProcessId=29820 OR ParentProcessId=29820'",
+    "ownershipCensusObservedUtc": "2026-10-13T16:29:33.2345858Z",
+    "ownershipCensusPowerShellExit": 0,
+    "ownershipLimitation": "Built-in stop confirmed the exact owned process tree termination. The later census additionally found zero owned shell/direct children; it did not attempt to adopt or stop any other node.exe.",
+    "interpretation": "Current guarded collection also did not finish within its bounded wait. No first guard output was captured, but the exact blocking stage remains UNKNOWN because guard starts/config phases were not instrumented."
+  },
+  "conclusion": {
+    "provenRootCause": null,
+    "causeStatus": "UNKNOWN",
+    "provenFindings": [
+      "Six inspected rescue receipts have no final native JSON and UNKNOWN actual case counts.",
+      "At least two of those receipts contain guard output and the RUN banner; a single no-stdout startup signature does not describe all failures.",
+      "A direct guarded Grafana control actually executed20 cases and exited0 on supported Node26/Vitest4.1.11.",
+      "That control spent383727.646ms before Vitest's native start clock; configured30000ms per-test/hook limits do not account for this wall-clock overhead.",
+      "Current single dynamic discovery produced no runner output within100 seconds and was explicitly stopped with natural/termination numeric exits UNKNOWN.",
+      "Guard startup has no explicit child timeout/start marker, and final JSON is written only at run end; existing receipts cannot pinpoint the missing phase.",
+      "The inspected runtime/dependency engines support Node26.11.1, and current available memory does not evidence an OOM."
+    ],
+    "candidates": [
+      {
+        "id": "guard-or-config-startup-cost",
+        "mechanism": "Synchronous source-graph/catalog scans or config/plugin imports can consume substantial time before the first guard completion output.",
+        "evidenceFor": "Unbounded execFileSync guard calls, work before final OK, roughly384s pre-native-start in a real completed control, silent current discovery.",
+        "notProven": "No separately measured guard duration or config stack. Cannot assign the384s to these scripts or explain both post-RUN stalls from this fact alone."
+      },
+      {
+        "id": "fork-environment-setup-or-module-collection",
+        "mechanism": "After guards/RUN, worker bootstrap, jsdom, global async mocks and transitive real barrel imports occur before case reporting.",
+        "evidenceFor": "Entropy and Gap retained RUN but no case names; config/setup and Entropy importOriginal paths are source-proven.",
+        "notProven": "No worker stack, import timing or deadlock evidence. It could be slow collection rather than a faulty module."
+      },
+      {
+        "id": "historical-resource-contention",
+        "mechanism": "Many independent guarded runs could compete for CPU/I/O and repeat full-source guard scans.",
+        "evidenceFor": "Historical32-worker dispatch and large pre-native-start interval.",
+        "notProven": "Historical active runner count/CPU/I/O/memory pressure unavailable. Present memory is ample; no infrastructure exemption follows."
+      },
+      {
+        "id": "output-or-command-dispatch-observability",
+        "mechanism": "Silent redirected output does not by itself locate child execution or pipeline progress.",
+        "evidenceFor": "Multiple receipts lack raw child output and natural exits; current plain call uses only normal PowerShell Tee-Object.",
+        "notProven": "No measured buffering, launch failure or tool-platform defect. Other retained direct calls capture output successfully."
+      }
+    ],
+    "noFailureExemption": true,
+    "runnerRepaired": false,
+    "leafAcceptanceChanged": false,
+    "freshPassingTestCases": 0
+  },
+  "nextExactFixNeed": {
+    "owner": "Parent must authorize a narrow root continuation; no leaf retry or exhausted-budget reset is implied.",
+    "immediateNeed": "Separate normal guarded startup timing from post-RUN collection before choosing a source/config repair. No exact defective application line is proven and no speculative fix should be committed.",
+    "existingCommandSequenceForAnAuthorizedContinuationOnly": [
+      "Set-Location 'D:\\repos\\teslasync\\web'; $env:VITE_GIT_SHA='dev'; & 'C:\\Users\\AtulM\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64\\node.exe' '.\\scripts\\split-i18n-catalog.mjs' --check",
+      "Set-Location 'D:\\repos\\teslasync\\web'; $env:VITE_GIT_SHA='dev'; & 'C:\\Users\\AtulM\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64\\node.exe' '.\\scripts\\audit-i18n-namespaces.mjs' --strict"
+    ],
+    "continuationEvidenceRequired": "Serialize those existing read-only guards, use exact owned bounded PowerShell handles, retain wall-clock start/end, stdout/stderr and natural numeric exits, with no regenerating flags or bypass. If both finish promptly, authorize existing-runner worker/collection diagnostics, not another leaf run.",
+    "conditionalRepairScope": {
+      "ifGuardSpecificCauseProven": "Only the measured existing catalog/source-graph owner (web\\scripts\\split-i18n-catalog.mjs, web\\scripts\\i18n-source-graph.mjs or namespace-audit script as evidence determines), preserving --check/--strict failure semantics.",
+      "ifCollectionSpecificCauseProven": "Only the identified existing setup/import/worker configuration owner; retain jsdom, storage flag, original mocks/assertions and guards unless evidence requires an expressly authorized change."
+    },
+    "commandsAboveRunHere": false,
+    "forbiddenShortcuts": "Do not disable guards, lengthen all leaf budgets, downgrade runtime, install dependencies, blame Windows, reset attempts or accept old/stopped/no-case receipts as passes."
+  },
+  "readOnlyPreservation": {
+    "hashesEqualBeforeAndAfterProbe": true,
+    "verifiedFiles": [
+      { "path": "web\\vite.config.ts", "sha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58" },
+      { "path": "web\\package.json", "sha256": "549E01893E2447D22B07486182357C4A8C3D161A2C65F65707531611E298C1EC" },
+      { "path": "web\\package-lock.json", "sha256": "626F096DFDD962204BC6D88931F60469A57DD07F2A8F6B045744BD90F29910DF" },
+      { "path": "web\\src\\test-setup.ts", "sha256": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A" },
+      { "path": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.test.tsx", "sha256": "2286DEC3F7FD40213DCB1E4A9E0317F1AC9CD2B4A1ADD73990591D006B82B954" }
+    ],
+    "hashCommand": "Get-FileHash -LiteralPath <each exact listed path> -Algorithm SHA256",
+    "verificationPowerShellExit": 0,
+    "notAWholeWorkingTreeClaim": "No Git was run; no unrelated pre-existing or concurrent changes are attributed to this worker."
+  },
+  "commandReceipts": [
+    { "shellId": "4519", "purpose": "Report/log existence and report inventory", "powerShellExit": 0 },
+    { "shellId": "4530", "purpose": "Initial queue/log inventory; terminal display too large, then narrowed; no failure exemption", "powerShellExit": 0 },
+    { "shellId": "4541", "purpose": "Exact queue row and affected claims", "powerShellExit": 0 },
+    { "shellId": "4548", "purpose": "Retained log/report locations", "powerShellExit": 0 },
+    { "shellId": "4560", "purpose": "Node version, environment, current memory/process facts, historical JSON totals", "powerShellExit": 0, "nodeVersionNativeExit": 0 },
+    { "shellId": "4572", "purpose": "Baseline configuration/source/package hashes and absent receipt files", "powerShellExit": 0 },
+    { "shellId": "4579", "purpose": "Installed CLI source inspection; display too large, then narrowed", "powerShellExit": 0 },
+    { "shellId": "4588", "purpose": "Compact installed list path and control timing; logs/ ignore pattern verified by file read", "powerShellExit": 0 },
+    { "shellId": "phase6-scoped-runner-discovery-20261013", "purpose": "Sole direct discovery; stopped", "powerShellExit": null, "nativeExit": null },
+    { "shellId": "4654", "purpose": "Post-stop exact ownership census, preserved hashes and raw log inspection", "powerShellExit": 0 },
+    { "shellId": "4669", "purpose": "Exact setup/config lines and historical native assertion status counts", "powerShellExit": 0 },
+    { "shellId": "4670", "purpose": "JSON finalization source, precise old startup interval and two remaining absent receipts", "powerShellExit": 0 }
+  ],
+  "unknownCounts": {
+    "retainedFailedRescueReceipts": 6,
+    "unknownHistoricalCountFields": 30,
+    "countDimensionsPerHistoricalReceipt": ["discovered", "executed", "passed", "failed", "skipped"],
+    "currentDiscoveryCount": null,
+    "currentDiscoveryNaturalExit": null,
+    "currentDiscoveryTerminationExit": null,
+    "currentDiscoveryExactNativeElapsed": null,
+    "historicalNaturalExitsForSixStoppedRuns": null
+  },
+  "validationNotRun": {
+    "typeScript": "NOTRUN: report-only item; no application edits or typecheck authorization.",
+    "violationAudit": "NOTRUN: no source changes; this diagnosis is not a guideline/audit pass.",
+    "pageLineSectionAndHookComparison": "NOT_APPLICABLE: no page/component/hook changes.",
+    "fullTestsLintBuild": "NOTRUN; no phase gate or test pass claimed.",
+    "nativeBrowserDocker": "NOTRUN; no grant or deployment changes.",
+    "freshTestExecution": "NOTRUN; sole probe was list collection."
+  },
+  "release": {
+    "allApplicationConfigTestAndReadClaims": "RELEASED; no application/config/test write claim was exercised.",
+    "reportWriteClaim": "RELEASED on return after the final existing-tool JSON verification exits.",
+    "ignoredLogWriteClaim": "RELEASED on return after the final timing/release receipt is appended.",
+    "allCommandClaims": "RELEASED on return; discovery stopped through its exact owned handle, read-only inspection commands completed, final verification must be terminal.",
+    "unrelatedProcessClaims": "NONE; no unrelated process adopted or killed.",
+    "postReturnWrites": "NONE; no command, report, log or source write after return.",
+    "parentOwnsCommit": true
+  }
+}

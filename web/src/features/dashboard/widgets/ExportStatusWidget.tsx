@@ -1,16 +1,22 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download } from 'lucide-react';
-import { Badge } from '@/components/ui';
-import { MetricBar, TimeStamp } from '@/components/data-display';
+import { Badge, Caption } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { exportDownloadUrl, useExports } from '@/api/hooks/useExports';
 import { useExportJobs } from '@/api/hooks/useAdmin';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
+import { WidgetBigNumber, WidgetEventFeed } from './shared';
 import type { WidgetProps } from './types';
 import type { ExportJob as ExportJobExport } from '@/types/export';
 import type { ExportJob as ExportJobAdmin } from '@/types/admin';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
+import { useDataState } from '@/hooks/useDataState';
+import { combineDataStates } from '@/api/dataState';
+import { safeArray } from '@/lib/safeArray';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 // ── Normalised job shape used within this widget ─────────────────────
 
@@ -18,7 +24,7 @@ export interface NormalisedJob {
   id: string;
   format: string;
   filePath?: string;
-  fileSize: number;
+  fileSize: number | null;
   createdAt: string;
 }
 
@@ -27,7 +33,7 @@ function fromExportHook(j: ExportJobExport): NormalisedJob {
     id: j.id,
     format: j.format,
     filePath: j.filePath,
-    fileSize: j.fileSize ?? 0,
+    fileSize: j.fileSize ?? null,
     createdAt: j.createdAt,
   };
 }
@@ -37,21 +43,21 @@ function fromAdminHook(j: ExportJobAdmin): NormalisedJob {
     id: j.id,
     format: j.format,
     filePath: undefined,
-    fileSize: j.fileSize ?? 0,
+    fileSize: j.fileSize ?? null,
     createdAt: j.createdAt,
   };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-export type JobStatus = 'queued' | 'processing' | 'ready' | 'failed';
+export type JobStatus = 'queued' | 'processing' | 'ready' | 'failed' | 'unknown';
 
 export function normaliseStatusFromAdmin(status: string | undefined): JobStatus {
   const s = (status ?? '').toLowerCase();
   if (s === 'processing' || s === 'running') return 'processing';
   if (s === 'ready' || s === 'done' || s === 'completed') return 'ready';
   if (s === 'failed' || s === 'error') return 'failed';
-  return 'queued';
+  return s === 'queued' || s === 'pending' ? 'queued' : 'unknown';
 }
 
 export function normaliseStatusFromExport(status: string | undefined): JobStatus {
@@ -63,6 +69,7 @@ const STATUS_ORDER: Record<JobStatus, number> = {
   queued: 1,
   ready: 2,
   failed: 3,
+  unknown: 4,
 };
 
 const STATUS_BADGE: Record<JobStatus, { variant: 'neutral' | 'info' | 'success' | 'danger'; labelKey: string; label: string }> = {
@@ -70,14 +77,16 @@ const STATUS_BADGE: Record<JobStatus, { variant: 'neutral' | 'info' | 'success' 
   processing: { variant: 'info',    labelKey: 'widget.exportRunning',    label: 'Running' },
   ready:      { variant: 'success', labelKey: 'widget.exportDone',       label: 'Done' },
   failed:     { variant: 'danger',  labelKey: 'widget.exportFailed',     label: 'Failed' },
+  unknown:    { variant: 'neutral', labelKey: 'common.unknown', label: 'Unknown' },
 };
 
-export function fmtBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '—';
+export function fmtBytes(bytes: number | null | undefined): string {
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return '—';
+  if (bytes === 0) return '0 B';
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  if (bytes < 1024 * 1024) return `${fmtNumber((bytes / 1024))} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${fmtNumber((bytes / (1024 * 1024)))} MB`;
+  return `${fmtNumber((bytes / (1024 * 1024 * 1024)))} GB`;
 }
 
 export function truncateFilename(path: string | undefined, maxLen: number): string {
@@ -93,20 +102,21 @@ export function mergeExportJobs(
 ): { job: NormalisedJob; status: JobStatus }[] {
   const byId = new Map<string, { job: NormalisedJob; status: JobStatus }>();
 
-  for (const j of (exports ?? [])) {
+  for (const j of safeArray(exports)) {
     byId.set(j.id, {
       job: fromExportHook(j),
       status: normaliseStatusFromExport(j.fsmState),
     });
   }
 
-  for (const j of (adminJobs ?? [])) {
+  for (const j of safeArray(adminJobs)) {
     const existing = byId.get(j.id);
     const adminJob = fromAdminHook(j);
     byId.set(j.id, {
       job: {
         ...adminJob,
         filePath: existing?.job.filePath ?? adminJob.filePath,
+        fileSize: adminJob.fileSize ?? existing?.job.fileSize ?? null,
       },
       status: normaliseStatusFromAdmin(j.status),
     });
@@ -128,89 +138,28 @@ export function mergeExportJobs(
 function CompactView({
   activeCount,
   hasRunning,
+  hasUnknown,
   t,
 }: {
   activeCount: number;
   hasRunning: boolean;
+  hasUnknown: boolean;
   t: (key: string, fallback: string) => string;
 }) {
+  const { fmtInt } = useNumberFormatting();
   return (
     <WidgetBigNumber
-      value={activeCount}
-      label={t('widget.exportActiveJobs', 'Active Exports')}
+      value={hasUnknown && activeCount === 0 ? null : fmtInt(activeCount)}
+      label={t('widget.exportActiveJobs', 'Active exports')}
       badge={{
         text: hasRunning
           ? t('widget.exportRunningBadge', 'Running')
-          : t('widget.exportIdleBadge', 'Idle'),
+          : hasUnknown ? t('common.unknown', 'Unknown') : t('widget.exportIdleBadge', 'Idle'),
         variant: hasRunning ? 'success' : 'neutral',
       }}
     />
   );
 }
-
-// ── Job row ──────────────────────────────────────────────────────────
-
-function JobRow({
-  job,
-  status,
-  showDownload,
-  t,
-}: {
-  job: NormalisedJob;
-  status: JobStatus;
-  showDownload: boolean;
-  t: (key: string, fallback: string) => string;
-}) {
-  const cfg = STATUS_BADGE[status];
-  const format = (job.format ?? '').toUpperCase() || '—';
-
-  return (
-    <div className="flex items-center gap-2 min-h-[44px] px-1 py-1.5 border-b border-[var(--border-subtle)] last:border-b-0">
-      {/* Filename */}
-      <span className="flex-1 min-w-0 truncate text-xs text-[var(--text-primary)]">
-        {truncateFilename(job.filePath, 28)}
-      </span>
-
-      {/* Format badge */}
-      <Badge variant="neutral" size="sm" className="shrink-0">
-        {format}
-      </Badge>
-
-      {/* File size */}
-      <span className="shrink-0 text-xs tabular-nums text-[var(--text-secondary)] w-16 text-right">
-        {fmtBytes(job.fileSize ?? 0)}
-      </span>
-
-      {/* Status badge */}
-      <Badge variant={cfg.variant} size="sm" className="shrink-0 min-w-[52px] justify-center">
-        {t(cfg.labelKey, cfg.label)}
-      </Badge>
-
-      {/* Relative time */}
-      <span className="shrink-0 w-14 text-right">
-        <TimeStamp value={job.createdAt} className="text-2xs text-[var(--text-muted)]" />
-      </span>
-
-      {/* Download link — wide only */}
-      {showDownload && (
-        job.filePath && status === 'ready' ? (
-          <a
-            href={exportDownloadUrl(job.id)}
-            aria-label={t('widget.exportDownload', 'Download')}
-            className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-cyan-300 hover:text-[var(--text-primary)] transition-colors"
-            title={t('widget.exportDownload', 'Download')}
-          >
-            <Download className="h-3.5 w-3.5" />
-          </a>
-        ) : (
-          <span className="shrink-0 w-[44px]" />
-        )
-      )}
-    </div>
-  );
-}
-
-// ── Standard list with optional progress bars ────────────────────────
 
 function StandardView({
   jobs,
@@ -223,9 +172,10 @@ function StandardView({
   maxItems: number;
   t: (key: string, fallback: string) => string;
 }) {
-  const visible = jobs.slice(0, maxItems);
+  useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
 
-  if (visible.length === 0) {
+  if (jobs.length === 0) {
     return (
       <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
         icon={<Download className="h-5 w-5" />}
@@ -237,16 +187,45 @@ function StandardView({
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
-      {visible.map(({ job, status }) => (
-        <div key={job.id}>
-          <JobRow job={job} status={status} showDownload={showDownload} t={t} />
-          {status === 'processing' && (
-            <div className="px-1 pb-1.5">
-              <MetricBar value={50} max={100} color="#22d3ee" label="" />
-            </div>
-          )}
-        </div>
-      ))}
+      <WidgetEventFeed
+        order="source"
+        maxItems={maxItems}
+        items={jobs.map(({ job, status }) => {
+          const cfg = STATUS_BADGE[status];
+          return {
+            id: job.id,
+            icon: <Download className="h-3.5 w-3.5" aria-hidden="true" />,
+            title: job.filePath ? job.filePath.split('/').pop() || job.filePath : '—',
+            timestamp: job.createdAt,
+            // Keep the preferred TimeStamp and its alternate tooltip in metadata.
+            timeLabel: formatDateTime(job.createdAt),
+            color: '',
+            wrap: true,
+            badges: (
+              <span className="inline-flex max-w-full flex-wrap gap-2">
+                <Badge variant="neutral" size="sm">{(job.format ?? '').toUpperCase() || '—'}</Badge>
+                <Badge variant={cfg.variant} size="sm">{t(cfg.labelKey, cfg.label)}</Badge>
+              </span>
+            ),
+            metadata: (
+              <span className="inline-flex max-w-full flex-wrap items-center gap-2">
+                <Caption className="tabular-nums">{fmtBytes(job.fileSize)}</Caption>
+                <TimeStamp value={job.createdAt} />
+              </span>
+            ),
+            actions: showDownload && job.filePath && status === 'ready' ? (
+              <a
+                href={exportDownloadUrl(job.id)}
+                aria-label={t('widget.exportDownload', 'Download')}
+                title={t('widget.exportDownload', 'Download')}
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-cyan-300 transition-colors hover:text-[var(--text-primary)]"
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
+            ) : undefined,
+          };
+        })}
+      />
     </div>
   );
 }
@@ -256,31 +235,36 @@ function StandardView({
 export default function ExportStatusWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
 
+  const exportsQuery = useExports();
   const {
     data: exports,
-    isLoading: exportsLoading,
     isFetching: exportsFetching,
     isStale: exportsStale,
     isError: exportsIsError,
-    dataUpdatedAt: exportsUpdatedAt,
     refetch: exportsRefetch,
-  } = useExports();
+  } = exportsQuery;
 
+  const adminQuery = useExportJobs();
   const {
     data: adminJobs,
-    isLoading: adminLoading,
     isFetching: adminFetching,
     isStale: adminStale,
     isError: adminIsError,
-    dataUpdatedAt: adminUpdatedAt,
     refetch: adminRefetch,
-  } = useExportJobs();
+  } = adminQuery;
 
-  const isLoading = exportsLoading || adminLoading;
   const isFetching = exportsFetching || adminFetching;
   const isStale = exportsStale || adminStale;
   const isError = exportsIsError || adminIsError;
-  const updatedAt = Math.max(exportsUpdatedAt ?? 0, adminUpdatedAt ?? 0);
+  const exportsState = useDataState(exportsQuery, { provenance: 'historical' });
+  const adminState = useDataState(adminQuery, { provenance: 'historical' });
+  const retry = () => { void exportsRefetch(); void adminRefetch(); };
+  const dataState = {
+    ...combineDataStates([exportsState, adminState]),
+    data: { exports, adminJobs },
+    hasData: exportsState.hasData || adminState.hasData,
+    retry,
+  };
 
   const sortedJobs = useMemo(() => {
     return mergeExportJobs(exports, adminJobs);
@@ -297,21 +281,22 @@ export default function ExportStatusWidget({ size }: WidgetProps) {
     () => sortedJobs.some((j) => j.status === 'processing'),
     [sortedJobs],
   );
+  const hasUnknown = sortedJobs.some((job) => job.status === 'unknown');
 
   return (
     <WidgetShell
-      title={t('widget.exportStatus', 'Export Status')}
-      icon={<Download className="h-3.5 w-3.5 text-neon-cyan" />}
-      loading={isLoading}
-      updatedAt={updatedAt}
+      title={t('widget.exportStatus', 'Export status')}
+      icon={<Download className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
+      dataState={hasUnknown && dataState.status === 'ok' ? { ...dataState, status: 'partial' } : dataState}
+      updatedAt={dataState.updatedAt ?? 0}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => { exportsRefetch(); adminRefetch(); }}
+      onRefresh={retry}
     >
       {isCompact ? (
         sortedJobs.length > 0 ? (
-          <CompactView activeCount={activeCount} hasRunning={hasRunning} t={t} />
+          <CompactView activeCount={activeCount} hasRunning={hasRunning} hasUnknown={hasUnknown} t={t} />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Download className="h-5 w-5" />}

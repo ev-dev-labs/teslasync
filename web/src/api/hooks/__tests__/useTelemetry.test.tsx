@@ -16,9 +16,11 @@
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import type { SignalHistoryResponse } from '@/types/telemetry'
+import { camelCaseKeys } from '@/lib/resilience'
 
 vi.mock('@/api/client', () => ({
   request: vi.fn(),
@@ -355,6 +357,85 @@ describe('useSignalAnalysisHistory', () => {
 })
 
 describe('useSignalEvidenceBundle', () => {
+  it('preserves pending identities and distinguishes measured zero from a resolved empty history', async () => {
+    const speed: SignalHistoryResponse = {
+      vehicleId: 1, signal: 'Speed', from: '', to: '', count: 1,
+      data: [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 }],
+    }
+    const power: SignalHistoryResponse = {
+      vehicleId: 1, signal: 'Power', from: '', to: '', count: 0, data: [],
+    }
+    let resolvePower: (response: SignalHistoryResponse) => void = () => {
+      throw new Error('Power request has not started')
+    }
+    mockedRequest.mockImplementation((url: string) => url.includes('/Speed/')
+      ? Promise.resolve(speed)
+      : new Promise<SignalHistoryResponse>((resolve) => { resolvePower = resolve }))
+    const { result } = renderHook(
+      () => useSignalEvidenceBundle(1, [' Speed ', 'Power', 'Speed'], 24),
+      { wrapper: makeWrapper() },
+    )
+
+    expect(result.current.sources.map((source) => source.signal)).toEqual(['Speed', 'Power'])
+    expect(result.current.sources[1]?.state).toMatchObject({
+      status: 'initial', provenance: 'unknown', hasData: false, updatedAt: null,
+    })
+    await waitFor(() => expect(result.current.sources[0]?.state.status).toBe('ok'))
+    expect(result.current.data).toEqual([{ signal: 'Speed', response: speed }])
+    expect(result.current.sources[0]?.state.data?.data[0]?.valueNum).toBe(0)
+    expect(result.current.sources[1]?.state.status).toBe('initial')
+
+    await act(async () => { resolvePower(power) })
+    await waitFor(() => expect(result.current.sources[1]?.state.status).toBe('unavailable'))
+    expect(result.current.sources[1]?.state.provenance).toBe('historical')
+    expect(result.current.sources[1]?.state.updatedAt).toBeGreaterThan(0)
+    expect(result.current.data.map((series) => series.signal)).toEqual(['Speed', 'Power'])
+    expect(mockedRequest).toHaveBeenCalledTimes(2)
+  })
+
+  it('retains independently stale histories and retries only the failed source', async () => {
+    const speed: SignalHistoryResponse = {
+      vehicleId: 1, signal: 'Speed', from: '', to: '', count: 1,
+      data: [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 }],
+    }
+    const power: SignalHistoryResponse = {
+      vehicleId: 1, signal: 'Power', from: '', to: '', count: 1,
+      data: [{ timestamp: '2026-10-06T00:00:00Z', valueNum: -50 }],
+    }
+    const refreshError = new Error('Power refresh unavailable')
+    let failPower = false
+    mockedRequest.mockImplementation((url: string) => url.includes('/Speed/')
+      ? Promise.resolve(speed)
+      : failPower ? Promise.reject(refreshError) : Promise.resolve(power))
+    const { result } = renderHook(
+      () => useSignalEvidenceBundle(1, ['Speed', 'Power'], 24),
+      { wrapper: makeWrapper() },
+    )
+    await waitFor(() => expect(result.current.sources.every((source) => source.state.status === 'ok')).toBe(true))
+    const updatedAt = result.current.sources[1]?.state.updatedAt
+    failPower = true
+
+    await act(async () => { await result.current.refetch() })
+    await waitFor(() => expect(result.current.sources[1]?.state.status).toBe('stale'))
+    expect(result.current.sources[0]?.state.status).toBe('ok')
+    expect(result.current.sources[1]?.state).toMatchObject({
+      data: power, hasData: true, provenance: 'historical',
+      fatalError: null, refreshError, updatedAt,
+    })
+    expect(result.current.data).toEqual([
+      { signal: 'Speed', response: speed }, { signal: 'Power', response: power },
+    ])
+    expect(result.current.error).toBe(refreshError)
+    expect(mockedRequest).toHaveBeenCalledTimes(4)
+
+    failPower = false
+    act(() => { result.current.sources[1]?.state.retry?.() })
+    await waitFor(() => expect(result.current.sources[1]?.state.status).toBe('ok'))
+    expect(result.current.error).toBeNull()
+    expect(mockedRequest).toHaveBeenCalledTimes(5)
+    expect(mockedRequest.mock.calls[4]?.[0]).toContain('/Power/history')
+  })
+
   it('loads unique encoded signals with independent cancellation contexts', async () => {
     mockedRequest.mockImplementation(async (url: string) => ({
       vehicleId: 1,
@@ -411,6 +492,13 @@ describe('useSignalEvidenceBundle', () => {
     expect(result.current.isError).toBe(true)
     expect(result.current.error?.message).toBe('history unavailable')
     expect(result.current.data).toHaveLength(1)
+    expect(result.current.sources.map((source) => source.signal)).toEqual(['Speed', 'Power'])
+    expect(result.current.sources[0]?.state.status).toBe('unavailable')
+    expect(result.current.sources[1]?.state).toMatchObject({
+      status: 'initialFailure', hasData: false, provenance: 'unknown', data: undefined,
+      refreshError: null, updatedAt: null,
+    })
+    expect(result.current.sources[1]?.state.fatalError?.message).toBe('history unavailable')
   })
 
   it('does not fetch when the vehicle or signal set is unavailable', async () => {
@@ -426,7 +514,9 @@ describe('useSignalEvidenceBundle', () => {
     await tick()
     expect(mockedRequest).not.toHaveBeenCalled()
     expect(first.result.current.isLoading).toBe(false)
+    expect(first.result.current.sources[0]?.state.status).toBe('initial')
     expect(second.result.current.data).toEqual([])
+    expect(second.result.current.sources).toEqual([])
   })
 })
 
@@ -564,9 +654,9 @@ describe('useMQTTStatus', () => {
     expect(mockedRequest.mock.calls[0][0]).toBe('/telemetry')
     const vehicles = result.current.data!.vehicles
     expect(vehicles).toHaveLength(1)
-    expect(vehicles[0].vin).toBe('5YJVIN')
-    expect(vehicles[0].signalCount).toBe(10)
-    expect(vehicles[0].batchCount).toBe(2)
+    expect(vehicles?.[0].vin).toBe('5YJVIN')
+    expect(vehicles?.[0].signalCount).toBe(10)
+    expect(vehicles?.[0].batchCount).toBe(2)
     expect(result.current.data!.uptimeSeconds).toBe(42)
   })
 
@@ -577,10 +667,10 @@ describe('useMQTTStatus', () => {
     })
     const { result } = renderHook(() => useMQTTStatus(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data!.vehicles[0].vin).toBe('A')
+    expect(result.current.data!.vehicles?.[0].vin).toBe('A')
   })
 
-  it('falls back to streaming_vehicles and defaults missing counts to 0', async () => {
+  it('falls back to streaming_vehicles without manufacturing missing counts', async () => {
     mockedRequest.mockResolvedValueOnce({
       connected: false,
       streaming_vehicles: { VIN2: { state: 'online' } },
@@ -588,34 +678,166 @@ describe('useMQTTStatus', () => {
     const { result } = renderHook(() => useMQTTStatus(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     const vehicles = result.current.data!.vehicles
-    expect(vehicles[0].vin).toBe('VIN2')
-    expect(vehicles[0].signalCount).toBe(0)
-    expect(vehicles[0].batchCount).toBe(0)
+    expect(vehicles?.[0].vin).toBe('VIN2')
+    expect(vehicles?.[0].signalCount).toBeUndefined()
+    expect(vehicles?.[0].batchCount).toBeUndefined()
   })
 
-  it('yields an empty vehicles array when none are present', async () => {
+  it('keeps the vehicles list unknown when no container is present', async () => {
     mockedRequest.mockResolvedValueOnce({ connected: false })
     const { result } = renderHook(() => useMQTTStatus(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data!.vehicles).toEqual([])
+    expect(result.current.data!.vehicles).toBeUndefined()
+  })
+
+  it.each([
+    { shape: 'array', casing: 'camel' },
+    { shape: 'array', casing: 'snake' },
+    { shape: 'map', casing: 'camel' },
+    { shape: 'map', casing: 'snake' },
+  ] as const)('Q01 retains partial $shape / $casing rows, real zeros and independent broker fields', async ({ shape, casing }) => {
+    const rows = casing === 'camel'
+      ? [
+        { vin: 'ZERO', signalCount: 0, batchCount: 0, signalsPerSecond: 0 },
+        { vin: 'NO-SIGNALS', batchCount: 7, signalsPerSecond: 2 },
+        { vin: 'NO-BATCHES', signalCount: 9, signalsPerSecond: 3 },
+      ]
+      : [
+        { vin: 'ZERO', signal_count: 0, batch_count: 0, signals_per_second: 0 },
+        { vin: 'NO-SIGNALS', batch_count: 7, signals_per_second: 2 },
+        { vin: 'NO-BATCHES', signal_count: 9, signals_per_second: 3 },
+      ]
+    const vehicles = shape === 'array' ? rows
+      : Object.fromEntries(rows.map(row => [row.vin, { ...row, vin: 'ignored' }]))
+    const raw = camelCaseKeys({ connected: false, broker: 'fixture-broker', uptime_seconds: 42, vehicles })
+    mockedRequest.mockResolvedValueOnce(raw)
+    const client = makeClient()
+    const { result } = renderHook(() => useMQTTStatus(), { wrapper: makeWrapper(client) })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toMatchObject({ connected: false, broker: 'fixture-broker', uptime_seconds: 42, uptimeSeconds: 42 })
+    expect(result.current.data?.vehicles).toHaveLength(3)
+    expect(result.current.data?.vehicles?.[0]).toMatchObject({ vin: 'ZERO', signalCount: 0, batchCount: 0, signalsPerSecond: 0 })
+    expect(result.current.data?.vehicles?.[1]).toMatchObject({ vin: 'NO-SIGNALS', batchCount: 7, signalsPerSecond: 2 })
+    expect(result.current.data?.vehicles?.[1].signalCount).toBeUndefined()
+    expect(result.current.data?.vehicles?.[2].batchCount).toBeUndefined()
+    expect(result.current.data?.vehicles?.[2].signalCount).toBe(9)
+    expect(mockedRequest.mock.calls[0][0]).toBe('/telemetry')
+    expect(mockedRequest.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
+    const query = client.getQueryCache().find({ queryKey: ['mqtt-status'] })
+    expect(query?.queryKey).toEqual(['mqtt-status'])
+    expect(query?.observers[0].options.refetchInterval).toBe(5_000)
+  })
+
+  it.each([
+    { id: 'omitted', payload: { connected: true }, expected: undefined },
+    { id: 'nullish', payload: { connected: false, vehicles: null }, expected: undefined },
+    { id: 'unsupported primary', payload: { connected: true, vehicles: 'oops', streaming_vehicles: { LEGACY: { signal_count: 1 } } }, expected: undefined },
+    { id: 'empty array', payload: { connected: true, vehicles: [], streaming_vehicles: { LEGACY: { signal_count: 1 } } }, expected: [] },
+    { id: 'empty map', payload: { connected: false, vehicles: {} }, expected: [] },
+    { id: 'legacy empty array', payload: { connected: false, streaming_vehicles: [] }, expected: [] },
+    { id: 'legacy empty map', payload: { connected: true, streaming_vehicles: {} }, expected: [] },
+  ])('Q01 distinguishes $id container evidence without failing a successful request', async ({ payload, expected }) => {
+    mockedRequest.mockResolvedValueOnce(camelCaseKeys(payload))
+    const { result } = renderHook(() => useMQTTStatus(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.vehicles).toEqual(expected)
+    expect(result.current.data?.connected).toBe(payload.connected)
+    expect(result.current.error).toBeNull()
   })
 })
 
-// ─── useSignalCatalog (deprecated 404 endpoint) ───────────────────────────────
+// ─── useSignalCatalog (validated canonical envelope) ─────────────────────────
 
 describe('useSignalCatalog', () => {
-  it('requests the deprecated /signals/catalog route', async () => {
-    mockedRequest.mockResolvedValueOnce([{ name: 'X' }])
+  const timestamp = '2026-10-11T12:00:00Z'
+  const unobserved = {
+    field: 'X', destination: 'signal_log', value_kind: 'ValueKindFloat',
+    last_seen_at: null, sample_count_total: null, vehicle_count: null,
+  }
+  const canonical = {
+    signals: [
+      unobserved,
+      { ...unobserved, field: 'Y', last_seen_at: timestamp, sample_count_total: 250, vehicle_count: 2 },
+      { ...unobserved, field: 'Zero', sample_count_total: 0, vehicle_count: 0 },
+    ],
+    generated_at: timestamp,
+  } satisfies import('@/types/signals').SignalsCatalogResponse
+
+  it('requests /signals/catalog and preserves canonical observed, unobserved and zero metadata', async () => {
+    mockedRequest.mockResolvedValueOnce(canonical)
     const { result } = renderHook(() => useSignalCatalog(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockedRequest.mock.calls[0][0]).toBe('/signals/catalog')
+    expect(mockedRequest.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
+    expect(result.current.data).toEqual(canonical)
+    expect(result.current.data!.signals[0].sample_count_total).toBeNull()
+    expect(result.current.data!.signals[2].sample_count_total).toBe(0)
   })
 
-  it('surfaces the 404 the deprecated endpoint reliably returns as isError', async () => {
-    mockedRequest.mockRejectedValueOnce(new Error('404 not found'))
+  it('propagates the actual request error without success-shaped fallback data', async () => {
+    const error = new Error('catalog source unavailable')
+    mockedRequest.mockRejectedValueOnce(error)
     const { result } = renderHook(() => useSignalCatalog(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(result.current.error).toBeInstanceOf(Error)
+    expect(result.current.error).toBe(error)
+    expect(result.current.data).toBeUndefined()
+  })
+
+  it('accepts an authoritative successful empty catalog envelope', async () => {
+    const empty = { signals: [], generated_at: timestamp }
+    mockedRequest.mockResolvedValueOnce(empty)
+    const { result } = renderHook(() => useSignalCatalog(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toEqual(empty)
+  })
+
+  const malformed: Array<[string, unknown]> = [
+    ['legacy bare array', [unobserved]],
+    ['null envelope', null],
+    ['missing signals', { generated_at: timestamp }],
+    ['null signals', { signals: null, generated_at: timestamp }],
+    ['missing generated timestamp', { signals: [] }],
+    ['invalid generated timestamp', { signals: [], generated_at: 'not a date' }],
+    ['null generated timestamp', { signals: [], generated_at: null }],
+    ['invalid row', { signals: [null], generated_at: timestamp }],
+    ...[
+      { field: undefined }, { field: '' }, { field: 12 },
+      { destination: null }, { destination: ' ' },
+      { value_kind: null }, { value_kind: 1 }, { value_kind: '' },
+      { last_seen_at: undefined }, { last_seen_at: 42 }, { last_seen_at: 'invalid' },
+      { sample_count_total: undefined }, { sample_count_total: -1 },
+      { sample_count_total: Number.NaN }, { sample_count_total: Infinity },
+      { sample_count_total: '1' }, { vehicle_count: undefined },
+      { vehicle_count: -1 }, { vehicle_count: Infinity }, { vehicle_count: '0' },
+    ].map((override, index): [string, unknown] => [
+      `invalid required row metadata ${index}`,
+      { signals: [unobserved, { ...unobserved, ...override }], generated_at: timestamp },
+    ]),
+  ]
+
+  it.each(malformed)('rejects %s rather than succeeding or silently dropping rows', async (_label, payload) => {
+    mockedRequest.mockResolvedValueOnce(payload)
+    const { result } = renderHook(() => useSignalCatalog(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error?.message).toMatch(/^Invalid signal catalog/)
+    expect(result.current.isSuccess).toBe(false)
+    expect(result.current.data).toBeUndefined()
+  })
+
+  it('retains the last valid canonical cache when a malformed refresh fails validation', async () => {
+    const client = makeClient()
+    mockedRequest.mockResolvedValueOnce(canonical)
+    const { result } = renderHook(() => useSignalCatalog(), { wrapper: makeWrapper(client) })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    mockedRequest.mockResolvedValueOnce({
+      signals: [{ ...unobserved, field: undefined }], generated_at: timestamp,
+    })
+    await act(async () => { await result.current.refetch() })
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error?.message).toMatch(/^Invalid signal catalog row/)
+    expect(result.current.data).toEqual(canonical)
+    expect(client.getQueryData(['signal-catalog'])).toEqual(canonical)
   })
 })
 

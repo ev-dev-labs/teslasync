@@ -15,6 +15,31 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 )
 
+func TestCanonicalWaitToolSchemaAndProjection(t *testing.T) {
+	stub := &stubAutomationValidator{}
+	tool := &draftAutomationGraph{validator: stub}
+	if !strings.Contains(string(tool.InputSchema()), "action_wait") || !strings.Contains(string(tool.InputSchema()), "duration_s") {
+		t.Fatal("wait discriminator and SI seconds missing from tool schema")
+	}
+	input, err := tool.Validate(json.RawMessage(`{
+		"vehicle_id":7,"name":"Wait at home",
+		"trigger":{"kind":"trigger_geofence","place_id":1,"event":"enter"},
+		"conditions":[{"kind":"condition_time_window","start_time":"00:00","end_time":"00:00","days_of_week":[1,2]}],
+		"actions":[{"kind":"action_command","command_name":"cabin_overheat_protection_on"},
+			{"kind":"action_command","command_name":"hvac_on"},{"kind":"action_wait","duration_s":30}]} `))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tool.Execute(context.Background(), input); err != nil {
+		t.Fatal(err)
+	}
+	if len(stub.Calls) != 1 || !strings.Contains(string(stub.Calls[0]), `"duration_s":30`) ||
+		!strings.Contains(string(stub.Calls[0]), `"days_of_week":[1,2]`) ||
+		strings.Contains(string(stub.Calls[0]), "duration_seconds") {
+		t.Fatalf("canonical wire = %s", stub.Calls)
+	}
+}
+
 // stubAutomationValidator records every call + can be wired to fail
 // for the rejection-path tests.
 type stubAutomationValidator struct {

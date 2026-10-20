@@ -39,6 +39,7 @@ export interface UtilizationBand<Key extends string> {
 }
 
 export interface UtilizationDay {
+  coverage?: UtilizationFieldCoverage;
   day: string;
   dayStartMs: number;
   observedS: number;
@@ -50,6 +51,7 @@ export interface UtilizationDay {
 }
 
 export interface UtilizationMonth {
+  coverage?: UtilizationFieldCoverage;
   month: string;
   monthStartMs: number;
   observedDays: number;
@@ -62,6 +64,7 @@ export interface UtilizationMonth {
 }
 
 export interface UtilizationWeek {
+  coverage?: UtilizationFieldCoverage;
   weekStart: string;
   weekStartMs: number;
   /** Exact observed duration represented as 24-hour days. */
@@ -76,6 +79,7 @@ export interface UtilizationWeek {
 }
 
 export interface WeekdayUtilization {
+  coverage?: UtilizationFieldCoverage;
   /** UTC weekday index: 0 = Sunday, 6 = Saturday. */
   weekday: number;
   observedDays: number;
@@ -199,6 +203,7 @@ interface NormalizedDrive {
 }
 
 interface MutableDay {
+  coverage: UtilizationFieldCoverage;
   day: string;
   dayStartMs: number;
   observedS: number;
@@ -206,6 +211,34 @@ interface MutableDay {
   drivingS: number;
   distanceM: number;
   energyWh: number;
+}
+
+export interface UtilizationFieldCoverage {
+  /** Field coverage follows drive-start attribution, not duration segments. */
+  usableDurationRows: number;
+  excludedDurationRows: number;
+  truncatedDurationRows: number;
+  usableDistanceRows: number;
+  excludedDistanceRows: number;
+  usableEnergyRows: number;
+  excludedEnergyRows: number;
+}
+
+function emptyCoverage(): UtilizationFieldCoverage {
+  return {
+    usableDurationRows: 0, excludedDurationRows: 0, truncatedDurationRows: 0,
+    usableDistanceRows: 0, excludedDistanceRows: 0,
+    usableEnergyRows: 0, excludedEnergyRows: 0,
+  };
+}
+
+function addCoverage(
+  target: UtilizationFieldCoverage,
+  source: UtilizationFieldCoverage,
+): void {
+  for (const key of Object.keys(target) as Array<keyof UtilizationFieldCoverage>) {
+    target[key] += source[key];
+  }
 }
 
 interface DateRange {
@@ -284,8 +317,8 @@ function mondayStart(dayStartMs: number): number {
   return dayStartMs - ((weekday + 6) % 7) * DAY_MS;
 }
 
-function positiveFinite(value: number | null | undefined): number | null {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0
+function nonnegativeFinite(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
     ? value
     : null;
 }
@@ -381,6 +414,7 @@ function emptySummary(
     days: [],
     months: [],
     weekdays: Array.from({ length: 7 }, (_, weekday) => ({
+      coverage: emptyCoverage(),
       weekday,
       observedDays: 0,
       activeDays: 0,
@@ -467,9 +501,9 @@ export function summarizeUtilization(
     eligible.push({
       drive,
       startMs,
-      durationS: positiveFinite(drive.durationS),
-      distanceM: positiveFinite(drive.distanceM),
-      energyWh: positiveFinite(drive.energyUsedWh),
+      durationS: nonnegativeFinite(drive.durationS),
+      distanceM: nonnegativeFinite(drive.distanceM),
+      energyWh: nonnegativeFinite(drive.energyUsedWh),
     });
   }
 
@@ -517,6 +551,7 @@ export function summarizeUtilization(
   ) {
     const key = dayKey(cursor);
     mutableDays.set(key, {
+      coverage: emptyCoverage(),
       day: key,
       dayStartMs: cursor,
       observedS:
@@ -567,6 +602,13 @@ export function summarizeUtilization(
     const measuredEnergyWh = truncated ? null : item.energyWh;
 
     if (startDay) {
+      startDay.coverage.usableDurationRows += item.durationS != null ? 1 : 0;
+      startDay.coverage.excludedDurationRows += item.durationS == null ? 1 : 0;
+      startDay.coverage.truncatedDurationRows += truncated ? 1 : 0;
+      startDay.coverage.usableDistanceRows += measuredDistanceM != null ? 1 : 0;
+      startDay.coverage.excludedDistanceRows += measuredDistanceM == null ? 1 : 0;
+      startDay.coverage.usableEnergyRows += measuredEnergyWh != null ? 1 : 0;
+      startDay.coverage.excludedEnergyRows += measuredEnergyWh == null ? 1 : 0;
       if (measuredDistanceM != null) {
         startDay.distanceM += measuredDistanceM;
       }
@@ -601,7 +643,9 @@ export function summarizeUtilization(
       const cursorDayMs = utcDayStart(cursor);
       const segmentEndMs = Math.min(cursorDayMs + DAY_MS, cappedEndMs);
       const day = mutableDays.get(dayKey(cursorDayMs));
-      if (day) day.drivingS += (segmentEndMs - cursor) / 1000;
+      if (day) {
+        day.drivingS += (segmentEndMs - cursor) / 1000;
+      }
       cursor = segmentEndMs;
     }
   }
@@ -625,6 +669,7 @@ export function summarizeUtilization(
   const weekdayRows: WeekdayUtilization[] = Array.from(
     { length: 7 },
     (_, weekday) => ({
+      coverage: emptyCoverage(),
       weekday,
       observedDays: 0,
       activeDays: 0,
@@ -639,6 +684,7 @@ export function summarizeUtilization(
   for (const day of days) {
     const month = monthKey(day.dayStartMs);
     const monthRow = monthsByKey.get(month) ?? {
+      coverage: emptyCoverage(),
       month,
       monthStartMs: Date.UTC(
         new Date(day.dayStartMs).getUTCFullYear(),
@@ -659,11 +705,13 @@ export function summarizeUtilization(
     monthRow.drivingS += day.drivingS;
     monthRow.distanceM += day.distanceM;
     monthRow.energyWh += day.energyWh;
+    addCoverage(monthRow.coverage!, day.coverage!);
     monthsByKey.set(month, monthRow);
 
     const weekStartMs = mondayStart(day.dayStartMs);
     const weekStart = dayKey(weekStartMs);
     const weekRow = weeksByKey.get(weekStart) ?? {
+      coverage: emptyCoverage(),
       weekStart,
       weekStartMs,
       observedDays: 0,
@@ -681,6 +729,7 @@ export function summarizeUtilization(
     weekRow.driveCount += day.driveCount;
     weekRow.drivingS += day.drivingS;
     weekRow.distanceM += day.distanceM;
+    addCoverage(weekRow.coverage!, day.coverage!);
     weeksByKey.set(weekStart, weekRow);
 
     const weekday = new Date(day.dayStartMs).getUTCDay();
@@ -690,6 +739,7 @@ export function summarizeUtilization(
     weekdayRow.driveCount += day.driveCount;
     weekdayRow.drivingS += day.drivingS;
     weekdayRow.distanceM += day.distanceM;
+    addCoverage(weekdayRow.coverage!, day.coverage!);
   }
 
   const months = Array.from(monthsByKey.values())
@@ -697,7 +747,8 @@ export function summarizeUtilization(
     .map((month) => ({
       ...month,
       drivingShare:
-        month.observedDays > 0
+        month.observedDays > 0 &&
+        (month.driveCount === 0 || month.coverage!.usableDurationRows > 0)
           ? Math.min(1, month.drivingS / (month.observedDays * DAY_S))
           : null,
     }));
@@ -718,7 +769,7 @@ export function summarizeUtilization(
         ? weekday.activeDays / weekday.observedDays
         : null,
     averageDistancePerActiveDayM:
-      weekday.activeDays > 0
+      weekday.activeDays > 0 && weekday.coverage!.usableDistanceRows > 0
         ? weekday.distanceM / weekday.activeDays
         : null,
   }));
@@ -830,13 +881,13 @@ export function summarizeUtilization(
     observedCalendarDays,
     drivingHours: drivingS / HOUR_S,
     drivingShare:
-      observedDurationS > 0
+      observedDurationS > 0 && usableDurationRows > 0
         ? Math.min(1, drivingS / observedDurationS)
         : null,
     distanceM,
     energyWh,
     distancePerDayM:
-      observedCalendarDays > 0 ? distanceM / observedCalendarDays : null,
+      observedCalendarDays > 0 && usableDistanceRows > 0 ? distanceM / observedCalendarDays : null,
     activeDayShare:
       observedCalendarDays > 0 ? activeDays / observedCalendarDays : null,
     pricedDistanceM,

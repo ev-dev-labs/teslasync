@@ -3,8 +3,10 @@ import type { FsdInsights } from '../src/types/fsd';
 import type { NotificationLog, NotificationReport } from '../src/api/types';
 import type { PinnedItem } from '../src/api/types';
 import type { ThemeId } from '../src/components/ui/ThemeProvider';
-import { ensureMockSseServer } from './mockSseServer';
+import { closeMockSseServer, ensureMockSseServer } from './mockSseServer';
 import type { DataScenario } from './routeRegistry';
+
+export const closeMockApiFixtures = closeMockSseServer;
 
 export type E2EUIDensity = 'compact' | 'comfortable' | 'spacious';
 
@@ -16,7 +18,7 @@ export interface BrowserSeedOptions {
 const NOW = '2026-08-26T16:00:00.000Z';
 const STALE = '2026-08-19T16:00:00.000Z';
 
-const settings = {
+export const mockAppSettings = {
   unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar',
   preferred_range: 'rated', language: 'en', base_cost_per_kwh: 0.16,
   api_suspended: false, theme: 'neon-cyan',
@@ -121,12 +123,13 @@ const drive = {
   id: 101, vehicle_id: 7, start_ts: '2026-08-25T08:00:00.000Z',
   end_ts: '2026-08-25T08:32:00.000Z', duration_s: 1920, distance_m: 28750,
   start_address: 'Home', end_address: 'Office', start_lat: 37.4, start_lon: -122.1,
-  end_lat: 37.7, end_lon: -122.4, start_soc_pct: 78, end_soc_pct: 68,
+  end_lat: 37.7, end_lon: -122.4, start_battery_pct: 78, end_battery_pct: 68,
   energy_used_wh: 5120, regen_energy_wh: 740, avg_speed_mps: 14.9,
   max_speed_mps: 29.1, avg_power_w: 9600, outside_temp_avg_c: 21,
   inside_temp_avg_c: null, score: 92, ended_status: 'completed',
   created_at: NOW, updated_at: NOW,
 };
+export { drive as mockDrive, vehicle as mockVehicle };
 
 const charging = {
   id: 201, vehicle_id: 7, started_at: '2026-08-24T23:00:00.000Z',
@@ -314,6 +317,7 @@ function fsdInsightsFixture(scenario: DataScenario): FsdInsights {
       contributing_drives: [],
       reset_events: [],
       repeated_routes: [],
+      commute_identities: [],
       time_of_day: [],
       firmware: [],
       firmware_spotlight: {
@@ -440,7 +444,7 @@ export function resolveApiFixture(
     ) return matched({});
     return { matched: false };
   }
-  if (path === '/settings') return matched({ ...settings, theme: accentTheme, mode: theme, ui_density: density });
+  if (path === '/settings') return matched({ ...mockAppSettings, theme: accentTheme, mode: theme, ui_density: density });
   if (path === '/system/auth-mode') return matched({ mode: 'open', forward_auth: false });
   if (path === '/auth/status') return matched({ authenticated: false, connected: false });
   if (path === '/auth/session') {
@@ -454,6 +458,7 @@ export function resolveApiFixture(
   if (path === '/admin/impersonate') return matched({ mode: 'inactive' });
   if (path === '/push/public-key') return matched({ public_key: '' });
   if (path === '/saved-views' || path.startsWith('/saved-views?')) return matched([]);
+  if (path === '/annotations' || path.startsWith('/annotations?')) return matched([]);
   if (path.startsWith('/search?')) {
     const query = new URLSearchParams(path.split('?')[1]).get('q') ?? '';
     return matched({ hits: [], query });
@@ -461,6 +466,7 @@ export function resolveApiFixture(
   if (path === '/settings/dashboard-layouts') return matched({ layouts: [], active_layout_id: null });
   if (path.startsWith('/user-preferences/latest?')) return matched(null);
   if (/^\/signals\/7\/live/.test(path)) return matched({});
+  if (path === '/vehicles/7') return matched(vehicle);
   if (path === '/vehicles') {
     if (scenario === 'large-fleet') return matched(largeFleetVehicles());
     return matched(listFor(scenario, scenario === 'partial' ? { ...vehicle, model: '', trim_badging: '' } : vehicle));
@@ -578,6 +584,11 @@ export function resolveApiFixture(
       : { ...drive, updated_at: observedAt };
     return matched(listFor(scenario, value));
   }
+  if (path.startsWith('/drives/score')) {
+    return matched(scenario === 'empty'
+      ? { overall: 0, efficiency: 0, smoothness: 0, speed_discipline: 0, grade: 'F', total_drives: 0, trend: 'flat' }
+      : { overall: 87, efficiency: 82, smoothness: 90, speed_discipline: 88, grade: 'B', total_drives: 24, trend: 'up' });
+  }
   if (path.startsWith('/charging?') || path === '/charging') {
     const value = scenario === 'partial'
       ? { ...charging, ended_at: null, end_soc_pct: null, avg_power_w: null, live: true }
@@ -607,13 +618,34 @@ export function resolveApiFixture(
     return matched(fsdInsightsFixture(scenario));
   }
   if (path.startsWith('/analytics/charging-optimizer')) {
-    return matched({ recommended_start_hour: 1, estimated_savings: 4.2, confidence: 0.84 });
+    // Mirrors internal/api/chargeopt (optimizerResponse wire shape), incl. its
+    // zero-session response. The previous 3-field stub predates the current
+    // contract and crashed OptimizerSection on current_schedule.
+    if (scenario === 'empty') {
+      return matched({
+        current_schedule: { most_common_start_hour: 0, most_common_day: '', avg_sessions_per_week: 0, home_charging_pct: 0, avg_charge_to_pct: 0 },
+        cost_analysis: { peak_hours: [], offpeak_hours: [], peak_cost_per_kwh: 0, offpeak_cost_per_kwh: 0, sessions_during_peak_pct: 0, potential_monthly_savings: 0 },
+        battery_health_score: 0,
+        recommendations: [],
+        weekly_heatmap: [],
+      });
+    }
+    return matched({
+      current_schedule: { most_common_start_hour: 21, most_common_day: 'Tuesday', avg_sessions_per_week: 3.5, home_charging_pct: 72.5, avg_charge_to_pct: 80 },
+      cost_analysis: { peak_hours: [16, 17, 18, 19, 20], offpeak_hours: [0, 1, 2, 3, 4, 5], peak_cost_per_kwh: 0.42, offpeak_cost_per_kwh: 0.18, sessions_during_peak_pct: 22.5, potential_monthly_savings: 18.4 },
+      battery_health_score: 88,
+      recommendations: [{ type: 'shift_offpeak', priority: 'high', title: 'Shift charging to off-peak hours', detail: 'Moving two weekly sessions after midnight lowers cost.', estimated_savings: 18.4 }],
+      weekly_heatmap: [
+        { day: 2, hour: 21, sessions: 3, avg_cost_per_kwh: 0.2 },
+        { day: 5, hour: 18, sessions: 1, avg_cost_per_kwh: 0.42 },
+      ],
+    });
   }
   if (path.startsWith('/analytics/battery-health')) {
     return matched({
       vehicle_id: 7, current_soh: 94, estimated_capacity_wh: 74200,
       original_capacity_wh: 79000, degradation_rate_pct_per_year: 1.4,
-      battery_age_months: 36, total_cycles: 184, avg_depth_of_discharge_pct: 34,
+      battery_age_months: 36, total_cycles: 184, valid_dod_count: 184, avg_depth_of_discharge_pct: 34,
       fast_charge_pct: 18, full_charge_pct: 9, charge_habits_score: 88,
       stress_level: 'Low', temp_exposure_score: 91, temp_exposure_reason: null,
       capacity_source: 'fleet_telemetry', charging_analysis: {
@@ -627,7 +659,10 @@ export function resolveApiFixture(
         total_sessions: 42,
       },
       prediction: {
-        has_enough_data: true, slope_per_year: -1.4, years_to_80_pct: 9.8,
+        // Mirrors the backend DTO (internal/api/batterydegradation/dtos.go):
+        // a valid fit ships fit_valid; the degradation page withholds the
+        // fit-rate metric and projections without it.
+        fit_valid: true, has_enough_data: true, slope_per_year: -1.4, years_to_80_pct: 9.8,
         predicted_date: '2036-06-01', projection_points: [
           { month: '2026-08', health: 94 }, { month: '2027-08', health: 92.6 },
         ],
@@ -801,6 +836,31 @@ function requestRecord(
   controller.requestIndex.set(request, record);
   controller.requests.push(record);
   return record;
+}
+
+export async function fulfillApiFixture(
+  route: Route,
+  controller: MockApiController | null,
+  response: Parameters<Route['fulfill']>[0],
+): Promise<void> {
+  if (!controller) throw new Error('API fixture overrides require mocked E2E mode');
+  const request = route.request();
+  const url = new URL(request.url());
+  const record = requestRecord(controller, request);
+  if (!record || !url.pathname.startsWith('/api/v1/')) {
+    throw new Error(`API fixture override received a non-API request: ${url.pathname}`);
+  }
+  const path = `${url.pathname.replace(/^\/api\/v1/, '')}${url.search}`;
+  controller.seen.add(`${request.method()} ${path}`);
+  controller.pending += 1;
+  controller.lastActivityAt = Date.now();
+  try {
+    await route.fulfill(response);
+    record.disposition = 'fulfilled';
+  } finally {
+    controller.pending -= 1;
+    controller.lastActivityAt = Date.now();
+  }
 }
 
 function isSseRequest(route: Route, path: string): boolean {
@@ -1173,7 +1233,12 @@ export async function seedBrowserState(
   options: BrowserSeedOptions = {},
 ): Promise<void> {
   const density = options.density ?? 'comfortable';
-  await page.addInitScript(({ selectedTheme, selectedDensity, activePath, allowedBeaconPaths, maxBeaconBytes, preserveDashboardState }) => {
+  await page.addInitScript(({ selectedTheme, selectedDensity, activePath, allowedBeaconPaths, maxBeaconBytes, preserveDashboardState, disableServiceWorker }) => {
+    // Hermetic runs block workers; disable the capability instead of giving
+    // Workbox an undefined registration that looks like a production failure.
+    if (disableServiceWorker && !Reflect.deleteProperty(Navigator.prototype, 'serviceWorker')) {
+      throw new Error('Unable to disable service workers for isolated API fixtures');
+    }
     const beaconRecords: CapturedBeacon[] = [];
     const NativeBlob = Blob;
     const blobBodies = new WeakMap<Blob, string | null>();
@@ -1417,5 +1482,6 @@ export async function seedBrowserState(
     allowedBeaconPaths: [...ALLOWED_BEACON_PATHS],
     maxBeaconBytes: MAX_BEACON_BYTES,
     preserveDashboardState: options.preserveDashboardState ?? false,
+    disableServiceWorker: process.env.E2E_MOCKS !== '0',
   });
 }

@@ -1,0 +1,1489 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-notifications-browser-notifications",
+  "attempt": 1,
+  "status": "DONE_READONLY_AUDIT_NEEDS_FIXES_NOT_NATIVE_ACCEPTANCE",
+  "route": "/notifications/browser",
+  "generated_at_utc": "2026-10-14T02:13:30.312651+00:00",
+  "timing": {
+    "reservation": "2026-10-14T01:57:57.687Z",
+    "first_probe": "2026-10-14T02:00:04.4480745Z",
+    "return_by": "2026-10-14T02:17:57.687Z",
+    "hard": "2026-10-14T02:22:57.687Z",
+    "note": "Earlier commentary 02:06Z timestamp was approximate; actual tool/log timestamps govern."
+  },
+  "authority": {
+    "orchestrator": "docs/orchestrator-loop.md fully read1-296",
+    "design": "docs/frontend-design-contract.md core1-645 plus relevant append-only section scan; MDC-002/020/025/026/031/040-047/060/070",
+    "mission": "Relevant principles/layout/mobile/states/a11y/preservation and sections43-45",
+    "inventory": "docs/frontend-inventory.md:198,493,496,500,1290; audit-page-147.json historical evidence",
+    "handoff": "docs/session-handoff.md current1-42 and conventions2219-2269",
+    "instructions": [
+      ".github/copilot-instructions.md relevant integrity/engineering sections",
+      ".github/instructions/react-frontend.instructions.md"
+    ],
+    "exact_queue_line": 68,
+    "queue_row": "| [~] | 6 | phase6-qa-notifications-browser-notifications | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-notifications-browser-notifications.json; web\\logs\\phase6-qa-notifications-browser-notifications.log | phase5-page-notifications-browser-notifications | 1 | reserved01:57:57.687Z; actor pending | - | BrowserNotificationsPage/direct supports; source-only, no browser permission/subscription/push requests. |",
+    "dependency": "Phase5 page item [x] at line2046; source acceptance is not native acceptance",
+    "dedup": "No existing Phase6 repair row matched the exact push/listener/card/device/sound support names in the bounded queue search. Needs are existing responsibility groups, not actor claims or new queue tasks. Parent must serialize overlapping files."
+  },
+  "scope": {
+    "readonly_page": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+    "writable_only": [
+      "docs/frontend-audits/phase6-qa-notifications-browser-notifications.json",
+      "web/logs/phase6-qa-notifications-browser-notifications.log"
+    ],
+    "sources": [
+      "web/src/hooks/useWebPush.ts",
+      "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+      "web/src/features/notifications/components/BrowserNotificationsKpis.tsx",
+      "web/src/features/notifications/components/BrowserPermissionPanel.tsx",
+      "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx",
+      "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+      "web/src/features/notifications/components/DeviceDataUsagePanel.tsx",
+      "web/src/features/notifications/components/NotificationSoundsPanel.tsx",
+      "web/src/features/notifications/components/NotificationSoundChannelRow.tsx",
+      "web/src/hooks/useNotificationListener.ts",
+      "web/src/hooks/useDeviceNotificationPrefs.ts",
+      "web/src/api/hooks/usePush.ts",
+      "web/src/components/feedback/LowBandwidthControl.tsx",
+      "web/src/hooks/useDataState.ts",
+      "web/src/api/dataState.ts",
+      "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "web/src/api/hooks/useSettings.ts",
+      "web/src/sw/notificationPolicy.ts",
+      "web/src/lib/notificationSound.ts",
+      "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+      "web/src/hooks/useLowBandwidthMode.ts",
+      "web/src/api/hooks/useVehicles.ts",
+      "web/src/components/layout/PageContainer.tsx",
+      "web/src/components/ui/Button.tsx",
+      "web/src/components/ui/Toggle.tsx",
+      "web/src/components/layout/Layout.tsx",
+      "web/src/lib/sseManager.ts",
+      "web/src/lib/workspaceScope.ts",
+      "web/src/components/layout/CopyLinkButton.tsx",
+      "web/src/api/queryClient.ts",
+      "web/src/i18n/index.ts"
+    ],
+    "tests": [
+      "web/src/features/notifications/pages/BrowserNotificationsPage.test.tsx",
+      "web/src/hooks/__tests__/useWebPush.test.ts",
+      "web/src/hooks/__tests__/useNotificationListener.test.ts",
+      "web/src/hooks/__tests__/useDeviceNotificationPrefs.test.tsx",
+      "web/src/api/hooks/usePush.test.tsx",
+      "web/src/lib/__tests__/notificationSound.test.ts",
+      "web/src/sw/__tests__/notificationPolicy.test.ts",
+      "web/src/features/notifications/components/BrowserPushChannelCard.test.tsx",
+      "web/src/features/notifications/components/BrowserPermissionPanel.test.tsx",
+      "web/src/features/notifications/components/BrowserNotificationsKpis.test.tsx",
+      "web/src/features/notifications/components/BrowserTabSignalsPanel.test.tsx",
+      "web/src/features/notifications/components/DeviceNotificationPrefsPanel.test.tsx",
+      "web/src/features/notifications/components/NotificationSoundsPanel.test.tsx",
+      "web/src/features/notifications/components/NotificationSoundChannelRow.test.tsx"
+    ],
+    "auxiliary": [
+      "web/src/i18n/en.json",
+      "web/src/i18n/en/locale-notifications.json",
+      "web/scripts/lint-i18n-no-template-literals.mjs"
+    ],
+    "inspection_depth": "Page/eight domain supports/push-listener-device hooks/push API/policy read fully; larger shared modules only relevant exports/ownership and bounded line searches. Tests: declared cases/mocks and selected assertions, not execution. Not a whole-repository shared-component audit.",
+    "source_test_catalog_git_writes": false
+  },
+  "confirmed_findings": [
+    {
+      "id": "F01",
+      "rule": "duplicate-delivery-owner",
+      "severity": "high",
+      "owner_need": "N1",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Page duplicates shell listener and edits unshared preferences",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+          "line": 31,
+          "end_line": 31,
+          "code": "  const { prefs: pushPrefs, setPrefs: setPushPrefs } = useNotificationListener();"
+        },
+        {
+          "file": "web/src/components/layout/Layout.tsx",
+          "line": 879,
+          "end_line": 879,
+          "code": "  useNotificationListener()"
+        },
+        {
+          "file": "web/src/hooks/useNotificationListener.ts",
+          "line": 98,
+          "end_line": 109,
+          "code": "  const { permission, sendNotification } = useWebPush()\n  const { t } = useTranslation()\n  const [prefs, setPrefsState] = useState<WebPushPreferences>(loadPrefs)\n  const navigate = useNavigate()\n\n  const setPrefs = useCallback((next: WebPushPreferences | ((prev: WebPushPreferences) => WebPushPreferences)) => {\n    setPrefsState((prev) => {\n      const resolved = typeof next === 'function' ? next(prev) : next\n      savePrefs(resolved)\n      return resolved\n    })\n  }, [])"
+        },
+        {
+          "file": "web/src/hooks/useNotificationListener.ts",
+          "line": 178,
+          "end_line": 210,
+          "code": "    sseManager.subscribe('alert', onAlert)\n    sseManager.subscribe('export_status', onExportStatus)\n\n    return () => {\n      sseManager.unsubscribe('alert', onAlert)\n      sseManager.unsubscribe('export_status', onExportStatus)\n    }\n  }, [permission, prefs, sendNotification, navigate, t])\n\n  // Per-channel notification sounds live in their own effect because audio\n  // cues are independent of the OS browser\n  // notification permission and fire even while the tab is visible —\n  // they complement the in-app toast / OS notification, they don't\n  // replace them.\n  useEffect(() => {\n    const onAlertSound = (raw: unknown) => {\n      const data = raw as AlertEventData\n      if (data.quiet_suppressed || data.is_test) return\n      const category = mapNotificationToCategory({\n        type: data.type ?? 'alert',\n        severity: data.severity ?? null,\n      })\n      if (!category) return\n      // Pull prefs at fire-time (not effect-creation time) so toggling a\n      // channel in Settings takes effect on the very next event without\n      // re-subscribing the SSE handler.\n      playNotificationSound(category, getNotificationSoundPrefs())\n    }\n    sseManager.subscribe('alert', onAlertSound)\n    return () => {\n      sseManager.unsubscribe('alert', onAlertSound)\n    }\n  }, [])"
+        }
+      ],
+      "mechanism": "Independent useState/loadPrefs and distinct SSE callbacks; setter updates only caller/localStorage, no same/cross-tab observer. Sound attempts duplicate and shell ignores page alerts=false after unmount. Same OS tags may replace visible popups; two visible popups not claimed.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Trace shell+page callbacks with alerts=false only on page; no SSE/Notification action executed."
+      },
+      "fix": "Use reactive preference-only hook and one shell delivery owner."
+    },
+    {
+      "id": "F02",
+      "rule": "permission-truth",
+      "severity": "high",
+      "owner_need": "N2",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Permission snapshot updates only requesting instance",
+      "locations": [
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 39,
+          "end_line": 41,
+          "code": "  const [permission, setPermission] = useState<NotificationPermission>(\n    isSupported ? Notification.permission : 'denied',\n  )"
+        },
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 78,
+          "end_line": 83,
+          "code": "  const requestPermission = useCallback(async (): Promise<NotificationPermission> => {\n    if (!isSupported) return 'denied'\n    const result = await Notification.requestPermission()\n    setPermission(result)\n    return result\n  }, [])"
+        },
+        {
+          "file": "web/src/hooks/useNotificationListener.ts",
+          "line": 98,
+          "end_line": 112,
+          "code": "  const { permission, sendNotification } = useWebPush()\n  const { t } = useTranslation()\n  const [prefs, setPrefsState] = useState<WebPushPreferences>(loadPrefs)\n  const navigate = useNavigate()\n\n  const setPrefs = useCallback((next: WebPushPreferences | ((prev: WebPushPreferences) => WebPushPreferences)) => {\n    setPrefsState((prev) => {\n      const resolved = typeof next === 'function' ? next(prev) : next\n      savePrefs(resolved)\n      return resolved\n    })\n  }, [])\n\n  useEffect(() => {\n    if (permission !== 'granted') return"
+        },
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 107,
+          "end_line": 109,
+          "code": "  const { prefs, updatePrefs, resetPrefs, hasFilters } = useDeviceNotificationPrefs();\n  const { permission, isSupported } = useWebPush();\n  const vehiclesQuery = useVehicles();"
+        }
+      ],
+      "mechanism": "Other hook instances keep mount-time default/denied; page granted UI can coexist with gated listener and device noPermission.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted fixture: default snapshots; only page request resolves granted; other states unchanged."
+      },
+      "fix": "Share/synchronize existing permission truth without unsolicited prompts."
+    },
+    {
+      "id": "F03",
+      "rule": "subscription-truth",
+      "severity": "high",
+      "owner_need": "N2",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Unknown subscription lookup becomes certain Not subscribed",
+      "locations": [
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 42,
+          "end_line": 43,
+          "code": "  const [isSubscribed, setIsSubscribed] = useState<boolean>(false)\n  const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null)"
+        },
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 56,
+          "end_line": 76,
+          "code": "  useEffect(() => {\n    if (!isPushAPISupported) return\n    let cancelled = false\n    void navigator.serviceWorker\n      .getRegistration()\n      .then(async (reg) => {\n        if (!reg || cancelled) return\n        const sub = await reg.pushManager.getSubscription()\n        if (cancelled) return\n        setIsSubscribed(!!sub)\n        setCurrentEndpoint(sub?.endpoint ?? null)\n      })\n      .catch(() => {\n        // A failed registration/subscription lookup just means \"unknown /\n        // not subscribed on this device\" — never surface it as an\n        // unhandled promise rejection.\n      })\n    return () => {\n      cancelled = true\n    }\n  }, [])"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 163,
+          "end_line": 169,
+          "code": "          {isUnsupported ? (\n            <Badge variant=\"warning\">{t('webpush.status.unsupported', 'Unavailable')}</Badge>\n          ) : showKeyError || showLoading ? null : isSubscribed ? (\n            <Badge variant=\"success\">{t('webpush.status.subscribed', 'Active on this device')}</Badge>\n          ) : (\n            <Badge variant=\"neutral\">{t('webpush.status.notSubscribed', 'Not subscribed')}</Badge>\n          )}"
+        }
+      ],
+      "mechanism": "false/null initialized and lookup rejection swallowed, no checking/error/retry; browser-only truth cannot prove server registration.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted deferred/rejected lookup with retained key selects Not subscribed."
+      },
+      "fix": "Expose explicit browser/server checking/known/unknown/failure and retry."
+    },
+    {
+      "id": "F04",
+      "rule": "incomplete-unsubscribe",
+      "severity": "high",
+      "owner_need": "N2",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Partial teardown returns true and clears state",
+      "locations": [
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 209,
+          "end_line": 225,
+          "code": "    try {\n      await unsubscribeMut.mutateAsync(sub.endpoint)\n    } catch {\n      // Even on server failure, proceed with browser-side unsubscribe\n      // so the user gets the immediate effect they asked for. The\n      // mutation already toasted.\n    }\n    try {\n      await sub.unsubscribe()\n    } catch {\n      // Browser-side unsubscribe failed (rare). Still clear local state\n      // so the UI reflects the user's intent; the next mount re-syncs\n      // against pushManager truth.\n    }\n    setIsSubscribed(false)\n    setCurrentEndpoint(null)\n    return true"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 111,
+          "end_line": 120,
+          "code": "  const runDeviceAction = useCallback(async (action: () => Promise<boolean>) => {\n    setBusy(true);\n    setActionFailed(false);\n    try {\n      if (!await action()) setActionFailed(true);\n    } catch {\n      setActionFailed(true);\n    } finally {\n      setBusy(false);\n    }"
+        }
+      ],
+      "mechanism": "Server/browser catches swallow failure, browser boolean ignored, false/null+true unconditional, card actionFailed suppressed.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted fixture rejects DELETE/browser teardown or returns browser false; trace true."
+      },
+      "fix": "Return complete/partial/failure and retain confirmed truth with recovery."
+    },
+    {
+      "id": "F05",
+      "rule": "initial-paused-readiness",
+      "severity": "high",
+      "owner_need": "N2",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Pending paused key can select Push API unsupported",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 54,
+          "end_line": 61,
+          "code": "  const keyQuery = usePushPublicKey();\n  const keyState = useDataState(keyQuery);\n  const {\n    data: publicKey,\n    refetch: refetchPublicKey,\n  } = keyQuery;\n  const keyLoading = keyQuery.isLoading && !keyState.hasData;\n  const keyError = Boolean(keyState.fatalError);"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 85,
+          "end_line": 103,
+          "code": "  const isCheckingAvailability = notifSupported && keyLoading;\n\n  // Disabled-state reason — the card still renders so users can SEE\n  // that browser push exists but is not currently available. Ordering is\n  // significant: a browser with no Notification API at all is decisively\n  // unavailable regardless of key/loading state, whereas the Push-API and\n  // server-key verdicts are deferred until the key request settles.\n  const disabledReason = useMemo(() => {\n    if (!notifSupported)\n      return t('webpush.unsupported.notification', \"This browser doesn't support notifications.\");\n    if (isCheckingAvailability || keyError) return null;\n    if (!isPushSupported && publicKey === null)\n      return t('webpush.unsupported.serverDisabled', 'Browser push is not configured on this server. Ask your administrator to set the VAPID keys.');\n    if (!isPushSupported)\n      return t('webpush.unsupported.pushApi', \"This browser doesn't support the Push API.\");\n    if (permission === 'denied')\n      return t('webpush.unsupported.permissionDenied', 'Notifications are blocked for this site. Re-enable them in your browser settings to use browser push.');\n    return null;\n  }, [notifSupported, isCheckingAvailability, keyError, isPushSupported, publicKey, permission, t]);"
+        },
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 233,
+          "end_line": 233,
+          "code": "    isPushSupported: isPushAPISupported && !!publicKey,"
+        }
+      ],
+      "mechanism": "isLoading=false misses no-data pending/paused; undefined key and false support choose unsupported. Current native reachability under offlineFirst/retry:false not asserted.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted valid query-shaped tuple pending=true, paused, loading=false, no data/error on capable browser."
+      },
+      "fix": "Use initial/isRefreshBlocked before definitive capability verdict."
+    },
+    {
+      "id": "F06",
+      "rule": "current-device-removal-truth",
+      "severity": "high",
+      "owner_need": "N2",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Removing current endpoint leaves Active state",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 126,
+          "end_line": 136,
+          "code": "  const handleRemoveDevice = useCallback(\n    (endpoint: string) => {\n      // Fire-and-forget: useUnsubscribePush toasts on success/failure and\n      // invalidates the device list, so the row disappears on its own. The\n      // catch keeps a rejected mutation from bubbling out of the click handler.\n      void removeDevice(endpoint).catch(() => {\n        /* toasted by the mutation hook */\n      });\n    },\n    [removeDevice],\n  );"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 252,
+          "end_line": 252,
+          "code": "                const isThisDevice = currentEndpoint !== null && currentEndpoint === row.endpoint;"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 279,
+          "end_line": 287,
+          "code": "                    <Button\n                      variant=\"ghost\"\n                      size=\"sm\"\n                      loading={removing}\n                      onClick={() => handleRemoveDevice(row.endpoint)}\n                      icon={<Trash2 className=\"h-4 w-4\" aria-hidden=\"true\" />}\n                      aria-label={t('webpush.devices.remove', 'Remove this device')}\n                      title={t('webpush.devices.remove', 'Remove this device')}\n                    />"
+        }
+      ],
+      "mechanism": "Only server mutation; no shared unsubscribe or local-state reconciliation; row disappears but Active/Disable stays.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted fixture: true/current endpoint matches removed row; list becomes[]; local true unchanged."
+      },
+      "fix": "Separate remote revoke/current teardown and reconcile browser/server truth."
+    },
+    {
+      "id": "F07",
+      "rule": "hidden-section",
+      "severity": "medium",
+      "owner_need": "N3",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Registered-device empty section disappears",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 240,
+          "end_line": 249,
+          "code": "        <StaleRefreshWarning state={subsState} label={t('webpush.devices.title', 'Registered devices')} />\n        {subsQuery.isLoading && !subsState.hasData && <Skeleton className=\"h-20 w-full\" />}\n        {subsState.fatalError && (\n          <QueryError error={subsState.fatalError} onRetry={() => void subsQuery.refetch()} />\n        )}\n        {rows.length > 0 && (\n          <div className=\"space-y-2 pt-2 border-t border-[var(--border-subtle)]\">\n            <Text as=\"h4\" variant=\"label\">\n              {t('webpush.devices.title', 'Registered devices')}\n            </Text>"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 290,
+          "end_line": 293,
+          "code": "              })}\n            </ul>\n          </div>\n        )}"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.test.tsx",
+          "line": 396,
+          "end_line": 407,
+          "code": "  it('renders no device section when there are no registered devices', () => {\n    subsMock.mockReturnValue({ data: [] });\n    renderCard();\n    expect(screen.queryByText('Registered devices')).toBeNull();\n  });\n\n  it('tolerates an unresolved subscriptions query (data undefined)', () => {\n    subsMock.mockReturnValue({ data: undefined });\n    renderCard();\n    // Still renders its header; the device section is simply absent.\n    expect(screen.getByRole('heading', { name: /browser push/i })).toBeInTheDocument();\n    expect(screen.queryByText('Registered devices')).toBeNull();"
+        }
+      ],
+      "mechanism": "rows.length gate removes heading/list with successful empty or pending/paused query; no named empty shell. Existing test expects disappearance.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted successful [] source or pending/paused undefined source hides region."
+      },
+      "fix": "Always mount named source region with empty/loading/paused/fatal/retained content."
+    },
+    {
+      "id": "F08",
+      "rule": "initial-paused-empty",
+      "severity": "medium",
+      "owner_need": "N3",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Paused sources presented as unavailable/empty",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx",
+          "line": 56,
+          "end_line": 68,
+          "code": "        <StaleRefreshWarning state={source} label={t('settings.tab.heading', 'Browser tab signals')} />\n        {isLoading && !source.hasData ? (\n          <Skeleton height={132} />\n        ) : source.fatalError ? (\n          <QueryError error={source.fatalError} onRetry={() => void refetch()} />\n        ) : !settings ? (\n          <EmptyState\n            message={t(\n              'settings.tab.empty',\n              'Tab signal preferences are unavailable right now.',\n            )}\n            action={{ label: t('common.retry', 'Retry'), onClick: () => void refetch() }}\n          />"
+        },
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 330,
+          "end_line": 342,
+          "code": "                {vehiclesQuery.isLoading && !vehiclesState.hasData ? (\n                  <Skeleton className=\"h-20 w-full\" />\n                ) : vehiclesState.fatalError ? (\n                  <QueryError error={vehiclesState.fatalError} onRetry={() => { void vehiclesQuery.refetch(); }} />\n                ) : vehicles.length === 0 ? (\n                  // no-action: adding a vehicle happens in onboarding / the\n                  // Vehicles page, not from a notification-scope selector.\n                  <EmptyState\n                    message={t(\n                      'notifications.device.noVehicles',\n                      'No vehicles are available to scope to yet.',\n                    )}\n                  />"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 57,
+          "end_line": 60,
+          "code": "  // `initial` and `initialFailure` mean there is nothing retained; those are\n  // the skeleton's and the page error surface's job, not this component's.\n  if (!state.hasData) return null;\n  if (state.status === 'ok') return null;"
+        }
+      ],
+      "mechanism": "isLoading gates miss pending/paused no data; warning returns null then unavailable/noVehicles text, not authoritative answer.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted paused/no-data/no-error/loading=false fixture in selected scope chooses empty."
+      },
+      "fix": "Explicit initial-blocked/unknown source notices with individual retry."
+    },
+    {
+      "id": "F09",
+      "rule": "misleading-policy-copy",
+      "severity": "medium",
+      "owner_need": "N4",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Critical ring-through promise ignores configurable bypass",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 401,
+          "end_line": 424,
+          "code": "            <HelperText className=\"mt-1 block\">\n              {t(\n                'notifications.device.quietHint',\n                'Quiet hours silence the notification rather than dropping it, so nothing is lost. Critical alerts still ring.',\n              )}\n            </HelperText>\n            <div className=\"mt-2 flex flex-wrap gap-2\">\n              {NOTIFICATION_SEVERITIES.map((severity) => (\n                <Toggle\n                  key={severity}\n                  size=\"sm\"\n                  disabled={!prefs.enabled || !prefs.quietHours.enabled}\n                  label={t(BYPASS_I18N_KEYS[severity], BYPASS_LABELS[severity])}\n                  checked={prefs.quietHours.bypassSeverities.includes(severity)}\n                  onChange={(checked) =>\n                    updatePrefs({\n                      quietHours: {\n                        ...prefs.quietHours,\n                        bypassSeverities: checked\n                          ? [...prefs.quietHours.bypassSeverities, severity]\n                          : prefs.quietHours.bypassSeverities.filter((s) => s !== severity),\n                      },\n                    })\n                  }"
+        },
+        {
+          "file": "web/src/sw/notificationPolicy.ts",
+          "line": 438,
+          "end_line": 442,
+          "code": "  if (isWithinQuietHours(prefs.quietHours, weekday, minutesOfDay)) {\n    if (prefs.quietHours.bypassSeverities.includes(severity)) {\n      return { ...base, show: true, silent: false, requireInteraction, reason: 'quiet-hours-bypassed' }\n    }\n    return { ...base, show: true, silent: true, requireInteraction: false, reason: 'quiet-hours-silenced' }"
+        }
+      ],
+      "mechanism": "Critical bypass can be unchecked; policy silent=true while help still says Critical alerts still ring.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted in-window policy fixture without critical bypass; trace silent=true."
+      },
+      "fix": "Describe chosen bypasses conditionally; preserve toggles and other mutes."
+    },
+    {
+      "id": "F10",
+      "rule": "misleading-policy-copy",
+      "severity": "medium",
+      "owner_need": "N4",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Fleet-wide always-delivered hint overstates vehicle exemption",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 304,
+          "end_line": 313,
+          "code": "            <Select\n              label={t('notifications.device.vehicleScope', 'Vehicle scope')}\n              value={prefs.vehicleScope}\n              disabled={!prefs.enabled}\n              options={scopeOptions}\n              size=\"sm\"\n              hint={t(\n                'notifications.device.vehicleScopeHint',\n                'Fleet-wide notifications with no vehicle attached are always delivered.',\n              )}"
+        },
+        {
+          "file": "web/src/sw/notificationPolicy.ts",
+          "line": 415,
+          "end_line": 429,
+          "code": "  if (!prefs.enabled) {\n    return { ...base, show: false, silent: false, requireInteraction: false, reason: 'device-disabled' }\n  }\n  if (prefs.categories[category] === false) {\n    return { ...base, show: false, silent: false, requireInteraction: false, reason: 'category-muted' }\n  }\n  if (severityRank(severity) < severityRank(prefs.minSeverity)) {\n    return { ...base, show: false, silent: false, requireInteraction: false, reason: 'below-min-severity' }\n  }\n  if (\n    prefs.vehicleScope === 'selected'\n    && vehicleId != null\n    && !prefs.vehicleIds.includes(vehicleId)\n  ) {\n    return { ...base, show: false, silent: false, requireInteraction: false, reason: 'vehicle-out-of-scope' }"
+        }
+      ],
+      "mechanism": "Master/category/severity suppress no-vehicle payloads before vehicle filter; exemption is only vehicle scope.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted no-vehicle payload with device disabled/category muted; trace show=false."
+      },
+      "fix": "Say unaffected by vehicle scope, not always delivered."
+    },
+    {
+      "id": "F11",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "owner_need": "N4",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Raw English machine reason inserted into translated feedback",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 163,
+          "end_line": 169,
+          "code": "    if (!decision.show) {\n      setTestResult(\n        t(\n          'notifications.device.test.suppressed',\n          'Suppressed on this device by the \"{{reason}}\" rule.',\n          { reason: decision.reason },\n        ),"
+        },
+        {
+          "file": "web/src/sw/notificationPolicy.ts",
+          "line": 359,
+          "end_line": 367,
+          "code": "/** Why the SW showed, silenced, or suppressed a push. */\nexport type NotificationDecisionReason =\n  | 'delivered'\n  | 'device-disabled'\n  | 'category-muted'\n  | 'below-min-severity'\n  | 'vehicle-out-of-scope'\n  | 'quiet-hours-silenced'\n  | 'quiet-hours-bypassed'"
+        },
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.test.tsx",
+          "line": 222,
+          "end_line": 236,
+          "code": "  it('names the exact rule when the device policy suppresses the test', async () => {\n    render(<DeviceNotificationPrefsPanel />)\n    fireEvent.change(screen.getByLabelText('Minimum severity'), {\n      target: { value: 'critical' },\n    })\n\n    fireEvent.click(screen.getByTestId('device-prefs-test'))\n\n    await waitFor(() => {\n      expect(screen.getByTestId('device-prefs-test-result')).toHaveTextContent(\n        'below-min-severity',\n      )\n    })\n    // A silent no-op here would be indistinguishable from a broken push\n    // subscription, which is why the reason is surfaced instead."
+        }
+      ],
+      "mechanism": "decision.reason such as below-min-severity is not localized human text; test expects raw token.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted critical-only policy on fixed warning test; non-English sentence retains raw reason."
+      },
+      "fix": "Static localized enum reason map; retain raw reason as diagnostic metadata."
+    },
+    {
+      "id": "F12",
+      "rule": "nonsemantic-neon",
+      "severity": "medium",
+      "owner_need": "N5",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Fixed cyan decoration bypasses neutral theme roles",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 147,
+          "end_line": 148,
+          "code": "            <div className=\"shrink-0 rounded-xl p-2.5 ring-1 ring-cyan-300/30 bg-cyan-300/10\">\n              <BellRing className=\"h-5 w-5 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 270,
+          "end_line": 273,
+          "code": "                          {isThisDevice && (\n                            <Text as=\"span\" variant=\"bodySm\" className=\"ms-2 text-cyan-300\">\n                              {t('webpush.devices.thisDevice', '(this device)')}\n                            </Text>"
+        }
+      ],
+      "mechanism": "Header grouping/current-device marker hardcode cyan300 rather than source semantic state. Source violation, not measured contrast.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Read unconditional classes; native appearance NOTRUN."
+      },
+      "fix": "Use existing restrained neutral/icon roles without saved-theme resets."
+    },
+    {
+      "id": "F13",
+      "rule": "mobile-target-declaration",
+      "severity": "medium",
+      "owner_need": "N5",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Local button heights lack mobile44px overrides",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 279,
+          "end_line": 287,
+          "code": "                    <Button\n                      variant=\"ghost\"\n                      size=\"sm\"\n                      loading={removing}\n                      onClick={() => handleRemoveDevice(row.endpoint)}\n                      icon={<Trash2 className=\"h-4 w-4\" aria-hidden=\"true\" />}\n                      aria-label={t('webpush.devices.remove', 'Remove this device')}\n                      title={t('webpush.devices.remove', 'Remove this device')}\n                    />"
+        },
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 433,
+          "end_line": 445,
+          "code": "          <Button\n            wrapLabel\n            size=\"sm\"\n            variant=\"secondary\"\n            onClick={() => void sendTest()}\n            data-testid=\"device-prefs-test\"\n          >\n            <Send className=\"h-4 w-4\" aria-hidden=\"true\" />\n            {t('notifications.device.test.action', 'Send test notification')}\n          </Button>\n          <Button wrapLabel size=\"sm\" variant=\"ghost\" onClick={resetPrefs} data-testid=\"device-prefs-reset\">\n            {t('notifications.device.reset', 'Reset device rules')}\n          </Button>"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationSoundChannelRow.tsx",
+          "line": 39,
+          "end_line": 48,
+          "code": "      <Button\n        wrapLabel\n        variant=\"ghost\"\n        size=\"sm\"\n        type=\"button\"\n        icon={<Play className=\"h-3.5 w-3.5\" aria-hidden=\"true\" />}\n        onClick={onTest}\n        aria-label={t('notificationSounds.testAria', 'Test {{name}} sound', { name: label })}\n      >\n        {t('notificationSounds.test', 'Test')}"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPermissionPanel.tsx",
+          "line": 79,
+          "end_line": 86,
+          "code": "                <Button\n                  wrapLabel\n                  variant=\"primary\"\n                  icon={<Bell className=\"h-4 w-4\" aria-hidden=\"true\" />}\n                  onClick={handleEnable}\n                >\n                  {t('browserNotifications.enable', 'Enable browser notifications')}\n                </Button>"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 35,
+          "end_line": 48,
+          "code": "const sizes = {\n  sm: 'h-9 px-3 text-sm',\n  md: 'h-10 px-4 text-sm',\n  lg: 'h-12 px-6 text-base',\n  // Density-aware sizing follows the user's `ui_density` setting via the\n  // density Tailwind utilities (`min-h-d-row px-d-pad-x text-d-base`).\n  auto: 'min-h-d-row px-d-pad-x text-d-base',\n} as const;\n\nconst wrappingSizes = {\n  sm: 'h-auto min-h-9 py-1.5',\n  md: 'h-auto min-h-10 py-2',\n  lg: 'h-auto min-h-12 py-2.5',\n  auto: 'h-auto py-d-pad-y',"
+        }
+      ],
+      "mechanism": "sm h9/minh9 and default md h10/minh10; no local min-h11. Remove icon button concrete h9; wrapped labels may grow. Toggle and CopyLink already mobile44px exceptions.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Source CSS at standard16px root gives36/40px; actual hit areas/overlap not measured."
+      },
+      "fix": "Existing responsive min-h11 mobile roles at local consumers; preserve desktop sizes/focus."
+    },
+    {
+      "id": "F14",
+      "rule": "missing-canonical-i18n-keys",
+      "severity": "medium",
+      "owner_need": "N8",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Eleven device keys absent from canonical and namespace catalogs",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 78,
+          "end_line": 93,
+          "code": "const CATEGORY_I18N_KEYS: Record<NotificationCategory, string> = {\n  alert: 'notifications.device.category.alert',\n  charging: 'notifications.device.category.charging',\n  drive: 'notifications.device.category.drive',\n  battery: 'notifications.device.category.battery',\n  security: 'notifications.device.category.security',\n  system: 'notifications.device.category.system',\n  export: 'notifications.device.category.export',\n  other: 'notifications.device.category.other',\n};\n\nconst BYPASS_I18N_KEYS: Record<NotificationSeverity, string> = {\n  info: 'notifications.device.bypass.info',\n  warn: 'notifications.device.bypass.warn',\n  critical: 'notifications.device.bypass.critical',\n};"
+        },
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 269,
+          "end_line": 269,
+          "code": "                  label={t(CATEGORY_I18N_KEYS[category], CATEGORY_LABELS[category])}"
+        },
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 413,
+          "end_line": 413,
+          "code": "                  label={t(BYPASS_I18N_KEYS[severity], BYPASS_LABELS[severity])}"
+        }
+      ],
+      "mechanism": "Eight category and three bypass keys absent in en.json and locale-notifications.json; fallbacks hide omission. Other locale coverage not inspected.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Actual local JSON key lookup returned absent; no i18n runtime/network action."
+      },
+      "fix": "Serialized canonical integration and normal derived catalog workflow."
+    },
+    {
+      "id": "F15",
+      "rule": "preference-preservation",
+      "severity": "medium",
+      "owner_need": "N4",
+      "classification": "confirmed-source-mechanism",
+      "native_reproduced": false,
+      "title": "Quiet enable toggle overwrites saved weekdays",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 101,
+          "end_line": 101,
+          "code": "const WEEKDAY_ALL_MASK = 0b111_1111;"
+        },
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 364,
+          "end_line": 373,
+          "code": "            <Toggle\n              size=\"sm\"\n              disabled={!prefs.enabled}\n              label={t('notifications.device.quietEnabled', 'Silence notifications overnight')}\n              checked={prefs.quietHours.enabled}\n              onChange={(checked) =>\n                updatePrefs({\n                  quietHours: { ...prefs.quietHours, enabled: checked, weekdays: WEEKDAY_ALL_MASK },\n                })\n              }"
+        },
+        {
+          "file": "web/src/sw/notificationPolicy.ts",
+          "line": 275,
+          "end_line": 281,
+          "code": "  const weekdays =\n    typeof rawQuiet.weekdays === 'number'\n      && Number.isInteger(rawQuiet.weekdays)\n      && rawQuiet.weekdays >= 0\n      && rawQuiet.weekdays <= WEEKDAY_ALL\n      ? rawQuiet.weekdays\n      : WEEKDAY_ALL"
+        }
+      ],
+      "mechanism": "Valid0..127 persisted weekday mask silently replaced by all127 on either enabled toggle.",
+      "repro": {
+        "status": "NOTRUN source walkthrough unless local JSON lookup explicitly stated",
+        "steps": "Unexecuted saved weekdays62; callback writes127 though action only changes enabled."
+      },
+      "fix": "Preserve saved weekdays; disclose any explicitly approved migration."
+    }
+  ],
+  "conditional_native_candidates": [
+    {
+      "id": "C01",
+      "classification": "conditional-action-lifecycle",
+      "owner_need": "N4",
+      "title": "Permission/device test overlap and stale feedback",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/BrowserPermissionPanel.tsx",
+          "line": 43,
+          "end_line": 48,
+          "code": "  const [permissionError, setPermissionError] = useState(false);\n\n  const handleEnable = useCallback(() => {\n    setPermissionError(false);\n    void requestPermission().catch(() => setPermissionError(true));\n  }, [requestPermission]);"
+        },
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 432,
+          "end_line": 451,
+          "code": "        <div className=\"flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3\">\n          <Button\n            wrapLabel\n            size=\"sm\"\n            variant=\"secondary\"\n            onClick={() => void sendTest()}\n            data-testid=\"device-prefs-test\"\n          >\n            <Send className=\"h-4 w-4\" aria-hidden=\"true\" />\n            {t('notifications.device.test.action', 'Send test notification')}\n          </Button>\n          <Button wrapLabel size=\"sm\" variant=\"ghost\" onClick={resetPrefs} data-testid=\"device-prefs-reset\">\n            {t('notifications.device.reset', 'Reset device rules')}\n          </Button>\n        </div>\n\n        {testResult != null && (\n          <Caption role=\"status\" aria-live=\"polite\" className=\"block\" data-testid=\"device-prefs-test-result\">\n            {testResult}\n          </Caption>"
+        }
+      ],
+      "mechanism_and_needed_followup": "No pending/disabled guards, and testResult not cleared on preference changes; duplicate requests/out-of-order or old-snapshot feedback depend on timing. Authorized deferred-promise mocks needed; actual prompt coalescing not tested.",
+      "native_reproduced": false
+    },
+    {
+      "id": "C02",
+      "classification": "conditional-native-audio",
+      "owner_need": "N6",
+      "title": "Scheduled nodes are not confirmed running-context playback",
+      "locations": [
+        {
+          "file": "web/src/lib/notificationSound.ts",
+          "line": 369,
+          "end_line": 387,
+          "code": "    cachedCtx = ctx\n    // A context constructed outside a gesture (or after the tab was\n    // backgrounded) can start 'suspended'; resume it while we still hold the\n    // user gesture so the next cue is audible.\n    if (ctx.state === 'suspended') {\n      void ctx.resume()\n    }\n    return true\n  } catch {\n    cachedCtx = null\n    return false\n  }\n}\n\nexport interface PlayResult {\n  played: boolean\n  reason?:\n    | 'master_off'\n    | 'category_off'"
+        },
+        {
+          "file": "web/src/lib/notificationSound.ts",
+          "line": 422,
+          "end_line": 425,
+          "code": "    for (const note of profile.notes) {\n      const start = now + note.offset\n      const dur = note.duration ?? tail\n      const osc = ctx.createOscillator()"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationSoundsPanel.tsx",
+          "line": 43,
+          "end_line": 59,
+          "code": "  const handleTestSound = (category: NotificationSoundCategory) => {\n    // Force a play even if master is off — the Test button is itself a user\n    // gesture and is the primary way to verify (and authorise) the cue.\n    const volume = soundPrefs.volume ?? 0;\n    const result = playNotificationSound(category, {\n      master: true,\n      perCategory: { ...soundPrefs.perCategory, [category]: true },\n      volume: volume <= 0 ? 0.5 : volume,\n    });\n    if (result.played) {\n      // A cue that actually played proves the browser has authorised\n      // playback, so the one-time autoplay hint is no longer useful.\n      setAutoplayHintDismissed(true);\n    } else if (result.reason === 'no_audio_context') {\n      // Audio is still blocked — keep the hint visible so the user retries.\n      setAutoplayHintDismissed(false);\n    }"
+        }
+      ],
+      "mechanism_and_needed_followup": "prime does not await/catch resume rejection; play returns played=true without checking/resuming suspended context, then panel dismisses help. Native audibility/rejection occurrence not proven; authorized mocked suspended/resume-rejection checks needed.",
+      "native_reproduced": false
+    },
+    {
+      "id": "C03",
+      "classification": "conditional-refresh-race",
+      "owner_need": "N7",
+      "title": "Second full settings replacement may use stale cache",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx",
+          "line": 35,
+          "end_line": 43,
+          "code": "    // Ignore toggles while a save is still in flight. Each save is a full\n    // object replace built from the currently-cached settings, so firing a\n    // second one before the first resolves and invalidates the cache would\n    // rebuild the body from stale data and silently revert the first toggle\n    // (a classic lost update).\n    if (!settings || isSaving) return;\n    // Send the full settings object so the server-side full-replace upsert\n    // does not zero-value any unrelated fields.\n    saveSettings.mutate({ ...settings, [key]: value });"
+        },
+        {
+          "file": "web/src/api/hooks/useSettings.ts",
+          "line": 44,
+          "end_line": 48,
+          "code": "    onSuccess: () => {\n      invalidateAndBroadcast(qc, { queryKey: settingsKeys.settings });\n      success('toast.settings.save.success', 'Settings saved');\n    },\n    onError: (e) => error(e, 'toast.settings.save.error', 'Failed to save settings'),"
+        }
+      ],
+      "mechanism_and_needed_followup": "Only mutation pending guards input; onSuccess does not return invalidation promise or update cache from response. A second edit before refetch may overwrite first. Timing/backend not reproduced; authorized deferred-refetch tests needed.",
+      "native_reproduced": false
+    },
+    {
+      "id": "C04",
+      "classification": "conditional-i18n-extraction",
+      "owner_need": "N8",
+      "title": "Computed sound key extraction needs provenance",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/NotificationSoundsPanel.tsx",
+          "line": 113,
+          "end_line": 113,
+          "code": "                label={t(`notificationSounds.category.${category}`, CATEGORY_FALLBACK[category])}"
+        },
+        {
+          "file": "web/scripts/lint-i18n-no-template-literals.mjs",
+          "line": 1,
+          "end_line": 4,
+          "code": "// Fails if any web/src/i18n/*.json contains a JS template-literal placeholder\n// (${...}) inside a string value. i18next uses {{mustache}}, not ${js}.\n//\n// Allowed exceptions: literal \"${{amount}}\" (= \"$\" + mustache \"{{amount}}\"),"
+        }
+      ],
+      "mechanism_and_needed_followup": "Seven sound-category keys exist in current English namespace. Inspected lint:i18n checks JS placeholders inside JSON, not computed t keys; neighboring comment is not lint evidence. Extractor retention not verified; do not report missing sound translations.",
+      "native_reproduced": false
+    },
+    {
+      "id": "C05",
+      "classification": "conditional-native-test-scope",
+      "owner_need": "N4",
+      "title": "Local device test is not end-to-end push or vehicle scope proof",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 143,
+          "end_line": 159,
+          "code": "   * Device test delivery.\n   *\n   * There is no `POST /push/test` route on the backend, so this cannot be a\n   * true end-to-end push round-trip. What it DOES exercise is everything the\n   * device owns: OS permission, an active service-worker registration, the\n   * device policy below, and the OS notification rendering. When the policy\n   * suppresses the test we say exactly which rule fired instead of silently\n   * showing nothing — a silent no-op is indistinguishable from a broken\n   * subscription.\n   */\n  const sendTest = useCallback(async () => {\n    setTestResult(null);\n    const payload = {\n      title: 'TeslaSync',\n      severity: 'warn' as const,\n      category: 'alert' as const,\n      tag: 'device-policy-test',"
+        },
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+          "line": 182,
+          "end_line": 211,
+          "code": "    try {\n      const registration = await navigator.serviceWorker?.getRegistration();\n      if (registration == null) {\n        setTestResult(\n          t(\n            'notifications.device.test.noWorker',\n            'No service worker is registered, so background delivery is unavailable.',\n          ),\n        );\n        return;\n      }\n      await registration.showNotification('TeslaSync', {\n        body: t(\n          'notifications.device.test.body',\n          'Test notification — your device policy allows this severity.',\n        ),\n        badge: '/icons/badge-72.png',\n        tag: payload.tag,\n        silent: decision.silent,\n        requireInteraction: decision.requireInteraction,\n        data: { url: '/notifications/inbox' },\n      });\n      setTestResult(\n        decision.silent\n          ? t(\n              'notifications.device.test.deliveredSilent',\n              'Delivered silently — quiet hours are active.',\n            )\n          : t('notifications.device.test.delivered', 'Test notification delivered.'),\n      );"
+        }
+      ],
+      "mechanism_and_needed_followup": "Fixed warning/alert test has no vehicle ID; calls showNotification directly, not server push. It cannot prove subscription/routing/transport/selected vehicle filtering; comment acknowledges no POST /push/test. Label local test limits; no native action performed.",
+      "native_reproduced": false
+    },
+    {
+      "id": "C06",
+      "classification": "native-acceptance-notrun",
+      "owner_need": "N9",
+      "title": "Mounted readiness and responsive/a11y/clipboard acceptance open",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+          "line": 34,
+          "end_line": 40,
+          "code": "    <PageLayout\n      title={t('notifications.browser.title', 'Browser notifications')}\n      subtitle={t(\n        'notifications.browser.subtitle',\n        'Receive background push on this device and tune what happens while the tab is open.',\n      )}\n      copyLink"
+        },
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+          "line": 62,
+          "end_line": 91,
+          "code": "          <section\n            aria-label={t(\n              'notifications.browser.controlsAria',\n              'Notification delivery controls',\n            )}\n            className=\"grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5\"\n          >\n            <BrowserPermissionPanel\n              className=\"xl:col-span-2\"\n              permission={permission}\n              requestPermission={requestPermission}\n              notificationsSupported={isSupported}\n              pushPrefs={pushPrefs}\n              setPushPrefs={setPushPrefs}\n            />\n            <BrowserTabSignalsPanel />\n          </section>\n        </FadeIn>\n\n        <FadeIn delay={0.2}>\n          <section\n            aria-label={t(\n              'notifications.device.sectionAria',\n              'Per-device notification and data rules',\n            )}\n            className=\"grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5\"\n          >\n            <DeviceNotificationPrefsPanel className=\"xl:col-span-2\" />\n            <DeviceDataUsagePanel />\n          </section>"
+        },
+        {
+          "file": "web/src/components/layout/CopyLinkButton.tsx",
+          "line": 39,
+          "end_line": 69,
+          "code": "  const handleClick = useCallback(async () => {\n    if (typeof window === 'undefined') return;\n    const url = window.location.href;\n    try {\n      if (navigator.clipboard?.writeText) {\n        await navigator.clipboard.writeText(url);\n      } else {\n        // Fallback for older browsers / non-secure contexts.\n        const ta = document.createElement('textarea');\n        ta.value = url;\n        ta.style.position = 'fixed';\n        ta.style.opacity = '0';\n        document.body.appendChild(ta);\n        ta.select();\n        let ok = false;\n        try {\n          ok = document.execCommand('copy');\n        } finally {\n          document.body.removeChild(ta);\n        }\n        // execCommand reports failure with a falsy return rather than throwing;\n        // surface it so the error toast fires instead of a false \"copied\".\n        if (!ok) throw new Error('execCommand copy failed');\n      }\n      setCopied(true);\n      toast?.success(t('common.copyLink.success', 'Link copied to clipboard'));\n      if (resetTimer.current !== undefined) window.clearTimeout(resetTimer.current);\n      resetTimer.current = window.setTimeout(() => setCopied(false), 2000);\n    } catch {\n      toast?.error(t('common.copyLink.error', 'Could not copy link'));\n    }"
+        }
+      ],
+      "mechanism_and_needed_followup": "Authentication/route/native readiness, clipboard, permission/PWA/SW delivery, keyboard/focus, contrast, forced colors, RTL,200% zoom,long-copy and mission widths remain NOTRUN. Future explicit safe authorization required; declarations are not runtime acceptance.",
+      "native_reproduced": false
+    }
+  ],
+  "test_evidence_warnings": [
+    {
+      "id": "T01",
+      "locations": [
+        {
+          "file": "web/src/hooks/__tests__/useWebPush.test.ts",
+          "line": 324,
+          "end_line": 337,
+          "code": "  it('swallows a rejected getRegistration on mount without crashing', async () => {\n    const getRegistration = vi.fn().mockRejectedValue(new Error('SW registration boom'))\n    const { renderHook, act, useWebPush } = await loadHook({\n      permission: 'granted',\n      pushSupported: true,\n      getRegistration,\n    })\n    const { result } = renderHook(() => useWebPush())\n    await flush(act)\n\n    expect(result.current.isSubscribed).toBe(false)\n    expect(result.current.currentEndpoint).toBeNull()\n    expect(getRegistration).toHaveBeenCalledTimes(1)\n  })"
+        }
+      ],
+      "detail": "Lookup-rejection assertion expects false/null, encoding F03 rather than unknown truth; NOTRUN."
+    },
+    {
+      "id": "T02",
+      "locations": [
+        {
+          "file": "web/src/hooks/__tests__/useWebPush.test.ts",
+          "line": 593,
+          "end_line": 615,
+          "code": "  it('still tears down the browser subscription when the server call fails', async () => {\n    const existing = makeSub('https://push.example/server-500')\n    const reg = makeReg({ existing })\n    const getRegistration = vi.fn().mockResolvedValue(reg)\n    mocks.unsubscribeMutateAsync.mockRejectedValue(new Error('500'))\n    const { renderHook, act, waitFor, useWebPush } = await loadHook({\n      pushSupported: true,\n      getRegistration,\n    })\n    const { result } = renderHook(() => useWebPush())\n    await waitFor(() => expect(result.current.isSubscribed).toBe(true))\n\n    let ok = false\n    await act(async () => {\n      ok = await result.current.unsubscribe()\n    })\n\n    expect(ok).toBe(true)\n    expect(existing.unsubscribe).toHaveBeenCalledTimes(1)\n    expect(result.current.isSubscribed).toBe(false)\n  })\n\n  it('clears state and returns true even when the browser unsubscribe rejects', async () => {"
+        },
+        {
+          "file": "web/src/hooks/__tests__/useWebPush.test.ts",
+          "line": 638,
+          "end_line": 643,
+          "code": "    })\n\n    expect(threw).toBe(false)\n    expect(ok).toBe(true)\n    expect(existing.unsubscribe).toHaveBeenCalledTimes(1)\n    expect(result.current.isSubscribed).toBe(false)"
+        }
+      ],
+      "detail": "Failure assertions expect true/cleared state, encoding F04; NOTRUN."
+    },
+    {
+      "id": "T03",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.test.tsx",
+          "line": 77,
+          "end_line": 78,
+          "code": "vi.mock('@/hooks/useWebPush', () => ({ useWebPush: vi.fn() }));\nvi.mock('@/hooks/useNotificationListener', () => ({ useNotificationListener: vi.fn() }));"
+        },
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.test.tsx",
+          "line": 219,
+          "end_line": 223,
+          "code": "    for (const id of ['bn-background-push', 'bn-kpis', 'bn-permission-panel', 'bn-tab-signals', 'bn-sounds']) {\n      expect(screen.getByTestId(id)).toBeInTheDocument();\n    }\n    expect(screen.getByText('While this tab is open')).toBeInTheDocument();\n  });"
+        }
+      ],
+      "detail": "Mocked hook/section prop fan-out cannot establish shell listener/native permission truth; five-ID loop does not assert device/data panels; NOTRUN."
+    },
+    {
+      "id": "T04",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.test.tsx",
+          "line": 81,
+          "end_line": 89,
+          "code": "    writable: true,\n    value: {\n      getRegistration: vi.fn(async () => ({ active: { postMessage: vi.fn() }, showNotification })),\n      controller: { postMessage: vi.fn() },\n      addEventListener: vi.fn(),\n      removeEventListener: vi.fn(),\n    },\n  })\n  resetDeviceNotificationPrefs()"
+        },
+        {
+          "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.test.tsx",
+          "line": 210,
+          "end_line": 220,
+          "code": "  it('delivers a test notification through the real service worker', async () => {\n    render(<DeviceNotificationPrefsPanel />)\n    fireEvent.click(screen.getByTestId('device-prefs-test'))\n\n    await waitFor(() => {\n      expect(screen.getByTestId('device-prefs-test-result')).toHaveTextContent(\n        'Test notification delivered.',\n      )\n    })\n    expect(showNotification).toHaveBeenCalledTimes(1)\n  })"
+        }
+      ],
+      "detail": "Declared real service worker test uses vi.fn registration/showNotification mocks, not real SW/OS evidence; NOTRUN."
+    }
+  ],
+  "needs": [
+    {
+      "id": "N1",
+      "owner": "Existing delivery/preference lifecycle owner; inventory G141/P260",
+      "need": "One shell listener and reactive same/cross-tab prefs",
+      "finding_ids": [
+        "F01"
+      ],
+      "candidate_ids": [],
+      "cited_files": [
+        "web/src/components/layout/Layout.tsx",
+        "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+        "web/src/hooks/useNotificationListener.ts"
+      ],
+      "write_authority": "NONE; deduplicated parent responsibility, not a claim"
+    },
+    {
+      "id": "N2",
+      "owner": "Existing push/permission lifecycle owner; inventory G138/P261/P263",
+      "need": "Shared permission, browser/server readiness, partial teardown and current-device removal",
+      "finding_ids": [
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06"
+      ],
+      "candidate_ids": [],
+      "cited_files": [
+        "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+        "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+        "web/src/hooks/useNotificationListener.ts",
+        "web/src/hooks/useWebPush.ts"
+      ],
+      "write_authority": "NONE; deduplicated parent responsibility, not a claim"
+    },
+    {
+      "id": "N3",
+      "owner": "Notification source-state adoption owner",
+      "need": "Always-visible device region; initial/paused/unknown versus authoritative empty",
+      "finding_ids": [
+        "F07",
+        "F08"
+      ],
+      "candidate_ids": [],
+      "cited_files": [
+        "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "web/src/features/notifications/components/BrowserPushChannelCard.test.tsx",
+        "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+        "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx",
+        "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx"
+      ],
+      "write_authority": "NONE; deduplicated parent responsibility, not a claim"
+    },
+    {
+      "id": "N4",
+      "owner": "Existing device policy UI/persistence owner",
+      "need": "Truthful bypass/scope/local-test copy, localized reasons,weekday preservation and pending/snapshot feedback",
+      "finding_ids": [
+        "F09",
+        "F10",
+        "F11",
+        "F15"
+      ],
+      "candidate_ids": [
+        "C01",
+        "C05"
+      ],
+      "cited_files": [
+        "web/src/features/notifications/components/BrowserPermissionPanel.tsx",
+        "web/src/features/notifications/components/DeviceNotificationPrefsPanel.test.tsx",
+        "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+        "web/src/sw/notificationPolicy.ts"
+      ],
+      "write_authority": "NONE; deduplicated parent responsibility, not a claim"
+    },
+    {
+      "id": "N5",
+      "owner": "Notification visual/mobile adoption owner",
+      "need": "Existing neutral roles and mobile44px local button targets; no global Button API rewrite",
+      "finding_ids": [
+        "F12",
+        "F13"
+      ],
+      "candidate_ids": [],
+      "cited_files": [
+        "web/src/components/ui/Button.tsx",
+        "web/src/features/notifications/components/BrowserPermissionPanel.tsx",
+        "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+        "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+        "web/src/features/notifications/components/NotificationSoundChannelRow.tsx"
+      ],
+      "write_authority": "NONE; deduplicated parent responsibility, not a claim"
+    },
+    {
+      "id": "N6",
+      "owner": "Existing notification audio owner",
+      "need": "Authorized suspended-context/result/rejection verification",
+      "finding_ids": [],
+      "candidate_ids": [
+        "C02"
+      ],
+      "cited_files": [
+        "web/src/features/notifications/components/NotificationSoundsPanel.tsx",
+        "web/src/lib/notificationSound.ts"
+      ],
+      "write_authority": "NONE; deduplicated parent responsibility, not a claim"
+    },
+    {
+      "id": "N7",
+      "owner": "Existing settings mutation/cache owner",
+      "need": "Authorized deferred-invalidation lost-update verification",
+      "finding_ids": [],
+      "candidate_ids": [
+        "C03"
+      ],
+      "cited_files": [
+        "web/src/api/hooks/useSettings.ts",
+        "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx"
+      ],
+      "write_authority": "NONE; deduplicated parent responsibility, not a claim"
+    },
+    {
+      "id": "N8",
+      "owner": "Orchestrator canonical English/extractor owner",
+      "need": "Serialize 11 missing keys and reason translations through canonical workflow, derive split outputs normally",
+      "finding_ids": [
+        "F14"
+      ],
+      "candidate_ids": [
+        "C04"
+      ],
+      "cited_files": [
+        "web/scripts/lint-i18n-no-template-literals.mjs",
+        "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+        "web/src/features/notifications/components/NotificationSoundsPanel.tsx"
+      ],
+      "write_authority": "NONE; deduplicated parent responsibility, not a claim"
+    },
+    {
+      "id": "N9",
+      "owner": "Parent authorized native QA owner",
+      "need": "Future explicitly authorized existing-tooling safe-fixture responsive/a11y/clipboard/audio/native permission/subscription/SW/API checks",
+      "finding_ids": [],
+      "candidate_ids": [
+        "C06"
+      ],
+      "cited_files": [
+        "web/src/components/layout/CopyLinkButton.tsx",
+        "web/src/features/notifications/pages/BrowserNotificationsPage.tsx"
+      ],
+      "write_authority": "NONE; deduplicated parent responsibility, not a claim"
+    }
+  ],
+  "rule_search_receipts": [
+    {
+      "search": "static-inline-style-candidate",
+      "raw_match_lines": 1,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    },
+    {
+      "search": "raw-html-candidate",
+      "raw_match_lines": 4,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    },
+    {
+      "search": "direct-library-import-candidate",
+      "raw_match_lines": 0,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    },
+    {
+      "search": "old-api-import-candidate",
+      "raw_match_lines": 0,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    },
+    {
+      "search": "double-prefix-candidate",
+      "raw_match_lines": 6,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    },
+    {
+      "search": "camelcase-param-candidate",
+      "raw_match_lines": 0,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    },
+    {
+      "search": "hidden-section-candidate",
+      "raw_match_lines": 2,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    },
+    {
+      "search": "hardcoded-visible-jsx-candidate",
+      "raw_match_lines": 48,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    },
+    {
+      "search": "fetch-useeffect-candidate",
+      "raw_match_lines": 29,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    },
+    {
+      "search": "computed-i18n-key-candidate",
+      "raw_match_lines": 1,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    },
+    {
+      "search": "mobile-small-button-candidate",
+      "raw_match_lines": 25,
+      "exit": 0,
+      "receipt": "shell2174 original raw log",
+      "meaning": "candidates not violation totals"
+    }
+  ],
+  "notrun": {
+    "tests": "NOTRUN prohibited; no discovered/executed/pass counts claimed",
+    "lint_audit_helpers": "NOTRUN prohibited",
+    "build": "NOTRUN prohibited",
+    "global_tsc": "NOTRUN prohibited; no TypeScript pass claim",
+    "browser_native": "NOTRUN; no permission/subscription/push/SW/Notification/clipboard/audio/browser/network/API actions",
+    "servers_installs_subagents_helpers_git_writes": "NOTRUN prohibited; none created/executed",
+    "passing_reruns": "NONE; source rereads and final hash checks are not rerun tests/gates"
+  },
+  "command_failures": [
+    {
+      "shell": "1974",
+      "exit": 1,
+      "reason": "rg unavailable"
+    },
+    {
+      "shell": "1975",
+      "exit": 1,
+      "reason": "rg unavailable"
+    },
+    {
+      "shell": "1997",
+      "exit": 1,
+      "reason": "cp1252 UnicodeEncodeError during doc output"
+    },
+    {
+      "shell": "1998",
+      "exit": 1,
+      "reason": "cp1252 UnicodeEncodeError"
+    },
+    {
+      "shell": "2327",
+      "exit": 1,
+      "reason": "Windows command-line length, os error206; writer never started; bounded construction follows"
+    },
+    {
+      "shell": "2377",
+      "exit": 1,
+      "reason": "Transcript exclusive log lock prevented nested Python append; JSON unchanged; corrected bounded command follows."
+    },
+    {
+      "shell": "2443",
+      "exit": 1,
+      "reason": "Final queue identity assertion failed; earlier JSON/count/owner/73-citation/49-pin checks passed; current queue reconciliation inspected separately."
+    }
+  ],
+  "raw_evidence": {
+    "log": "web/logs/phase6-qa-notifications-browser-notifications.log",
+    "commands": "Exact bounded search/artifact/check script bodies, raw outputs and exits logged via transcripts. Large initial raw reads copied from host receipts.",
+    "startup_read_limit": "Several small startup navigation/read probes were not saved by host; log explicitly references original tool transcript rather than inventing original output. No tests/gates were run.",
+    "typecheck_pass_claimed": false
+  },
+  "hashes": {
+    "algorithm": "SHA-256",
+    "before": {
+      "web/src/hooks/useWebPush.ts": "60735e9e3de6e608e1f09a1c524a3d56e9bff96c87a2829e1434c90e220f9d70",
+      "web/src/features/notifications/components/BrowserPushChannelCard.tsx": "d37ba6b5c3ad7d1db0f2244a9d29c97add61d33dfe7c6f48fc28d352af4897c8",
+      "web/src/features/notifications/components/BrowserNotificationsKpis.tsx": "572cdd76050f4df7f61e12021f112da3f2e691366331bffee627a2d6490a0485",
+      "web/src/features/notifications/components/BrowserPermissionPanel.tsx": "dbc1e71b216374358b9e213c02874a142f3f35abf7634c64a84e8be03220c45c",
+      "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx": "192c355ce6533fda84c24ff21368642ea0007018e3976f2d1d364c4ed8588355",
+      "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx": "9d8cb5449dd3006b0bca294b8640f8c0cdfdd1e731635aea189dfc52d671cbf3",
+      "web/src/features/notifications/components/DeviceDataUsagePanel.tsx": "94f022d05639e213fec0ee0b3b3af899f5d25d58cb32890e4ff388c9c95902ab",
+      "web/src/features/notifications/components/NotificationSoundsPanel.tsx": "c1dd6932443493cb6f63b041818f3c3ba3b7d3c95f4a1a98ff430cbfac08ec72",
+      "web/src/features/notifications/components/NotificationSoundChannelRow.tsx": "2bce3304f22127e998e79e1857a99895beba935271da179a89e2cfb2153b69ea",
+      "web/src/hooks/useNotificationListener.ts": "8e88fd56da190139eda8c9c61f0a691dc112ee7737d14faf60f70560b639a7c7",
+      "web/src/hooks/useDeviceNotificationPrefs.ts": "4e8d3a1ce53a12ff7a32f26a76c49729e0f78fd6432a73868b2e0898ab3e261b",
+      "web/src/api/hooks/usePush.ts": "315616b972b9bcaf40c0bc283715e744ef3d1a9296e78656ea6ace725d920a06",
+      "web/src/components/feedback/LowBandwidthControl.tsx": "fb08c71f602f97ffee4299a8144c724d95ceb49297d5123cefbc95ad3ca7c208",
+      "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "web/src/components/feedback/StaleRefreshWarning.tsx": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "web/src/api/hooks/useSettings.ts": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "web/src/sw/notificationPolicy.ts": "b3f0354adc07355b25d55aad187e1485ad7631a8ee7c4d9f969eaad68bd20197",
+      "web/src/lib/notificationSound.ts": "44cd25f288e13efdf284777798cab3fd3079fbaad1061e9535c3b470813c3dd3",
+      "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "web/src/features/notifications/pages/BrowserNotificationsPage.test.tsx": "7231749c399f2550de46d26291d21701831ea7189c0f5efa3f439a3472ea934a",
+      "web/src/hooks/__tests__/useWebPush.test.ts": "4f7f3468f167bdfef3ab8f0a53a72800858e51c481031d1d2c300fed03e65249",
+      "web/src/hooks/__tests__/useNotificationListener.test.ts": "9d01fb65196cea16c029d74cd36ba967ee32a3ee15cedb4e08e877d3c6b7c8e9",
+      "web/src/hooks/__tests__/useDeviceNotificationPrefs.test.tsx": "5d4dac3f15ece52cdc371892f420c755e2829243d95e57bf2d077fe6d0207f32",
+      "web/src/api/hooks/usePush.test.tsx": "291470f2fc4cbb299127cbda41dd0f10c387f0e76a9cb2c2e0627225f14d1a8d",
+      "web/src/lib/__tests__/notificationSound.test.ts": "3103431f248898d1c54cb9004e36381c2bb17b740843a6c795daec97da7981c1",
+      "web/src/sw/__tests__/notificationPolicy.test.ts": "6ef8eee8fdba3494336fae03542750fe19919ff9de492d232fe7db949ca717f8",
+      "web/src/features/notifications/components/BrowserPushChannelCard.test.tsx": "0470124219bcac4dbfa74c8a4cdf8ba5dcb1da8b617a431188937bb497be1b28",
+      "web/src/features/notifications/components/BrowserPermissionPanel.test.tsx": "5428adb3aab4676e2b3ae1da619ae7a9d5d8fbd21f15d1ff6f8fc1d3fb7f9d53",
+      "web/src/features/notifications/components/BrowserNotificationsKpis.test.tsx": "ec0253eae82197b6a7c9ed7b0292a22967a2590ad54cb66fd450149047bac53d",
+      "web/src/features/notifications/components/BrowserTabSignalsPanel.test.tsx": "630bddf8010f1a66083a55a04eefdf92488e1022d2f64b50295d3e6dd5d1e9a1",
+      "web/src/features/notifications/components/DeviceNotificationPrefsPanel.test.tsx": "ff8b06e3013e9b57a86b09c1914b180694766e4cfaec56e70c0b88b4944e9f0c",
+      "web/src/features/notifications/components/NotificationSoundsPanel.test.tsx": "98d07e22a996d0976a3094a1351ccc332b06e36babb13e0e32a9810887f1d049",
+      "web/src/features/notifications/components/NotificationSoundChannelRow.test.tsx": "72fff9e4c387397526ef22dacdaf32a82502c90149b9937554a1efe1037cea64",
+      "web/src/features/notifications/pages/BrowserNotificationsPage.tsx": "99884a4531e4598ad7e9cb8c1d4db7014bba271fa5bea0054f89c0379542f5c9",
+      "web/src/i18n/en.json": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "web/src/hooks/useLowBandwidthMode.ts": "04f473de20391f22208b78035916dfe9736be6e70062e7ebf09e5e5e33176e2b",
+      "web/src/api/hooks/useVehicles.ts": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "web/src/components/layout/PageContainer.tsx": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "web/src/components/ui/Toggle.tsx": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "web/src/components/layout/Layout.tsx": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "web/src/lib/sseManager.ts": "1b962851417b3bb8925d70206d661ea71e14846168a460462922463e7fb19a52",
+      "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "web/src/components/layout/CopyLinkButton.tsx": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "web/src/api/queryClient.ts": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "web/src/i18n/index.ts": "8804718879d0ccb02c876b64b139da56e67b7d117e34e5de914904242de3ec17",
+      "web/src/i18n/en/locale-notifications.json": "f0888894c53ef8428dbe8018b62757fe6a2b5916f6ee05436b4f10e614ec0ad0",
+      "web/scripts/lint-i18n-no-template-literals.mjs": "5dbdfe5850d161f6e063699440f969aca17f200904363b1b52341f13802a23f8"
+    },
+    "after": {
+      "web/src/hooks/useWebPush.ts": "60735e9e3de6e608e1f09a1c524a3d56e9bff96c87a2829e1434c90e220f9d70",
+      "web/src/features/notifications/components/BrowserPushChannelCard.tsx": "d37ba6b5c3ad7d1db0f2244a9d29c97add61d33dfe7c6f48fc28d352af4897c8",
+      "web/src/features/notifications/components/BrowserNotificationsKpis.tsx": "572cdd76050f4df7f61e12021f112da3f2e691366331bffee627a2d6490a0485",
+      "web/src/features/notifications/components/BrowserPermissionPanel.tsx": "dbc1e71b216374358b9e213c02874a142f3f35abf7634c64a84e8be03220c45c",
+      "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx": "192c355ce6533fda84c24ff21368642ea0007018e3976f2d1d364c4ed8588355",
+      "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx": "9d8cb5449dd3006b0bca294b8640f8c0cdfdd1e731635aea189dfc52d671cbf3",
+      "web/src/features/notifications/components/DeviceDataUsagePanel.tsx": "94f022d05639e213fec0ee0b3b3af899f5d25d58cb32890e4ff388c9c95902ab",
+      "web/src/features/notifications/components/NotificationSoundsPanel.tsx": "c1dd6932443493cb6f63b041818f3c3ba3b7d3c95f4a1a98ff430cbfac08ec72",
+      "web/src/features/notifications/components/NotificationSoundChannelRow.tsx": "2bce3304f22127e998e79e1857a99895beba935271da179a89e2cfb2153b69ea",
+      "web/src/hooks/useNotificationListener.ts": "8e88fd56da190139eda8c9c61f0a691dc112ee7737d14faf60f70560b639a7c7",
+      "web/src/hooks/useDeviceNotificationPrefs.ts": "4e8d3a1ce53a12ff7a32f26a76c49729e0f78fd6432a73868b2e0898ab3e261b",
+      "web/src/api/hooks/usePush.ts": "315616b972b9bcaf40c0bc283715e744ef3d1a9296e78656ea6ace725d920a06",
+      "web/src/components/feedback/LowBandwidthControl.tsx": "fb08c71f602f97ffee4299a8144c724d95ceb49297d5123cefbc95ad3ca7c208",
+      "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "web/src/components/feedback/StaleRefreshWarning.tsx": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "web/src/api/hooks/useSettings.ts": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "web/src/sw/notificationPolicy.ts": "b3f0354adc07355b25d55aad187e1485ad7631a8ee7c4d9f969eaad68bd20197",
+      "web/src/lib/notificationSound.ts": "44cd25f288e13efdf284777798cab3fd3079fbaad1061e9535c3b470813c3dd3",
+      "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "web/src/features/notifications/pages/BrowserNotificationsPage.test.tsx": "7231749c399f2550de46d26291d21701831ea7189c0f5efa3f439a3472ea934a",
+      "web/src/hooks/__tests__/useWebPush.test.ts": "4f7f3468f167bdfef3ab8f0a53a72800858e51c481031d1d2c300fed03e65249",
+      "web/src/hooks/__tests__/useNotificationListener.test.ts": "9d01fb65196cea16c029d74cd36ba967ee32a3ee15cedb4e08e877d3c6b7c8e9",
+      "web/src/hooks/__tests__/useDeviceNotificationPrefs.test.tsx": "5d4dac3f15ece52cdc371892f420c755e2829243d95e57bf2d077fe6d0207f32",
+      "web/src/api/hooks/usePush.test.tsx": "291470f2fc4cbb299127cbda41dd0f10c387f0e76a9cb2c2e0627225f14d1a8d",
+      "web/src/lib/__tests__/notificationSound.test.ts": "3103431f248898d1c54cb9004e36381c2bb17b740843a6c795daec97da7981c1",
+      "web/src/sw/__tests__/notificationPolicy.test.ts": "6ef8eee8fdba3494336fae03542750fe19919ff9de492d232fe7db949ca717f8",
+      "web/src/features/notifications/components/BrowserPushChannelCard.test.tsx": "0470124219bcac4dbfa74c8a4cdf8ba5dcb1da8b617a431188937bb497be1b28",
+      "web/src/features/notifications/components/BrowserPermissionPanel.test.tsx": "5428adb3aab4676e2b3ae1da619ae7a9d5d8fbd21f15d1ff6f8fc1d3fb7f9d53",
+      "web/src/features/notifications/components/BrowserNotificationsKpis.test.tsx": "ec0253eae82197b6a7c9ed7b0292a22967a2590ad54cb66fd450149047bac53d",
+      "web/src/features/notifications/components/BrowserTabSignalsPanel.test.tsx": "630bddf8010f1a66083a55a04eefdf92488e1022d2f64b50295d3e6dd5d1e9a1",
+      "web/src/features/notifications/components/DeviceNotificationPrefsPanel.test.tsx": "ff8b06e3013e9b57a86b09c1914b180694766e4cfaec56e70c0b88b4944e9f0c",
+      "web/src/features/notifications/components/NotificationSoundsPanel.test.tsx": "98d07e22a996d0976a3094a1351ccc332b06e36babb13e0e32a9810887f1d049",
+      "web/src/features/notifications/components/NotificationSoundChannelRow.test.tsx": "72fff9e4c387397526ef22dacdaf32a82502c90149b9937554a1efe1037cea64",
+      "web/src/features/notifications/pages/BrowserNotificationsPage.tsx": "99884a4531e4598ad7e9cb8c1d4db7014bba271fa5bea0054f89c0379542f5c9",
+      "web/src/i18n/en.json": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "web/src/hooks/useLowBandwidthMode.ts": "04f473de20391f22208b78035916dfe9736be6e70062e7ebf09e5e5e33176e2b",
+      "web/src/api/hooks/useVehicles.ts": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "web/src/components/layout/PageContainer.tsx": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "web/src/components/ui/Toggle.tsx": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "web/src/components/layout/Layout.tsx": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "web/src/lib/sseManager.ts": "1b962851417b3bb8925d70206d661ea71e14846168a460462922463e7fb19a52",
+      "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "web/src/components/layout/CopyLinkButton.tsx": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "web/src/api/queryClient.ts": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "web/src/i18n/index.ts": "8804718879d0ccb02c876b64b139da56e67b7d117e34e5de914904242de3ec17",
+      "web/src/i18n/en/locale-notifications.json": "f0888894c53ef8428dbe8018b62757fe6a2b5916f6ee05436b4f10e614ec0ad0",
+      "web/scripts/lint-i18n-no-template-literals.mjs": "5dbdfe5850d161f6e063699440f969aca17f200904363b1b52341f13802a23f8"
+    },
+    "source_count": 32,
+    "test_count": 14,
+    "auxiliary_count": 3,
+    "changed_readonly_files": [],
+    "method": "Earliest retained before read receipts; new direct shared supports pinned before artifact writes. After bytes and independent final check follow."
+  },
+  "missing_catalog_keys": [
+    "notifications.device.category.alert",
+    "notifications.device.category.charging",
+    "notifications.device.category.drive",
+    "notifications.device.category.battery",
+    "notifications.device.category.security",
+    "notifications.device.category.system",
+    "notifications.device.category.export",
+    "notifications.device.category.other",
+    "notifications.device.bypass.info",
+    "notifications.device.bypass.warn",
+    "notifications.device.bypass.critical"
+  ],
+  "section_action_matrix": [
+    {
+      "section": "Page chrome/copy link",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+          "line": 34,
+          "end_line": 40,
+          "code": "    <PageLayout\n      title={t('notifications.browser.title', 'Browser notifications')}\n      subtitle={t(\n        'notifications.browser.subtitle',\n        'Receive background push on this device and tune what happens while the tab is open.',\n      )}\n      copyLink"
+        }
+      ],
+      "actions": [
+        "Copy current URL including query"
+      ],
+      "source_verdict": "PageLayout wraps PageContainer. Copy awaits clipboard or true execCommand; error toast and textarea/timer cleanup declared. Does not export preferences. Clipboard/tooltip/focus NOTRUN."
+    },
+    {
+      "section": "Browser push/device list",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+          "line": 43,
+          "end_line": 47,
+          "code": "        <FadeIn>\n          <section aria-label={t('webpush.title', 'Browser push')}>\n            <BrowserPushChannelCard className=\"p-4 sm:p-5\" webPush={webPush} />\n          </section>\n        </FadeIn>"
+        }
+      ],
+      "actions": [
+        "Enable",
+        "Disable",
+        "Retry key",
+        "Retry list",
+        "Remove endpoint"
+      ],
+      "source_verdict": "Independent key/list loading/fatal/retained warnings; enable/disable busy guard. F02-F07 remain. Exact endpoints identify current device; server list not selected-vehicle scope."
+    },
+    {
+      "section": "Configuration KPI band",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+          "line": 49,
+          "end_line": 55,
+          "code": "        <FadeIn delay={0.05}>\n          <BrowserNotificationsKpis\n            permission={permission}\n            notificationsSupported={isSupported}\n            pushPrefs={pushPrefs}\n          />\n        </FadeIn>"
+        }
+      ],
+      "actions": [
+        "Review configuration metrics/details"
+      ],
+      "source_verdict": "Four status/configuration metrics, raw count/countTotal,explicit not delivery-success copy. Missing settings count remains null; absent persisted flags intentionally default on. Same page props do not synchronize other hook instances F01-F02."
+    },
+    {
+      "section": "In-tab permission/events",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+          "line": 57,
+          "end_line": 78,
+          "code": "        <FadeIn delay={0.1}>\n          <SectionTitle>{t('notifications.browser.inTabTitle', 'While this tab is open')}</SectionTitle>\n          <Text as=\"p\" variant=\"bodySm\" className=\"mt-1 mb-3\">\n            {t('notifications.browser.inTabHelp', 'These controls affect notifications and indicators in this browser tab. Browser push above delivers even when TeslaSync is closed.')}\n          </Text>\n          <section\n            aria-label={t(\n              'notifications.browser.controlsAria',\n              'Notification delivery controls',\n            )}\n            className=\"grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5\"\n          >\n            <BrowserPermissionPanel\n              className=\"xl:col-span-2\"\n              permission={permission}\n              requestPermission={requestPermission}\n              notificationsSupported={isSupported}\n              pushPrefs={pushPrefs}\n              setPushPrefs={setPushPrefs}\n            />\n            <BrowserTabSignalsPanel />\n          </section>"
+        }
+      ],
+      "actions": [
+        "Request permission",
+        "Alerts toggle",
+        "Export completions toggle"
+      ],
+      "source_verdict": "Unsupported/default/granted/denied and request rejection help; granted controls are intentional disclosure within mounted shell. Functional setters preserve other flags. Hidden-tab/test/quiet exclusions and drillthrough declared, not executed."
+    },
+    {
+      "section": "Browser tab signals",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx",
+          "line": 46,
+          "end_line": 99,
+          "code": "  return (\n    <GlassPanel className={cn('p-4 sm:p-5', className)}>\n      <div className=\"space-y-4\">\n        <div className=\"flex items-center gap-3\">\n          <IconBox color=\"purple\">\n            <AppWindow className=\"h-5 w-5\" aria-hidden=\"true\" />\n          </IconBox>\n          <PanelTitle>{t('settings.tab.heading', 'Browser tab signals')}</PanelTitle>\n        </div>\n\n        <StaleRefreshWarning state={source} label={t('settings.tab.heading', 'Browser tab signals')} />\n        {isLoading && !source.hasData ? (\n          <Skeleton height={132} />\n        ) : source.fatalError ? (\n          <QueryError error={source.fatalError} onRetry={() => void refetch()} />\n        ) : !settings ? (\n          <EmptyState\n            message={t(\n              'settings.tab.empty',\n              'Tab signal preferences are unavailable right now.',\n            )}\n            action={{ label: t('common.retry', 'Retry'), onClick: () => void refetch() }}\n          />\n        ) : (\n          <div className=\"space-y-3\" aria-busy={isSaving}>\n            <Toggle\n              label={t('settings.tab.badge', 'Show unread count in browser tab')}\n              checked={tabBadgeEnabled}\n              onChange={(checked) => updateTabSetting('tab_badge_enabled', checked)}\n              size=\"sm\"\n              disabled={isSaving}\n            />\n            <Toggle\n              label={t('settings.tab.flash', 'Flash tab title on critical alerts')}\n              checked={criticalFlashEnabled}\n              onChange={(checked) => updateTabSetting('critical_flash_enabled', checked)}\n              size=\"sm\"\n              disabled={isSaving}\n            />\n            <HelperText>\n              {t(\n                'settings.tab.hint',\n                'Adds a \"(N)\" prefix and favicon dot when there are unread notifications, and mirrors the count onto the installed app icon while the app is open where supported. Critical alerts briefly flash \"(!) ALERT\" when the tab is in the background.',\n              )}\n            </HelperText>\n            {isSaving && (\n              <Caption role=\"status\" aria-live=\"polite\" className=\"block\">\n                {t('settings.tab.saving', 'Saving…')}\n              </Caption>\n            )}\n          </div>\n        )}\n      </div>\n    </GlassPanel>"
+        }
+      ],
+      "actions": [
+        "Unread badge",
+        "Critical title flash",
+        "Retry settings"
+      ],
+      "source_verdict": "Independent skeleton/fatal/retry/null-empty/retained warning and saving status/guard; full settings preserves unrelated fields. F08 paused branch and C03 deferred-refetch race remain. Saved server settings, not exclusively device-local."
+    },
+    {
+      "section": "Device rules/data usage",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+          "line": 81,
+          "end_line": 92,
+          "code": "        <FadeIn delay={0.2}>\n          <section\n            aria-label={t(\n              'notifications.device.sectionAria',\n              'Per-device notification and data rules',\n            )}\n            className=\"grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5\"\n          >\n            <DeviceNotificationPrefsPanel className=\"xl:col-span-2\" />\n            <DeviceDataUsagePanel />\n          </section>\n        </FadeIn>"
+        }
+      ],
+      "actions": [
+        "Master enable",
+        "Eight categories",
+        "Severity",
+        "All/selected vehicle IDs",
+        "Quiet enable/start/end",
+        "Three bypasses",
+        "Local test",
+        "Reset rules",
+        "Low bandwidth auto/on/off"
+      ],
+      "source_verdict": "Local store sanitization/patch merges,stored IDs and cross-tab/SW bridge declarations; independent vehicle fatal/retained states. Shared low-bandwidth policy explains user/network/off and effects. No storage/SW/network action executed."
+    },
+    {
+      "section": "Sounds",
+      "locations": [
+        {
+          "file": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+          "line": 94,
+          "end_line": 96,
+          "code": "        <FadeIn delay={0.3}>\n          <NotificationSoundsPanel />\n        </FadeIn>"
+        }
+      ],
+      "actions": [
+        "Master",
+        "Seven channel toggles",
+        "Seven Test buttons",
+        "Volume"
+      ],
+      "source_verdict": "All rows mounted; master-off deliberately permits preconfiguration/Test; shallow category patches and bounded volume. Test overrides master/category and uses0.5 volume if muted intentionally. C02/C04 and mobileF13 remain."
+    }
+  ],
+  "state_identity_trust": {
+    "loading": "Key/list/settings/vehicle source-shaped states; native subscription lookup lacks checking F03",
+    "fatal": "Source-local fatal branches; unrelated page sections stay mounted",
+    "retained": "Shared dataState keeps payload, last-success/freshness and individual retry on refresh error; no all-page data gate",
+    "initial_paused": "F05/F07/F08; tuple walkthrough not native offline reachability proof",
+    "unknown": "Settings KPI null honest; subscription false collapses unknown F03. Normalized local booleans/zero config counts not fake measurements",
+    "permission_subscription_lifecycle": "F01-F06; actual permission/subscribe/unsubscribe/push/SW actions NONE",
+    "preferences": "Keys preserved: teslasync-web-push-prefs; teslasync:device-notification-prefs:v1; teslasync:notification-sound-prefs:v1; teslasync:low-bandwidth:v1. Saved weekday mask overwritten F15; no actual storage write",
+    "identity_scope": "/notifications/browser not date-range-owned; /notifications prefix disables global vehicle via workspaceScope95-106,156-166. Local IDs are independent device policy; endpoints exact. Auth/tenant/real backend scope NOTRUN",
+    "i18n": "Page/major strings use t; F11 raw reason and F14 eleven missing canonical keys. Current seven sound category translations present; computed extraction candidate only",
+    "mobile_a11y": "Base single-column/XLspan grids, responsive sound columns and wrapping declared; named sections/status live feedback/decorative icons. Shared Toggle/CopyLink mobile44px exceptions. Button F13 declaration gap; no native contrast, keyboard,forced-colors,motion,RTL,zoom/width acceptance"
+  },
+  "accepted_exceptions": [
+    "PageLayout wraps PageContainer, not missing wrapper",
+    "Shared UI raw buttons and comment matches expected",
+    "Layout inline sidebar-width computed/ternary, not static style violation",
+    "/api/v1 comment and EventSource URLs are not request double-prefix; usePush paths unprefixed",
+    "Native/event lifecycle effects are not ad-hoc backend fetch loading; unrelated shared exports not globally accepted",
+    "Permission/selected-vehicle/quiet input disclosure inside mounted panel intentional",
+    "Master-off sound controls intentionally interactive",
+    "Seven computed sound category keys present; inspected lint script does not check computed t calls"
+  ],
+  "summary": {
+    "confirmed_source_findings": 15,
+    "confirmed_native_findings": 0,
+    "conditional_native_candidates": 6,
+    "test_evidence_warnings": 4,
+    "deduplicated_owner_needs": 9,
+    "by_rule": {
+      "duplicate-delivery-owner": 1,
+      "permission-truth": 1,
+      "subscription-truth": 1,
+      "incomplete-unsubscribe": 1,
+      "initial-paused-readiness": 1,
+      "current-device-removal-truth": 1,
+      "hidden-section": 1,
+      "initial-paused-empty": 1,
+      "misleading-policy-copy": 2,
+      "hardcoded-string": 1,
+      "nonsemantic-neon": 1,
+      "mobile-target-declaration": 1,
+      "missing-canonical-i18n-keys": 1,
+      "preference-preservation": 1
+    },
+    "by_severity": {
+      "high": 6,
+      "medium": 9
+    },
+    "most_primary_findings": [
+      {
+        "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+        "count": 5
+      },
+      {
+        "file": "web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx",
+        "count": 5
+      },
+      {
+        "file": "web/src/hooks/useWebPush.ts",
+        "count": 3
+      },
+      {
+        "file": "web/src/features/notifications/pages/BrowserNotificationsPage.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx",
+        "count": 1
+      }
+    ],
+    "missing_catalog_keys": 11,
+    "priorities": [
+      "F01 one listener/effective prefs",
+      "F02-F06 shared permission/subscription truth",
+      "F07-F08 independent source readiness/empty",
+      "F09-F11/F14-F15 localized truthful policy/preserved prefs",
+      "F12-F13 restrained/mobile roles"
+    ]
+  },
+  "release": {
+    "status": "RELEASE",
+    "source_test_catalog_claims_released": true,
+    "artifact_paths": [
+      "docs/frontend-audits/phase6-qa-notifications-browser-notifications.json",
+      "web/logs/phase6-qa-notifications-browser-notifications.log"
+    ],
+    "at_utc": "2026-10-14T02:16:38.020750+00:00",
+    "acceptance": "Audit delivered, not page/native/whole Phase6 acceptance",
+    "final_check": "Independent json.loads/count/owner/exact-line/hash/allowlist checks immediately follow; raw command/exits logged, no tests/gates"
+  },
+  "final_verification": {
+    "json_parse": "PASS",
+    "task_scope_counts_owners": "PASS",
+    "exact_citations": {
+      "status": "PASS",
+      "count": 73
+    },
+    "readonly_pins": {
+      "status": "PASS",
+      "unchanged": 49,
+      "source": 32,
+      "tests": 14,
+      "auxiliary": 3
+    },
+    "sections_search_receipts": "PASS",
+    "initial_final_command_exit": 1,
+    "queue_reconciliation": "FAIL_REQUIRES_PARENT_RECONCILIATION",
+    "current_matching_queue_rows": [
+      {
+        "line": 57,
+        "row": "| phase6-qa-notifications-browser-notifications | ab13c335-0ff0-4d49-87e7-057c21193072 |"
+      },
+      {
+        "line": 89,
+        "row": "| [~] | 6 | phase6-qa-notifications-browser-notifications | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-notifications-browser-notifications.json; web\\logs\\phase6-qa-notifications-browser-notifications.log | phase5-page-notifications-browser-notifications | 1 | reserved01:57:57.687Z; actor pending | - | BrowserNotificationsPage/direct supports; source-only, no browser permission/subscription/push requests. |"
+      }
+    ],
+    "native_acceptance": "NOTRUN",
+    "utc": "2026-10-14T02:17:47.096673+00:00"
+  }
+}

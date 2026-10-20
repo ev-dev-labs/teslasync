@@ -299,7 +299,7 @@ func (s *VehicleService) buildStateFromSignalStoreWithProvenance(
 		voltage, vok := signal.Float64Value(all["PackVoltage"])
 		current, cok := signal.Float64Value(all["PackCurrent"])
 		if vok && cok {
-			state.Power = voltage * current / 1000.0
+			state.Power = voltage * current
 			selected["power"] = true
 			if isObservedSignalValue(all["PackVoltage"]) &&
 				isObservedSignalValue(all["PackCurrent"]) {

@@ -26,7 +26,7 @@
  *   - `react-i18next` is stubbed to resolve the developer fallback string (and
  *     interpolate `{{vars}}`) so assertions read the shipped English copy.
  *   - The real <AchievementBadge> renders so the strip is covered end-to-end.
- *   - `matchMedia` is stubbed before any import because <DataFreshness>'s
+ *   - `matchMedia` is stubbed before any import because <FreshnessDot>'s
  *     `useMotionPreference` (rendered transitively by <WidgetShell>) reads it on
  *     first paint and jsdom does not provide it.
  *
@@ -39,7 +39,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
-// jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference reads it on
+// jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference reads it on
 // first paint. Install a no-op (reduced-motion = false) BEFORE any import.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
@@ -218,6 +218,44 @@ describe('unlockedTs', () => {
 
 // ── Widget: badge strip ───────────────────────────────────────────────────────
 describe('RecentlyUnlockedAchievementsWidget', () => {
+  it('recovers initial failures without claiming no achievements have been unlocked', () => {
+    const refetch = vi.fn();
+    lifetimeMock.mockReturnValue(makeLifetimeQuery(undefined, { isError: true, refetch }));
+    renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
+    expect(screen.queryByText(/achievements will appear here as you unlock them/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it('preserves badges on retained failures and exposes explicit recovery', () => {
+    const refetch = vi.fn();
+    lifetimeMock.mockReturnValue(makeLifetimeQuery([MARCH], { isError: true, refetch }));
+    renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
+    expect(screen.getByText('March')).toBeInTheDocument();
+        expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it('normalizes a null achievement array as partial evidence, without crashing', () => {
+    lifetimeMock.mockReturnValue({ ...makeLifetimeQuery([]), data: { achievements: null } });
+    const { container } = renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
+    expect(screen.queryByTestId('recently-unlocked-list')).not.toBeInTheDocument();
+  });
+
+  it('retries vehicle discovery without refetching the unresolved vehicle-scoped lifetime request', () => {
+    const refetchVehicles = vi.fn();
+    const refetchLifetime = vi.fn();
+    vehiclesMock.mockReturnValue({ data: undefined, isError: true, error: new Error('Vehicles unavailable'), refetch: refetchVehicles });
+    lifetimeMock.mockReturnValue(makeLifetimeQuery(undefined, { refetch: refetchLifetime }));
+    renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+    expect(refetchVehicles).toHaveBeenCalledOnce();
+    expect(refetchLifetime).not.toHaveBeenCalled();
+  });
+
   it('renders unlocked badges newest-first, capped at 3 in the narrow layout, excluding locked/undated', () => {
     renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
 
@@ -303,14 +341,15 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
     expect(screen.queryByTestId('recently-unlocked-list')).not.toBeInTheDocument();
   });
 
-  it('shows the empty state (not a crash) when the lifetime payload is absent', () => {
+  it('keeps an unresolved lifetime payload in its initial state instead of claiming no achievements', () => {
     lifetimeMock.mockReturnValue(makeLifetimeQuery(undefined));
 
-    renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
+    const { container } = renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
 
     expect(
-      screen.getByText(/achievements will appear here as you unlock them/i),
-    ).toBeInTheDocument();
+      screen.queryByText(/achievements will appear here as you unlock them/i),
+    ).not.toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('recently-unlocked-list')).not.toBeInTheDocument();
   });
 
@@ -319,7 +358,7 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
 
     const { container } = renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByTestId('recently-unlocked-list')).not.toBeInTheDocument();
     expect(
       screen.queryByText(/achievements will appear here/i),

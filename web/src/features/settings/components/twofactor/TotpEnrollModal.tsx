@@ -6,8 +6,9 @@
  * the original `data-testid` hooks used by the section contract test.
  */
 import { useTranslation } from 'react-i18next'
-import { Modal, Button, Input, CopyButton, Code, Text, ErrorText } from '@/components/ui'
+import { Modal, Button, Input, CodeBlock, Text, ErrorText } from '@/components/ui'
 import type { TOTPEnrollment } from '@/api/types'
+import { TotpCopyAction } from './TotpCopyAction'
 
 interface TotpEnrollModalProps {
   open: boolean
@@ -58,15 +59,17 @@ export function TotpEnrollModal({
               data-testid="totp-qr"
             />
           </div>
-          <div className="space-y-1">
-            <Text variant="label">{t('totp.modal.manualLabel', 'Manual entry secret')}</Text>
-            <div className="flex items-center gap-2">
-              <Code className="flex-1 break-all" data-testid="totp-secret">
+          <CodeBlock
+            text={enrollment.secret}
+            ariaLabel={t('totp.modal.manualLabel', 'Manual entry secret')}
+            heading={<Text variant="label">{t('totp.modal.manualLabel', 'Manual entry secret')}</Text>}
+            wrap
+            action={<TotpCopyAction text={enrollment.secret} />}
+          >
+              <span data-testid="totp-secret">
                 {enrollment.secret}
-              </Code>
-              <CopyButton text={enrollment.secret} />
-            </div>
-          </div>
+              </span>
+          </CodeBlock>
           <Input
             type="text"
             inputMode="numeric"
@@ -87,13 +90,14 @@ export function TotpEnrollModal({
             disabled={verifying}
           />
           {error ? <ErrorText data-testid="totp-verify-error">{error}</ErrorText> : null}
-          <div className="flex items-center justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={verifying}>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button type="button" variant="ghost" wrapLabel onClick={onClose} disabled={verifying}>
               {t('totp.modal.cancel', 'Cancel')}
             </Button>
             <Button
               type="button"
               variant="primary"
+              wrapLabel
               onClick={onVerify}
               loading={verifying}
               data-testid="totp-verify-submit"

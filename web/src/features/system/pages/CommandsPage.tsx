@@ -9,14 +9,16 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { History, Radio } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { Badge, Button } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { Badge, Button, GlassPanel, Heading, Icon, Text, IconButton } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { Icons } from '@/lib/icons';
 import {
   CommandCenterFallback,
   VehicleCommandCenter,
@@ -34,6 +36,7 @@ export default function CommandsPage() {
    * loading/error/refetch state needed for explicit route placeholders.
    */
   const vehiclesQuery = useVehicles();
+  const vehiclesState = useDataState(vehiclesQuery);
   const { vehicleId, vehicle: selectedFromStore } = useSelectedVehicle();
   const vehicles = vehiclesQuery.data ?? [];
 
@@ -60,53 +63,57 @@ export default function CommandsPage() {
     [vehicles],
   );
 
-  const fallbackStatus: CommandCenterFallbackStatus = vehiclesQuery.isLoading
-    ? 'loading'
-    : vehiclesQuery.error
-      ? 'error'
+  const fallbackStatus: CommandCenterFallbackStatus = vehiclesState.fatalError
+    ? 'error'
+    : !vehiclesState.hasData
+      ? 'loading'
       : 'empty';
+  const initialRefreshBlocked =
+    !vehiclesState.hasData && vehiclesState.isRefreshBlocked;
+  const refreshPausedTitle = t('dataSources.status.paused', 'Refresh paused');
 
   return (
-    <PageContainer
-      title={t('commands.pageTitle', 'Vehicle Command Center')}
+    <PageLayout
+      title={t('commands.pageTitle', 'Vehicle command center')}
       subtitle={t(
         'commands.subtitle',
         'Review vehicle readiness, send remote actions, and verify recent outcomes.',
       )}
-      actions={
-        <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:justify-end">
-          {vehicles.length > 0 && (
-            <Badge
-              variant="neutral"
-              size="lg"
-              className="min-h-11"
-            >
-              <Icons.wifi className="h-3.5 w-3.5" aria-hidden="true" />
-              {t(
-                'commands.lastKnownActiveCount',
-                '{{active}}/{{total}} last reported active',
-                {
-                  active: lastKnownActiveCount,
-                  total: vehicles.length,
-                },
-              )}
-            </Badge>
-          )}
-
-
-          <Button
-            type="button"
-            variant="ghost"
+      metadataActions={
+        vehicles.length > 0 && (
+          <Badge
+            variant="neutral"
             size="lg"
             className="min-h-11"
-            icon={<Icons.history className="h-4 w-4" aria-hidden="true" />}
-            onClick={() => navigate('/command-history')}
           >
-            {t('commands.viewHistory', 'View history')}
-          </Button>
+            <Icon icon={Radio} size="sm" />
+            {t(
+              'commands.lastKnownActiveCount',
+              '{{active}}/{{total}} last reported active',
+              {
+                active: lastKnownActiveCount,
+                total: vehicles.length,
+              },
+            )}
+          </Badge>
+        )
+      }
+      secondaryActions={
+        <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:justify-end">
+          <IconButton icon={<Icon icon={History} />} label={t('commands.viewHistory', 'View history')} onClick={() => navigate('/command-history')} />
         </div>
       }
     >
+      <StaleRefreshWarning
+        state={vehiclesState}
+        title={vehiclesState.isRefreshBlocked ? refreshPausedTitle : undefined}
+        message={vehiclesState.isRefreshBlocked
+          ? t(
+              'dataSources.staleMessage',
+              'Previously loaded data remains visible while affected sources recover.',
+            )
+          : undefined}
+      />
       <FadeIn>
         <section
           aria-label={t(
@@ -119,15 +126,45 @@ export default function CommandsPage() {
               key={selectedVehicle.id}
               vehicle={selectedVehicle}
             />
+          ) : initialRefreshBlocked ? (
+            <div className="space-y-4 sm:space-y-5" data-testid="command-center-paused">
+              {[
+                t('commands.hero.title', 'Selected vehicle'),
+                t('commands.readiness.title', 'Command readiness'),
+                t('commands.workspace.title', 'Command workspace'),
+              ].map((title, index) => (
+                <GlassPanel key={title} className="space-y-4 p-4 sm:p-5">
+                  <Heading level="section">{title}</Heading>
+                  <Text as="p" color="secondary" role={index === 0 ? 'status' : undefined}>
+                    {index === 0
+                      ? refreshPausedTitle
+                      : t(
+                          'dataSources.unavailableMessage',
+                          'No requested source has returned usable data yet.',
+                        )}
+                  </Text>
+                  {index === 0 && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="min-h-11"
+                      onClick={() => void vehiclesQuery.refetch()}
+                    >
+                      {t('error.retry', 'Retry')}
+                    </Button>
+                  )}
+                </GlassPanel>
+              ))}
+            </div>
           ) : (
             <CommandCenterFallback
               status={fallbackStatus}
-              error={vehiclesQuery.error}
+              error={vehiclesState.fatalError}
               onRetry={() => void vehiclesQuery.refetch()}
             />
           )}
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

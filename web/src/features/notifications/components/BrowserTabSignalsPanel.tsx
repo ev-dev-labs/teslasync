@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { AppWindow } from 'lucide-react';
-import { Caption, GlassPanel, HelperText, IconBox, PanelTitle, Toggle } from '@/components/ui';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { Button, Caption, GlassPanel, HelperText, IconBox, PanelTitle, Toggle } from '@/components/ui';
+import { AlertBanner, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useSaveSettings, useSettings } from '@/api/hooks/useSettings';
 import { cn } from '@/lib/cn';
+import { useDataState } from '@/hooks/useDataState';
 
 interface BrowserTabSignalsPanelProps {
   className?: string;
@@ -16,7 +17,9 @@ interface BrowserTabSignalsPanelProps {
  */
 export function BrowserTabSignalsPanel({ className }: BrowserTabSignalsPanelProps) {
   const { t } = useTranslation();
-  const { data: settings, isLoading, isError, error, refetch } = useSettings();
+  const settingsQuery = useSettings();
+  const { data: settings, refetch } = settingsQuery;
+  const source = useDataState(settingsQuery);
   const saveSettings = useSaveSettings();
   const isSaving = saveSettings.isPending;
 
@@ -44,16 +47,33 @@ export function BrowserTabSignalsPanel({ className }: BrowserTabSignalsPanelProp
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <IconBox color="purple">
+          <IconBox color="neutral">
             <AppWindow className="h-5 w-5" aria-hidden="true" />
           </IconBox>
           <PanelTitle>{t('settings.tab.heading', 'Browser tab signals')}</PanelTitle>
         </div>
 
-        {isLoading ? (
+        <StaleRefreshWarning state={source} label={t('settings.tab.heading', 'Browser tab signals')} />
+        {!source.hasData && !source.isRefreshBlocked && settingsQuery.isFetching ? (
           <Skeleton height={132} />
-        ) : isError ? (
-          <QueryError error={error} onRetry={() => void refetch()} />
+        ) : source.fatalError ? (
+          <QueryError error={source.fatalError} onRetry={() => void refetch()} />
+        ) : !source.hasData ? (
+          <AlertBanner variant="info" title={t('settings.tab.heading', 'Browser tab signals')} role="status">
+            <div className="space-y-2">
+              <HelperText className="block">
+                {source.isRefreshBlocked
+                  ? t('dataSources.status.paused', 'Refresh paused')
+                  : t('dataSources.status.pending', 'Pending')}
+              </HelperText>
+              <HelperText className="block">
+                {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+              </HelperText>
+              <Button size="sm" variant="ghost" onClick={() => void refetch()}>
+                {t('common.retry', 'Retry')}
+              </Button>
+            </div>
+          </AlertBanner>
         ) : !settings ? (
           <EmptyState
             message={t(
@@ -69,12 +89,14 @@ export function BrowserTabSignalsPanel({ className }: BrowserTabSignalsPanelProp
               checked={tabBadgeEnabled}
               onChange={(checked) => updateTabSetting('tab_badge_enabled', checked)}
               size="sm"
+              disabled={isSaving}
             />
             <Toggle
               label={t('settings.tab.flash', 'Flash tab title on critical alerts')}
               checked={criticalFlashEnabled}
               onChange={(checked) => updateTabSetting('critical_flash_enabled', checked)}
               size="sm"
+              disabled={isSaving}
             />
             <HelperText>
               {t(

@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { EmptyState } from '@/components/feedback';
-import { PageContainer, Grid } from '@/components/layout';
-import { FadeIn } from '@/components/motion';
-import { GlassPanel, Select, Text } from '@/components/ui';
+import { EmptyState, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { PageLayout, Grid, LayoutCard } from '@/components/layout';
+import { Select, Text } from '@/components/ui';
+import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
@@ -16,7 +16,6 @@ import {
   ChainLengthChart,
   ElapsedComposition,
   EnergyIntensityPanel,
-  EvidenceBand,
   JourneyDirectory,
   MethodologyPanel,
   MonthlyTrendChart,
@@ -27,6 +26,9 @@ import {
   WeekdayProfileChart,
 } from '../components/journey-fragmentation';
 import { analyzeJourneyFragmentation } from '../lib/journeyFragmentation';
+import { JourneyEvidenceBrief } from '../components/operationalbrief-a-m/JourneyEvidenceBrief';
+import { DynamicsPausedNotice } from '../components/driving-dynamics-modernization/DynamicsPausedNotice';
+import { PendingEvidence } from '../components/journey-fragmentation/PendingEvidence';
 
 const HISTORY_LIMIT = 1_000;
 const GAP_OPTIONS = [30, 60, 120, 240] as const;
@@ -40,6 +42,7 @@ export default function JourneyFragmentationPage() {
   const [analysisNowMs] = useState(() => Date.now());
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, HISTORY_LIMIT);
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const result = useMemo(
     () => analyzeJourneyFragmentation(
       drivesQuery.data ?? [],
@@ -49,19 +52,24 @@ export default function JourneyFragmentationPage() {
     ),
     [analysisNowMs, drivesQuery.data, maxGapMin, timeZone],
   );
-  const initialLoading = drivesQuery.isLoading && drivesQuery.data == null;
+  const initialLoading = vehicleId != null && drivesState.status === 'initial' && !drivesState.isRefreshBlocked;
+  const pendingContext = !drivesState.hasData;
+  const sectionProps = { result, loading: initialLoading, state: drivesState };
   const gapOptions = GAP_OPTIONS.map((minutes) => ({
     value: String(minutes),
     label: t('journeyFragmentation.gapMinutes', '{{count}} min', { count: minutes }),
   }));
 
   return (
-    <PageContainer
+    <PageLayout
+      className="w-full min-w-0"
       title={t('journeyFragmentation.title', 'Journey Fragmentation')}
+      query={drivesQuery}
       subtitle={t('journeyFragmentation.subtitle', 'Descriptive continuity analysis of a capped returned drive-history window')}
-      actions={(
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+      contextActions={(
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Select
+            label={t('journeyFragmentation.maxGap', 'Maximum parking gap')}
             aria-label={t('journeyFragmentation.maxGap', 'Maximum parking gap')}
             value={String(maxGapMin)}
             options={gapOptions}
@@ -71,48 +79,79 @@ export default function JourneyFragmentationPage() {
         </div>
       )}
     >
-      <FadeIn>
-        <EvidenceBand
+      {vehicleId != null && <DynamicsPausedNotice state={drivesState} label={t('journeyFragmentation.title', 'Journey Fragmentation')} />}
+      <StaleRefreshWarning state={drivesState} label={t('journeyFragmentation.title', 'Journey Fragmentation')} />
+      <SectionErrorBoundary name="JourneyFragmentationEvidence">
+        <JourneyEvidenceBrief
           result={result}
+          state={drivesState}
           loading={initialLoading}
           hasVehicle={vehicleId != null}
-          error={drivesQuery.isError ? drivesQuery.error : null}
+          error={drivesState.fatalError}
           onRetry={() => void drivesQuery.refetch()}
+          available={drivesState.hasData}
+          retained={drivesState.hasData && (drivesState.status === 'stale' || drivesState.refreshError != null || drivesState.isRefreshBlocked)}
         />
-      </FadeIn>
+      </SectionErrorBoundary>
 
       <Grid cols={{ default: 1, lg: 2 }} gap={4}>
-        <FadeIn><ChainLengthChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.05}><StopoverGapChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.1}><ThresholdSensitivityChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.15}><ElapsedComposition result={result} loading={initialLoading} /></FadeIn>
+        <SectionErrorBoundary name="JourneyFragmentationChainLength">
+          <ChainLengthChart {...sectionProps} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationStopoverGap">
+          <StopoverGapChart {...sectionProps} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationThresholdSensitivity">
+          <ThresholdSensitivityChart {...sectionProps} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationElapsedComposition">
+          <ElapsedComposition {...sectionProps} />
+        </SectionErrorBoundary>
       </Grid>
 
-      <FadeIn delay={0.2}><StructureIndicators result={result} loading={initialLoading} /></FadeIn>
-      <FadeIn delay={0.25}><EnergyIntensityPanel result={result} loading={initialLoading} /></FadeIn>
+      <SectionErrorBoundary name="JourneyFragmentationStructureIndicators">
+        <StructureIndicators {...sectionProps} />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary name="JourneyFragmentationEnergyIntensity">
+        <EnergyIntensityPanel {...sectionProps} />
+      </SectionErrorBoundary>
 
       <Grid cols={{ default: 1, lg: 2 }} gap={4}>
-        <FadeIn delay={0.3}><StartProfileChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.35}><WeekdayProfileChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.4}><MonthlyTrendChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.45}><JourneyDirectory result={result} /></FadeIn>
+        <SectionErrorBoundary name="JourneyFragmentationStartProfile">
+          <StartProfileChart {...sectionProps} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationWeekdayProfile">
+          <WeekdayProfileChart {...sectionProps} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationMonthlyTrend">
+          <MonthlyTrendChart {...sectionProps} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationDirectory">
+          <JourneyDirectory {...sectionProps} />
+        </SectionErrorBoundary>
       </Grid>
 
-      <FadeIn delay={0.5}><AccountingPanel result={result} /></FadeIn>
-      <FadeIn delay={0.55}><MethodologyPanel result={result} /></FadeIn>
+      <SectionErrorBoundary name="JourneyFragmentationAccounting">
+        <AccountingPanel {...sectionProps} />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary name="JourneyFragmentationMethodology">
+        <MethodologyPanel result={result} />
+      </SectionErrorBoundary>
 
-      <GlassPanel className="p-4">
-        <Text as="p" variant="caption">
+      <LayoutCard title={t('journeyFragmentation.footer.title', 'Report context')}>
+        {pendingContext ? (
+          <PendingEvidence state={drivesState} loading={initialLoading} />
+        ) : <Text as="p" variant="caption">
           {result.returnedRows === 0
             ? t('journeyFragmentation.footer.empty', 'All analytical shells remain visible while the returned history window is empty.')
             : t('journeyFragmentation.footer.note', 'Charts and directories describe returned records at the selected continuity threshold.')}
-        </Text>
-        {result.returnedRows === 0 && (
+        </Text>}
+        {!pendingContext && result.returnedRows === 0 && (
           <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
             message={t('journeyFragmentation.footer.waiting', 'No returned drive rows are available for this vehicle yet.')}
           />
         )}
-      </GlassPanel>
-    </PageContainer>
+      </LayoutCard>
+    </PageLayout>
   );
 }

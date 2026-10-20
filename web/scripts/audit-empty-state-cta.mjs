@@ -4,8 +4,8 @@
 // Walks src/features/ and fails if any <EmptyState...> JSX use is found
 // without either:
 // - an `action=` or `actionTo=` prop (anywhere in the same JSX element), or
-// - an inline `// no-action: <reason>` comment within the surrounding context
-// (within 200 chars before, or 200 chars after the opening tag).
+// - an explicit `variant="informational"` for healthy/self-populating states, or
+// - an inline `// no-action: <panel-specific reason>` comment for a genuine dead end.
 //
 // Goal: every empty surface in a page either has an actionable CTA or a
 // documented reason for being a dead end.
@@ -58,12 +58,11 @@ function auditFile(path) {
 
     const hasAction = /\baction(To)?\s*=/.test(tagSource);
 
-    // Look at 200 chars before the tag and the tag body itself for a
-    // `no-action:` exemption comment.
+    const isInformational = /\bvariant\s*=\s*(['"])informational\1/.test(tagSource);
     const exemptionWindow = text.slice(Math.max(0, m.index - 200), tagEnd === -1 ? m.index + 200 : tagEnd + 200);
     const hasExempt = /no-action:/.test(exemptionWindow);
 
-    if (!hasAction && !hasExempt) {
+    if (!hasAction && !isInformational && !hasExempt) {
       const line = text.slice(0, m.index).split('\n').length;
       offenders.push(`${path}:${line}`);
     }
@@ -151,7 +150,7 @@ walk(ROOT);
 
 if (offenders.length > 0) {
   console.error(
-    `\nEmptyState without action / actionTo / // no-action: comment (${offenders.length}):`,
+    `\nEmptyState without action / actionTo / informational variant / panel-specific no-action reason (${offenders.length}):`,
   );
   for (const o of offenders) console.error('  ', o);
   console.error(
@@ -163,4 +162,4 @@ if (offenders.length > 0) {
 }
 
 const _ = sep; // keep the import linter happy if sep is needed later
-console.log(`OK — every <EmptyState> in ${ROOT} has a CTA or // no-action: exemption`);
+console.log(`OK - every <EmptyState> in ${ROOT} has a CTA, informational variant, or panel-specific no-action reason`);

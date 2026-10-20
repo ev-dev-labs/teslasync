@@ -16,9 +16,11 @@ import {
   XAxis,
   YAxis,
   axisTick,
+  useChartHiddenSeries,
 } from '@/components/charts';
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries';
-import { fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface ArrivalReliabilityProfileRow
   extends Record<string, string | number | null> {
@@ -30,18 +32,20 @@ export interface ArrivalReliabilityProfileRow
 }
 
 interface ArrivalReliabilityProfilePlotProps {
+  chartKey: string;
   rows: ArrivalReliabilityProfileRow[];
   normalizedName: string;
   allowanceName: string;
   samplesName: string;
   locale: string;
-  /** Passed from parent for backwards-compatibility; context state from chartKey takes precedence. */
+  /** Parent profile controller; the nearest chart context takes precedence. */
   hiddenSeries?: HiddenSeriesState | null;
   /** Accessible label; falls back to a translated default. */
   ariaLabel?: string;
 }
 
 export function ArrivalReliabilityProfilePlot({
+  chartKey,
   rows,
   normalizedName,
   allowanceName,
@@ -50,7 +54,9 @@ export function ArrivalReliabilityProfilePlot({
   hiddenSeries: externalHiddenSeries,
   ariaLabel,
 }: ArrivalReliabilityProfilePlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const profileSeries = useChartHiddenSeries() ?? externalHiddenSeries ?? null;
 
   const effectiveAriaLabel =
     ariaLabel ??
@@ -65,28 +71,28 @@ export function ArrivalReliabilityProfilePlot({
       {
         key: 'normalizedDurationIndex',
         label: normalizedName,
-        format: (v) => (v != null ? fmtNumber(v as number, 1, locale) : '—'),
+        format: (v) => (v != null ? fmtNumber(v as number, undefined, locale) : '—'),
       },
       {
         key: 'allowanceShare',
         label: allowanceName,
-        format: (v) => (v != null ? fmtNumber(v as number, 1, locale) : '—'),
+        format: (v) => (v != null ? fmtNumber(v as number, undefined, locale) : '—'),
       },
       { key: 'samples', label: samplesName, format: (v) => String(v ?? 0) },
     ],
-    [t, normalizedName, allowanceName, samplesName, locale],
+    [t, normalizedName, allowanceName, samplesName, locale, fmtNumber],
   );
 
   return (
     <EmbeddedChart
-      chartKey="arrival-reliability-profile"
+      chartKey={chartKey}
       title={t('arrivalReliability.profileTitle', 'Arrival Reliability Profile')}
       ariaLabel={effectiveAriaLabel}
       data={rows}
       dataColumns={dataColumns}
     >
-      {({ hiddenSeries: contextSeries }) => {
-        const hs = contextSeries ?? externalHiddenSeries ?? null;
+      {() => {
+        const hs = profileSeries;
         return (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={rows}>
@@ -120,11 +126,15 @@ export function ArrivalReliabilityProfilePlot({
               <Tooltip
                 content={
                   <ChartTooltip
-                    valueFormatter={(value) => fmtNumber(value, 1, locale)}
+                    valueFormatter={(value) => fmtNumber(value, undefined, locale)}
                   />
                 }
               />
-              <ChartLegend verticalAlign="top" align="right" />
+              <ChartLegend
+                state={hs ?? undefined}
+                verticalAlign="top"
+                align="right"
+              />
               <Bar
                 yAxisId="count"
                 dataKey="samples"

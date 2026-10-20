@@ -1,3 +1,5 @@
+import { chartTokens } from '@/lib/tokens';
+
 /**
  * Powershare telemetry comes from 5 cold signals in signal_log per ADR-005
  * (typed-only hot schema; everything else → signal_log), surfaced through the
@@ -17,11 +19,8 @@ export const POWERSHARE_SIGNALS = {
  */
 export const SERIES_LIMIT = 48;
 
-/** chartTokens.series[2] — amber. Kept as a literal so the chart primitives can
- *  consume it directly without a token round-trip. */
-export const POWER_COLOR = '#f59e0b';
-/** chartTokens.series[5] — cyan. */
-export const HOURS_COLOR = '#06b6d4';
+export const POWER_COLOR = chartTokens.series[2];
+export const HOURS_COLOR = chartTokens.series[5];
 
 /** One point in a numeric-signal trend, oldest → newest. */
 export interface TrendPoint {

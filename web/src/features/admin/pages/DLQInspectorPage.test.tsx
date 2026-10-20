@@ -26,7 +26,7 @@
  *      placeholders, shows a recoverable QueryError, and recovers on retry.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -109,6 +109,7 @@ vi.mock('@/api/client', async () => {
 });
 
 import { request, ApiError } from '@/api/client';
+import { formatBytes } from '@/lib/numberFormat';
 import { ToastProvider } from '@/components/feedback/Toast';
 import DLQInspectorPage from './DLQInspectorPage';
 import type {
@@ -127,7 +128,7 @@ const ENTRY_A_SOURCE = 'telemetry/VIN1/v/Field';
 const INNER_JSON = '{"field":"VehicleSpeed"}';
 
 const entryA: DLQEntrySummary = {
-  id: 1,
+  id: '1',
   arrived_at: '2026-07-01T10:00:00.000Z',
   dlq_topic: 'dlq/telemetry',
   parsed_reason: 'unknown_enum',
@@ -143,7 +144,7 @@ const entryA: DLQEntrySummary = {
 };
 
 const entryB: DLQEntrySummary = {
-  id: 2,
+  id: '2',
   arrived_at: '2026-07-02T11:00:00.000Z',
   dlq_topic: 'dlq/telemetry',
   parsed_reason: 'kind_mismatch',
@@ -173,14 +174,14 @@ const entryBFull: DLQEntryFull = {
 const auditResponse: DLQAuditResponse = {
   count: 1,
   limit: 50,
-  dlq_id: 0,
+  dlq_id: '0',
   rows: [
     {
       id: 10,
       replayed_at: '2026-07-02T12:00:00.000Z',
       actor: 'admin@example.com',
       actor_ip: '10.0.0.1',
-      dlq_id: 1,
+      dlq_id: '1',
       src_topic: ENTRY_A_SOURCE,
       dst_topic: ENTRY_A_SOURCE,
       payload: 'x',
@@ -194,7 +195,7 @@ const auditResponse: DLQAuditResponse = {
 
 const replayOk: DLQReplayResponse = {
   ok: true,
-  replayed_id: 1,
+  replayed_id: '1',
   dst_topic: ENTRY_A_SOURCE,
   result: 'ok',
   audit_id: 10,
@@ -240,7 +241,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   });
-  return render(
+  const view = render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -249,6 +250,7 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return { ...view, client };
 }
 
 /** Inspect entry A (replayable) by locating its row via the VIN cell. */
@@ -275,6 +277,31 @@ beforeEach(() => {
 });
 
 describe('DLQInspectorPage — bento surface', () => {
+  it('uses the shared OperationalBrief with six numeric/source metrics, full captions and independent queue scope', async () => {
+    wire();
+    renderPage();
+    await screen.findByText(ENTRY_A_VIN);
+    const strip = screen.getByTestId('dlq-operational-brief');
+    expect(strip).toHaveAttribute('data-operational-brief');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(strip.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    const payload = strip.querySelector('[data-operational-metric="payload"]');
+    expect(payload).toHaveTextContent(formatBytes(2948));
+    // Captions live in the Review-details drawer, never on the face.
+    for (const caption of ['in dead-letter queue', 'parsed with source topic', 'no replay target',
+      'unique failure causes', 'raw bytes queued', 'DLQ_REPLAY_ENABLED env']) {
+      expect(strip).not.toHaveTextContent(caption);
+    }
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Dead-letter queue summary details' });
+    for (const caption of ['in dead-letter queue', 'parsed with source topic', 'no replay target',
+      'unique failure causes', 'raw bytes queued', 'DLQ_REPLAY_ENABLED env']) {
+      expect(drawer).toHaveTextContent(caption);
+    }
+    expect(screen.getByText('Recent replay activity')).toBeInTheDocument();
+    expect(screen.getByText('Failure reasons')).toBeInTheDocument();
+  });
+
   it('renders the KPI band, entries table, reason breakdown, and audit log from the list payload', async () => {
     wire();
     renderPage();
@@ -285,7 +312,7 @@ describe('DLQInspectorPage — bento surface', () => {
     expect(screen.getAllByText('kind_mismatch').length).toBeGreaterThan(0);
 
     // Page chrome + KPI band labels.
-    expect(screen.getByRole('heading', { name: 'DLQ Inspector' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'DLQ inspector' })).toBeInTheDocument();
     expect(screen.getByText('Total entries')).toBeInTheDocument();
     // "Replayable" is both a KPI label and a table column header → >= 2.
     expect(screen.getAllByText('Replayable').length).toBeGreaterThan(0);
@@ -313,6 +340,23 @@ describe('DLQInspectorPage — bento surface', () => {
 });
 
 describe('DLQInspectorPage — entry drawer', () => {
+  it('opens operational review details without selecting or replaying a DLQ entry', async () => {
+    wire();
+    renderPage();
+    await screen.findByText(ENTRY_A_VIN);
+    fireEvent.click(within(screen.getByTestId('dlq-operational-brief'))
+      .getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Dead-letter queue summary details' });
+    expect(within(drawer).getByText('parsed with source topic')).toBeInTheDocument();
+    expect(within(drawer).getByText('raw bytes queued')).toBeInTheDocument();
+    expect(within(drawer).getByText(formatBytes(2948))).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /DLQ entry #1/ })).not.toBeInTheDocument();
+    expect(mockedRequest.mock.calls.some(call => String(call[0]).endsWith('/replay'))).toBe(false);
+    const close = within(drawer).getAllByRole('button', { name: 'Close' });
+    fireEvent.click(close[close.length - 1]);
+    expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+  });
+
   it('opens the drawer, lazy-loads the full entry, and decodes the base64 inner payload', async () => {
     wire();
     renderPage();
@@ -416,5 +460,74 @@ describe('DLQInspectorPage — list error handling', () => {
 
     expect(await screen.findByText(ENTRY_A_VIN)).toBeInTheDocument();
     expect(screen.getAllByText('unknown_enum').length).toBeGreaterThan(0);
+  });
+
+  it('retains entries, failure reasons, replay mode and independent audit rows after failed background reads', async () => {
+    wire();
+    const { client } = renderPage();
+    await screen.findByText(ENTRY_A_VIN);
+    await screen.findByText('admin@example.com');
+    wire({
+      list: () => Promise.reject(new ApiError('list refresh failed', 500)),
+      audit: () => Promise.reject(new ApiError('audit refresh failed', 500)),
+    });
+    await act(async () => { await client.refetchQueries({ type: 'active' }); });
+    expect(screen.getByText(ENTRY_A_VIN)).toBeInTheDocument();
+    expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    expect(screen.getAllByText('kind_mismatch').length).toBeGreaterThan(0);
+    expect(screen.getByText('Enabled')).toBeInTheDocument();
+    expect(screen.queryByText('DLQ replay is disabled')).toBeNull();
+    expect(screen.queryByText('Server error')).toBeNull();
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+    expect(screen.getByTestId('dlq-summary')).toHaveAttribute('data-retained', 'true');
+    expect(mockedRequest.mock.calls.some(call => String(call[0]).endsWith('/replay'))).toBe(false);
+  });
+
+  it('preserves the selected entry identity in the replay confirmation and cancellation never publishes', async () => {
+    wire();
+    renderPage();
+    await openReplayConfirm();
+    expect(screen.getByText(/republish entry #1 to its source topic/)).toBeInTheDocument();
+    const confirmation = screen.getByRole('dialog', { name: 'Replay DLQ entry?' });
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Replay DLQ entry?' })).toBeNull());
+    expect(screen.getByRole('dialog', { name: /DLQ entry #1/ })).toBeInTheDocument();
+    expect(mockedRequest.mock.calls.some(call => String(call[0]).endsWith('/replay'))).toBe(false);
+  });
+});
+
+describe('DLQInspectorPage — restrained panel hierarchy', () => {
+  it.each([
+    { name: 'loaded snapshot', empty: false },
+    { name: 'empty snapshot', empty: true },
+  ])('keeps every panel and neutral decorative glyph in the $name', async ({ empty }) => {
+    wire({
+      list: () => Promise.resolve(listResponse(empty ? { count: 0, entries: [] } : {})),
+    });
+    renderPage();
+    await screen.findByText('admin@example.com');
+    if (empty) {
+      expect(await screen.findByText('No DLQ entries — the pipeline is clean.')).toBeInTheDocument();
+    } else {
+      expect(await screen.findByText(ENTRY_A_VIN)).toBeInTheDocument();
+    }
+
+    expect(screen.getByTestId('dlq-operational-brief')
+      .querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    for (const [title, glyph] of [
+      ['Dead-letter entries', 'lucide-octagon-alert'],
+      ['Failure reasons', 'lucide-bar-chart3'],
+      ['Recent replay activity', 'lucide-history'],
+    ]) {
+      const heading = screen.getByRole('heading', { name: title });
+      const card = heading.closest('[data-card]');
+      expect(card).not.toBeNull();
+      const icon = card?.querySelector(`header svg.${glyph}`);
+      expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0', 'text-[var(--text-muted)]');
+      expect(icon).not.toHaveClass('text-cyan-300');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+    }
+    expect(mockedRequest.mock.calls.some(call => String(call[0]).endsWith('/replay'))).toBe(false);
   });
 });

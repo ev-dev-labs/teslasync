@@ -2,7 +2,7 @@
  * DriverDialog — guardrail fields round-trip into the create payload and
  * invalid guardrails block submit.
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -43,6 +43,8 @@ beforeEach(() => {
 describe('DriverDialog guardrails', () => {
   it('submits charge cap + curfew in the create payload', () => {
     renderDialog({ item: null, ...callbacks });
+    expect(within(screen.getByRole('group', { name: 'Driver identity' })).getByLabelText(/Display name/)).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Guardrails' })).getByLabelText(/Charge cap/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Display name/), { target: { value: 'Teen' } });
     fireEvent.change(screen.getByLabelText(/Non-sensitive reference code/), { target: { value: 'T1' } });
     fireEvent.change(screen.getByLabelText(/Charge cap \(%\)/), { target: { value: '80' } });

@@ -46,6 +46,19 @@ function readySource(id = 'secondary'): DataSourceDescriptor {
 }
 
 describe('DataSourceNotice — classifier wiring', () => {
+  it('keeps paused retained data nonfatal without inventing a service failure', () => {
+    const { container } = renderNotice([{
+      id: 'retained',
+      label: 'Drives',
+      query: { data: [], fetchStatus: 'paused', refetch: vi.fn() },
+    }], { online: false })
+    expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull()
+    expect(container.querySelector('[data-unavailable-reason="service_outage"]')).toBeNull()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByText('Paused offline')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry unavailable sources: Drives' })).toBeEnabled()
+  })
+
   it('explains a permission failure instead of a generic outage message', () => {
     const { container } = renderNotice([failedSource(new ApiError('nope', 403))])
 

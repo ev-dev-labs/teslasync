@@ -2,6 +2,7 @@ package automation
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -11,6 +12,38 @@ import (
 
 	"github.com/jackc/pgx/v5"
 )
+
+// HistorySectionAvailability describes coverage without changing stored payloads.
+type HistorySectionAvailability struct {
+	Status    string `json:"status"`
+	Truncated bool   `json:"truncated"`
+	Complete  bool   `json:"complete"`
+	Total     int64  `json:"total"`
+}
+
+// ActionResultsAvailability distinguishes missing results from a recorded empty list.
+func ActionResultsAvailability(h *automationmodel.AutomationHistory) HistorySectionAvailability {
+	meta := HistorySectionAvailability{Status: "unavailable"}
+	if h == nil {
+		return meta
+	}
+	var actions []json.RawMessage
+	if len(h.ActionsExecuted) == 0 || string(h.ActionsExecuted) == "null" {
+		return meta
+	}
+	if err := json.Unmarshal(h.ActionsExecuted, &actions); err != nil {
+		meta.Status = "failed"
+		return meta
+	}
+	if actions == nil {
+		return meta
+	}
+	meta.Status = "available"
+	meta.Total = int64(len(actions))
+	meta.Truncated = len(actions) < h.ActionsSucceeded+h.ActionsFailed
+	meta.Complete = !meta.Truncated && h.Status != "running"
+	return meta
+}
 
 // AutomationHistoryRepo provides automation execution history data access.
 type AutomationHistoryRepo struct {
@@ -244,6 +277,10 @@ type HistoryStats struct {
 	Partial         int     `json:"partial"`
 	SuccessRate     float64 `json:"success_rate"` // percentage, excludes running/skipped/cancelled
 	AvgDurationMs   float64 `json:"avg_duration_ms"`
+	// Duration includes any status with a recorded duration, except test/undo.
+	// Its population is independent of the completed-run TotalExecutions.
+	AvgDurationPopulation string `json:"avg_duration_population"`
+	AvgDurationRuns       int    `json:"avg_duration_runs"`
 }
 
 // HistoryTrendPoint is a UTC day/status bucket across the entire filtered range.
@@ -277,22 +314,29 @@ func (r *AutomationHistoryRepo) GetTrend(ctx context.Context, f HistoryFilter) (
 	return points, nil
 }
 
-// GetStats returns aggregate statistics for executions matching the filter.
-func (r *AutomationHistoryRepo) GetStats(ctx context.Context, f HistoryFilter) (*HistoryStats, error) {
-	where, args := buildHistoryWhere(f)
+const historyDurationFilter = `duration_ms IS NOT NULL AND status NOT IN ('test','undo')`
 
-	query := `SELECT
+const historyStatsQuery = `SELECT
 		COUNT(*) FILTER (WHERE status NOT IN ('running','skipped','cancelled','test','undo')),
 		COUNT(*) FILTER (WHERE status = 'success'),
 		COUNT(*) FILTER (WHERE status = 'failed'),
 		COUNT(*) FILTER (WHERE status = 'partial'),
-		COALESCE(AVG(duration_ms) FILTER (WHERE duration_ms IS NOT NULL AND status NOT IN ('test','undo')), 0)
-	FROM automation_history` + where
+		COALESCE(AVG(duration_ms) FILTER (WHERE ` + historyDurationFilter + `), 0),
+		COUNT(*) FILTER (WHERE ` + historyDurationFilter + `)
+	FROM automation_history`
 
-	s := &HistoryStats{}
+// GetStats returns aggregate statistics for executions matching the filter,
+// including the recorded-duration population across the full filtered range.
+func (r *AutomationHistoryRepo) GetStats(ctx context.Context, f HistoryFilter) (*HistoryStats, error) {
+	where, args := buildHistoryWhere(f)
+	return scanHistoryStats(r.db.Pool.QueryRow(ctx, historyStatsQuery+where, args...))
+}
+
+func scanHistoryStats(row pgx.Row) (*HistoryStats, error) {
+	s := &HistoryStats{AvgDurationPopulation: "runs_with_recorded_duration_excluding_test_undo"}
 	var avgDur float64
-	if err := r.db.Pool.QueryRow(ctx, query, args...).Scan(
-		&s.TotalExecutions, &s.Succeeded, &s.Failed, &s.Partial, &avgDur,
+	if err := row.Scan(
+		&s.TotalExecutions, &s.Succeeded, &s.Failed, &s.Partial, &avgDur, &s.AvgDurationRuns,
 	); err != nil {
 		return nil, fmt.Errorf("get automation history stats: %w", err)
 	}

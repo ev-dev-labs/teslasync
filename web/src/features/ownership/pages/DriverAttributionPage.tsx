@@ -26,61 +26,46 @@ import {
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
+import { MetricBar } from '@/components/data-display';
+import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text, Toggle, useSortToggle, IconButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { chartTokens, typography } from '@/lib/tokens';
+
 import type { DriveFingerprint, DriverCluster, DriverProfile } from '@/types/ownership';
 import {
   EvidencePanel,
   GhostDrivesPanel,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { formatCurrencyMinor, formatEfficiencyFromSI, formatPct, formatSpan } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const WINDOW_OPTIONS = [30, 60, 90, 180, 365];
 const ACCENTS = ['cyan', 'emerald', 'amber', 'purple', 'rose', 'indigo'];
 
-const ACCENT_HEX: Record<string, string> = {
-  cyan: '#22d3ee',
-  emerald: '#34d399',
-  amber: '#fbbf24',
-  purple: '#c084fc',
-  rose: '#fb7185',
-  indigo: '#818cf8',
-};
-
-function accentText(accent: string): string {
-  switch (accent) {
-    case 'emerald':
-      return 'text-emerald-300';
-    case 'amber':
-      return 'text-amber-300';
-    case 'purple':
-      return 'text-purple-300';
-    case 'rose':
-      return 'text-rose-300';
-    case 'indigo':
-      return 'text-indigo-300';
-    default:
-      return 'text-cyan-300';
-  }
-}
-
 export default function DriverAttributionPage() {
+  const { fmtInt, fmtNumber, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
+  const palette = useChartPalette();
+  const accentColor = (accent: string) =>
+    palette[Math.max(0, ACCENTS.indexOf(accent)) % palette.length] ?? chartTokens.series[0];
+  const clusterSort = useSortToggle();
+  const fingerprintSort = useSortToggle();
   const [windowDays, setWindowDays] = useState(90);
   const [profileOpen, setProfileOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
@@ -91,7 +76,7 @@ export default function DriverAttributionPage() {
   });
   const [assignDraft, setAssignDraft] = useState({ drive_id: 0, driver_profile_id: 0 });
 
-  usePageTitle(t('ownership.driver.navTitle', 'Driver Fingerprinting'));
+  usePageTitle(t('ownership.driver.navTitle', 'Driver fingerprinting'));
 
   const driverAttrHidden = useHiddenSeries('driver-attribution-chart');
 
@@ -121,6 +106,17 @@ export default function DriverAttributionPage() {
   const fingerprints = useMemo(() => report?.fingerprints ?? [], [report?.fingerprints]);
   const profiles = useMemo(() => profilesQuery.data?.items ?? [], [profilesQuery.data?.items]);
   const currency = report?.currency ?? 'USD';
+  const sortedClusters = clusterSort.sortFn(clusters, (row, key) => {
+    switch (key) {
+      case 'drives': return row.drive_count;
+      case 'distance': return row.distance_m;
+      case 'aggression': return row.aggression_score;
+      default: return row.cluster_id;
+    }
+  });
+  const sortedFingerprints = fingerprintSort.sortFn(fingerprints, (row, key) =>
+    key === 'confidence' ? row.confidence_pct : row.distance_m,
+  );
 
   const shareData = useMemo(
     () =>
@@ -128,8 +124,8 @@ export default function DriverAttributionPage() {
         name: cluster.driver_name || t('ownership.driver.unnamed', 'Cluster {{id}}', {
           id: cluster.cluster_id + 1,
         }),
-        share: Number(cluster.share_pct.toFixed(1)),
-        aggression: Number(cluster.aggression_score.toFixed(1)),
+        share: cluster.share_pct,
+        aggression: cluster.aggression_score,
         accent: cluster.accent,
       })),
     [clusters, t],
@@ -163,9 +159,9 @@ export default function DriverAttributionPage() {
       key: 'name',
       header: t('ownership.driver.cluster.name', 'Behaviour cluster'),
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <Fingerprint className={`h-4 w-4 ${accentText(row.accent)}`} aria-hidden="true" />
-          <div>
+        <div className="flex min-w-0 items-start gap-2">
+          <Icon icon={Fingerprint} className={typography.color.secondary} />
+          <div className="min-w-0 break-words">
             <Text as="p" variant="label">
               {row.driver_name ||
                 t('ownership.driver.unnamed', 'Cluster {{id}}', { id: row.cluster_id + 1 })}
@@ -184,11 +180,12 @@ export default function DriverAttributionPage() {
     {
       key: 'drives',
       header: t('ownership.driver.cluster.drives', 'Drives'),
+      align: 'right',
       render: (row) => (
         <div>
-          <span className="tabular-nums">{fmtNumber(row.drive_count, 0)}</span>
+          <span className="tabular-nums">{fmtInt(row.drive_count)}</span>
           <Text as="p" variant="caption">
-            {formatPct(row.share_pct, 0)}
+            {formatPct(row.share_pct)}
           </Text>
         </div>
       ),
@@ -197,12 +194,14 @@ export default function DriverAttributionPage() {
     {
       key: 'distance',
       header: t('ownership.driver.cluster.distance', 'Distance'),
+      align: 'right',
       render: (row) => <span className="tabular-nums">{units.formatDistance(row.distance_m)}</span>,
       sortable: true,
     },
     {
       key: 'efficiency',
       header: t('ownership.driver.cluster.efficiency', 'Efficiency'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {formatEfficiencyFromSI(row.efficiency_wh_per_m, units.unitPrefs)}
@@ -212,6 +211,7 @@ export default function DriverAttributionPage() {
     {
       key: 'speed',
       header: t('ownership.driver.cluster.speed', 'Avg speed'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {row.avg_speed_mps != null ? units.formatSpeed(row.avg_speed_mps) : '—'}
@@ -221,6 +221,7 @@ export default function DriverAttributionPage() {
     {
       key: 'regen',
       header: t('ownership.driver.cluster.regen', 'Regen share'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {row.regen_share_pct != null ? formatPct(row.regen_share_pct) : '—'}
@@ -230,22 +231,27 @@ export default function DriverAttributionPage() {
     {
       key: 'night',
       header: t('ownership.driver.cluster.night', 'Night share'),
-      render: (row) => <span className="tabular-nums">{formatPct(row.night_share_pct, 0)}</span>,
+      align: 'right',
+      render: (row) => <span className="tabular-nums">{formatPct(row.night_share_pct)}</span>,
     },
     {
       key: 'aggression',
       header: t('ownership.driver.cluster.aggression', 'Aggression'),
+      align: 'right',
       render: (row) => (
-        <div className="min-w-[6rem]">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
-            <div
-              className="h-full rounded-full bg-amber-400/70"
-              style={{ width: `${Math.min(100, Math.max(0, row.aggression_score))}%` }}
-            />
-          </div>
-          <span className="tabular-nums text-xs text-[var(--text-muted)]">
-            {fmtNumber(row.aggression_score, 0)}/100
-          </span>
+        <div className="min-w-24">
+          <MetricBar
+            value={row.aggression_score}
+            max={100}
+            color={chartTokens.series[2]}
+            ariaLabel={t('ownership.driver.cluster.aggression', 'Aggression')}
+            showHeader={false}
+            size="slim"
+            fill="solid"
+          />
+          <Text as="span" variant="caption" className="tabular-nums">
+            {fmtNumber(row.aggression_score)}/100
+          </Text>
         </div>
       ),
       sortable: true,
@@ -253,6 +259,7 @@ export default function DriverAttributionPage() {
     {
       key: 'cost',
       header: t('ownership.driver.cluster.cost', 'Energy cost share'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {formatCurrencyMinor(row.cost_share_minor, currency, units.unitPrefs.locale)}
@@ -262,8 +269,9 @@ export default function DriverAttributionPage() {
     {
       key: 'cohesion',
       header: t('ownership.driver.cluster.cohesion', 'Cohesion'),
+      align: 'right',
       render: (row) => (
-        <span className="tabular-nums">{fmtNumber(row.cohesion, 2)}</span>
+        <span className="tabular-nums">{fmtNumber(row.cohesion)}</span>
       ),
     },
   ];
@@ -287,15 +295,17 @@ export default function DriverAttributionPage() {
       key: 'attribution',
       header: t('ownership.driver.fp.attribution', 'Attributed to'),
       render: (row) => (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 break-words">
           <Text as="span" variant="label">
             {row.driver_name ||
               t('ownership.driver.unnamed', 'Cluster {{id}}', { id: row.cluster_id + 1 })}
           </Text>
-          <Badge variant={row.source === 'labelled' ? 'success' : 'info'}>
+          <Badge variant={row.source === 'labelled' ? 'success' : row.source === 'inferred' ? 'info' : 'neutral'}>
             {row.source === 'labelled'
               ? t('ownership.driver.fp.labelled', 'confirmed')
-              : t('ownership.driver.fp.inferred', 'inferred')}
+              : row.source === 'inferred'
+                ? t('ownership.driver.fp.inferred', 'inferred')
+                : <>{t('common.unknown', 'Unknown')}{row.source ? ` (${row.source})` : ''}</>}
           </Badge>
           {row.ambiguous ? (
             <Badge variant="warning">{t('ownership.driver.fp.ambiguous', 'ambiguous')}</Badge>
@@ -306,11 +316,10 @@ export default function DriverAttributionPage() {
     {
       key: 'confidence',
       header: t('ownership.driver.fp.confidence', 'Confidence'),
+      align: 'right',
       render: (row) => (
-        <span
-          className={`tabular-nums ${row.confidence_pct >= 75 ? 'text-emerald-300' : row.confidence_pct >= 50 ? 'text-amber-300' : 'text-rose-300'}`}
-        >
-          {formatPct(row.confidence_pct, 0)}
+        <span className="tabular-nums">
+          {formatPct(row.confidence_pct)}
         </span>
       ),
       sortable: true,
@@ -318,21 +327,24 @@ export default function DriverAttributionPage() {
     {
       key: 'distance',
       header: t('ownership.driver.fp.distance', 'Distance'),
+      align: 'right',
       render: (row) => <span className="tabular-nums">{units.formatDistance(row.distance_m)}</span>,
       sortable: true,
     },
     {
       key: 'duration',
       header: t('ownership.driver.fp.duration', 'Duration'),
+      align: 'right',
       render: (row) => formatSpan(row.duration_s),
     },
     {
       key: 'margin',
       header: t('ownership.driver.fp.margin', 'Separation margin'),
+      align: 'right',
       render: (row) =>
         row.distance_to_next_centroid != null ? (
           <span className="tabular-nums">
-            {fmtNumber(row.distance_to_next_centroid - row.distance_to_own_centroid, 3)}
+            {fmtScientificNumber(row.distance_to_next_centroid - row.distance_to_own_centroid, 3)}
           </span>
         ) : (
           '—'
@@ -362,6 +374,8 @@ export default function DriverAttributionPage() {
         <Button
           variant="ghost"
           size="sm"
+          className="min-h-11 min-w-11 md:min-h-9"
+          wrapLabel
           onClick={() => {
             setAssignDraft({
               drive_id: row.drive_id,
@@ -380,11 +394,14 @@ export default function DriverAttributionPage() {
     {
       key: 'name',
       header: t('ownership.driver.profile.name', 'Driver'),
+      filterValue: (row) => row.id,
+      filterValueLabel: (_value, row) => row.name,
       render: (row) => (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 break-words">
           <span
             className="h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: ACCENT_HEX[row.accent] ?? ACCENT_HEX.cyan }}
+            style={{ backgroundColor: accentColor(row.accent) }}
+            aria-hidden="true"
           />
           <Text as="span" variant="label">
             {row.name}
@@ -397,6 +414,8 @@ export default function DriverAttributionPage() {
     },
     {
       key: 'created',
+      filterValue: (row) => row.created_at,
+      filterValueLabel: (_value, row) => formatDateTime(row.created_at),
       header: t('ownership.driver.profile.created', 'Created'),
       render: (row) => (
         <Text as="span" variant="caption">
@@ -408,30 +427,22 @@ export default function DriverAttributionPage() {
       key: 'actions',
       header: t('ownership.action.header', 'Actions'),
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-          loading={deleteProfile.isPending && deleteProfile.variables === row.id}
-          onClick={() => void handleRemove(row)}
-        >
-          {t('ownership.action.remove', 'Remove')}
-        </Button>
+        /* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */
+        <IconButton icon={<Icon icon={Trash2} />} label={t('ownership.action.remove', 'Remove')} onClick={() => void handleRemove(row)} busy={deleteProfile.isPending && deleteProfile.variables === row.id} />
       ),
     },
   ];
 
   return (
-    <PageContainer
-      title={t('ownership.driver.title', 'Driver Fingerprinting & Attribution')}
+    <PageLayout
+      title={t('ownership.driver.title', 'Driver fingerprinting & attribution')}
       subtitle={t(
         'ownership.driver.subtitle',
         'Group drives by how they were driven — speed discipline, power draw, regen use and departure hour — then attach a name once and let every future drive inherit it.',
       )}
-      loading={reportQuery.isLoading}
-      error={reportQuery.error as Error | null}
-      actions={
-        <div className="flex items-center gap-2">
+      query={[reportQuery, profilesQuery]}
+      contextActions={
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Select
             aria-label={t('ownership.window.label', 'Analysis window')}
             value={String(windowDays)}
@@ -469,22 +480,33 @@ export default function DriverAttributionPage() {
       </FadeIn>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.driver.summary.title', 'Separation quality')}>
-          <StatGrid
-            stats={[
+        <OwnershipPanel title={t('ownership.driver.summary.title', 'Separation quality')}
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.driver.brief.title', 'Cluster separation and attribution')}
+            description={t('ownership.driver.brief.description', 'Behavioural clusters are anonymous until labelled. Inferred and ambiguous drives remain distinct from confirmed drives.')}
+            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+            source={reportQuery} enabled={vehicleId != null}
+            window={report?.window}
+            metrics={[
               {
-                key: 'clusters',
+                occurrenceId: 'clusters', metricId: 'count',
                 label: t('ownership.driver.stat.clusters', 'Distinct clusters'),
-                value: fmtNumber(clusters.length, 0),
+                rawValue: report ? clusters.length : null,
+                display: specialistDisplay(fmtInt),
               },
               {
-                key: 'separation',
+                occurrenceId: 'separation', metricId: 'ratio',
                 label: t('ownership.driver.stat.separation', 'Separation score'),
-                value:
-                  report?.separation_score != null
-                    ? fmtNumber(report.separation_score, 2)
-                    : '—',
-                hint: report?.separation_verdict,
+                rawValue: report?.separation_score,
+                display: specialistDisplay(fmtNumber),
+                context: report?.separation_verdict === 'strong'
+                  ? t('ownership.verdict.strong', 'strong')
+                  : report?.separation_verdict === 'moderate'
+                    ? t('ownership.verdict.moderate', 'moderate')
+                    : report?.separation_verdict === 'weak'
+                      ? t('ownership.verdict.weak', 'weak')
+                      : report?.separation_verdict,
                 tone:
                   report?.separation_verdict === 'strong'
                     ? 'positive'
@@ -493,22 +515,25 @@ export default function DriverAttributionPage() {
                       : 'default',
               },
               {
-                key: 'labelled',
+                occurrenceId: 'labelled', metricId: 'count',
                 label: t('ownership.driver.stat.labelled', 'Confirmed drives'),
-                value: fmtNumber(report?.labelled_drive_count ?? 0, 0),
+                rawValue: report?.labelled_drive_count,
+                display: specialistDisplay(fmtInt),
                 tone: 'positive',
               },
               {
-                key: 'inferred',
+                occurrenceId: 'inferred', metricId: 'count',
                 label: t('ownership.driver.stat.inferred', 'Inferred drives'),
-                value: fmtNumber(report?.inferred_drive_count ?? 0, 0),
+                rawValue: report?.inferred_drive_count,
+                display: specialistDisplay(fmtInt),
               },
               {
-                key: 'ambiguous',
+                occurrenceId: 'ambiguous', metricId: 'count',
                 label: t('ownership.driver.stat.ambiguous', 'Ambiguous drives'),
-                value: fmtNumber(report?.ambiguous_drive_count ?? 0, 0),
+                rawValue: report?.ambiguous_drive_count,
+                display: specialistDisplay(fmtInt),
                 tone: (report?.ambiguous_drive_count ?? 0) > 0 ? 'warning' : 'default',
-                hint: t(
+                context: t(
                   'ownership.driver.stat.ambiguousHint',
                   'Two clusters fit almost equally well',
                 ),
@@ -521,6 +546,8 @@ export default function DriverAttributionPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.driver.chart.title', 'Cluster mix and driving intensity')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           empty={shareData.length === 0}
           emptyMessage={t(
             'ownership.driver.chart.empty',
@@ -539,12 +566,12 @@ export default function DriverAttributionPage() {
               {
                 key: 'share',
                 label: t('ownership.driver.chart.col.share', 'Share of drives'),
-                format: (v) => formatPct(v as number, 1),
+                format: (v) => formatPct(v as number),
               },
               {
                 key: 'aggression',
                 label: t('ownership.driver.chart.col.aggression', 'Aggression score'),
-                format: (v) => fmtNumber(v as number, 1),
+                format: (v) => `${fmtNumber(v as number)}/100`,
               },
             ]}
             height={280}
@@ -554,11 +581,16 @@ export default function DriverAttributionPage() {
               <BarChart data={shareData} margin={chartMargin}>
                 <CartesianGrid {...chartGrid} />
                 <XAxis dataKey="name" tick={axisTick} />
-                <YAxis tick={axisTick} unit="%" />
-                <Tooltip content={<ChartTooltip />} />
+                <YAxis tick={axisTick} domain={[0, 100]} />
+                <Tooltip content={<ChartTooltip valueFormatter={(value, _name, unit) =>
+                  typeof value === 'number'
+                    ? unit === '%' ? formatPct(value) : `${fmtNumber(value)}/100`
+                    : '—'
+                } />} />
                 <ChartLegend state={driverAttrHidden} />
                 <Bar
                   dataKey="share"
+                  unit="%"
                   name={t('ownership.driver.chart.col.share', 'Share of drives')}
                   radius={[4, 4, 0, 0]}
                   hide={driverAttrHidden.isHidden('share')}
@@ -566,14 +598,14 @@ export default function DriverAttributionPage() {
                   {shareData.map((entry, index) => (
                     <Cell
                       key={`share-${index}`}
-                      fill={ACCENT_HEX[entry.accent] ?? ACCENT_HEX.cyan}
+                      fill={accentColor(entry.accent)}
                     />
                   ))}
                 </Bar>
                 <Bar
                   dataKey="aggression"
                   name={t('ownership.driver.chart.col.aggression', 'Aggression score')}
-                  fill="rgba(251,191,36,0.35)"
+                  fill={chartTokens.series[2]}
                   radius={[4, 4, 0, 0]}
                   hide={driverAttrHidden.isHidden('aggression')}
                 />
@@ -586,6 +618,8 @@ export default function DriverAttributionPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.driver.clusters.title', 'Cluster characteristics')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.driver.clusters.subtitle',
             'Cohesion is the mean feature distance inside the cluster — lower is tighter.',
@@ -595,8 +629,17 @@ export default function DriverAttributionPage() {
         >
           <DataTable
             columns={clusterColumns}
-            mobileColumns={['name', 'drives', 'aggression']}
-            data={clusters}
+            mobilePresentation={{
+              roles: { name: 'title', drives: 'primary', aggression: 'meta' },
+              displayValue: (row, key) => key === 'name'
+                ? row.driver_name || t('ownership.driver.unnamed', 'Cluster {{id}}', { id: row.cluster_id + 1 })
+                : key === 'drives' ? fmtInt(row.drive_count)
+                  : key === 'aggression' ? `${fmtNumber(row.aggression_score)}/100` : null,
+            }}
+            data={sortedClusters}
+            onSort={clusterSort.onSort}
+            sortKey={clusterSort.sortKey}
+            sortDir={clusterSort.sortDir}
             keyExtractor={(row) => row.cluster_id}
             tableId="ownership-driver-clusters"
           />
@@ -606,6 +649,9 @@ export default function DriverAttributionPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.driver.profiles.title', 'Named drivers')}
+          source={profilesQuery}
+          sourceEnabled={vehicleId != null}
+          editing={profileOpen}
           description={t(
             'ownership.driver.profiles.subtitle',
             'Name a cluster once by labelling any drive it contains; the whole cluster inherits the name.',
@@ -616,7 +662,9 @@ export default function DriverAttributionPage() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<UserPlus className="h-4 w-4" aria-hidden="true" />}
+              icon={<Icon icon={UserPlus} />}
+              className="min-h-11 min-w-11 md:min-h-9"
+              wrapLabel
               onClick={() => setProfileOpen((open) => !open)}
             >
               {profileOpen
@@ -639,12 +687,19 @@ export default function DriverAttributionPage() {
               <Select
                 label={t('ownership.driver.form.accent', 'Accent colour')}
                 value={profileDraft.accent}
-                options={ACCENTS.map((accent) => ({ value: accent, label: accent }))}
+                options={[
+                  { value: 'cyan', label: t('ownership.driver.form.accents.cyan', 'cyan') },
+                  { value: 'emerald', label: t('ownership.driver.form.accents.emerald', 'emerald') },
+                  { value: 'amber', label: t('ownership.driver.form.accents.amber', 'amber') },
+                  { value: 'purple', label: t('ownership.driver.form.accents.purple', 'purple') },
+                  { value: 'rose', label: t('ownership.driver.form.accents.rose', 'rose') },
+                  { value: 'indigo', label: t('ownership.driver.form.accents.indigo', 'indigo') },
+                ]}
                 onChange={(event) =>
                   setProfileDraft((current) => ({ ...current, accent: event.target.value }))
                 }
               />
-              <div className="flex items-end gap-4">
+              <div className="flex min-w-0 flex-wrap items-end gap-4">
                 <Toggle
                   label={t('ownership.driver.form.primary', 'Primary driver')}
                   checked={profileDraft.is_primary}
@@ -652,7 +707,7 @@ export default function DriverAttributionPage() {
                     setProfileDraft((current) => ({ ...current, is_primary: checked }))
                   }
                 />
-                <Button type="submit" loading={createProfile.isPending} disabled={vehicleId == null}>
+                <Button type="submit" className="min-h-11 md:min-h-10" wrapLabel loading={createProfile.isPending} disabled={vehicleId == null}>
                   {t('ownership.action.save', 'Save')}
                 </Button>
               </div>
@@ -664,7 +719,13 @@ export default function DriverAttributionPage() {
 
           <DataTable
             columns={profileColumns}
-            mobileColumns={['name', 'created']}
+            enableValueFilters
+            mobilePresentation={{
+              roles: { name: 'title', created: 'meta' },
+              displayValue: (row, key) => key === 'name' ? row.name
+                : key === 'created' ? formatDateTime(row.created_at) : null,
+              inlineActions: (row) => profileColumns.find(column => column.key === 'actions')?.render(row),
+            }}
             data={profiles}
             keyExtractor={(row) => row.id}
             tableId="ownership-driver-profiles"
@@ -677,6 +738,9 @@ export default function DriverAttributionPage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.driver.fingerprints.title', 'Drive fingerprints')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
+          editing={assignOpen}
           description={t(
             'ownership.driver.fingerprints.subtitle',
             'Every drive scored against each cluster centroid. Labelling one drive re-anchors the whole cluster.',
@@ -689,7 +753,7 @@ export default function DriverAttributionPage() {
         >
           {assignOpen ? (
             <form
-              className="mb-6 grid gap-4 rounded-lg border border-white/[0.07] bg-white/[0.02] p-4 md:grid-cols-3"
+              className="mb-6 grid gap-4 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4 md:grid-cols-3"
               onSubmit={submitAssignment}
             >
               <Input
@@ -720,11 +784,11 @@ export default function DriverAttributionPage() {
                   }))
                 }
               />
-              <div className="flex items-end gap-2">
-                <Button type="submit" loading={assign.isPending} disabled={profiles.length === 0}>
+              <div className="flex min-w-0 flex-wrap items-end gap-2">
+                <Button type="submit" className="min-h-11 md:min-h-10" wrapLabel loading={assign.isPending} disabled={profiles.length === 0}>
                   {t('ownership.driver.assign.submit', 'Confirm label')}
                 </Button>
-                <Button type="button" variant="ghost" onClick={() => setAssignOpen(false)}>
+                <Button type="button" variant="ghost" className="min-h-11 min-w-11 md:min-h-10" wrapLabel onClick={() => setAssignOpen(false)}>
                   {t('ownership.action.cancel', 'Cancel')}
                 </Button>
               </div>
@@ -736,8 +800,17 @@ export default function DriverAttributionPage() {
 
           <DataTable
             columns={fingerprintColumns}
-            mobileColumns={['drive', 'attribution', 'confidence']}
-            data={fingerprints}
+            mobilePresentation={{
+              roles: { drive: 'title', attribution: 'primary', confidence: 'meta' },
+              displayValue: (row, key) => key === 'drive' ? `#${row.drive_id}`
+                : key === 'attribution' ? row.driver_name || t('ownership.driver.unnamed', 'Cluster {{id}}', { id: row.cluster_id + 1 })
+                  : key === 'confidence' ? formatPct(row.confidence_pct) : null,
+              inlineActions: (row) => fingerprintColumns.find(column => column.key === 'assign')?.render(row),
+            }}
+            data={sortedFingerprints}
+            onSort={fingerprintSort.onSort}
+            sortKey={fingerprintSort.sortKey}
+            sortDir={fingerprintSort.sortDir}
             keyExtractor={(row) => row.drive_id}
             tableId="ownership-driver-fingerprints"
           />
@@ -753,7 +826,8 @@ export default function DriverAttributionPage() {
       </FadeIn>
 
       <FadeIn delay={0.25}>
-        <OwnershipPanel title={t('ownership.driver.verdict.title', 'Interpretation')}>
+        <OwnershipPanel title={t('ownership.driver.verdict.title', 'Interpretation')}
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
           <div className="flex flex-wrap items-center gap-3">
             <VerdictBadge value={report?.separation_verdict ?? 'unknown'} />
             <Text as="p" variant="bodySm">
@@ -767,10 +841,10 @@ export default function DriverAttributionPage() {
                       'ownership.driver.verdict.moderate',
                       'Clusters overlap somewhat. Label a few more drives per cluster to sharpen the boundary.',
                     )
-                  : t(
+                  : report?.separation_verdict === 'weak' ? t(
                       'ownership.driver.verdict.weak',
                       'Behaviour is too similar to separate reliably. Treat attributions as indicative only.',
-                    )}
+                    ) : t('common.unknown', 'Unknown')}
             </Text>
           </div>
         </OwnershipPanel>
@@ -778,6 +852,8 @@ export default function DriverAttributionPage() {
 
       <FadeIn delay={0.3}>
         <EvidencePanel
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -793,6 +869,6 @@ export default function DriverAttributionPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -17,7 +17,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { SignalDiffRow } from '@/api/hooks/useTelemetry';
 
@@ -134,12 +135,29 @@ function rowFor(name: string): HTMLElement {
   return tr as HTMLElement;
 }
 
+const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+function resizeTable(width: number) {
+  act(() => observers.forEach(({ element, callback }) => callback(
+    [{ target: element, contentRect: { width } } as ResizeObserverEntry],
+    {} as ResizeObserver,
+  )));
+}
+
 beforeEach(() => {
   localStorage.clear();
+  observers.length = 0;
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(private callback: ResizeObserverCallback) {}
+    observe(element: Element) { observers.push({ element, callback: this.callback }); }
+    unobserve() {}
+    disconnect() {}
+  });
 });
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  document.documentElement.classList.remove('light-mode');
 });
 
 // ── asNumber ─────────────────────────────────────────────────────────────
@@ -154,7 +172,7 @@ describe('asNumber', () => {
   });
 
   it('parses numeric strings but rejects blank / non-numeric ones', () => {
-    expect(asNumber('12.5')).toBe(12.5);
+    expect(asNumber('12.50')).toBe(12.5);
     expect(asNumber('  7  ')).toBe(7); // Number() trims surrounding whitespace
     expect(asNumber('')).toBeNull();
     expect(asNumber('   ')).toBeNull();
@@ -230,6 +248,22 @@ describe('deltaLabel', () => {
 
 // ── SignalDiffTable — loading / empty ────────────────────────────────────
 describe('SignalDiffTable — loading & empty states', () => {
+  it('retains exact long raw values, real numeric zero and selected identity after typography adoption', () => {
+    const name = 'CanonicalLongTelemetrySignal'.repeat(4);
+    const raw = 'exact source value; '.repeat(12);
+    renderTable({
+      rows: [
+        { name, value_a: raw, value_b: 0, source_a: 'log', source_b: 'l2', changed: true },
+      ],
+      selectedSignals: [name],
+    });
+    expect(screen.getByText(name)).toHaveClass('break-all');
+    const row = within(rowFor(name));
+    expect(row.getByText(raw.trim())).toHaveClass('whitespace-pre-wrap', 'break-all');
+    expect(row.getByText('0.00')).toBeInTheDocument();
+    expect(row.getByText('changed')).toBeInTheDocument();
+    expect(row.getByRole('checkbox')).toBeChecked();
+  });
   it('renders only the loading placeholder while loading (no table)', () => {
     renderTable({ loading: true });
     expect(screen.getByText('Loading…')).toBeInTheDocument();
@@ -286,16 +320,71 @@ describe('SignalDiffTable — row content', () => {
     expect(within(battery).getByText('88.00')).toBeInTheDocument();
   });
 
-  it('colours a positive Δ emerald with a signed value + percent', () => {
+  it('uses the success token for a positive Δ with a signed value + percent', () => {
     renderTable();
-    const delta = within(rowFor('battery_level')).getByText(/\+8\.00 \(\+10\.0%\)/);
-    expect(delta.className).toContain('text-emerald-300');
+    const delta = within(rowFor('battery_level')).getByText(/\+8\.00 \(\+10\.00%\)/);
+    expect(delta.className).toContain('text-[var(--semantic-success)]');
   });
 
-  it('colours a negative Δ rose with a signed value + percent', () => {
+  it('uses the danger token for a negative Δ with a signed value + percent', () => {
     renderTable();
-    const delta = within(rowFor('cabin_temp')).getByText(/-3\.00 \(-13\.6%\)/);
-    expect(delta.className).toContain('text-rose-300');
+    const delta = within(rowFor('cabin_temp')).getByText(/-3\.00 \(-13\.64%\)/);
+    expect(delta.className).toContain('text-[var(--semantic-danger)]');
+  });
+
+  describe('SignalDiffTable — mobile details and desktop preservation', () => {
+    it.each(['light', 'dark'])('keeps all fields and pinning keyboard-accessible in %s mode at 375px', async mode => {
+      document.documentElement.classList.toggle('light-mode', mode === 'light');
+      const user = userEvent.setup();
+      const name = 'long_signal_'.repeat(20);
+      const raw = 'exact source value; '.repeat(12).trim();
+      const { container } = renderTable({
+        rows: [{ name, value_a: raw, value_b: 0, source_a: 'log', source_b: 'l2', changed: true }],
+        selectedSignals: [name],
+      });
+      resizeTable(375);
+      expect(container.querySelector('[data-mobile-table]')).toBeInTheDocument();
+      expect(screen.queryByRole('table')).toBeNull();
+      const pin = screen.getByTestId('pin-button');
+      expect(pin).toHaveClass('min-h-11', 'min-w-11');
+      const trigger = screen.getByRole('button', { name: 'Quick view' });
+      trigger.focus();
+      await user.keyboard('{Enter}');
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText(name, { selector: 'code' })).toHaveClass('break-all');
+      expect(within(dialog).getByText(raw)).toHaveClass('whitespace-pre-wrap', 'break-all');
+      for (const label of ['Signal', 'Window A', 'Window B', 'Δ', 'Src A', 'Src B']) {
+        expect(within(dialog).getByText(label)).toBeInTheDocument();
+      }
+      expect(within(dialog).getByText('0.00')).toBeInTheDocument();
+      expect(within(dialog).getByText('changed')).toBeInTheDocument();
+      expect(within(dialog).getAllByTestId('source-layer-badge').map(badge => badge.dataset.source))
+        .toEqual(['log', 'l2']);
+      expect(within(dialog).getByTestId('pin-button')).toBeInTheDocument();
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(trigger).toHaveFocus();
+      document.documentElement.classList.remove('light-mode');
+    });
+
+    it('retains signal selection and seven columns when switching back to desktop virtualization', async () => {
+      const user = userEvent.setup();
+      const { container, onSelectionChange } = renderTable({ selectedSignals: ['battery_level'] });
+      resizeTable(375);
+      await user.click(screen.getByRole('button', { name: 'Select', exact: true }));
+      const selected = screen.getByRole('checkbox', { name: 'Deselect battery_level' });
+      expect(selected).toBeChecked();
+      selected.focus();
+      await user.keyboard(' ');
+      expect(onSelectionChange).toHaveBeenLastCalledWith([]);
+      resizeTable(1440);
+      expect(container.querySelector('[data-mobile-table]')).toBeNull();
+      expect(within(rowFor('battery_level')).getByRole('checkbox')).toBeChecked();
+      expect(rowFor('battery_level').querySelectorAll('td')).toHaveLength(8);
+      expect(screen.getAllByTestId('pin-button')).toHaveLength(SAMPLE_ROWS.length);
+      expect(container.querySelector('[data-column-key="name"]')).toBeInTheDocument();
+      expect(container.querySelector('[style*="max-height: 600px"]')).toBeInTheDocument();
+    });
   });
 
   it('shows "changed" for a non-numeric difference and "—" for equal values', () => {

@@ -6,10 +6,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/domain/vehicle"
 )
 
-// VehicleRepository defines the persistence interface for vehicles.
+// VehicleRepository persists static metadata in the installation's shared
+// fleet. HTTP callers authorize through ForwardAuth before using this port;
+// a subject string is not a per-vehicle ownership grant.
 type VehicleRepository interface {
 	GetByID(ctx context.Context, id string) (*vehicle.Vehicle, error)
-	GetByUserID(ctx context.Context, userID string) ([]vehicle.Vehicle, error)
+	GetAll(ctx context.Context) ([]vehicle.Vehicle, error)
 	GetByVIN(ctx context.Context, vin string) (*vehicle.Vehicle, error)
 	Save(ctx context.Context, v *vehicle.Vehicle) error
 	Delete(ctx context.Context, id string) error

@@ -30,23 +30,28 @@
  *     real. There is no network in this component, so nothing else is mocked.
  *   - The component renders no user-visible English of its own (all copy is
  *     supplied by callers via props), so there is no i18n boundary to stub.
+ *
+ * Compatibility discrepancy: the original numeric-guard assertions below
+ * explicitly require fabricated 0/100 defaults. They remain unchanged.
+ * The opt-in preservation contract instead forwards unknown readings and
+ * invalid scales to the existing LinearGauge, which handles them safely.
+ * These adapter tests establish forwarding, not the primitive's rendered
+ * accessibility or geometry; all execution awaits consolidated validation.
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
+import type { ComponentProps } from 'react';
+import type { LinearGauge } from '@/components/charts';
 import { WidgetGaugeHero, type GaugeHeroConfig, type GaugeHeroStat } from './WidgetGaugeHero';
 
 // ── LinearGauge stub — records the props WidgetGaugeHero forwards. ────────────
-interface LinearGaugeStubProps {
-  value: number;
-  max: number;
-  label: string;
-  unit?: string;
-  color?: string;
-  size?: number;
-}
+type LinearGaugeStubProps = ComponentProps<typeof LinearGauge>;
 
 vi.mock('@/components/charts', () => ({
-  LinearGauge: ({ value, max, label, unit, color, size }: LinearGaugeStubProps) => (
+  LinearGauge: ({
+    value, max, label, unit, color, size, min, ariaLabel, tone, status,
+    kind, decimals, hideScale, marker, markerLabel,
+  }: LinearGaugeStubProps) => (
     <div
       data-testid="linear-gauge"
       data-value={String(value)}
@@ -55,6 +60,15 @@ vi.mock('@/components/charts', () => ({
       data-unit={unit ?? ''}
       data-color={color ?? ''}
       data-size={String(size)}
+      data-min={String(min)}
+      data-aria-label={ariaLabel}
+      data-tone={tone}
+      data-status={status}
+      data-kind={kind}
+      data-decimals={String(decimals)}
+      data-hide-scale={String(hideScale)}
+      data-marker={String(marker)}
+      data-marker-label={markerLabel}
     />
   ),
 }));
@@ -125,6 +139,111 @@ describe('WidgetGaugeHero — numeric guards', () => {
       expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-max', '100');
       unmount();
     }
+  });
+});
+
+describe('WidgetGaugeHero — preservation contract', () => {
+  const preservedGauge: GaugeHeroConfig = {
+    ...baseGauge,
+    preserveReadingAndScale: true,
+  };
+
+  it('preserves unknown readings distinctly from a genuine zero', () => {
+    const { rerender } = render(<WidgetGaugeHero gauge={preservedGauge} />);
+
+    for (const value of [null, undefined, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0]) {
+      rerender(<WidgetGaugeHero gauge={{ ...preservedGauge, value }} />);
+      expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', String(value));
+    }
+  });
+
+  it('never invents a 100-unit ceiling for an invalid max in preservation mode', () => {
+    const { rerender } = render(<WidgetGaugeHero gauge={preservedGauge} />);
+
+    for (const max of [0, -50, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      rerender(<WidgetGaugeHero gauge={{ ...preservedGauge, max }} />);
+      expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-max', String(max));
+      expect(screen.getByTestId('linear-gauge')).not.toHaveAttribute('data-max', '100');
+    }
+  });
+
+  it('preserves finite readings and caller interval bounds without conversion', () => {
+    render(
+      <WidgetGaugeHero gauge={{ ...preservedGauge, value: 120.2, min: 32, max: 302, unit: '°F' }} />,
+    );
+
+    const gauge = screen.getByTestId('linear-gauge');
+    expect(gauge).toHaveAttribute('data-value', '120.2');
+    expect(gauge).toHaveAttribute('data-min', '32');
+    expect(gauge).toHaveAttribute('data-max', '302');
+    expect(gauge).toHaveAttribute('data-unit', '°F');
+  });
+
+  it('forwards semantic, accessible, precision, scale and reference metadata in either mode', () => {
+    const metadata: GaugeHeroConfig = {
+      ...baseGauge,
+      label: '',
+      min: 10,
+      ariaLabel: 'Battery charge',
+      tone: 'warning',
+      status: 'Below target',
+      kind: 'measurement',
+      decimals: 2,
+      hideScale: true,
+      marker: 90,
+      markerLabel: 'Charge limit',
+    };
+    const { rerender } = render(<WidgetGaugeHero gauge={metadata} />);
+
+    for (const preserveReadingAndScale of [false, true]) {
+      rerender(<WidgetGaugeHero gauge={{ ...metadata, preserveReadingAndScale }} />);
+      const gauge = screen.getByTestId('linear-gauge');
+      expect(gauge).toHaveAttribute('data-label', '');
+      expect(gauge).toHaveAttribute('data-min', '10');
+      expect(gauge).toHaveAttribute('data-aria-label', 'Battery charge');
+      expect(gauge).toHaveAttribute('data-tone', 'warning');
+      expect(gauge).toHaveAttribute('data-color', '#10b981');
+      expect(gauge).toHaveAttribute('data-status', 'Below target');
+      expect(gauge).toHaveAttribute('data-kind', 'measurement');
+      expect(gauge).toHaveAttribute('data-decimals', '2');
+      expect(gauge).toHaveAttribute('data-hide-scale', 'true');
+      expect(gauge).toHaveAttribute('data-marker', '90');
+      expect(gauge).toHaveAttribute('data-marker-label', 'Charge limit');
+    }
+  });
+
+  it('preserves explicit zero precision, false hideScale and count kind', () => {
+    render(
+      <WidgetGaugeHero gauge={{ ...preservedGauge, min: 0, decimals: 0, hideScale: false, kind: 'count' }} />,
+    );
+    const gauge = screen.getByTestId('linear-gauge');
+    expect(gauge).toHaveAttribute('data-min', '0');
+    expect(gauge).toHaveAttribute('data-decimals', '0');
+    expect(gauge).toHaveAttribute('data-hide-scale', 'false');
+    expect(gauge).toHaveAttribute('data-kind', 'count');
+  });
+
+  it('keeps standard stats and children, then suppresses both at compact size with an unknown reading', () => {
+    const props = {
+      gauge: { ...preservedGauge, value: null },
+      stats: [{ label: 'Range', value: 0, unit: 'mi' }],
+    };
+    const { rerender } = render(
+      <WidgetGaugeHero {...props}><div>charging-indicator</div></WidgetGaugeHero>,
+    );
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', 'null');
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-size', '100');
+    expect(screen.getByText('Range')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('charging-indicator')).toBeInTheDocument();
+
+    rerender(
+      <WidgetGaugeHero {...props} compact><div>charging-indicator</div></WidgetGaugeHero>,
+    );
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', 'null');
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-size', '70');
+    expect(screen.queryByText('Range')).not.toBeInTheDocument();
+    expect(screen.queryByText('charging-indicator')).not.toBeInTheDocument();
   });
 });
 

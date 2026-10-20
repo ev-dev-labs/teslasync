@@ -4,6 +4,7 @@ import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { fleetSetupKeys } from './useFleetSetup';
 import type {
   AppSettings,
   GasPriceStatus,
@@ -66,6 +67,9 @@ export function useAuthStatus() {
 export function useAuthURL() {
   const { success, error } = useMutationToast();
   return useMutation({
+    // Recovery remains available in historical views, but must never queue or retry.
+    networkMode: 'always',
+    retry: false,
     mutationFn: () => request<{ auth_url: string }>('/auth/url', { method: 'POST' }),
     onSuccess: () => {
       success('toast.settings.auth.url.success', 'Auth URL generated');
@@ -78,9 +82,12 @@ export function useRefreshAuth() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
+    networkMode: 'always',
+    retry: false,
     mutationFn: () => request<void>('/auth/refresh', { method: 'POST' }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: settingsKeys.authStatus });
+      invalidateAndBroadcast(qc, { queryKey: fleetSetupKeys.apiInfo });
       success('toast.settings.auth.refresh.success', 'Auth refreshed');
     },
     onError: (e) => error(e, 'toast.settings.auth.refresh.error', 'Failed to refresh auth'),
@@ -91,9 +98,12 @@ export function useDisconnectAuth() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
+    networkMode: 'always',
+    retry: false,
     mutationFn: () => request<void>('/auth/disconnect', { method: 'POST' }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: settingsKeys.authStatus });
+      invalidateAndBroadcast(qc, { queryKey: fleetSetupKeys.apiInfo });
       success('toast.settings.auth.disconnect.success', 'Tesla account disconnected');
     },
     onError: (e) => error(e, 'toast.settings.auth.disconnect.error', 'Failed to disconnect'),
@@ -150,9 +160,18 @@ export function useCarPreferences(vehicleId: number | null) {
 // ─── Gas Price ───────────────────────────────────────────────────────────────
 
 export function useGasPriceStatus(enabled = true) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: settingsKeys.gasPriceStatus,
-    queryFn: ({ signal }) => request<GasPriceStatus>('/gas-price/status', { signal }),
+    queryFn: async ({ signal }) => {
+      const previous = qc.getQueryData<GasPriceStatus>(settingsKeys.gasPriceStatus);
+      const status = await request<GasPriceStatus>('/gas-price/status', { signal });
+      // The worker advances this timestamp only after committing the price.
+      if (previous && Date.parse(status.last_poll_time) > Date.parse(previous.last_poll_time)) {
+        void qc.invalidateQueries({ queryKey: settingsKeys.gasPriceHistory });
+      }
+      return status;
+    },
     enabled,
     retry: false,
     refetchInterval: enabled ? INTERVALS.STANDARD : false,
@@ -174,11 +193,15 @@ export function usePollGasPrice() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: () => request<{ status: string }>('/gas-price/poll', { method: 'POST' }),
+    networkMode: 'always',
+    retry: false,
+    mutationFn: () => request<{ status: string }>('/gas-price/poll', {
+      method: 'POST',
+      requiresLiveMode: true,
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: settingsKeys.gasPriceStatus });
-      qc.invalidateQueries({ queryKey: settingsKeys.gasPriceHistory });
-      success('toast.settings.gasPrice.poll.success', 'Gas prices updated');
+      success('gas.pollTriggered', 'Gas price poll triggered');
     },
     onError: (e) => error(e, 'toast.settings.gasPrice.poll.error', 'Failed to poll gas prices'),
   });
@@ -188,9 +211,12 @@ export function useToggleGasPrice() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
+    networkMode: 'always',
+    retry: false,
     mutationFn: (enabled: boolean) =>
       request<{ enabled: boolean }>('/gas-price/toggle', {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled }),
       }),
@@ -209,9 +235,12 @@ export function useUpdateGasPriceConfig() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
+    networkMode: 'always',
+    retry: false,
     mutationFn: (pollInterval: string) =>
       request<{ poll_interval: string }>('/gas-price/config', {
         method: 'PUT',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ poll_interval: pollInterval }),
       }),

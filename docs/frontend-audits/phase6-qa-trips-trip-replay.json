@@ -1,0 +1,1202 @@
+{
+  "item": "phase6-qa-trips-trip-replay",
+  "attempt": 1,
+  "status": "DONE",
+  "completionKind": "read-only source/declaration QA; NOT page/native/application acceptance",
+  "page": "web/src/features/trips/pages/TripReplayPage.tsx",
+  "routes": [
+    "/drives/:id/replay"
+  ],
+  "purpose": "Replay telemetry-enriched stored drive positions with synchronized map, transport, current readouts, elevation and speed/power timelines.",
+  "clock": {
+    "reservation": "2026-10-14T02:53:30.443Z",
+    "returnBy": "2026-10-14T03:13:30.443Z",
+    "hardLimit": "2026-10-14T03:18:30.443Z",
+    "reset": false,
+    "actualActorCreation": "not exposed; conservative reservation retained"
+  },
+  "objectiveCheck": {
+    "queueFirstReadLine": 190,
+    "status": "[~]",
+    "attempt": 1,
+    "artifactsExisted": false,
+    "duplicate": false,
+    "reason": "audit-page-216 and accepted phase5-page-trips-trip-replay are historical source objectives, not this Phase6 finished-page QA."
+  },
+  "writeScope": [
+    "docs/frontend-audits/phase6-qa-trips-trip-replay.json",
+    "web/logs/phase6-qa-trips-trip-replay.log"
+  ],
+  "authority": {
+    "orchestratorLoop": "docs/orchestrator-loop.md read fully",
+    "design": "Relevant contract ranges1-250,251-493,494-680,1680-1740: architecture/design/trust/SI/mobile/a11y/evidence/map adoption",
+    "mission": "Relevant preservation/architecture/responsive/state/chart/a11y/domain/extreme-data ranges1-600,690-1250",
+    "inventory": "Authority1-46 and TripReplay rows267,345,574,1405-1408 at first read",
+    "handoff": "Current docs/session-handoff.md:1-140 Phase6 source-only restrictions",
+    "instructions": [
+      "docs/frontend-worker-conventions.md",
+      ".github/copilot-instructions.md:1-410",
+      ".github/instructions/react-frontend.instructions.md:1-420",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      "docs/I18N_GUIDELINES.md:1-125",
+      "docs/MOBILE_GUIDELINES.md:1-110",
+      "docs/A11Y_GUIDELINES.md:1-100"
+    ],
+    "precedence": "Canonical SI/current design override obsolete car/source-unit/legacy converter/null-to-zero/neon/glass examples."
+  },
+  "dataSources": [
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "line": 197,
+      "hook": "useDrive(id)",
+      "mechanism": "useQuery; singular drivingKeys.drive(id); request(`/drives/${id}`, {signal}); enabled by id; polls data.live=true",
+      "endpoint": "GET /api/v1/drives/{driveID}",
+      "route": "internal/api/router.go:3514-3515; actual handler constructor735",
+      "producer": "internal/api/drives/detail.go:281-352",
+      "limit": "No API/record/authorization exercised"
+    },
+    {
+      "file": "web/src/hooks/useTripReplay.ts",
+      "line": 99,
+      "hook": "useTripReplay",
+      "mechanism": "derived timeline/virtual clock/50ms interval; not data fetching"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "line": 124,
+      "hook": "useUnits + useNumberFormatting",
+      "mechanism": "display preferences, locale and precision; no raw payload mutation"
+    }
+  ],
+  "sections": [
+    {
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "line": 466,
+      "name": "Drive summary",
+      "fields": [
+        "distance",
+        "duration",
+        "average speed",
+        "maximum speed",
+        "efficiency",
+        "battery start/end",
+        "elevation gain",
+        "elevation loss"
+      ],
+      "count": 8,
+      "mechanism": "SummaryBrief:33-62 raw StatMetric entries -> useOperationalMetrics -> TripOperationalBrief; stored totals independent of GPS"
+    },
+    {
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "line": 483,
+      "name": "Route map/current position",
+      "fields": [
+        "speed",
+        "power",
+        "battery",
+        "elevation",
+        "rated range",
+        "outside temperature"
+      ],
+      "count": 6,
+      "mechanism": "one hero panel; one currentIndex; HelpTooltip/readout wrapping retained"
+    },
+    {
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "line": 570,
+      "name": "Playback transport",
+      "mechanism": "PlaybackControls framed=false receives all callbacks/markers/preview/duration/optional decorative sparkline"
+    },
+    {
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "line": 602,
+      "name": "Elevation/speed-power timelines",
+      "charts": 2,
+      "primarySeries": 3,
+      "mechanism": "every position index retained; null gaps/connectNulls=false; negative power preserved; clicks resolve original sample identity"
+    }
+  ],
+  "actions": [
+    "Refresh query:page445",
+    "Native Back to Drive Link:page450-456",
+    "Summary Review details via existing OperationalBrief (declaration pages/__tests__/TripReplayPage.test.tsx:509)",
+    "Map polyline nearest-sample seek:map205-211",
+    "Map layer switch:map316",
+    "Play/pause/stop/restart:page578-581; restart rewinds without pausing",
+    "Speed cycle/relative slots:PlaybackSpeedMenu10,46-61; hook224-232",
+    "Scrubber click/drag/pointer-capture/marker seek:TimelineScrubber327-417,620-674",
+    "Keyboard seeks/frames/start/end/percent/speed/help:PlaybackControls140-293,315-380",
+    "Elevation click:64-67; timeline click/hover:charts124-130,241-252",
+    "Per-drive URL at/play restore and300ms replace-only persistence/cleanup:page242-290",
+    "Chart exportable/legend capability:charts106-113; elevation49-57 (not exercised)"
+  ],
+  "walkthrough": {
+    "routeScope": "App.tsx643 SafeRoute -> routeLoaders39 trips module; routeRegistry117 hidden record route. id owns useDrive; no local scope picker. workspaceScope22-76,156-168 gives range=false/vehicle=true; shell vehicle cannot change id.",
+    "normalization": "page132-210 sorts telemetry timestamps, validates bounded finite coordinates, preserves zero coordinates/source order, picks position before nearest telemetry, NaN for unknown SOC. No positions fabricated.",
+    "sync": "page214-222 one seek controller/currentIndex -> map/readouts/scrubber/charts; map75-92 nearest haversine; charts241-252 cursor bridge; hook155-195 commits refs/state and cleans interval.",
+    "loading": "deriveDataState199-221 no data -> initial; page427 -> PageLayout -> PageContainer240-241 source skeleton and aria-busy; header remains, children not mounted.",
+    "fatal": "page428 passes fatalError only; no retained data -> PageContainer242-243 ErrorDisplay; header refresh/back remain declared.",
+    "retained": "deriveDataState229 onward keeps payload/refreshError; page derives stored data, fatalError=null -> children retained; TripOperationalBrief25-31 exposes retained label/provenance/update time. Native preservation not executed.",
+    "paused": "deriveDataState185,211,227 distinguishes fetchStatus=paused/isRefreshBlocked; current summary/header discard specific blocked reason (F13).",
+    "empty": "page469-480 retains summary plus GPS panel but removes route/readouts/transport/timeline shells (F15); with positions, missing altitude keeps ChartCard/EmptyState:elevation99-104; all-null timeline keeps ChartCard/EmptyState:charts116,203-210.",
+    "stationary": "map147-158 uses geo route/anchor; map323-335 anchor/banner not zero-length route. Exactly-one-coordinate copy is conditional debt when repeated/jittered samples cause same predicate.",
+    "unknownZero": "Unknown readouts use em dash; SOC finite guard preserves measured0. page367 omits only decorative speed sparkline for any unknown/nonfinite speed; primary arrays retain all indices and gaps. Map still treats null speed as measured0 (F02).",
+    "SIAndSigns": "Summary metres/mps/seconds/Wh raw; speed/distance/temp convert at render; altitude explicit metres, negative altitude/power retained. Adjacent-known elevation deltas only. Producer still emits per-sample kW (F06); no blind isolated W conversion recommended. Negative power regen is not charging proof (F07).",
+    "preferences": "useUnits124-194 and useNumberFormatting20-46 subscribe saved units/locale/precision. Derived display series not cache changes; no saved theme/chart/settings IDs reset. Raw summary ISO scope and h/m duration strings remain gaps.",
+    "mobile": "page491-507 stage stacks below lg; readouts2/3columns; page609 timelines stack until xl; min-w-0/wrapping; refresh/back min44 belowmd. PlaybackControls411-480 transport/help now44px, superseding old inventory critique. Slider h-8 remains(F17); marker overlaps/preview clipping/RTL/contrast require native QA.",
+    "a11y": "Labeled regions/panel titles/names and canonical chart frames exist; no positive tabindex found in inspected declarations. Missing complete sample alternatives(F08/F09); source markup is not focus/screen-reader/forced-colors acceptance.",
+    "motion": "page117 passes reduced/low-bandwidth preference to map237-239 and294-314 snap branch; chart/elevation areas disable animation; TimelineScrubber286,571,603 consults same preference. Intentional playback remains functional.",
+    "i18n": "51 literal t keys in six scoped renderers exist in canonical en.json. Existence is not truthful wording/fallback equality/split coherence. Markers bypass existing canonical keys; elevation aria canonically says no data even when populated(F12)."
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "file": "web/src/features/trips/components/TripReplayMap.tsx",
+      "line": 55,
+      "rule": "si-speed-band",
+      "severity": "high",
+      "detail": "km/h thresholds30/60/100 receive raw SI m/s at178; 20m/s is wrongly in<30 bucket rather than72km/h band.",
+      "fix": "Convert classifier input at display or express thresholds in SI; never mutate raw positions.",
+      "owner": "map domain",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F02",
+      "file": "web/src/features/trips/components/TripReplayMap.tsx",
+      "line": 178,
+      "rule": "unknown-as-zero",
+      "severity": "high",
+      "detail": "curr.speed??0 paints unknown as measured slow/stopped; nonfinite speed has no unknown band.",
+      "fix": "Neutral labeled unknown segment, preserve measured0 and seekability.",
+      "owner": "map domain",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F03",
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "line": 146,
+      "endLine": 162,
+      "rule": "unbounded-evidence-join",
+      "severity": "high",
+      "detail": "Nearest telemetry always returns a row without max age/causal-future distinction/evidence metadata; remote or future readings can be represented as current-position stats.",
+      "fix": "Document bounded domain alignment policy and per-quantity source timestamps/age/unknown; do not invent tolerance.",
+      "owner": "replay evidence domain",
+      "confidence": "confirmed mechanism; real-record occurrence NOTRUN"
+    },
+    {
+      "id": "F04",
+      "file": "web/src/hooks/useTripReplay.ts",
+      "line": 51,
+      "endLine": 65,
+      "rule": "temporal-trust",
+      "severity": "high",
+      "detail": "Invalid timestamps become offset0; last offset defines total at118; page324 also labels invalid time elapsed0. Binary searches assume ordered offsets; page validates coordinates but not temporal order. All-invalid positions can still set isPlaying=true at202-209 with total0.",
+      "fix": "Retain samples/unknown temporal evidence; one validated ordered usable time domain for hook/chart/preview/markers and play enablement.",
+      "owner": "replay controller/domain",
+      "confidence": "confirmed missing guards; malformed-record runtime NOTRUN"
+    },
+    {
+      "id": "F05",
+      "file": "web/src/lib/geo.ts",
+      "line": 52,
+      "endLine": 55,
+      "rule": "coordinate-policy-conflict",
+      "severity": "medium",
+      "detail": "Page176-181 accepts genuine(0,0), named test148 preserves it, but route/anchor geo helpers reject it as placeholder. An all-zero valid stationary record cannot show its recorded anchor; mixed trails may still draw zero points ignored by predicate.",
+      "fix": "One evidence-aware missing-GPS/legitimate-zero policy; no silent point loss or invented fallback center.",
+      "owner": "geo/map integration",
+      "confidence": "confirmed contradiction"
+    },
+    {
+      "id": "F06",
+      "file": "internal/api/drives/detail.go",
+      "line": 168,
+      "rule": "canonical-si-wire",
+      "severity": "high",
+      "detail": "Per-sample power emits V*A/1000(kW); avg_power_w staysW at343. useDrive has no adapter; page354/518 and chart159 displaykW. This agrees with actual legacy producer but conflicts with canonical W wire/cache/hooks, not a page-only1000x bug.",
+      "fix": "Coordinate producer/types/all per-sample consumers/tests toW then render via existing power formatter. Preserve signed/zero/null; no lone page compatibility conversion.",
+      "owner": "producer/API/type/replay integration",
+      "confidence": "confirmed boundary conflict"
+    },
+    {
+      "id": "F07",
+      "file": "web/src/features/driving/lib/replayMarkers.ts",
+      "line": 170,
+      "endLine": 189,
+      "rule": "physical-sign-semantics",
+      "severity": "high",
+      "detail": "Sustained negative pack power labels Charge start/stop; page help correctly describes negative power as regen. Sign alone cannot establish a charging session.",
+      "fix": "Annotate regenerative-flow evidence; require actual charge evidence before charge-session labels.",
+      "owner": "marker domain",
+      "confidence": "confirmed inference"
+    },
+    {
+      "id": "F08",
+      "file": "web/src/features/trips/components/TripReplayCharts.tsx",
+      "line": 104,
+      "endLine": 113,
+      "rule": "chart-a11y",
+      "severity": "high",
+      "detail": "no-table opt-out with no data/dataColumns/ariaDescription; ChartContainer503-508 needs data+columns. Totals/current readouts cannot expose whole speed/power history.",
+      "fix": "Existing ChartCard sample data/columns or complete meaningful text alternative with units/gaps/indices; preserve legend/export/sync.",
+      "owner": "timeline caller",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F09",
+      "file": "web/src/features/trips/components/TripReplayElevation.tsx",
+      "line": 47,
+      "endLine": 57,
+      "rule": "chart-a11y",
+      "severity": "high",
+      "detail": "Same no-table opt-out without complete sample alternative; gain/loss/current altitude cannot convey history.",
+      "fix": "Existing ChartCard sample data/columns or complete equivalent narrative; preserve gaps/original indices.",
+      "owner": "elevation caller",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F10",
+      "file": "web/src/features/driving/lib/replayMarkers.ts",
+      "line": 102,
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "detail": "English labels/manual plural descriptions forwarded unchanged at page229 to TimelineScrubber631-640 tooltip/accessible names; replay.markers singular keys already exist.",
+      "occurrenceLines": [
+        102,
+        109,
+        111,
+        113,
+        115,
+        117,
+        150,
+        151,
+        162,
+        163,
+        177,
+        178,
+        188,
+        189,
+        221,
+        235,
+        244
+      ],
+      "occurrenceCount": 17,
+      "fix": "Keep pure kind/count domain evidence; localize at presentation with existing keys and count-aware plurals/interpolation; parent owns any missing copy.",
+      "owner": "marker/page plus parent catalog",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F11",
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "line": 74,
+      "endLine": 78,
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "detail": "fmtDriveTime emits literal0m and Xh Ym/Xm, fed into SummaryBrief39 rather than existing localized duration owner.",
+      "occurrenceLines": [
+        74,
+        78
+      ],
+      "occurrenceCount": 2,
+      "fix": "Existing locale-aware duration formatter with same rounding/rollover/invalid semantics; no new formatter.",
+      "owner": "summary/page",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F12",
+      "file": "web/src/i18n/en.json",
+      "line": 9272,
+      "rule": "misleading-a11y-copy",
+      "severity": "medium",
+      "detail": "Canonical replay.elevation.aria says 'Elevation profile chart — no data available yet', overriding caller fallback in both empty/populated elevation54.",
+      "fix": "Parent catalog owner supplies truthful state-neutral name or state-specific caller copy.",
+      "owner": "parent canonical catalog",
+      "confidence": "confirmed declaration"
+    },
+    {
+      "id": "F13",
+      "file": "web/src/features/trips/components/operationalbrief-all/TripOperationalBrief.tsx",
+      "line": 25,
+      "endLine": 31,
+      "rule": "paused-reason",
+      "severity": "medium",
+      "detail": "Passed source.isRefreshBlocked unused; summary says Retained source; DataFreshnessAuto282-285,331-336 ignores fetchStatus and can report fresh when paused/isStale=false.",
+      "fix": "Adopt existing source/trust notice at caller showing blocked reason/update time, not invented server failure/new shared API.",
+      "owner": "replay source-status caller",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F14",
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "line": 117,
+      "rule": "source-provenance",
+      "severity": "medium",
+      "detail": "Fixed historical provenance also applies to live=true in-progress payload enriched at detail.go281-289 and polled by hook202-205.",
+      "fix": "Truthful per-source provenance, distinguishing stored totals/live enrichment/inference.",
+      "owner": "replay source domain",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F15",
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "line": 469,
+      "endLine": 480,
+      "rule": "hidden-section",
+      "severity": "medium",
+      "detail": "NoGPS branch retains summary and one GPS panel but removes labeled route/readouts/transport/elevation/timeline shells. Not an all-page data gate, still loses section shells.",
+      "fix": "Keep specific unavailable section shells and disabled impossible playback; no fabricated coordinates/samples/values; preserve totals.",
+      "owner": "page",
+      "confidence": "confirmed branch"
+    },
+    {
+      "id": "F16",
+      "file": "web/src/features/trips/components/TripReplayMap.tsx",
+      "line": 56,
+      "rule": "restrained-palette-adoption",
+      "severity": "medium",
+      "detail": "Feature pins saturated speed/endpoints/anchor/playhead paint; timeline cursor and elevation stroke also pin paint, bypassing existing restrained roles. This is caller debt, not a new global palette objective.",
+      "relatedCitations": [
+        {
+          "file": "web/src/features/trips/components/TripReplayMap.tsx",
+          "line": 254
+        },
+        {
+          "file": "web/src/features/trips/components/TripReplayMap.tsx",
+          "line": 281
+        },
+        {
+          "file": "web/src/features/trips/components/TripReplayMap.tsx",
+          "line": 300
+        },
+        {
+          "file": "web/src/features/trips/components/TripReplayCharts.tsx",
+          "line": 197
+        },
+        {
+          "file": "web/src/features/trips/components/TripReplayElevation.tsx",
+          "line": 90
+        }
+      ],
+      "fix": "Reuse current token/palette/material contracts, preserving identities/preferences and SVG/Canvas paint semantics; native contrastNOTRUN.",
+      "owner": "existing feature map/chart callers",
+      "confidence": "confirmed source paint; no measured visual severity"
+    },
+    {
+      "id": "F17",
+      "file": "web/src/components/data-display/TimelineScrubber.tsx",
+      "line": 524,
+      "rule": "mobile-target",
+      "severity": "medium",
+      "detail": "Interactive slider track h-8 declares32px, no mobile44px expansion; below stronger default, not measured WCAG AA failure. Transport/help44px already fixed.",
+      "fix": "Shared TimelineScrubber mobile min44 hit area without changing temporal geometry; later native containment/overlap/focus.",
+      "owner": "shared TimelineScrubber",
+      "confidence": "confirmed source size; renderedNOTRUN"
+    },
+    {
+      "id": "F18",
+      "file": "web/src/features/trips/components/operationalbrief-all/TripReplaySummaryBrief.tsx",
+      "line": 27,
+      "rule": "date-preferences",
+      "severity": "medium",
+      "detail": "Scope/details interpolate raw ISO startTs/endTs rather than locale/timezone/12-24h formatting.",
+      "fix": "Existing date owner at display boundary, preserve raw event bounds and relevant timezone disclosure.",
+      "owner": "summary caller",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F19",
+      "file": "web/src/features/trips/components/TripReplayMap.tsx",
+      "line": 125,
+      "rule": "bounds-refresh-dependencies",
+      "severity": "medium",
+      "detail": "FitBounds memo depends only trail.length/fallback center, not trail coordinate content/map. Changed same-count route with unchanged first point does not refit changed endpoint.",
+      "fix": "Existing React map lifecycle with complete dependencies and intended viewport semantics; not fetch-useEffect/new engine.",
+      "owner": "map domain",
+      "confidence": "confirmed omission; runtime driftNOTRUN"
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C1",
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "line": 491,
+      "detail": "Four inherited numeric geometry utilities: lg grid min280 and h320/sm380/lg440 at492. Exact token/design disposition required; no scanner/config/compiler/new approval."
+    },
+    {
+      "id": "C2",
+      "file": "web/src/features/trips/components/TripReplayElevation.tsx",
+      "line": 69,
+      "detail": "areaGradient(...,0.4) final alpha/helper composition untraced: not claim40% rendered alpha. Map324 z-[400] separate naming/layer candidate."
+    },
+    {
+      "id": "C3",
+      "file": "web/src/lib/workspaceScope.ts",
+      "line": 156,
+      "detail": "Record replay range=false/vehicle=true; shell selection cannot change id. Integration clarifies truthful header scope; no local picker/forced range registration."
+    },
+    {
+      "id": "C4",
+      "file": "web/src/features/trips/components/TripReplayMap.tsx",
+      "line": 332,
+      "detail": "Stationary banner asserts exactly one coordinate/timelines above scrubber despite repeated/jittered samples and timelines below. Parent canonical source-conditioned copy review; no real-record coordinate claim."
+    },
+    {
+      "id": "C5",
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "line": 196,
+      "detail": "pick<number> trusts unknown telemetry types/nonfinite power-altitude may pass non-null chart gates; typed schema/finite validation review, no malformed payload fetched."
+    },
+    {
+      "id": "C6",
+      "file": "web/src/components/data-display/TimelineScrubber.tsx",
+      "line": 491,
+      "detail": "Preview clipping, left-based pointer positions inRTL, touch-overlay overlap/focus/contrast require real geometry; no rendered issue claimed."
+    }
+  ],
+  "nativeCandidates": {
+    "status": "NOTRUN",
+    "matrix": [
+      "320/375/390/430/768/1024/1280/1440/1920/2560 and narrow containers",
+      "dark/light/saved custom/palettes",
+      "RTL/200% text/long labels",
+      "forced-colors/composed contrast/focus",
+      "reduced motion/low bandwidth",
+      "populated/zero/negative-valid/null/invalid/loading/error/empty/paused/retained",
+      "map seek/layer switch; chart hover/click/export; scrubber drag/keyboard/markers; shortcuts; summary review",
+      "deep links/record change/equal sample counts/cleanup"
+    ],
+    "limit": "No browser/native/server/device/provider/network/API/real trip/location/replay actions authorized."
+  },
+  "acceptableExceptions": [
+    "PageLayout wraps PageContainer:layout-reference/PageLayout.tsx10, not missing-page-container",
+    "Map222 computed height style is dynamic",
+    "Chart API axis-label style objects:charts150,162/elevation75,80 and ReferenceLine props are exceptions",
+    "Page/hook/chart effects restore/persist URL, clock/cleanup or cursor; not data loading; refetch not fetch()",
+    "Shared building-block DOM/vendor boundaries/test mocks not production raw-html/direct-import findings",
+    "Every primary sample index/null gap retained; missing decorative sparkline omitted only; signed/zero readings preserved",
+    "Initial/fatal replacement allowed without retained data; refresh failure does not erase payload",
+    "Specialist vertical metres/elapsed clocks retained, not blindly horizontal distance-preference conversion"
+  ],
+  "checks": {
+    "candidateSearch": {
+      "productionFiles": 8,
+      "staticStyleOrVarMatchedLines": 10,
+      "rawHtmlMatchedLines": 0,
+      "directLibraryMatchedLines": 0,
+      "oldApiMatchedLines": 0,
+      "doublePrefixMatchedLines": 0,
+      "camelCaseQueryMatchedLinesAfterCorrection": 0,
+      "conditionalSectionMatchedLines": 10,
+      "fetchOrEffectMatchedLines": 7,
+      "meaning": "Actual Select-String raw matched-line counts/log, not whole-repository violation counts; default case-insensitive URL false positive corrected."
+    },
+    "catalog": {
+      "literalKeys": 51,
+      "missing": 0,
+      "status": "read-only existence traversal; generation/guard/split coherenceNOTRUN"
+    },
+    "tests": {
+      "status": "DECLARATIONS_ONLY_NOTRUN",
+      "files": 8,
+      "declarationSites": 138,
+      "byFile": {
+        "TripReplayPage.test.tsx": 6,
+        "TripReplayCharts.test.tsx": 33,
+        "TripReplayElevation.test.tsx": 4,
+        "TripReplayMap.test.tsx": 22,
+        "TripReplayReadout.test.tsx": 1,
+        "pages/__tests__/TripReplayPage.sync.test.tsx": 19,
+        "pages/__tests__/TripReplayPage.test.tsx": 27,
+        "hooks/__tests__/useTripReplay.test.ts": 26
+      },
+      "parameterized": "Named page one it.each with two rows; declaration sites not runtime discoveries/expanded counts",
+      "executed": 0,
+      "discovered": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "limits": "Mocks capture props, not real Leaflet/Recharts/mobile/native/scope/privacy; maptest289 pins null-as-zero, not a safe oracle. No test executed/edited."
+    },
+    "typescript": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "helpers": "NOTRUN",
+    "network": "NOTRUN",
+    "native": "NOTRUN",
+    "failures": [
+      "rg unavailable shell3326exit1",
+      "unbounded contract view refused/range251-660truncated; resumed494",
+      "broad outputs tool-truncated; targeted reads supersede",
+      "obsolete web/src/routes absent enclosingexit0",
+      "obsolete internal/api/drive_handler_detail.go absent shell3360exit1/viewfailure; actual drives/detail.go inspected",
+      "shell3383quoting ParserError exit1/no execution; corrected read0",
+      "shell3410 Windows command-size os206 exit1/no report created; bounded chunks used"
+    ]
+  },
+  "ownerNeeds": [
+    {
+      "id": "N1",
+      "name": "Map SI/unknown/coordinate/bounds/paint adoption",
+      "files": [
+        "web/src/features/trips/components/TripReplayMap.tsx",
+        "web/src/lib/geo.ts"
+      ],
+      "findings": [
+        "F01",
+        "F02",
+        "F05",
+        "F16",
+        "F19"
+      ],
+      "queueDisposition": "No exact pending path owner matched. Completed phase3-route-playback/map-renderer-color-root are different/shared objectives: reuse, never reopen. Parent queues narrow followup."
+    },
+    {
+      "id": "N2",
+      "name": "Bound telemetry alignment/one validated time domain",
+      "files": [
+        "web/src/features/trips/pages/TripReplayPage.tsx",
+        "web/src/hooks/useTripReplay.ts",
+        "web/src/features/driving/lib/replayMarkers.ts"
+      ],
+      "findings": [
+        "F03",
+        "F04"
+      ],
+      "queueDisposition": "No exact path claimant found; do not repeat completed Phase5 page. Parent assigns evidence/controller plus existing tests."
+    },
+    {
+      "id": "N3",
+      "name": "Coordinated canonical W boundary",
+      "files": [
+        "internal/api/drives/detail.go",
+        "web/src/types/driving.ts",
+        "web/src/api/hooks/useDriving.ts",
+        "web/src/features/trips/pages/TripReplayPage.tsx",
+        "web/src/features/trips/components/TripReplayCharts.tsx"
+      ],
+      "findings": [
+        "F06"
+      ],
+      "queueDisposition": "No exact per-sample SI fix found in inspected queue; other consumers remain integration scope unknown. No independent page conversion."
+    },
+    {
+      "id": "N4",
+      "name": "Regen evidence/marker localization",
+      "files": [
+        "web/src/features/driving/lib/replayMarkers.ts",
+        "web/src/features/trips/pages/TripReplayPage.tsx"
+      ],
+      "findings": [
+        "F07",
+        "F10"
+      ],
+      "queueDisposition": "No exact pending marker path owner. Existing singular keys; parent missing plurals only if required. No competing scrubber/marker engine."
+    },
+    {
+      "id": "N5",
+      "name": "Two chart caller sample alternatives/paint",
+      "files": [
+        "web/src/features/trips/components/TripReplayCharts.tsx",
+        "web/src/features/trips/components/TripReplayElevation.tsx"
+      ],
+      "findings": [
+        "F08",
+        "F09",
+        "F16"
+      ],
+      "queueDisposition": "No exact pending chart path owner. Completed shared ChartContainer/palette APIs sufficient; caller adoption not new library."
+    },
+    {
+      "id": "N6",
+      "name": "Replay section/state/provenance",
+      "files": [
+        "web/src/features/trips/pages/TripReplayPage.tsx",
+        "web/src/features/trips/components/operationalbrief-all/TripOperationalBrief.tsx"
+      ],
+      "findings": [
+        "F13",
+        "F14",
+        "F15"
+      ],
+      "queueDisposition": "No exact replay status fix found; completed freshness/stale warning reused; other active source-trust fixes have different callers."
+    },
+    {
+      "id": "N7",
+      "name": "Summary duration/dates/truthful elevation catalog aria",
+      "files": [
+        "web/src/features/trips/pages/TripReplayPage.tsx",
+        "web/src/features/trips/components/operationalbrief-all/TripReplaySummaryBrief.tsx",
+        "web/src/i18n/en.json"
+      ],
+      "findings": [
+        "F11",
+        "F12",
+        "F18"
+      ],
+      "queueDisposition": "Parent serialized catalog ownership retained; exact replay.elevation.aria need, no competing catalog work. Existing formatters reused."
+    },
+    {
+      "id": "N8",
+      "name": "Shared slider mobile hit area",
+      "files": [
+        "web/src/components/data-display/TimelineScrubber.tsx"
+      ],
+      "findings": [
+        "F17"
+      ],
+      "queueDisposition": "No exact TimelineScrubber path owner. Completed phase3-playback-controls now44px: do not reopen; parent queues slider-only followup, native overlap separate."
+    }
+  ],
+  "summary": {
+    "confirmedSourceMechanisms": 19,
+    "conditionalCandidates": 6,
+    "ownerNeeds": 8,
+    "countingUnit": "Unique finding IDs/mechanisms; F10 groups17 literal/aggregation sites, F11 groups2; not whole-repository violation count",
+    "priority": [
+      "SI bands/unknown/canonical power preserving signs",
+      "Bound time/evidence and do not infer charging from regen",
+      "Complete accessible samples/truthful source/paused/section states",
+      "Localized marker/duration/date/aria and restrained caller paint",
+      "Shared slider hit area then authorized native matrix"
+    ],
+    "wholeApplicationDone": false,
+    "runtimeAcceptance": false,
+    "byRule": [
+      {
+        "rule": "bounds-refresh-dependencies",
+        "findings": 1
+      },
+      {
+        "rule": "canonical-si-wire",
+        "findings": 1
+      },
+      {
+        "rule": "chart-a11y",
+        "findings": 2
+      },
+      {
+        "rule": "coordinate-policy-conflict",
+        "findings": 1
+      },
+      {
+        "rule": "date-preferences",
+        "findings": 1
+      },
+      {
+        "rule": "hardcoded-string",
+        "findings": 2
+      },
+      {
+        "rule": "hidden-section",
+        "findings": 1
+      },
+      {
+        "rule": "misleading-a11y-copy",
+        "findings": 1
+      },
+      {
+        "rule": "mobile-target",
+        "findings": 1
+      },
+      {
+        "rule": "paused-reason",
+        "findings": 1
+      },
+      {
+        "rule": "physical-sign-semantics",
+        "findings": 1
+      },
+      {
+        "rule": "restrained-palette-adoption",
+        "findings": 1
+      },
+      {
+        "rule": "si-speed-band",
+        "findings": 1
+      },
+      {
+        "rule": "source-provenance",
+        "findings": 1
+      },
+      {
+        "rule": "temporal-trust",
+        "findings": 1
+      },
+      {
+        "rule": "unbounded-evidence-join",
+        "findings": 1
+      },
+      {
+        "rule": "unknown-as-zero",
+        "findings": 1
+      }
+    ],
+    "byPrimaryFile": [
+      {
+        "file": "web/src/features/trips/components/TripReplayMap.tsx",
+        "primaryFindings": 4
+      },
+      {
+        "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+        "primaryFindings": 4
+      },
+      {
+        "file": "web/src/features/driving/lib/replayMarkers.ts",
+        "primaryFindings": 2
+      },
+      {
+        "file": "internal/api/drives/detail.go",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/components/data-display/TimelineScrubber.tsx",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/features/trips/components/operationalbrief-all/TripOperationalBrief.tsx",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/features/trips/components/operationalbrief-all/TripReplaySummaryBrief.tsx",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/features/trips/components/TripReplayCharts.tsx",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/features/trips/components/TripReplayElevation.tsx",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/hooks/useTripReplay.ts",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "primaryFindings": 1
+      },
+      {
+        "file": "web/src/lib/geo.ts",
+        "primaryFindings": 1
+      }
+    ]
+  },
+  "preservation": {
+    "pageLines": 631,
+    "namedTestLines": 209,
+    "sections": 4,
+    "summaryMetrics": 8,
+    "readouts": 6,
+    "charts": 2,
+    "primarySeries": 3,
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "catalogWrites": 0,
+    "queueWrites": 0,
+    "gitEdits": 0,
+    "note": "Current input pins, not historical parity proof. Unrelated deltas/originals preserved."
+  },
+  "evidenceLimits": [
+    "Source/declaration QA only; tests/compiler/lint/build/nativeNOTRUN",
+    "Actual actor creation unavailable; conservative reservation not reset",
+    "Concurrent queue edits shifted lines; exact item authority, no immutable queue pin or queue write",
+    "Per-file first-inspection pins not globally atomic; parallel hash/view ordering not guaranteed; page/named test pinned before full walkthrough",
+    "Only relevant/current contract/mission/handoff/inventory/instructions sections read; entire orchestrator loop read",
+    "Initial raw status/list tool transcript retained; pertinent failures/full scoped receipts in log; no actual trip/location data logged",
+    "Catalog existence not wording/fallback/split coherence",
+    "No backend implementation audit/live authorization/transitive preference/provider/catalog graph/full historical parity comparison"
+  ],
+  "inputPins": [
+    {
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "beforeSha256": "946C174048ED5FF373619F436243D2CB2A31C07B5A0F0B1C9C4C49993B6235BF",
+      "afterSha256": "946C174048ED5FF373619F436243D2CB2A31C07B5A0F0B1C9C4C49993B6235BF",
+      "beforeLines": 631,
+      "afterLines": 631,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/pages/TripReplayPage.test.tsx",
+      "beforeSha256": "6000493789F9E6A8B8AFCD7EC1F7E992992A8D2FF65BE86235BE8FCFC53B82D8",
+      "afterSha256": "6000493789F9E6A8B8AFCD7EC1F7E992992A8D2FF65BE86235BE8FCFC53B82D8",
+      "beforeLines": 209,
+      "afterLines": 209,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/components/TripReplayCharts.test.tsx",
+      "beforeSha256": "5363112389D15D773A999FDBDF86617BFE83B115930FCA53926712A345D51A64",
+      "afterSha256": "5363112389D15D773A999FDBDF86617BFE83B115930FCA53926712A345D51A64",
+      "beforeLines": 576,
+      "afterLines": 576,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/components/TripReplayCharts.tsx",
+      "beforeSha256": "6880B74081CC1B5E6F34A16F148D4666EFB0E3AEE2A42D9A24FC8ADA9E0986BD",
+      "afterSha256": "6880B74081CC1B5E6F34A16F148D4666EFB0E3AEE2A42D9A24FC8ADA9E0986BD",
+      "beforeLines": 273,
+      "afterLines": 273,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/components/TripReplayElevation.test.tsx",
+      "beforeSha256": "F6D9861CB90C14E98CB8B5559F91EB8A7A95C506BD2C1D93850CB46400AB2534",
+      "afterSha256": "F6D9861CB90C14E98CB8B5559F91EB8A7A95C506BD2C1D93850CB46400AB2534",
+      "beforeLines": 104,
+      "afterLines": 104,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/components/TripReplayElevation.tsx",
+      "beforeSha256": "AD1FEA627ABD866EAE1898DA0C5CC0059EA56965F53D307D8BB4D19B4BA4F94D",
+      "afterSha256": "AD1FEA627ABD866EAE1898DA0C5CC0059EA56965F53D307D8BB4D19B4BA4F94D",
+      "beforeLines": 107,
+      "afterLines": 107,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/components/TripReplayMap.test.tsx",
+      "beforeSha256": "8F9F5F42B8C7D2C969F4A3B6D43E95F2EB41385F6343E70C51E6A6FE3964D905",
+      "afterSha256": "8F9F5F42B8C7D2C969F4A3B6D43E95F2EB41385F6343E70C51E6A6FE3964D905",
+      "beforeLines": 417,
+      "afterLines": 417,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/components/TripReplayMap.tsx",
+      "beforeSha256": "FD58E1E5C7E1CCA57D7230EBD03E7A7C93FD52B7A5FBF309EF53FDE7F33A28C6",
+      "afterSha256": "FD58E1E5C7E1CCA57D7230EBD03E7A7C93FD52B7A5FBF309EF53FDE7F33A28C6",
+      "beforeLines": 350,
+      "afterLines": 350,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/components/TripReplayReadout.test.tsx",
+      "beforeSha256": "E95264208687B1FA724842598080793DA128602A9DA638C5EC021149633725E9",
+      "afterSha256": "E95264208687B1FA724842598080793DA128602A9DA638C5EC021149633725E9",
+      "beforeLines": 22,
+      "afterLines": 22,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/components/TripReplayReadout.tsx",
+      "beforeSha256": "311C9196123CF743E4CF5613431CC43A310F43BEE0605F7FF4FC4DC6EC47A98F",
+      "afterSha256": "311C9196123CF743E4CF5613431CC43A310F43BEE0605F7FF4FC4DC6EC47A98F",
+      "beforeLines": 29,
+      "afterLines": 29,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/pages/__tests__/TripReplayPage.sync.test.tsx",
+      "beforeSha256": "D8C51C847FF5C967835F76283843A18FA993F1E79DD9845693463885366938C4",
+      "afterSha256": "D8C51C847FF5C967835F76283843A18FA993F1E79DD9845693463885366938C4",
+      "beforeLines": 535,
+      "afterLines": 535,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/pages/__tests__/TripReplayPage.test.tsx",
+      "beforeSha256": "3B5E3BA0CD96C3EC1343254F5FE0A4E19A70FF86299460D59D2BECEAF88F931C",
+      "afterSha256": "3B5E3BA0CD96C3EC1343254F5FE0A4E19A70FF86299460D59D2BECEAF88F931C",
+      "beforeLines": 656,
+      "afterLines": 656,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/components/operationalbrief-all/TripReplaySummaryBrief.tsx",
+      "beforeSha256": "69FB0C01BBC4D8A86305A89F526DF3E71573E11EA67ADDFE09AD79FFDEC1CB71",
+      "afterSha256": "69FB0C01BBC4D8A86305A89F526DF3E71573E11EA67ADDFE09AD79FFDEC1CB71",
+      "beforeLines": 72,
+      "afterLines": 72,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useTripReplay.ts",
+      "beforeSha256": "B91C18863DB4EF1EDD77C0831B64B74F11DA9598FBBCB91B48C3BF31CFB5BB14",
+      "afterSha256": "B91C18863DB4EF1EDD77C0831B64B74F11DA9598FBBCB91B48C3BF31CFB5BB14",
+      "beforeLines": 277,
+      "afterLines": 277,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "beforeSha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "afterSha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "beforeLines": 454,
+      "afterLines": 454,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/driving/lib/replayMarkers.ts",
+      "beforeSha256": "C944A284B326B75E47C9E1A6F9482634B810D3C4CB991E7CAC9A95A26548C929",
+      "afterSha256": "C944A284B326B75E47C9E1A6F9482634B810D3C4CB991E7CAC9A95A26548C929",
+      "beforeLines": 287,
+      "afterLines": 287,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/types/driving.ts",
+      "beforeSha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "afterSha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "beforeLines": 411,
+      "afterLines": 411,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "beforeSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "afterSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "beforeLines": 500,
+      "afterLines": 500,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "beforeSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "afterSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "beforeLines": 194,
+      "afterLines": 194,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "beforeLines": 434,
+      "afterLines": 434,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "beforeLines": 168,
+      "afterLines": 168,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/PlaybackControls.tsx",
+      "beforeSha256": "5F77E4F4A7271FBF2B913D1542833944E535E0697CA16168E345C71AC8FC8DCE",
+      "afterSha256": "5F77E4F4A7271FBF2B913D1542833944E535E0697CA16168E345C71AC8FC8DCE",
+      "beforeLines": 488,
+      "afterLines": 488,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/TimelineScrubber.tsx",
+      "beforeSha256": "D099131BFDFCFD902F58ED34D995A5E9D1423D9869E0AD51BCE78A3A309BBCCD",
+      "afterSha256": "D099131BFDFCFD902F58ED34D995A5E9D1423D9869E0AD51BCE78A3A309BBCCD",
+      "beforeLines": 674,
+      "afterLines": 674,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/App.tsx",
+      "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "beforeLines": 919,
+      "afterLines": 919,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "beforeSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "beforeLines": 39035,
+      "afterLines": 39035,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/trips/components/operationalbrief-all/TripOperationalBrief.tsx",
+      "beforeSha256": "FFEC36CA316960B657A5C35C89A75A8C42E856F2D3B80347D28E8356D5976C0E",
+      "afterSha256": "FFEC36CA316960B657A5C35C89A75A8C42E856F2D3B80347D28E8356D5976C0E",
+      "beforeLines": 35,
+      "afterLines": 35,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "beforeLines": 17,
+      "afterLines": 17,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "beforeSha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+      "afterSha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+      "beforeLines": 48,
+      "afterLines": 48,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "beforeSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "afterSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "beforeLines": 47,
+      "afterLines": 47,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/geo.ts",
+      "beforeSha256": "C844AFE12D42D0D5D97422D84AB2CB51DA74C80A3E33A009D4995A9BC2F779F3",
+      "afterSha256": "C844AFE12D42D0D5D97422D84AB2CB51DA74C80A3E33A009D4995A9BC2F779F3",
+      "beforeLines": 111,
+      "afterLines": 111,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/PlaybackSpeedMenu.tsx",
+      "beforeSha256": "B65696DA5C9C03733FD4B732ACC294BE5DFD657F788151343CFCCCF525FFDCE3",
+      "afterSha256": "B65696DA5C9C03733FD4B732ACC294BE5DFD657F788151343CFCCCF525FFDCE3",
+      "beforeLines": 69,
+      "afterLines": 69,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "beforeSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "afterSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "beforeLines": 259,
+      "afterLines": 259,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "beforeSha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "afterSha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "beforeLines": 42,
+      "afterLines": 42,
+      "unchanged": true
+    },
+    {
+      "file": "internal/api/drives/detail.go",
+      "beforeSha256": "862A309D97F3313B881EDE80FA01EF12F5D3038722D2D9412F652EBABF36C313",
+      "afterSha256": "862A309D97F3313B881EDE80FA01EF12F5D3038722D2D9412F652EBABF36C313",
+      "beforeLines": 583,
+      "afterLines": 583,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "beforeSha256": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+      "afterSha256": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+      "beforeLines": 342,
+      "afterLines": 342,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "beforeSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "afterSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "beforeLines": 1006,
+      "afterLines": 1006,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/__tests__/useTripReplay.test.ts",
+      "beforeSha256": "13111454C694B79A23687EE9FFD7857D68B95DE391632AF8CEA642B0E96ABB45",
+      "afterSha256": "13111454C694B79A23687EE9FFD7857D68B95DE391632AF8CEA642B0E96ABB45",
+      "beforeLines": 395,
+      "afterLines": 395,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "beforeSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "afterSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "beforeLines": 127,
+      "afterLines": 127,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "beforeSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "afterSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "beforeLines": 289,
+      "afterLines": 289,
+      "unchanged": true
+    }
+  ],
+  "createdAtUtc": "2026-10-14T03:07:44.0918414Z",
+  "finalizedAtUtc": "2026-10-14T03:10:47.3817432Z",
+  "filesRead": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/A11Y_GUIDELINES.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/I18N_GUIDELINES.md",
+    "docs/MOBILE_GUIDELINES.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "internal/api/drives/detail.go",
+    "internal/api/router.go",
+    "migration-queue.md",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useDriving.ts",
+    "web/src/App.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/charts/EmbeddedChart.tsx",
+    "web/src/components/data-display/DataFreshness.tsx",
+    "web/src/components/data-display/PlaybackControls.tsx",
+    "web/src/components/data-display/PlaybackSpeedMenu.tsx",
+    "web/src/components/data-display/TimelineScrubber.tsx",
+    "web/src/components/layout/layout-reference/ChartCard.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/features/driving/lib/replayMarkers.ts",
+    "web/src/features/trips/components/operationalbrief-all/TripOperationalBrief.tsx",
+    "web/src/features/trips/components/operationalbrief-all/TripReplaySummaryBrief.tsx",
+    "web/src/features/trips/components/TripReplayCharts.test.tsx",
+    "web/src/features/trips/components/TripReplayCharts.tsx",
+    "web/src/features/trips/components/TripReplayElevation.test.tsx",
+    "web/src/features/trips/components/TripReplayElevation.tsx",
+    "web/src/features/trips/components/TripReplayMap.test.tsx",
+    "web/src/features/trips/components/TripReplayMap.tsx",
+    "web/src/features/trips/components/TripReplayReadout.test.tsx",
+    "web/src/features/trips/components/TripReplayReadout.tsx",
+    "web/src/features/trips/pages/__tests__/TripReplayPage.sync.test.tsx",
+    "web/src/features/trips/pages/__tests__/TripReplayPage.test.tsx",
+    "web/src/features/trips/pages/TripReplayPage.test.tsx",
+    "web/src/features/trips/pages/TripReplayPage.tsx",
+    "web/src/hooks/__tests__/useTripReplay.test.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useTripReplay.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/i18n/en.json",
+    "web/src/lib/geo.ts",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/routePrefetch.ts",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/types/driving.ts"
+  ],
+  "artifactValidation": {
+    "jsonParse": "PASS",
+    "findingIdsUnique": true,
+    "countsMatch": true,
+    "citationChecks": 32,
+    "invalidCitations": 0,
+    "pinCount": 39,
+    "changedPins": 0,
+    "pinStatus": "first-inspection vs final per-file comparison; not global atomic snapshot",
+    "remaining": "Manual mechanism/source walkthrough, no native acceptance"
+  },
+  "contextPinLimit": "Sixteen governing/context paths were read but have no before hash; not included in39-pin immutability claim.",
+  "release": {
+    "artifacts": "RELEASED after final owned writes/checks",
+    "commands": "RELEASED; no running command/helper/service retained",
+    "source": "never claimed/written; readonly",
+    "native": "NOTRUN"
+  }
+}

@@ -94,8 +94,8 @@ describe('PedalUsage — data rendering', () => {
     })
     expect(screen.getByText('Brake Pedal Position')).toBeInTheDocument()
     // Gauge values render (integers → no decimals).
-    expect(screen.getByText('42')).toBeInTheDocument()
-    expect(screen.getByText('8')).toBeInTheDocument()
+    expect(screen.getByText('42.00')).toBeInTheDocument()
+    expect(screen.getByText('8.00')).toBeInTheDocument()
     // brake_pedal_active === true → danger "Brake Active".
     expect(screen.getByText('Brake Active')).toBeInTheDocument()
     expect(screen.queryByText('No pedal telemetry received yet')).toBeNull()
@@ -135,7 +135,7 @@ describe('PedalUsage — data rendering', () => {
     })
     // Panel still renders its gauges (hasAny is true from throttle alone).
     expect(screen.getByText('Throttle Position')).toBeInTheDocument()
-    expect(screen.getByText('33')).toBeInTheDocument()
+    expect(screen.getByText('33.00')).toBeInTheDocument()
     // Missing brake position renders the em-dash unit, not a bogus "%".
     expect(screen.getByText('—')).toBeInTheDocument()
     // The absent-signal regression: no definitive Active/Inactive claim.

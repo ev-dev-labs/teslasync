@@ -38,6 +38,8 @@ test('existing aggregate names reject any required job that did not succeed', ()
       ['contract', 'browser-build', 'chromium-tests']],
     [browser.jobs, 'visual', 'Deliberate visual snapshot gate (Windows baseline)',
       ['contract', 'browser-build', 'visual-tests']],
+    [browser.jobs, 'cross-browser', '${{ matrix.browser }} critical smoke',
+      ['contract', 'browser-build', 'cross-browser-tests']],
   ]) {
     const job = jobs[id];
     assert.equal(job.name, name);
@@ -60,11 +62,16 @@ test('independent validation and Docker builds start together; final gate checks
 test('browser shards reuse one build and retain isolated performance and Windows baselines', () => {
   const shards = browser.jobs['chromium-tests'].strategy.matrix.include;
   assert.deepEqual(shards.filter(shard => shard.suite === 'quality').map(shard => shard.shard),
-    Array.from({ length: 16 }, (_, i) => `${i + 1}/16`));
-  for (const suite of ['a11y', 'performance']) {
-    assert.deepEqual(shards.filter(shard => shard.suite === suite).map(shard => shard.shard), ['1/1']);
+    Array.from({ length: 64 }, (_, i) => `${i + 1}/64`));
+  for (const [suite, count] of [['a11y', 13], ['performance', 1]]) {
+    assert.deepEqual(shards.filter(shard => shard.suite === suite).map(shard => shard.shard),
+      Array.from({ length: count }, (_, i) => `${i + 1}/${count}`));
   }
-  for (const id of ['chromium-tests', 'visual-tests', 'cross-browser']) {
+  assert.deepEqual(browser.jobs['cross-browser-tests'].strategy.matrix,
+    { browser: ['firefox', 'webkit'], shard: [1, 2, 3] });
+  assert.match(commands(browser.jobs['cross-browser-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/3/);
+  assert.match(commands(browser.jobs['visual-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/64 --workers=2/);
+  for (const id of ['chromium-tests', 'visual-tests', 'cross-browser-tests']) {
     const job = browser.jobs[id];
     assert.equal(job.needs, 'browser-build');
     assert.equal(job.strategy['fail-fast'], false);
@@ -73,7 +80,7 @@ test('browser shards reuse one build and retain isolated performance and Windows
   }
   assert.equal(browser.jobs['visual-tests']['runs-on'], 'windows-latest');
   assert.deepEqual(browser.jobs['visual-tests'].strategy.matrix.shard,
-    Array.from({ length: 10 }, (_, i) => i + 1));
+    Array.from({ length: 64 }, (_, i) => i + 1));
   assert.equal(Object.values(browser.jobs).filter(job => commands(job).includes('npm run e2e:build')).length, 1);
 });
 

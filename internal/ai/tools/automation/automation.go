@@ -103,7 +103,8 @@ type automationGraphConditionInput struct {
 // automationGraphActionInput is the typed shape for one action. Same
 // flattened-union strategy as the trigger / condition inputs.
 type automationGraphActionInput struct {
-	Kind               string          `json:"kind" validate:"required,oneof=action_command action_notify action_set_setting action_call_automation" desc:"Action kind."`
+	Kind               string          `json:"kind" validate:"required,oneof=action_command action_notify action_set_setting action_call_automation action_wait" desc:"Action kind."`
+	DurationS          int             `json:"duration_s,omitempty" desc:"Integer SI seconds, 1 through 3600 (action_wait)."`
 	CommandName        string          `json:"command_name,omitempty" desc:"Command name (action_command)."`
 	CommandParams      json.RawMessage `json:"command_params,omitempty" desc:"Command parameters JSON (action_command)."`
 	ChannelID          int64           `json:"channel_id,omitempty" desc:"Notification channel ID (action_notify)."`
@@ -230,7 +231,7 @@ var allowedConditionKindsHint = func() string {
 // action discriminator values.
 var allowedActionKindsHint = func() string {
 	names := []string{
-		"action_command", "action_notify", "action_set_setting", "action_call_automation",
+		"action_command", "action_notify", "action_set_setting", "action_call_automation", "action_wait",
 	}
 	sort.Strings(names)
 	return strings.Join(names, ", ")
@@ -313,6 +314,7 @@ func triggerToMap(t automationGraphTriggerInput) map[string]any {
 		setPtr(m, "dwell_minutes", t.DwellMinutes)
 	case "trigger_schedule":
 		setNonEmpty(m, "cron_expr", t.CronExpr)
+		m["timezone"] = "UTC"
 		setNonEmpty(m, "timezone", t.Timezone)
 	case "trigger_event":
 		setNonEmpty(m, "event_type", t.EventType)
@@ -335,10 +337,13 @@ func conditionToMap(c automationGraphConditionInput) map[string]any {
 	case "condition_time_window":
 		setNonEmpty(m, "start_time", c.StartTime)
 		setNonEmpty(m, "end_time", c.EndTime)
+		m["timezone"] = "UTC"
 		setNonEmpty(m, "timezone", c.Timezone)
-		if len(c.DaysOfWeek) > 0 {
-			m["days_of_week"] = c.DaysOfWeek
+		days := c.DaysOfWeek
+		if days == nil {
+			days = []int{}
 		}
+		m["days_of_week"] = days
 	case "condition_geofence":
 		if c.PlaceID != 0 {
 			m["place_id"] = c.PlaceID
@@ -362,6 +367,8 @@ func actionToMap(a automationGraphActionInput) map[string]any {
 		if len(a.CommandParams) > 0 {
 			m["command_params"] = a.CommandParams
 		}
+	case "action_wait":
+		m["duration_s"] = a.DurationS
 	case "action_notify":
 		if a.ChannelID != 0 {
 			m["channel_id"] = a.ChannelID

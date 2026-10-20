@@ -42,8 +42,14 @@ export interface ConsentPresentation {
  * localStorage entry, or an untyped JS caller — collapses onto the neutral
  * `unknown` presentation rather than throwing, so bad input can never break the
  * privacy UI.
+ *
+ * `requireConsent` is the deployment's `require_cookie_consent` policy. Where
+ * no consent gate exists the stored choice is a preview only: reporting stays
+ * on regardless, so the declined/unknown details switch to policy-aware copy
+ * instead of claiming essential-only storage or a banner that will never
+ * appear. Reporting behavior itself is unchanged — see `isReportingAllowed`.
  */
-export function describeConsent(state: ConsentState, t: Translate): ConsentPresentation {
+export function describeConsent(state: ConsentState, t: Translate, requireConsent = true): ConsentPresentation {
   switch (state) {
     case 'accepted':
       return {
@@ -54,7 +60,9 @@ export function describeConsent(state: ConsentState, t: Translate): ConsentPrese
       }
     case 'declined':
       return {
-        detail: localize(t, 'consent.state.declined', 'Declined — only essential storage in use'),
+        detail: requireConsent
+          ? localize(t, 'consent.state.declined', 'Declined — only essential storage in use')
+          : localize(t, 'consent.state.declinedPreview', 'Declined — preview only; reporting stays on without a consent gate'),
         short: localize(t, 'consent.short.declined', 'Declined'),
         color: 'amber',
         dot: 'bg-amber-400',
@@ -62,7 +70,9 @@ export function describeConsent(state: ConsentState, t: Translate): ConsentPrese
     case 'unknown':
     default:
       return {
-        detail: localize(t, 'consent.state.unknown', 'Not decided — banner will appear on next visit'),
+        detail: requireConsent
+          ? localize(t, 'consent.state.unknown', 'Not decided — banner will appear on next visit')
+          : localize(t, 'consent.state.unknownPreview', 'Not decided — no consent gate on this deployment; reporting stays on'),
         short: localize(t, 'consent.short.unknown', 'Not decided'),
         color: 'blue',
         dot: 'bg-slate-400',

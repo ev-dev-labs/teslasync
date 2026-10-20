@@ -32,7 +32,7 @@ for (const theme of ['light', 'dark'] as const) {
       const date = header.getByTestId('daylog-date');
       await expect(date).toHaveValue('2026-09-14');
       await expect(header.locator('#daylog-timezone')).toBeVisible();
-      await expect(header.locator('[data-role="page-actions"] #daylog-timezone')).toHaveCount(0);
+      await expect(header.locator('[data-action-group="metadata"] #daylog-timezone')).toHaveCount(1);
       await expectNoHorizontalOverflow(page);
       const navigation = header.getByTestId('daylog-date-navigation');
       const navBox = await navigation.boundingBox();
@@ -91,7 +91,7 @@ for (const theme of ['light', 'dark'] as const) {
       await header.getByTestId('daylog-today').click();
       await expect(date).toHaveValue(await date.getAttribute('max') ?? '');
       await header.getByRole('button', { name: /copy link/i }).click();
-      await expect(header.getByRole('button', { name: /copy link/i })).toHaveText('Copied');
+      await expect(header.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(page.url());
     });
   }

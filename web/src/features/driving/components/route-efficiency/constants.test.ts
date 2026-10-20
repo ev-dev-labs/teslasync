@@ -10,8 +10,8 @@ import { chartTokens } from '@/lib/tokens';
 // These are pure data, but they carry real, load-bearing contracts:
 //   • ROUTE_EFF_COLORS is inlined into a CSS `linear-gradient(...)` in
 //     RouteCard and passed as recharts `fill=` on RouteEfficiencyPage, so
-//     every value MUST be a literal `#rrggbb` hex — never a `var(--x)` token
-//     that a gradient string / recharts fill cannot resolve.
+//     every value must supply literal `#rrggbb` stops for both themes via
+//     `light-dark(...)`, never an unresolved `var(--x)` token.
 //   • The best/avg/worst/mostDriven → series-slot mapping encodes semantics
 //     (green = lowest consumption, red = highest). A palette reorder in
 //     @/lib/tokens must not silently repaint "best" red — the tests below pin
@@ -27,7 +27,14 @@ function rgb(hex: string): { r: number; g: number; b: number } {
   return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
 }
 
+function themeStops(color: string): { light: string; dark: string } {
+  const match = /^light-dark\((#[0-9a-f]{6}),\s*(#[0-9a-f]{6})\)$/i.exec(color);
+  if (!match) throw new Error(`not a theme-aware pair of 6-digit hex colors: ${color}`);
+  return { light: match[1], dark: match[2] };
+}
+
 const ACCENT_KEYS = ['best', 'avg', 'worst', 'mostDriven'] as const;
+const THEMES = ['light', 'dark'] as const;
 
 describe('ROUTE_EFF_COLORS', () => {
   it('exposes exactly the best/avg/worst/mostDriven accents in declaration order', () => {
@@ -50,8 +57,13 @@ describe('ROUTE_EFF_COLORS', () => {
 
   it('resolves every accent to a literal 6-digit hex color, never a CSS var', () => {
     const values = Object.values(ROUTE_EFF_COLORS);
-    for (const value of values) {
-      expect(value).toMatch(/^#[0-9a-f]{6}$/i);
+    // The inherited title describes the resolved stops, not their theme selector.
+    for (const color of values) {
+      const stops = themeStops(color);
+      for (const theme of THEMES) {
+        const value = stops[theme];
+        expect(value).toMatch(/^#[0-9a-f]{6}$/i);
+      }
     }
     // The RouteCard gradient + recharts fills cannot resolve `var(--x)`.
     expect(values.some((v) => v.includes('var('))).toBe(false);
@@ -64,23 +76,27 @@ describe('ROUTE_EFF_COLORS', () => {
   });
 
   it('encodes consumption semantics: best is green, worst is red', () => {
-    const best = rgb(ROUTE_EFF_COLORS.best);
-    expect(best.g).toBeGreaterThan(best.r);
-    expect(best.g).toBeGreaterThan(best.b);
+    for (const theme of THEMES) {
+      const best = rgb(themeStops(ROUTE_EFF_COLORS.best)[theme]);
+      expect(best.g).toBeGreaterThan(best.r);
+      expect(best.g).toBeGreaterThan(best.b);
 
-    const worst = rgb(ROUTE_EFF_COLORS.worst);
-    expect(worst.r).toBeGreaterThan(worst.g);
-    expect(worst.r).toBeGreaterThan(worst.b);
+      const worst = rgb(themeStops(ROUTE_EFF_COLORS.worst)[theme]);
+      expect(worst.r).toBeGreaterThan(worst.g);
+      expect(worst.r).toBeGreaterThan(worst.b);
+    }
   });
 
   it('encodes accent hues: avg reads cyan, mostDriven reads purple', () => {
-    const avg = rgb(ROUTE_EFF_COLORS.avg);
-    expect(avg.g).toBeGreaterThan(avg.r);
-    expect(avg.b).toBeGreaterThan(avg.r);
+    for (const theme of THEMES) {
+      const avg = rgb(themeStops(ROUTE_EFF_COLORS.avg)[theme]);
+      expect(avg.g).toBeGreaterThan(avg.r);
+      expect(avg.b).toBeGreaterThan(avg.r);
 
-    const mostDriven = rgb(ROUTE_EFF_COLORS.mostDriven);
-    expect(mostDriven.b).toBeGreaterThan(mostDriven.g);
-    expect(mostDriven.r).toBeGreaterThan(mostDriven.g);
+      const mostDriven = rgb(themeStops(ROUTE_EFF_COLORS.mostDriven)[theme]);
+      expect(mostDriven.b).toBeGreaterThan(mostDriven.g);
+      expect(mostDriven.r).toBeGreaterThan(mostDriven.g);
+    }
   });
 
   it('composes into a valid RouteCard-style gradient containing each stop color', () => {

@@ -4,6 +4,25 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import type { AiUsageByFeatureResponse, AiUsageRecentResponse } from '@/api/hooks/useAiUsage'
 
+const savedPreferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  tz_display_default: 'user',
+  timezone_user: 'America/Los_Angeles',
+}))
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { ...savedPreferences, currency_symbol: '$', decimal_precision: 2 },
+    locale: savedPreferences.locale,
+  }),
+}))
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: { timezone: 'Asia/Tokyo' } }),
+}))
+vi.mock('@/lib/timezone', async () =>
+  vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone'),
+)
+
 vi.mock('@/api/client', () => ({ request: vi.fn() }))
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -49,11 +68,40 @@ function renderPanel(enabled = true, seed?: AiUsageByFeatureResponse) {
 }
 
 beforeEach(() => {
+  savedPreferences.locale = 'en-US'
+  savedPreferences.tz_display_default = 'user'
+  savedPreferences.timezone_user = 'America/Los_Angeles'
   requestMock.mockReset()
   requestMock.mockImplementation((path) => Promise.resolve(path === '/ai/usage/by-feature' ? byFeature : recent) as ReturnType<typeof request>)
 })
 
 describe('AIFeatureSpendPanel', () => {
+  it.each([
+    ['user', 'America/Los_Angeles', '2026-09-25T00:15:00Z', '25. Sept. 2026, 00:15'],
+    ['vehicle', 'Pacific/Auckland', '2026-09-25T23:45:00Z', '25. Sept. 2026, 23:45'],
+    ['user', 'America/Los_Angeles', '2026-09-25T23:30:00-07:00', '26. Sept. 2026, 06:30'],
+  ])('uses the saved locale and UTC audit day despite %s timezone %s', async (mode, timezone, timestamp, expected) => {
+    savedPreferences.locale = 'de-DE'
+    savedPreferences.tz_display_default = mode
+    savedPreferences.timezone_user = timezone
+    requestMock.mockImplementation((path) => Promise.resolve(path === '/ai/usage/by-feature'
+      ? { ...byFeature, rows: [{ ...byFeature.rows[0], last_call_at: timestamp }] }
+      : recent) as ReturnType<typeof request>)
+    renderPanel()
+    const item = await screen.findByRole('listitem')
+    expect(within(item).getByText(`3 calls · 120 in / 40 out · last call ${expected} UTC`)).toBeInTheDocument()
+  })
+
+  it.each(['invalid-date', '', null, undefined])('shows the invalid placeholder for last call %s', async (timestamp) => {
+    const row = { ...byFeature.rows[0], last_call_at: timestamp }
+    requestMock.mockImplementation((path) => Promise.resolve(path === '/ai/usage/by-feature'
+      ? { ...byFeature, rows: [row] }
+      : recent) as ReturnType<typeof request>)
+    renderPanel()
+    const item = await screen.findByRole('listitem')
+    expect(within(item).getByText('3 calls · 120 in / 40 out · last call — UTC')).toBeInTheDocument()
+  })
+
   it('makes no usage requests when AI is off', async () => {
     renderPanel(false)
     expect(screen.getByText(/Save an enabled Helix mode/)).toBeInTheDocument()

@@ -25,12 +25,15 @@ export interface ChannelField {
   i18nKey: string;
   label: string;
   placeholder: string;
+  placeholderI18nKey?: string;
   type: 'url' | 'password' | 'text' | 'email';
+  required?: boolean;
 }
 
 export interface ChannelTypeMeta {
   value: ChannelType;
   label: string;
+  i18nKey: string;
   icon: LucideIcon;
   color: string;
   fields: readonly ChannelField[];
@@ -86,35 +89,35 @@ export const FIELD_HELP: Record<string, { i18nKey: string; content: string }> = 
 
 /** Provider catalog — the single source of truth for every supported channel kind. */
 export const CHANNEL_TYPES: readonly ChannelTypeMeta[] = [
-  { value: 'discord', label: 'Discord', icon: Hash, color: '#5865F2', fields: [
+  { value: 'discord', label: 'Discord', i18nKey: 'notifications.channels.providerNames.discord', icon: Hash, color: '#5865F2', fields: [
     { key: 'webhook_url', i18nKey: 'notifications.channels.fields.webhookUrl', label: 'Webhook URL', placeholder: 'https://discord.com/api/webhooks/...', type: 'url' },
   ] },
-  { value: 'slack', label: 'Slack', icon: MessageSquare, color: '#4A154B', fields: [
+  { value: 'slack', label: 'Slack', i18nKey: 'notifications.channels.providerNames.slack', icon: MessageSquare, color: '#4A154B', fields: [
     { key: 'webhook_url', i18nKey: 'notifications.channels.fields.webhookUrl', label: 'Webhook URL', placeholder: 'https://hooks.slack.com/services/...', type: 'url' },
   ] },
-  { value: 'telegram', label: 'Telegram', icon: Send, color: '#0088cc', fields: [
-    { key: 'bot_token', i18nKey: 'notifications.channels.fields.botToken', label: 'Bot Token', placeholder: '123456:ABC-...', type: 'password' },
+  { value: 'telegram', label: 'Telegram', i18nKey: 'notifications.channels.providerNames.telegram', icon: Send, color: '#0088cc', fields: [
+    { key: 'bot_token', i18nKey: 'notifications.channels.fields.botToken', label: 'Bot token', placeholder: '123456:ABC-...', type: 'password' },
     { key: 'chat_id', i18nKey: 'notifications.channels.fields.chatId', label: 'Chat ID', placeholder: '-1001234567890', type: 'text' },
   ] },
-  { value: 'email', label: 'Email', icon: Mail, color: '#EA4335', fields: [
-    { key: 'smtp_host', i18nKey: 'notifications.channels.fields.smtpHost', label: 'SMTP Host', placeholder: 'smtp.gmail.com', type: 'text' },
-    { key: 'smtp_port', i18nKey: 'notifications.channels.fields.smtpPort', label: 'SMTP Port', placeholder: '587', type: 'text' },
-    { key: 'smtp_username', i18nKey: 'notifications.channels.fields.smtpUsername', label: 'SMTP Username', placeholder: 'alerts@example.com', type: 'text' },
-    { key: 'smtp_password', i18nKey: 'notifications.channels.fields.smtpPassword', label: 'SMTP Password', placeholder: '••••••••', type: 'password' },
-    { key: 'from_address', i18nKey: 'notifications.channels.fields.fromAddress', label: 'From Address', placeholder: 'alerts@example.com', type: 'email' },
+  { value: 'email', label: 'Email', i18nKey: 'notifications.channels.providerNames.email', icon: Mail, color: '#EA4335', fields: [
+    { key: 'smtp_host', i18nKey: 'notifications.channels.fields.smtpHost', label: 'SMTP host', placeholder: 'smtp.gmail.com', type: 'text' },
+    { key: 'smtp_port', i18nKey: 'notifications.channels.fields.smtpPort', label: 'SMTP port', placeholder: '587', type: 'text' },
+    { key: 'smtp_username', i18nKey: 'notifications.channels.fields.smtpUsername', label: 'SMTP username', placeholder: 'alerts@example.com', type: 'text' },
+    { key: 'smtp_password', i18nKey: 'notifications.channels.fields.smtpPassword', label: 'SMTP password', placeholder: '••••••••', type: 'password' },
+    { key: 'from_address', i18nKey: 'notifications.channels.fields.fromAddress', label: 'From address', placeholder: 'alerts@example.com', type: 'email' },
     { key: 'to_addresses', i18nKey: 'notifications.channels.fields.toAddresses', label: 'Recipients (comma-separated)', placeholder: 'you@example.com,ops@example.com', type: 'text' },
   ] },
-  { value: 'webhook', label: 'Webhook', icon: Webhook, color: '#FF6B35', fields: [
-    { key: 'url', i18nKey: 'notifications.channels.fields.url', label: 'URL', placeholder: 'https://example.com/webhook', type: 'url' },
-    { key: 'bearer_token', i18nKey: 'notifications.channels.fields.signingSecret', label: 'Signing secret', placeholder: 'Optional — used for HMAC signing', type: 'password' },
+  { value: 'webhook', label: 'Webhook', i18nKey: 'notifications.channels.providerNames.webhook', icon: Webhook, color: '#FF6B35', fields: [
+    { key: 'url', i18nKey: 'notifications.channels.fields.url', label: 'URL', placeholder: 'https://example.com/webhook', type: 'url', required: true },
+    { key: 'bearer_token', i18nKey: 'notifications.channels.fields.signingSecret', label: 'Signing secret', placeholderI18nKey: 'notifications.channels.placeholders.signingSecret', placeholder: 'Optional — used for HMAC signing', type: 'password' },
   ] },
-  { value: 'ntfy', label: 'ntfy', icon: Megaphone, color: '#57A773', fields: [
+  { value: 'ntfy', label: 'ntfy', i18nKey: 'notifications.channels.providerNames.ntfy', icon: Megaphone, color: '#57A773', fields: [
     { key: 'server_url', i18nKey: 'notifications.channels.fields.serverUrl', label: 'Server URL', placeholder: 'https://ntfy.sh', type: 'url' },
     { key: 'topic', i18nKey: 'notifications.channels.fields.topic', label: 'Topic', placeholder: 'teslasync', type: 'text' },
   ] },
-  { value: 'pushover', label: 'Pushover', icon: Smartphone, color: '#249DF1', fields: [
-    { key: 'user_key', i18nKey: 'notifications.channels.fields.userKey', label: 'User Key', placeholder: 'u1v2w3...', type: 'password' },
-    { key: 'app_token', i18nKey: 'notifications.channels.fields.appToken', label: 'App Token', placeholder: 'a1b2c3...', type: 'password' },
+  { value: 'pushover', label: 'Pushover', i18nKey: 'notifications.channels.providerNames.pushover', icon: Smartphone, color: '#249DF1', fields: [
+    { key: 'user_key', i18nKey: 'notifications.channels.fields.userKey', label: 'User key', placeholder: 'u1v2w3...', type: 'password' },
+    { key: 'app_token', i18nKey: 'notifications.channels.fields.appToken', label: 'App token', placeholder: 'a1b2c3...', type: 'password' },
   ] },
 ];
 
@@ -131,9 +134,14 @@ export function getChannelMeta(kind: string): ChannelTypeMeta {
   return CHANNEL_TYPES.find((c) => c.value === kind) ?? FALLBACK_META;
 }
 
-/** Fields whose values must never be shown in plaintext previews. */
+const CREDENTIAL_FIELDS = new Set([
+  'webhook_url', 'url', 'bot_token', 'app_token', 'user_key',
+  'smtp_password', 'bearer_token', 'password',
+]);
+
+/** Credential-bearing URLs are secret too; input type is not a preview policy. */
 export function isSecretField(key: string): boolean {
-  return key.includes('token') || key.includes('key') || key.includes('password');
+  return CREDENTIAL_FIELDS.has(key);
 }
 
 /** Flatten a stored channel into the flat `Record<string,string>` the form edits. */
@@ -176,20 +184,21 @@ export function channelToFormConfig(ch: NotificationChannel): Record<string, str
   }
 }
 
-/** Build the typed save/update payload from flat form state. */
+/** Build a save payload, retaining unexposed typed options from the edited channel. */
 export function buildChannelPayload(
   kind: ChannelType,
   name: string,
   enabled: boolean,
   config: Record<string, string>,
   id?: number,
+  original?: NotificationChannel | null,
 ): NotificationChannelInput {
   const idPart = id !== undefined ? { id } : {};
   switch (kind) {
     case 'discord':
-      return { ...idPart, kind: 'discord', name, enabled, webhook_url: config.webhook_url ?? '', username: null, avatar_url: null } as NotificationChannelInput;
+      return { ...idPart, kind: 'discord', name, enabled, webhook_url: config.webhook_url ?? '', username: original?.kind === 'discord' ? original.username : null, avatar_url: original?.kind === 'discord' ? original.avatar_url : null };
     case 'slack':
-      return { ...idPart, kind: 'slack', name, enabled, webhook_url: config.webhook_url ?? '', channel: null, username: null } as NotificationChannelInput;
+      return { ...idPart, kind: 'slack', name, enabled, webhook_url: config.webhook_url ?? '', channel: original?.kind === 'slack' ? original.channel : null, username: original?.kind === 'slack' ? original.username : null };
     case 'telegram':
       return { ...idPart, kind: 'telegram', name, enabled, bot_token: config.bot_token ?? '', chat_id: config.chat_id ?? '' } as NotificationChannelInput;
     case 'email': {
@@ -205,18 +214,20 @@ export function buildChannelPayload(
         smtp_password: config.smtp_password ?? '',
         from_address: config.from_address ?? '',
         to_addresses: (config.to_addresses ?? '').split(',').map((s) => s.trim()).filter(Boolean),
-        use_tls: true,
+        use_tls: original?.kind === 'email' ? original.use_tls : true,
       } as NotificationChannelInput;
     }
     case 'webhook': {
       const method = (config.method ?? 'POST').toUpperCase();
-      const safeMethod: 'POST' | 'PUT' = method === 'PUT' ? 'PUT' : 'POST';
+      const safeMethod = original?.kind === 'webhook' && config.method === original.method
+        ? original.method
+        : method === 'PUT' ? 'PUT' : 'POST';
       return {
         ...idPart, kind: 'webhook', name, enabled,
         url: config.url?.trim() ?? '',
         method: safeMethod,
-        headers: {},
-        body_template: '',
+        headers: original?.kind === 'webhook' ? original.headers : {},
+        body_template: original?.kind === 'webhook' ? original.body_template : '',
         bearer_token: config.bearer_token?.trim() || undefined,
       };
     }
@@ -225,14 +236,17 @@ export function buildChannelPayload(
         ...idPart, kind: 'ntfy', name, enabled,
         server_url: config.server_url ?? 'https://ntfy.sh',
         topic: config.topic ?? '',
-        priority: 3, username: null, password: null,
+        priority: original?.kind === 'ntfy' ? original.priority : 3,
+        username: original?.kind === 'ntfy' ? original.username : null,
+        password: original?.kind === 'ntfy' ? original.password : null,
       } as NotificationChannelInput;
     case 'pushover':
       return {
         ...idPart, kind: 'pushover', name, enabled,
         user_key: config.user_key ?? '',
         app_token: config.app_token ?? '',
-        device: null, priority: 0,
+        device: original?.kind === 'pushover' ? original.device : null,
+        priority: original?.kind === 'pushover' ? original.priority : 0,
       } as NotificationChannelInput;
   }
 }

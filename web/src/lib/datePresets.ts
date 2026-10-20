@@ -88,6 +88,16 @@ export const DATE_PRESETS: DatePreset[] = [
     }),
   },
   {
+    id: '6h',
+    i18nKey: 'date.preset.last6h',
+    fallback: 'Last 6 hours.',
+    requiresExplicitSelection: true,
+    resolve: (now = new Date(), timeZone?) => ({
+      start: iso(new Date(now.getTime() - 6 * 60 * 60_000), timeZone),
+      end: iso(now, timeZone),
+    }),
+  },
+  {
     id: '24h',
     i18nKey: 'date.preset.last24h',
     fallback: 'Last 24 hours',
@@ -224,4 +234,17 @@ export function matchPresetId(start: string, end: string, now?: Date): string | 
     if (r.start === start && r.end === end) return preset.id;
   }
   return undefined;
+}
+
+/**
+ * Whether (start, end) is the "All time" range. Prefers the persisted
+ * `presetId` when the caller has it (exact, timezone-independent);
+ * otherwise matches the resolved range, so deep-linked ranges without a
+ * stored preset are still recognised. Pages use this to skip the
+ * prior-period comparison: mirroring an equal-length window before
+ * "2015-01-01 → today" yields a nonsense pre-history window.
+ */
+export function isAllTimeRange(start: string, end: string, presetId?: string): boolean {
+  if (presetId === 'all') return true;
+  return matchPresetId(start, end) === 'all';
 }

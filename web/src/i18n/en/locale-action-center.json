@@ -1,22 +1,46 @@
 {
   "actionCenter": {
     "page": {
-      "title": "Action Center",
+      "title": "Action center",
       "subtitle": "A prioritized decision inbox built from existing TeslaSync evidence—not another analytics dashboard."
     },
-    "resource": "Action Center recommendations",
+    "resource": "Action center recommendations",
     "loading": "Loading recommendations",
     "list": {
       "label": "Prioritized recommendations"
     },
     "summary": {
-      "label": "Action Center summary",
+      "label": "Action center summary",
       "open": "Open",
       "critical": "Critical",
       "high": "High",
       "acknowledged": "Acknowledged",
       "snoozed": "Snoozed",
-      "dismissed": "Dismissed"
+      "dismissed": "Dismissed",
+      "openHelp": "Generated recommendations in the open state.",
+      "criticalHelp": "Generated recommendations with critical priority across all inbox states.",
+      "highHelp": "Generated recommendations with high priority across all inbox states.",
+      "acknowledgedHelp": "Generated recommendations in the acknowledged state.",
+      "snoozedHelp": "Generated recommendations in the snoozed state.",
+      "dismissedHelp": "Generated recommendations in the dismissed state.",
+      "status": {
+        "initial": "Awaiting summary evidence",
+        "initialFailure": "Summary request failed",
+        "ok": "Summary returned",
+        "stale": "Retained summary",
+        "partial": "Partial source coverage",
+        "unavailable": "Summary unavailable"
+      },
+      "scope": "{{vehicle}} · Before priority, source, state, and pagination filters",
+      "windowContext": "Provider-specific evidence windows and limits apply; these counts are not an all-time total.",
+      "eyebrow": "Decision inbox",
+      "title": "Decision queue overview",
+      "description": "Recommendation state and priority counts from generated evidence, not just the visible page.",
+      "generatedAt": "Generated {{date}}",
+      "generatedUnknown": "Generation time unavailable",
+      "coverageIncomplete": "Source coverage is incomplete or unknown; unavailable sources do not imply zero findings.",
+      "evidenceSource": "Server-generated recommendation evidence",
+      "vehicleId": "Vehicle {{id}}"
     },
     "filters": {
       "title": "Filter decisions",
@@ -71,14 +95,16 @@
       "fleet_maintenance_work_orders": "Fleet maintenance work orders",
       "signal_log": "Telemetry history",
       "status_incidents": "System incident history",
-      "tesla_battery_passport_ledger": "Issued Battery Passports",
+      "tesla_battery_passport_ledger": "Issued battery passports",
       "method": "Ranked from persisted evidence without synthetic substitutes."
     },
     "providers": {
       "title": "Source coverage",
       "description": "Unavailable sources are shown explicitly; the inbox never invents substitute findings.",
       "empty": "No provider status was returned.",
-      "findings": "{{count}} findings"
+      "findings": "{{count}} findings",
+      "findings_one": "{{count}} finding",
+      "findings_other": "{{count}} findings"
     },
     "card": {
       "details": "Evidence, scoring, and outcomes",
@@ -122,7 +148,7 @@
     },
     "confirm": {
       "title": "Confirm inbox action",
-      "message": "{{action}} “{{title}}”? This changes only your Action Center state and does not control the vehicle or source record."
+      "message": "{{action}} “{{title}}”? This changes only your Action center state and does not control the vehicle or source record."
     },
     "toast": {
       "success": "Action applied",
@@ -135,5 +161,810 @@
       "error": "Action not applied",
       "errorMessage": "Refresh and try again."
     }
+  },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
+  "activity": {
+    "action": {
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleDelete": "Alert rule deleted",
+      "alertRuleUpdate": "Alert rule updated",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyDelete": "API key revoked",
+      "apiKeyUpdate": "API key updated",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out",
+      "automation": "Automation change",
+      "automationAutoDisabled": "Automation auto-disabled",
+      "automationCreate": "Automation created",
+      "automationCreated": "Automation created",
+      "automationDelete": "Automation deleted",
+      "automationDeleted": "Automation deleted",
+      "automationDisabled": "Automation disabled",
+      "automationEnabled": "Automation enabled",
+      "automationExecuted": "Automation ran",
+      "automationExported": "Automations exported",
+      "automationFailed": "Automation failed",
+      "automationImported": "Automations imported",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationUpdate": "Automation updated",
+      "automationUpdated": "Automation updated",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandCharge": "Charging command",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandWake": "Wake vehicle"
+    },
+    "myActivity": {
+      "empty": "No recent activity in this window."
+    }
+  },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
+  "battery": {
+    "delta": {
+      "aria": "Battery {{from}}% to {{to}}%",
+      "unknown": "Battery delta unknown"
+    }
+  },
+  "bulk": {
+    "clear": "Clear selection",
+    "itemDefault": "item",
+    "itemDefault_one": "item",
+    "itemDefault_other": "items",
+    "ofTotal": "of {{total}}",
+    "selected": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "toolbarLabel": "Bulk actions for selected items"
+  },
+  "calculationDetails": {
+    "coverage": "Data coverage",
+    "exclusions": "Exclusions and limitations",
+    "method": "Method",
+    "noExclusions": "No additional exclusions were supplied.",
+    "period": "Analysis period",
+    "provenance": "Provenance",
+    "sources": "Data sources",
+    "title": "How this was calculated",
+    "unavailable": "Not provided",
+    "version": "Calculation version"
+  },
+  "delta": {
+    "noComparison": "No comparison data",
+    "title": "{{current}} vs {{previous}}"
+  },
+  "developerReference": {
+    "stats": {
+      "metric": {
+        "byteRate": {
+          "description": "Recorded bytes per second; the displayed interval is explicit.",
+          "label": "Data rate"
+        },
+        "bytes": {
+          "description": "Recorded byte count, displayed with binary size units.",
+          "label": "Data size"
+        },
+        "charge": {
+          "avgDuration": {
+            "description": "Existing average session duration calculation, expressed in canonical seconds.",
+            "label": "Average session duration"
+          },
+          "energyAdded": {
+            "description": "Recorded energy added on included charging sessions.",
+            "label": "Energy added"
+          },
+          "meanSessionPower": {
+            "description": "Arithmetic mean of finite session average powers; not peak power.",
+            "label": "Mean session power"
+          },
+          "overallRate": {
+            "description": "Aggregate valid energy divided by corresponding positive duration; not mean session power.",
+            "label": "Overall charging rate"
+          },
+          "peakPower": {
+            "description": "Highest observed charging power; never a replacement for an average.",
+            "label": "Peak power"
+          },
+          "recordedCost": {
+            "description": "Recorded session costs, not tariff estimates or billing.",
+            "label": "Recorded cost"
+          },
+          "sessions": {
+            "description": "Number of returned charging sessions included by the existing filter.",
+            "label": "Sessions"
+          }
+        },
+        "count": {
+          "description": "Declared count, not inferred from an integer measurement.",
+          "label": "Count"
+        },
+        "currency": {
+          "description": "Amount in its recorded denomination; no currency conversion.",
+          "label": "Cost"
+        },
+        "distance": {
+          "description": "Measured distance; canonical input is meters.",
+          "label": "Distance"
+        },
+        "duration": {
+          "description": "Elapsed duration; canonical input is seconds.",
+          "label": "Duration"
+        },
+        "efficiency": {
+          "description": "Consumption in watt-hours per meter; not reciprocal economy.",
+          "label": "Energy intensity"
+        },
+        "energy": {
+          "description": "Measured energy; canonical input is watt-hours.",
+          "label": "Energy"
+        },
+        "identifier": {
+          "description": "Source identifier, retained without grouping or rounding.",
+          "label": "Identifier"
+        },
+        "latency": {
+          "description": "Recorded non-negative elapsed time in seconds, displayed in milliseconds or seconds.",
+          "label": "Latency"
+        },
+        "mass": {
+          "description": "Recorded mass in kilograms.",
+          "label": "Mass"
+        },
+        "multiplier": {
+          "description": "Dimensionless multiplier, not a percentage.",
+          "label": "Multiplier"
+        },
+        "number": {
+          "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
+          "label": "Value"
+        },
+        "percent": {
+          "description": "Percentage input is already on the 0–100 scale.",
+          "label": "Percentage"
+        },
+        "power": {
+          "description": "Measured power; canonical input is watts.",
+          "label": "Power"
+        },
+        "pressure": {
+          "description": "Pressure in kilopascals.",
+          "label": "Pressure"
+        },
+        "rate": {
+          "description": "Source-defined rate; the caller declares the quantity and time unit.",
+          "label": "Rate"
+        },
+        "ratio": {
+          "description": "Dimensionless coefficient, not a percentage.",
+          "label": "Ratio"
+        },
+        "score": {
+          "description": "Numeric score on a declared 100-point scale.",
+          "label": "Score"
+        },
+        "seasonal": {
+          "fitStatus": {
+            "description": "Existing translated fit status; no invented eligibility threshold.",
+            "label": "Fit status"
+          },
+          "inSampleRSquared": {
+            "description": "Existing dimensionless in-sample coefficient, not a percent.",
+            "label": "In-sample R²"
+          },
+          "includedDrives": {
+            "description": "Drive count admitted by the existing seasonal eligibility rules.",
+            "label": "Included drives"
+          },
+          "observedIntensity": {
+            "description": "Existing observed consumption over included drives.",
+            "label": "Observed energy intensity"
+          }
+        },
+        "speed": {
+          "description": "Measured speed; canonical input is meters per second.",
+          "label": "Speed"
+        },
+        "status": {
+          "description": "Source-provided status, retained without numeric coercion.",
+          "label": "Status"
+        },
+        "temperature": {
+          "description": "Absolute temperature in degrees Celsius; not a temperature difference.",
+          "label": "Temperature"
+        },
+        "text": {
+          "description": "Source-provided text, retained without numeric coercion.",
+          "label": "Text"
+        }
+      },
+      "state": {
+        "empty": "No metrics supplied",
+        "loading": "Loading measurements",
+        "retained": "Showing retained measurements"
+      },
+      "valueState": {
+        "invalid": "invalid",
+        "missing": "missing",
+        "value": "value"
+      }
+    }
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "emptyState": {
+    "alerts": {
+      "list": {
+        "likelyCause": "Either no rules are configured yet, or every rule has evaluated cleanly in the selected window.",
+        "meaning": "No alerts have fired — this is the expected steady state."
+      }
+    },
+    "analytics": {
+      "efficiency": {
+        "likelyCause": "Most often the selected range contains no completed drives — widen it before assuming data is missing.",
+        "meaning": "No efficiency figures can be computed for the selected period."
+      }
+    },
+    "automations": {
+      "list": {
+        "likelyCause": "This list is empty by default — automations are opt-in and are never created for you.",
+        "meaning": "No automations are configured, so nothing is being evaluated."
+      }
+    },
+    "battery": {
+      "degradation": {
+        "likelyCause": "Most often the vehicle was linked recently, so the observation window is still too short to be meaningful.",
+        "meaning": "There is not enough history yet to estimate battery degradation."
+      }
+    },
+    "charging": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not charged since it was linked, or it charged while asleep and unreachable.",
+        "meaning": "No charging sessions have been recorded for this vehicle yet."
+      }
+    },
+    "drives": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not driven since it was linked, or the selected date range ends before the first recorded drive.",
+        "meaning": "No completed drives have been recorded for this vehicle yet."
+      }
+    },
+    "generic": "No data available yet.",
+    "label": {
+      "likelyCause": "Most likely reason",
+      "prerequisite": "What has to happen first"
+    },
+    "signals": {
+      "live": {
+        "likelyCause": "Most often the vehicle is asleep — Tesla stops streaming while a car sleeps, and waking it costs range.",
+        "meaning": "No live signals are arriving for this vehicle right now."
+      }
+    },
+    "vehicles": {
+      "list": {
+        "likelyCause": "Either setup has not been completed, or the stored Tesla authorisation was revoked and needs renewing.",
+        "meaning": "No vehicles are linked, so nothing is being collected anywhere in the app."
+      }
+    }
+  },
+  "entityContext": {
+    "title": "Related context"
+  },
+  "errorBoundary": {
+    "body": "An unexpected error occurred. Please try again.",
+    "chunkBody": "A new version was deployed. Click Reload to load the latest assets.",
+    "chunkTitle": "New Version Deployed",
+    "connectionBody": "Unable to reach the server. Check your connection and try again.",
+    "connectionTitle": "Connection Lost",
+    "goHome": "Go Home",
+    "inlineTitle": "Component failed to load",
+    "retriesExceeded": "Multiple retries failed. Try refreshing the page or checking system status.",
+    "retry": "Retry",
+    "retryAttempt": "Retry attempt {{count}}",
+    "title": "Something went wrong",
+    "tryAgain": "Try Again",
+    "tryAgainAnyway": "Try Again Anyway"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    }
+  },
+  "freshness": {
+    "seconds": "{{s}}s ago"
+  },
+  "fsm": {
+    "typeLabel": {
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "driveSession": "Drive",
+      "notification": "Notify",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—",
+      "vehicle": "Vehicle"
+    }
+  },
+  "gas": {
+    "pollTriggered": "Gas price poll triggered"
+  },
+  "impersonation": {
+    "toast": {
+      "ended": "Impersonation ended",
+      "started": "Impersonation started"
+    }
+  },
+  "lifetime": {
+    "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
+    "unlocked": "✓ Unlocked"
+  },
+  "live": {
+    "connected": "Live",
+    "disconnected": "Offline",
+    "reconnecting": "Reconnecting…",
+    "scope": "Live data",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
+    "unknown": "Unknown"
+  },
+  "operationalMode": {
+    "actionCenterDisabled": {
+      "title": "Inbox actions are read-only"
+    },
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "operations": {
+    "attention": "Attention",
+    "detailTitle": "{{title}} details",
+    "emptyFieldsHidden": "{{count}} empty fields are hidden.",
+    "emptyFieldsHidden_one": "1 empty field is hidden.",
+    "emptyFieldsHidden_other": "{{count}} empty fields are hidden.",
+    "evidence": "Evidence",
+    "metricValuesAppear": "Values will appear when the source provides measurements.",
+    "metrics": "Operational metrics",
+    "narrative": {
+      "causeUnavailable": "Cause is not established by the available evidence.",
+      "confidence": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium",
+        "not_scored": "Not scored",
+        "title": "Confidence",
+        "unavailable": "No confidence basis was supplied."
+      },
+      "evidence": "Supporting evidence",
+      "evidenceCoverage": "{{count}} supporting records supplied.",
+      "likelyCause": "Likely cause",
+      "limitations": "Limitations",
+      "noEvidence": "No supporting records were supplied.",
+      "noLimitations": "No additional limitations were supplied.",
+      "recommendedResponse": "Recommended response",
+      "record": "Record",
+      "responseUnavailable": "No action is recommended from this evidence alone.",
+      "title": "Decision narrative",
+      "whatChanged": "What changed",
+      "whyItMatters": "Why it matters",
+      "whyUnavailable": "No defensible impact statement is available."
+    },
+    "noAttention": "No current attention items.",
+    "noMetricValues": "No metric values are available yet.",
+    "reviewAll": "Review all"
+  },
+  "problemReport": {
+    "context": {
+      "appVersion": "App version",
+      "browser": "Browser",
+      "page": "Page",
+      "pageNote": "(record ids are replaced with :id)",
+      "title": "What is sent with your report"
+    },
+    "form": {
+      "description": "What were you doing, and what did you expect?",
+      "descriptionPlaceholder": "Steps you took, what you saw, and what you expected to see instead.",
+      "descriptionTooShort": "Please add at least {{count}} characters.",
+      "hidePreview": "Hide exactly what is sent",
+      "includeDiagnostics": "Attach a redacted technical summary ({{count}} recent errors)",
+      "includeDiagnosticsHint": "Versions, browser capability, service health, error messages and trace IDs. Never VINs, locations, tokens, e-mail addresses or raw logs.",
+      "showPreview": "Show exactly what is sent",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "title": "What went wrong?",
+      "titlePlaceholder": "Short summary (e.g. \"Charging costs show as blank\")"
+    },
+    "intro": "Describe what happened in your own words. We attach a redacted technical summary only if you allow it.",
+    "policy": {
+      "consoleTail": "Console output",
+      "files": "File attachments",
+      "screenshots": "Screenshots",
+      "userEmail": "E-mail address"
+    },
+    "submitError": "Could not send the report. Please try again.",
+    "title": "Report a problem"
+  },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "auto": "Automatic (follow the network)",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "off": "Always off",
+      "on": "Always on",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusOff": "Not active — the app is using full quality.",
+      "statusUser": "Active — enabled manually on this device."
+    }
+  },
+  "rbac": {
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "savedViews": {
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "defaultBadge": "Default",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "deleteTitle": "Delete saved view",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "error": "Unable to load saved views",
+    "loading": "Loading saved views…",
+    "makeDefault": "Apply automatically when I open this page",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "pin": "Pin",
+    "renamePrompt": "Rename view",
+    "saveCurrent": "Save current view…",
+    "setDefault": "Set as default",
+    "title": "Saved views",
+    "unpin": "Unpin",
+    "unsetDefault": "Clear default"
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
+  "sourceLayer": {
+    "age": "age",
+    "log": {
+      "desc": "Replayed from signal_log (durable history).",
+      "label": "Log"
+    },
+    "stale": {
+      "label": "Stale"
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
+  },
+  "timeline": {
+    "empty": "No timeline entries yet.",
+    "label": "Timeline"
+  },
+  "toast": {
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created"
+        },
+        "delete": {
+          "success": "API key deleted"
+        },
+        "revoke": {
+          "success": "API key revoked"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated"
+      }
+    },
+    "alerts": {
+      "ack": {
+        "success": "Alert acknowledged"
+      },
+      "comment": {
+        "success": "Comment added"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted"
+      },
+      "markRead": {
+        "success": "Alert marked as read"
+      },
+      "reopen": {
+        "success": "Alert reopened"
+      },
+      "saveRule": {
+        "success": "Alert rule saved"
+      },
+      "test": {
+        "success": "Test alert sent"
+      }
+    },
+    "annotation": {
+      "deleted": {
+        "success": "Annotation removed"
+      },
+      "updated": {
+        "success": "Annotation updated"
+      }
+    },
+    "export": {
+      "account": {
+        "success": "Account export queued — track progress in the floating widget"
+      },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
+      "create": {
+        "success": "Export started"
+      }
+    },
+    "notifications": {
+      "archive": {
+        "success": "Archived"
+      },
+      "delete": {
+        "success": "Deleted"
+      },
+      "markRead": {
+        "success": "Marked as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread"
+      },
+      "unarchive": {
+        "success": "Restored from archive"
+      }
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned"
+      },
+      "unpinned": {
+        "success": "Unpinned"
+      }
+    },
+    "quietHours": {
+      "delete": {
+        "success": "Quiet hours window removed"
+      }
+    },
+    "savedViews": {
+      "create": {
+        "success": "Saved view created"
+      },
+      "delete": {
+        "success": "View deleted"
+      },
+      "update": {
+        "success": "View updated"
+      }
+    },
+    "settings": {
+      "auth": {
+        "disconnect": {
+          "success": "Tesla account disconnected"
+        },
+        "refresh": {
+          "success": "Auth refreshed"
+        },
+        "url": {
+          "success": "Auth URL generated"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved"
+      },
+      "gasPrice": {
+        "config": {
+          "success": "Gas price config updated"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved"
+      },
+      "save": {
+        "success": "Settings saved"
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced"
+        }
+      }
+    },
+    "vehicles": {
+      "delete": {
+        "success": "Vehicle deleted"
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed"
+        }
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed"
+      },
+      "refresh": {
+        "success": "Vehicle refreshed"
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed"
+        }
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)"
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed"
+        }
+      },
+      "wake": {
+        "success": "Wake command sent"
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed"
+        }
+      }
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

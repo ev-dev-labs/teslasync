@@ -3,7 +3,8 @@
 // vehicle detail view. The grid is a pure prop-driven presenter over a
 // VehicleState, so the contract worth pinning is the per-tile branching:
 //   - battery colour thresholds (>50 emerald / >20 amber / else rose) including
-//     the null-safe `?? 0` guard so an absent level neither throws nor mis-colours,
+//     the null-safe guard so an absent level renders unknown ("—", muted) and
+//     neither throws, mis-colours as critical, nor leaks "0.00%"/"undefined%",
 //   - speed → Driving / Parked (null-safe),
 //   - charger value (kW while charging, i18n "Not Charging" otherwise), the
 //     emerald/muted colour, and the "Full in Xh" ETA sub-line which must be HIDDEN
@@ -112,7 +113,7 @@ describe('TelemetryGrid', () => {
   it('formats the battery percent + range sub-line and routes rated_range through formatDistance', () => {
     renderGrid({ battery_level: 82, rated_range: 312 })
 
-    expect(screen.getByText('82%')).toBeInTheDocument()
+    expect(screen.getByText('82.00%')).toBeInTheDocument()
     // rated_range → formatDistance with no precision override; the "range" word is i18n.
     expect(formatDistance).toHaveBeenCalledWith(312)
     expect(screen.getByText('312 km range')).toBeInTheDocument()
@@ -121,35 +122,43 @@ describe('TelemetryGrid', () => {
 
   it('colours the battery value by charge threshold (>50 emerald, >20 amber, else rose)', () => {
     renderGrid({ battery_level: 82 })
-    expect(screen.getByText('82%').className).toContain('text-emerald-300')
+    expect(screen.getByText('82.00%').className).toContain('text-emerald-300')
     cleanup()
 
     renderGrid({ battery_level: 35 })
-    expect(screen.getByText('35%').className).toContain('text-amber-300')
+    expect(screen.getByText('35.00%').className).toContain('text-amber-300')
     cleanup()
 
     renderGrid({ battery_level: 8 })
-    expect(screen.getByText('8%').className).toContain('text-rose-300')
+    expect(screen.getByText('8.00%').className).toContain('text-rose-300')
   })
 
   it('treats the colour thresholds as exclusive (exactly 50 → amber, exactly 20 → rose)', () => {
     renderGrid({ battery_level: 50 })
-    expect(screen.getByText('50%').className).toContain('text-amber-300')
+    expect(screen.getByText('50.00%').className).toContain('text-amber-300')
     cleanup()
 
     renderGrid({ battery_level: 20 })
-    expect(screen.getByText('20%').className).toContain('text-rose-300')
+    expect(screen.getByText('20.00%').className).toContain('text-rose-300')
   })
 
-  it('is null-safe for an absent battery level (renders 0% at the critical colour, no throw)', () => {
+  it('is null-safe for an absent battery level (renders unknown muted, no throw)', () => {
     expect(() => renderGrid({ battery_level: undefined as unknown as number })).not.toThrow()
 
-    const value = screen.getByText('0%')
+    const value = screen.getByText('—')
     expect(value).toBeInTheDocument()
-    // `(state.battery_level ?? 0) > 50` — undefined collapses to 0 → rose, never a
-    // NaN-comparison-driven blank or an "undefined%" leak.
-    expect(value.className).toContain('text-rose-300')
+    // Missing is unknown: muted, never a fabricated "0.00%" at the critical
+    // colour, never a NaN-comparison-driven blank or an "undefined%" leak.
+    expect(value.className).toContain('text-[var(--text-muted)]')
+    expect(screen.queryByText('0.00%')).toBeNull()
     expect(screen.queryByText('undefined%')).toBeNull()
+  })
+
+  it('renders a measured 0% battery at the critical colour (real zeros stay zero)', () => {
+    renderGrid({ battery_level: 0 })
+
+    const value = screen.getByText('0.00%')
+    expect(value.className).toContain('text-rose-300')
   })
 
   it('labels speed as Driving when moving and Parked when stopped, via i18n', () => {
@@ -176,16 +185,16 @@ describe('TelemetryGrid', () => {
   it('shows charger power + a "Full in" ETA while charging with time remaining', () => {
     renderGrid({ is_charging: true, charger_power: 11, time_to_full_charge: 1.5 })
 
-    const value = screen.getByText('11 kW')
+    const value = screen.getByText('11.00 kW')
     expect(value.className).toContain('text-emerald-300')
     // fmtNumber(1.5, 1) → "1.5"; the "Full in" prefix is i18n.
     expect(screen.getByText('Full in {{hours}}h')).toBeInTheDocument()
-    expect(mockT).toHaveBeenCalledWith('telemetry.fullInHours', 'Full in {{hours}}h', { hours: '1.5' })
+    expect(mockT).toHaveBeenCalledWith('telemetry.fullInHours', 'Full in {{hours}}h', { hours: '1.50' })
   })
 
   it('hides the "Full in" ETA when time_to_full_charge is 0 or null (regression: no "Full in 0h")', () => {
     renderGrid({ is_charging: true, charger_power: 7, time_to_full_charge: 0 })
-    expect(screen.getByText('7 kW')).toBeInTheDocument()
+    expect(screen.getByText('7.00 kW')).toBeInTheDocument()
     expect(screen.queryByText(/Full in/)).toBeNull()
 
     cleanup()
@@ -198,13 +207,20 @@ describe('TelemetryGrid', () => {
     expect(screen.queryByText(/Full in/)).toBeNull()
   })
 
+  it('renders unknown charger power while charging when the reading is missing', () => {
+    renderGrid({ is_charging: true, charger_power: undefined as unknown as number })
+
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('0.00 kW')).toBeNull()
+  })
+
   it('shows an i18n "Not Charging" label with muted colour and no ETA when idle', () => {
     renderGrid({ is_charging: false })
 
-    const value = screen.getByText('Not Charging')
+    const value = screen.getByText('Not charging')
     expect(value.className).toContain('text-[var(--text-muted)]')
     expect(screen.queryByText(/Full in/)).toBeNull()
-    expect(mockT).toHaveBeenCalledWith('common.notCharging', 'Not Charging')
+    expect(mockT).toHaveBeenCalledWith('common.notCharging', 'Not charging')
   })
 
   it('renders sentry state as Active (rose) or Off (muted) through i18n', () => {
@@ -235,7 +251,7 @@ describe('TelemetryGrid', () => {
     renderGrid({ odometer: 45000 })
 
     expect(screen.getByText('45000 km')).toBeInTheDocument()
-    expect(formatDistance).toHaveBeenCalledWith(45000, { precision: 0 })
+    expect(formatDistance).toHaveBeenCalledWith(45000)
   })
 
   it('wires every tile label to its i18n key (no raw English labels)', () => {

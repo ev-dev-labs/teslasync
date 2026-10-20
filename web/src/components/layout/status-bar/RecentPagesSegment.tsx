@@ -11,7 +11,11 @@ import {
   MapPinned,
   Route,
 } from 'lucide-react';
-import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { Popover } from '@/components/ui/Popover';
+import { PanelTitle, Text } from '@/components/ui/Typography';
+import { Tooltip } from '@/components/ui/Tooltip';
 import {
   getRecentPages,
   subscribeRecentPages,
@@ -19,6 +23,7 @@ import {
   type RecentPageKind,
 } from '@/lib/recentPages';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { PrefetchLink } from '../PrefetchLink';
 import { useStatusBarPopover } from './StatusBarContext';
 
@@ -26,31 +31,34 @@ const DISPLAY_LIMIT = 5;
 
 export interface RecentPagesSegmentProps {
   iconOnly?: boolean;
+  /** Render the list inline (inside the More menu) instead of a trigger. */
+  embedded?: boolean;
+  onAction?: () => void;
 }
 
 function iconForKind(kind: RecentPageKind): ReactNode {
-  const className = 'h-3.5 w-3.5';
   switch (kind) {
     case 'vehicle':
-      return <Car className={className} />;
+      return <Icon icon={Car} size="sm" />;
     case 'drive':
-      return <Route className={className} />;
+      return <Icon icon={Route} size="sm" />;
     case 'charging':
-      return <BatteryCharging className={className} />;
+      return <Icon icon={BatteryCharging} size="sm" />;
     case 'trip':
-      return <Compass className={className} />;
+      return <Icon icon={Compass} size="sm" />;
     case 'geofence':
-      return <MapPinned className={className} />;
+      return <Icon icon={MapPinned} size="sm" />;
     case 'year-review':
-      return <CalendarDays className={className} />;
+      return <Icon icon={CalendarDays} size="sm" />;
     default:
-      return <FileText className={className} />;
+      return <Icon icon={FileText} size="sm" />;
   }
 }
 
 function formatRelative(visitedAt: number, now: number, t: TFunction): string {
   const diffMs = Math.max(0, now - visitedAt);
   const minutes = Math.floor(diffMs / 60_000);
+  // relative-time: when the page was visited
   if (minutes < 1) return t('recentPages.justNow', 'Just now');
   if (minutes < 60) return `${minutes}${t('recentPages.shortMinute', 'm')}`;
   const hours = Math.floor(minutes / 60);
@@ -69,7 +77,11 @@ function useRecentPages(): RecentEntry[] {
   return entries;
 }
 
-export function RecentPagesSegment({ iconOnly = false }: RecentPagesSegmentProps) {
+export function RecentPagesSegment({
+  iconOnly = false,
+  embedded = false,
+  onAction,
+}: RecentPagesSegmentProps) {
   const { t } = useTranslation();
   const entries = useRecentPages();
   const visibleEntries = entries.slice(0, DISPLAY_LIMIT);
@@ -86,6 +98,87 @@ export function RecentPagesSegment({ iconOnly = false }: RecentPagesSegmentProps
     count: entries.length,
     defaultValue: 'Open recently viewed pages, {{count}} saved',
   });
+
+  const onNavigate = embedded ? onAction : close;
+  const body = (
+    <>
+      <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] px-2 pb-2 pt-1">
+        <div className="min-w-0">
+          <PanelTitle className="break-words">{title}</PanelTitle>
+          <Text as="p" variant="caption" className="mt-0.5">
+            {countLabel}
+          </Text>
+        </div>
+        <Icon icon={Clock} className={cn('mt-0.5', typography.color.secondary)} />
+      </div>
+
+      {visibleEntries.length === 0 ? (
+        <Text
+          as="p"
+          size="sm"
+          color="muted"
+          className="px-3 py-5 text-center"
+          data-testid="status-bar-recent-empty"
+        >
+          {t(
+            'statusBar.recent.empty',
+            'Pages you visit will appear here for quick access.',
+          )}
+        </Text>
+      ) : (
+        <ul
+          className="max-h-alerts-preview space-y-0.5 overflow-y-auto pt-1"
+          data-testid="status-bar-recent-list"
+        >
+          {visibleEntries.map((entry) => (
+            <li key={entry.path}>
+              <PrefetchLink
+                to={entry.path}
+                onClick={onNavigate}
+                className={cn(
+                  'flex min-h-11 items-center gap-2 rounded-shape-sm px-2 py-2 md:min-h-10',
+                  'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+                  'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]',
+                )}
+                data-testid={`status-bar-recent-row-${entry.path}`}
+              >
+                <span
+                  className={cn('shrink-0', typography.color.secondary)}
+                  aria-hidden
+                  data-page-kind={entry.kind}
+                >
+                  {iconForKind(entry.kind)}
+                </span>
+                <Text
+                  as="span"
+                  size="sm"
+                  weight="medium"
+                  color="primary"
+                  className="min-w-0 flex-1 break-words"
+                >
+                  {entry.title}
+                </Text>
+                <Text as="span" variant="caption" className="shrink-0 tabular-nums">
+                  {formatRelative(entry.visited_at, now, t)}
+                </Text>
+              </PrefetchLink>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section
+        className="border-b border-[var(--border-subtle)] p-2"
+        data-testid="status-bar-recent-embedded"
+      >
+        {body}
+      </section>
+    );
+  }
 
   return (
     <>
@@ -108,12 +201,13 @@ export function RecentPagesSegment({ iconOnly = false }: RecentPagesSegmentProps
           aria-controls={open ? contentId : undefined}
           onClick={toggle}
           className={cn(
-            'h-5 min-h-0 gap-1 px-1.5 py-0 text-xs leading-none',
+            'h-11 min-h-11 min-w-11 shrink-0 gap-1.5 whitespace-nowrap px-1.5 py-0 leading-none xl:h-5 xl:min-h-0 xl:min-w-0',
+            typography.size.xs,
             'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
           )}
           data-testid="status-bar-recent-trigger"
         >
-          <Clock className="h-3 w-3 shrink-0" aria-hidden />
+          <Icon icon={Clock} size="xs" />
           {!iconOnly && (
             <Text as="span" size="xs" weight="medium" color="secondary">
               {t('statusBar.recent.short', 'Recent')}
@@ -129,73 +223,10 @@ export function RecentPagesSegment({ iconOnly = false }: RecentPagesSegmentProps
         side="top"
         align="end"
         ariaLabel={title}
-        className="w-[min(92vw,360px)] p-2"
+        className="w-recent-pages p-2"
       >
         <div id={contentId} data-testid="status-bar-recent-popover">
-          <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] px-2 pb-2 pt-1">
-            <div className="min-w-0">
-              <PanelTitle>{title}</PanelTitle>
-              <Text as="p" size="xs" color="muted" className="mt-0.5">
-                {countLabel}
-              </Text>
-            </div>
-            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[var(--theme-primary)]" aria-hidden />
-          </div>
-
-          {visibleEntries.length === 0 ? (
-            <Text
-              as="p"
-              size="sm"
-              color="muted"
-              className="px-3 py-5 text-center"
-              data-testid="status-bar-recent-empty"
-            >
-              {t(
-                'statusBar.recent.empty',
-                'Pages you visit will appear here for quick access.',
-              )}
-            </Text>
-          ) : (
-            <ul
-              className="max-h-[320px] space-y-0.5 overflow-y-auto pt-1"
-              data-testid="status-bar-recent-list"
-            >
-              {visibleEntries.map((entry) => (
-                <li key={entry.path}>
-                  <PrefetchLink
-                    to={entry.path}
-                    onClick={close}
-                    className={cn(
-                      'flex min-h-10 items-center gap-2 rounded-md px-2 py-2',
-                      'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
-                    )}
-                    data-testid={`status-bar-recent-row-${entry.path}`}
-                  >
-                    <span
-                      className="shrink-0 text-[var(--theme-primary)]"
-                      aria-hidden
-                      data-page-kind={entry.kind}
-                    >
-                      {iconForKind(entry.kind)}
-                    </span>
-                    <Text
-                      as="span"
-                      size="sm"
-                      weight="medium"
-                      color="primary"
-                      className="min-w-0 flex-1 truncate"
-                    >
-                      {entry.title}
-                    </Text>
-                    <Text as="span" size="2xs" color="muted" className="shrink-0 tabular-nums">
-                      {formatRelative(entry.visited_at, now, t)}
-                    </Text>
-                  </PrefetchLink>
-                </li>
-              ))}
-            </ul>
-          )}
+          {body}
         </div>
       </Popover>
     </>

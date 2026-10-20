@@ -1,0 +1,1480 @@
+{
+  "item": "phase6-qa-service-intelligence-service-intelligence",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-service-intelligence-service-intelligence.json",
+    "web/logs/phase6-qa-service-intelligence-service-intelligence.log"
+  ],
+  "clock": {
+    "reservationUtc": "2026-10-14T02:22:14.747Z",
+    "returnBy": "2026-10-14T02:42:14.747Z",
+    "hardBy": "2026-10-14T02:47:14.747Z",
+    "firstCommandUtc": "2026-10-14T02:26:58.2249920Z",
+    "renewed": false
+  },
+  "pins": [
+    {
+      "file": "web/src/api/hooks/useServiceIntelligence.test.tsx",
+      "before": "963f5bae18a2dfe00d1644b57247a5c77f51375240560ccb9c69073bf212411c",
+      "baselineKind": "initial-source-review",
+      "after": "963f5bae18a2dfe00d1644b57247a5c77f51375240560ccb9c69073bf212411c",
+      "matched": true
+    },
+    {
+      "file": "web/src/api/hooks/useServiceIntelligence.ts",
+      "before": "dc988f742bcac4c518ec1f8732188e2696e131e9e6bdf51538f67209fa1f36b3",
+      "baselineKind": "initial-source-review",
+      "after": "dc988f742bcac4c518ec1f8732188e2696e131e9e6bdf51538f67209fa1f36b3",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "baselineKind": "initial-source-review",
+      "after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/ClaimDraftPanel.test.tsx",
+      "before": "db2867986543d49780925391e9e284e8458e841a2f5422107253a153ddf930ba",
+      "baselineKind": "initial-source-review",
+      "after": "db2867986543d49780925391e9e284e8458e841a2f5422107253a153ddf930ba",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx",
+      "before": "c4e565d96ed768582d1562dd4edcc4373f043027937c66f9390993f89b9c91ec",
+      "baselineKind": "initial-source-review",
+      "after": "c4e565d96ed768582d1562dd4edcc4373f043027937c66f9390993f89b9c91ec",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.test.tsx",
+      "before": "0a967a6ae0b607c2b0012b76abfcc049ae096886e581801a486f320b0754887a",
+      "baselineKind": "initial-source-review",
+      "after": "0a967a6ae0b607c2b0012b76abfcc049ae096886e581801a486f320b0754887a",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+      "before": "c0469f799feccd3fa721db42b074e398cff5586692fee02725a508746622a30f",
+      "baselineKind": "initial-source-review",
+      "after": "c0469f799feccd3fa721db42b074e398cff5586692fee02725a508746622a30f",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/CommunicationsPanel.test.tsx",
+      "before": "9b40a980d97aa22cd23c875965e5dd8c7f308d734e3850818025a3aaf31435da",
+      "baselineKind": "initial-source-review",
+      "after": "9b40a980d97aa22cd23c875965e5dd8c7f308d734e3850818025a3aaf31435da",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+      "before": "5256dd131d2edf5b6c870a239d562d5fe73586e2ba7ab12110c05370dd301041",
+      "baselineKind": "initial-source-review",
+      "after": "5256dd131d2edf5b6c870a239d562d5fe73586e2ba7ab12110c05370dd301041",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/EvidenceLimitationsPanel.test.tsx",
+      "before": "ea38339b3a0f54572ac5004cd0dd49f9651c1c603eb65e8bf04bee9a9713efc1",
+      "baselineKind": "initial-source-review",
+      "after": "ea38339b3a0f54572ac5004cd0dd49f9651c1c603eb65e8bf04bee9a9713efc1",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/EvidenceLimitationsPanel.tsx",
+      "before": "48775a794a58d68a8e5ada3f2e80df3384645bacfe475e84b07c3511ad6f4863",
+      "baselineKind": "initial-source-review",
+      "after": "48775a794a58d68a8e5ada3f2e80df3384645bacfe475e84b07c3511ad6f4863",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/PanelState.tsx",
+      "before": "1737e773727eb9837f4db03468bc11225d144757b8e8172871b155cc30ec415b",
+      "baselineKind": "initial-source-review",
+      "after": "1737e773727eb9837f4db03468bc11225d144757b8e8172871b155cc30ec415b",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/RecallFindingCard.tsx",
+      "before": "38eb55f5dea633004003c64ec95d7d9b140b9b27dcd7bae644e8dee8be1dd915",
+      "baselineKind": "initial-source-review",
+      "after": "38eb55f5dea633004003c64ec95d7d9b140b9b27dcd7bae644e8dee8be1dd915",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/RecallInventoryPanel.tsx",
+      "before": "b07120a7fdcabc358b1c45f043537166966d620f3aab5b61f7e63e0b711aa367",
+      "baselineKind": "initial-source-review",
+      "after": "b07120a7fdcabc358b1c45f043537166966d620f3aab5b61f7e63e0b711aa367",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/SourceFreshnessPanel.test.tsx",
+      "before": "9a6c30ea5a5cd1125c843dd6ec4025139b190164488e486163a85beaa99acbba",
+      "baselineKind": "initial-source-review",
+      "after": "9a6c30ea5a5cd1125c843dd6ec4025139b190164488e486163a85beaa99acbba",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/SourceFreshnessPanel.tsx",
+      "before": "e11e403f7927b6b419859762ffba9ed5fb31e52e9cde600f4e129cacaaf9befd",
+      "baselineKind": "initial-source-review",
+      "after": "e11e403f7927b6b419859762ffba9ed5fb31e52e9cde600f4e129cacaaf9befd",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/SymptomMatchesPanel.tsx",
+      "before": "0dbc038bc26b8fa5a540e86e65dbda0c249331722a413488c426ddccf99fb755",
+      "baselineKind": "initial-source-review",
+      "after": "0dbc038bc26b8fa5a540e86e65dbda0c249331722a413488c426ddccf99fb755",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/VehicleMatchPanel.test.tsx",
+      "before": "78d2909b5cbc73ff45095be8e8672a7267a8a800e6c10adfe44be90983ef9b14",
+      "baselineKind": "initial-source-review",
+      "after": "78d2909b5cbc73ff45095be8e8672a7267a8a800e6c10adfe44be90983ef9b14",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/VehicleMatchPanel.tsx",
+      "before": "48ef6c9c6a16d8aceaca7e349f9f5e2673ee917dc16abea482931a21b395a18e",
+      "baselineKind": "initial-source-review",
+      "after": "48ef6c9c6a16d8aceaca7e349f9f5e2673ee917dc16abea482931a21b395a18e",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/WarrantyPanel.test.tsx",
+      "before": "f0d684dafc4fbdc5ecc792778e30b1403bb971e93ad387275ef86e46c69496d7",
+      "baselineKind": "initial-source-review",
+      "after": "f0d684dafc4fbdc5ecc792778e30b1403bb971e93ad387275ef86e46c69496d7",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/WarrantyPanel.tsx",
+      "before": "f56b7b3d7f5674fc379cd6cf45a7dcbbda3cb6f895e33562e8922ee5f8d021b9",
+      "baselineKind": "initial-source-review",
+      "after": "f56b7b3d7f5674fc379cd6cf45a7dcbbda3cb6f895e33562e8922ee5f8d021b9",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/components/index.ts",
+      "before": "07b106b060326dfc5e2670affc5451e0401d2145dbf70fda02d1d2a2457d6c8a",
+      "baselineKind": "initial-source-review",
+      "after": "07b106b060326dfc5e2670affc5451e0401d2145dbf70fda02d1d2a2457d6c8a",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.closure.fixtures.ts",
+      "before": "f9a69fb2379f5afa52cdbb3f0428b95fd2e25a065227f56f7a39423cc11ffcd6",
+      "baselineKind": "initial-source-review",
+      "after": "f9a69fb2379f5afa52cdbb3f0428b95fd2e25a065227f56f7a39423cc11ffcd6",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.closure.test.tsx",
+      "before": "50781b3effe2dd4af39ec413e42bd4b1934957cd8a31f3d5106d4fb2a1196a54",
+      "baselineKind": "initial-source-review",
+      "after": "50781b3effe2dd4af39ec413e42bd4b1934957cd8a31f3d5106d4fb2a1196a54",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.test.tsx",
+      "before": "8cd2f1bf24685f4494b929b1aaebaff819541d25183803cbc99cb6366708e0c0",
+      "baselineKind": "initial-source-review",
+      "after": "8cd2f1bf24685f4494b929b1aaebaff819541d25183803cbc99cb6366708e0c0",
+      "matched": true
+    },
+    {
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "before": "96757dfe29e4d153a6e93945a78e05e3f45232c9d818124b4e2e14a31c254bd3",
+      "baselineKind": "initial-source-review",
+      "after": "96757dfe29e4d153a6e93945a78e05e3f45232c9d818124b4e2e14a31c254bd3",
+      "matched": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "baselineKind": "initial-source-review",
+      "after": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "matched": true
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "before": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "baselineKind": "initial-source-review",
+      "after": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "matched": true
+    },
+    {
+      "file": "web/src/i18n/en/locale-service-intelligence.json",
+      "before": "ff26d11993ff9d2f527fcb60e6b090a86c09f442f95e1cd3fd4cd52fea88f0ca",
+      "baselineKind": "initial-source-review",
+      "after": "ff26d11993ff9d2f527fcb60e6b090a86c09f442f95e1cd3fd4cd52fea88f0ca",
+      "matched": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "before": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/ui/Badge.tsx",
+      "before": "99296caea1e9b136ff8493f1a85ae63d5a7aa6955c6983d095eb8460b1b84abf",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "99296caea1e9b136ff8493f1a85ae63d5a7aa6955c6983d095eb8460b1b84abf",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "before": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+      "matched": true
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "matched": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/data-display/index.ts",
+      "before": "f8495446c7eb521756f6071b4fb021fc71cec90218f2f204db7ad65d841158d9",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "f8495446c7eb521756f6071b4fb021fc71cec90218f2f204db7ad65d841158d9",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/data-display/format/index.ts",
+      "before": "4bb1c3a012590f59ccd6852a3afbf69334e870c679b8ba7ca575318367a8c4bb",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "4bb1c3a012590f59ccd6852a3afbf69334e870c679b8ba7ca575318367a8c4bb",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/data-display/format/DateTime.tsx",
+      "before": "08b77196089a97bdf6f1fb37e17af36fa717c1bd7bc8b0d3f603c765c47e04a8",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "08b77196089a97bdf6f1fb37e17af36fa717c1bd7bc8b0d3f603c765c47e04a8",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/ui/CopyButton.tsx",
+      "before": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+      "matched": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "before": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "matched": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "before": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "baselineKind": "supplementary-read-boundary",
+      "after": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "matched": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "baselineKind": "later-selective-read-boundary"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "before": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "baselineKind": "later-selective-read-boundary"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "before": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "baselineKind": "later-selective-read-boundary"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/LayoutCard.tsx",
+      "before": "409641019732349e44d45adf5e2c13dd93c5b38a0f037564ae43b93fc4099a1e",
+      "baselineKind": "later-selective-read-boundary"
+    }
+  ],
+  "preservationCounts": {
+    "productionTsxFiles": 12,
+    "productionTsxLines": 1570,
+    "pageLines": 207,
+    "lineCounts": {
+      "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx": 112,
+      "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx": 285,
+      "web/src/features/service-intelligence/components/CommunicationsPanel.tsx": 170,
+      "web/src/features/service-intelligence/components/EvidenceLimitationsPanel.tsx": 106,
+      "web/src/features/service-intelligence/components/PanelState.tsx": 63,
+      "web/src/features/service-intelligence/components/RecallFindingCard.tsx": 128,
+      "web/src/features/service-intelligence/components/RecallInventoryPanel.tsx": 53,
+      "web/src/features/service-intelligence/components/SourceFreshnessPanel.tsx": 96,
+      "web/src/features/service-intelligence/components/SymptomMatchesPanel.tsx": 98,
+      "web/src/features/service-intelligence/components/VehicleMatchPanel.tsx": 155,
+      "web/src/features/service-intelligence/components/WarrantyPanel.tsx": 97,
+      "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx": 207
+    }
+  },
+  "driftAtPreservationCheck": [],
+  "page": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+  "routes": [
+    "/service-intelligence"
+  ],
+  "createdAt": "2026-10-14T02:41:37.600955+00:00",
+  "acceptedSource": "fa094bafca3611d1a8bf691094813b60ba6eb141 (Phase5 queue receipt, not fresh acceptance)",
+  "purpose": "Read-only QA of service hypotheses versus authoritative evidence, coverage estimates, claim drafting, source trust and display preferences.",
+  "instructions": {
+    "orchestrator": "docs/orchestrator-loop.md read fully; root authority is under docs.",
+    "design": "docs/frontend-design-contract.md base lines 1-655 read, including preservation, trust, scope, SI/localization, responsive/a11y and evidence. Unrelated later appendices not claimed as read.",
+    "mission": "Relevant lines 1-145,529-812,921-1180,1416-1517 read.",
+    "inventory": "Exact service route row and linked audit-page-169 states/mobile/a11y/architecture/preservation read.",
+    "handoff": "Current recovery/source-only conventions and relevant historical sections read.",
+    "queue": "Exact attempt1 claim initially at migration-queue.md:135 and Phase5 dependency at 2151 read; current owner scopes searched. No queue edits.",
+    "repository": [
+      ".github/copilot-instructions.md (applicable frontend/integrity/security/testing sections)",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      "docs/frontend-worker-conventions.md",
+      "docs/I18N_GUIDELINES.md"
+    ]
+  },
+  "confirmedIssues": [
+    {
+      "id": "SI01",
+      "priority": "P1",
+      "rule": "MDC-026 unknown provenance versus authoritative empty",
+      "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+      "snippet": "const unavailable = source?.status === 'unavailable';",
+      "related": [
+        {
+          "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+          "lines": [
+            62,
+            63,
+            170,
+            171
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+          "lines": [
+            92,
+            96,
+            98,
+            99
+          ]
+        }
+      ],
+      "mechanism": "Missing nhtsa_manufacturer_communications source becomes null; unavailable/stale are false. Empty communications then claims a configured-provider/official-index negative result despite missing provenance.",
+      "repro": "Successful typed report with selected vehicle 7, sources=[] and communications=[] renders No communications found and provider-returned-empty wording.",
+      "fix": "Render explicit unknown-source availability, not authoritative empty; retain returned records and existing local recovery.",
+      "ownerGroup": "N01",
+      "historical": "Retained audit-page-169 and Phase5 provenance need; deduplicated.",
+      "line": 31,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    },
+    {
+      "id": "SI02",
+      "priority": "P1",
+      "rule": "MDC-026 initial-paused source handling",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "snippet": "loading={!serviceState.hasData && query.isLoading}",
+      "related": [
+        {
+          "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+          "lines": [
+            110,
+            143,
+            157,
+            168,
+            178,
+            189,
+            199
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/PanelState.tsx",
+          "lines": [
+            51
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx",
+          "lines": [
+            95
+          ]
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "lines": [
+            193,
+            204,
+            209,
+            214,
+            216
+          ]
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "lines": [
+            59
+          ]
+        }
+      ],
+      "mechanism": "Initial pending/paused query has no data/error and false isLoading/isFetching. Shared state exposes isRefreshBlocked but callers discard it; StaleRefreshWarning returns null without data. Recall/symptom sections claim negative results; catalog says Not imported; submitted paused claim says No ticket yet.",
+      "repro": "Selected vehicle; data=undefined,error=null,isPending=true,isLoading=false,isFetching=false,fetchStatus=paused. Trace caller loading and PanelState/SourceContent conditions.",
+      "fix": "Preserve initial/isRefreshBlocked at each source boundary, explaining unresolved/paused versus empty without global gating or invented offline server error.",
+      "ownerGroup": "N01",
+      "line": 128,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    },
+    {
+      "id": "SI03",
+      "priority": "P2",
+      "rule": "MDC-044/MDC-045 physical display preference",
+      "file": "web/src/features/service-intelligence/components/WarrantyPanel.tsx",
+      "snippet": "{t('serviceIntelligence.warranty.kmLeft', '{{km}} km left', {",
+      "related": [
+        {
+          "file": "web/src/api/hooks/useServiceIntelligence.ts",
+          "lines": [
+            214,
+            215,
+            248,
+            264,
+            269
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/WarrantyPanel.tsx",
+          "lines": [
+            8,
+            41,
+            75,
+            79
+          ]
+        }
+      ],
+      "mechanism": "km_remaining is only numerically formatted and always labeled km. useNumberFormatting does not subscribe to physical units; saved miles preference cannot affect this row.",
+      "repro": "Coverage km_remaining=1609.344 with saved miles display preference still uses source numeric value and km label.",
+      "fix": "Coordinate explicit warranty source-km/display unit boundary using existing physical formatters. Preserve raw km wire/query fields; never reinterpret them as meters.",
+      "ownerGroup": "N02",
+      "historical": "Existing unowned warranty date/unit need from audit-page-169/Phase5.",
+      "line": 78,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    },
+    {
+      "id": "SI04",
+      "priority": "P2",
+      "rule": "MDC-044 raw warranty business date",
+      "file": "web/src/features/service-intelligence/components/WarrantyPanel.tsx",
+      "snippet": "date: c.expires_at,",
+      "mechanism": "Raw expires_at string is interpolated without calendar-day locale formatting; date preferences do not change its presentation and invalid strings are not normalized.",
+      "repro": "expires_at=2028-01-01 stays raw under en-US and de-DE preferences.",
+      "fix": "Use existing locale-aware day-key formatting for calendar expiration dates; do not introduce a timezone day shift by naively treating business dates as instants. Preserve countdown assumptions/clamps.",
+      "ownerGroup": "N02",
+      "historical": "Retained audit-page-169/Phase5 date need.",
+      "line": 72,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    },
+    {
+      "id": "SI05",
+      "priority": "P2",
+      "rule": "MDC-040/MDC-022 essential hover-only match explanation",
+      "file": "web/src/features/service-intelligence/components/RecallFindingCard.tsx",
+      "snippet": "title={factor.detail}",
+      "related": [
+        {
+          "file": "web/src/components/ui/Badge.tsx",
+          "lines": [
+            36,
+            38
+          ]
+        }
+      ],
+      "mechanism": "Essential factor detail exists only as native title on a nonfocusable Badge span; caller has no keyboard/touch disclosure or described-by body. Visible dimension/status do not expose the explanation.",
+      "repro": "Supply fixture factor model_year/matched with detail, then inspect Tab/touch access declarations: no trigger reaches the detail. Native behavior not exercised.",
+      "fix": "Reuse accessible Tooltip/help or named disclosure preserving full detail/order.",
+      "ownerGroup": "N03",
+      "historical": "Retained audit-page-169 essential-help need.",
+      "line": 89,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    },
+    {
+      "id": "SI06",
+      "priority": "P2",
+      "rule": "MDC-040 stronger mobile minimum target declaration",
+      "file": "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+      "snippet": "size=\"sm\"",
+      "related": [
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "lines": [
+            36,
+            37,
+            45,
+            46
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx",
+          "lines": [
+            54,
+            82,
+            87
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+          "lines": [
+            67,
+            70
+          ]
+        },
+        {
+          "file": "web/src/components/ui/CopyButton.tsx",
+          "lines": [
+            59
+          ]
+        }
+      ],
+      "mechanism": "Five wrapping sm artifact buttons declare only min-height36px; Draft/evidence actions default md40px, Copy default sm36px. Eight actions lack below-md44px override. Wrapping can enlarge labels; actual hit boxes/WCAG spacing failures are not claimed.",
+      "repro": "Inspect single-line labels below md/default16px rem. Compare Review details and retained Refresh, which explicitly declare min-h-11.",
+      "fix": "Adopt existing mobile44px caller classes, preserving desktop density and busy/disabled semantics; no global Button rewrite.",
+      "ownerGroup": "N04",
+      "line": 252,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    },
+    {
+      "id": "SI07",
+      "priority": "P2",
+      "rule": "MDC-044 i18n plural forms",
+      "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+      "snippet": "'{{count}} observed symptom match',",
+      "mechanism": "Six count labels lack canonical _one/_other leaves: communication symptoms, source records, evidence items and catalog source/Tesla/rejected rows. Passing count does not generate missing plural forms.",
+      "repro": "2 symptom matches displays 2 observed symptom match; record_count=1/items.length=1 displays 1 records/1 items. Split and canonical English lookups both lacked all six pairs.",
+      "fix": "Serialized canonical-English owner integrates exact six one/other pairs via normal generation after authorization. No catalog changes here.",
+      "ownerGroup": "N05",
+      "aggregation": "One owner/root finding across six keys.",
+      "line": 147,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    },
+    {
+      "id": "SI08",
+      "priority": "P2",
+      "rule": "MDC-010/MDC-012 theme-aware role adoption",
+      "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+      "snippet": "text-cyan-300 hover:underline",
+      "related": [
+        {
+          "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+          "lines": [
+            36,
+            69,
+            137
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/RecallFindingCard.tsx",
+          "lines": [
+            58,
+            60,
+            70,
+            120
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/EvidenceLimitationsPanel.tsx",
+          "lines": [
+            29,
+            80,
+            92
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/SourceFreshnessPanel.tsx",
+          "lines": [
+            27,
+            85
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+          "lines": [
+            94,
+            183,
+            185
+          ]
+        }
+      ],
+      "mechanism": "Feature links/icons/explanatory surfaces use fixed cyan/amber/rose ramps and fixed low-opacity focus rings instead of theme-aware neutral/semantic/focus roles. Generic decorative cyan is not source status.",
+      "repro": "Compare source classes under dark/light/custom saved themes: fixed hues remain unchanged. Grep has21 fixed-color/tint lines, plus one unrelated native-title line. No measured contrast/visual failure claimed.",
+      "fix": "Adopt established roles at callers, preserving source URLs and genuine safety warning meanings. No local palette or foundation remigration.",
+      "ownerGroup": "N04",
+      "historical": "Retained audit-page-169 fixed-link/decorative-role concern.",
+      "line": 156,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    },
+    {
+      "id": "SI09",
+      "priority": "P1",
+      "rule": "preservation independent supplied warning flags",
+      "file": "web/src/features/service-intelligence/components/RecallFindingCard.tsx",
+      "snippet": "{finding.park_it",
+      "related": [
+        {
+          "file": "web/src/api/hooks/useServiceIntelligence.ts",
+          "lines": [
+            83,
+            84
+          ]
+        }
+      ],
+      "mechanism": "Independent park_it/park_outside booleans collapse into one ternary. A both-true typed finding exposes only the park_it label; park_outside disappears. Type has no mutual-exclusion declaration.",
+      "repro": "Use fixture finding but park_it=true,park_outside=true; combined guard renders one block selecting only first flag. No real campaign co-occurrence or service action asserted.",
+      "fix": "Independently expose every supplied warning flag without altering diagnosis/applicability/remedy conclusions.",
+      "ownerGroup": "N03",
+      "line": 61,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    },
+    {
+      "id": "SI10",
+      "priority": "P2",
+      "rule": "MDC-044 business-calendar date parsed as instant",
+      "file": "web/src/features/service-intelligence/components/RecallFindingCard.tsx",
+      "snippet": "<DateTime value={finding.report_received_at} variant=\"date\" />",
+      "related": [
+        {
+          "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+          "lines": [
+            114
+          ]
+        },
+        {
+          "file": "web/src/components/data-display/format/DateTime.tsx",
+          "lines": [
+            107,
+            108
+          ]
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "lines": [
+            65,
+            67,
+            69,
+            70
+          ]
+        }
+      ],
+      "mechanism": "Recall/publication date-only fixture strings flow to new Date and browser-local formatDate. YYYY-MM-DD becomes UTC midnight, so west-of-UTC browsers can display previous calendar day. ISO-title assertions do not prove visible business-date preservation.",
+      "repro": "report_received_at=2026-07-01 with America/Los_Angeles browser timezone represents June30 locally. Source/ECMAScript semantics only; no fresh execution.",
+      "fix": "Existing locale-aware day-key formatter for publication business dates; separate true instant formatting. No invented workspace bounds.",
+      "ownerGroup": "N06",
+      "line": 114,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    },
+    {
+      "id": "SI11",
+      "priority": "P2",
+      "rule": "MDC-044 instant display preference boundary",
+      "file": "web/src/components/data-display/format/DateTime.tsx",
+      "snippet": "return <PureDateTime {...props} />;",
+      "related": [
+        {
+          "file": "web/src/features/service-intelligence/components/VehicleMatchPanel.tsx",
+          "lines": [
+            65,
+            67,
+            148
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/SourceFreshnessPanel.tsx",
+          "lines": [
+            71,
+            75
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/SymptomMatchesPanel.tsx",
+          "lines": [
+            90
+          ]
+        },
+        {
+          "file": "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+          "lines": [
+            124
+          ]
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "lines": [
+            43,
+            50,
+            58,
+            61
+          ]
+        }
+      ],
+      "mechanism": "Service callers omit in/showTz and take PureDateTime without settings/timezone inputs. Actual timestamps are browser locale/timezone formatted; full timestamp options do not carry saved12/24-hour choice. Shared formatter presence is not effective preference preservation.",
+      "repro": "Browser en-US/UTC versus saved alternate locale/timezone: generated/checked/fetched/observed timestamps receive no preference options. Distinct from calendar-day shift/raw warranty string.",
+      "fix": "Reuse preference-aware instant boundaries and coordinate clock capability at existing owner; never convert business day keys to instants or create another formatter.",
+      "ownerGroup": "N06",
+      "line": 48,
+      "reproStatus": "SOURCE_CONFIRMED; specified synthetic/manual repro NOTRUN; no real action",
+      "confidence": "high"
+    }
+  ],
+  "inspectionFailures": [
+    {
+      "kind": "command",
+      "shellId": "2586",
+      "exitCode": 1,
+      "error": "UnicodeEncodeError: 'charmap' codec can't encode characters in position 6-7: character maps to <undefined>",
+      "detail": "Hashes printed before cp1252 repository-heading stdout failure; later UTF-8 inspection succeeded, not a test/compiler run."
+    },
+    {
+      "kind": "view",
+      "exitCode": null,
+      "error": "ClaimDraftPanel.test.tsx [221,-1]: start beyond EOF; 191 lines. Prior [1,220] already read the complete file."
+    },
+    {
+      "kind": "view",
+      "exitCode": null,
+      "error": "Guessed components/data-display/DateTime.tsx missing; resolved through barrel to actual format/DateTime.tsx."
+    },
+    {
+      "kind": "command",
+      "shellId": "2920",
+      "exitCode": 1,
+      "error": "The filename or extension is too long. (os error 206)",
+      "detail": "Oversized final report-write invocation rejected before Python ran; no report finalized by that call. Split into bounded writes to the same authorized artifacts; no tests/helper/source writes."
+    }
+  ],
+  "scopePolicy": {
+    "writableFiles": [
+      "docs/frontend-audits/phase6-qa-service-intelligence-service-intelligence.json",
+      "web/logs/phase6-qa-service-intelligence-service-intelligence.log"
+    ],
+    "sourceEdits": 0,
+    "testEdits": 0,
+    "catalogEdits": 0,
+    "gitWrites": 0,
+    "subagents": 0,
+    "installs": 0,
+    "servers": 0,
+    "helperFiles": 0,
+    "realServiceIdentityLocationProviderAPIBrowserActions": 0
+  },
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+      "line": 239,
+      "mechanism": "Unbroken ZIP filename lacks explicit min-w-0/break-words; long source/signal text and nonwrapping warranty rows may overflow320px/200%-text/RTL. Shared card/Badge wrapping mitigates some cases.",
+      "repro": "Long allow-listed filename/narrow allocated card/long translations.",
+      "whyNotConfirmed": "No native width/overflow/screenshots permitted.",
+      "ownerGroup": "N04"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx",
+      "line": 37,
+      "mechanism": "Direct maps/length/find assume required arrays in typed wire payloads.",
+      "repro": "Out-of-contract null coverages/communications/symptom_matches/match_factors/sources.",
+      "whyNotConfirmed": "Real backend null/normalization guarantees not inspected; no production crash claim.",
+      "ownerGroup": "N01"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+      "line": 127,
+      "mechanism": "Direct Math.round(value*100) lacks explicit score/confidence finite/range/unknown validation.",
+      "repro": "Out-of-contract null/NaN or out-of-range score versus legitimate zero.",
+      "whyNotConfirmed": "Real producer bounds/null authority outside scope; no fabricated threshold changes.",
+      "ownerGroup": "N01"
+    },
+    {
+      "id": "C04",
+      "file": "web/src/api/hooks/useServiceIntelligence.ts",
+      "line": 214,
+      "mechanism": "Warranty km wire/query versus general SI guidance; negative days/km clamp tozero.",
+      "repro": "Compare explicit kilometer contract and null/zero/negative remaining allowances.",
+      "whyNotConfirmed": "Wire units/overrun authority unknown. Existing tests intentionally preserve countdown clamps; not automatically sign corruption. SI03 is separate display-preference omission.",
+      "ownerGroup": "N02"
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+      "line": 35,
+      "mechanism": "Future completed_at age is negative and classified fresh; threshold updates on render only.",
+      "repro": "Future import timestamp or eight-day crossing without render.",
+      "whyNotConfirmed": "No producer clock/bounds/update authority or temporal/native execution.",
+      "ownerGroup": "N01"
+    },
+    {
+      "id": "C06",
+      "file": "web/src/features/service-intelligence/components/EvidenceLimitationsPanel.tsx",
+      "line": 57,
+      "mechanism": "Evidence observed_at/confidence/finding_id, vehicle build_date and warranty limit/basis omitted explicitly. Claim symptoms/evidence retained in exact copied body rather than separate visible summary.",
+      "repro": "Existing dated/confident/linked evidence fixture; trace reviewability before copying/navigation.",
+      "whyNotConfirmed": "Source omissions proven, but not proven regressions or explicitly required visible fields. Retrieval time is not evidence age; completeness needs product review. Copied body not data deletion.",
+      "ownerGroup": "N03"
+    },
+    {
+      "id": "C07",
+      "file": "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx",
+      "line": 67,
+      "mechanism": "Submitted issue state survives vehicle switch and keyed enabled query follows new vehicle automatically.",
+      "repro": "Draft issue vehicle7 then select8 while mounted.",
+      "whyNotConfirmed": "Cache keys scope identities; desired sticky/reset workflow unestablished. No identity leak or real request observed.",
+      "ownerGroup": "N01"
+    },
+    {
+      "id": "C08",
+      "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+      "line": 52,
+      "mechanism": "Unavailable-provider branch would hide nonempty communications.",
+      "repro": "Retained rows plus source.status=unavailable.",
+      "whyNotConfirmed": "Producer status/retention invariant unknown; current unavailable test uses[]. No live defect asserted.",
+      "ownerGroup": "N01"
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "owner": "service trust presentation/API integration",
+      "issues": [
+        "SI01",
+        "SI02"
+      ],
+      "candidates": [
+        "C02",
+        "C03",
+        "C05",
+        "C07",
+        "C08"
+      ],
+      "files": [
+        "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+        "web/src/features/service-intelligence/components/PanelState.tsx",
+        "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+        "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+        "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx",
+        "web/src/api/hooks/useServiceIntelligence.ts"
+      ],
+      "dedup": "Existing audit-page-169/Phase5 provenance need; no service repair row found. Parent must separately authorize narrow repairs, not reopen completed Phase5."
+    },
+    {
+      "id": "N02",
+      "owner": "warranty display/API integration",
+      "issues": [
+        "SI03",
+        "SI04"
+      ],
+      "candidates": [
+        "C04"
+      ],
+      "files": [
+        "web/src/features/service-intelligence/components/WarrantyPanel.tsx",
+        "web/src/api/hooks/useServiceIntelligence.ts"
+      ],
+      "dedup": "Retain existing unowned date/unit need; preserve explicit km wire, assumptions, null-zero and intentional countdown clamps."
+    },
+    {
+      "id": "N03",
+      "owner": "recall/evidence presentation",
+      "issues": [
+        "SI05",
+        "SI09"
+      ],
+      "candidates": [
+        "C06"
+      ],
+      "files": [
+        "web/src/features/service-intelligence/components/RecallFindingCard.tsx",
+        "web/src/features/service-intelligence/components/EvidenceLimitationsPanel.tsx"
+      ],
+      "dedup": "Reuse retained essential-help need; supplied both-warning-flags case is distinct. No new help/panel library."
+    },
+    {
+      "id": "N04",
+      "owner": "service action/theme caller adoption",
+      "issues": [
+        "SI06",
+        "SI08"
+      ],
+      "candidates": [
+        "C01"
+      ],
+      "files": [
+        "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+        "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx",
+        "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+        "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx"
+      ],
+      "dedup": "Adopt existing target/theme roles at callers, not global Button/Badge rewrite. Native acceptance separate."
+    },
+    {
+      "id": "N05",
+      "owner": "orchestrator-serialized canonical English integration",
+      "issues": [
+        "SI07"
+      ],
+      "candidates": [],
+      "files": [
+        "web/src/i18n/en.json",
+        "web/src/i18n/en/locale-service-intelligence.json"
+      ],
+      "exactKeys": [
+        "serviceIntelligence.communications.symptoms",
+        "serviceIntelligence.sources.records",
+        "serviceIntelligence.evidence.count",
+        "serviceIntelligence.catalog.rowsRead",
+        "serviceIntelligence.catalog.rowsImported",
+        "serviceIntelligence.catalog.rowsRejected"
+      ],
+      "dedup": "One exact six-key one/other integration scope under current catalog ownership; no generation/catalog changes here."
+    },
+    {
+      "id": "N06",
+      "owner": "service calendar/instant display integration",
+      "issues": [
+        "SI10",
+        "SI11"
+      ],
+      "candidates": [],
+      "files": [
+        "web/src/features/service-intelligence/components/RecallFindingCard.tsx",
+        "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+        "web/src/components/data-display/format/DateTime.tsx",
+        "web/src/lib/dateFormat.ts"
+      ],
+      "dedup": "phase6-fix-relative-future-dates owns lib/dateFormat.ts and matching contract test. Its future-relative objective is different; coordinate that lease rather than duplicate/reopen it or claim it resolves this page."
+    }
+  ],
+  "sections": [
+    {
+      "name": "Disclaimer",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "lines": [
+        93,
+        104
+      ],
+      "keep": "Not findings of fault; official/technician confirmation."
+    },
+    {
+      "name": "Official NHTSA TSB catalog",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "lines": [
+        106,
+        122
+      ],
+      "keep": "Global scope, two metrics, latest successful/failed import, five official periods, rows/hash, busy/cancel/auth guidance."
+    },
+    {
+      "name": "Vehicle match context",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "lines": [
+        124,
+        137
+      ],
+      "keep": "Model/year/plant/firmware/build basis, four raw count metrics, generation time and source context Review drawer."
+    },
+    {
+      "name": "Warranty countdown",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "lines": [
+        139,
+        148
+      ],
+      "keep": "Coverage order/status/expiration/countdown/assumptions; independent recovery."
+    },
+    {
+      "name": "Warranty claim draft",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "lines": [
+        150,
+        152
+      ],
+      "keep": "Issue/draft state, subject/vehicle/coverage/ask/communications/disclaimer, exact complete body copy including symptoms/evidence; no service submission."
+    },
+    {
+      "name": "Recall inventory",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "lines": [
+        154,
+        162
+      ],
+      "keep": "All campaigns/applicability/confidence/completion unknown, hypothesis/consequence/remedy/factors/warnings/OTA/source."
+    },
+    {
+      "name": "Communications and TSBs",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "lines": [
+        165,
+        174
+      ],
+      "keep": "Provider stale/unavailable, publication/type/summary/hypothesis/applicability/confidence/symptom count and source URL."
+    },
+    {
+      "name": "Ranked observed symptoms",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "lines": [
+        175,
+        183
+      ],
+      "keep": "Server order, signal/campaign/severity/score/evidence/observed time; association not diagnosis."
+    },
+    {
+      "name": "Evidence and limitations",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "lines": [
+        186,
+        194
+      ],
+      "keep": "Item order/source/links/limits/disclaimer; zero-item bundle keeps interpretation limits."
+    },
+    {
+      "name": "Source freshness",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "lines": [
+        196,
+        203
+      ],
+      "keep": "Every supplied identity/order/status/count/checked/fetched/cache/detail/URL; retrieval time not observation date."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Open service evidence pack",
+      "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+      "line": 72,
+      "behavior": "Disabled without vehicle; /diagnostics/service-evidence?vehicle_id={id} navigation preserved."
+    },
+    {
+      "name": "Five official Import/Refresh period actions",
+      "file": "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+      "line": 266,
+      "behavior": "Exact allow-listed URL, all disabled while any pending, pending artifact busy, retained latest successful period."
+    },
+    {
+      "name": "Draft ticket",
+      "file": "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx",
+      "line": 83,
+      "behavior": "Sets submitted issue; enabled read query, no claim/service submission."
+    },
+    {
+      "name": "Copy ticket text",
+      "file": "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx",
+      "line": 54,
+      "behavior": "Copies exact draft.body, not reconstructed visible summary; shared success/error feedback."
+    },
+    {
+      "name": "Review details on both summaries",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "line": 157,
+      "behavior": "Existing Drawer/context/narrative; native Escape/focus restoration NOTRUN."
+    },
+    {
+      "name": "Source-local Retry/Refresh",
+      "file": "web/src/features/service-intelligence/components/PanelState.tsx",
+      "line": 56,
+      "behavior": "Fatal retry and separate retained warnings; no request/refetch invoked."
+    },
+    {
+      "name": "Official campaign/document/evidence/dataset/source links",
+      "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+      "line": 151,
+      "behavior": "Original URL/new-tab/noopener noreferrer preserved; no links followed."
+    }
+  ],
+  "dataSources": [
+    {
+      "hook": "useServiceIntelligence(vehicleId,refresh=false)",
+      "endpoint": "GET /api/v1/service-intelligence/vehicles/{id}?refresh=false",
+      "scope": "Selected vehicle, server-defined source windows; key includes vehicle/refresh; AbortSignal passed; raw payload retained."
+    },
+    {
+      "hook": "useWarrantyOutlook(vehicleId,odometerKm?)",
+      "endpoint": "GET /api/v1/service-intelligence/vehicles/{id}/warranty[?odometer_km=...]",
+      "scope": "Estimated vehicle coverage snapshot; page no odometer override; explicit km wire fields."
+    },
+    {
+      "hook": "useClaimDraft(vehicleId,submittedIssue,odometerKm?)",
+      "endpoint": "GET /api/v1/service-intelligence/vehicles/{id}/claim-draft?issue=...",
+      "scope": "Enabled vehicle+submitted issue, keyed vehicle/issue/odometer; returned draft, not submitted ticket."
+    },
+    {
+      "hook": "useCommunicationsCatalogStatus()",
+      "endpoint": "GET /api/v1/admin/service-intelligence/communications/status",
+      "scope": "Independent global admin catalog."
+    },
+    {
+      "hook": "useImportCommunicationsCatalog()",
+      "endpoint": "POST /api/v1/admin/service-intelligence/communications/import",
+      "scope": "Five exact official URLs, requiresLiveMode=true, shared sudo cancellation, success-only catalog/vehicle invalidation/toasts. Never invoked; actual auth/route/provider semantics unverified."
+    }
+  ],
+  "sourceQAMatrix": {
+    "serviceEvidenceVsModel": "Decoded context/eligibility hypotheses/statistical associations/warranty estimates explicitly caveated. No confirmed diagnosis/repair/completion inferred; SI01/SI09 remain exceptions.",
+    "provenanceCoverage": "Two briefs retain raw validated counts and source-specific context. Missing/invalid summary values differ from legitimate zero. Five official allow-listed artifacts explicitly not proof five imported periods. Evidence metadata completeness remains C06.",
+    "identity": "Existing header-selected vehicle; keys include vehicle and AbortSignal; no previous-vehicle placeholder configured. No-selection suppresses cached vehicle evidence/copy while catalog stays global. Actual payload identity/isolation unverified; C07 not proven leak.",
+    "boundsBusinessDates": "Route is absent RANGE_ENABLED_PATHS and not vehicle-disabled: snapshot/provider-window scope, not missing header analysis bounds. No local duplicate picker/range control. Producer lookback/coverage unknown. Independent publication/expiration business days handled by SI04/SI10, not workspace from/to.",
+    "rawSISignsUnknownZero": "Hooks return raw unconverted values; warranty km is observed contract, not assumed meters. Null distance omitted, zero displayed; negative remaining allowances clamp by existing intentional tests. Server symptom order retained; no frontend threshold/re-sort/sign changes. Confidence bound/null risk C03 separate.",
+    "loadingFatalRetained": "Nine shells and disclaimer persist. Local skeletons/fatalError boundaries retain successful neighbors. Four retained warnings for service/warranty/catalog/claim with individual retry. Failed latest import retains latest successful records. No page-wide loading/error props gate neighbors. Initial-paused SI02; unavailable-with-rows C08 unproved.",
+    "initialPaused": "Shared state isRefreshBlocked exists but initial caller branches collapse into empty; paused is not proof offline.",
+    "preferences": "Numeric locale/precision bridge retained, selected vehicle preferences untouched. Physical/calendar/instant preferences SI03/SI04/SI10/SI11. No settings/theme resets or writes.",
+    "i18n": "167 literal references/138 unique service keys resolve in split English. Canonical/split six plural pairs absent SI07. Four dynamic technical taxonomy keys reviewed; IDs/API prose/SHA-256/punctuation are not raw English violations. No generator/extraction.",
+    "mobileDeclarations": "Wrapped page actions; xl two-column service grid; sm stacked claim form; md recall detail split; lg catalog/source grids. Shared min-w-0/Badge wrapping mitigate risk. SI06 is minimum declaration only; C01 overflow unmeasured.",
+    "a11yDeclarations": "Localized labels, secure native external links, textual statuses, shared Table row headers, source loading status/retained polite notices and route focus declaration preserved. SI05 noninteractive factor detail gap. Actual keyboard/screen-reader/contrast/targets/forced-colors/motion not accepted."
+  },
+  "ruleChecks": {
+    "method": "Scoped textual Select-String plus source review; not global AST lint or runtime acceptance.",
+    "zeroMatchScans": [
+      "inline-style attribute (case-sensitive)",
+      "lowercase forbidden raw controls/table (case-sensitive)",
+      "direct recharts/react-leaflet/framer-motion imports",
+      "old ../api imports",
+      "double /api/v1 prefix",
+      "camelCase query parameter (case-sensitive)",
+      "hidden whole-panel pattern",
+      "fetch/useEffect data loading"
+    ],
+    "cautions": "Obvious hardcoded-label pattern got0 candidates, not blanket i18n proof. Eight broad CSS-var matches were valid Tailwind tokens; case-insensitive Table/snake_case hits were classified exceptions. Shared component native HTML/effects expected. PageLayout delegates to PageContainer, so no missing wrapper. Backend Go rules NOTAPPLICABLE, not zero backend violations.",
+    "counts": {
+      "layoutCardShells": 9,
+      "pageSectionsIncludingDisclaimer": 10,
+      "fixedColorOrTintLines": 21,
+      "colorOrNativeHelpCandidateLines": 22
+    }
+  },
+  "tests": {
+    "status": "NOTRUN",
+    "reason": "Fresh tests/passing reruns prohibited; existing tests read only.",
+    "filesRead": 10,
+    "staticDeclarations": 55,
+    "staticExpandedCases": 61,
+    "expansion": "Catalog each3 adds2, vehicle each3 adds2, two closure each2 add2; authored61 is not runner discovery.",
+    "discovered": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "coverageRead": "Independent fatal/retained/loading/no-selection states, source-local retries, exact full-body copy, scoped navigation, catalog allow-list/busy/cancellation/403/eight-day boundary, raw count missing-zero-invalid and warranty intentional countdown clamp, source order/limits, mocked Review focus/Escape.",
+    "missingCoverage": "Absent source provenance, initial paused, both warning flags, effective units/date/clock/business-day visible date, native targets/overflow/theme/contrast, malformed wire/bounds/vehicle-switch workflow.",
+    "historicalOnly": "Phase5 queue receipt: Vitest startup exit1/339.322s/zero executed; not a fresh run/pass in this audit."
+  },
+  "nativeAcceptance": {
+    "status": "NOTRUN",
+    "attempted": 0,
+    "accepted": false,
+    "checks": [
+      {
+        "id": "NA01",
+        "kind": "responsive/visual",
+        "status": "NOTRUN",
+        "matrix": "320/375/390/430/768/1024/1280/1440/1920/2560px, narrow containers,200%text,long translations/IDs,RTL,dark/light/custom"
+      },
+      {
+        "id": "NA02",
+        "kind": "keyboard/focus/help/drawers",
+        "status": "NOTRUN"
+      },
+      {
+        "id": "NA03",
+        "kind": "assistive tech/contrast/44px targets/forced colors/motion",
+        "status": "NOTRUN"
+      },
+      {
+        "id": "NA04",
+        "kind": "mounted initial/retained paused/fatal/empty/permission recovery",
+        "status": "NOTRUN"
+      },
+      {
+        "id": "NA05",
+        "kind": "units/locale/timezone/clock and business-day boundary preferences",
+        "status": "NOTRUN"
+      },
+      {
+        "id": "NA06",
+        "kind": "real service/identity/location/provider/API/browser/import/clipboard/navigation",
+        "status": "NOTRUN; explicitly prohibited"
+      }
+    ]
+  },
+  "notRun": [
+    {
+      "command": "npx tsc --noEmit",
+      "reason": "Global compiler prohibited; no TypeScript pass claim.",
+      "status": "NOTRUN"
+    },
+    {
+      "command": "Vitest/fresh tests/passing reruns",
+      "reason": "User prohibited execution.",
+      "status": "NOTRUN"
+    },
+    {
+      "command": "lint/build/full suites/catalog generator",
+      "reason": "Explicitly prohibited.",
+      "status": "NOTRUN"
+    },
+    {
+      "command": "backend/API/provider/service/identity/location",
+      "reason": "Outside source scope; no real requests/actions.",
+      "status": "NOTRUN"
+    },
+    {
+      "command": "browser/native acceptance",
+      "reason": "No authorization; source/test declarations cannot establish acceptance.",
+      "status": "NOTRUN"
+    }
+  ],
+  "summary": {
+    "confirmedFindings": 11,
+    "unprovedCandidates": 8,
+    "deduplicatedOwnerNeeds": 6,
+    "nativeChecks": 6,
+    "nativeRuns": 0,
+    "sourceEdits": 0,
+    "testEdits": 0,
+    "catalogEdits": 0,
+    "staticTestFiles": 10,
+    "staticTestDeclarations": 55,
+    "staticExpandedCases": 61,
+    "discovered": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "inspectionFailures": 4,
+    "actualCommandFailures": 2,
+    "priorityCounts": {
+      "P1": 3,
+      "P2": 8
+    },
+    "confirmedByPrimaryRule": [
+      {
+        "rule": "MDC-010/MDC-012 theme-aware role adoption",
+        "count": 1
+      },
+      {
+        "rule": "MDC-026 initial-paused source handling",
+        "count": 1
+      },
+      {
+        "rule": "MDC-026 unknown provenance versus authoritative empty",
+        "count": 1
+      },
+      {
+        "rule": "MDC-040 stronger mobile minimum target declaration",
+        "count": 1
+      },
+      {
+        "rule": "MDC-040/MDC-022 essential hover-only match explanation",
+        "count": 1
+      },
+      {
+        "rule": "MDC-044 business-calendar date parsed as instant",
+        "count": 1
+      },
+      {
+        "rule": "MDC-044 i18n plural forms",
+        "count": 1
+      },
+      {
+        "rule": "MDC-044 instant display preference boundary",
+        "count": 1
+      },
+      {
+        "rule": "MDC-044 raw warranty business date",
+        "count": 1
+      },
+      {
+        "rule": "MDC-044/MDC-045 physical display preference",
+        "count": 1
+      },
+      {
+        "rule": "preservation independent supplied warning flags",
+        "count": 1
+      }
+    ],
+    "filesWithMostConfirmedIssues": [
+      {
+        "file": "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+        "count": 3
+      },
+      {
+        "file": "web/src/features/service-intelligence/components/RecallFindingCard.tsx",
+        "count": 3
+      },
+      {
+        "file": "web/src/features/service-intelligence/components/WarrantyPanel.tsx",
+        "count": 2
+      },
+      {
+        "file": "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/components/data-display/format/DateTime.tsx",
+        "count": 1
+      }
+    ],
+    "applicationAccepted": false
+  },
+  "preservation": {
+    "productionTsxFiles": 12,
+    "productionTsxLines": 1570,
+    "pageLines": 207,
+    "lineCounts": {
+      "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx": 112,
+      "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx": 285,
+      "web/src/features/service-intelligence/components/CommunicationsPanel.tsx": 170,
+      "web/src/features/service-intelligence/components/EvidenceLimitationsPanel.tsx": 106,
+      "web/src/features/service-intelligence/components/PanelState.tsx": 63,
+      "web/src/features/service-intelligence/components/RecallFindingCard.tsx": 128,
+      "web/src/features/service-intelligence/components/RecallInventoryPanel.tsx": 53,
+      "web/src/features/service-intelligence/components/SourceFreshnessPanel.tsx": 96,
+      "web/src/features/service-intelligence/components/SymptomMatchesPanel.tsx": 98,
+      "web/src/features/service-intelligence/components/VehicleMatchPanel.tsx": 155,
+      "web/src/features/service-intelligence/components/WarrantyPanel.tsx": 97,
+      "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx": 207
+    },
+    "pageSha256": "96757dfe29e4d153a6e93945a78e05e3f45232c9d818124b4e2e14a31c254bd3",
+    "historicalPageLines": 207,
+    "historicalProductionTsxLines": 1570,
+    "historicalSamePageHash": true,
+    "sourceSections": 10,
+    "panelShells": 9,
+    "summaryBriefs": 2,
+    "pinWindow": "29 initial scope/test/support pins +14 supplementary read-boundary pins +4 later selective-read pins. Later pins do not claim coverage of the earlier review window."
+  },
+  "filesRead": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/I18N_GUIDELINES.md",
+    "docs/frontend-audits/audit-page-169.json",
+    "docs/frontend-audits/phase6-qa-vehicle-systems-maintenance.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useServiceIntelligence.test.tsx",
+    "web/src/api/hooks/useServiceIntelligence.ts",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/data-display/format/DateTime.tsx",
+    "web/src/components/data-display/format/index.ts",
+    "web/src/components/data-display/index.ts",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/layout-reference/LayoutCard.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/SourceContent.tsx",
+    "web/src/components/ui/Badge.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/CopyButton.tsx",
+    "web/src/components/ui/Typography.tsx",
+    "web/src/features/service-intelligence/components/ClaimDraftPanel.test.tsx",
+    "web/src/features/service-intelligence/components/ClaimDraftPanel.tsx",
+    "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.test.tsx",
+    "web/src/features/service-intelligence/components/CommunicationsCatalogPanel.tsx",
+    "web/src/features/service-intelligence/components/CommunicationsPanel.test.tsx",
+    "web/src/features/service-intelligence/components/CommunicationsPanel.tsx",
+    "web/src/features/service-intelligence/components/EvidenceLimitationsPanel.test.tsx",
+    "web/src/features/service-intelligence/components/EvidenceLimitationsPanel.tsx",
+    "web/src/features/service-intelligence/components/PanelState.tsx",
+    "web/src/features/service-intelligence/components/RecallFindingCard.tsx",
+    "web/src/features/service-intelligence/components/RecallInventoryPanel.tsx",
+    "web/src/features/service-intelligence/components/SourceFreshnessPanel.test.tsx",
+    "web/src/features/service-intelligence/components/SourceFreshnessPanel.tsx",
+    "web/src/features/service-intelligence/components/SymptomMatchesPanel.tsx",
+    "web/src/features/service-intelligence/components/VehicleMatchPanel.test.tsx",
+    "web/src/features/service-intelligence/components/VehicleMatchPanel.tsx",
+    "web/src/features/service-intelligence/components/WarrantyPanel.test.tsx",
+    "web/src/features/service-intelligence/components/WarrantyPanel.tsx",
+    "web/src/features/service-intelligence/components/index.ts",
+    "web/src/features/service-intelligence/pages/ServiceIntelligencePage.closure.fixtures.ts",
+    "web/src/features/service-intelligence/pages/ServiceIntelligencePage.closure.test.tsx",
+    "web/src/features/service-intelligence/pages/ServiceIntelligencePage.test.tsx",
+    "web/src/features/service-intelligence/pages/ServiceIntelligencePage.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-service-intelligence.json",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/workspaceScope.ts"
+  ],
+  "evidenceLimits": [
+    "Source-confirmed mechanisms have specified synthetic/manual repros, not executed runtime repros. Candidates excluded from confirmed totals.",
+    "No fresh tests/discovery/lint/build/compiler/server/browser/provider/API/operational evidence; no whole-page/release acceptance.",
+    "Source/test/catalog/Git/queue/handoff unchanged by auditor; only two authorized artifacts written.",
+    "Raw SI, explicit km contract, signs/unknown-zero and model-estimate semantics preserved; no invented backend capabilities.",
+    "Historical receipts remain historical. Later shared pin windows explicit; concurrent owners can change dependencies after release."
+  ]
+}

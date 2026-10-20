@@ -51,7 +51,7 @@ describe('ResultPanel', () => {
     expect(screen.queryByRole('button', { name: 'Copy' })).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     // idle background cue
-    expect(container.firstChild).toHaveClass('bg-white/[0.02]')
+    expect(container.firstChild).toHaveClass('bg-[var(--surface-2)]')
   })
 
   it('prefers a caller-supplied idleMessage over the default', () => {
@@ -72,7 +72,7 @@ describe('ResultPanel', () => {
     expect(pre?.textContent).toContain('"id": 7')
     expect(pre?.textContent).toContain('"name": "Model 3"')
     expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
-    expect(container.firstChild).toHaveClass('bg-neon-green/5')
+    expect(container.firstChild).toHaveClass('bg-[var(--surface-2)]')
   })
 
   it('copies the exact stringified payload to the clipboard on click', async () => {
@@ -96,7 +96,7 @@ describe('ResultPanel', () => {
     expect(alert).toHaveTextContent('Upstream 500: boom')
     expect(screen.queryByRole('button', { name: 'Copy' })).not.toBeInTheDocument()
     expect(container.querySelector('pre')).toBeNull()
-    expect(container.firstChild).toHaveClass('bg-neon-red/5')
+    expect(container.firstChild).toHaveClass('bg-[var(--semantic-danger-bg)]')
   })
 
   it('treats falsy-but-present data (0 / false) as data, not idle', () => {
@@ -139,6 +139,6 @@ describe('ResultPanel', () => {
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(container.querySelector('pre')?.textContent).toContain('"ok": true')
-    expect(container.firstChild).toHaveClass('bg-neon-green/5')
+    expect(container.firstChild).toHaveClass('bg-[var(--surface-2)]')
   })
 })

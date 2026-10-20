@@ -1,0 +1,1103 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-vehicles-parking-analytics",
+  "attempt": 1,
+  "actor": "a910e5cb-0014-418c-abcf-88a29ee90a1d",
+  "status": "SOURCE_QA_WITH_FINDINGS",
+  "page": "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx",
+  "routes": [
+    "/parking"
+  ],
+  "generatedAt": "2026-10-14T01:41:04.897217+00:00",
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-vehicles-parking-analytics.json",
+    "web/logs/phase6-qa-vehicles-parking-analytics.log"
+  ],
+  "sourceAcceptance": "344b12750ed7543254e3e9234b8218ec80f9f15b accepted SOURCE ONLY; no native/application acceptance here",
+  "deadlines": {
+    "releaseBy": "2026-10-14T01:44:50.678Z",
+    "hardBy": "2026-10-14T01:49:50.678Z"
+  },
+  "authorityReads": {
+    "entire": [
+      "docs/orchestrator-loop.md",
+      "docs/frontend-design-contract.md",
+      "docs/frontend-mission.md",
+      "docs/frontend-worker-conventions.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "bounded": [
+      "docs/session-handoff.md:1-180 current recovery/conventions",
+      "docs/frontend-inventory.md:authority headers and exact /parking row282",
+      "docs/frontend-component-inventory.md:1-110 historical API/evidence",
+      "migration-queue.md:headers/exact parking QA row71 and accepted source row2016 plus exact owner searches; not whole2.5MB",
+      "docs/frontend-audits/audit-page-231.json:prior findings/proposals/preservation"
+    ]
+  },
+  "readonlyScope": {
+    "codeWrites": false,
+    "testWrites": false,
+    "catalogWrites": false,
+    "gitWrites": false,
+    "apiBrowserRealLocationIdentityAccess": false,
+    "installsServersSubagentsHelpersCreated": false
+  },
+  "sourcePins": [
+    {
+      "file": "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx",
+      "before": "bcf4861d4749c54a85a36c2cc7834369b087de1b2af66bf53241b779da4c6efe",
+      "after": "bcf4861d4749c54a85a36c2cc7834369b087de1b2af66bf53241b779da4c6efe",
+      "unchanged": true,
+      "lines": 186,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/pages/ParkingAnalyticsPage.test.tsx",
+      "before": "3ef8b46a6e7922f3ef7c0f029b58145d23a1eea89994d1d65ff37e16330b5f5e",
+      "after": "3ef8b46a6e7922f3ef7c0f029b58145d23a1eea89994d1d65ff37e16330b5f5e",
+      "unchanged": true,
+      "lines": 402,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "before": "9de001133e32ee63e950fdacf113d195845dee7d1595b4ea3a92e09267844f75",
+      "after": "9de001133e32ee63e950fdacf113d195845dee7d1595b4ea3a92e09267844f75",
+      "unchanged": true,
+      "lines": 43,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/lib/parkingDwell.ts",
+      "before": "a60f11b108801ef438d7b98dc75061e871831f926e1ed12191e623c3e28c821c",
+      "after": "a60f11b108801ef438d7b98dc75061e871831f926e1ed12191e623c3e28c821c",
+      "unchanged": true,
+      "lines": 693,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/lib/parkingDwell.test.ts",
+      "before": "c12a0f2cee9d44c77c2a4d8200a441796eaa03f8c0f1f066b6e0b8cf2b2af864",
+      "after": "c12a0f2cee9d44c77c2a4d8200a441796eaa03f8c0f1f066b6e0b8cf2b2af864",
+      "unchanged": true,
+      "lines": 474,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "before": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "after": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "unchanged": true,
+      "lines": 454,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/types/driving.ts",
+      "before": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+      "after": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+      "unchanged": true,
+      "lines": 411,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/hooks/useRangeState.ts",
+      "before": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "after": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "unchanged": true,
+      "lines": 694,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "unchanged": true,
+      "lines": 168,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "before": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "after": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "unchanged": true,
+      "lines": 148,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "after": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true,
+      "lines": 65,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true,
+      "lines": 434,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "before": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "after": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "unchanged": true,
+      "lines": 194,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "after": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "unchanged": true,
+      "lines": 47,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true,
+      "lines": 17,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "before": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "after": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "unchanged": true,
+      "lines": 115,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "before": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "after": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "unchanged": true,
+      "lines": 174,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+      "before": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+      "after": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+      "unchanged": true,
+      "lines": 77,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/DurationDistributionChart.tsx",
+      "before": "a587fb7fd6e3a0c1df0a631326330155053f1d9c6b177a67ea6c8a3f7323d0b8",
+      "after": "a587fb7fd6e3a0c1df0a631326330155053f1d9c6b177a67ea6c8a3f7323d0b8",
+      "unchanged": true,
+      "lines": 198,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/index.ts",
+      "before": "ed11a6b43069e6b7dd04fd2ec33dd8c84fbb7442e89722d34543e5b14c4e2fba",
+      "after": "ed11a6b43069e6b7dd04fd2ec33dd8c84fbb7442e89722d34543e5b14c4e2fba",
+      "unchanged": true,
+      "lines": 9,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/LongestParkingStints.tsx",
+      "before": "e889459dd2cec47f6375b83cf66eb6ec13df14844057d0ebb5db90c00218a995",
+      "after": "e889459dd2cec47f6375b83cf66eb6ec13df14844057d0ebb5db90c00218a995",
+      "unchanged": true,
+      "lines": 171,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/MonthlyDwellTrend.tsx",
+      "before": "61d940321dada0d28be06daba656e45da35d16297b13fed4d2fc01ff9996fcf9",
+      "after": "61d940321dada0d28be06daba656e45da35d16297b13fed4d2fc01ff9996fcf9",
+      "unchanged": true,
+      "lines": 202,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/OvernightParkingContext.tsx",
+      "before": "6278dff05bdfd406e2e98007300f3cb8a33387ba64ace2cd07b207fa60a4a328",
+      "after": "6278dff05bdfd406e2e98007300f3cb8a33387ba64ace2cd07b207fa60a4a328",
+      "unchanged": true,
+      "lines": 186,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingCoverageMethodology.tsx",
+      "before": "59c6eeafb205923e45dc4d2bc3551bd26e361b8c54cbd7de947980125782d13d",
+      "after": "59c6eeafb205923e45dc4d2bc3551bd26e361b8c54cbd7de947980125782d13d",
+      "unchanged": true,
+      "lines": 114,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingKpiBand.tsx",
+      "before": "5265be1122d9f7ff53a2980593fd52631934011dc116b2fb36a41364eb5b1f9c",
+      "after": "5265be1122d9f7ff53a2980593fd52631934011dc116b2fb36a41364eb5b1f9c",
+      "unchanged": true,
+      "lines": 99,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingMethodCaveats.tsx",
+      "before": "8c4ca408ce4270524417588eeb1cd878ead983fa5e17cb1389b7cc92915add93",
+      "after": "8c4ca408ce4270524417588eeb1cd878ead983fa5e17cb1389b7cc92915add93",
+      "unchanged": true,
+      "lines": 125,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingSectionBody.tsx",
+      "before": "4de497d2b85a1e27402d93877fcac930832f0790d8e527254af162e4594a842b",
+      "after": "4de497d2b85a1e27402d93877fcac930832f0790d8e527254af162e4594a842b",
+      "unchanged": true,
+      "lines": 45,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingStartBarChart.tsx",
+      "before": "2e0cbef2160d50420f2ad994225353535a855045319cd97e6c44356dbc689ac9",
+      "after": "2e0cbef2160d50420f2ad994225353535a855045319cd97e6c44356dbc689ac9",
+      "unchanged": true,
+      "lines": 111,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingTemporalProfile.tsx",
+      "before": "0b7c851639d43aadbc3fc2463445ac51b8c3a8f4321e010b31116f52bb4d8a97",
+      "after": "0b7c851639d43aadbc3fc2463445ac51b8c3a8f4321e010b31116f52bb4d8a97",
+      "unchanged": true,
+      "lines": 155,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.test.tsx",
+      "before": "552ac71a2079d8b2967242485656b8698cfb4e0352a4b25ca4e4d87ce7439a0d",
+      "after": "552ac71a2079d8b2967242485656b8698cfb4e0352a4b25ca4e4d87ce7439a0d",
+      "unchanged": true,
+      "lines": 61,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx",
+      "before": "b0b7c9bfa32f4518df994f899d52571a1f65e67b7268a4cf816579ac0801190c",
+      "after": "b0b7c9bfa32f4518df994f899d52571a1f65e67b7268a4cf816579ac0801190c",
+      "unchanged": true,
+      "lines": 168,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/features/vehicles/components/parking-analytics/types.ts",
+      "before": "d060a9669df9b5d04d20864e363ba568386db1d013b5a46f2e73fd6bf496141d",
+      "after": "d060a9669df9b5d04d20864e363ba568386db1d013b5a46f2e73fd6bf496141d",
+      "unchanged": true,
+      "lines": 5,
+      "baselineStage": "initial-source-baseline",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "before": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "after": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "unchanged": true,
+      "lines": 1707,
+      "baselineStage": "SUPPORT-SNAPSHOT",
+      "baselineLimit": "late snapshot after discovery read"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true,
+      "lines": 259,
+      "baselineStage": "SUPPORT-SNAPSHOT",
+      "baselineLimit": "late snapshot after discovery read"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "before": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "after": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "unchanged": true,
+      "lines": 1006,
+      "baselineStage": "SUPPORT-SNAPSHOT",
+      "baselineLimit": "late snapshot after discovery read"
+    },
+    {
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "before": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "after": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "unchanged": true,
+      "lines": 342,
+      "baselineStage": "SUPPORT-SNAPSHOT",
+      "baselineLimit": "late snapshot after discovery read"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "unchanged": true,
+      "lines": 462,
+      "baselineStage": "SUPPORT-SNAPSHOT",
+      "baselineLimit": "late snapshot after discovery read"
+    },
+    {
+      "file": "web/src/components/charts/chartUtils.tsx",
+      "before": "a9ec06aa5e321797194b9fb278aad015272b5d7809a01f01c655508f114303d2",
+      "after": "a9ec06aa5e321797194b9fb278aad015272b5d7809a01f01c655508f114303d2",
+      "unchanged": true,
+      "lines": 28,
+      "baselineStage": "SUPPORT-BEFORE-READ",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "before": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "after": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "unchanged": true,
+      "lines": 39,
+      "baselineStage": "SUPPORT-BEFORE-READ",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+      "before": "a5ea6977c603a5af95150b655b403d36f0970bbd704231703fb136ad9e447a5a",
+      "after": "a5ea6977c603a5af95150b655b403d36f0970bbd704231703fb136ad9e447a5a",
+      "unchanged": true,
+      "lines": 30,
+      "baselineStage": "SUPPORT-BEFORE-READ",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/lib/colors.ts",
+      "before": "a5c53faeaaa3a2d07c6475f0d64f67ddce9e36e6c3405ac983584f4a1fcf5e93",
+      "after": "a5c53faeaaa3a2d07c6475f0d64f67ddce9e36e6c3405ac983584f4a1fcf5e93",
+      "unchanged": true,
+      "lines": 388,
+      "baselineStage": "SUPPORT-BEFORE-READ",
+      "baselineLimit": "before final source audit/probe"
+    },
+    {
+      "file": "web/src/hooks/useChartPalette.ts",
+      "before": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "after": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "unchanged": true,
+      "lines": 49,
+      "baselineStage": "SUPPORT-BEFORE-FINAL-READ",
+      "baselineLimit": "late snapshot after discovery read"
+    },
+    {
+      "file": "web/src/components/charts/index.ts",
+      "before": "7c088add21d5d43f2d37f41c72517db9b2eb7738174914bd8bf21b9fbc62de5d",
+      "after": "7c088add21d5d43f2d37f41c72517db9b2eb7738174914bd8bf21b9fbc62de5d",
+      "unchanged": true,
+      "lines": 88,
+      "baselineStage": "SUPPORT-BEFORE-FINAL-READ",
+      "baselineLimit": "late snapshot after discovery read"
+    }
+  ],
+  "filesRead": [
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useDriving.ts",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/charts/chartUtils.tsx",
+    "web/src/components/charts/index.ts",
+    "web/src/components/data-display/DataFreshness.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/ui/MobileDataTableAdapter.types.ts",
+    "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+    "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+    "web/src/features/vehicles/components/parking-analytics/DurationDistributionChart.tsx",
+    "web/src/features/vehicles/components/parking-analytics/LongestParkingStints.tsx",
+    "web/src/features/vehicles/components/parking-analytics/MonthlyDwellTrend.tsx",
+    "web/src/features/vehicles/components/parking-analytics/OvernightParkingContext.tsx",
+    "web/src/features/vehicles/components/parking-analytics/ParkingCoverageMethodology.tsx",
+    "web/src/features/vehicles/components/parking-analytics/ParkingKpiBand.tsx",
+    "web/src/features/vehicles/components/parking-analytics/ParkingMethodCaveats.tsx",
+    "web/src/features/vehicles/components/parking-analytics/ParkingSectionBody.tsx",
+    "web/src/features/vehicles/components/parking-analytics/ParkingStartBarChart.tsx",
+    "web/src/features/vehicles/components/parking-analytics/ParkingTemporalProfile.tsx",
+    "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.test.tsx",
+    "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx",
+    "web/src/features/vehicles/components/parking-analytics/index.ts",
+    "web/src/features/vehicles/components/parking-analytics/types.ts",
+    "web/src/features/vehicles/lib/parkingDwell.test.ts",
+    "web/src/features/vehicles/lib/parkingDwell.ts",
+    "web/src/features/vehicles/pages/ParkingAnalyticsPage.test.tsx",
+    "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx",
+    "web/src/hooks/useChartPalette.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/lib/colors.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/types/driving.ts"
+  ],
+  "confirmedIssues": [
+    {
+      "id": "PQA-001",
+      "file": "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx",
+      "line": 47,
+      "rule": "workspace-exact-bounds",
+      "severity": "high",
+      "title": "Header instants replaced by UTC calendar dates",
+      "mechanism": "Page extracts start/end only and sends dates to useDrives and model. Model accepts YYYY-MM-DD, adds one UTC day to inclusive end. Header exposes precise rolling/local-midnight instants; no timezone supplied to range hook. Hook DriveWindow already permits RFC3339.",
+      "repro": "Synthetic LA Jan6 intended Jan6 08:00Z-Jan7 08:00Z, actual model Jan6 00:00Z-Jan7 00:00Z. 24h/live loses rolling instants. Parser probe executed, server/header UI not.",
+      "fix": "Align request/model to authoritative startInstant/endInstantExclusive/timezone; extend model bound contract and UTC copy/tests coherently. Merely sending ISO strings to date-only parser makes summary invalid.",
+      "owner": "parking integration: page/model/caveats/direct tests",
+      "evidence": [
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx:47-65",
+        "web/src/hooks/useRangeState.ts:108-124,656-678",
+        "web/src/lib/workspaceScope.ts:54,79-93,156-167",
+        "web/src/api/hooks/useDriving.ts:94-132",
+        "web/src/features/vehicles/lib/parkingDwell.ts:194-204,467,515-520"
+      ],
+      "priorFinding": "audit-page-231 precise workspace scope; count once",
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-002",
+      "file": "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx",
+      "line": 78,
+      "rule": "initial-paused-as-empty",
+      "severity": "high",
+      "title": "Pending paused initial source renders resolved-empty content",
+      "mechanism": "Uses query.isLoading, not initial/no-payload DataState. Pending+paused has isLoading=false; warning returns null without retained data; main empty gate and7 child bodies show empty/Browse drives before source answers. loading=false overrides evidence wrapper initial-state fallback.",
+      "repro": "Synthetic no-data isPending=true,isLoading=false,fetchStatus=paused produces initial,blocked=true,fatalError=null; page empty gate true. Source fixture/path proof only, no mounted render.",
+      "fix": "Source-shaped pending/deferred presentation via DataState status/hasData/isRefreshBlocked; keep shells, explain blocked refresh without asserting offline/error; only resolved source may be empty.",
+      "owner": "page/local state integration",
+      "evidence": [
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx:57,76-86,104,111,143-145",
+        "web/src/features/vehicles/components/parking-analytics/ParkingSectionBody.tsx:24-44",
+        "web/src/features/vehicles/components/parking-analytics/ParkingCoverageMethodology.tsx:78,90-100",
+        "web/src/api/dataState.ts:212-230",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:61"
+      ],
+      "priorFinding": null,
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-003",
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingCoverageMethodology.tsx",
+      "line": 65,
+      "rule": "unknown-source-as-success-zero",
+      "severity": "medium",
+      "title": "Absent source gets successful cap badge and zero sample context",
+      "mechanism": "Unconditional badge only sees empty fallback possiblyCapped=false, so initial/loading/fatal/paused source says success Within request cap. Metric rawValues correctly remain null but headline scope/context says0 usable/0 reconstructed/0 located/0 missing.",
+      "repro": "Absent payload creates summary from[]. Badge outside body gate always shows success. Page test389-401 explicitly expects0 located/0 missing for fatal no-data drawer; tests not run.",
+      "fix": "Guard cap/sample context on actual source evidence; neutral unknown/deferred until source resolves. Preserve measured zero after successful[].",
+      "owner": "page/local coverage/headline",
+      "evidence": [
+        "web/src/features/vehicles/components/parking-analytics/ParkingCoverageMethodology.tsx:65-70,82-87",
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx:55,113-116,124-140",
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.test.tsx:389-401"
+      ],
+      "priorFinding": "audit-page-231 unknown cap badge carried once; contextual-zero extension new",
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-004",
+      "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "line": 31,
+      "rule": "paused-labelled-refresh-failure",
+      "severity": "medium",
+      "title": "Retained paused source called a refresh failure",
+      "mechanism": "Wrapper maps every stale status to Retained after refresh failure. Shared deriveDataState marks retained paused reads stale with refreshError=null. Both briefs pass status without cause; adjacent warning is correctly cause-neutral.",
+      "repro": "Synthetic data=[],fetchStatus=paused gives stale,blocked=true,refreshError=null; wrapper fixed label nevertheless says failure. Source mapping proof, not component execution.",
+      "fix": "Use cause-neutral retained/stale wording or existing source-state distinction at existing wrapper; failure wording only for actual refreshError. Parent owns canonical copy if needed.",
+      "owner": "existing feature-shared VehicleEvidenceBrief owner",
+      "evidence": [
+        "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx:28-42",
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx:57,111",
+        "web/src/features/vehicles/components/parking-analytics/ParkingCoverageMethodology.tsx:47,77",
+        "web/src/api/dataState.ts:255-262"
+      ],
+      "priorFinding": null,
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-005",
+      "file": "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx",
+      "line": 56,
+      "rule": "historical-tail-as-live-location",
+      "severity": "medium",
+      "title": "Historical right-censored destination labelled now/Ongoing",
+      "mechanism": "Ongoing is inferred solely from final closed drive plus date range containing injected clock, not live vehicle/position evidence. Locations prints now at prior destination, even null group; longest prints Ongoing. Historical disclaimer does not establish current location.",
+      "repro": "One synthetic closed10:00-11:00 drive, no live flag/null address, clock12:00 yields ongoing=true/rightCensored=true; null-location row receives now. No real location/identity read.",
+      "fix": "Label reconstructed/right-censored as of explicit source snapshot, not current position. Preserve observed minimum and missing address; no unscoped live API.",
+      "owner": "local model/presentation",
+      "evidence": [
+        "web/src/features/vehicles/lib/parkingDwell.ts:568-608",
+        "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx:38,56-58",
+        "web/src/features/vehicles/components/parking-analytics/LongestParkingStints.tsx:102-109",
+        "web/src/features/vehicles/components/parking-analytics/ParkingMethodCaveats.tsx:70-81",
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx:57"
+      ],
+      "priorFinding": null,
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-006",
+      "file": "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx",
+      "line": 46,
+      "rule": "frozen-clock-refreshed-source",
+      "severity": "medium",
+      "title": "Fresh returned drives excluded against mount-time clock",
+      "mechanism": "pageNowMs frozen across successful query refetch/scope changes. Model excludes later starts/ends as future; no server as-of requested. New bytes plus old clock is not coherent frozen source snapshot.",
+      "repro": "Actual pure model: clock12:00, refreshed drives10:00-11:00 and13:00-14:00 at actual15:00 =>1 accepted/1 futureStart excluded/1h ongoing. Coherent15:00 model =>2 accepted/3h parked.",
+      "fix": "Tie clock to actual accepted source snapshot/as-of policy and scope; preserve deterministic injected tests without discarding genuinely newer rows. No speculative server capability.",
+      "owner": "page/model snapshot integration",
+      "evidence": [
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx:46,55-67",
+        "web/src/features/vehicles/lib/parkingDwell.ts:465,515-516,532-544",
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.test.tsx:342-365"
+      ],
+      "priorFinding": null,
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-007",
+      "file": "web/src/features/vehicles/lib/parkingDwell.ts",
+      "line": 580,
+      "rule": "overlap-double-counted-denominator",
+      "severity": "high",
+      "title": "Nested drives fabricate parking inside known driving",
+      "mechanism": "Adjacent-end gaps ignore active earlier long drive, while driving separately unions every interval. Positive nested gaps therefore overlap known driving. Parking totals/location/night/month distributions/parked-share denominator all inherit double count.",
+      "repro": "Actual model synthetic A00:00-10:00,B02:00-03:00,C04:00-05:00,now12:00 => driving10h,parking8h,six parked hours overlap A,parkedShare8/18=44.444%. Valid union permits only10:00-12:00 trailing parking.",
+      "fix": "Use validated occupied-interval union/active max-end sweep; unresolved nested destination must not fabricate parking/location. Preserve exclusion/censoring/ranking accounting.",
+      "owner": "parkingDwell local domain owner",
+      "evidence": [
+        "web/src/features/vehicles/lib/parkingDwell.ts:395-427,568-615,674-689",
+        "web/src/features/vehicles/lib/parkingDwell.test.ts:181-259"
+      ],
+      "priorFinding": null,
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-008",
+      "file": "web/src/features/vehicles/components/parking-analytics/OvernightParkingContext.tsx",
+      "line": 47,
+      "rule": "pre-rounded-chart-data",
+      "severity": "medium",
+      "title": "One-decimal row rounding changes plot geometry/export",
+      "mechanism": "Adapters round hours before numeric chart/table/export rows. Preferences cannot recover lost precision. Donut angles use rounded duration while headline/table shares use exact source.",
+      "repro": "Exact source arithmetic night1s/day2s => positive3s/true33.333% night, but both chart hours0. For9min/3min rounded0.2/0.1 implies66.667%, not75%. Browser rendering not run; input loss confirmed.",
+      "fix": "Keep unrounded SI/unrounded converted rows; precision/locale at format boundary only; retain faithful accessible/CSV numerics.",
+      "owner": "local chart adapters",
+      "evidence": [
+        "web/src/features/vehicles/components/parking-analytics/OvernightParkingContext.tsx:47-61,76,115,152",
+        "web/src/features/vehicles/components/parking-analytics/DurationDistributionChart.tsx:55-60",
+        "web/src/features/vehicles/components/parking-analytics/MonthlyDwellTrend.tsx:53-60"
+      ],
+      "priorFinding": null,
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-009",
+      "file": "web/src/features/vehicles/components/parking-analytics/LongestParkingStints.tsx",
+      "line": 164,
+      "rule": "mobile-detail-loss",
+      "severity": "medium",
+      "title": "Mobile tables hide fields without details path",
+      "mechanism": "Longest omits parked-at/censoring status; locations omits count/share. DataTable hidden md:table-cell applies independent of column menu; full mobile adapter requires mobilePresentation. Neither caller provides adapter or expandable/renderExpanded.",
+      "repro": "Below-md declared layout loses these cells with no supplied detail path. CSS mechanism source-confirmed, actual viewport/touch/focus NOTRUN.",
+      "fix": "Reuse existing mobilePresentation roles/displayValue/allDetails or expansion; retain all fields/full address/IDs/filter/search/paging/export sample scope.",
+      "owner": "local callers; existing shared adapter reused",
+      "evidence": [
+        "web/src/features/vehicles/components/parking-analytics/LongestParkingStints.tsx:78-111,153-164",
+        "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx:64-100,160",
+        "web/src/components/ui/DataTable.tsx:733-743,1185-1195,1404-1420",
+        "web/src/components/ui/MobileDataTableAdapter.types.ts:7-23"
+      ],
+      "priorFinding": "audit-page-231 mobile specialist detail carried once across both callers",
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-010",
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingTemporalProfile.tsx",
+      "line": 131,
+      "rule": "duplicate-chart-accessible-name",
+      "severity": "low",
+      "title": "Hour/weekday charts have identical accessible names",
+      "mechanism": "Both child calls use same seriesName and omit ariaLabel; fallback name Bar chart of Parking starts patterns and embedded title Parking starts both identical. Visible subheads not wired to name props.",
+      "repro": "Inspect131-147 child calls and45-49 fallback: same inputs yield same names; no screen-reader exercise.",
+      "fix": "Pass distinct localized hour/weekday ariaLabel/title context through existing API; preserve embedded/combined data alternatives.",
+      "owner": "local temporal caller",
+      "evidence": [
+        "web/src/features/vehicles/components/parking-analytics/ParkingTemporalProfile.tsx:131-147",
+        "web/src/features/vehicles/components/parking-analytics/ParkingStartBarChart.tsx:45-49,68-73"
+      ],
+      "priorFinding": "audit-page-231 distinct chart identity carried once",
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-011",
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingTemporalProfile.tsx",
+      "line": 35,
+      "rule": "hour-label-locale-bypass",
+      "severity": "medium",
+      "title": "Hourly labels force ASCII24-hour notation",
+      "mechanism": "String(hour).padStart + :00 bypasses locale time owner, unlike weekday/month/date cells. No separate persisted hour12 field proved in inspected API.",
+      "repro": "Synthetic Intl en-US hour13 formats01:00 PM while current bucket13:00. Locale/hour-cycle inconsistency proved; uninspected saved setting defect not asserted.",
+      "fix": "Use existing locale/time formatter for hour bucket labels without changing numeric grouping/night-window/timezone semantics.",
+      "owner": "local temporal labels",
+      "evidence": [
+        "web/src/features/vehicles/components/parking-analytics/ParkingTemporalProfile.tsx:31-40",
+        "web/src/hooks/useDateFormat.ts:81-93,110-113",
+        "web/src/lib/dateFormat.ts:97-116"
+      ],
+      "priorFinding": null,
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    },
+    {
+      "id": "PQA-012",
+      "file": "web/src/features/vehicles/components/parking-analytics/DurationDistributionChart.tsx",
+      "line": 175,
+      "rule": "chart-preference-bypass",
+      "severity": "medium",
+      "title": "Parking plots ignore saved chart-palette preference",
+      "mechanism": "CHART_COLORS is fixedCB-safe export; all local plots directly index it. Existing useChartPalette reads savedcb_safe/neon and light-mode derived roles; parking does not subscribe.",
+      "repro": "Source substitution: saved chart_palette=neon does not change constantCHART_COLORS inputs. No settings/API/browser change performed.",
+      "fix": "Reuse existing useChartPalette at chart owners; preserve hue order/legend identities and saved IDs; no new palette root.",
+      "owner": "local chart preference adoption",
+      "evidence": [
+        "web/src/features/vehicles/components/parking-analytics/DurationDistributionChart.tsx:175",
+        "web/src/features/vehicles/components/parking-analytics/DurationDistributionChart.tsx:185",
+        "web/src/features/vehicles/components/parking-analytics/MonthlyDwellTrend.tsx:179",
+        "web/src/features/vehicles/components/parking-analytics/MonthlyDwellTrend.tsx:189",
+        "web/src/features/vehicles/components/parking-analytics/OvernightParkingContext.tsx:166",
+        "web/src/features/vehicles/components/parking-analytics/ParkingStartBarChart.tsx:103",
+        "web/src/components/charts/chartUtils.tsx:5",
+        "web/src/lib/colors.ts:105-110",
+        "web/src/hooks/useChartPalette.ts:20-27,45-48"
+      ],
+      "priorFinding": null,
+      "confidence": "confirmed-source",
+      "nativeVerified": false
+    }
+  ],
+  "candidates": [
+    {
+      "id": "PQC-001",
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingTemporalProfile.tsx",
+      "line": 95,
+      "rule": "stacked-chart-geometry",
+      "detail": "420px bounded viewport vs2 stacked256px child hosts at640-1023 plus headings/gap; overflow-hidden shared viewport. Strong source risk, actual computed clipping unmeasured.",
+      "repro": "Safe synthetic browser640/768/1023,narrow allocated container,200% text; NOTRUN",
+      "owner": "local temporal layout",
+      "prior": "audit-page-231 same responsive candidate",
+      "evidence": [
+        "web/src/features/vehicles/components/parking-analytics/ParkingStartBarChart.tsx:68",
+        "web/src/components/charts/ChartContainer.tsx:760-795"
+      ]
+    },
+    {
+      "id": "PQC-002",
+      "file": "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx",
+      "line": 52,
+      "rule": "privacy-full-location-presentation",
+      "detail": "Private authenticated addresses in truncated text/title/main context/filter keys/default export. No real strings accessed; no redaction entitlement contract proved, so NOT a confirmed leak. Full touch-readable labels and any established privacy masking/export need safe proof.",
+      "repro": "Synthetic long/null labels only; mask summary/details/filter/export/title consistently if actual privacy contract requires; no real location/identity",
+      "owner": "local privacy presentation/existing privacy owner only on concrete proof",
+      "evidence": [
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx:132-135",
+        "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx:44-54,155",
+        "web/src/features/vehicles/components/parking-analytics/LongestParkingStints.tsx:69-75",
+        "web/src/components/ui/MobileDataTableAdapter.types.ts:19-21"
+      ]
+    },
+    {
+      "id": "PQC-003",
+      "file": "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx",
+      "line": 121,
+      "rule": "denominator-label-clarity",
+      "detail": "Time parked percent is parked/(parked+driving), not selected elapsed window; sample counts/disclaimer present but formula not explicit. Misinterpretation unproved, never claim full occupancy.",
+      "repro": "Safe sparse/capped window wording review with exact denominator/unknown leading coverage; NOTRUN",
+      "owner": "local method/metric context",
+      "evidence": [
+        "web/src/features/vehicles/lib/parkingDwell.ts:674-689",
+        "web/src/features/vehicles/components/parking-analytics/ParkingMethodCaveats.tsx:42-48,108-121"
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "name": "Parking summary",
+      "file": "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx",
+      "line": 106,
+      "data": "4 numeric metrics/sample/provenance",
+      "actions": "Review details; fatal retry; Browse drives"
+    },
+    {
+      "name": "Duration distribution",
+      "file": "web/src/features/vehicles/components/parking-analytics/DurationDistributionChart.tsx",
+      "line": 70,
+      "data": "6 bands/count+dwell",
+      "actions": "Legend toggles; PNG/SVG/copy image/CSV"
+    },
+    {
+      "name": "Overnight context",
+      "file": "web/src/features/vehicles/components/parking-analytics/OvernightParkingContext.tsx",
+      "line": 95,
+      "data": "Night/day duration and parked-time shares",
+      "actions": "PNG/SVG/copy image/CSV"
+    },
+    {
+      "name": "Temporal profile",
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingTemporalProfile.tsx",
+      "line": 73,
+      "data": "24 hours/7 weekdays;2 child charts;combined fallback",
+      "actions": "PNG/SVG/copy image/CSV"
+    },
+    {
+      "name": "Monthly dwell trend",
+      "file": "web/src/features/vehicles/components/parking-analytics/MonthlyDwellTrend.tsx",
+      "line": 72,
+      "data": "Start-month total/average dwell/count",
+      "actions": "Legend toggles; PNG/SVG/copy image/CSV"
+    },
+    {
+      "name": "Top locations",
+      "file": "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx",
+      "line": 107,
+      "data": "All grouped known/null addresses;count/duration/share",
+      "actions": "Help; Browse drives; filters below cap; pagination; inherited search/density/columns/resize/export"
+    },
+    {
+      "name": "Longest stints",
+      "file": "web/src/features/vehicles/components/parking-analytics/LongestParkingStints.tsx",
+      "line": 119,
+      "data": "Explicit top10;rank/location/start/duration/status",
+      "actions": "Browse drives; inherited search/density/columns/resize/export"
+    },
+    {
+      "name": "Coverage/method",
+      "file": "web/src/features/vehicles/components/parking-analytics/ParkingCoverageMethodology.tsx",
+      "line": 50,
+      "data": "4 numeric metrics;cap;complete method/censoring/exclusion notes",
+      "actions": "Review details; Browse drives; fatal retry"
+    }
+  ],
+  "sectionCount": 8,
+  "dataSources": [
+    {
+      "hook": "useDrives",
+      "file": "web/src/api/hooks/useDriving.ts",
+      "line": 104,
+      "endpoint": "GET /drives?vehicle_id=<selected>&start=<date>&end=<date>&limit=1000; client auto-prefix /api/v1",
+      "behavior": "Vehicle/window/limit query key; AbortSignal passed; safeArray select; disabled without vehicle; cap1000 disclosed as potential partial; no pagination/full-result aggregate request",
+      "limits": "Backend bounds/order/totals not independently exercised"
+    }
+  ],
+  "denominators": {
+    "parked": "reconstructed parked / (reconstructed parked + union driving); null without tracked time; nesting defect listed",
+    "night": "exact local22:00-06:00 overlap / all reconstructed parked; not number of stints",
+    "locationShare": "group dwell / all parked, including unknown-location group",
+    "locationCoverage": "known-address stints / all stints; null without stints",
+    "monthAverage": "month dwell / month stint count; all dwell credited to local start period",
+    "longest": "explicit top10 of returned reconstructed set, not unreturned/full-window data"
+  },
+  "states": {
+    "historical": "Explicit historical provenance/reconstruction disclaimer; no continuous occupancy evidence",
+    "fatal": "fatalError only, raw unknown metrics null; shells retained",
+    "retained": "Data not erased on refresh error; shared nonblocking warning/retry",
+    "initialPaused": "Loading/empty/zero/cap source defects listed",
+    "empty": "Successful[] can legitimately show zero counts/null shares; not same as absent payload",
+    "partial": "headline and coverage success+capped map to partial; prior headline mismatch repaired"
+  },
+  "preferences": {
+    "SI": "No hook/cache/wire edits; durationS seconds; model milliseconds; display /1000 before useUnits/converters",
+    "signs": "Invalid/inverted intervals excluded; zero/touching/open accounting preserved; no energy/battery sign rewriting",
+    "localeNumbers": "Reactive saved locale/precision formatter present; chart pre-rounding loses precision",
+    "datesTimezone": "useDateFormat for timestamp/month/weekday; model UTC window differs from precise header bounds",
+    "time": "Hour labels fixed ASCII24h; separate saved hour12 preference not proved",
+    "palette": "FixedCHART_COLORS bypasses existing saved palette hook",
+    "privacy": "Only synthetic null/generic addresses used; React escaping; no raw coordinates/VIN/real identity read; masking/export contract candidate"
+  },
+  "sourceA11yMobile": {
+    "declarations": "Localized section/chart labels; decorative icons hidden; chart dataColumns/figcaption alternatives; shared reduced-motion FadeIn; outer grids default1/xl2; temporal belowlg stack; table mobile allow-lists",
+    "limitations": "Native viewport/contrast/focus/44px targets/forced-colors/reduced-motion behavior NOTRUN; omission mechanism separately confirmed"
+  },
+  "tests": {
+    "status": "NOTRUN",
+    "authoredCases": {
+      "ParkingAnalyticsPage.test.tsx": 11,
+      "parkingDwell.test.ts": 14,
+      "TopParkingLocations.test.tsx": 2
+    },
+    "authoredTotal": 27,
+    "runnerDiscovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "limits": "Page mocks range and all7 child sections; not child/native/precise-instant coverage. Existing overlap test is crossing/touching, not nesting. No unchanged passing suite rerun."
+  },
+  "syntheticProbes": {
+    "runtime": "v26.8.1",
+    "command": "node --input-type=module -e <exact inline source in log>",
+    "exit": 0,
+    "observations": 8,
+    "labels": [
+      "NESTED_OVERLAP",
+      "FROZEN_CLOCK_REFRESH",
+      "HISTORICAL_NOT_LIVE",
+      "INITIAL_PAUSED",
+      "RETAINED_PAUSED",
+      "CHART_PRE_ROUNDING",
+      "WORKSPACE_BOUND_MISMATCH",
+      "TIME_LABEL_PREFERENCE"
+    ],
+    "limits": "Actual pure model/DataState executions and exact adapter arithmetic; reproduction assertions only, not Vitest/application/native acceptance"
+  },
+  "guidelineScans": {
+    "command": "Native Select-String exact patterns in log; mounted production page/domain/direct feature supports, excluding tests/unused KPI band",
+    "patternMatches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-url-candidate": 0,
+      "hidden-section-candidate": 0,
+      "hardcoded-jsx-text-candidate": 0,
+      "fetch-useeffect-candidate": 0,
+      "container-adoption": 2
+    },
+    "exceptions": "PageLayout and NoVehicleSelected both forward PageContainer; shared raw controls/test fixtures and dynamic chart/API props acceptable. Zero bounded text-pattern matches is not whole-catalog/code acceptance. Backend Go rules N/A."
+  },
+  "commandFailures": [
+    {
+      "command": "rg --files ...",
+      "exit": 1,
+      "reason": "rg unavailable; Select-String fallback; no install"
+    },
+    {
+      "command": "test/action read including components/charts/chartUtils.ts",
+      "exit": 1,
+      "reason": "Wrong extension; corrected actual chartUtils.tsx read"
+    },
+    {
+      "command": "shell1461 large python -c artifact writer",
+      "exit": 1,
+      "reason": "Windows os206 command length; no artifact written; bounded stdin retries"
+    }
+  ],
+  "notRun": [
+    "Vitest unchanged source/tests (source-only/no-change scope)",
+    "npx tsc --noEmit/globalTSC/lint/build/full suites",
+    "Helper scanners/preservation CLI/catalog generators/installs/servers",
+    "API/HTTP/backend totals/filter/authorization and real locations/identity",
+    "Browser/native/Edge/Playwright/screenshots/device; no locks/permission",
+    "All mission widths320/375/390/430/768/1024/1280/1440/1920/2560 plus transitions/narrow slots",
+    "RTL/200% text/long labels/dark/light/custom/forced-colors/contrast/keyboard/focus/44px/export/clipboard/reduced-motion/live preference acceptance"
+  ],
+  "evidenceLimits": [
+    "Initial readonly git status before worker no-Git convention was read; no Git writes and no later Git commands",
+    "Bootstrap raw output in tool transcript; later raw commands/outputs/exits captured in log",
+    "Current source/test pins and8-section/action closure, not immutable original preservation percentage",
+    "32 initial scope pins plus explicitly labelled later support snapshots; no falsely claimed pre-read pins for discovered supports",
+    "No source/native/application completion or real current-location proof"
+  ],
+  "release": {
+    "status": "ARTIFACT_AND_COMMAND_RELEASED",
+    "releasedAt": "2026-10-14T01:43:51.425848Z",
+    "sourceWriteClaim": "NONE throughout; source/tests were readonly",
+    "artifactClaim": "Only owned JSON/log written; final citation correction and re-release complete; no further writes after this command",
+    "commands": "All own commands synchronous/completed; no owned service or async/helper session remains",
+    "nativeAcceptance": "NOTRUN; no source/page/native/application gate waived"
+  },
+  "confirmedIssueCount": 12,
+  "candidateCount": 3,
+  "counts": {
+    "byRule": {
+      "workspace-exact-bounds": 1,
+      "initial-paused-as-empty": 1,
+      "unknown-source-as-success-zero": 1,
+      "paused-labelled-refresh-failure": 1,
+      "historical-tail-as-live-location": 1,
+      "frozen-clock-refreshed-source": 1,
+      "overlap-double-counted-denominator": 1,
+      "pre-rounded-chart-data": 1,
+      "mobile-detail-loss": 1,
+      "duplicate-chart-accessible-name": 1,
+      "hour-label-locale-bypass": 1,
+      "chart-preference-bypass": 1
+    },
+    "bySeverity": {
+      "high": 3,
+      "medium": 8,
+      "low": 1
+    },
+    "byPrimaryFile": {
+      "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx": 3,
+      "web/src/features/vehicles/components/parking-analytics/ParkingCoverageMethodology.tsx": 1,
+      "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx": 1,
+      "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx": 1,
+      "web/src/features/vehicles/lib/parkingDwell.ts": 1,
+      "web/src/features/vehicles/components/parking-analytics/OvernightParkingContext.tsx": 1,
+      "web/src/features/vehicles/components/parking-analytics/LongestParkingStints.tsx": 1,
+      "web/src/features/vehicles/components/parking-analytics/ParkingTemporalProfile.tsx": 2,
+      "web/src/features/vehicles/components/parking-analytics/DurationDistributionChart.tsx": 1
+    }
+  },
+  "deduplication": {
+    "priorReport": "audit-page-231",
+    "carriedOnce": [
+      "PQA-001",
+      "PQA-003",
+      "PQA-009",
+      "PQA-010",
+      "PQC-001"
+    ],
+    "resolvedNotCounted": "Headline cap status mismatch repaired at page69-72",
+    "notReopened": [
+      "Unused ParkingKpiBand not ninth mounted section; original duplicate note retained without deletion",
+      "Completed shared mobile/data-trust/date/chart/palette roots reused, no remigration",
+      "phase6-fix-relative-future-dates active exact lib/dateFormat.ts owner; do not duplicate/write it"
+    ],
+    "ownerSearch": "Current queue exact file/rule searches logged; no exact active parking/model/VehicleEvidenceBrief fix found. Needs below are proposals, not new queue rows."
+  },
+  "needs": [
+    {
+      "name": "Coherent parking window/snapshot/domain correction",
+      "issueIds": [
+        "PQA-001",
+        "PQA-005",
+        "PQA-006",
+        "PQA-007"
+      ],
+      "ownerFiles": [
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx",
+        "web/src/features/vehicles/lib/parkingDwell.ts",
+        "web/src/features/vehicles/components/parking-analytics/ParkingMethodCaveats.tsx",
+        "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx",
+        "web/src/features/vehicles/components/parking-analytics/LongestParkingStints.tsx"
+      ],
+      "disposition": "Separately lease existing local integration/model owners; preserve accepted original migration, no new backend/range engine"
+    },
+    {
+      "name": "Initial/unknown/paused evidence integration",
+      "issueIds": [
+        "PQA-002",
+        "PQA-003",
+        "PQA-004"
+      ],
+      "ownerFiles": [
+        "web/src/features/vehicles/pages/ParkingAnalyticsPage.tsx",
+        "web/src/features/vehicles/components/parking-analytics/types.ts",
+        "web/src/features/vehicles/components/parking-analytics/ParkingSectionBody.tsx",
+        "web/src/features/vehicles/components/parking-analytics/ParkingCoverageMethodology.tsx",
+        "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx"
+      ],
+      "disposition": "Reuse existing DataState distinctions; one feature-shared label correction, parent-owned copy if required; no duplicate generic trust root"
+    },
+    {
+      "name": "Local table/chart preference/precision/a11y adoption",
+      "issueIds": [
+        "PQA-008",
+        "PQA-009",
+        "PQA-010",
+        "PQA-011",
+        "PQA-012"
+      ],
+      "ownerFiles": [
+        "web/src/features/vehicles/components/parking-analytics/DurationDistributionChart.tsx",
+        "web/src/features/vehicles/components/parking-analytics/OvernightParkingContext.tsx",
+        "web/src/features/vehicles/components/parking-analytics/MonthlyDwellTrend.tsx",
+        "web/src/features/vehicles/components/parking-analytics/ParkingTemporalProfile.tsx",
+        "web/src/features/vehicles/components/parking-analytics/ParkingStartBarChart.tsx",
+        "web/src/features/vehicles/components/parking-analytics/TopParkingLocations.tsx",
+        "web/src/features/vehicles/components/parking-analytics/LongestParkingStints.tsx"
+      ],
+      "disposition": "Reuse mobilePresentation/useChartPalette/useDateFormat; no new shared API; preserve loaded-sample export/filter ownership"
+    },
+    {
+      "name": "Safe mounted acceptance",
+      "candidateIds": [
+        "PQC-001",
+        "PQC-002",
+        "PQC-003"
+      ],
+      "disposition": "Separate authorized synthetic browser/native evidence after corrections; no acceptance/real-data access here"
+    }
+  ],
+  "priorityFixes": [
+    "PQA-001 exact bounds",
+    "PQA-007 interval union/denominators",
+    "PQA-002 pending paused",
+    "PQA-005/PQA-006 coherent historical snapshot"
+  ],
+  "pinCheck": {
+    "checkedAt": "2026-10-14T01:43:51.425848Z",
+    "count": 43,
+    "unchanged": 43,
+    "drift": [],
+    "status": "PASS"
+  },
+  "validation": {
+    "parse": "PASS: final corrected disk JSON reparsed",
+    "uniqueIds": 15,
+    "issueCounts": "12 confirmed/3 candidate",
+    "sourcePins": "43 compared",
+    "lineBounds": "all primary finding/candidate citations valid",
+    "commandFailuresRetained": 3,
+    "primaryCitationCorrection": "PQA-012 corrected from nearby dataKey line173 to exact palette-input line175"
+  }
+}

@@ -1,0 +1,414 @@
+{
+  "item": "audit-page-089",
+  "page": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+  "routes": ["/tesla-charging-history"],
+  "purpose": "Inspect and reconcile Tesla Supercharger/DC billing history, spending, visited locations and site pricing, with invoice access and exports.",
+  "primaryGoal": "Review real imported charging sessions for the selected vehicle or fleet, understand cost and usage, sync Tesla records and download billing evidence.",
+  "dataSources": [
+    {
+      "name": "Tesla charging history",
+      "hook": "useTeslaChargingHistory",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "endpoint": "GET /api/v1/tesla/charging/history?vin=<optional VIN>",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:115-123", "web\\src\\api\\hooks\\useCharging.ts:217-226", "internal\\api\\router.go:3541-3544"],
+      "behavior": "Typed entries and all-time summary; VIN-specific or fleet query key; SLOW stale time; forwards AbortSignal; enabled after vehicle initial loading. Range and search are local transformations, not request bounds.",
+      "sourceOwnership": "Hook documents local database reads. Backend handler/query implementation was not inspected; ordering, completeness, currency normalization and server aggregation remain unknown."
+    },
+    {
+      "name": "Tesla history refresh",
+      "hook": "useRefreshTeslaChargingHistory",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "endpoint": "POST /api/v1/tesla/charging/history/refresh",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:169-171", "web\\src\\api\\hooks\\useCharging.ts:229-252", "internal\\api\\router.go:3545"],
+      "behavior": "Page sends optional VIN only. Hook additionally accepts start_time/end_time; successful mutation invalidates both history and site-ranking key families and uses mutation toasts. Router has five-per-minute IP limit. Pending button is disabled. No mutation was executed."
+    },
+    {
+      "name": "Site price ranking",
+      "hook": "useChargingSiteRanking",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "consumer": "web\\src\\features\\charging\\components\\SitePriceRadar.tsx",
+      "endpoint": "GET /api/v1/tesla/charging/history/sites?vin=<optional VIN>",
+      "evidence": ["web\\src\\features\\charging\\components\\SitePriceRadar.tsx:18-24", "web\\src\\api\\hooks\\useCharging.ts:255-263", "internal\\api\\router.go:3544"],
+      "behavior": "Independent VIN-backed source; SLOW stale time and AbortSignal; renders first eight sites, visit count/last visit, realized price per kWh, unpriced visit count and cheapest-to-priciest spread within those eight. No range bounds passed; server source scope/ordering not independently verified."
+    },
+    {
+      "name": "Invoice download",
+      "hook": "getTeslaChargingInvoiceURL",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "endpoint": "GET /api/v1/tesla/charging/invoice/{contentID}",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:252-273", "web\\src\\api\\hooks\\useCharging.ts:266-275", "internal\\api\\router.go:3547"],
+      "behavior": "Encoded opaque invoice ID in direct anchor URL; full API prefix is intentional because this does not use request(). Link only exists when has_invoice and invoice_content_id are both truthy; new tab has noopener noreferrer."
+    },
+    {
+      "name": "Vehicle scope",
+      "hook": "useVehicles / useVehicleVinFilter",
+      "owner": "web\\src\\hooks\\useVehicleVinFilter.ts",
+      "dependencies": ["web\\src\\api\\hooks\\useVehicles.ts", "web\\src\\hooks\\useSelectedVehicle.ts", "web\\src\\hooks\\useUrlState.ts"],
+      "endpoint": "GET /api/v1/vehicles",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:108-115,154-165", "web\\src\\api\\hooks\\useVehicles.ts:73-76", "web\\src\\hooks\\useVehicleVinFilter.ts:8-15,34-84"],
+      "behavior": "Existing workspace owner bridged to VIN endpoints; vin=* is explicit fleet override, bookmarks promote valid VIN into numeric scope, unresolved override is cleared after fleet resolution. Duplicate hook invocations do not establish duplicate network requests; shared QueryClient execution was not tested.",
+      "sourceOwnership": "Only useVehicles query snippet inspected; /vehicles backend route was not checked in this bounded audit."
+    },
+    {
+      "name": "Range, URL filters and display preferences",
+      "owner": "web\\src\\hooks\\useRangeState.ts",
+      "dependencies": ["useUrlEnum", "useUrlString", "useFilteredList", "useUnits", "useFormatting", "useNumberFormatting", "useSettings", "formatDateTime", "formatCurrencyValue"],
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:100-106,128-140,280-314,362-380", "web\\src\\hooks\\useRangeState.ts:9-16,84-90,114-127", "web\\src\\lib\\workspaceScope.ts:70,130"],
+      "behavior": "Header-owned dated and vehicle-enabled route. Page reads calendar start/end, URL q/sort/dir and saved formatting/currency preferences. Wh remains raw in hook/cache/exports; energy formatting occurs at display. Formatter internals and preference subscriptions were not traced."
+    }
+  ],
+  "components": [
+    {
+      "names": ["PageLayout", "LayoutCard"],
+      "category": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "relatedOwner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:383-406,444-524", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-16", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:8-17,24-36,58-60"],
+      "contract": "Existing PageContainer adapter with title/subtitle/query/copyLink/contextActions/primaryAction; full-width min-w-0 composition. Three named cards use title/actions/children and shared Card surface/heading."
+    },
+    {
+      "names": ["ChargingSummaryBrief", "OperationalBrief"],
+      "category": "domain summary / data-display",
+      "owner": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+      "relatedOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:362-380,430-439", "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx:6-29,35-69"],
+      "contract": "Six typed StatMetric measurements with specialist formatter overrides; unknown period reason states lifetime versus loaded-record scope. Retained/loading/status/partial/missing handling goes through existing useOperationalMetrics and OperationalBrief. Shared OperationalBrief source not inspected."
+    },
+    {
+      "names": ["EmbeddedChart", "BarChart", "ChartTooltip", "ChartGradient"],
+      "category": "charts",
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:457-485", "web\\src\\components\\charts\\EmbeddedChart.tsx:6-40"],
+      "contract": "Canonical ChartContainer embedded adapter, chart title/ariaLabel, raw monthly exportData/dataColumns, export and fullscreen opt-ins, fixed desktop 288/mobile 224 height; category-barrel Recharts exports."
+    },
+    {
+      "names": ["MetricBar"],
+      "category": "data-display",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:504-512", "web\\src\\components\\data-display\\MetricBar.tsx:8-28,44-62,92-98"],
+      "contract": "Label/value/max/color/sublabel; existing solid fill option avoids new renderer. Progress semantics, null reading handling and reduced-motion hook are source-present; page feeds precomputed spend/count."
+    },
+    {
+      "names": ["SitePriceRadar"],
+      "category": "domain panel",
+      "owner": "web\\src\\features\\charging\\components\\SitePriceRadar.tsx",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:518-520", "web\\src\\features\\charging\\components\\SitePriceRadar.tsx:9-12,18-87"],
+      "contract": "vin/enabled; shared GlassPanel/PanelTitle/Text/Caption, independent loading/error/retry/empty and priced/unpriced evidence. No competing generic ranking component proposed."
+    },
+    {
+      "names": ["DataTable"],
+      "category": "ui table",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:562-615", "web\\src\\components\\ui\\DataTable.tsx:184-188,236-248,716-725,873-916"],
+      "contract": "Stable tableId tesla-charging-history, seven columns, URL sorting, value filters, column visibility/reorder, sticky header, 600 maxHeight, virtualized 56px rows, pagination 25/50/100, exportRow, multi-selection and localized rowLabel. Existing mobilePresentation and embedded variant available; current page supplies neither."
+    },
+    {
+      "names": ["Button", "Select", "Text", "Caption", "SearchInput", "FilterBar", "ActiveFilterChips", "FadeIn", "Skeleton", "EmptyState", "QueryError", "DataStateNotice", "StaleRefreshWarning"],
+      "category": "existing category-barrel primitives and composites",
+      "owner": "Existing @/components/ui, forms, motion and feedback category owners",
+      "evidence": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:7-16,389-425,525-560,605-615"],
+      "contract": "Reuse present owners for localized controls, filtering, motion and source states. Implementations were not recursively audited."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+      "line": 325,
+      "rule": "MDC-023 / MDC-002",
+      "detail": "Page hand-builds selected CSV Blob/download at 325-355 while DataTable already owns CSV/JSON exports and selected-row scope. Serializers also differ: duration_minutes/energy_wh versus duration/energy, with different site sanitization.",
+      "fix": "Reuse existing table selected export pipeline only after preserving both current field schemas, raw SI, selection scope and filename behavior; if both formats remain intentional, keep explicitly named actions rather than silently deleting one.",
+      "owner": "page",
+      "confidence": "high",
+      "sharedOwner": "web\\src\\components\\ui\\DataTable.tsx",
+      "sharedEvidence": "web\\src\\components\\ui\\DataTable.tsx:873-916"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "PageLayout retains min-w-0 and full-width allocation; page uses one column until 2xl then a three-column grid with spending/sessions spanning two columns and top locations/Price Radar in third: page lines 444-524.",
+      "Vehicle Select is w-full below sm, sm:w-44; refresh uses wrapLabel: page lines 389-405.",
+      "Search is w-full/sm:w-72; embedded chart explicitly uses mobileHeight 224 and height 288: page lines 469-470,537-543.",
+      "Date/location/energy/cost are mobile-visible; table owner hides other columns below md: page lines 183-242; DataTable lines 716-725."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+        "line": 562,
+        "rule": "MDC-043 / MDC-023 preservation",
+        "detail": "Mobile allow-list hides duration and invoice below md; rate is default-hidden everywhere. No mobilePresentation, expanded detail renderer or equivalent mobile invoice action is supplied. Source proves hiding, not actual device reachability via column controls.",
+        "fix": "Use existing DataTable mobilePresentation/detail capabilities or an explicit reachable detail action retaining all seven columns and invoices; preserve tableId, sorting, selections, pagination, filters and both exports.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verifiedViewports": [],
+    "unverified": "All requested widths 320/375/390/430/768/1024/1280/1440/1920/2560, allocated container widths, 200% text, long location names, RTL and overflow require mounted QA."
+  },
+  "accessibility": {
+    "sourcePositives": [
+      "KPI section has localized aria-label (430); chart has localized ariaLabel and dataColumns (459-467).",
+      "Vehicle Select has localized aria-label (394); icons used decoratively set aria-hidden; invoice anchor has localized accessible name (263).",
+      "Selection rowLabel combines site/date and localized unknown-site fallback (593-600); no bare-date-only checkbox labels.",
+      "Shared MetricBar has progressbar semantics and reduced-motion source handling (MetricBar 58-62,95-97)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+        "line": 258,
+        "rule": "MDC-040",
+        "detail": "Inline invoice link has 3.5-size icon and xs text with no explicit minimum target dimensions; its accessible label is identical across rows. Effective target size and table-cell context are unmeasured.",
+        "fix": "Retain native download navigation, use existing button/link chrome with 44px reachability where appropriate, and include site/date in localized action name without replacing the invoice URL.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+        "line": 52,
+        "rule": "MDC-044",
+        "detail": "formatDurationMinutes emits literal h/m units rather than locale-aware duration text. Both table and duration KPI use it; these labels are outside t().",
+        "fix": "Adopt existing locale-aware duration formatting only if exact rounding and hour/minute display are preserved; localize fallback labels through current catalogs, with any missing catalog work assigned separately.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Keyboard order and focus", "Screen reader output and invoice context", "Effective text/UI contrast", "Forced colors", "Actual hit targets", "Reduced motion in mounted chart/entrance/button", "Chart/table alternatives in open fullscreen/export states"]
+  },
+  "states": {
+    "history": "useDataState historical provenance (121) supplies fatalError only; StaleRefreshWarning (407), refresh-blocked/no-data unavailable notice (408-412), firstLoading (360), independent persistent sections and panel retries (448-454,492-498,525-531) preserve retained history instead of blanking on ordinary refresh failure. KPI retained state is passed at 432.",
+    "empty": "History unavailable distinct from loaded-empty chart/location/table at 455-456,499-500,532-536; search mismatch uses separate message at 619-621.",
+    "mutation": "Refresh pending disables its button and displays Syncing with animated icon (401-405); hook success/error toasts and invalidation present (245-251). Offline execution not tested.",
+    "priceRadar": "Independent initial loading/error/retry/empty at SitePriceRadar 33-41; no shared DataState adapter used.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\SitePriceRadar.tsx",
+        "line": 35,
+        "rule": "MDC-026",
+        "detail": "isError replaces site rows with QueryError even if query retains prior data; no refresh warning or unavailable/paused state is distinguished. This differs from the main historical source trust policy.",
+        "fix": "Use existing useDataState and StaleRefreshWarning; replace rows only for fatal no-data failure, retain site evidence on refresh error and expose paused/unavailable state with independent retry.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+        "line": 359,
+        "rule": "MDC-026 freshness",
+        "detail": "Last synced uses entries[0].fetched_at from range-filtered rows, not an explicit source sync timestamp or max across records. Changing the analysis range can hide/change this source-freshness label; backend ordering and timestamp semantics unverified.",
+        "fix": "Determine documented source timestamp semantics; preserve fetched_at metadata but do not label a selected row as global freshness without evidence. Prefer actual source metadata or a clearly row-scoped label.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+        "line": 67,
+        "rule": "MDC-026 unknown is not zero",
+        "detail": "Monthly spending and top-location rollups substitute zero for missing total_due (67,89); total duration sums missing/invalid durations as zero (146). Therefore a row/bucket with unknown bills can appear as measured zero, and partial duration has no missing-count evidence. Sites count includes unpriced entries.",
+        "fix": "Retain every record and existing aggregate calculation pending explicitly approved business changes; expose priced/missing counts and partial duration evidence rather than upgrading unknowns to trustworthy zero. Preserve known zero as distinct from missing.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+      "line": 509,
+      "rule": "MDC-010 / mission 43",
+      "detail": "Top-location bars assign a different fixed chartTokens.series hue to each ranked site, creating up to six saturated decorative colors with no category/meaning legend. Default MetricBar fill adds a gradient. Token series values are fixed hex at tokens.ts:401.",
+      "fix": "Use a single restrained existing semantic/theme hue for spend ranking and MetricBar fill='solid'; retain ordering, amounts, count labels and all six sites. Do not modify user-selected palettes or global tokens from this page.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+      "line": 216,
+      "rule": "MDC-012 / MDC-010",
+      "detail": "Energy and cost body values use fixed cyan-300/emerald-300 (216,230), decorative card icons use cyan-300 (447,491), and invoice link uses cyan-300 (262). Price Radar uses the same fixed hues (29,57). These are not neon class names, but fixed-hue accent repetition is source-level noise and effective light/dark contrast is unknown.",
+      "fix": "Prefer existing theme-aware primary/secondary text roles for routine data and decorative icons; reserve restrained semantic emphasis for meaningful cheapest-site status and navigable invoice action.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+      "line": 476,
+      "rule": "MDC-034 / mission 43",
+      "detail": "Single-series monthly spending has a fixed cyan series gradient at opacity 0.6. This is source-confirmed decoration, not a measured visual or contrast failure.",
+      "fix": "Reuse a restrained existing chart color/fill contract without changing monthly data, axes, tooltip, responsive sizing, accessible columns, fullscreen or export controls.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+      "line": 128,
+      "rule": "MDC-032 / MDC-045",
+      "detail": "Page reconstructs browser-local midnight and 23:59:59.999 from calendar start/end instead of consuming useRangeState startInstant/endInstantExclusive. Rolling scopes such as 24h lose exact instants; timezone supplied by the shared range owner is bypassed. Hook only supports VIN read scope and no range bounds are sent.",
+      "fix": "Consume shared precise instants and exclusive upper bound; coordinate typed hook/backend filtering extension rather than claiming server support. Keep lifetime summary and loaded-record duration/sites explicitly separate from scoped charts/table; preserve all records and import mutation semantics.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+      "line": 389,
+      "rule": "MDC-032",
+      "detail": "Page contextActions renders a second vehicle Select despite /tesla-charging-history being registered as vehicle-enabled (workspaceScope.ts:130) and useVehicleVinFilter sharing workspace state. VIN fleet override semantics are important and cannot simply be dropped.",
+      "fix": "Use shell-owned vehicle scope without duplicate selector; first verify the header supports explicit fleet selection and VIN bookmark promotion. If unsupported, extend the canonical owner before removing the page action.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+      "line": 61,
+      "rule": "MDC-045 / preserve source currency",
+      "detail": "Monthly and location sums combine total_due without currency_code grouping, then display in saved user currency (479,510). Table correctly preserves per-row currency (225-234). Server summary and price ranking normalization are unknown; no currency conversion is visible in these local sums.",
+      "fix": "Establish backend/source currency guarantees before any aggregate redesign; retain each row currency and expose mixed/unknown currency evidence. Do not invent FX conversion or silently relabel heterogeneous sums as one currency.",
+      "owner": "integration",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+      "line": 60,
+      "rule": "mission 33 / MDC-002",
+      "detail": "629-line page combines date/ranking transforms, duration helpers, column rendering, sorting, browser download code and page orchestration. These exported helpers are business/presentation transformations, not additional exported React components.",
+      "fix": "Extract narrowly scoped typed feature helpers/column presentation only when authorized; retain exported helper compatibility and all sections. Use page plus extracted component totals for preservation, not deletion to hit a size target.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve range/workspace consistency, hidden mobile invoice/detail preservation and independent source trust before cosmetic adoption; source currency and unknown-as-zero risks need evidence rather than aesthetic rewrites.",
+    "order": ["Precise range and workspace owner contracts", "Retained Price Radar and unknown/partial source evidence", "Mobile full-detail and invoice reachability", "Currency/freshness semantics verification", "Deduplicated exports and restrained presentation"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "VIN history analysis-bound contract",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useCharging.ts",
+      "props": ["Optional typed startInstant/endInstantExclusive read bounds with established snake_case backend parameter names; names must be confirmed before implementation", "VIN and enabled remain unchanged", "Preserve separate lifetime summary versus scoped entries/aggregates"],
+      "variants": ["VIN", "fleet"],
+      "states": ["initial loading", "retained refresh", "empty", "fatal error", "paused/unavailable"],
+      "usedBy": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx"],
+      "dependsOn": ["Backend history handler/repository filtering and completeness evidence; not inspected", "web\\src\\hooks\\useRangeState.ts precise instant contract", "Existing history query keys, cancellation and stale-time policy"],
+      "evidence": ["web\\src\\api\\hooks\\useCharging.ts:218-225", "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:128-148"],
+      "note": "Missing capability in inspected hook; not authorization to edit backend or assert a supported endpoint."
+    },
+    {
+      "name": "Canonical header fleet/VIN compatibility",
+      "owner": "web\\src\\hooks\\useVehicleVinFilter.ts",
+      "existingOwnerFile": "web\\src\\hooks\\useVehicleVinFilter.ts",
+      "props": ["Existing numeric vehicle selection", "Explicit fleet override equivalent to vin=*", "Valid VIN bookmark promotion and stale VIN cleanup"],
+      "variants": ["selected vehicle", "all vehicles"],
+      "states": ["vehicles loading", "resolved fleet", "unresolvable VIN"],
+      "usedBy": ["web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx"],
+      "dependsOn": ["Canonical WorkspaceHeader vehicle picker owner; implementation not inspected", "web\\src\\lib\\workspaceScope.ts vehicle-enabled registration"],
+      "evidence": ["web\\src\\hooks\\useVehicleVinFilter.ts:8-15,58-84", "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx:389-397"],
+      "note": "Conditional shared integration requirement: do not build a second selector or assume header fleet support."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+      "line": 389,
+      "rule": "MDC-032",
+      "detail": "Local vehicle picker competes with the registered workspace vehicle owner.",
+      "fix": "Resolve canonical header fleet/VIN compatibility requirement once; preserve all selection/bookmark behavior.",
+      "owner": "integration",
+      "confidence": "high",
+      "reference": "requiredSharedChanges: Canonical header fleet/VIN compatibility"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+      "line": 325,
+      "rule": "MDC-023",
+      "detail": "Local selected CSV generation overlaps the existing DataTable export controller.",
+      "fix": "Follow the single deduplicated export finding; no additional export component/library.",
+      "owner": "page",
+      "confidence": "high",
+      "reference": "duplicatedPatterns: selected CSV"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "59519F81EFEE4A85C40EC1BAFFD829485144CB1D1ED56A12D427D2CBE21DEEFF",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 629,
+    "sectionCount": 5,
+    "sections": [
+      {"name": "Charging summary metrics", "line": 430, "count": 1, "metricCount": 6, "metrics": ["Total sessions", "Total energy", "Total spend", "Avg cost/kWh", "Total duration", "Sites visited"]},
+      {"name": "Monthly spending", "line": 446, "count": 1},
+      {"name": "Top locations", "line": 490, "count": 1},
+      {"name": "Price Radar", "line": 519, "count": 1},
+      {"name": "Charging sessions", "line": 524, "count": 1, "columnCount": 7, "columns": ["Date", "Location", "Duration", "Energy", "Cost", "Rate", "Invoice"]}
+    ],
+    "auxiliaryContent": ["Page title/subtitle", "Last-sync timestamp when range contains a row", "Source trust warning/unavailable notice", "Lifetime/loaded-record summary scope explanation", "Independent Price Radar unpriced count and price spread"],
+    "componentCounts": {"PageLayout": 1, "LayoutCard": 3, "ChargingSummaryBrief": 1, "EmbeddedChart": 1, "SitePriceRadar": 1, "DataTable": 1, "sectionElements": 2, "GlassPanelInPage": 0, "ChartContainerInPage": 0, "GlassPanelInSitePriceRadar": 1},
+    "actions": [
+      {"name": "Copy page link", "line": 388},
+      {"name": "Select vehicle or explicit all vehicles", "line": 390},
+      {"name": "Refresh records from Tesla / disabled pending state", "line": 399},
+      {"name": "History retry in KPI footer and three panels", "line": 438},
+      {"name": "Monthly chart fullscreen, export and source-data columns", "line": 457},
+      {"name": "Independent Price Radar retry", "file": "web\\src\\features\\charging\\components\\SitePriceRadar.tsx", "line": 36},
+      {"name": "Location search, remembered charging search scope, remove chip and clear all", "line": 537},
+      {"name": "Date/energy/cost sorting and direction in URL", "line": 280},
+      {"name": "Value filters; visibility/reorder; pagination 25/50/100; sticky/virtualized scrolling", "line": 563},
+      {"name": "Per-session invoice download in new tab", "line": 258},
+      {"name": "Table CSV/JSON exports using exportRow", "line": 579},
+      {"name": "Multi-row selection and dedicated selected CSV download", "line": 593}
+    ],
+    "dataBehavior": [
+      "Preserve optional VIN/fleet scope, valid VIN bookmark handling, query keys, enablement, SLOW stale time, read cancellation and refresh invalidation of both independent sources.",
+      "Preserve typed nullable billing fields and all record metadata: session/id/VIN/location/start/stop/country/state/county/postal/billing/fee/currency/pricing/rate/Wh/amount/invoice/fetched_at/created_at. Do not remove non-rendered metadata from payload/cache.",
+      "Lifetime server summary is distinct from all-loaded-record duration/sites and locally ranged chart/table. Preserve this explicit scope explanation; any range correction requires verified equivalence.",
+      "Monthly buckets use local year/month, skip malformed timestamp buckets, sort ascending; location rollup sorts descending spend and keeps six, accumulating energyWh/count. Keep exported helpers and their behavior until approved correction.",
+      "Duration currently rounds positive finite timestamp difference to minutes; null stop/invalid/nonpositive is unknown. KPI exposes seconds to StatMetric with specialist duration formatter.",
+      "Wh values are raw in source/cache and exports, display conversion uses useUnits; invoices and per-row currency/rate/source pricing labels remain source-owned. Do not rename wire fields or invent monetary conversion.",
+      "Search covers site_location_name; sorting operates on a copy, date lexical order and missing numeric sort values currently zero. Selected session IDs and stable tableId remain unchanged.",
+      "Preserve both current export field sets, null handling, filenames, selected versus matching-loaded row scopes and download behavior; resolve duplicate controller without deleting an export capability.",
+      "Price Radar remains independent, first eight sites, visit/date context, unpriced count and within-displayed-sites spread; range behavior is not inferred."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 source-only atomic audit; no source edits, Git, full lint/build or runtime interactions.",
+    "routeMount": "Assigned route used verbatim. Actual router mounting/auth/reachability not exercised or traced.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "backend": "Only exact page-specific route block inspected; no handler/query/body inspection, billing normalization, server completeness, invoice response, ordering or actual endpoints exercised.",
+    "dependencyBoundary": "Only page, two direct feature components, relevant hook contracts and narrow shared owner/source snippets inspected. Other imported formatter/theme/motion/feedback internals are not claimed audited. filesRead records actual inspected paths.",
+    "validation": [
+      {"command": "Python json.loads report validation with assertions for required fields, exact item/page/routes, hashlib.sha256 current page bytes, splitlines count, issue/shared contract keys and deduplicated shared names/filesRead", "exitCode": 0, "output": "PASS: valid JSON; 20 required fields; exact item/page/routes; current SHA256 and 629-line baseline; issue/shared contracts; deduplicated shared names and filesRead."},
+      {"command": "Get-FileHash 'web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx' -Algorithm SHA256; (Get-Content 'web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx').Count", "exitCode": 0, "output": "SHA256 59519F81EFEE4A85C40EC1BAFFD829485144CB1D1ED56A12D427D2CBE21DEEFF; 629"},
+      {"command": "Scoped PowerShell regex counts on TeslaChargingHistoryPage.tsx: style=\\{\\{; <(button|input|textarea|select|table)\\b; from '(recharts|react-leaflet|framer-motion)'; neon-|glow|text-white|bg-white; JSX owner names", "exitCode": 0, "output": "staticInlineStyle: 0\nrawRestrictedHtml: 0\ndirectChartMapMotionImports: 0\nneonGlowPureWhite: 0\nLayoutCard: 3\nEmbeddedChart: 1\nChargingSummaryBrief: 1\nSitePriceRadar: 1\nDataTable: 1", "limitation": "Literal regex source counts only, not AST, contrast, dynamic styling or whole dependency graph acceptance."},
+      {"command": "Initial PowerShell scoped count probe", "exitCode": 1, "output": "ParserError: Unexpected token ']' in expression or statement.", "resolution": "Corrected quoting and reran successfully; no file writes from failed probe."},
+      {"command": "bash .github\\skills\\audit-violations\\audit.sh <page>", "exitCode": null, "output": "NOT RUN: inspected script unconditionally executes whole-web npx tsc --noEmit; source-only task/concurrent worker contract does not authorize that gate."},
+      {"command": "npx tsc --noEmit; lint; tests; build; browser QA", "exitCode": null, "output": "NOT RUN: not authorized for atomic Phase0 source audit."}
+    ],
+    "literalNoiseCounts": "No direct neon/glow/pure-white literals in assigned page. Saturated fixed-hue and inherited gradient/rainbow risks are separately cited; zero literal matches is not zero visual issues.",
+    "acceptance": "Report completion means bounded source audit artifact only, not modernization completion, runtime acceptance or no-data-loss certification."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx",
+    "web\\src\\features\\charging\\components\\SitePriceRadar.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\hooks\\useVehicleVinFilter.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "internal\\api\\router.go"
+  ]
+}

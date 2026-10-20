@@ -3,17 +3,17 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
   Music, Disc3, Radio, Bluetooth, Podcast,
-  Headphones, Volume2, ListMusic, BarChart3, AlertCircle,
+  Headphones, Volume2, BarChart3, AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 
-import { PageContainer } from '@/components/layout';
+import { CardGrid, PageLayout, LayoutCard } from '@/components/layout';
 import {
-  GlassPanel, Badge, DataTable, PanelTitle, Text, Caption, type Column,
+  Badge, DataTable, Text, Caption, Icon, type Column,
 } from '@/components/ui';
 
-import { MetricCard, TimeStamp } from '@/components/data-display';
+import { KVList, TimeStamp } from '@/components/data-display';
 import { EmptyState, AlertBanner, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -26,10 +26,17 @@ import { useMedia, useMediaHistory } from '@/api/hooks/useVehicleSystems';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 import { getErrorMessage } from '@/lib/errorMessage';
 import type { MediaSnapshot } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { deriveDataState } from '@/api/dataState';
+import { VehicleSourceContent } from '../components/VehicleSourceContent';
+import { VehicleSourcePause } from '../components/VehicleSourcePause';
+import {
+  MediaSlot, MediaStats, finiteReading, playbackProgress,
+} from '../components/media-player-modernization';
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -50,6 +57,10 @@ function formatVolumeLevel(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? fmtNumber(value) : '—';
 }
 
+function reportedTitle(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
 /** Milliseconds → `m:ss` play-time label. Non-finite/negative input clamps to
  *  `0:00` so a malformed elapsed/duration never renders `-1:-01`. */
 function fmtPlayTime(ms: number): string {
@@ -60,97 +71,90 @@ function fmtPlayTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/** Source → toned accent icon. Decorative — the adjacent text carries meaning. */
+/** Source identity comes from the glyph and label, not decorative status hues. */
 function SourceIcon({ source }: { source: string }) {
   const s = (source ?? '').toLowerCase();
-  const base = 'h-4 w-4';
-  if (s.includes('spotify')) return <Disc3 className={cn(base, 'text-emerald-300')} aria-hidden="true" />;
-  if (s.includes('bluetooth')) return <Bluetooth className={cn(base, 'text-indigo-300')} aria-hidden="true" />;
-  if (s.includes('radio') || s.includes('fm') || s.includes('am'))
-    return <Radio className={cn(base, 'text-amber-300')} aria-hidden="true" />;
-  if (s.includes('podcast')) return <Podcast className={cn(base, 'text-purple-300')} aria-hidden="true" />;
-  return <Headphones className={cn(base, 'text-cyan-300')} aria-hidden="true" />;
+  const icon = s.includes('spotify') ? Disc3
+    : s.includes('bluetooth') ? Bluetooth
+    : s.includes('radio') || s.includes('fm') || s.includes('am') ? Radio
+    : s.includes('podcast') ? Podcast
+    : Headphones;
+  return <Icon icon={icon} className={typography.color.secondary} />;
 }
 
 function statusVariant(status: string): 'success' | 'warning' | 'neutral' {
-  const s = (status ?? '').toLowerCase();
-  if (s.includes('playing')) return 'success';
-  if (s.includes('paused')) return 'warning';
+  const s = typeof status === 'string' ? status.trim().toLowerCase() : '';
+  if (s === 'playing') return 'success';
+  if (s === 'paused') return 'warning';
   return 'neutral';
 }
 
 function statusLabel(status: string, t: TFunction): string {
-  const s = (status ?? '').toLowerCase();
-  if (s.includes('playing')) return t('media.status.playing', 'Playing');
-  if (s.includes('paused')) return t('media.status.paused', 'Paused');
-  return t('media.status.stopped', 'Stopped');
+  const s = typeof status === 'string' ? status.trim().toLowerCase() : '';
+  if (!s) return t('media.modernization.unknownStatus', 'Unknown status');
+  if (s === 'playing') return t('media.status.playing', 'Playing');
+  if (s === 'paused') return t('media.status.paused', 'Paused');
+  if (s === 'stopped') return t('media.status.stopped', 'Stopped');
+  return status;
 }
 
 /* ── Component ─────────────────────────────────────────────────── */
 
 export default function MediaPlayerPage() {
+  const { fmtNumber, fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
-  usePageTitle(t('media.title', 'Media Player'));
+  usePageTitle(t('media.title', 'Media player'));
 
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const hasVehicle = activeId !== '';
 
-  const { start, end } = useRangeState({
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'media-player.range',
     defaultPresetId: '7d',
   });
 
   const [tableSortKey, setTableSortKey] = useState<string>('created_at');
   const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('desc');
+  const [expandedHistoryKeys, setExpandedHistoryKeys] = useState<(string | number)[]>([]);
 
   /* ── Queries (via @/api/hooks) ────────────────────────────── */
 
   const mediaQuery = useMedia(activeId);
-  const historyQuery = useMediaHistory(activeId, { start, end });
+  const historyQuery = useMediaHistory(activeId, {
+    start: startInstant, end: endInstantExclusive,
+  });
 
   const latest = mediaQuery.data ?? null;
   const history = historyQuery.data ?? [];
-  const anyError = mediaQuery.error ?? historyQuery.error ?? null;
+  const mediaSource = deriveDataState({ ...mediaQuery, data: mediaQuery.data ?? undefined });
+  const historySource = deriveDataState(historyQuery, { provenance: 'historical' });
+  const anyError = mediaSource.fatalError ?? historySource.fatalError;
+  const mediaState = {
+    retained: mediaSource.refreshError != null || (mediaSource.hasData && mediaSource.isRefreshBlocked),
+    loading: mediaQuery.isLoading && !mediaSource.hasData,
+    fatal: mediaSource.fatalError != null,
+    available: mediaSource.hasData,
+  };
+  const historyState = {
+    retained: historySource.refreshError != null || (historySource.hasData && historySource.isRefreshBlocked),
+    loading: historyQuery.isLoading && !historySource.hasData,
+    fatal: historySource.fatalError != null,
+    available: historySource.hasData,
+  };
 
-  /* ── Filtered history (client-side range guard) ───────────── */
+  /* ── History inside the shared half-open interval ────────── */
 
   const filtered = useMemo<MediaSnapshot[]>(() => {
     if (!history.length) return [];
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    const startMs = Date.parse(startInstant);
+    const endMs = Date.parse(endInstantExclusive);
     return history.filter((s) => {
-      const ts = new Date(s.created_at).getTime();
-      return Number.isNaN(ts) ? true : ts >= startMs && ts <= endMs;
+      const ts = Date.parse(s.created_at ?? s.ts ?? '');
+      return Number.isFinite(ts) && ts >= startMs && ts < endMs;
     });
-  }, [history, start, end]);
-
-  /* ── Derived stats ────────────────────────────────────────── */
-
-  const stats = useMemo(() => {
-    if (!filtered.length) return { uniqueTracks: 0, topSource: '—', avgVolume: 0 };
-
-    const titles = new Set(filtered.map((s) => s.now_playing_title).filter(Boolean));
-
-    const sources = filtered.reduce<Record<string, number>>((acc, s) => {
-      if (s.playback_source) acc[s.playback_source] = (acc[s.playback_source] ?? 0) + 1;
-      return acc;
-    }, {});
-
-    const topSource = Object.entries(sources).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—';
-
-    // Average only snapshots that actually carry a volume reading. Treating a
-    // missing `audio_volume` as 0 (the old behaviour) dragged the mean down and
-    // reported a dishonest "Avg Volume" whenever some rows lacked the field.
-    const volumes = filtered
-      .map((s) => s.audio_volume)
-      .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
-    const avgVolume = volumes.length
-      ? volumes.reduce((sum, v) => sum + v, 0) / volumes.length
-      : 0;
-
-    return { uniqueTracks: titles.size, topSource, avgVolume };
-  }, [filtered]);
+  }, [history, startInstant, endInstantExclusive]);
 
   /* ── Volume chart data ────────────────────────────────────── */
 
@@ -160,13 +164,14 @@ export default function MediaPlayerPage() {
     // Volume KPI above): charting a missing field as 0 drew phantom drops to
     // silence that the KPI deliberately excludes.
     return [...filtered]
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .filter(
-        (s): s is MediaSnapshot & { audio_volume: number } =>
-          typeof s.audio_volume === 'number' && Number.isFinite(s.audio_volume),
+        (s): s is MediaSnapshot & { audio_volume: number; created_at: string } =>
+          typeof s.created_at === 'string' && Number.isFinite(Date.parse(s.created_at))
+          && typeof s.audio_volume === 'number' && Number.isFinite(s.audio_volume),
       )
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .map((s) => ({ time: formatDateTime(s.created_at), volume: s.audio_volume }));
-  }, [filtered]);
+  }, [filtered, formatDateTime]);
 
   /* ── Volume axis ceiling ──────────────────────────────────── */
   // Derive the Y-axis max from the data actually being charted so historical
@@ -175,7 +180,7 @@ export default function MediaPlayerPage() {
   // low-volume series still renders against a sensible scale.
   const volumeAxisMax = useMemo(() => {
     const dataMax = volumeChartData.reduce((m, d) => Math.max(m, d.volume ?? 0), 0);
-    const knownMax = Math.max(dataMax, latest?.audio_volume_max ?? 0);
+    const knownMax = Math.max(dataMax, finiteReading(latest?.audio_volume_max) ? latest.audio_volume_max : 0);
     return knownMax > 0 ? knownMax : VOLUME_FALLBACK_MAX;
   }, [volumeChartData, latest?.audio_volume_max]);
 
@@ -214,16 +219,18 @@ export default function MediaPlayerPage() {
       },
       {
         key: 'now_playing_title',
+        filterValue: (row) => reportedTitle(row.now_playing_title),
         header: t('media.col.track', 'Track'),
         sortable: true,
         render: (row) => (
           <Text as="span" size="sm" weight="medium" color="primary" className="block max-w-[200px] truncate">
-            {row.now_playing_title || '—'}
+            {reportedTitle(row.now_playing_title) ?? '—'}
           </Text>
         ),
       },
       {
         key: 'now_playing_artist',
+        filterValue: (row) => row.now_playing_artist || null,
         header: t('media.col.artist', 'Artist'),
         sortable: true,
         render: (row) => (
@@ -234,6 +241,7 @@ export default function MediaPlayerPage() {
       },
       {
         key: 'playback_source',
+        filterValue: (row) => row.playback_source || null,
         header: t('media.col.source', 'Source'),
         sortable: true,
         render: (row) => (
@@ -247,16 +255,21 @@ export default function MediaPlayerPage() {
       },
       {
         key: 'audio_volume',
+        align: 'right',
+        filterValue: (row) => row.audio_volume == null ? null : `${row.audio_volume}:${row.audio_volume_max ?? ''}`,
+        filterValueLabel: (_value, row) => row.audio_volume == null ? '—' : `${formatVolumeLevel(row.audio_volume)}/${formatVolumeLevel(row.audio_volume_max)}`,
         header: t('media.col.volume', 'Volume'),
         sortable: true,
         render: (row) => (
-          <Text as="span" variant="body" className="tabular-nums text-cyan-300">
+          <Text as="span" variant="body" className="tabular-nums">
             {formatVolumeLevel(row.audio_volume)}/{formatVolumeLevel(row.audio_volume_max)}
           </Text>
         ),
       },
       {
         key: 'playback_status',
+        filterValue: (row) => row.playback_status || null,
+        filterValueLabel: (_value, row) => statusLabel(row.playback_status ?? '', t),
         header: t('media.col.status', 'Status'),
         sortable: true,
         render: (row) => (
@@ -266,7 +279,7 @@ export default function MediaPlayerPage() {
         ),
       },
     ],
-    [t],
+    [t, displayPrecision, displayLocale],
   );
 
   /* ── Sorting ──────────────────────────────────────────────── */
@@ -296,19 +309,7 @@ export default function MediaPlayerPage() {
 
   /* ── Derived play state ───────────────────────────────────── */
 
-  const isPlaying = (latest?.playback_status ?? '').toLowerCase().includes('playing');
-  const progressPct =
-    latest?.now_playing_duration && latest.now_playing_duration > 0
-      ? Math.min(100, ((latest.now_playing_elapsed ?? 0) / latest.now_playing_duration) * 100)
-      : 0;
-
-  // Clamped seconds for the progressbar aria values so a negative or
-  // overrun elapsed can never report a value outside [0, duration].
-  const durationSec = latest?.now_playing_duration ? Math.round(latest.now_playing_duration / 1000) : 0;
-  const elapsedSec = Math.min(
-    durationSec,
-    Math.max(0, Math.round((latest?.now_playing_elapsed ?? 0) / 1000)),
-  );
+  const progress = playbackProgress(latest);
 
   const noVehicleState = (icon: ReactNode, message: string) => (
     <EmptyState /* no-action: awaiting a vehicle selection — no recovery action */
@@ -320,87 +321,98 @@ export default function MediaPlayerPage() {
   /* ── Render ───────────────────────────────────────────────── */
 
   return (
-    <PageContainer
-      title={t('media.title', 'Media Player')}
+    <PageLayout
+      title={t('media.title', 'Media player')}
       subtitle={t('media.subtitle', 'Now playing, volume, and listening history')}
       query={[mediaQuery, historyQuery]}
+      busy={mediaQuery.isFetching || historyQuery.isFetching}
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       )}
+      {(mediaState.retained || historyState.retained) && (
+        <Caption role="status">
+          {mediaSource.refreshError || historySource.refreshError
+            ? t('media.modernization.retained', 'Refresh failed; previously loaded data remains visible for the affected source.')
+            : t('dataState.refreshBlocked.message', 'The device is offline, so this section is showing the last values it received.')}
+        </Caption>
+      )}
 
       {/* ── Row 1 — Now Playing hero + Volume gauge ──────────── */}
       <FadeIn>
-        <section
-          aria-label={t('media.nowPlayingSection', 'Now playing')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
-        >
-          {/* Now Playing — hero, spans two columns on wide screens */}
-          <GlassPanel
-            glow="cyan"
-            hover
-            className={cn('p-4 sm:p-5 xl:col-span-2', isPlaying && 'ring-1 ring-cyan-400/20')}
-          >
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Music className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('media.nowPlaying', 'Now Playing')}
-            </PanelTitle>
-
+        <section aria-label={t('media.nowPlayingSection', 'Now playing')}>
+        {hasVehicle && latest != null && (
+          <Caption className="mb-3 break-words">
+            {t('media.modernization.retrievedAt', 'Media retrieved at')}:{' '}
+            <TimeStamp value={mediaSource.updatedAt} format="absolute" />
+            {' · '}
+            {t('media.modernization.measurementTimeUnavailable', 'Measurement time unavailable; the latest media response does not include observation timestamps.')}
+          </Caption>
+        )}
+        <CardGrid label={t('media.nowPlayingSection', 'Now playing')} items={[
+          { id: 'media-now-playing', size: 'half', content: <MediaSlot>
+          {/* Now Playing — retained metadata in the shared packed layout */}
+          <LayoutCard title={t('media.nowPlaying', 'Now playing')}>
+            <VehicleSourceContent source={mediaSource} enabled={hasVehicle}
+              label={t('media.nowPlaying', 'Now playing')}>
             {!hasVehicle ? (
               noVehicleState(
                 <Music className="h-8 w-8" />,
                 t('media.selectVehicle', 'Select a vehicle to see what’s playing'),
               )
+            ) : mediaSource.isRefreshBlocked && !mediaSource.hasData ? (
+              <VehicleSourcePause label={t('media.nowPlaying', 'Now playing')}
+                message={t('dataSources.status.pausedOffline', 'Paused offline')}
+                retained={false} onRetry={() => { mediaSource.retry?.(); }} />
             ) : mediaQuery.isLoading && !latest ? (
               <div className="flex items-start gap-4 sm:gap-6">
-                <div className="h-24 w-24 shrink-0 animate-pulse rounded-xl bg-white/[0.05] sm:h-28 sm:w-28" aria-hidden="true" />
+                <div className="h-16 w-16 shrink-0 rounded-xl bg-[var(--surface-3)] sm:h-28 sm:w-28" aria-hidden="true" />
                 <div className="flex-1 space-y-3 py-1">
                   <Skeleton width="60%" height={20} />
                   <Skeleton width="40%" height={14} />
                   <Skeleton width="30%" height={12} />
                 </div>
               </div>
-            ) : mediaQuery.error ? (
+            ) : mediaState.fatal ? (
               <QueryError
                 error={mediaQuery.error}
                 onRetry={() => mediaQuery.refetch()}
                 resourceName={t('media.resource', 'Media')}
               />
+            ) : !latest ? (
+              <EmptyState message={t('media.modernization.noSnapshot', 'No media snapshot available')}
+                action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void mediaQuery.refetch(); } }} />
             ) : (
               <div className="flex items-start gap-4 sm:gap-6">
                 {/* Album-art placeholder */}
                 <div
-                  className={cn(
-                    'flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] sm:h-28 sm:w-28',
-                    isPlaying && 'animate-pulse',
-                  )}
+                  className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-2)] sm:h-28 sm:w-28"
                   aria-hidden="true"
                 >
-                  <Music className="h-10 w-10 text-cyan-300/70 sm:h-12 sm:w-12" />
+                  <Music className="h-8 w-8 text-[var(--text-secondary)] sm:h-12 sm:w-12" />
                 </div>
 
                 {/* Track info */}
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Text as="p" size="lg" weight="bold" color="primary" className="truncate">
-                      {latest?.now_playing_title || t('media.noTrack', 'No track')}
+                    <Text as="p" size="lg" weight="bold" color="primary" className="break-words">
+                      {reportedTitle(latest.now_playing_title)
+                        ?? t('media.modernization.unknownReading', 'No reading reported')}
                     </Text>
-                    {latest?.playback_status && (
-                      <Badge variant={statusVariant(latest.playback_status)} dot>
-                        {statusLabel(latest.playback_status, t)}
-                      </Badge>
-                    )}
+                    <Badge variant={statusVariant(latest.playback_status ?? '')} dot>
+                      {statusLabel(latest.playback_status ?? '', t)}
+                    </Badge>
                   </div>
 
-                  <Text as="p" size="sm" color="secondary" className="truncate">
+                  <Text as="p" size="sm" color="secondary" className="break-words">
                     {latest?.now_playing_artist || t('media.unknownArtist', 'Unknown artist')}
                     {latest?.now_playing_album ? ` — ${latest.now_playing_album}` : ''}
                   </Text>
 
                   {latest?.now_playing_station && (
-                    <Text as="p" variant="caption" className="truncate">
+                    <Text as="p" variant="caption" className="break-words">
                       {latest.now_playing_station}
                     </Text>
                   )}
@@ -414,117 +426,118 @@ export default function MediaPlayerPage() {
                     </div>
                   )}
 
-                  {latest?.now_playing_duration ? (
+                  {latest?.now_playing_duration != null || latest?.now_playing_elapsed != null ? (
                     <div
                       className="flex items-center gap-2 pt-1"
-                      role="progressbar"
+                      role={progress ? 'progressbar' : undefined}
                       aria-label={t('media.progress', 'Playback progress')}
-                      aria-valuemin={0}
-                      aria-valuemax={durationSec}
-                      aria-valuenow={elapsedSec}
+                      aria-valuemin={progress ? 0 : undefined}
+                      aria-valuemax={progress?.durationSec}
+                      aria-valuenow={progress?.elapsedSec}
                     >
                       <Text as="span" variant="caption" className="tabular-nums">
-                        {fmtPlayTime(latest.now_playing_elapsed ?? 0)}
+                        {finiteReading(latest.now_playing_elapsed) ? fmtPlayTime(latest.now_playing_elapsed) : '—'}
                       </Text>
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]">
                         <div
-                          className="h-full rounded-full bg-cyan-400 transition-all duration-slow"
-                          style={{ width: `${progressPct}%` }}
+                          className="h-full rounded-full bg-[var(--theme-primary)] motion-safe:transition-all duration-slow"
+                          style={{ width: `${progress?.percent ?? 0}%` }}
                         />
                       </div>
                       <Text as="span" variant="caption" className="tabular-nums">
-                        {fmtPlayTime(latest.now_playing_duration)}
+                        {finiteReading(latest.now_playing_duration) ? fmtPlayTime(latest.now_playing_duration) : '—'}
                       </Text>
                     </div>
                   ) : null}
+                  {!progress && (
+                    <Caption>{t('media.modernization.progressUnknown', 'Playback progress is unavailable without a reported elapsed time and positive duration.')}</Caption>
+                  )}
                 </div>
               </div>
             )}
-          </GlassPanel>
-
+            </VehicleSourceContent>
+          </LayoutCard>
+          </MediaSlot> },
+          { id: 'media-volume', size: 'half', content: <MediaSlot>
           {/* Volume gauge */}
-          <GlassPanel className="flex flex-col p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Volume2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('media.volume', 'Volume')}
-            </PanelTitle>
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-2">
+          <LayoutCard title={t('media.volume', 'Volume')}>
+            <VehicleSourceContent source={mediaSource} enabled={hasVehicle}
+              label={t('media.volume', 'Volume')}>
+            {!hasVehicle ? noVehicleState(
+              <Volume2 className="h-8 w-8" />,
+              t('media.selectVehicle', 'Select a vehicle to see what’s playing'),
+            ) : mediaSource.isRefreshBlocked && !mediaSource.hasData ? (
+              <VehicleSourcePause label={t('media.volume', 'Volume')}
+                message={t('dataSources.status.pausedOffline', 'Paused offline')}
+                retained={false} onRetry={() => { mediaSource.retry?.(); }} />
+            ) : mediaState.loading ? <Skeleton height={128} />
+              : mediaState.fatal ? <QueryError error={mediaQuery.error} onRetry={() => mediaQuery.refetch()} />
+              : !latest ? <EmptyState message={t('media.modernization.noSnapshot', 'No media snapshot available')}
+                action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void mediaQuery.refetch(); } }} />
+              : <div className="flex flex-1 flex-col items-center justify-center gap-2 py-2">
               <LinearGauge
-                value={latest?.audio_volume ?? 0}
-                max={latest?.audio_volume_max || VOLUME_FALLBACK_MAX}
+                value={finiteReading(latest.audio_volume) ? latest.audio_volume : null}
+                preserveReadingAndScale
+                max={finiteReading(latest.audio_volume_max) && latest.audio_volume_max > 0 ? latest.audio_volume_max : VOLUME_FALLBACK_MAX}
                 label={t('media.volume', 'Volume')}
                 unit=""
-                color={CHART_COLORS[0]}
+                tone="primary"
                 size={128}
               />
               <Caption className="text-center">
                 {t('media.volumeStep', 'Step')}:{' '}
-                {latest?.audio_volume_increment != null
-                  ? fmtNumber(latest.audio_volume_increment, 2)
+                {finiteReading(latest?.audio_volume_increment)
+                  ? fmtNumber(latest.audio_volume_increment)
                   : '—'}
               </Caption>
-            </div>
-          </GlassPanel>
+              <Caption>
+                {t('media.modernization.reportedMaximum', 'Reported maximum')}: {formatVolumeLevel(latest.audio_volume_max)}
+              </Caption>
+              {(!finiteReading(latest.audio_volume_max) || latest.audio_volume_max <= 0) && (
+                <Caption>{t('media.modernization.fallbackScale', 'No positive maximum reported; gauge uses the existing fallback scale of 11.')}</Caption>
+              )}
+            </div>}
+            </VehicleSourceContent>
+          </LayoutCard>
+          </MediaSlot> },
+        ]} />
         </section>
       </FadeIn>
 
       {/* ── Row 2 — KPI band ─────────────────────────────────── */}
       <FadeIn delay={0.05}>
-        <section
-          aria-label={t('media.statsSection', 'Listening stats')}
-          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-        >
-          <MetricCard
-            label={t('media.uniqueTracks', 'Unique Tracks')}
-            value={stats.uniqueTracks}
-            icon={<ListMusic className="h-5 w-5" aria-hidden="true" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('media.topSource', 'Top Source')}
-            value={stats.topSource}
-            icon={<Radio className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('media.avgVolume', 'Avg Volume')}
-            value={fmtInt(stats.avgVolume)}
-            icon={<Volume2 className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('media.volumeStepFull', 'Volume Step')}
-            value={
-              latest?.audio_volume_increment != null
-                ? fmtNumber(latest.audio_volume_increment, 2)
-                : '—'
-            }
-            icon={<Volume2 className="h-5 w-5" aria-hidden="true" />}
-            color="purple"
-          />
-        </section>
+        <div>
+        <MediaStats
+          historySource={historySource} mediaSource={mediaSource}
+          filtered={filtered} history={historyQuery.data} latest={latest}
+          hasVehicle={hasVehicle} historyLoading={historyQuery.isLoading}
+          mediaLoading={mediaQuery.isLoading} historyError={historyQuery.error}
+          mediaError={mediaQuery.error} start={startInstant} end={endInstantExclusive}
+        />
+        </div>
       </FadeIn>
 
       {/* ── Row 3 — Charts bento ─────────────────────────────── */}
       <FadeIn delay={0.1}>
-        <section
-          aria-label={t('media.chartsSection', 'Media charts')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
-        >
-          {/* Volume over time — hero chart, spans two columns */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Volume2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('media.volumeOverTime', 'Volume over Time')}
-            </PanelTitle>
+        <CardGrid label={t('media.chartsSection', 'Media charts')} items={[
+          { id: 'media-volume-history', size: 'half', content: <MediaSlot>
+          {/* Volume over time — all finite source samples retained */}
+          <section aria-label={t('media.volumeOverTime', 'Volume over time')}>
+          <LayoutCard title={t('media.volumeOverTime', 'Volume over time')}>
+            <VehicleSourceContent source={historySource} enabled={hasVehicle}
+              label={t('media.volumeOverTime', 'Volume over time')}>
             {!hasVehicle ? (
               noVehicleState(
                 <BarChart3 className="h-8 w-8" />,
                 t('media.selectVehicleChart', 'Select a vehicle to view volume history'),
               )
-            ) : historyQuery.isLoading ? (
+            ) : historySource.isRefreshBlocked && !historySource.hasData ? (
+              <VehicleSourcePause label={t('media.volumeOverTime', 'Volume over time')}
+                message={t('dataSources.status.pausedOffline', 'Paused offline')}
+                retained={false} onRetry={() => { historySource.retry?.(); }} />
+            ) : historyState.loading ? (
               <Skeleton height={256} />
-            ) : historyQuery.error ? (
+            ) : historyState.fatal ? (
               <QueryError error={historyQuery.error} onRetry={() => historyQuery.refetch()} />
             ) : volumeChartData.length === 0 ? (
               <EmptyState /* no-action: transient empty state — no volume samples in the selected period */
@@ -533,10 +546,14 @@ export default function MediaPlayerPage() {
               />
             ) : (
               <div className="h-56 sm:h-64 xl:h-72">
-                {/* chart-a11y:no-table media volume time-series — continuous audio levels, not tabular */}
                 <EmbeddedChart
-                  title={t('media.volumeOverTime', 'Volume over Time')}
+                  title={t('media.volumeOverTime', 'Volume over time')}
                   ariaLabel={t('media.volumeAria', 'Media volume over time area chart')}
+                  data={volumeChartData}
+                  dataColumns={[
+                    { key: 'time', label: t('media.col.time', 'Time') },
+                    { key: 'volume', label: t('media.col.volume', 'Volume') },
+                  ]}
                   fluid
                 >
                   <ResponsiveContainer width="100%" height="100%">
@@ -548,8 +565,8 @@ export default function MediaPlayerPage() {
                       <XAxis dataKey="time" {...axisTickSm} />
                       <YAxis
                         {...axisTickSm}
-                        allowDecimals={false}
-                        domain={[0, volumeAxisMax]}
+                        allowDecimals
+                        domain={[volumeChartData.reduce((min, point) => Math.min(min, point.volume), 0), volumeAxisMax]}
                       />
                       <Tooltip content={<ChartTooltip />} />
                       <Area
@@ -565,22 +582,27 @@ export default function MediaPlayerPage() {
                 </EmbeddedChart>
               </div>
             )}
-          </GlassPanel>
-
+            </VehicleSourceContent>
+          </LayoutCard>
+          </section>
+          </MediaSlot> },
+          { id: 'media-source-distribution', size: 'half', content: <MediaSlot>
           {/* Source distribution */}
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Disc3 className="h-4 w-4 text-purple-300" aria-hidden="true" />
-              {t('media.sourceDistribution', 'Source Distribution')}
-            </PanelTitle>
+          <LayoutCard title={t('media.sourceDistribution', 'Source distribution')}>
+            <VehicleSourceContent source={historySource} enabled={hasVehicle}
+              label={t('media.sourceDistribution', 'Source distribution')}>
             {!hasVehicle ? (
               noVehicleState(
                 <Disc3 className="h-8 w-8" />,
                 t('media.selectVehicleSource', 'Select a vehicle to view sources'),
               )
-            ) : historyQuery.isLoading ? (
+            ) : historySource.isRefreshBlocked && !historySource.hasData ? (
+              <VehicleSourcePause label={t('media.sourceDistribution', 'Source distribution')}
+                message={t('dataSources.status.pausedOffline', 'Paused offline')}
+                retained={false} onRetry={() => { historySource.retry?.(); }} />
+            ) : historyState.loading ? (
               <Skeleton height={224} />
-            ) : historyQuery.error ? (
+            ) : historyState.fatal ? (
               <QueryError error={historyQuery.error} onRetry={() => historyQuery.refetch()} />
             ) : sourceData.length === 0 ? (
               <EmptyState /* no-action: transient empty state — no source data in the selected period */
@@ -592,7 +614,7 @@ export default function MediaPlayerPage() {
                 {/* chart-a11y:no-table pie chart with dynamic source names — legend list below chart serves as accessible summary */}
                 <div className="h-48 sm:h-56">
                   <EmbeddedChart
-                    title={t('media.sourceDistribution', 'Source Distribution')}
+                    title={t('media.sourceDistribution', 'Source distribution')}
                     ariaLabel={t('media.sourceAria', 'Pie chart of media source distribution')}
                     fluid
                   >
@@ -635,28 +657,32 @@ export default function MediaPlayerPage() {
                 </ul>
               </>
             )}
-          </GlassPanel>
-        </section>
+            </VehicleSourceContent>
+          </LayoutCard>
+          </MediaSlot> },
+        ]} />
       </FadeIn>
 
       {/* ── Row 4 — Playback History (full-width detail band) ── */}
       <FadeIn delay={0.15}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <ListMusic className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('media.playbackHistory', 'Playback History')}
-            <Badge variant="neutral" size="sm" className="ml-auto">
-              {fmtInt(filtered.length)} {t('media.records', 'records')}
-            </Badge>
-          </PanelTitle>
+        <LayoutCard title={t('media.playbackHistory', 'Playback history')}
+          actions={<Badge variant="neutral" size="sm">
+              {hasVehicle && historyState.available ? fmtInt(filtered.length) : '—'} {t('media.records', 'records')}
+            </Badge>}>
+          <VehicleSourceContent source={historySource} enabled={hasVehicle}
+            label={t('media.playbackHistory', 'Playback history')}>
           {!hasVehicle ? (
             noVehicleState(
               <Music className="h-8 w-8" />,
               t('media.selectVehicleHistory', 'Select a vehicle to view playback history'),
             )
-          ) : historyQuery.isLoading ? (
+          ) : historySource.isRefreshBlocked && !historySource.hasData ? (
+            <VehicleSourcePause label={t('media.playbackHistory', 'Playback history')}
+              message={t('dataSources.status.pausedOffline', 'Paused offline')}
+              retained={false} onRetry={() => { historySource.retry?.(); }} />
+          ) : historyState.loading ? (
             <Skeleton height={320} />
-          ) : historyQuery.error ? (
+          ) : historyState.fatal ? (
             <QueryError error={historyQuery.error} onRetry={() => historyQuery.refetch()} />
           ) : sortedHistory.length === 0 ? (
             <EmptyState /* no-action: transient empty state — no playback history in the selected period */
@@ -666,10 +692,45 @@ export default function MediaPlayerPage() {
           ) : (
             <DataTable<MediaSnapshot>
               tableId="vehicle-systems:media-history"
+              enableValueFilters
+              filterData={filtered}
               columns={columns}
+              expandable
+              expandedKeys={expandedHistoryKeys}
+              onExpandedChange={setExpandedHistoryKeys}
+              rowLabel={(row) => reportedTitle(row.now_playing_title) ?? formatDateTime(row.created_at)}
+              renderExpanded={(row) => (
+                <KVList
+                  layout="responsive"
+                  items={[
+                    { id: 'created_at', label: t('media.col.time', 'Time'), value: <TimeStamp value={row.created_at} format="absolute" /> },
+                    { id: 'now_playing_title', label: t('media.col.track', 'Track'), value: reportedTitle(row.now_playing_title) ?? '—' },
+                    { id: 'now_playing_artist', label: t('media.col.artist', 'Artist'), value: row.now_playing_artist || '—' },
+                    { id: 'playback_source', label: t('media.col.source', 'Source'), value: row.playback_source || '—' },
+                    { id: 'audio_volume', label: t('media.col.volume', 'Volume'), value: `${formatVolumeLevel(row.audio_volume)}/${formatVolumeLevel(row.audio_volume_max)}` },
+                    { id: 'playback_status', label: t('media.col.status', 'Status'), value: statusLabel(row.playback_status ?? '', t) },
+                  ]}
+                />
+              )}
               mobileColumns={['now_playing_title', 'playback_status', 'created_at']}
+              mobilePresentation={{
+                variant: 'cards',
+                roles: {
+                  now_playing_title: 'title', playback_status: 'badge',
+                  created_at: 'meta', now_playing_artist: 'meta',
+                  playback_source: 'meta', audio_volume: 'primary',
+                },
+                displayValue: (row, key) => {
+                  if (key === 'created_at') return formatDateTime(row.created_at);
+                  if (key === 'audio_volume') return `${formatVolumeLevel(row.audio_volume)}/${formatVolumeLevel(row.audio_volume_max)}`;
+                  if (key === 'playback_status') return statusLabel(row.playback_status ?? '', t);
+                  const value = row[key as keyof MediaSnapshot];
+                  return value != null && value !== '' ? value : '—';
+                },
+              }}
+              caption={t('media.playbackHistory', 'Playback history')}
               data={sortedHistory}
-              keyExtractor={(row) => row.id}
+              keyExtractor={(row) => row.id ?? `${row.created_at ?? 'unknown'}-${row.vehicle_id ?? 'vehicle'}`}
               sortKey={tableSortKey}
               sortDir={tableSortDir}
               onSort={handleSort}
@@ -678,8 +739,9 @@ export default function MediaPlayerPage() {
               pagination
             />
           )}
-        </GlassPanel>
+          </VehicleSourceContent>
+        </LayoutCard>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

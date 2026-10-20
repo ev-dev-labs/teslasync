@@ -1,0 +1,1060 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-vehicle-systems-media-player",
+  "attempt": 1,
+  "actor": "611f60e6-56ee-45ee-ad21-80cc650c09bf",
+  "status": "SOURCE_AUDIT_DELIVERED_WITH_FINDINGS",
+  "page": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+  "routes": [
+    "/media-player"
+  ],
+  "acceptedSourceCommit": "ffb7b92501f36184c34b478f70c2818c404263b4",
+  "snapshotUTC": "2026-10-14T01:40:21.4079449Z",
+  "timebox": {
+    "immutable": true,
+    "returnUTC": "2026-10-14T01:44:50.678Z",
+    "firstObservedExecutionUTC": "2026-10-14T01:27:50.4747781Z",
+    "effectiveHardUTC": "2026-10-14T01:49:50.678Z",
+    "hardUTC": "2026-10-14T01:49:50.678Z",
+    "reservationUTC": "2026-10-14T01:24:50.678Z",
+    "effectiveReturnUTC": "2026-10-14T01:44:50.678Z"
+  },
+  "acceptance": {
+    "typeScript": "NOTRUN",
+    "native": "NOTRUN",
+    "freshTests": "NOTRUN",
+    "runtime": "NOTRUN",
+    "notPageOrNativePass": true,
+    "lint": "NOTRUN",
+    "pageAcceptance": "NOTRUN",
+    "build": "NOTRUN",
+    "sourceAudit": "REPORT ONLY"
+  },
+  "authority": {
+    "queue": "Exact item initially row63, refreshed row64 actor+attempt1",
+    "orchestratorFullRead": "docs/orchestrator-loop.md",
+    "inventory": [
+      "media page row 274",
+      "G220 row 575",
+      "P440/P441 rows 1051-1052"
+    ],
+    "instructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      "docs/frontend-worker-conventions.md"
+    ],
+    "missionRanges": [
+      "1-200",
+      "660-970",
+      "1390-1540"
+    ],
+    "handoff": "1-110 current recovery and conventions",
+    "designRanges": [
+      "1-210",
+      "214-284",
+      "419-605"
+    ]
+  },
+  "sourceSnapshot": {
+    "hashAlgorithm": "SHA256",
+    "additionalBeforeCommands": [
+      "C02",
+      "C06",
+      "C08",
+      "C12"
+    ],
+    "pins": [
+      {
+        "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+        "unchanged": true,
+        "lineCount": 686,
+        "afterSHA256": "354fbac3269838646a65d1078d3070841249049aa3a707b2529bc206f066a7bb",
+        "beforeSHA256": "354fbac3269838646a65d1078d3070841249049aa3a707b2529bc206f066a7bb"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.test.tsx",
+        "unchanged": true,
+        "lineCount": 738,
+        "afterSHA256": "656875cb42cbb183a00faa6ceb403bb98544bd975b436a046daeec63794b6a55",
+        "beforeSHA256": "656875cb42cbb183a00faa6ceb403bb98544bd975b436a046daeec63794b6a55"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/media-player-modernization/MediaStats.tsx",
+        "unchanged": true,
+        "lineCount": 106,
+        "afterSHA256": "d879ce7a7955a087bf9d5e72b017e5d81431ea7c3ef2066f6f0ca23ce43b3b0e",
+        "beforeSHA256": "d879ce7a7955a087bf9d5e72b017e5d81431ea7c3ef2066f6f0ca23ce43b3b0e"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/media-player-modernization/MediaSlot.tsx",
+        "unchanged": true,
+        "lineCount": 18,
+        "afterSHA256": "a88df9994c33526109e770c0b4242a3384728fbc5289019ba520d5bbc924399c",
+        "beforeSHA256": "a88df9994c33526109e770c0b4242a3384728fbc5289019ba520d5bbc924399c"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/media-player-modernization/mediaPresentation.ts",
+        "unchanged": true,
+        "lineCount": 45,
+        "afterSHA256": "c4fb8835ca8f033d3496364ff673c725408476793e279a2b141723695f483047",
+        "beforeSHA256": "c4fb8835ca8f033d3496364ff673c725408476793e279a2b141723695f483047"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/media-player-modernization/index.ts",
+        "unchanged": true,
+        "lineCount": 3,
+        "afterSHA256": "c30bfde4d3a64b0b56299130762002a382c668751d8010f0ecf8a60ebf9ff1ac",
+        "beforeSHA256": "c30bfde4d3a64b0b56299130762002a382c668751d8010f0ecf8a60ebf9ff1ac"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/VehicleSourceContent.tsx",
+        "unchanged": true,
+        "lineCount": 32,
+        "afterSHA256": "1b17cbf2559e17de73ebfbb0d231bd68c7aedd4a5bad01cdfa42bdef05e3bd64",
+        "beforeSHA256": "1b17cbf2559e17de73ebfbb0d231bd68c7aedd4a5bad01cdfa42bdef05e3bd64"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+        "unchanged": true,
+        "lineCount": 73,
+        "afterSHA256": "e0b859e45485e60c9cce07bbf523817c6971c9c95c3d4dddb254294a19f2b173",
+        "beforeSHA256": "e0b859e45485e60c9cce07bbf523817c6971c9c95c3d4dddb254294a19f2b173"
+      },
+      {
+        "file": "web/src/api/hooks/useVehicleSystems.ts",
+        "unchanged": true,
+        "lineCount": 176,
+        "afterSHA256": "06474d1dc7e0b1d63be82589d14abbb39ac33a29e5319a888a1236a295881c8d",
+        "beforeSHA256": "06474d1dc7e0b1d63be82589d14abbb39ac33a29e5319a888a1236a295881c8d"
+      },
+      {
+        "file": "web/src/api/types.ts",
+        "unchanged": true,
+        "lineCount": 4194,
+        "afterSHA256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "beforeSHA256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b"
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "unchanged": true,
+        "lineCount": 434,
+        "afterSHA256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "beforeSHA256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761"
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "unchanged": true,
+        "lineCount": 65,
+        "afterSHA256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "beforeSHA256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b"
+      },
+      {
+        "file": "web/src/hooks/useRangeState.ts",
+        "unchanged": true,
+        "lineCount": 694,
+        "afterSHA256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+        "beforeSHA256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea"
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "unchanged": true,
+        "lineCount": 168,
+        "afterSHA256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "beforeSHA256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7"
+      },
+      {
+        "file": "web/src/components/charts/EmbeddedChart.tsx",
+        "unchanged": true,
+        "lineCount": 42,
+        "afterSHA256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+        "beforeSHA256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721"
+      },
+      {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "unchanged": true,
+        "lineCount": 1707,
+        "afterSHA256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "beforeSHA256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282"
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "unchanged": true,
+        "lineCount": 17,
+        "afterSHA256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "beforeSHA256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/VehicleSourceContent.test.tsx",
+        "unchanged": true,
+        "lineCount": 121,
+        "afterSHA256": "91682d8ca33d2efbd215f407be986076971923d2af30f34a8f1ddecfee1e44bd",
+        "beforeSHA256": "91682d8ca33d2efbd215f407be986076971923d2af30f34a8f1ddecfee1e44bd"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.test.tsx",
+        "unchanged": true,
+        "lineCount": 97,
+        "afterSHA256": "5a68bdf9c4503107c5f14112be334d16b44e41b862c287deebd03e080d3cb095",
+        "beforeSHA256": "5a68bdf9c4503107c5f14112be334d16b44e41b862c287deebd03e080d3cb095"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/media-player-modernization/preservation.test.mjs",
+        "unchanged": true,
+        "lineCount": 304,
+        "afterSHA256": "f943cbad92530e3c2a68f0f18a812ff9e2e4ccfb1556f5fe17ddcd4ec81c6aee",
+        "beforeSHA256": "f943cbad92530e3c2a68f0f18a812ff9e2e4ccfb1556f5fe17ddcd4ec81c6aee"
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx",
+        "unchanged": true,
+        "lineCount": 17,
+        "afterSHA256": "e871e533be1616ed3445e75e4b881dc020b8efb084a3404e6433222aa0df8bb5",
+        "beforeSHA256": "e871e533be1616ed3445e75e4b881dc020b8efb084a3404e6433222aa0df8bb5"
+      },
+      {
+        "file": "web/src/components/charts/ChartContainer.tsx",
+        "unchanged": true,
+        "lineCount": 1006,
+        "afterSHA256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+        "beforeSHA256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694"
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "unchanged": true,
+        "lineCount": 259,
+        "afterSHA256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "beforeSHA256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a"
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "unchanged": true,
+        "lineCount": 462,
+        "afterSHA256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "beforeSHA256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "unchanged": true,
+        "lineCount": 47,
+        "afterSHA256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "beforeSHA256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7"
+      },
+      {
+        "file": "web/src/lib/numberFormat.ts",
+        "unchanged": true,
+        "lineCount": 172,
+        "afterSHA256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+        "beforeSHA256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3"
+      },
+      {
+        "file": "internal/api/media/handler.go",
+        "unchanged": true,
+        "lineCount": 130,
+        "afterSHA256": "ca857f5da3695d87fcf130c1ff5001a47d336810114e4be441807357fa20374a",
+        "beforeSHA256": "ca857f5da3695d87fcf130c1ff5001a47d336810114e4be441807357fa20374a"
+      },
+      {
+        "file": "internal/api/apiparams/params.go",
+        "unchanged": true,
+        "lineCount": 142,
+        "afterSHA256": "5526c81eaff016243772398b88b003112f3d0c0921b484c0de3008b7d2656add",
+        "beforeSHA256": "5526c81eaff016243772398b88b003112f3d0c0921b484c0de3008b7d2656add"
+      },
+      {
+        "file": "web/src/components/data-display/DataFreshness.tsx",
+        "unchanged": true,
+        "lineCount": 342,
+        "afterSHA256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+        "beforeSHA256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965"
+      },
+      {
+        "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+        "unchanged": true,
+        "lineCount": 165,
+        "afterSHA256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+        "beforeSHA256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21"
+      },
+      {
+        "file": "web/src/components/layout/index.ts",
+        "unchanged": true,
+        "lineCount": 27,
+        "afterSHA256": "16105443f3f6c85fc73ae940f65f8b61f751a1fb30e77369b229d24ec7dfc642",
+        "beforeSHA256": "16105443f3f6c85fc73ae940f65f8b61f751a1fb30e77369b229d24ec7dfc642"
+      },
+      {
+        "file": "web/src/components/ui/Icon.tsx",
+        "unchanged": true,
+        "lineCount": 78,
+        "afterSHA256": "1afc4a9b6429a024a5bb979460e9cfef7ff5ce370f643cf92c10b570714701d5",
+        "beforeSHA256": "1afc4a9b6429a024a5bb979460e9cfef7ff5ce370f643cf92c10b570714701d5"
+      },
+      {
+        "file": "web/src/components/data-display/TimeStamp.tsx",
+        "unchanged": true,
+        "lineCount": 64,
+        "afterSHA256": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+        "beforeSHA256": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb"
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "unchanged": true,
+        "lineCount": 38994,
+        "afterSHA256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+        "beforeSHA256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893"
+      },
+      {
+        "file": "web/src/hooks/useDateFormat.ts",
+        "unchanged": true,
+        "lineCount": 148,
+        "afterSHA256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "beforeSHA256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542"
+      },
+      {
+        "file": "web/src/hooks/useTimeFormatPreference.ts",
+        "unchanged": true,
+        "lineCount": 26,
+        "afterSHA256": "720db3c19e020a343f8c3df9a28d869d3a6c119ae5ddc7345dc86f7e4a5c1132",
+        "beforeSHA256": "720db3c19e020a343f8c3df9a28d869d3a6c119ae5ddc7345dc86f7e4a5c1132"
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "unchanged": true,
+        "lineCount": 174,
+        "afterSHA256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "beforeSHA256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3"
+      },
+      {
+        "file": "web/src/lib/safeArray.ts",
+        "unchanged": true,
+        "lineCount": 28,
+        "afterSHA256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14",
+        "beforeSHA256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14"
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+        "unchanged": true,
+        "lineCount": 74,
+        "afterSHA256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+        "beforeSHA256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7"
+      },
+      {
+        "file": "internal/api/router.go",
+        "unchanged": true,
+        "lineCount": 5363,
+        "afterSHA256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+        "beforeSHA256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c"
+      }
+    ],
+    "finalPinCheck": "MATCHED",
+    "primaryBeforeUTC": "2026-10-14T01:29:12.8869934Z",
+    "finalPinCheckUTC": "2026-10-14T01:43:37.0030263Z"
+  },
+  "confirmedIssueCount": 12,
+  "confirmedIssues": [
+    {
+      "severity": "high",
+      "detail": "Workspace exact instants are discarded. Date-only start/end go to the UTC-bounded server; browser-local midnight/end-of-day re-filters those rows. Rolling 24h and saved timezone/DST windows cannot be reconstructed.",
+      "owner": "existing G220/P440 integration + page",
+      "line": 107,
+      "mechanism": [
+        "MediaPlayerPage.tsx:107-110,118,140-148",
+        "web/src/hooks/useRangeState.ts:656-683",
+        "web/src/api/hooks/useVehicleSystems.ts:159-175",
+        "internal/api/apiparams/params.go:61-86",
+        "internal/api/media/handler.go:70-81"
+      ],
+      "fix": "Pass existing startInstant/endInstantExclusive into history/query keys and use identical bounds in every calculation; remove/align local range guard.",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "confidence": "high",
+      "repro": "Not executed: select June10 in America/Los_Angeles. Intended instants June10 07:00Z to June11 07:00Z; page sends June10 dates, server ends June10 UTC. Client cannot restore omitted local-evening rows. 24h is similarly reduced to calendar dates.",
+      "id": "F01",
+      "dedup": "Reconfirmed audit-page-223 architecture finding; no new range owner or completed-page redispatch.",
+      "rule": "workspace-instant-bounds",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "severity": "high",
+      "detail": "Truthiness of the all-null latest object bypasses missing snapshot. Null title renders No track without affirmative absence/stopped evidence.",
+      "owner": "page existing audit-page-223 states owner",
+      "line": 379,
+      "mechanism": [
+        "MediaPlayerPage.tsx:120-124,362-379",
+        "internal/api/media/handler.go:103-105,122-130",
+        "web/src/api/dataState.ts:195-197"
+      ],
+      "fix": "Keep unreported title unknown/unavailable, distinguish actual source-confirmed no-playback status, preserve all panels and real zero.",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "confidence": "high",
+      "repro": "Not executed: selected vehicle and successful canonical eleven-key latest object with every media field null. !latest is false; No track is shown beside Unknown status and missing volume/progress.",
+      "id": "F02",
+      "dedup": "Existing finding survives accepted neutral-icon/loading rescue.",
+      "rule": "unknown-not-absence",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "severity": "high",
+      "detail": "Loading uses isLoading; retained pause requires hasData. Initial paused queries have no dedicated branch, so current panels and history charts/table show no-data/no-history instead of paused/unresolved reads. History has no pause-specific retry.",
+      "owner": "page adoption at existing source/pause owners",
+      "line": 125,
+      "mechanism": [
+        "MediaPlayerPage.tsx:125-136,347-364,446-449,506-513,563-570,639-645",
+        "VehicleSourceContent.tsx:18-21",
+        "MediaStats.tsx:37-56",
+        "web/src/api/dataState.ts:198,207-218",
+        "VehicleSourcePause.tsx:4-15 existing specialized presentation"
+      ],
+      "fix": "Handle isRefreshBlocked && !hasData before empty/loading, reusing VehicleSourcePause and real source.retry; do not infer empty response.",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "confidence": "high",
+      "repro": "Not executed: selected vehicle; data undefined,error null,isPending true,isLoading false,isFetching false,fetchStatus paused. Wrappers choose ready and empty copy. Page test668 covers retained pause, not initial pause.",
+      "id": "F03",
+      "dedup": "Existing component/test VehicleSourceContent.test.tsx:32 already expresses correct initial pause contract; no new shared engine.",
+      "rule": "initial-paused-not-empty",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "severity": "medium",
+      "detail": "Brief availability ANDs history and latest although three metrics are historical and one latest. Independently returned evidence is labeled unresolved. Unknown period also yields blanket Not a live-state observation while latest volume step is displayed.",
+      "owner": "MediaStats and existing VehicleOperationalBrief semantics",
+      "line": 97,
+      "mechanism": [
+        "MediaStats.tsx:57-89,94-105",
+        "VehicleOperationalBrief.tsx:31-38,41-48"
+      ],
+      "fix": "Summarize partial returned evidence truthfully, retain per-metric history/latest ownership, never claim measurement freshness from read success.",
+      "file": "web/src/features/vehicle-systems/components/media-player-modernization/MediaStats.tsx",
+      "confidence": "high",
+      "repro": "Not executed: successful nonempty history + missing latest produces three real metrics with Evidence unresolved; latest-only success produces real Volume step plus unresolved/non-live brief text.",
+      "id": "F04",
+      "dedup": "Existing audit-page-223 mixed-source finding; no replacement brief.",
+      "rule": "mixed-source-summary-trust",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "severity": "medium",
+      "detail": "MediaStats computes loading/fatal reasons but omits loading/error props to VehicleOperationalBrief. Defaults keep summary Evidence unresolved rather than Loading source/Source unavailable and do not mark summary busy.",
+      "owner": "page MediaStats; existing brief API",
+      "line": 94,
+      "mechanism": [
+        "MediaStats.tsx:37-56,94-105",
+        "VehicleOperationalBrief.tsx:26-34,61",
+        "VehicleOperationalBrief.test.tsx:85-96 existing busy API"
+      ],
+      "fix": "Wire existing summary loading/fatal API without hiding independently available or retained metrics.",
+      "file": "web/src/features/vehicle-systems/components/media-player-modernization/MediaStats.tsx",
+      "confidence": "high",
+      "repro": "Not executed: both queries loading without data, then both fatal without retained data. Metric reasons update but aggregate status never enters loading/unavailable. Other source-local errors still render.",
+      "id": "F05",
+      "dedup": "Loading omission in historical audit; separate mechanism from F04 AND/provenance but same narrow correction can cover both.",
+      "rule": "summary-loading-fatal-state",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "severity": "medium",
+      "detail": "Current media has no measurement observation time or observation-time-unavailable disclosure. Header freshness uses query retrieval dataUpdatedAt, not signal observation. Latest projection supplies no observation timestamp.",
+      "owner": "page disclosure + existing source metadata/trust integration coordinated with G220/P440/G221",
+      "line": 314,
+      "mechanism": [
+        "MediaPlayerPage.tsx:121-136,314-320,339-473",
+        "internal/api/media/handler.go:114-132",
+        "PageContainer.tsx:38-48,150-156,222",
+        "DataFreshness.tsx:86,184-190,323-339"
+      ],
+      "fix": "Disclose retrieval time versus unavailable measurement time. Reuse authoritative metadata only if available; never derive observedAt from query time or invent freshness threshold.",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "confidence": "high",
+      "repro": "Not executed: latest succeeds with recent query.dataUpdatedAt but observation metadata unavailable. Header age describes retrieval; hero supplies no observation qualification. No claim of actual stale backend data or Up to date under default staleTime.",
+      "id": "F06",
+      "dedup": "Historical staleOffline limitation; no speculative store/polling/backend capability.",
+      "rule": "observation-freshness-unqualified",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "dedup": "Same integration need as F01.",
+      "owner": "existing G220/P440",
+      "mechanism": [
+        "api/types.ts:2225-2240",
+        "api/hooks/useVehicleSystems.ts:153,173",
+        "internal/api/media/handler.go:88-99,122-132"
+      ],
+      "repro": "Unexecuted schema comparison: valid all-null latest lacks required keys; compare constructed response maps and type.",
+      "line": 2225,
+      "rule": "media-wire-type-guarantees",
+      "severity": "medium",
+      "id": "F07",
+      "file": "web/src/api/types.ts",
+      "detail": "MediaSnapshot requires id,vehicle_id,created_at and excludes explicit null. Latest emits nullable media fields without identities/time; history adds response-local id/time but no vehicle_id.",
+      "fix": "Accurate existing latest/history nullability; no manufactured metadata/units.",
+      "confidence": "high",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "dedup": "Reconfirmed phase0 finding; complete pie legend not counted.",
+      "owner": "page existing ChartContainer adoption",
+      "mechanism": [
+        "MediaPlayerPage.tsx:517-546,649-679",
+        "components/charts/EmbeddedChart.tsx:28-38",
+        "components/charts/ChartContainer.tsx:502-508,859-870,949-954"
+      ],
+      "repro": "Unexecuted source trace: two finite observations passed only to AreaChart; wrapper fallback condition false, title-only figcaption. Not universal runtime inaccessibility claim.",
+      "line": 518,
+      "rule": "chart-equivalent-data-fallback",
+      "severity": "medium",
+      "id": "F08",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "detail": "Volume wrapper omits data,dataColumns,ariaDescription; continuous-is-not-tabular comment leaves title-only shared SR/forced-colors fallback. History table not associated as equivalent alternative.",
+      "fix": "Existing fallback data/columns or explicit equivalent accessible history association; preserve all finite points.",
+      "confidence": "high",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "dedup": "Existing phase0 finding, no guessed unit migration.",
+      "owner": "page helper/semantics",
+      "mechanism": [
+        "mediaPresentation.ts:25-34",
+        "MediaPlayerPage.tsx:406-413"
+      ],
+      "repro": "Unexecuted arithmetic trace duration250/elapsed125 -> percent50,durationSec0,elapsedSec0; progressbar min0,max0,now0.",
+      "line": 29,
+      "rule": "progressbar-degenerate-bounds",
+      "severity": "medium",
+      "id": "F09",
+      "file": "web/src/features/vehicle-systems/components/media-player-modernization/mediaPresentation.ts",
+      "detail": "Positive duration below500 in current millisecond interpretation rounds durationSec to0, yielding determinate progressbar min=max0.",
+      "fix": "Validate positive determinate ARIA bounds independently of visual rounding; retain raw values/pending unit authority.",
+      "confidence": "high",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "dedup": "No new formatter/catalog.",
+      "owner": "page formatter adoption",
+      "mechanism": [
+        "MediaPlayerPage.tsx:29,151-164,663",
+        "web/src/lib/dateFormat.ts:29-60",
+        "TimeStamp.tsx:42-57",
+        "web/src/hooks/useDateFormat.ts:72-99"
+      ],
+      "repro": "Unexecuted scenario browser UTC/en-US versus saved vehicle America/Los_Angeles/other locale; same timestamp differs across chart/mobile and desktop. Changing saved timezone does not invalidate chart memo.",
+      "line": 163,
+      "rule": "saved-date-locale-timezone-bypass",
+      "severity": "medium",
+      "id": "F10",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "detail": "Chart/mobile timestamps use browser-default pure formatDateTime without settings options; desktop TimeStamp binds saved locale/timezone/format. Chart memo depends only on filtered.",
+      "fix": "Existing useDateFormat strings/formatter dependencies; preserve intentional absolute chart labels.",
+      "confidence": "high",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "dedup": "Export need already satisfied; no phase3 redispatch.",
+      "owner": "existing G068/P441 consumer",
+      "mechanism": [
+        "MediaSlot.tsx:2",
+        "web/src/components/layout/index.ts:11"
+      ],
+      "repro": "Static import/export comparison.",
+      "line": 2,
+      "rule": "category-barrel-boundary",
+      "severity": "low",
+      "id": "F11",
+      "file": "web/src/features/vehicle-systems/components/media-player-modernization/MediaSlot.tsx",
+      "detail": "Nested layout-reference import despite canonical category useCardPlacement export.",
+      "fix": "Use @/components/layout without changing placement.",
+      "confidence": "high",
+      "reproExecution": "NOTRUN; source reasoning only"
+    },
+    {
+      "dedup": "One root for two columns, historical concern source-rechecked.",
+      "owner": "page existing G007 detail",
+      "mechanism": [
+        "MediaPlayerPage.tsx:216-229,655-669",
+        "DataTable.tsx:1183-1187,1406-1409",
+        "MobileDataTableAdapter.tsx:145-152"
+      ],
+      "repro": "Unexecuted long-string render-path: desktop and Quick view reuse bounded truncate cells. Full text remains DOM/AT-readable; native clipping measurement NOTRUN.",
+      "line": 216,
+      "rule": "full-detail-truncated-renderer",
+      "severity": "medium",
+      "id": "F12",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "detail": "Title/artist impose 200/160px truncate. Mobile full-details modal invokes same truncated column.render, without full-value affordance.",
+      "fix": "Existing full-value detail/disclosure adoption preserving every field.",
+      "confidence": "high",
+      "reproExecution": "NOTRUN; source reasoning only"
+    }
+  ],
+  "conditionalConcernCount": 6,
+  "conditionalConcerns": [
+    {
+      "detail": "Duration/elapsed treated as ms; authoritative normalization/proto unit not traced; handler forwards scalars.",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "id": "C01",
+      "line": 58,
+      "status": "UNKNOWN not confirmed SI violation",
+      "category": "unit-authority"
+    },
+    {
+      "detail": "Six mobile roles, Quick view, sorting/filtering/pagination/retry/details source declared; focus/keyboard/SR/touch/field retrieval untested. Ten widths/narrow/RTL/200% text required.",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "id": "C02",
+      "line": 649,
+      "status": "NOTRUN",
+      "category": "native-keyboard-mobile"
+    },
+    {
+      "detail": "Neutral icons/motion-safe progress source declared; contrast/dark/light/saved themes/forced colors/reduced motion/low bandwidth untested.",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "id": "C03",
+      "line": 418,
+      "status": "NOTRUN",
+      "category": "native-theme-motion"
+    },
+    {
+      "detail": "Invalid timestamps retained; null row would be dereferenced. safeArray container-only; handler constructs nonnull timestamped maps, malformed-row reachability unknown.",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+      "id": "C04",
+      "line": 145,
+      "status": "CONDITIONAL",
+      "category": "conditional-null-invalid-history"
+    },
+    {
+      "detail": "{} counters indexed by source string can collide with inherited Object keys. Actual constructor/__proto__ source reachability unknown; no adversarial execution.",
+      "file": "web/src/features/vehicle-systems/components/media-player-modernization/mediaPresentation.ts",
+      "id": "C05",
+      "line": 11,
+      "status": "CONDITIONAL",
+      "category": "conditional-source-key-collision"
+    },
+    {
+      "detail": "Most mounts /media versus real /media-player; range/hooks/charts/i18n mocked. Initial-pause/all-null/sub500ms cases absent. Historical21/21 not fresh or native proof.",
+      "file": "web/src/features/vehicle-systems/pages/MediaPlayerPage.test.tsx",
+      "id": "C06",
+      "line": 246,
+      "status": "Tests NOTRUN",
+      "category": "test-evidence-limits"
+    }
+  ],
+  "validationBlockers": [
+    {
+      "detail": "Absolute archived original prerequisite absent.",
+      "owner": "existing test/orchestrator; no artifact/helper creation",
+      "file": "web/src/features/vehicle-systems/components/media-player-modernization/preservation.test.mjs",
+      "rawOutput": "False",
+      "id": "V01",
+      "line": 22,
+      "testExecution": "NOTRUN, no fabricated test failure exit",
+      "command": "C10 Test-Path C:/Users/AtulM/.copilot/session-state/bba4960d-f516-4831-bda3-877640f907ce/files/parallel-media-player-page-live/original.MediaPlayerPage.tsx"
+    }
+  ],
+  "finalValidation": {
+    "activeCommands": 0,
+    "allClaimsReleased": true,
+    "releaseUTC": "2026-10-14T01:44:05.3720506Z",
+    "sourceTestPins": "MATCHED",
+    "countsCheck": "MATCHED",
+    "jsonReparse": "PASSED"
+  },
+  "preservation": {
+    "sections": [
+      {
+        "line": 339,
+        "states": "selection/loading/fatal/missing/retained/metadata",
+        "name": "Now playing"
+      },
+      {
+        "line": 440,
+        "states": "selection/loading/fatal/missing/retained; raw zero/fallback11 disclosed",
+        "name": "Volume"
+      },
+      {
+        "line": 482,
+        "states": "four typed independent metrics; summary gaps F04/F05",
+        "name": "Listening stats"
+      },
+      {
+        "line": 498,
+        "states": "selection/loading/fatal/empty/retained; finite samples only",
+        "name": "Volume over time"
+      },
+      {
+        "line": 555,
+        "states": "selection/loading/fatal/empty/retained; Unknown bucket/all count legend",
+        "name": "Source distribution"
+      },
+      {
+        "line": 628,
+        "states": "selection/loading/fatal/empty/retained; six columns/mobile cards",
+        "name": "Playback history"
+      }
+    ],
+    "commandReadiness": "No play/pause/seek/volume mutation handlers found. Confirmation/auth/capability for media commands NOTAPPLICABLE. No media commands executed; query recovery is read-only.",
+    "pageSpecificPresentationLineCount": 858,
+    "elementCounts": {
+      "EmbeddedChart": 2,
+      "MediaStats": 1,
+      "DataTable": 1,
+      "dynamicInlineStyles": 2,
+      "FadeIn": 4,
+      "LayoutCard": 5
+    },
+    "sectionCount": 6,
+    "rawDataPreserved": [
+      "title/artist/album/station/source/status",
+      "volume/maximum/increment raw scalar, not percent",
+      "unique titles/top source/finite mean/latest step",
+      "source-frequency observations not listening-time totals",
+      "zero retained, missing/nonfinite never silence",
+      "progress current ms interpretation; unit authority unknown",
+      "query enablement/vehicle keys/AbortSignal/polling/range-key/sort/preferences unchanged"
+    ],
+    "historicalPageLineCount": 687,
+    "comparison": "Current counts/source inspection; no reconstructed originals or fresh preservation execution",
+    "stateMatrix": {
+      "fatal": "Only affected source replaced; neighbors retained",
+      "loading": "Panel skeletons retained; summary propagation gap",
+      "initialPaused": "F03 conflates unresolved pause/empty",
+      "scope": "Vehicle preserved; instant range loss F01",
+      "unknown": "Finite scalar guards exist; F02 unknown title gap",
+      "retained": "Usable payloads and zero remain, status+retry exist",
+      "freshness": "Query retrieval time, observation unavailable F06"
+    },
+    "historicalCombinedLineCount": 859,
+    "stableIds": [
+      "vehicle-systems:media-history",
+      "media-listening-stats",
+      "volGrad",
+      "media-now-playing",
+      "media-volume",
+      "media-volume-history",
+      "media-source-distribution"
+    ],
+    "pageLineCount": 686,
+    "actions": [
+      "Latest-source read retry/refresh",
+      "Independent history-source read retry",
+      "Header freshness read refresh for selected worst query",
+      "Six-column sort/value filters/clear/pagination/mobile load-more/Quick view",
+      "OperationalBrief Review details/close/Escape delegated"
+    ]
+  },
+  "dataSources": [
+    {
+      "mechanism": "Vehicle-keyed/enabled/cancelled/standard poll; no observation timestamp",
+      "file": "web/src/api/hooks/useVehicleSystems.ts",
+      "route": "internal/api/router.go:4177-4179; handler.go:107-132",
+      "url": "/media/latest?vehicle_id={vehicleId}",
+      "line": 150,
+      "hook": "useMedia"
+    },
+    {
+      "mechanism": "Vehicle+range key/AbortSignal/safeArray; Timeline identity-collapse ignores elapsed/volume-only changes",
+      "file": "web/src/api/hooks/useVehicleSystems.ts",
+      "route": "router.go:4177-4178; handler.go:42-54,63-100",
+      "url": "/media?vehicle_id={vehicleId}&start={date}&end={date}",
+      "line": 159,
+      "hook": "useMediaHistory"
+    }
+  ],
+  "tests": {
+    "runtimeDiscovery": "NOTRUN",
+    "pageExecuted": 0,
+    "skipped": null,
+    "failed": null,
+    "pageAuthoredDefinitions": 21,
+    "note": "it.each two-case expansion not counted as runtime discovery; all tests read-only and NOTRUN. Historical queue21/21 rescue SOURCE ONLY not fresh proof.",
+    "supportAuthoredDeclarations": {
+      "VehicleSourceContent": 5,
+      "VehicleOperationalBrief": 3,
+      "preservationNode": 7
+    },
+    "passed": null
+  },
+  "guidelineScan": {
+    "literalTranslationKeys": 71,
+    "limits": "Lexical/manual source evidence, not AST/native/global audit pass",
+    "commands": [
+      "C01",
+      "C02",
+      "C11"
+    ],
+    "canonicalMissingKeys": 0,
+    "rawCandidates": {
+      "doublePrefix": 0,
+      "sqlInterpolation": 0,
+      "fetchUseEffect": 0,
+      "hiddenPanelMultiline": 0,
+      "mutationCalls": 0,
+      "queryNewRequestHeuristic": 2,
+      "hardcodedJsx": 0,
+      "hiddenNoticesSameLine": 2,
+      "directLibraryImport": 0,
+      "barePanic": 0,
+      "fmtLogPrintln": 0,
+      "rawHtml": 0,
+      "camelcaseParam": 0,
+      "oldApiImport": 0,
+      "staticInlineStyle": 0
+    },
+    "exceptions": [
+      "Two hidden matches retained/error Text notices, not sections",
+      "Two page styles computed progress width and palette color are allowed",
+      "PageLayout delegates PageContainer",
+      "Shared raw DOM/API vendor boundaries expected; fixtures not production",
+      "Two backend matches URL.Query, not DB; Timeline/LiveState pass r.Context()",
+      "useSelectedVehicle effects sync selection, not data loading",
+      "Pie text legend supplies every source/count"
+    ],
+    "scope": "Seven production presentation files; exact media hooks150-177; media handler backend only"
+  },
+  "needs": [
+    {
+      "need": "Exact bounds and accurate nullable media response types, no duplicate integration campaign",
+      "owner": "existing G220/P440",
+      "issues": [
+        "F01",
+        "F07"
+      ]
+    },
+    {
+      "need": "Unknown-title/initial-paused read recovery",
+      "owner": "page using existing source/pause components",
+      "issues": [
+        "F02",
+        "F03"
+      ]
+    },
+    {
+      "need": "Mixed/partial provenance and proper loading/fatal status",
+      "owner": "MediaStats + existing VehicleOperationalBrief",
+      "issues": [
+        "F04",
+        "F05"
+      ]
+    },
+    {
+      "need": "Unavailable observation-time disclosure, no fabricated timestamp",
+      "owner": "existing source metadata/trust owners coordinated G220/G221",
+      "issues": [
+        "F06"
+      ]
+    },
+    {
+      "need": "Equivalent accessible volume data and valid ARIA bounds",
+      "owner": "page existing charts/progress",
+      "issues": [
+        "F08",
+        "F09"
+      ]
+    },
+    {
+      "need": "Saved locale/timezone in chart/mobile callbacks",
+      "owner": "page existing formatters",
+      "issues": [
+        "F10"
+      ]
+    },
+    {
+      "need": "Canonical import and full title/artist retrieval; no new shared exports/components",
+      "owner": "G068/P441 consumer and G007 details",
+      "issues": [
+        "F11",
+        "F12"
+      ]
+    },
+    {
+      "need": "Record missing archive prerequisite and future authorized unit/native/extreme QA; no PASS",
+      "owner": "orchestrator/existing test/native/unit owners",
+      "issues": [
+        "V01",
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C05",
+        "C06"
+      ]
+    }
+  ],
+  "deduplication": {
+    "queueLookup": "C04 no literal G220/G221/G068 queue item matches; C06 completed placement/grid/layout owners preserved. Inventory is not live claim.",
+    "resolved": "Neutral source glyph and nonpulsing loading adopted; not current findings",
+    "historical": "audit-page-223 findings source-rechecked; not borrowed evidence",
+    "completed": "Preserve accepted phase5 and phase6 rescue source objectives; do not redispatch",
+    "queueWrites": 0,
+    "existing": [
+      "P440/G220",
+      "P441/G068",
+      "G007 details",
+      "ChartContainer",
+      "VehicleOperationalBrief",
+      "VehicleSourcePause"
+    ]
+  },
+  "processDeviations": [
+    {
+      "kind": "no-Git startup deviation",
+      "detail": "Read-only startup probes despite no-Git request; no Git writes; no further Git",
+      "commands": [
+        "git --no-pager status --short",
+        "git --no-pager ls-files orchestration/instruction selectors"
+      ]
+    },
+    {
+      "command": "rg -n contracts/queue selectors",
+      "kind": "failed search",
+      "raw": "rg not recognized; PowerShell fallback, no install",
+      "exitCode": 1
+    },
+    {
+      "exitCode": 1,
+      "kind": "report launcher length",
+      "shellId": "1458",
+      "resolution": "Bounded standard PowerShell composition, no helper files",
+      "raw": "The filename or extension is too long. (os error206)"
+    },
+    {
+      "exitCode": 1,
+      "kind": "report serialization",
+      "shellId": "1493",
+      "resolution": "Corrected -Depth 30, C17 exit0",
+      "raw": "ConvertTo-Json: parameter Depth30 not found"
+    }
+  ],
+  "commands": {
+    "failedExitCount": 3,
+    "successfulChecks": [
+      "C01",
+      "C02",
+      "C03",
+      "C04",
+      "C05",
+      "C06",
+      "C07",
+      "C08",
+      "C09",
+      "C10",
+      "C11",
+      "C12"
+    ],
+    "rawLog": "web/logs/phase6-qa-vehicle-systems-media-player.log",
+    "checkExits": 0,
+    "exactEarlyCommands": "Caller PowerShell transcript shellIDs1075,1093,1094,1119,1132,1143,1156,1174,1188,1203,1237,1255; large outputs copied verbatim into log",
+    "reportWrites": [
+      "C14 exit0",
+      "C15 exit0",
+      "C16 exit1",
+      "C17 exit0"
+    ],
+    "finalChecks": [
+      "C19 exit0 all40pins matched",
+      "C20 post-write JSON reparse and all40pin comparison"
+    ]
+  },
+  "evidenceLimits": {
+    "NOTRUN": [
+      "Vitest/Node tests",
+      "npx tsc --noEmit",
+      "build/lint/full suites",
+      "browser/visual/keyboard/a11y/mobile/native/API/device/media",
+      "signal-unit authority trace"
+    ],
+    "writes": [
+      "docs/frontend-audits/phase6-qa-vehicle-systems-media-player.json",
+      "web/logs/phase6-qa-vehicle-systems-media-player.log"
+    ],
+    "noSourceTestCatalogQueueGitWrites": true,
+    "sourceOnly": "Confirmed means source mechanism, unexecuted reproduction scenario, not production symptom or page/native PASS",
+    "snapshotScope": "Hash pins include auxiliary snapshots; semantic audit is the page/direct media supports and explicitly cited shared/source mechanisms, not every line of all shared files."
+  },
+  "filesRead": [
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "docs/frontend-worker-conventions.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-audits/audit-page-223.json",
+    "docs/frontend-audits/phase6-qa-diagnostics-root-cause-intelligence.json",
+    "web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx",
+    "web/src/features/vehicle-systems/pages/MediaPlayerPage.test.tsx",
+    "web/src/features/vehicle-systems/components/media-player-modernization/MediaStats.tsx",
+    "web/src/features/vehicle-systems/components/media-player-modernization/MediaSlot.tsx",
+    "web/src/features/vehicle-systems/components/media-player-modernization/mediaPresentation.ts",
+    "web/src/features/vehicle-systems/components/media-player-modernization/index.ts",
+    "web/src/features/vehicle-systems/components/VehicleSourceContent.tsx",
+    "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+    "web/src/api/hooks/useVehicleSystems.ts",
+    "web/src/api/types.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/components/charts/EmbeddedChart.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/features/vehicle-systems/components/VehicleSourceContent.test.tsx",
+    "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.test.tsx",
+    "web/src/features/vehicle-systems/components/media-player-modernization/preservation.test.mjs",
+    "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/lib/dateFormat.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/lib/numberFormat.ts",
+    "internal/api/media/handler.go",
+    "internal/api/apiparams/params.go",
+    "web/src/components/data-display/DataFreshness.tsx",
+    "web/src/components/ui/MobileDataTableAdapter.tsx",
+    "web/src/components/layout/index.ts",
+    "web/src/components/ui/Icon.tsx",
+    "web/src/components/data-display/TimeStamp.tsx",
+    "web/src/i18n/en.json",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useTimeFormatPreference.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/lib/safeArray.ts",
+    "web/src/components/layout/layout-reference/SourceContent.tsx",
+    "internal/api/router.go"
+  ],
+  "summary": {
+    "validationBlockers": 1,
+    "priority": [
+      "workspace bounds/types",
+      "unknown and paused trust",
+      "brief/freshness qualifiers",
+      "a11y/preferences/full details",
+      "boundary adoption"
+    ],
+    "filesWithMostIssues": {
+      "MediaStats": 2,
+      "MediaPlayerPage": 7,
+      "MediaSlot": 1,
+      "apiTypes": 1,
+      "mediaPresentation": 1
+    },
+    "needs": 8,
+    "confirmed": 12,
+    "conditionalNative": 6,
+    "byRule": {
+      "category-barrel-boundary": 1,
+      "observation-freshness-unqualified": 1,
+      "full-detail-truncated-renderer": 1,
+      "mixed-source-summary-trust": 1,
+      "media-wire-type-guarantees": 1,
+      "summary-loading-fatal-state": 1,
+      "workspace-instant-bounds": 1,
+      "saved-date-locale-timezone-bypass": 1,
+      "unknown-not-absence": 1,
+      "progressbar-degenerate-bounds": 1,
+      "initial-paused-not-empty": 1,
+      "chart-equivalent-data-fallback": 1
+    }
+  }
+}

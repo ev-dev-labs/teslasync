@@ -37,12 +37,15 @@ import type {
   SignalDomain,
 } from './rootCauseIntelligence';
 import { NO_CAUSAL_PROOF_DISCLAIMER } from './rootCauseIntelligence';
+import { isSensitiveFieldName, redactSensitiveText } from '@/lib/privacy';
+import type { DataState } from '@/api/dataState';
+import type { SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Schema
 // ─────────────────────────────────────────────────────────────────────────
 
-export const SERVICE_EVIDENCE_PACK_SCHEMA_VERSION = '1.0.0';
+export const SERVICE_EVIDENCE_PACK_SCHEMA_VERSION = '1.1.0';
 
 export const SERVICE_EVIDENCE_PACK_INCLUDED_VEHICLE_FIELDS = ['id', 'displayName'] as const;
 
@@ -114,6 +117,44 @@ export interface ServiceEvidencePackPrivacyManifest {
   notes: string;
 }
 
+/** Serializable trust only: payloads, retry callbacks and error messages are
+ * deliberately excluded from the privacy-safe offline snapshot. */
+export interface ServiceEvidencePackSourceTrust {
+  status: DataState<unknown>['status'] | 'unknown';
+  provenance: DataState<unknown>['provenance'];
+  hasData: boolean | null;
+  isRefreshing: boolean | null;
+  isRefreshBlocked: boolean | null;
+  hasRefreshError: boolean | null;
+  hasFatalError: boolean | null;
+  updatedAt: number | null;
+  ageMs: number | null;
+}
+
+export interface ServiceEvidencePackSourceSnapshot {
+  kind: 'catalog' | 'history' | 'softwareUpdates';
+  signal: string | null;
+  responseSignal: string | null;
+  vehicleId: number | null;
+  from: string | null;
+  to: string | null;
+  /** Loaded raw rows, not normalized entries or usable statistical samples.
+   * null means unknown; zero means an explicitly empty source array. */
+  loadedCount: number | null;
+  /** Source-reported count, not a claim of full-window completeness. */
+  reportedCount: number | null;
+  trust: ServiceEvidencePackSourceTrust;
+}
+
+export interface ServiceEvidencePackSnapshot {
+  sources: ServiceEvidencePackSourceSnapshot[];
+  counts: {
+    signalEvidence: number | null;
+    hypotheses: number | null;
+    softwareUpdates: number | null;
+  };
+}
+
 export interface ServiceEvidencePackCore {
   schemaVersion: string;
   generatedAt: string;
@@ -134,6 +175,9 @@ export interface ServiceEvidencePackCore {
   /** Verbatim `NO_CAUSAL_PROOF_DISCLAIMER` — repeated here so the exported
    *  JSON file is self-explanatory even without the app around it. */
   disclaimer: string;
+  /** Added in 1.1; optional for consumers retaining a 1.0 document. No source
+   * trust or full-window completeness is inferred from analysis quality. */
+  snapshot?: ServiceEvidencePackSnapshot;
 }
 
 export interface ServiceEvidencePackIntegrity {
@@ -201,10 +245,20 @@ function buildPrivacyManifest(): ServiceEvidencePackPrivacyManifest {
     notes:
       "This pack references the vehicle by its numeric id and user-facing display name only. " +
       'VIN, GPS coordinates, street address, geofence names, authentication tokens, and raw ' +
-      'location history are never included. Signal evidence is limited to statistical ' +
+      'location history are never included. Signal evidence is limited to non-sensitive ' +
+      'signals; sensitive focal signals, candidate signals, ' +
+      'and their hypotheses are excluded, including coordinate statistics. ' +
+      'Narrative references to excluded signals are redacted. Statistical ' +
       'summaries (medians, MAD, effect sizes, sample counts, signal names) — raw telemetry ' +
       'payloads are not embedded.',
   };
+}
+
+function isSensitiveSignal(signal: string): boolean {
+  const compact = signal.replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const normalized = signal.replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2');
+  return isSensitiveFieldName(normalized) ||
+    /coordinates|latitude|longitude|address|geofence|rawlocationhistory|gps/.test(compact);
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -220,8 +274,85 @@ export interface BuildServiceEvidencePackInput {
    *  when unavailable — the output field is always present (as `null`) so
    *  consumers never need to guess whether it was omitted vs. empty. */
   softwareUpdates?: readonly RawSoftwareUpdateEntry[] | null;
+  /** Original per-query states captured with the analysis. Omission preserves
+   * legacy callers but exports unknown trust, never assumed healthy trust. */
+  sources?: {
+    catalog?: DataState<readonly string[]>;
+    histories?: readonly SignalEvidenceBundleSource[];
+    softwareUpdates?: DataState<readonly RawSoftwareUpdateEntry[]>;
+  };
   /** Injectable clock for deterministic tests; defaults to the real clock. */
   now?: () => string;
+}
+
+function snapshotTrust(state: DataState<unknown> | undefined): ServiceEvidencePackSourceTrust {
+  return {
+    status: state?.status ?? 'unknown',
+    provenance: state?.provenance ?? 'unknown',
+    hasData: state?.hasData ?? null,
+    isRefreshing: state?.isRefreshing ?? null,
+    isRefreshBlocked: state?.isRefreshBlocked ?? null,
+    hasRefreshError: state ? state.refreshError != null : null,
+    hasFatalError: state ? state.fatalError != null : null,
+    updatedAt: state?.updatedAt ?? null,
+    ageMs: state?.ageMs ?? null,
+  };
+}
+
+function sourceCount(value: number | undefined): number | null {
+  return value !== undefined && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function buildSnapshot(
+  input: BuildServiceEvidencePackInput,
+  signalEvidence: ServiceEvidencePackSignalEvidence[],
+  hypotheses: ServiceEvidencePackHypothesis[],
+): ServiceEvidencePackSnapshot {
+  const catalog = input.sources?.catalog;
+  const updates = input.sources?.softwareUpdates;
+  const histories = input.sources?.histories ?? [];
+  // Keep requested sources even when they never loaded or entered the graph.
+  const signals = new Set([
+    input.analysis?.focalSignal ?? '',
+    ...(input.analysis?.relatedCandidates ?? []).map((candidate) => candidate.signal),
+    ...signalEvidence.map((entry) => entry.signal),
+    ...histories.map((source) => source.signal),
+  ]);
+  const sources: ServiceEvidencePackSourceSnapshot[] = [{
+    kind: 'catalog', signal: null, responseSignal: null, vehicleId: input.vehicle?.id ?? null,
+    from: null, to: null,
+    loadedCount: Array.isArray(catalog?.data) ? catalog.data.length : null,
+    reportedCount: null, trust: snapshotTrust(catalog),
+  }];
+  for (const signal of signals) {
+    if (!signal || isSensitiveSignal(signal)) continue;
+    const state = histories.find((source) => source.signal === signal)?.state;
+    const response = state?.data;
+    sources.push({
+      kind: 'history', signal,
+      responseSignal: response?.signal && !isSensitiveSignal(response.signal) ? response.signal : null,
+      vehicleId: response?.vehicleId ?? input.vehicle?.id ?? null,
+      from: response?.from ?? null, to: response?.to ?? null,
+      loadedCount: Array.isArray(response?.data) ? response.data.length : null,
+      reportedCount: sourceCount(response?.count),
+      trust: snapshotTrust(state),
+    });
+  }
+  const rawUpdates = updates?.data ?? input.softwareUpdates;
+  const updateCount = Array.isArray(rawUpdates) ? rawUpdates.length : null;
+  sources.push({
+    kind: 'softwareUpdates', signal: null, responseSignal: null, vehicleId: input.vehicle?.id ?? null,
+    from: null, to: null, loadedCount: updateCount, reportedCount: null,
+    trust: snapshotTrust(updates),
+  });
+  return {
+    sources,
+    counts: {
+      signalEvidence: Array.isArray(input.analysis?.graph?.nodes) ? signalEvidence.length : null,
+      hypotheses: Array.isArray(input.analysis?.hypotheses) ? hypotheses.length : null,
+      softwareUpdates: updateCount,
+    },
+  };
 }
 
 /**
@@ -234,6 +365,20 @@ export interface BuildServiceEvidencePackInput {
 export function buildServiceEvidencePackCore(input: BuildServiceEvidencePackInput): ServiceEvidencePackCore {
   const nowFn = typeof input.now === 'function' ? input.now : () => new Date().toISOString();
   const analysis = input.analysis;
+  const focalExcluded = isSensitiveSignal(analysis?.focalSignal ?? '');
+  const excludedSignals = [
+    analysis?.focalSignal ?? '',
+    ...(analysis?.graph?.nodes ?? []).map((n) => n.id),
+    ...(analysis?.hypotheses ?? []).map((h) => h.signal),
+    ...(analysis?.relatedCandidates ?? []).map((c) => c.signal),
+  ].filter(isSensitiveSignal);
+  const scrubNarrative = (text: string): string => {
+    let scrubbed = text;
+    for (const signal of excludedSignals) {
+      scrubbed = scrubbed.split(signal).join('[REDACTED]');
+    }
+    return redactSensitiveText(scrubbed);
+  };
 
   const vehicle = normalizeVehicleReference(input.vehicle);
   const window: ServiceEvidencePackWindow = {
@@ -242,7 +387,8 @@ export function buildServiceEvidencePackCore(input: BuildServiceEvidencePackInpu
     latestMs: analysis?.dataWindow?.latestMs ?? null,
   };
 
-  const signalEvidence: ServiceEvidencePackSignalEvidence[] = (analysis?.graph?.nodes ?? []).map((n) => ({
+  const signalEvidence: ServiceEvidencePackSignalEvidence[] = (analysis?.graph?.nodes ?? [])
+    .filter((n) => !isSensitiveSignal(n.id)).map((n) => ({
     signal: n.id,
     role: n.kind,
     domains: n.domains,
@@ -250,7 +396,8 @@ export function buildServiceEvidencePackCore(input: BuildServiceEvidencePackInpu
     hasEvidence: n.hasEvidence,
   }));
 
-  const hypotheses: ServiceEvidencePackHypothesis[] = (analysis?.hypotheses ?? []).map((h) => ({
+  const hypotheses: ServiceEvidencePackHypothesis[] = (analysis?.hypotheses ?? [])
+    .filter((h) => !focalExcluded && !isSensitiveSignal(h.signal)).map((h) => ({
     signal: h.signal,
     domains: h.domains,
     relation: h.relation,
@@ -258,32 +405,52 @@ export function buildServiceEvidencePackCore(input: BuildServiceEvidencePackInpu
     shift: h.shift,
     score: h.score,
     sampleCount: h.sampleCount,
-    rationale: h.rationale,
+    rationale: scrubNarrative(h.rationale),
   }));
+
+  const quality = analysis?.quality ?? {
+    band: 'insufficient',
+    overallScore: 0,
+    focalSampleCount: 0,
+    candidatesWithEvidence: 0,
+    candidatesConsidered: 0,
+    windowMs: 0,
+  };
+  const privacyFiltered = excludedSignals.length > 0;
 
   return {
     schemaVersion: SERVICE_EVIDENCE_PACK_SCHEMA_VERSION,
     generatedAt: nowFn(),
     vehicle,
     window,
-    focalSignal: analysis?.focalSignal ?? '',
-    focalDomains: analysis?.focalDomains ?? [],
-    focalShift: analysis?.focalShift ?? null,
+    focalSignal: focalExcluded ? '' : analysis?.focalSignal ?? '',
+    focalDomains: focalExcluded ? [] : analysis?.focalDomains ?? [],
+    focalShift: focalExcluded ? null : analysis?.focalShift ?? null,
     signalEvidence,
     hypotheses,
-    quality: analysis?.quality ?? {
-      band: 'insufficient',
+    quality: privacyFiltered ? {
+      ...quality,
+      band: focalExcluded || quality.band === 'insufficient' ? 'insufficient' : 'weak',
       overallScore: 0,
-      focalSampleCount: 0,
-      candidatesWithEvidence: 0,
-      candidatesConsidered: 0,
-      windowMs: 0,
-    },
-    limitations: analysis?.limitations ?? [],
-    summary: analysis?.summary ?? '',
+      focalSampleCount: focalExcluded ? 0 : quality.focalSampleCount,
+      candidatesWithEvidence: hypotheses.length,
+      candidatesConsidered: signalEvidence.filter((n) => n.role === 'candidate').length,
+    } : quality,
+    limitations: [
+      ...(analysis?.limitations ?? []).map(scrubNarrative),
+      ...(privacyFiltered ? [
+        'Sensitive signal evidence was excluded for privacy. Original analysis quality is not applicable to this filtered export.',
+      ] : []),
+    ],
+    summary: focalExcluded
+      ? `The sensitive focal signal and its associated hypotheses were excluded for privacy. ${NO_CAUSAL_PROOF_DISCLAIMER}`
+      : privacyFiltered
+        ? `${scrubNarrative(analysis?.focalSignal ?? '')}: ${hypotheses.length} ranked hypotheses retained after sensitive signal exclusion. ${NO_CAUSAL_PROOF_DISCLAIMER}`
+        : scrubNarrative(analysis?.summary ?? ''),
     softwareUpdates: normalizeSoftwareUpdates(input.softwareUpdates),
     privacy: buildPrivacyManifest(),
     disclaimer: NO_CAUSAL_PROOF_DISCLAIMER,
+    snapshot: buildSnapshot(input, signalEvidence, hypotheses),
   };
 }
 

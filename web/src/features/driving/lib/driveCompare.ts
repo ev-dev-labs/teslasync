@@ -113,7 +113,10 @@ export function metricOf(drive: Drive, key: CompareMetricKey): number | null {
     case 'socUsed': {
       const start = num(drive.startBatteryPct);
       const end = num(drive.endBatteryPct);
-      return start != null && end != null && start >= end ? start - end : null;
+      return start != null && start >= 0 && start <= 100
+        && end != null && end >= 0 && end <= 100
+        ? start - end
+        : null;
     }
     case 'outsideTempAvgC':
       return num(drive.outsideTempAvgC);
@@ -183,12 +186,8 @@ function sample(point: TimestampShape, value: unknown, valid: (n: number) => boo
 }
 
 function compact(samples: Array<TimestampedValue | null>): TimestampedValue[] {
-  const byTimestamp = new Map<number, number>();
-  for (const item of samples) {
-    if (item) byTimestamp.set(item.timestampMs, item.value);
-  }
-  return [...byTimestamp]
-    .map(([time, value]) => ({ timestampMs: time, value }))
+  return samples
+    .filter((item): item is TimestampedValue => item != null)
     .sort((a, b) => a.timestampMs - b.timestampMs);
 }
 
@@ -241,19 +240,32 @@ export function normalizeDriveProfile(drive: DriveDetail): NormalizedDriveProfil
   };
 }
 
-/** Merge original sample positions for a two-line chart; missing values stay null. */
+/**
+ * Align samples by rounded progress and source occurrence, without aggregation.
+ * Duplicate occurrences retain source order; unmatched opposite-side values stay null.
+ */
 export function mergeProfileSeries(
   a: ReadonlyArray<ProgressValuePoint>,
   b: ReadonlyArray<ProgressValuePoint>,
 ): ComparisonProfilePoint[] {
-  const rows = new Map<number, ComparisonProfilePoint>();
+  const rows = new Map<number, ComparisonProfilePoint[]>();
   for (const point of a) {
     const progress = Math.round(point.progress * 100) / 100;
-    rows.set(progress, { progress, a: point.value, b: rows.get(progress)?.b ?? null });
+    const occurrences = rows.get(progress) ?? [];
+    occurrences.push({ progress, a: point.value, b: null });
+    rows.set(progress, occurrences);
   }
+  const bOccurrences = new Map<number, number>();
   for (const point of b) {
     const progress = Math.round(point.progress * 100) / 100;
-    rows.set(progress, { progress, a: rows.get(progress)?.a ?? null, b: point.value });
+    const index = bOccurrences.get(progress) ?? 0;
+    const occurrences = rows.get(progress) ?? [];
+    if (index < occurrences.length) occurrences[index].b = point.value;
+    else occurrences.push({ progress, a: null, b: point.value });
+    rows.set(progress, occurrences);
+    bOccurrences.set(progress, index + 1);
   }
-  return [...rows.values()].sort((left, right) => left.progress - right.progress);
+  return [...rows.entries()]
+    .sort(([left], [right]) => left - right)
+    .flatMap(([, occurrences]) => occurrences);
 }

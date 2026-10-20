@@ -1,10 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { Navigation, MapPin, Flag } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, PanelTitle, Table } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { DateTime } from '@/components/data-display';
+import { useVehicle } from '@/api/hooks/useVehicles';
+import { useSettings } from '@/hooks/useSettings';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { resolveTimezone } from '@/lib/timezone';
 import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface JourneyDetailsPanelProps {
   drive: DriveDetail;
@@ -33,7 +37,16 @@ export function formatCoordinates(
 }
 
 export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const { data: vehicle } = useVehicle(String(drive.vehicleId));
+  const { settings } = useSettings();
+  const { formatDateTime } = useDateFormat();
+  const timezone = resolveTimezone(
+    settings.tz_display_default === 'user' || settings.tz_display_default === 'utc'
+      ? settings.tz_display_default : 'vehicle',
+    vehicle?.timezone, settings.timezone_user,
+  );
 
   const startCoords = formatCoordinates(drive.startLat, drive.startLon);
   const endCoords = formatCoordinates(drive.endLat, drive.endLon);
@@ -41,15 +54,16 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
 
   return (
     <FadeIn>
-      <GlassPanel className="p-5">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-          <Navigation className="h-4 w-4 text-cyan-400" aria-hidden="true" /> {t('driveDetail.journeyDetails', 'Journey Details')}
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-green-400 mb-1">
-              <MapPin className="h-4 w-4" aria-hidden="true" /> {t('driveDetail.start', 'Start')}
-            </div>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="flex items-center gap-2 mb-4">
+          <Navigation className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" /> {t('driveDetail.journeyDetails', 'Journey details')}
+        </PanelTitle>
+        <Table variant="embedded" className="table-fixed [&_td]:break-words [&_td]:[overflow-wrap:anywhere]" aria-label={t('driveDetail.timeline.label', 'Drive timeline')}>
+          <thead><tr>
+            <th scope="col"><span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4" aria-hidden="true" />{t('driveDetail.start', 'Start')}</span></th>
+            <th scope="col"><span className="inline-flex items-center gap-2"><Flag className="h-4 w-4" aria-hidden="true" />{t('driveDetail.destination', 'Destination')}</span></th>
+          </tr></thead>
+          <tbody><tr><td className="align-top">
             <p className="font-bold text-[var(--text-primary)] text-sm">
               {drive.startAddress
                 ? drive.startAddress
@@ -58,16 +72,11 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
                   : t('driveDetail.noAddress', 'No address data')}
             </p>
             <p className="text-xs text-[var(--text-muted)]">
-              <DateTime value={drive.startTs} in="vehicle" />
+              <span title={drive.startTs || undefined}>{formatDateTime(drive.startTs, { tz: timezone })}</span>
             </p>
-            <p className="text-xs text-[var(--text-secondary)]">
-              {t('driveDetail.battery', 'Battery')}: {drive.startBatteryPct ?? '?'}%
-            </p>
-          </div>
-          <div>
-            <div className="flex items-center gap-2 text-red-400 mb-1">
-              <Flag className="h-4 w-4" aria-hidden="true" /> {t('driveDetail.destination', 'Destination')}
-            </div>
+            {drive.startAddress && startCoords ? <p className="mt-1 font-mono text-xs text-[var(--text-muted)]">{startCoords}</p> : null}
+            <p className="mt-2 text-xs text-[var(--text-secondary)]">{t('driveDetail.battery', 'Battery')}: {drive.startBatteryPct != null ? `${fmtNumber(drive.startBatteryPct)}%` : '—'}</p>
+          </td><td className="align-top">
             <p className="font-bold text-[var(--text-primary)] text-sm">
               {drive.endAddress
                 ? drive.endAddress
@@ -77,14 +86,15 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
             </p>
             <p className="text-xs text-[var(--text-muted)]">
               {hasEnded
-                ? <DateTime value={drive.endTs} in="vehicle" />
+                ? <span title={drive.endTs || undefined}>{formatDateTime(drive.endTs, { tz: timezone })}</span>
                 : t('driveDetail.inProgress', 'In progress')}
             </p>
             <p className="text-xs text-[var(--text-secondary)]">
-              {t('driveDetail.battery', 'Battery')}: {drive.endBatteryPct ?? '?'}%
+              {t('driveDetail.battery', 'Battery')}: {drive.endBatteryPct != null ? `${fmtNumber(drive.endBatteryPct)}%` : '—'}
             </p>
-          </div>
-        </div>
+            {drive.endAddress && endCoords ? <p className="mt-1 font-mono text-xs text-[var(--text-muted)]">{endCoords}</p> : null}
+          </td></tr></tbody>
+        </Table>
       </GlassPanel>
     </FadeIn>
   );

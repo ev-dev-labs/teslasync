@@ -50,6 +50,7 @@ export function VehicleCostToolbar({
       </label>
       <Button
         variant="ghost"
+        className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
         onClick={onRefresh}
         disabled={refreshing}
         // Communicate the in-flight refresh to assistive tech. The visible

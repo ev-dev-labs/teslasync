@@ -15,12 +15,13 @@ import { useTranslation } from 'react-i18next';
 import { Activity, Clock, Gauge, Layers, Timer, TrendingUp } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type {
   IngestXRayBucket,
   IngestXRayResponse,
   IngestXRayWindow,
 } from '@/types/admin-diagnostics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface XRayHeaderProps {
   data: IngestXRayResponse | undefined;
@@ -53,6 +54,7 @@ export function XRayHeader({
   windowSel,
   bucketSel,
 }: XRayHeaderProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Peak + mean samples per bucket, derived from the same series the hero
@@ -97,7 +99,7 @@ export function XRayHeader({
       />
       <MetricCard
         label={t('admin.xray.stats.avg', 'Avg / bucket')}
-        value={ready ? fmtNumber(avg, 1) : DASH}
+        value={ready ? fmtNumber(avg) : DASH}
         icon={<Gauge className="h-5 w-5" />}
         color="purple"
         subtitle={t('admin.xray.stats.avgSub', 'mean per interval')}

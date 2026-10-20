@@ -1,0 +1,1324 @@
+{
+  "item": "phase6-qa-power-user-dashboards",
+  "attempt": 1,
+  "status": "SOURCE_QA_REPORT_COMPLETE_WITH_CONFIRMED_NEEDS",
+  "page": "web/src/features/power-user/pages/DashboardsPage.tsx",
+  "routes": [
+    "/power/dashboards"
+  ],
+  "sourceReadOnly": true,
+  "acceptedSourceCommit": "c09b31ec136cfbd232755fb2825b20f61c9a54a4",
+  "writableFiles": [
+    "docs/frontend-audits/phase6-qa-power-user-dashboards.json",
+    "web/logs/phase6-qa-power-user-dashboards.log"
+  ],
+  "authority": {
+    "reservationUtc": "2026-10-14T01:47:59.989Z",
+    "firstActualCommandUtc": "2026-10-14T01:55:05.1996736Z",
+    "returnByUtc": "2026-10-14T02:07:59.989Z",
+    "hardByUtc": "2026-10-14T02:12:59.989Z",
+    "clockNotRenewed": true,
+    "initialQueueLine": 60,
+    "currentQueueMatches": [
+      {
+        "line": 42,
+        "text": "| phase6-qa-power-user-dashboards | e86efa10-9e0e-46a1-afff-1f393131c418 |"
+      },
+      {
+        "line": 166,
+        "text": "| [~] | 6 | phase6-qa-power-user-dashboards | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-power-user-dashboards.json; web\\logs\\phase6-qa-power-user-dashboards.log | phase5-page-power-user-dashboards | 1 | reserved01:47:59.989Z; actor pending | - | DashboardsPage/direct supports; source-only, no dashboard writes/external embedded requests/browser access. |"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "file": "web/src/lib/workspaceScope.ts",
+      "line": 166,
+      "anchor": "vehicle: !vehicleDisabled",
+      "rule": "misleading-workspace-scope",
+      "contract": "MDC-032",
+      "needId": "N1",
+      "status": "CONFIRMED_SOURCE_MECHANISM_NOT_RUNTIME_REPRODUCED",
+      "detail": "Route absent from vehicle-disabled paths/prefixes, so /power/dashboards yields vehicle=true/range=false. Desktop/mobile pickers imply selection scope; manual editor, static catalog and AI {prompt} body never consume it.",
+      "sourceRepro": "Source repro: workspaceScope.ts:95-167; Layout.tsx:832-834,1311,1413-1414; WorkspaceHeader.tsx:33-35,63-67; composer:136,149-153. Selected vehicle has no input path.",
+      "fix": "Integration owner disables only this route picker unless real backend scope contract added; no invented query parameters."
+    },
+    {
+      "id": "F02",
+      "file": "web/src/features/power-user/pages/DashboardsPage.tsx",
+      "line": 301,
+      "anchor": "<Textarea",
+      "rule": "field-description-association",
+      "contract": "MDC-021/MDC-040",
+      "needId": "N2",
+      "status": "CONFIRMED_SOURCE_MECHANISM_NOT_RUNTIME_REPRODUCED",
+      "detail": "Editor has localized name but adjacent manual/Grafana helper is unassociated; no hint/aria-describedby.",
+      "sourceRepro": "Source repro: page295-312; shared Textarea50-54 only merges supplied IDs. Page test190 checks name only.",
+      "fix": "Page owner associates existing localized helper through stable ID or hint; preserve raw text, spellCheck=false, Copy/Clear."
+    },
+    {
+      "id": "F03",
+      "file": "web/src/components/ai/AINLDashboardComposer.tsx",
+      "line": 183,
+      "anchor": "<Textarea",
+      "rule": "field-description-association",
+      "contract": "MDC-021/MDC-040",
+      "needId": "N3",
+      "status": "CONFIRMED_SOURCE_MECHANISM_NOT_RUNTIME_REPRODUCED",
+      "detail": "AI prompt has localized name but unassociated card description; no hint/aria-describedby.",
+      "sourceRepro": "Source repro: composer173-175,183-192; AIFeatureCard328 separate paragraph; composer test374 checks name only.",
+      "fix": "Existing composer owner associates existing localized guidance via Textarea APIs; no replacement field/card."
+    },
+    {
+      "id": "F04",
+      "file": "web/src/components/ai/AiOutputPanel.tsx",
+      "line": 93,
+      "anchor": "{error ?? t(",
+      "rule": "raw-ai-error",
+      "contract": "MDC-026/MDC-044",
+      "needId": "N4",
+      "status": "CONFIRMED_SOURCE_MECHANISM_NOT_RUNTIME_REPRODUCED",
+      "detail": "Raw transport codes/errors are rendered in alert; localized prefix does not explain recovery.",
+      "sourceRepro": "Source repro: hook361-369,400 emits stream_http_404/stream_no_body/stream_incomplete; panel renders verbatim. Composer test519 expects stream_http_404; no HTTP request executed.",
+      "fix": "Shared error/output owner maps known codes to localized recovery; keep diagnostics, partial text, manual baseline and re-draft; do not infer offline."
+    },
+    {
+      "id": "F05",
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "line": 57,
+      "anchor": "? `${t('helix.evidence.grounded'",
+      "rule": "tool-success-as-source",
+      "contract": "MDC-026/MDC-046",
+      "needId": "N5",
+      "status": "CONFIRMED_SOURCE_MECHANISM_NOT_RUNTIME_REPRODUCED",
+      "detail": "All succeeded tools counted as TeslaSync sources/Grounded in. draft_dashboard_layout success does not prove queries or referenced panels were read.",
+      "sourceRepro": "Source repro: composer143 -> hook448-454 succeeded activity -> trail46-58 Grounded in 1 TeslaSync source. Composer fixture568 supplies that drafting tool.",
+      "fix": "Qualify execution metadata unless actual source grounding exists; retain IDs/order/privacy; never fabricate vehicle/date/query/physical evidence."
+    },
+    {
+      "id": "F06",
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "line": 114,
+      "anchor": "{toolLabel(item.name)}",
+      "rule": "hardcoded-string",
+      "contract": "MDC-044",
+      "needId": "N5",
+      "status": "CONFIRMED_SOURCE_MECHANISM_NOT_RUNTIME_REPRODUCED",
+      "detail": "English-derived human tool labels bypass t and recase protocol words.",
+      "sourceRepro": "Source repro: trail24-34/114 turns draft_dashboard_layout into Dashboard layout in every locale. Shared tests assert English fallback labels.",
+      "fix": "Known localized tool labels; raw unrecased unknown identifier fallback; keep IDs/names/title and serialized catalog ownership."
+    },
+    {
+      "id": "F07",
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "line": 57,
+      "anchor": "? `${t('helix.evidence.grounded'",
+      "rule": "fragmented-i18n",
+      "contract": "MDC-044",
+      "needId": "N5",
+      "status": "CONFIRMED_SOURCE_MECHANISM_NOT_RUNTIME_REPRODUCED",
+      "detail": "Summary/caption concatenate translated fragments in fixed English order with only singular/plural.",
+      "sourceRepro": "Source repro: trail51-58 and129-134 cannot express full sentence order or locale plural categories; no real-catalog/native run.",
+      "fix": "Full localized interpolation/plural messages; fix evidence semantics with F05 and retain every count/row."
+    },
+    {
+      "id": "F08",
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "line": 134,
+      "anchor": "{tokenCount}",
+      "rule": "number-preference-bypass",
+      "contract": "MDC-044",
+      "needId": "N5",
+      "status": "CONFIRMED_SOURCE_MECHANISM_NOT_RUNTIME_REPRODUCED",
+      "detail": "Evidence counts/token totals render raw numbers without user locale-number preferences.",
+      "sourceRepro": "Source repro: done usage12345+67890 computes81235 rendered raw at134; counts57/129 also bypass formatter. Derived example only, not executed.",
+      "fix": "Existing count-aware number formatter/preferences at display; raw wire values/valid zero preserved; no physical/JSON conversion."
+    },
+    {
+      "id": "F09",
+      "file": "web/src/components/ai/AIThinkingIndicator.tsx",
+      "line": 58,
+      "anchor": "text-cyan-300/90",
+      "rule": "decorative-neon",
+      "contract": "MDC-010/MDC-012",
+      "needId": "N6",
+      "status": "CONFIRMED_SOURCE_MECHANISM_NOT_RUNTIME_REPRODUCED",
+      "detail": "Pending UI hardcodes cyan text/dots and three white/electric-cyan gradients rather than restrained theme roles.",
+      "sourceRepro": "Source repro: empty-stream default AiOutputPanel -> indicator58-78 fixes text-cyan and rgba(0,240,255,0.10) for every theme. Not measured contrast.",
+      "fix": "Existing indicator owner uses neutral roles; preserve localized nonblank status, hidden decoration and skeleton geometry."
+    },
+    {
+      "id": "F10",
+      "file": "web/src/components/ai/AIThinkingIndicator.tsx",
+      "line": 60,
+      "anchor": "motion-safe:animate-pulse",
+      "rule": "motion-policy-gap",
+      "contract": "MDC-042",
+      "needId": "N6",
+      "status": "CONFIRMED_SOURCE_MECHANISM_NOT_RUNTIME_REPRODUCED",
+      "detail": "Full/in-button thinking loops only use OS CSS motion-safe, not combined low-bandwidth policy.",
+      "sourceRepro": "Source repro: low-bandwidth=true, OS no-preference still allows animations at60,65-78,98-100; useMotionPreference44-48 includes low-bandwidth but is not consumed here.",
+      "fix": "Existing motion policy gates busy decoration; static status/skeleton preserved; no unnecessary pulse/bounce intensity."
+    }
+  ],
+  "conditionalAndNativeCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/components/ai/AINLDashboardComposer.tsx",
+      "lines": [
+        91,
+        125
+      ],
+      "kind": "conditional-input",
+      "status": "UNPROMOTED",
+      "mechanism": "Invalid slots dropped; missing slots become []; client finite coordinates do not enforce catalog/duplicates/grid bounds. Existing parser tests preserve this.",
+      "sourceRepro": "Conditional source scenario described by mechanism; NOT executed.",
+      "promotionRequirement": "Confirm producer guarantees/malformed input before changing parser; no malformed live draft observed."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/power-user/pages/DashboardsPage.tsx",
+      "lines": [
+        148,
+        153
+      ],
+      "kind": "integration/native",
+      "status": "UNPROMOTED",
+      "mechanism": "Apply copies {title,slots}; no inspected Grafana panels/query-template conversion. Manual text deliberately freeform.",
+      "sourceRepro": "Conditional source scenario described by mechanism; NOT executed.",
+      "promotionRequirement": "Document intended import shape or separately authorized safe import QA; no dashboard writes allowed, no universal import failure claimed."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/components/ai/AINLDashboardComposer.tsx",
+      "lines": [
+        130,
+        168
+      ],
+      "kind": "conditional-interaction",
+      "status": "UNPROMOTED",
+      "mechanism": "Edit prompt A to B after drafting A: old Apply stays; no prompt scopeKey and draft.prompt not directly displayed. Body snapshots A during stream.",
+      "sourceRepro": "Conditional source scenario described by mechanism; NOT executed.",
+      "promotionRequirement": "Review intended retained-proposal provenance before erasing draft; no observed misapplication."
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/power-user/pages/DashboardsPage.tsx",
+      "lines": [
+        50,
+        58
+      ],
+      "kind": "conditional-identity",
+      "status": "UNPROMOTED",
+      "mechanism": "One origin-local ai.dashboardComposer.draft key, not account/server/dashboard namespaced.",
+      "sourceRepro": "Conditional source scenario described by mechanism; NOT executed.",
+      "promotionRequirement": "Inspect outer session/storage cleanup before claiming cross-account leakage; no identity switch exercised."
+    },
+    {
+      "id": "C05",
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "lines": [
+        49,
+        134
+      ],
+      "kind": "conditional-input",
+      "status": "UNPROMOTED",
+      "mechanism": "Null usage components become0 locally; hook done parser579-588 defaults absent/non-number usage to0; total0 hidden. Initial usage=null remains.",
+      "sourceRepro": "Conditional source scenario described by mechanism; NOT executed.",
+      "promotionRequirement": "Establish producer usage guarantee; malformed usage/known-zero distinction not exercised."
+    },
+    {
+      "id": "C06",
+      "file": "web/src/components/ai/AiOutputPanel.tsx",
+      "lines": [
+        72,
+        115
+      ],
+      "kind": "conditional-phase",
+      "status": "UNPROMOTED",
+      "mechanism": "Paused-confirm plus activity/no text falls through to No output was generated; existing test274 expects this. Composer has no continuation UI.",
+      "sourceRepro": "Conditional source scenario described by mechanism; NOT executed.",
+      "promotionRequirement": "Establish whether propose-only route can emit confirmation before promoting; do not invent mutations/continuations."
+    },
+    {
+      "id": "C07",
+      "file": "web/src/components/ai/AINLDashboardComposer.tsx",
+      "lines": [
+        197,
+        209
+      ],
+      "kind": "native/mobile",
+      "status": "UNPROMOTED",
+      "mechanism": "Copy/Clear md40px, Apply sm36px/no wrapLabel; Ask Helix now explicitly mobile44px and is not an old sizing violation.",
+      "sourceRepro": "Conditional source scenario described by mechanism; NOT executed.",
+      "promotionRequirement": "Measure composed targets/spacing/WCAG exceptions and long labels at narrow widths; source not native failure proof."
+    },
+    {
+      "id": "C08",
+      "file": "web/src/features/power-user/pages/DashboardsPage.tsx",
+      "lines": [
+        258,
+        359
+      ],
+      "kind": "native/mobile",
+      "status": "UNPROMOTED",
+      "mechanism": "Viewport-driven workflow sm3/catalog sm2/xl1/3xl2; min-w-0/wrapping/break-all declared.",
+      "sourceRepro": "Conditional source scenario described by mechanism; NOT executed.",
+      "promotionRequirement": "Ten mission widths/narrow allocations/RTL/200% text/long labels and themes/forced-color/keyboard/clipboard need authorized native QA; no clipping/contrast claim."
+    },
+    {
+      "id": "C09",
+      "file": "web/src/features/power-user/pages/DashboardsPage.tsx",
+      "lines": [
+        106,
+        125
+      ],
+      "kind": "conditional-storage",
+      "status": "UNPROMOTED",
+      "mechanism": "Storage read failure returns blank; writes silently ignored. In-memory edits retained but reload persistence not guaranteed under denial/quota.",
+      "sourceRepro": "Conditional source scenario described by mechanism; NOT executed.",
+      "promotionRequirement": "Synthetic storage denial/quota then reload in future authorized scope; no actual draft loss observed."
+    }
+  ],
+  "deduplicatedNeeds": [
+    {
+      "id": "N1",
+      "owner": "workspace integration",
+      "files": [
+        "web/src/lib/workspaceScope.ts"
+      ],
+      "findingIds": [
+        "F01"
+      ],
+      "dedup": "One route-specific need covers desktop/mobile. No exact active workspace correction row found."
+    },
+    {
+      "id": "N2",
+      "owner": "existing page owner",
+      "files": [
+        "web/src/features/power-user/pages/DashboardsPage.tsx"
+      ],
+      "findingIds": [
+        "F02"
+      ],
+      "dedup": "Same helper concern in audit-page-163; phase5-page-power-user-dashboards [x] c09b31ec136cfbd232755fb2825b20f61c9a54a4 remains complete."
+    },
+    {
+      "id": "N3",
+      "owner": "existing AI composer owner",
+      "files": [
+        "web/src/components/ai/AINLDashboardComposer.tsx"
+      ],
+      "findingIds": [
+        "F03"
+      ],
+      "dedup": "AI part of audit-page-163 helper concern; separate file owner from N2."
+    },
+    {
+      "id": "N4",
+      "owner": "existing shared output/transport error owner",
+      "files": [
+        "web/src/components/ai/AiOutputPanel.tsx"
+      ],
+      "findingIds": [
+        "F04"
+      ],
+      "dedup": "Raw error concern in audit-page-163; phase3-ai-output-panel and phase3-retained-ai-output-error [x] kept; retained prose already corrected."
+    },
+    {
+      "id": "N5",
+      "owner": "existing HelixEvidenceTrail owner",
+      "files": [
+        "web/src/components/ai/HelixEvidenceTrail.tsx"
+      ],
+      "findingIds": [
+        "F05",
+        "F06",
+        "F07",
+        "F08"
+      ],
+      "dedup": "One shared need for four mechanisms. phase3-helix-evidence-trail [-] historical bookkeeping not revived. Anomaly-dashboard C04 remains unpromoted physical-diagnosis candidate, not reopened."
+    },
+    {
+      "id": "N6",
+      "owner": "existing AIThinkingIndicator/AIThinkingDots owner",
+      "files": [
+        "web/src/components/ai/AIThinkingIndicator.tsx"
+      ],
+      "findingIds": [
+        "F09",
+        "F10"
+      ],
+      "dedup": "One shared color/motion need. AIFeatureCard neutral CTA/mobile44px corrected source retained; no old neon CTA fix reopened."
+    }
+  ],
+  "beforePins": [
+    {
+      "path": "web/src/features/power-user/pages/DashboardsPage.tsx",
+      "sha256": "84866975cd4c404331d99259c9494600396ee946041e6bd7435dada618a2ae80",
+      "bytes": 15352
+    },
+    {
+      "path": "web/src/features/power-user/pages/DashboardsPage.test.tsx",
+      "sha256": "5ceba49e3a159d0f022ac956a31da1a84c416f421a37506d3ae8e9621a937332",
+      "bytes": 19288
+    },
+    {
+      "path": "web/src/components/ai/AINLDashboardComposer.tsx",
+      "sha256": "fd995f9a3b18698febd9ae6783099f4efa080bb7144d2fa07a30fc141c6b03ec",
+      "bytes": 8636
+    },
+    {
+      "path": "web/src/components/ai/AINLDashboardComposer.test.tsx",
+      "sha256": "1d84fe5efb6d8f4a729de792e97565ec92c42f7a8f4d25cb63b02bc3b426bf6b",
+      "bytes": 26805
+    },
+    {
+      "path": "web/src/components/ai/AiOutputPanel.tsx",
+      "sha256": "c3bb5766576f4e80b16762122d2ee35038a9aa7cf6fe96df426269fe07e3c8a4",
+      "bytes": 4830
+    },
+    {
+      "path": "web/src/components/ai/AIFeatureCard.tsx",
+      "sha256": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "bytes": 13277
+    },
+    {
+      "path": "web/src/components/ai/withAiFeature.tsx",
+      "sha256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "bytes": 2255
+    },
+    {
+      "path": "web/src/hooks/useAiStream.ts",
+      "sha256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "bytes": 23120
+    },
+    {
+      "path": "web/src/hooks/useAiEnabled.ts",
+      "sha256": "afb5dddd9edc3f024249d1ba97f04a8c9c9a5d5b9bc09be672113fe155069250",
+      "bytes": 1681
+    },
+    {
+      "path": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "bytes": 5253
+    },
+    {
+      "path": "web/src/components/ui/CopyButton.tsx",
+      "sha256": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+      "bytes": 5307
+    },
+    {
+      "path": "web/src/components/ui/Textarea.tsx",
+      "sha256": "6de5efa5b3f0077c97712be4fc7c3b436df47a4c803012cae8cb0756bad2db75",
+      "bytes": 4609
+    },
+    {
+      "path": "web/src/components/feedback/InlineCallout.tsx",
+      "sha256": "3e58e0b84d4b4f18d8e214f759657af40e6e18d8314477a232ccc92af3cf6331",
+      "bytes": 3199
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes": 10783
+    },
+    {
+      "path": "web/src/components/layout/Grid.tsx",
+      "sha256": "8087e9bfb5e41cf0133db8dec1894a3b92bcbb92ce74ba8cc50b046f3ccbe042",
+      "bytes": 3871
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "bytes": 1493
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411
+    },
+    {
+      "path": "web/src/hooks/usePageTitle.ts",
+      "sha256": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "bytes": 1280
+    },
+    {
+      "path": "web/src/components/ai/index.ts",
+      "sha256": "e5125f596c27a6a34e311fbc08aa939cbd925c9572b2bbc5dad08231a67bc178",
+      "bytes": 5542
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytes": 5174
+    },
+    {
+      "path": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "sha256": "953592d2d52d941b7fcde3f30fded6decb432c7cd7e0bd5a16a6d495dec61076",
+      "bytes": 4538
+    },
+    {
+      "path": "web/src/components/ai/AIThinkingIndicator.tsx",
+      "sha256": "9f387482d09223469a93bb71b25d6b5800d8fec6b51b0ef5481ae4b27fc8037d",
+      "bytes": 4998
+    },
+    {
+      "path": "web/src/hooks/useAiEnabled.test.tsx",
+      "sha256": "7376a394bfff7c938a706cdd251a90b11c68c3a0cd371dccd5ad7a87ab923497",
+      "bytes": 3890
+    },
+    {
+      "path": "web/src/components/ai/AiOutputPanel.test.tsx",
+      "sha256": "30d56f98064c935fcef47e56590174be6fa304681ba8afe672a2f7c74cc87a3b",
+      "bytes": 13174
+    },
+    {
+      "path": "web/src/components/ai/AIFeatureCard.test.tsx",
+      "sha256": "f8a8e8d368d09f034a4bef5315ff881927a201f8c5ab45c702af512de48a5e43",
+      "bytes": 22691
+    },
+    {
+      "path": "web/src/components/ai/withAiFeature.test.tsx",
+      "sha256": "653c81d8e483623d2edcccd61732961f762fd61cd387fded95166cdfe770082e",
+      "bytes": 3780
+    },
+    {
+      "path": "web/src/api/settings.ts",
+      "sha256": "ca29e09f902efc13d6c97d735bfc824871b73fa147af6a7ee98de572f1b25817",
+      "bytes": 7750
+    },
+    {
+      "path": "web/src/api/hooks/useSettings.ts",
+      "sha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "bytes": 13356
+    },
+    {
+      "path": "web/src/hooks/__tests__/useAiStream.test.ts",
+      "sha256": "4e90501eb6afc2fccd498a3c38524f6c30038b10aa472508f1ecd645dba7a95a",
+      "bytes": 32707
+    },
+    {
+      "path": "web/src/components/ui/__tests__/CopyButton.test.tsx",
+      "sha256": "66e52a67bf401adfbea1ff4b13f5efcf515943e4d16572f9adadbcbac523791f",
+      "bytes": 24169
+    },
+    {
+      "path": "web/src/hooks/useMotionPreference.ts",
+      "sha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "bytes": 2081
+    },
+    {
+      "path": "web/src/components/ai/AIThinkingIndicator.test.tsx",
+      "sha256": "a5e69904f2cf1660b1383fcaad05a3ff68c782d28583cccb4585b4a25a730063",
+      "bytes": 5402
+    },
+    {
+      "path": "web/src/components/layout/WorkspaceHeader.tsx",
+      "sha256": "b414ebcd4a69886a2e40f9ce24c06124f40d0552eeca10da881b72a78260b37c",
+      "bytes": 2737
+    },
+    {
+      "path": "web/src/components/layout/Layout.tsx",
+      "sha256": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "bytes": 92115
+    },
+    {
+      "path": "web/src/hooks/useWorkspaceScope.tsx",
+      "sha256": "54a6830f3d45fb3a55af051ab34cfa41b3006a0f06becf3d932efe163ae63ead",
+      "bytes": 1029
+    },
+    {
+      "path": "web/src/components/layout/WorkspaceHeader.test.tsx",
+      "sha256": "9d0ec26acdf941be9c3ae1d1e7ed868a430e4fb60e425f4f98e4f830ca323bd8",
+      "bytes": 9056
+    }
+  ],
+  "afterPins": [
+    {
+      "path": "web/src/features/power-user/pages/DashboardsPage.tsx",
+      "sha256": "84866975cd4c404331d99259c9494600396ee946041e6bd7435dada618a2ae80",
+      "bytes": 15352,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/power-user/pages/DashboardsPage.test.tsx",
+      "sha256": "5ceba49e3a159d0f022ac956a31da1a84c416f421a37506d3ae8e9621a937332",
+      "bytes": 19288,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/AINLDashboardComposer.tsx",
+      "sha256": "fd995f9a3b18698febd9ae6783099f4efa080bb7144d2fa07a30fc141c6b03ec",
+      "bytes": 8636,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/AINLDashboardComposer.test.tsx",
+      "sha256": "1d84fe5efb6d8f4a729de792e97565ec92c42f7a8f4d25cb63b02bc3b426bf6b",
+      "bytes": 26805,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/AiOutputPanel.tsx",
+      "sha256": "c3bb5766576f4e80b16762122d2ee35038a9aa7cf6fe96df426269fe07e3c8a4",
+      "bytes": 4830,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/AIFeatureCard.tsx",
+      "sha256": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "bytes": 13277,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/withAiFeature.tsx",
+      "sha256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "bytes": 2255,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useAiStream.ts",
+      "sha256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "bytes": 23120,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useAiEnabled.ts",
+      "sha256": "afb5dddd9edc3f024249d1ba97f04a8c9c9a5d5b9bc09be672113fe155069250",
+      "bytes": 1681,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "bytes": 5253,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/CopyButton.tsx",
+      "sha256": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+      "bytes": 5307,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/Textarea.tsx",
+      "sha256": "6de5efa5b3f0077c97712be4fc7c3b436df47a4c803012cae8cb0756bad2db75",
+      "bytes": 4609,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/feedback/InlineCallout.tsx",
+      "sha256": "3e58e0b84d4b4f18d8e214f759657af40e6e18d8314477a232ccc92af3cf6331",
+      "bytes": 3199,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes": 10783,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/Grid.tsx",
+      "sha256": "8087e9bfb5e41cf0133db8dec1894a3b92bcbb92ce74ba8cc50b046f3ccbe042",
+      "bytes": 3871,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "bytes": 1493,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/usePageTitle.ts",
+      "sha256": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "bytes": 1280,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/index.ts",
+      "sha256": "e5125f596c27a6a34e311fbc08aa939cbd925c9572b2bbc5dad08231a67bc178",
+      "bytes": 5542,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytes": 5174,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "sha256": "953592d2d52d941b7fcde3f30fded6decb432c7cd7e0bd5a16a6d495dec61076",
+      "bytes": 4538,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/AIThinkingIndicator.tsx",
+      "sha256": "9f387482d09223469a93bb71b25d6b5800d8fec6b51b0ef5481ae4b27fc8037d",
+      "bytes": 4998,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useAiEnabled.test.tsx",
+      "sha256": "7376a394bfff7c938a706cdd251a90b11c68c3a0cd371dccd5ad7a87ab923497",
+      "bytes": 3890,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/AiOutputPanel.test.tsx",
+      "sha256": "30d56f98064c935fcef47e56590174be6fa304681ba8afe672a2f7c74cc87a3b",
+      "bytes": 13174,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/AIFeatureCard.test.tsx",
+      "sha256": "f8a8e8d368d09f034a4bef5315ff881927a201f8c5ab45c702af512de48a5e43",
+      "bytes": 22691,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/withAiFeature.test.tsx",
+      "sha256": "653c81d8e483623d2edcccd61732961f762fd61cd387fded95166cdfe770082e",
+      "bytes": 3780,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/settings.ts",
+      "sha256": "ca29e09f902efc13d6c97d735bfc824871b73fa147af6a7ee98de572f1b25817",
+      "bytes": 7750,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/hooks/useSettings.ts",
+      "sha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "bytes": 13356,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/__tests__/useAiStream.test.ts",
+      "sha256": "4e90501eb6afc2fccd498a3c38524f6c30038b10aa472508f1ecd645dba7a95a",
+      "bytes": 32707,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/__tests__/CopyButton.test.tsx",
+      "sha256": "66e52a67bf401adfbea1ff4b13f5efcf515943e4d16572f9adadbcbac523791f",
+      "bytes": 24169,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useMotionPreference.ts",
+      "sha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "bytes": 2081,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/AIThinkingIndicator.test.tsx",
+      "sha256": "a5e69904f2cf1660b1383fcaad05a3ff68c782d28583cccb4585b4a25a730063",
+      "bytes": 5402,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/WorkspaceHeader.tsx",
+      "sha256": "b414ebcd4a69886a2e40f9ce24c06124f40d0552eeca10da881b72a78260b37c",
+      "bytes": 2737,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/Layout.tsx",
+      "sha256": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "bytes": 92115,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useWorkspaceScope.tsx",
+      "sha256": "54a6830f3d45fb3a55af051ab34cfa41b3006a0f06becf3d932efe163ae63ead",
+      "bytes": 1029,
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/WorkspaceHeader.test.tsx",
+      "sha256": "9d0ec26acdf941be9c3ae1d1e7ed868a430e4fb60e425f4f98e4f830ca323bd8",
+      "bytes": 9056,
+      "matchesBefore": true
+    }
+  ],
+  "pinSummary": {
+    "files": 37,
+    "matched": 37,
+    "drift": [],
+    "method": "SHA256 exact bytes; primary01:56:43Z, supplemental as discovered before report write. Layout pin followed scoped excerpts; no earlier whole-shell snapshot claimed.",
+    "finalVerifiedUtc": "2026-10-14T02:12:11.544528+00:00"
+  },
+  "summary": {
+    "confirmedFindings": 10,
+    "conditionalCandidates": 6,
+    "nativeOrIntegrationCandidates": 3,
+    "allCandidates": 9,
+    "deduplicatedNeeds": 6,
+    "byRule": {
+      "misleading-workspace-scope": 1,
+      "field-description-association": 2,
+      "raw-ai-error": 1,
+      "tool-success-as-source": 1,
+      "hardcoded-string": 1,
+      "fragmented-i18n": 1,
+      "number-preference-bypass": 1,
+      "decorative-neon": 1,
+      "motion-policy-gap": 1
+    },
+    "filesWithMostIssues": {
+      "web/src/lib/workspaceScope.ts": 1,
+      "web/src/features/power-user/pages/DashboardsPage.tsx": 1,
+      "web/src/components/ai/AINLDashboardComposer.tsx": 1,
+      "web/src/components/ai/AiOutputPanel.tsx": 1,
+      "web/src/components/ai/HelixEvidenceTrail.tsx": 4,
+      "web/src/components/ai/AIThinkingIndicator.tsx": 2
+    },
+    "countBasis": "One count per distinct confirmed source mechanism; grouped shared call sites. Candidates/needs/grep counts not added.",
+    "priorityFixes": [
+      "N1 scope honesty and N5 execution/source provenance",
+      "N4 localized recovery while preserving partial text",
+      "N2/N3 associations,N5 copy/number preferences,N6 thinking presentation"
+    ]
+  },
+  "generatedAtUtc": "2026-10-14T02:09:35.893329+00:00",
+  "finalVerification": {
+    "status": "PASS_DOCUMENT_AND_SOURCE_PIN_CHECKS_ONLY",
+    "verifiedUtc": "2026-10-14T02:12:11.544528+00:00",
+    "jsonParse": true,
+    "counts": true,
+    "exactLineAnchors": 10,
+    "sourceTestPins": 37,
+    "sourceTestPinsMatched": 37,
+    "sourceTestDrift": [],
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "globalTypeScript": "NOTRUN",
+    "browserNetworkAPI": "NOTRUN"
+  },
+  "purpose": "Manual Grafana-oriented JSON composer, static install-wide six-panel reference and opt-in propose-only AI; not home dashboard widget settings, fleet metrics, saved-dashboard CRUD or an external embed.",
+  "dataSources": [
+    {
+      "name": "User-owned JSON",
+      "owner": "web/src/features/power-user/pages/DashboardsPage.tsx",
+      "source": "origin-local ai.dashboardComposer.draft; restore/persist raw text; empty removes key; clipboard payload trimmed only",
+      "evidence": [
+        106,
+        146,
+        148,
+        153,
+        301,
+        323
+      ],
+      "network": false
+    },
+    {
+      "name": "Curated catalog",
+      "owner": "web/src/features/power-user/pages/DashboardsPage.tsx",
+      "source": "six static stable protocol names with localized metadata descriptions and alphabetical order",
+      "queryProvenance": "Descriptions cite tables/SI identifiers, not actual query execution, availability or observed fleet measurements",
+      "evidence": [
+        58,
+        64,
+        97,
+        192,
+        359,
+        377
+      ]
+    },
+    {
+      "name": "AI configuration",
+      "owner": "withAiFeature -> useAiEnabled -> hooks/useSettings -> api/settings",
+      "endpoint": "GET /api/v1/settings",
+      "source": "settings query key, staleTime5min, refetchOnMount always,retry1; mode non-off plus exact nl-dashboard-composer flag true; defaults off; no preference mutation",
+      "evidence": [
+        "useSettings.ts:81-105",
+        "useAiEnabled.ts:31-39",
+        "withAiFeature.tsx:46-56",
+        "api/settings.ts:24"
+      ]
+    },
+    {
+      "name": "Explicit draft stream",
+      "owner": "web/src/components/ai/AINLDashboardComposer.tsx",
+      "endpoint": "POST /api/v1/ai/power/dashboard/draft",
+      "source": "bare route canonical prefix; body only trimmed prompt; snapshot on start; correct successful tool/name/status gates and finite coordinates; explicit Apply only",
+      "scope": "Install-wide; no vehicle/date bound parameters. Omitted entity scopeKey is not automatically a race defect. Cancellation/generation guards already corrected.",
+      "evidence": [
+        136,
+        138,
+        149,
+        159,
+        165
+      ],
+      "limits": "Frontend source only; backend/provider/auth/Grafana runtime/import not exercised."
+    }
+  ],
+  "components": [
+    "PageLayout -> PageContainer; existing category boundaries",
+    "Controlled shared Textarea, CopyButton attempt invalidation and native type=button",
+    "InlineCallout role=status plus warning/success icons/text",
+    "AIFeatureCard native action, contextual name, wrapped mobile44px Ask Helix, independent input/children/output",
+    "AiOutputPanel retained failed text and evidence; withAiFeature opt-in exception",
+    "FadeIn OS+low-bandwidth shared motion policy"
+  ],
+  "preservation": {
+    "sourceSha256": "84866975cd4c404331d99259c9494600396ee946041e6bd7435dada618a2ae80",
+    "currentLineCount": 384,
+    "historicalAuditLineCount": 377,
+    "lineCountGate": "No extraction/deletion;384 current vs377 historical, >=264 original70% threshold; not runtime preservation acceptance.",
+    "sectionCounts": {
+      "pageBands": 3,
+      "alwaysVisibleNamedSections": 3,
+      "optionalAiSections": 1,
+      "pageGlassPanelOpenings": 3,
+      "pageChartContainerOpenings": 0,
+      "workflowSteps": 3,
+      "catalogEntries": 6
+    },
+    "sections": [
+      {
+        "name": "How it works",
+        "lines": [
+          245,
+          280
+        ],
+        "preserve": "Intro and all three numbered workflow steps"
+      },
+      {
+        "name": "Optional Helix composer",
+        "lines": [
+          282,
+          284
+        ],
+        "preserve": "Feature gate,prompt,draft/output/activity/usage and explicit Apply"
+      },
+      {
+        "name": "Manual JSON editor",
+        "lines": [
+          290,
+          344
+        ],
+        "preserve": "18-row monospaced freeform input,help,Copy/Clear/status/manual selection"
+      },
+      {
+        "name": "Curated catalog",
+        "lines": [
+          347,
+          378
+        ],
+        "preserve": "All six names/descriptions/glyphs/order"
+      }
+    ],
+    "actions": [
+      {
+        "name": "Edit",
+        "lines": [
+          301,
+          312
+        ],
+        "preserve": "Raw text persisted; clears status"
+      },
+      {
+        "name": "Copy",
+        "lines": [
+          314,
+          322
+        ],
+        "preserve": "Enabled only nonwhitespace; trimmed payload, editor unchanged, success/manual-copy warnings"
+      },
+      {
+        "name": "Clear",
+        "lines": [
+          157,
+          160,
+          235,
+          323
+        ],
+        "preserve": "Whitespace clearable; empty value/status; removes key"
+      },
+      {
+        "name": "Draft/re-draft",
+        "file": "web/src/components/ai/AINLDashboardComposer.tsx",
+        "lines": [
+          155,
+          163
+        ],
+        "preserve": "Explicit POST with trimmed prompt, reset prior candidate on new start, coalesce streaming repeats"
+      },
+      {
+        "name": "Apply",
+        "file": "web/src/components/ai/AINLDashboardComposer.tsx",
+        "lines": [
+          165,
+          209
+        ],
+        "preserve": "Explicit proposal handoff; page pretty-prints dashboard only; no auto apply/push"
+      },
+      {
+        "name": "Manual selection/copy and retry",
+        "lines": [
+          162,
+          190
+        ],
+        "preserve": "Full text remains for native select/keyboard copy; no destructive fallback"
+      }
+    ],
+    "catalogNames": [
+      "alerts_count_stat",
+      "battery_soc_stat",
+      "charging_sessions_table",
+      "drives_per_day_timeseries",
+      "energy_used_per_day_barchart",
+      "vehicles_table"
+    ],
+    "siSignsPreferences": {
+      "physicalDisplay": "NOT_APPLICABLE: no vehicle measurements, chart series, currency costs or date/time readings. distance_m/energy_used_wh are untranslated SI/protocol identifiers, not values to convert.",
+      "rawDraft": "User JSON numbers/signs/date strings remain verbatim. Copy trims boundaries only. AI finite grid numbers stay numeric; do not locale-format JSON or apply units/absolute-value normalization.",
+      "preferences": "t() labels/descriptions and inherited theme/font; no units/locale/timezone/12-24h reset. Evidence numeric preference gap F08; real catalog/date/number rendering remains NOTRUN."
+    }
+  },
+  "states": {
+    "manual": {
+      "loading": "Immediate local text/blank, no network loading gate needed",
+      "empty": "Editable blank; Copy/Clear disabled; whitespace Copy disabled/Clear enabled",
+      "fatal": "No fleet fatal gate; clipboard warning retains editor",
+      "retained": "All copy failure/retry/stale callback paths retain text; edit/clear/apply clears status; shared CopyButton invalidates pending feedback by text/unmount",
+      "initialPaused": "No manual network source; offline/API pause must not erase workflow/editor/catalog",
+      "unknownZero": "Blank not fabricated zero; literal0/signs preserved; storage exception blank is C09"
+    },
+    "settings": {
+      "loading": "Unresolved defaults off; optional AI omitted only",
+      "fatal": "No-data failure defaults off, not invented enabled state",
+      "retained": "Retained enabled settings still gate AI; no page blanket error replacement",
+      "initialPaused": "Unresolved paused settings fail closed; main sections stay",
+      "unknownZero": "Unresolved flag not a measured fleet zero"
+    },
+    "ai": {
+      "loading": "Only explicit start; thinking/busy/disabled Ask; Apply disabled while streaming",
+      "fatal": "Alert/re-draft when nonstreaming; manual baseline intact",
+      "retained": "Nonempty failed/interrupted deltas remain selectable beside error; no done summary/fake freshness/last-success; existing retained-output fix kept",
+      "initialPaused": "No automatic TanStack paused stream equivalent; paused-confirm is distinct phase, conditionally reviewed C06; no invented server/offline failure",
+      "empty": "Done-no-text explicit no output; typed draft may exist independently; malformed partial slots C01",
+      "unknownZero": "Initial usage=null; no phantom readings/timestamps; malformed done usage defaults C05; zero prose retained by existing test129",
+      "identity": "Canonical generation/controller cancellation/unmount/scopeKey guards retained; old overlap bug not reopened. Prompt snapshot/retained proposal provenance C03."
+    }
+  },
+  "engineeringRuleChecks": {
+    "actualPageSelectStringShell": 2007,
+    "rawPageMatches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hardcoded-jsx-candidate": 0,
+      "fetch-useeffect-candidate": 1,
+      "panel-shells": 3,
+      "chart-shells": 0
+    },
+    "sourceRegexShell": 1944,
+    "disposition": [
+      "No main section null-data gate; conditional status feedback and optional AI-off gate are exceptions",
+      "PageLayout239 -> PageContainer at layout-reference/PageLayout.tsx:11 satisfies wrapper rule",
+      "Page144 effect persists local text, not data loading; canonical useAiStream fetch and settings formatter/broadcast effects are boundaries, not page ad-hoc fetch",
+      "Native UI primitive HTML, shared FadeIn vendor import and test stub raw button are expected exceptions",
+      "AI bare route/settings /settings; /api/v1 comments/mock URLs are not double-prefix caller bugs; no camelCase query strings",
+      "Page descriptions now t(descriptionKey,fallback); protocol names preserved. Literal JSX scan misses derived human label F06; no semantic zero-violations claim"
+    ],
+    "backend": "NOT_APPLICABLE: no internal/**/*.go audit authorized; SQL/logging/panic/context not claimed checked."
+  },
+  "sourceA11yAndMobile": {
+    "declarations": [
+      "Three section h2,semantic ol/ul",
+      "Localized textbox/button names; JSON spellCheck false",
+      "Copy wraps; native type=button; polite hidden copied status; InlineCallout status; errors alert",
+      "min-w-0/max-w-full,action flex-wrap,headings break-words,protocol names break-all",
+      "Workflow default1/sm3; catalog1/sm2/xl1/3xl2; outer1/xl3/3xl4/editor2span",
+      "FadeIn combined motion policy; thinking policy gap F10"
+    ],
+    "requiredWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "acceptance": "NOTRUN: source declarations do not certify native viewport/hit-area/focus/contrast/screen-reader/clipboard/storage/RTL/forced-colors behavior; C07/C08 remain candidates."
+  },
+  "tests": {
+    "status": "NOTRUN",
+    "runnerDiscovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "authoredEvidence": [
+      "Page17 declaration lines (one3-row it.each), AI composer22 it declarations; other names in raw log; no runner counts inferred",
+      "Page mocks AI; composer mocks fetch/settings; shared tests mock/fallback i18n; no native/provider acceptance inferred"
+    ],
+    "pathFailures": [
+      "Wrong hook .test.tsx view failed; corrected hooks/__tests__/useAiStream.test.ts",
+      "Wrong flat CopyButton path absent; actual ui/__tests__/CopyButton.test.tsx",
+      "HelixEvidenceTrail standalone test absent; indirect existing AiOutputPanel/AIFeatureCard coverage read"
+    ]
+  },
+  "commands": [
+    {
+      "shellId": 1749,
+      "exitCode": 0,
+      "commandDescription": "time/worktree/root discovery",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 1759,
+      "exitCode": 1,
+      "commandDescription": "rg unavailable",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 1771,
+      "exitCode": 0,
+      "commandDescription": "large docs/queue discovery",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 1780,
+      "exitCode": 0,
+      "commandDescription": "narrow exact queue/instructions",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 1792,
+      "exitCode": 1,
+      "commandDescription": "heading discovery cp1252 UnicodeEncodeError",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 1804,
+      "exitCode": 0,
+      "commandDescription": "UTF-8 handoff/queue/test inventory",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 1844,
+      "exitCode": 0,
+      "commandDescription": "log initialization/BEFORE pins",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 1864,
+      "exitCode": 1,
+      "commandDescription": "capture bytes/getvalue AttributeError",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 1877,
+      "exitCode": 0,
+      "commandDescription": "correct failed capture; SI/owners/pins",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 1919,
+      "exitCode": 0,
+      "commandDescription": "queue identities/authored names",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 1944,
+      "exitCode": 0,
+      "commandDescription": "source regex/scopes/motion/pins",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 2007,
+      "exitCode": 0,
+      "commandDescription": "actual Select-String page matches",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 2035,
+      "exitCode": 0,
+      "commandDescription": "exact anchors/scope/pin inventory",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 2068,
+      "exitCode": 0,
+      "commandDescription": "scope provider/existing reports",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 2083,
+      "exitCode": 0,
+      "commandDescription": "supplemental shell/test pins/prior report excerpts",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 2106,
+      "exitCode": 0,
+      "commandDescription": "test/API/barrel continuation reads",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 2195,
+      "exitCode": 1,
+      "commandDescription": "R1 Windows command-length rejection before execution",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 2216,
+      "exitCode": 1,
+      "commandDescription": "R2 queue-single-row AssertionError before report write",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 2241,
+      "exitCode": 0,
+      "commandDescription": "R3 corrected report write/AFTER hashes",
+      "rawReceipt": "web/logs/phase6-qa-power-user-dashboards.log; original bootstrap raw also in tool transcript"
+    },
+    {
+      "shellId": 2298,
+      "exitCode": 0,
+      "commandDescription": "R4 report-only preservation/states/preferences/command-failure supplement"
+    },
+    {
+      "commandId": "V1",
+      "exitCode": 0,
+      "commandDescription": "Python stdlib final JSON parse, item/attempt/writable scope, exact counts/deduplicated ownership/line anchors, all37 byte SHA256 pins and final serialized JSON parse; no test/helper runner"
+    }
+  ],
+  "evidenceLimits": {
+    "instructionsRead": [
+      "docs/orchestrator-loop.md entire",
+      "docs/frontend-design-contract.md core1-606; later unrelated addenda not reread",
+      "mission1-1593 incl relevant states/mobile/a11y/definitions of done",
+      "current handoff top160 captured/first90 inspected; exact queue/relevant owners reread as canonical file changed",
+      "inventory DashboardsPage row214 and full historical audit-page-163; not a replacement inventory",
+      "worker conventions/applicable frontend/SI instructions; outdated unit-compatibility examples do not override SI-only design contract"
+    ],
+    "notRun": [
+      "Fresh tests/passing reruns",
+      "Lint/build/global npx tsc --noEmit/QA or preservation helper runners",
+      "Browser/mounted DOM/screenshots/native keyboard/screen reader/contrast/targets/viewport/RTL/forced colors/clipboard/storage experiments",
+      "Network/API/provider/external embeds/Grafana import/dashboard writes/production mutations",
+      "Installs/servers/subagents/Git edits/source/tests/catalog/queue/handoff edits"
+    ],
+    "failuresHonest": [
+      "rg exit1 unavailable",
+      "Unicode heading probe exit1 terminated before handoff/queue",
+      "Capture exit1 AttributeError corrected once",
+      "Wrong hook test view/missing flat test paths recorded",
+      "Large report command exit1 Windows filename/extension too long",
+      "Queue-single-row report assertion exit1; two current/historical references actually found and retained"
+    ],
+    "rawReceipt": "Log records actual commands/results/exits/failures, raw large discovery, source grep, original test names and pins. Bootstrap tool transcript preserves original stdout; no runner exit inferred from source reads.",
+    "sourceOnly": true,
+    "releaseMeaning": "Only assigned report/log and source-write release; not whole-page/native/application/Phase6 acceptance; no TypeScript pass claim."
+  },
+  "filesRead": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".github/skills/audit-violations/SKILL.md",
+    "docs/frontend-audits/audit-page-163.json",
+    "docs/frontend-audits/phase6-qa-benchmarks-privacy-benchmarks.json",
+    "docs/frontend-audits/phase6-qa-diagnostics-anomaly-dashboard.json",
+    "docs/frontend-audits/phase6-qa-vehicles-vehicle-list.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "web/src/api/hooks/useSettings.ts",
+    "web/src/api/settings.ts",
+    "web/src/components/ai/AIFeatureCard.test.tsx",
+    "web/src/components/ai/AIFeatureCard.tsx",
+    "web/src/components/ai/AINLDashboardComposer.test.tsx",
+    "web/src/components/ai/AINLDashboardComposer.tsx",
+    "web/src/components/ai/AIThinkingIndicator.test.tsx",
+    "web/src/components/ai/AIThinkingIndicator.tsx",
+    "web/src/components/ai/AiOutputPanel.test.tsx",
+    "web/src/components/ai/AiOutputPanel.tsx",
+    "web/src/components/ai/HelixEvidenceTrail.tsx",
+    "web/src/components/ai/index.ts",
+    "web/src/components/ai/withAiFeature.test.tsx",
+    "web/src/components/ai/withAiFeature.tsx",
+    "web/src/components/feedback/InlineCallout.tsx",
+    "web/src/components/layout/Grid.tsx",
+    "web/src/components/layout/Layout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/WorkspaceHeader.test.tsx",
+    "web/src/components/layout/WorkspaceHeader.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/CopyButton.tsx",
+    "web/src/components/ui/Textarea.tsx",
+    "web/src/components/ui/__tests__/CopyButton.test.tsx",
+    "web/src/features/power-user/pages/DashboardsPage.test.tsx",
+    "web/src/features/power-user/pages/DashboardsPage.tsx",
+    "web/src/hooks/__tests__/useAiStream.test.ts",
+    "web/src/hooks/useAiEnabled.test.tsx",
+    "web/src/hooks/useAiEnabled.ts",
+    "web/src/hooks/useAiStream.ts",
+    "web/src/hooks/useMotionPreference.ts",
+    "web/src/hooks/usePageTitle.ts",
+    "web/src/hooks/useSettings.ts",
+    "web/src/hooks/useWorkspaceScope.tsx",
+    "web/src/lib/workspaceScope.ts"
+  ],
+  "deadlineReceipt": {
+    "softDeadlineMet": false,
+    "softMissReported": true,
+    "cause": "Report command-length rejection and failed concurrent queue-single-row assertion delayed artifact write; no clock renewed.",
+    "hardDeadlineUtc": "2026-10-14T02:12:59.989Z"
+  },
+  "release": {
+    "released": true,
+    "releasedUtc": "2026-10-14T02:12:11.544528+00:00",
+    "files": [
+      "docs/frontend-audits/phase6-qa-power-user-dashboards.json",
+      "web/logs/phase6-qa-power-user-dashboards.log"
+    ],
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "catalogWrites": 0,
+    "limits": "Source/report only; native/runtime acceptance unverified. No commands remain running.",
+    "softDeadlineMet": false,
+    "hardDeadlineMet": true
+  }
+}

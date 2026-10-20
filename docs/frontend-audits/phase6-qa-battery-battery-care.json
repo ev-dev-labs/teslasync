@@ -1,0 +1,517 @@
+{
+  "item": "phase6-qa-battery-battery-care",
+  "taskStatus": "DONE",
+  "reviewResult": "SOURCE_FINDINGS",
+  "completionMeaning": "The assigned read-only source QA and report are complete. Confirmed findings describe source mechanisms, not reproduced browser symptoms. This is NOT page, native, visual, behavioral-test, live-battery or application acceptance.",
+  "firstObservedAt": "2026-10-13T20:33:57.2418242Z",
+  "clockMeaning": "First command clock receipt, not a fabricated exact actor-creation time.",
+  "conservativeReturnBefore": "2026-10-13T20:53:00Z",
+  "hardReturnBefore": "2026-10-13T20:58:00Z",
+  "earlierActualCreationDeadlineWins": true,
+  "commandLimitMinutes": 8,
+  "scope": {
+    "page": "web\\src\\features\\battery\\pages\\BatteryCarePage.tsx",
+    "route": "/battery-care",
+    "versionedWrite": "docs\\frontend-audits\\phase6-qa-battery-battery-care.json",
+    "ignoredWrite": "web\\logs\\phase6-qa-battery-battery-care.log",
+    "sourceEdits": 0,
+    "testEdits": 0,
+    "catalogBackendConfigQueueEdits": 0,
+    "gitOperations": 0,
+    "subagents": 0,
+    "installsServersHelpersExtensions": 0,
+    "browserNativeOperations": 0,
+    "apiCalls": 0,
+    "realVehicleUserHealthDataReads": 0
+  },
+  "authorityRead": [
+    "migration-queue.md:289,1682",
+    "docs\\orchestrator-loop.md:1-296",
+    "docs\\session-handoff.md:1-140",
+    "docs\\frontend-mission.md:1416-1515 (sections 43-44)",
+    "docs\\frontend-design-contract.md:1-230,420-606",
+    ".github\\instructions\\react-frontend.instructions.md:1-465",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    "docs\\frontend-audits\\audit-page-060.json:1-220",
+    "web\\logs\\phase5-page-battery-battery-care.log"
+  ],
+  "guidancePrecedence": "Current SI-cutover/design guidance governs. Older unit-conversion/react examples containing legacy distance units and neon styling were not treated as permission to undo canonical SI or modernization.",
+  "alreadyDoneCheck": {
+    "checkedBeforeReportCreation": true,
+    "exactReportExisted": false,
+    "exactQaRow": "migration-queue.md:289 was pending [ ] at inspection",
+    "phase5Row": "migration-queue.md:1682 is accepted [x]; no Phase5 source rework was performed",
+    "historicalSourceAcceptanceCommitAsRecorded": "8dd7b66cbce11e02d18d3255cbc8651391ceea3d",
+    "gitReadToVerifyCommit": false
+  },
+  "historicalEvidence": {
+    "receipt": "web\\logs\\phase5-page-battery-battery-care.log",
+    "pageLines": 159,
+    "sections": 8,
+    "presentationLines": 1416,
+    "recordedLintExit": 0,
+    "recordedStaticExit": 0,
+    "recordedVitestExit": 1,
+    "recordedDiscovered": 0,
+    "recordedExecuted": 0,
+    "recordedPassed": 0,
+    "recordedFailed": 0,
+    "recordedSkipped": 0,
+    "blocker": "Generated English catalog guard failed before collection for locale-notifications.json, locale-settings.json, locale-driving-speed-profile.json, runtime-manifest.json and usage-manifest.json.",
+    "meaning": "Historical source acceptance and authored assertions are not fresh behavior proof. No test was rerun and no catalog was regenerated."
+  },
+  "purpose": {
+    "primaryGoal": "Review observed charging-session finish SoC, drive-arrival SoC, energy classification, descriptive care-index deductions and ranked habit opportunities.",
+    "notProvided": [
+      "Measured battery health, degradation, remaining life or service diagnosis",
+      "Time parked at high/low SoC, continuous SoC exposure or pack thermal exposure",
+      "Measured AC/DC efficiency, charging losses, a complete energy ledger or financial accounting",
+      "Vehicle charging commands, automatic schedule changes or medical/safety guarantees"
+    ],
+    "evidence": [
+      "web\\src\\features\\battery\\lib\\batteryCare.ts:1-9,137-145",
+      "web\\src\\features\\battery\\components\\battery-care-modernization\\CareRisk.tsx:57-58",
+      "web\\src\\features\\battery\\components\\battery-care\\RankedCareHabits.tsx:90-93",
+      "web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx:194-197"
+    ]
+  },
+  "routeAndWorkspace": {
+    "routeRegistration": "web\\src\\App.tsx:141,843: lazy BatteryCarePage inside SafeRoute at /battery-care",
+    "selectedVehicleOwner": "web\\src\\hooks\\useSelectedVehicle.ts:48-82,129-138,173-181: effective URL/store/fleet selection, fleet-known positive IDs and URL/store synchronization",
+    "desktopHeader": "web\\src\\components\\layout\\WorkspaceHeader.tsx:33-35,59-68",
+    "mobileDrawer": "web\\src\\components\\layout\\Layout.tsx:1411-1424",
+    "actualScope": {
+      "vehicle": true,
+      "range": false
+    },
+    "scopeBasis": "web\\src\\lib\\workspaceScope.ts:23-77,97-138,165-177: /battery-care is absent from RANGE_ENABLED_PATHS and all vehicle-disabled sets/prefixes",
+    "duplicatePageVehicleOrRangeControls": 0,
+    "dateBoundsSent": [],
+    "scopeLimit": "The actual accepted page requests the latest capped history windows, not the header's from/to range. It does not consume useRangeState or promise full-range/lifetime completeness. Both handlers support start/end, but these history hooks do not expose or send them. This is a disclosed accepted-source limitation, not a fabricated hook/router mismatch or authorization to remigrate the page.",
+    "timeAnchor": "BatteryCarePage.tsx:39,61-66 freezes analysisNowMs per mount; batteryCare.ts:559-594 derives six UTC calendar-month buckets and excludes timestamps after that anchor."
+  },
+  "dataOwners": [
+    {
+      "name": "Charging-session history",
+      "hook": "useChargingHistory(vehicleIdStr, 1000)",
+      "hookEvidence": "web\\src\\api\\hooks\\useCharging.ts:72-85",
+      "method": "GET",
+      "path": "/charging",
+      "parameters": ["vehicle_id", "limit"],
+      "router": "internal\\api\\router.go:3545-3546",
+      "handler": "internal\\api\\charging\\handler.go:123-160",
+      "repository": "internal\\database\\charging\\repo.go:75-112",
+      "contract": "Encoded vehicle ID, bounded 1..1000 limit, isolated vehicle/limit cache key, enabled guard, AbortSignal, 15-second MODERATE staleTime and safeArray selection.",
+      "wireFieldsConsumed": ["end_soc_pct", "total_energy_added_wh", "charger_type", "peak_power_w", "started_at"],
+      "modelEvidence": "internal\\models\\charging\\charging.go:10-29",
+      "orderingAndBounds": "Latest started_at descending, id descending; no completion-only predicate; optional lower inclusive and upper inclusive started_at filters in repository; no bounds sent here.",
+      "limits": "No pagination beyond the first 1000 rows, total count or deployed response proof. Read-only list path is not the detail endpoint's live-state enrichment."
+    },
+    {
+      "name": "Drive history",
+      "hook": "useDriveHistory(vehicleIdStr, 1000)",
+      "hookEvidence": "web\\src\\api\\hooks\\useDriving.ts:143-156",
+      "method": "GET",
+      "path": "/drives",
+      "parameters": ["vehicle_id", "limit"],
+      "router": "internal\\api\\router.go:3506-3507",
+      "handler": "internal\\api\\drives\\listing.go:24-60",
+      "repository": "internal\\database\\drive\\repo.go:165-203",
+      "contract": "Encoded vehicle ID, bounded 1..1000 limit, isolated vehicle/limit cache key, enabled guard, AbortSignal, MODERATE staleTime and safeArray selection.",
+      "wireFieldsConsumed": ["end_battery_pct", "start_ts"],
+      "clientAliasesConsumed": ["endBatteryPct", "startTs"],
+      "modelAndAliasEvidence": "internal\\models\\drive\\drive.go:31-34,60-61; web\\src\\lib\\resilience.ts:27-39 preserves both original and camelCase keys",
+      "orderingAndBounds": "Latest started_at descending, id descending; no completion-only predicate; optional inclusive repository bounds; no bounds sent here.",
+      "limits": "No full-history completeness, detail-live enrichment, temperature or energy-used/regen accounting is asserted for this page."
+    },
+    {
+      "name": "Vehicle selection prerequisite",
+      "method": "GET",
+      "path": "/vehicles",
+      "hookEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-81",
+      "router": "internal\\api\\router.go:3362-3363",
+      "consumer": "web\\src\\hooks\\useSelectedVehicle.ts:50",
+      "limits": "No real fleet query. Until the fleet resolves, an already selected valid numeric ID may be used. A null effective ID shows the existing onboarding surface rather than eight data panels."
+    },
+    {
+      "name": "Display preferences",
+      "method": "GET",
+      "path": "/settings",
+      "consumer": "web\\src\\hooks\\useUnits.ts:119-140; web\\src\\hooks\\useSettings.ts:81-90",
+      "requestEvidence": "web\\src\\api\\settings.ts:24",
+      "router": "internal\\api\\router.go:3702",
+      "limits": "Existing settings defaults apply while unavailable; this page has no separate settings trust disclosure. No settings write or real preference load occurred."
+    },
+    {
+      "name": "Pure descriptive evidence model",
+      "owner": "web\\src\\features\\battery\\lib\\batteryCare.ts:658-716",
+      "reads": "Only returned session/drive arrays and the frozen mount clock",
+      "writes": "None",
+      "thermalLimits": "No module temperature, cooling/heater, chemistry, cell imbalance or thermal-damage evidence is consumed. Missing thermal evidence is not interpreted as a healthy pack."
+    }
+  ],
+  "sourceStateReview": [
+    {
+      "state": "Initial actively pending",
+      "sourceEvidence": "BatteryCarePage.tsx:49-66; CareSection.tsx:38-48; CareMonthlyTrend.tsx:88,107; state.ts:38-43",
+      "result": "SOURCE_CONFIRMED",
+      "detail": "All eight section shells remain defined; bodies show source-shaped skeletons without fabricated score/SoC values. This is not a mounted assertion."
+    },
+    {
+      "state": "Single-source initial failure, other source received",
+      "sourceEvidence": "api\\dataState.ts:309-343; CareSourceNotices.tsx:17-18; BatteryCarePage.tsx:85-88",
+      "result": "SOURCE_CONFIRMED_WITH_FINDINGS",
+      "detail": "Charging-only and drive-only bodies use their own trust; mixed panels retain the received source and expose failed-source retry. Unknown source counts in the mixed methodology are wrongly rendered as zero; see BCARE-QA-005."
+    },
+    {
+      "state": "Both initial failures",
+      "sourceEvidence": "api\\dataState.ts:309-343; CareSection.tsx:38-39; state.ts:26-30",
+      "result": "SOURCE_CONFIRMED",
+      "detail": "Fatal errors replace dependent bodies, not the whole PageLayout. Composite retry invokes only failed/blocked sources."
+    },
+    {
+      "state": "One initial failure plus pending/paused sibling, neither received",
+      "result": "SOURCE_FINDING",
+      "finding": "BCARE-QA-004"
+    },
+    {
+      "state": "Retained refresh failure",
+      "sourceEvidence": "api\\dataState.ts:223-242; CareSourceNotices.tsx:16; StaleRefreshWarning.tsx:60-108",
+      "result": "SOURCE_CONFIRMED",
+      "detail": "Arrays stay in computation; refreshError does not become fatalError; named nonblocking warnings retain content and expose individual refetch. Summary explicitly labels retained source evidence."
+    },
+    {
+      "state": "Retained paused refresh",
+      "sourceEvidence": "api\\dataState.ts:245-253; StaleRefreshWarning.tsx:70-95",
+      "result": "SOURCE_CONFIRMED",
+      "detail": "Retained readings remain, with blocked/stale metadata; no offline-device diagnosis is made by the shared warning."
+    },
+    {
+      "state": "Initial paused fetch",
+      "result": "SOURCE_FINDINGS",
+      "findings": ["BCARE-QA-002", "BCARE-QA-003"]
+    },
+    {
+      "state": "Authoritative empty arrays",
+      "sourceEvidence": "api\\dataState.ts:190-191; CareSection.tsx:42-48; batteryCare.ts:240-241,468-482",
+      "result": "SOURCE_CONFIRMED",
+      "detail": "Empty arrays are received payloads; per-section eligibility picks contextual EmptyState. Care score/shares/medians remain null, not healthy zero. The ranked badge has a separate premature-success defect."
+    },
+    {
+      "state": "Missing/invalid number versus measured zero",
+      "sourceEvidence": "batteryCare.ts:232-241,421-447; EvidenceBar.tsx:13-23",
+      "result": "SOURCE_CONFIRMED_WITH_LIMITS",
+      "detail": "Finite SoC in [0,100], including exactly zero, is eligible; absent/nonfinite/out-of-range SoC is excluded. Zero energy is deliberately outside positive-energy eligibility, disclosed in methodology, not converted into positive/negative Wh. Null deductions/shares show dashes. Non-arrived source counts remain a defect."
+    },
+    {
+      "state": "Age-only cache staleness",
+      "sourceEvidence": "BatteryCarePage.tsx:49-50,97; api\\dataState.ts:263-269; PageContainer.tsx:38-50,157-164; DataFreshness.tsx:330-337",
+      "result": "LIMIT",
+      "detail": "Page header receives query isStale/last-success metadata and a worst-query refresh. Section trust passes no maxAgeMs, so section warnings need refresh failure/paused state rather than age alone. No invented freshness SLA or physical-device offline claim."
+    }
+  ],
+  "domainAndDisplayReview": {
+    "soc": "End-SoC buckets are below20,20..80,above80..below95,95..100. Arrival buckets are below10,10..below20,20..below50,50plus. Shares use eligible observations and median ignores invalid/missing entries. Labels explicitly distinguish observations from dwell time.",
+    "index": "Four weighted deductions (30/30/20/20); score withheld until at least5 eligible session ends,5 arrivals,3 classified-energy sessions and80% energy classification coverage. Monthly thresholds are3/3/2. This is a descriptive heuristic, not a calibrated battery-damage model despite UI use of the word calibrated.",
+    "energyAccounting": "Raw Wh sum only positive finite session energy. Unknown energy stays its own bucket; all-energy shares include unknown, while DC KPI divides by classified AC+DC Wh only. Coverage is classified Wh/total Wh, not row-count coverage. No charger loss, net battery energy, signed export/regen or cost claim is supported.",
+    "classification": "Explicit AC labels are checked before DC labels. Unlabeled peak power strictly above20000W infers DC; other energy remains unknown. Inference is described in methodology but each inferred row is not separately displayed.",
+    "rawSi": "No hook-side conversion. CareEnergy uses useUnits.formatEnergy; methodology uses useUnits.formatPower for20000W. Cache/model retain Wh/W. Signed energy is excluded by positive-energy eligibility rather than abs/clamp conversion; physical signed drive-energy fields are not consumed.",
+    "locale": "Main percentages/energy/index and monthly fallback/table cells use current shared preferences. Fresh canonical-English lookup resolves113 literal keys. Dates bypass explicit preference options; several count interpolations/axis ticks remain raw, documented under limits/candidates.",
+    "timezone": "Coverage start/end use browser defaults, whereas grouping is UTC and the chart keeps YYYY-MM keys. UTC bucket basis is not explicitly disclosed in chart copy. No workspace date bounds are applied.",
+    "preferences": "useUnits uses the current settings bridge; useNumberFormatting subscribes to formatter preferences. The page writes no settings, table IDs, palette selections, chart hidden-series state or unit defaults. Rendered preference-change behavior is NOTRUN.",
+    "evidence": [
+      "web\\src\\features\\battery\\lib\\batteryCare.ts:19-27,190-224,319-397,418-498,559-620",
+      "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSummary.tsx:13-78",
+      "web\\src\\features\\battery\\components\\battery-care-modernization\\CareEnergy.tsx:19-72",
+      "web\\src\\features\\battery\\components\\battery-care-modernization\\CareMonthlyTrend.tsx:48-86",
+      "web\\src\\hooks\\useUnits.ts:119-168",
+      "web\\src\\hooks\\useNumberFormatting.ts:20-51"
+    ]
+  },
+  "preservation": {
+    "basis": "Accepted Phase5 receipt, not a Git reconstruction or regenerated baseline.",
+    "acceptedPageLines": 159,
+    "currentPageLines": 159,
+    "acceptedPresentationLines": 1416,
+    "currentPresentationLines": 1416,
+    "presentationFilesMeasured": 16,
+    "acceptedSectionInstances": 8,
+    "currentSectionInstances": 8,
+    "minimum70PercentSatisfied": true,
+    "pageSha256": "BD74A62923249F3D8753D19F3C2F2BF3F278CEEC61EC2497F7E1D232EFE7DD82",
+    "countReceipt": "web\\logs\\phase6-qa-battery-battery-care.log: scoped PowerShell count/SHA receipt at20:38:35.5049097Z",
+    "literalCounts": {
+      "pageGlassPanel": 0,
+      "pageChartContainer": 0,
+      "CareSummary": 1,
+      "CareRisk": 1,
+      "SocEvidence": 2,
+      "CareEnergy": 1,
+      "CareMonthlyTrend": 1,
+      "RankedCareHabits": 1,
+      "BatteryCareMethodology": 1,
+      "CardGrid": 3,
+      "FadeIn": 5
+    },
+    "literalCountMeaning": "The page orchestrates extracted panels. Zero page-local GlassPanel/ChartContainer does not mean sections were deleted; CareSection/BatteryCareSection provide repeated shells and CareMonthlyTrend contains the actual ChartContainer. Sixteen measured files include the page, eleven modernization source files including barrel/state, three retained specialists, and BatteryEvidenceBrief.",
+    "sections": [
+      {"name": "Observed summary; four metrics and evidence review", "source": "BatteryCarePage.tsx:99-101; CareSummary.tsx:29-102"},
+      {"name": "Score and four risk deductions", "source": "BatteryCarePage.tsx:107; CareRisk.tsx:29-81"},
+      {"name": "Session-finish SoC distribution and median", "source": "BatteryCarePage.tsx:108; SocEvidence.tsx:20-84"},
+      {"name": "AC/DC/unclassified energy and coverage", "source": "BatteryCarePage.tsx:117; CareEnergy.tsx:19-73"},
+      {"name": "Drive-arrival SoC distribution and median", "source": "BatteryCarePage.tsx:118; SocEvidence.tsx:20-84"},
+      {"name": "Six-month index/sample trend, three series and complete row alternatives", "source": "BatteryCarePage.tsx:124-126; CareMonthlyTrend.tsx:34-223"},
+      {"name": "Ranked habit opportunities or calibration explanation", "source": "BatteryCarePage.tsx:133-139; RankedCareHabits.tsx:84-170"},
+      {"name": "Coverage, exclusions, classification, date span and caps", "source": "BatteryCarePage.tsx:143-154; BatteryCareMethodology.tsx:83-200"}
+    ]
+  },
+  "actionsAndAccessibility": [
+    {
+      "action": "Header/mobile vehicle selection",
+      "source": "WorkspaceHeader.tsx:63-68; Layout.tsx:1413-1415; VehiclePicker.tsx:79-122",
+      "detail": "Existing labelled Combobox updates shared selection; no page-local duplicate. No real user selection performed."
+    },
+    {
+      "action": "Source Retry/Refresh and page worst-source refresh",
+      "source": "state.ts:26-30; CareSourceNotices.tsx:16-18; StaleRefreshWarning.tsx:97-108; PageContainer.tsx:38-50,157-164; DataFreshness.tsx:330-337",
+      "detail": "Recovery uses typed-query refetch, not data fabrication or mutation. Mixed first-load omission is reported."
+    },
+    {
+      "action": "Card/page description help and summary Review details drawer",
+      "source": "LayoutCard.tsx:42-57; PageContainer.tsx:195-218; OperationalBrief.tsx:157-169",
+      "detail": "Existing shared Buttons/Tooltip/Drawer preserve descriptions and metrics. Keyboard, Escape, return focus and screen-reader output are NOTRUN."
+    },
+    {
+      "action": "Monthly legend, PNG/SVG/copy-image export",
+      "source": "CareMonthlyTrend.tsx:110-118,178-204; ChartContainer.tsx:477-483,719-727",
+      "detail": "Stable battery-care-monthly hidden-series identity; all three series consume hiddenSeries. Image menu is eligible only after nonfatal received monthly observations. No exportData is supplied, so chart CSV is NOT enabled by this page. No fullscreen or annotation prop is supplied. Download/clipboard/native menu behavior is NOTRUN."
+    },
+    {
+      "action": "Monthly evidence alternatives",
+      "source": "CareMonthlyTrend.tsx:48-86,111-113,208-221; ChartContainer.tsx:501-511,920-936",
+      "detail": "Captioned embedded DataTable and shared SR/forced-color fallback contain all six rows and four fields; mobile roles retain month/score/sessions/drives. Null score is a dash and line connectNulls=false. No sorting/pagination/export interaction is claimed merely from table presence."
+    },
+    {
+      "action": "No-vehicle recovery",
+      "source": "BatteryCarePage.tsx:69-76; NoVehicleSelected.tsx:43-81",
+      "detail": "Existing localized prerequisite surface links to governed /onboarding fallback; disabled data hooks do not become empty battery measurements."
+    },
+    {
+      "action": "Readonly ranked habits",
+      "source": "RankedCareHabits.tsx:24-171",
+      "detail": "Advice is descriptive text, not a command or autonomous vehicle action. It conditions suggestions on trip/range/convenience needs and disclaims estimated battery damage."
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "BCARE-QA-001",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\EvidenceBar.tsx",
+      "line": 21,
+      "mechanism": "Known bars forward current chartTokens.series CSS light-dark(...) colors without fill='solid'. MetricBar defaults to gradient and appends the hex-alpha suffix99 to the supplied color. The actual emitted string is linear-gradient(90deg, light-dark(#385e7e, #91b4d2)99, light-dark(#385e7e, #91b4d2)), which is not a valid CSS color stop.",
+      "evidence": ["CareRisk.tsx:69", "CareEnergy.tsx:62", "SocEvidence.tsx:76", "web\\src\\lib\\tokens.ts:399", "web\\src\\components\\data-display\\MetricBar.tsx:45,87", "fresh emitted-string receipt20:39:01.8450842Z"],
+      "narrowOwner": ["web\\src\\features\\battery\\components\\battery-care-modernization\\EvidenceBar.tsx"],
+      "nextStep": "A separately assigned owner can use existing fill='solid' for these token colors; preserve values, labels, bins, motion and unknown rendering. No shared token/MetricBar rewrite is needed for this page.",
+      "limit": "CSS string construction is confirmed; no browser computed-style, painted fill or screenshot result is claimed."
+    },
+    {
+      "id": "BCARE-QA-002",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSection.tsx",
+      "line": 40,
+      "mechanism": "No received payload plus no fatalError always selects Skeleton, even when isRefreshBlocked proves the first fetch is paused. The same predicate feeds specialistState.isLoading and monthly ChartContainer.loading, so paused sections remain loading indefinitely beside their unavailable notice.",
+      "evidence": ["state.ts:40", "CareMonthlyTrend.tsx:88,107", "CareSourceNotices.tsx:20-30", "web\\src\\api\\dataState.ts:204-220"],
+      "narrowOwner": ["web\\src\\features\\battery\\components\\battery-care-modernization\\CareSection.tsx", "web\\src\\features\\battery\\components\\battery-care-modernization\\state.ts", "web\\src\\features\\battery\\components\\battery-care-modernization\\CareMonthlyTrend.tsx"],
+      "nextStep": "Separately distinguish actively pending from initial paused/unavailable while retaining every shell, source identity and recovery.",
+      "limit": "Source branch confirmed; no offline browser reproduction."
+    },
+    {
+      "id": "BCARE-QA-003",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSourceNotices.tsx",
+      "line": 28,
+      "mechanism": "The initial blocked-source message asserts 'paused while offline', but its only predicate is isRefreshBlocked from fetchStatus==='paused'. No online/connectivity evidence is consulted; a paused query alone does not prove the reason or a device outage.",
+      "evidence": ["CareSourceNotices.tsx:20-30", "web\\src\\api\\dataState.ts:192,210-215", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:70"],
+      "narrowOwner": ["web\\src\\features\\battery\\components\\battery-care-modernization\\CareSourceNotices.tsx"],
+      "catalogCoordination": "Existing batteryCare.sources.paused leaf requires parent-owned serialized English integration if its wording changes.",
+      "nextStep": "Use reason-neutral paused/unavailable copy unless an actual source supplies offline evidence."
+    },
+    {
+      "id": "BCARE-QA-004",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSourceNotices.tsx",
+      "line": 17,
+      "mechanism": "Per-source initial QueryError requires composite trust.hasData. When one source fails and the sibling is pending/paused with no payload, combineDataStates has no fatalError (not all sources failed), the composite displays loading, and this condition hides the failed source's retry in summary/risk/trend/habits/methodology. Its dedicated single-source panel still exposes an error, so this is not a claim that all retry is lost.",
+      "evidence": ["state.ts:17-25", "web\\src\\api\\dataState.ts:309-343", "CareSection.tsx:38-41"],
+      "narrowOwner": ["web\\src\\features\\battery\\components\\battery-care-modernization\\CareSourceNotices.tsx"],
+      "nextStep": "Surface each source's initial failure independently of whether its sibling has delivered data; do not make the whole page fatal."
+    },
+    {
+      "id": "BCARE-QA-005",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx",
+      "line": 126,
+      "mechanism": "With one history received and the other unavailable/pending, the page feeds [] for the absent source, model coverage returns length0, and composite hasData permits methodology content. It then prints numeric0 for returned/eligible observations of the unreceived source. The readonly specialist adapter has already discarded individual source availability. Authoritative empty[] and not-yet-received are consequently indistinguishable in these four metrics, although source notices identify partial state.",
+      "evidence": ["BatteryCarePage.tsx:52,56,87-88,145-151", "state.ts:19,38-43", "batteryCare.ts:640-641", "BatteryCareMethodology.tsx:112-135", "CareSummary.tsx:52-66"],
+      "narrowOwner": ["web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx", "web\\src\\features\\battery\\components\\battery-care-modernization\\state.ts", "web\\src\\features\\battery\\pages\\BatteryCarePage.tsx"],
+      "nextStep": "Carry per-source availability into count presentation; show unknown for unreceived counts and preserve genuine zero from a resolved empty array. Do not replace the pure model with ad-hoc fetches."
+    },
+    {
+      "id": "BCARE-QA-006",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx",
+      "line": 48,
+      "mechanism": "Both coverage dates call formatDate without locale/tz options. That helper explicitly falls back to browser locale/timezone, not the app's saved locale/timezone_user/tz_display_default. Coverage labels can therefore disagree with selected display preferences. Monthly aggregation is additionally UTC without explicit UTC-bucket copy; no regrouping or 12/24-hour defect is claimed for a date-only label.",
+      "evidence": ["BatteryCareMethodology.tsx:48-57,188-191", "web\\src\\lib\\dateFormat.ts:36-50,65-72", "web\\src\\hooks\\useSettings.ts:47-49", "batteryCare.ts:559-572", "CareMonthlyTrend.tsx:36,138"],
+      "narrowOwner": ["web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx"],
+      "nextStep": "A separately assigned owner should use existing effective date preferences; any UTC-bucket disclosure/catalog integration belongs to an explicitly assigned trend/catalog owner, not a new timezone engine.",
+      "limit": "Source preference bypass confirmed; actual browser date strings and timezone-boundary screenshots NOTRUN."
+    },
+    {
+      "id": "BCARE-QA-007",
+      "severity": "low",
+      "file": "web\\src\\features\\battery\\components\\battery-care\\RankedCareHabits.tsx",
+      "line": 105,
+      "mechanism": "The always-mounted ranked badge chooses success solely because opportunities.length===0. That is also the value before either source arrives and while the score is uncalibrated/fatal/empty; the body later explains that evidence is insufficient, but the badge already paints successful '0 ranked'. Absence of calibrated evidence is not a source-confirmed success.",
+      "evidence": ["RankedCareHabits.tsx:105-108,117-129", "BatteryCareSection.tsx:58-75", "batteryCare.ts:522-540"],
+      "narrowOwner": ["web\\src\\features\\battery\\components\\battery-care\\RankedCareHabits.tsx"],
+      "nextStep": "Use neutral/building/unavailable badge semantics until evidence supports a calibrated no-opportunity conclusion; preserve the advice and ranking thresholds."
+    },
+    {
+      "id": "BCARE-QA-008",
+      "severity": "low",
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSection.tsx",
+      "line": 2,
+      "mechanism": "Three feature imports bypass available category exports: LayoutCard and useCardPlacement from layout/layout-reference, and StatMetric from data-display/stat-reference. Current category barrels already export all three.",
+      "evidence": ["CareSummary.tsx:4", "SpecialistSlot.tsx:2", "web\\src\\components\\layout\\index.ts:11-12", "web\\src\\components\\data-display\\index.ts:5", "fresh categorySubbarrel count=3"],
+      "narrowOwner": ["web\\src\\features\\battery\\components\\battery-care-modernization\\CareSection.tsx", "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSummary.tsx", "web\\src\\features\\battery\\components\\battery-care-modernization\\SpecialistSlot.tsx"],
+      "nextStep": "A separate source owner can change only these imports to the existing category barrels; no barrel edits or component replacement.",
+      "limit": "Architecture guideline issue, not a demonstrated runtime crash or dependency cycle."
+    },
+    {
+      "id": "BCARE-QA-009",
+      "severity": "low",
+      "file": "web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx",
+      "line": 141,
+      "mechanism": "Methodology title and three informational bullets use fixed purple/cyan/amber/indigo icon hues without distinct severity/source meaning. This is source-confirmed decorative multi-hue emphasis rather than semantic state, contrary to restrained hierarchy. It is not proof of neon, measured contrast failure or rendered visual intensity.",
+      "evidence": ["BatteryCareMethodology.tsx:92,141,158,173", "docs\\frontend-design-contract.md:MDC-010/MDC-012"],
+      "narrowOwner": ["web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx"],
+      "nextStep": "If separately assigned, use existing theme-aware secondary/muted decorative-icon roles while retaining all explanations and genuine warning badges."
+    }
+  ],
+  "runtimeConditionalCandidates": [
+    {
+      "id": "BCARE-CAND-001",
+      "file": "web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx",
+      "line": 112,
+      "mechanism": "Viewport sm:grid-cols-4 activates inside a CardGrid half-card even if its allocated width is narrow; base grid-cols-2 also constrains320px content.",
+      "notConfirmed": "Actual clipping, horizontal overflow or inaccessible metrics.",
+      "owner": "BatteryCareMethodology only",
+      "requiredEvidence": "Mounted320/375/430 and narrow desktop allocated cards with long localized labels,200% text and actual scroll/geometry."
+    },
+    {
+      "id": "BCARE-CAND-002",
+      "file": "web\\src\\features\\battery\\pages\\BatteryCarePage.tsx",
+      "line": 39,
+      "mechanism": "Frozen mount anchor remains unchanged across selection/refetch; monthly model rejects later timestamps, while overall index uses every eligible returned row. A long-lived mount receiving new post-anchor rows may show them only in overall evidence.",
+      "notConfirmed": "A defect in the accepted fixed-anchor contract or any observed stale trend.",
+      "owner": "BatteryCarePage/batteryCare model contract owner",
+      "requiredEvidence": "First decide whether the accepted per-mount UTC window is intentionally frozen; then bounded synthetic refetch/month-boundary QA. Do not silently remigrate accepted anchor semantics."
+    },
+    {
+      "id": "BCARE-CAND-003",
+      "file": "web\\src\\features\\battery\\lib\\batteryCare.ts",
+      "line": 208,
+      "mechanism": "Any otherwise unmatched label containing 'tesla' is DC; explicit AC labels are checked first. Actual vendor charger-label taxonomy could include an ambiguous AC label.",
+      "notConfirmed": "Any real session misclassification.",
+      "owner": "Battery-care classification model owner",
+      "requiredEvidence": "An authoritative synthetic/vendor-label contract, not real user/vehicle data or invented charger examples."
+    },
+    {
+      "id": "BCARE-CAND-004",
+      "file": "web\\src\\features\\battery\\lib\\batteryCare.ts",
+      "line": 421,
+      "mechanism": "Eligibility reads endpoint SoC but does not check ended_at/endTs; repository lists include unfinished rows. A supplied non-null endpoint on an unfinished row would be labelled finish/arrival evidence.",
+      "notConfirmed": "The actual list API emits endpoint values on incomplete rows or a live-row misdiagnosis.",
+      "owner": "Battery-care model/API contract integration owner",
+      "requiredEvidence": "Safe source/synthetic contract proof of an unfinished row with a meaningful endpoint. Detail-endpoint live enrichment is not proof for these list endpoints."
+    },
+    {
+      "id": "BCARE-CAND-005",
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\CareMonthlyTrend.tsx",
+      "line": 173,
+      "mechanism": "Tooltip samples and multiple badges/contexts interpolate raw counts; axis ticks do not supply locale formatters. i18n/index.ts:136 has only escapeValue:false, while table numeric cells explicitly use fmtInt.",
+      "notConfirmed": "Exact rendered locale/plural/digit differences or an interaction failure.",
+      "owner": "CareMonthlyTrend plus explicitly assigned count-presentation owners",
+      "requiredEvidence": "Safe mounted locales with distinct digits/grouping and representative counts; preserve actual numeric inputs/plural counts instead of turning them into formatted string plural operands."
+    },
+    {
+      "id": "BCARE-CAND-006",
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSourceNotices.tsx",
+      "line": 14,
+      "mechanism": "Independent warnings repeat across summary/risk/trend and both specialists. Current MetricBar header now wraps (MetricBar.tsx:66-72), so the older audit's nowrap header observation is not a current confirmed defect.",
+      "notConfirmed": "Excessive degraded-mode height, poor focus sequence, repeated live announcements or mobile overflow.",
+      "owner": "Feature notice owner and shared accessibility owners only if mounted evidence confirms a gap",
+      "requiredEvidence": "Safe degraded-source mobile/keyboard/screen-reader QA with per-source identity and retry preserved."
+    }
+  ],
+  "freshCommandReceipts": [
+    {
+      "shellId": "5773",
+      "at": "2026-10-13T20:38:35.5049097Z",
+      "commands": ["Get-Content -LiteralPath $f", "Get-FileHash -LiteralPath $f -Algorithm SHA256", "Select-String -LiteralPath $files -Pattern $p.Value -CaseSensitive", "[regex]::Matches($text,\"<$name\\b\").Count"],
+      "scope": "The16 exact presentation files and patterns enumerated in the ignored raw log.",
+      "numericExit": 0,
+      "rawOutputSummary": "presentationFiles=16 presentationLines=1416 pageLines=159; staticInlineStyle=0 rawControls=0 directVendorImports=0 oldApiImports=0 anyTypeEscape=0 directTransport=0 localWorkspacePicker=0 neonOrGlow=0 categorySubbarrel=3; section instances8.",
+      "meaning": "Actual source scan, not lint/test/compiler/runtime success."
+    },
+    {
+      "shellId": "5775",
+      "at": "2026-10-13T20:39:01.8450842Z",
+      "commands": ["Get-Content exact history-function line slices", "Select-String -Path 'D:\\repos\\teslasync\\internal\\api\\router.go' -Pattern 'r.Route\\(\"/(charging|drives)\"' -Context 0,1", "Get-Content 'D:\\repos\\teslasync\\web\\src\\i18n\\en.json' -Raw | ConvertFrom-Json -AsHashtable"],
+      "numericExit": 0,
+      "rawOutputSummary": "historyDoublePrefix=0 historyCamelCaseUrlParams=0; GET routes match; renderLiteralKeys=113 missingCanonicalStringLeaves=0; actual invalid default gradient string printed.",
+      "meaning": "No API requests, locale-loader validation, generated-catalog check or browser CSS evaluation."
+    },
+    {
+      "shellId": "5776",
+      "at": "2026-10-13T20:39:58.5219905Z",
+      "commands": ["Select-String -LiteralPath ('D:\\repos\\teslasync\\'+$entry.Key) -Pattern $entry.Value"],
+      "numericExit": 0,
+      "rawOutputSummary": "Exact finding branches, frozen clock, model eligibility/denominators, source availability, date formatting and current MetricBar line references printed in ignored log.",
+      "meaning": "Source mechanisms only."
+    }
+  ],
+  "notRun": [
+    {"command": "npx tsc --noEmit", "reason": "Explicit report-only/source-only scope; full-project compiler gate is parent-owned. No TypeScript pass is claimed."},
+    {"command": "npm run build", "reason": "No source change or phase gate authorized."},
+    {"command": "ESLint/Vitest/scoped tests/full suites", "reason": "Explicit no tests/full suites; historical zero-discovery receipt is not rerun or promoted."},
+    {"command": "bash .github\\skills\\audit-violations\\audit.sh <scope>", "reason": "Script unconditionally executes full-project TypeScript. Only its static categories were checked using scoped fresh commands."},
+    {"command": "bash .github\\skills\\verify-api-hooks\\verify.sh <hook-file>", "reason": "Whole-hook/module extraction would include unrelated reads; the four directly used resource paths were compared to mounted GET registrations by source."},
+    {"command": "Browser/native/Playwright/Chrome/visual/keyboard/screen-reader/contrast/touch/mobile/theme/RTL/200%/forced-colors/export QA", "reason": "No grant; source semantics and classes are not mounted acceptance."},
+    {"command": "Health checks, live API/battery/vehicle/user-data reads, mutations or vehicle commands", "reason": "Explicitly prohibited; zero performed."}
+  ],
+  "limits": [
+    "No full-page/native/test pass is inferred from159lines/eight sections/1416presentation lines, hashes, English key presence, method/path agreement or historical acceptance.",
+    "Mounted geometry, effective theme contrast, preference changes, locale loaders, safe export bytes, clipboard, focus restoration and physical battery accuracy remain unverified.",
+    "Read snapshots are not a lock on shared concurrent support. Final presentation hashes are checked only against the16 named source receipts, not a Git/tree-wide no-change assertion.",
+    "Only the parent may orchestrate, create followup queue claims, integrate shared catalogs, run gates or accept source/native closure. Findings were not fixed here."
+  ],
+  "needs": [
+    "Parent intake of this source-only report and ignored raw log.",
+    "Separate narrow assignments for confirmed BCARE-QA-001..009 if desired; serialize overlaps in CareSourceNotices, methodology and trust adapters.",
+    "Do not promote runtime candidates or historical external-catalog zero tests to failures/passes without the stated additional evidence.",
+    "Parent-owned fresh supported-runtime compiler/lint/build/covering tests and authorized synthetic mounted QA remain required for actual page acceptance."
+  ],
+  "release": {
+    "allSourceReportLogJsonCommandClaimsReleasedOnReturn": true,
+    "postReturnWrites": false,
+    "ongoingOwnProcesses": 0,
+    "noSourceWriteLeaseWasUsed": true,
+    "statement": "ALL source/report/log/JSON/commands RELEASED / NO POST-RETURN WRITES."
+  }
+}

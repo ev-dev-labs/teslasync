@@ -1,0 +1,362 @@
+{
+  "item": "audit-page-045",
+  "page": "web\\src\\features\\analytics\\pages\\FleetComparePage.tsx",
+  "routes": ["/vehicle-comparison"],
+  "purpose": "Compare two independently selected fleet vehicles using snapshot status, lifetime driving and charging statistics, and server-window monthly trends.",
+  "primaryGoal": "Choose or swap an A/B pair and compare known measurements without confusing missing, unverified, historical or failed evidence with observed values.",
+  "auditMode": "Phase 0, read-only source inspection; no source changes or runtime acceptance",
+  "dataSources": [
+    {
+      "hook": "useVehicles",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "ownership": "vehicle API hook and vehicleHandler.List",
+      "behavior": "One fleet list query; safeArray selection; FAST staleTime; cancellation signal forwarded."
+    },
+    {
+      "hook": "useVehicleState",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 260,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/state, with optional existing as-of state",
+      "routeEvidence": "internal\\api\\router.go:3329-3333",
+      "ownership": "vehicle state mapper/query policy and vehicleHandler.CurrentState",
+      "behavior": "Two vehicle-keyed queries enabled for positive IDs; existing asOf/queryPolicy/cancellation preserved. Mapper exposes state, live, observedAt, freshness and verifiedFields. Page currently keeps only state."
+    },
+    {
+      "hook": "useDrivingStats",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 218,
+      "endpoint": "GET /api/v1/drives/stats?vehicle_id={id}",
+      "routeEvidence": "internal\\api\\router.go:3463-3465",
+      "ownership": "driving hook and driveHandler.Stats",
+      "behavior": "Two ID-keyed, enabled queries, retry false and cancellation signal. Current typed contract uses totalDistanceKm, avgSpeedKmh, topSpeedKmh, avgEfficiencyWhKm, nullable regenRatio and co2SavedKg; no backend unit migration performed."
+    },
+    {
+      "hook": "useCostBreakdown",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 107,
+      "endpoint": "GET /api/v1/analytics/tco?vehicle_id={id}",
+      "routeEvidence": "internal\\api\\router.go:3853",
+      "ownership": "analytics hook and tcoHandler.GetTCO",
+      "behavior": "Two ID-keyed enabled queries with cancellation; page consumes total_charging_cost, total_wh and total_sessions."
+    },
+    {
+      "hook": "useMonthlyMileage",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 85,
+      "endpoint": "GET /api/v1/mileage/monthly?vehicle_id={id}",
+      "routeEvidence": "internal\\api\\router.go:4200-4202",
+      "ownership": "analytics hook, mileageHandler.Monthly and drivedb.NewMileageRepo",
+      "behavior": "Two enabled ID-keyed queries; unwrap months using safeArray. Types retain year_month, total_km and drive_count. Page documents default server window as starting 24 months ago, rounded to month start; handler/query bounds and aggregation semantics were not inspected."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": "PageLayout.tsx:9-15; web\\src\\components\\layout\\PageContainer.tsx:102-120",
+      "contract": "Full allocated width, named independent dataSources, aggregate query freshness, nonfatal source notice, busy state and inherited page boundary; reuse, not replacement."
+    },
+    {
+      "name": "Section / CardGrid / LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+      "evidence": "CardGrid.tsx:14-46; FleetComparePage.tsx:604,659,712,741,850",
+      "contract": "Five named sections, measured container grid with half-sized status/chart cards and stable card IDs. LayoutCard implementation itself not inspected."
+    },
+    {
+      "name": "Select / Button / GlassPanel / Text / Caption / DataTable",
+      "owner": "web\\src\\components\\ui",
+      "evidence": "FleetComparePage.tsx:623-657,857-884; Select.tsx:32-35,59-79; DataTable.tsx:144-149,186,267,298",
+      "contract": "Native labeled comparison selectors, named swap action, theme typography, canonical embedded three-column table and mobile allDetails. No competing table or selector implementation needed."
+    },
+    {
+      "name": "FleetComparisonBrief / OperationalBrief",
+      "owner": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetComparisonBrief.tsx",
+      "evidence": "FleetComparisonBrief.tsx:17-45",
+      "contract": "Eight numeric operational metrics representing four A/B pairs, specialist display formatter, snapshot/lifetime provenance and partial/retained/loading labels; existing useOperationalMetrics bridge."
+    },
+    {
+      "name": "FleetTrendCard / ChartCard / EmbeddedChart",
+      "owner": "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetTrendCard.tsx",
+      "evidence": "FleetTrendCard.tsx:15-33; ChartCard.tsx:13-43; EmbeddedChart.tsx:19-40",
+      "contract": "Exactly one chart shell, loading/empty/fatal error sibling, retained chart with refresh-error footer, accessible dataColumns, stable chartKey and hidden-series controller. Embedded export/fullscreen default false; do not claim page enabled actions."
+    },
+    {
+      "name": "formatKnown / getWinner",
+      "owner": "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\comparisonPresentation.ts",
+      "evidence": "comparisonPresentation.ts:13-30",
+      "contract": "Finite known values only; missing values display a dash and cannot win; preserve lower/higher/neutral comparison semantics."
+    },
+    {
+      "name": "FadeIn / useChartPalette / useUnits",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "evidence": "FadeIn.tsx:23-33; useChartPalette.ts:18-22,40-42; useUnits.ts:143-161",
+      "contract": "Existing reduced-motion pipeline; saved cb_safe/neon chart preference with cb_safe fallback; canonical display-only physical formatters. Do not reset preferences for restrained styling."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\FleetComparePage.tsx",
+      "line": 346,
+      "rule": "MDC-002 / mission 33: page orchestration and derivation separation",
+      "detail": "A/B queries and monthly chart transforms are repeated orchestration, but share distinct vehicle identities and must not be collapsed to the workspace selected vehicle. The 894-line page also embeds status presenters and row formatting.",
+      "fix": "If decomposing, extract page-local status and monthly derivation helpers with typed A/B evidence; preserve both identities and all sections. No new universal comparison engine without independent consumer evidence.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "FleetComparePage.tsx:608,620-656 stacks toolbar below allocated 640px and uses min-w-0.",
+      "CardGrid.tsx:27-45 measures allocated width and packs cards; PageLayout.tsx:12 establishes @container.",
+      "FleetComparePage.tsx:865-875 retains metric and both vehicle columns through mobile keyValue/allDetails.",
+      "FleetComparePage.tsx:639 gives swap a 44px square."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\FleetComparePage.tsx",
+        "line": 624,
+        "rule": "MDC-040 / MDC-043: mobile targets",
+        "detail": "Both Select callers inherit md min-h-10 (40px) from Select.tsx:34 rather than the stronger 44px mobile target; no spacing-exception evidence was exercised.",
+        "fix": "Use an existing size/min-height option preserving native focus and density behavior, or document a validated spacing exception. Test long names and 320px allocated width.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "UNVERIFIED at all ten required widths, including long-content, RTL and 200% text"
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Select.tsx:59-79 connects labels and controls; page supplies localized A/B labels.",
+      "FleetComparePage.tsx:633-639 names the icon-only swap button.",
+      "FleetComparePage.tsx:166-171 supplies battery progressbar label and range.",
+      "FleetComparePage.tsx:751-764,803-816 supplies named chart data columns and ariaLabel."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\FleetComparePage.tsx",
+        "line": 60,
+        "rule": "MDC-040 / mission 30: non-color equivalent semantics",
+        "detail": "Winner cells add a visible check but hide it with aria-hidden. Their accessible text remains only the formatted value, so the explicit higher/lower winner designation has no announced equivalent.",
+        "fix": "Retain visible check and semantic color, adding localized screen-reader winner text or an equivalent cell description; neutral/tie/unknown must never receive winner text.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "acceptance": "Keyboard order, select navigation, focus visibility, screen-reader output, effective contrast, forced colors and reduced-motion runtime UNVERIFIED"
+  },
+  "states": {
+    "sourceEvidence": [
+      "VehicleStatusCard keeps a titled shell for initial loading, absent selection and errors; retained state survives refresh errors (FleetComparePage.tsx:117-151).",
+      "FleetTrendCard.tsx:18-33 preserves usable series and renders retry footer on refresh failure.",
+      "FleetComparePage.tsx:609-619 handles fleet loading/error/zero-or-one vehicles with Manage vehicles recovery.",
+      "FleetComparePage.tsx:569-578 supplies nine named independent sources to PageLayout; generic source notice does not establish observation-level telemetry trust."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\FleetComparePage.tsx",
+        "line": 395,
+        "rule": "MDC-026 / MDC-045: unknown is not zero",
+        "detail": "Monthly merge initializes missing peer distance/count to zero and uses nullish zero for fields (400-419). If one side is pending or failed while the other has rows, charts and accessible tables render invented zero peer observations. An absent successful bucket's meaning is also not established by this audit.",
+        "fix": "Keep unavailable peer series/buckets null with per-side source state and truthful labels; preserve observed zero. Resolve successful missing-bucket semantics with the existing endpoint owner before treating a gap as zero. Keep working peer visible.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\pages\\FleetComparePage.tsx",
+        "line": 343,
+        "rule": "MDC-025 / MDC-026: observation trust must survive presentation",
+        "detail": "Page discards observedAt, freshness, verifiedFields and live returned by useVehicleState. Current-status cards read raw state and vehicle.state (143-148,220-228), with no observation-level stale/unverified labeling. A successful HTTP refresh does not mean the signal is current. Highlight retained flags only inspect error/paused, not telemetry trust (662-669).",
+        "fix": "Pass the existing typed state/trust metadata into status/highlight presentation; reuse isVehicleStateFieldCurrent and established trusted status semantics. Retain historical/expired readings with honest evidence labels rather than deleting or presenting them as verified current. Preserve as-of mode.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetComparisonBrief.tsx",
+        "line": 22,
+        "rule": "MDC-026 / MDC-033: independent loading and invalid values",
+        "detail": "Every item emits both numeric metrics regardless of item.loading; only all items loading suppresses the entire brief (34-35). Page pair flags are true only when both sides lack data (FleetComparePage.tsx:669,684,694). One pending side is therefore described as unavailable/partial rather than loading. partial checks null only, whereas formatKnown also rejects nonfinite values.",
+        "fix": "Carry per-side pending/fatal/refresh/retained/unknown states through the existing metrics bridge; suppress only pending measurements and classify invalid numeric values as unknown. Preserve successful peers and all eight metrics.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtimeAcceptance": "All loading/error/empty/partial/stale/offline transitions UNVERIFIED"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\FleetComparePage.tsx",
+      "line": 176,
+      "rule": "MDC-010 / MDC-025: semantic palette ownership",
+      "detail": "Battery fill uses fixed emerald-500/amber-500/rose-500 instead of the existing semantic token mapping, unlike winner/security foregrounds using severityTokens. Saturation and contrast on actual themes are not measured.",
+      "fix": "Reuse restrained existing semantic severity background tokens without changing threshold meaning; preserve the saved chart palette and all data series. Validate actual theme contrast rather than claim a source-only contrast defect.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetTrendCard.tsx",
+      "line": 3,
+      "rule": "MDC-002: production category imports",
+      "detail": "Feature presenter imports ChartCard/LayoutCard from @/components/layout/layout-reference instead of the accepted @/components/layout category barrel; the page itself already uses the category barrel.",
+      "fix": "Use existing layout category exports; do not author another chart shell.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": [
+      "Prevent fabricated peer zero series and preserve independent evidence.",
+      "Use existing vehicle observation trust metadata.",
+      "Repair per-side brief state semantics and accessible winner designation.",
+      "Finish category imports, semantic progress colors and mobile target verification."
+    ],
+    "scopeDecision": "Retain the genuinely independent A/B selectors; this is not a duplicate workspace vehicle picker."
+  },
+  "requiredSharedChanges": [],
+  "sharedContracts": [
+    {
+      "name": "Workspace ownership: independent comparison pair",
+      "owner": "web\\src\\lib\\workspaceScope.ts",
+      "evidence": "workspaceScope.ts:133,147-166; FleetComparePage.tsx:286-299",
+      "propsVariantsStates": "getWorkspaceRouteScope('/vehicle-comparison') disables workspace vehicle and leaves independent leftId/rightId, cross-disable and swap owned by the comparison page.",
+      "usedBy": ["/vehicle-comparison", "application workspace header"],
+      "dependsOn": ["existing workspaceScope policy"],
+      "decision": "Preserve existing shell scope; no range selector is introduced. Route is not present in RANGE_ENABLED_PATHS in inspected source. Lifetime/default-window charts are explicitly documented, and as-of vehicle state remains an independent existing hook responsibility."
+    },
+    {
+      "name": "Vehicle observation trust",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "evidence": "useVehicles.ts:147-149,225-230,1112-1129",
+      "propsVariantsStates": "MappedVehicleStateResponse observedAt/freshness/verifiedFields/live; isVehicleStateFieldCurrent for verified current fields; preserve historical, stale, unknown, failed and retained evidence.",
+      "usedBy": ["FleetComparePage status cards", "FleetComparisonBrief snapshot metrics"],
+      "dependsOn": ["existing vehicle mapper", "existing live query policy"],
+      "decision": "Reuse existing contract; page adoption needed, no demonstrated missing shared capability."
+    },
+    {
+      "name": "Embedded comparison charts and tables",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "evidence": "ChartCard.tsx:13-43; EmbeddedChart.tsx:19-40; FleetComparePage.tsx:857-884",
+      "propsVariantsStates": "ChartCard data/dataColumns/ariaLabel/chartKey/hiddenSeries plus retained-error footer; DataTable embedded tableId/mobileColumns/mobilePresentation/allDetails/exportValue.",
+      "usedBy": ["monthly distance", "monthly drive count", "lifetime comparison"],
+      "dependsOn": ["canonical ChartContainer pipeline", "canonical DataTable", "container measured grid"],
+      "decision": "Reuse; no speculative export/fullscreen enablement or replacement table."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetHighlights.tsx",
+      "line": 17,
+      "rule": "MDC-002 / MDC-033: one operational summary owner",
+      "detail": "Local index still exports a StatStrip text-pair FleetHighlights, while mounted page aliases numeric FleetComparisonBrief as FleetHighlights (FleetComparePage.tsx:43). These are two page-specific summary presenters, not proof that both are mounted.",
+      "fix": "Keep the mounted OperationalBrief numeric bridge canonical. Establish references before any future cleanup; do not delete uninspected consumer functionality or change specialist formatting.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "88f05fe0599c9acb9db402c5f1f520ae6a7cd61e183a9a637db987b8d54174b0",
+    "hashAlgorithm": "SHA-256 of root page bytes",
+    "currentLineCount": 894,
+    "sourceInventory": [
+      {"file": "web\\src\\features\\analytics\\pages\\FleetComparePage.tsx", "lines": 894, "sha256": "88f05fe0599c9acb9db402c5f1f520ae6a7cd61e183a9a637db987b8d54174b0", "role": "mounted page and local status presenters"},
+      {"file": "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetTrendCard.tsx", "lines": 35, "sha256": "bac45192c128d48f85c97ee1b5f7ee425b1a5662f890850c29a9139205f543bc", "role": "mounted chart state presenter"},
+      {"file": "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\comparisonPresentation.ts", "lines": 30, "sha256": "d413d6c37cef60297a87ee4577f563ff3dfa36da94028b459426daaa8b4ecd3c", "role": "mounted finite formatter/winner helper"},
+      {"file": "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\index.ts", "lines": 3, "sha256": "10db6aaa569bdfd319672d573d1623fe3dc5abcefc05428389062fb780bf9fe2", "role": "page dependency barrel"},
+      {"file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetComparisonBrief.tsx", "lines": 46, "sha256": "c7f4ac9f38c0cdae5cb35717f645517b62e778ea3c281b16df563410d69625bf", "role": "mounted highlights presenter"},
+      {"file": "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetHighlights.tsx", "lines": 44, "sha256": "e496393d9af0f7101309f0d809601191837d73907208d1fc9a0f67ce24fb29a5", "role": "barrel-exported alternate presenter, not directly mounted by audited page"}
+    ],
+    "mountedPageAndInspectedLocalDependencyLines": 1008,
+    "inventoryIncludingAlternatePresenterLines": 1052,
+    "sections": [
+      {"name": "Select vehicles to compare", "id": "fleet-compare-select", "line": 604, "count": 1},
+      {"name": "Key highlights", "id": "fleet-compare-highlights-section", "line": 659, "count": 1, "pairCount": 4, "numericMetricCount": 8},
+      {"name": "Current status", "id": "fleet-compare-status", "line": 712, "count": 1, "vehicleCardCount": 2},
+      {"name": "Trends over time", "id": "fleet-compare-trends", "line": 741, "count": 1, "chartCount": 2, "seriesPerChart": 2},
+      {"name": "Lifetime statistics", "id": "fleet-compare-lifetime", "line": 850, "count": 1, "rowCount": 10, "columnCount": 3}
+    ],
+    "sectionCount": 5,
+    "glassPanelSourceCount": 2,
+    "directChartContainerSourceCount": 0,
+    "actions": [
+      "A/B native selection with cross-disabled peer options",
+      "Swap independent vehicles",
+      "Deep-link initial leftId/rightId",
+      "Persist banner dismissal under phase40.compareBanner.dismissed.fleet",
+      "Navigate to /period-compare",
+      "Manage vehicles recovery to /vehicles",
+      "Retry fleet/state sources independently and monthly queries together",
+      "Existing chart hidden-series controls and accessible data columns"
+    ],
+    "dataBehavior": [
+      "Default select first two vehicles, first alone when only one; do not replace independent comparison identities with workspace vehicle.",
+      "Preserve query keys, ID enablement, cancellation, retries and inherited as-of behavior.",
+      "Preserve snapshot battery/range/temperature/security/status and model/trim identity; missing numeric values are not zero.",
+      "Preserve ten lifetime rows: total drives, distance, efficiency, average speed, top speed, regen ratio, CO2 saved, charging cost, energy, charging sessions.",
+      "Preserve all four highlight pairs and their specialist precision/currency/efficiency formatting and provenance.",
+      "Preserve monthly union/order, both distance and count series, chart keys and km scope explanation, without inferring unavailable observations.",
+      "Preserve current source contracts: Wh energy, meter-based rated-range formatting, explicit existing km/kmh statistics boundary conversion, dimensionless regen ratio and kg CO2. Wire/cache unit migration is not authorized by this audit.",
+      "Preserve tableId analytics:fleet-compare, mobile allDetails, value exports, finite-only winners and neutral speed/energy/session rows."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "accessibility": "UNVERIFIED beyond static source evidence",
+    "backend": "Route registration and frontend typed contracts only; no handler/database/runtime unit or missing-bucket semantics certification.",
+    "tests": "FleetTrendCard.test.tsx read only; no tests run and no historical receipts adopted as current acceptance.",
+    "validation": "No Git, source edits, build, lint, TypeScript, production mutations or browser actions. Audit skill script inspected but not executed because it unconditionally runs project TypeScript, conflicting with read-only Phase 0 scope.",
+    "scopedPatternChecks": {
+      "method": "PowerShell Select-String on assigned root page only; case-sensitive lowercase raw-control check",
+      "inlineStyleOccurrences": 1,
+      "inlineStyleExplanation": "Computed battery width at line 179; allowed dynamic value.",
+      "rawControlOccurrences": 0,
+      "directRechartsLeafletFramerImports": 0,
+      "neonWhiteGrayTextClassOccurrences": 0,
+      "note": "Initial case-insensitive raw-control count was 3 false positives from Select/DataTable; corrected case-sensitive check produced no matches. Counts are not comprehensive semantic or rendered acceptance."
+    },
+    "readSnapshotUtc": "2026-10-07T08:35:43.3775204Z",
+    "sourceDrift": "Concurrent repository writers possible; root source hash is pinned and rechecked before release."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\FleetComparePage.tsx",
+    "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetTrendCard.tsx",
+    "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\comparisonPresentation.ts",
+    "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\index.ts",
+    "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetHighlights.tsx",
+    "web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetTrendCard.test.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetComparisonBrief.tsx",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\types\\analytics.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\useChartPalette.ts",
+    "web\\src\\hooks\\useUnits.ts"
+  ],
+  "filesReadScope": "Paths include targeted ranges and matching lines, not an assertion that every listed large file was fully read.",
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-045.json",
+    ".agent-status\\audit-page-045.txt"
+  ]
+}

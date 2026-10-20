@@ -1,0 +1,974 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, renderHook, screen, within, cleanup } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import type { GuardConfig, GuardEvent } from '@/api/hooks/useGuard';
+import type { DataStateSource } from '@/api/dataState';
+import type { useVehicleState } from '@/api/hooks/useVehicles';
+import type { Geofence } from '@/types/location';
+import { ApiError } from '@/lib/resilience';
+import { formatDateTime } from '@/lib/dateFormat';
+import type { AppSettings } from '@/api/types';
+import { chartTokens } from '@/lib/tokens';
+
+type HookStateResponse = NonNullable<ReturnType<typeof useVehicleState>['data']>;
+// Mock sparse/malformed snapshots without changing the read-only production DTO.
+type StateResponse = Omit<HookStateResponse, 'state'> & {
+  state?: Partial<NonNullable<HookStateResponse['state']>>;
+};
+type Source<T> = DataStateSource<T> & { refetch: ReturnType<typeof vi.fn> };
+const H = vi.hoisted(() => ({
+  vehicleId: 42,
+  datePreferences: { locale: 'en-US', tz: 'UTC' },
+  unitSettings: { unit_of_length: 'km', locale: 'en-US', decimal_precision: 2 } as Partial<AppSettings>,
+  formatDateTime: vi.fn(),
+  config: {} as Source<GuardConfig | null>,
+  events: {} as Source<GuardEvent[]>,
+  state: {} as Source<StateResponse>,
+  geofences: {} as Source<Geofence[]>,
+  setConfig: { mutate: vi.fn(), isPending: false, error: null as Error | null },
+  panic: { mutate: vi.fn(), isPending: false, error: null as Error | null },
+  ack: { mutate: vi.fn(), isPending: false, error: null as Error | null },
+}));
+
+vi.mock('@/api/client', async importOriginal => ({
+  ...await importOriginal<typeof import('@/api/client')>(),
+  request: vi.fn(() => Promise.reject(new Error('Unexpected request in guard presentation test'))),
+}));
+
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicleId: H.vehicleId, vehicle: { display_name: 'Test vehicle' } }),
+}));
+vi.mock('@/api/hooks/useGuard', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/api/hooks/useGuard')>();
+  return { ...actual,
+    useGuardConfig: () => H.config,
+    useGuardEvents: () => H.events,
+    useSetGuardConfig: () => H.setConfig,
+    useGuardPanic: () => H.panic,
+    useAcknowledgeGuardEvent: () => H.ack,
+  };
+});
+vi.mock('@/api/hooks/useVehicles', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/api/hooks/useVehicles')>();
+  return { ...actual, useVehicleState: () => H.state };
+});
+vi.mock('@/api/hooks/useLocations', () => ({ useGeofences: () => H.geofences }));
+vi.mock('@/hooks/useSettings', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...actual, useSettings: () => ({ settings: H.unitSettings }) };
+});
+vi.mock('@/hooks/useDateFormat', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  return { ...actual, useDateFormat: () => ({
+    ...actual.useDateFormat(),
+    formatDateTime: H.formatDateTime,
+  }) };
+});
+// Keep the remaining motion exports: PageContainer/overlays may consume them.
+vi.mock('@/components/motion', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/components/motion')>();
+  return { ...actual, FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> };
+});
+vi.mock('@/components/maps', () => ({
+  MapContainer: ({ children, center }: { children: ReactNode; center: [number, number] }) =>
+    <div data-testid="guard-map" data-latitude={center[0]} data-longitude={center[1]}>{children}</div>,
+  Marker: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Popup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Circle: ({ radius, center, pathOptions }: {
+    radius: number;
+    center: [number, number];
+    pathOptions: { color: string; fillColor: string; fillOpacity: number; weight: number };
+  }) => <div data-testid="geofence-circle" data-radius={radius}
+    data-latitude={center[0]} data-longitude={center[1]}
+    data-color={pathOptions.color} data-fill-color={pathOptions.fillColor}
+    data-fill-opacity={pathOptions.fillOpacity} data-weight={pathOptions.weight} />,
+  Polyline: () => <div data-testid="event-trail" />,
+  MapTileLayer: () => null,
+  MapInvalidator: () => null,
+  vehicleIcon: () => ({}),
+}));
+vi.mock('@/components/data-display', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/components/data-display')>();
+  return { ...actual, TimeStamp: ({ value }: { value: string | number }) =>
+    <time dateTime={String(value)}>{String(value)}</time> };
+});
+// Use the real placement engine but isolate unrelated shell query/header wiring.
+vi.mock('@/components/layout/layout-reference', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/components/layout/layout-reference')>();
+  return { ...actual, PageLayout: ({ children }: { children: ReactNode }) => <main>{children}</main> };
+});
+
+import GuardModePage from '../../pages/GuardModePage';
+import { useGuardPageModel } from './useGuardPageModel';
+
+function query<T>(data: T | undefined, overrides: Partial<Source<T>> = {}): Source<T> {
+  return { data, error: null, isLoading: false, isFetching: false, isError: false,
+    dataUpdatedAt: Date.now(), refetch: vi.fn(), ...overrides };
+}
+function config(overrides: Partial<GuardConfig> = {}): GuardConfig {
+  return { vehicle_id: 42, enabled: true, home_geofence_id: 5, sensitivity: 'high',
+    auto_panic: true, created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-06-01T10:00:00Z', ...overrides };
+}
+function event(overrides: Partial<GuardEvent> = {}): GuardEvent {
+  return { id: 7, vehicle_id: 42, ts: '2026-06-01T10:00:00Z', event_type: 'locked',
+    from_state: 'false', to_state: 'true', details: null, acknowledged_at: null,
+    acknowledged_by: null, ...overrides };
+}
+function state(overrides: Partial<StateResponse> = {}): StateResponse {
+  return { state: { vehicle_id: 42, latitude: 37.5, longitude: -121.9,
+    is_locked: true, sentry_mode: true }, live: true, observedAt: Date.now(),
+    freshness: 'fresh', verifiedFields: ['latitude', 'longitude', 'is_locked', 'sentry_mode'],
+    ...overrides };
+}
+const geofence: Geofence = {
+  id: '5', name: 'Home', latitude: 37.5, longitude: -121.9, radius: 100,
+  alertOnEntry: true, alertOnExit: false, enabled: true, origin: 'manual',
+  needsReview: false, createdAt: '2026-01-01T00:00:00Z',
+};
+function renderPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<MemoryRouter><QueryClientProvider client={client}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+}
+function metric(label: string) {
+  const overview = screen.getByRole('region', { name: 'Guard status overview' });
+  const query = within(overview);
+  // Tooltip descriptions may legitimately repeat a metric's label text.
+  const selector = '[data-operational-metric] > :first-child';
+  expect(query.getAllByText(label, { selector })).toHaveLength(1);
+  const tile = query.getByText(label, { selector }).closest('[data-operational-metric]');
+  if (!(tile instanceof HTMLElement)) throw new Error(`Missing metric tile for ${label}`);
+  expect(overview).toContainElement(tile);
+  expect(tile.querySelectorAll(selector)).toHaveLength(1);
+  return tile;
+}
+function expectMissingMetric(label: string) {
+  const overview = screen.getByRole('region', { name: 'Guard status overview' });
+  expect(within(overview).queryByText(label, { selector: '[data-operational-metric] > :first-child' })).not.toBeInTheDocument();
+}
+function expectPendingMetric(label: string) {
+  const tile = metric(label);
+  expect(tile.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+  expect(tile.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+}
+
+function expectOverviewMetadata(text: string) {
+  const overview = screen.getByRole('region', { name: 'Guard status overview' });
+  fireEvent.click(within(overview).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  expect(within(dialog).getByText(text)).toBeInTheDocument();
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+
+function section(name: string) {
+  const el = document.querySelector(`[data-guard-section="${name}"]`);
+  if (!(el instanceof HTMLElement)) throw new Error(`Missing ${name} section`);
+  return within(el);
+}
+beforeEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  H.vehicleId = 42;
+  H.datePreferences = { locale: 'en-US', tz: 'UTC' };
+  H.unitSettings = { unit_of_length: 'km', locale: 'en-US', decimal_precision: 2 };
+  H.formatDateTime.mockImplementation((value: string) => formatDateTime(value, H.datePreferences));
+  H.config = query(config());
+  H.events = query([]);
+  H.state = query(state());
+  H.geofences = query([geofence]);
+  for (const mutation of [H.setConfig, H.panic, H.ack]) {
+    mutation.isPending = false;
+    mutation.error = null;
+  }
+});
+
+describe('guard live modernization preservation', () => {
+  it.each([100, 0])('uses the existing restrained map palette without changing a %s-meter geofence', radius => {
+    H.geofences = query([{ ...geofence, latitude: 38.25, longitude: -122.75, radius }]);
+    H.events = query([event(), event({ id: 8, event_type: 'sentry_mode' })]);
+    renderPage();
+    const circle = screen.getByTestId('geofence-circle');
+    expect(circle).toHaveAttribute('data-color', chartTokens.series[0]);
+    expect(circle).toHaveAttribute('data-fill-color', chartTokens.series[0]);
+    expect(circle).toHaveAttribute('data-fill-opacity', '0.08');
+    expect(circle).toHaveAttribute('data-weight', '2');
+    expect(circle).toHaveAttribute('data-radius', String(radius));
+    expect(circle).toHaveAttribute('data-latitude', '38.25');
+    expect(circle).toHaveAttribute('data-longitude', '-122.75');
+    expect(screen.getByTestId('guard-map')).toHaveAttribute('data-latitude', '37.5');
+    expect(screen.getByTestId('guard-map')).toHaveAttribute('data-longitude', '-121.9');
+    expect(screen.getByText('Test vehicle')).toBeInTheDocument();
+    expect(screen.queryByTestId('event-trail')).not.toBeInTheDocument();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+  });
+
+  it('formats the existing movement thresholds with current units without changing saved policy operands', () => {
+    H.config = query(config({ sensitivity: 'medium' }));
+    const { result, rerender } = renderHook(() => useGuardPageModel());
+    expect(result.current.sensitivityOptions).toEqual([
+      { value: 'low', label: 'Low — > 1.00 km' },
+      { value: 'medium', label: 'Medium — > 0.20 km' },
+      { value: 'high', label: 'High — any movement' },
+    ]);
+    H.unitSettings = { unit_of_length: 'mi', locale: 'en-US', decimal_precision: 3 };
+    rerender();
+    expect(result.current.sensitivityOptions).toEqual([
+      { value: 'low', label: 'Low — > 0.621 mi' },
+      { value: 'medium', label: 'Medium — > 0.124 mi' },
+      { value: 'high', label: 'High — any movement' },
+    ]);
+    expect(result.current.effectiveSensitivity).toBe('medium');
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    act(() => result.current.handleSaveSettings());
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: true, home_geofence_id: 5, sensitivity: 'medium', auto_panic: true,
+    });
+    H.config = query(null);
+    rerender();
+    expect(result.current.effectiveSensitivity).toBe('medium');
+    expect(result.current.policyEnabled).toBeNull();
+    expect(result.current.policyLabel).toBe('Saved policy unavailable');
+  });
+
+  it('keeps the saved-policy and automatic-monitoring caveats alongside unit-aware settings', () => {
+    H.unitSettings = { unit_of_length: 'mi', locale: 'en-US', decimal_precision: 2 };
+    H.config = query(config({ sensitivity: 'low' }));
+    renderPage();
+    expect(section('settings').getByRole('combobox', { name: 'Sensitivity' })).toHaveTextContent('Low — > 0.62 mi');
+    expect(section('settings').getByText('Saved movement threshold policy; automatic detection is not established.')).toBeInTheDocument();
+    expect(section('settings').getByText('Automatic guard monitoring, theft detection, and auto-panic are not established by the current service. These settings persist policy; verify vehicle security using current lock and Sentry readings.')).toBeInTheDocument();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each(['config', 'events', 'geofences'] as const)(
+    'discloses active loading and paused %s overlays without blocking the current marker', source => {
+      H[source] = query(undefined, { isLoading: true, isFetching: true, fetchStatus: 'fetching', dataUpdatedAt: 0 });
+      const view = renderPage();
+      expect(section('map').getByText('Loading')).toBeInTheDocument();
+      expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+      expect(screen.queryByTestId('event-trail')).not.toBeInTheDocument();
+      const label = source === 'config' ? 'Guard settings' : source === 'events' ? 'Event timeline' : 'Home geofence';
+      const loadingRow = section('map').getByText(label).closest('li');
+      expect(loadingRow).toHaveTextContent('Loading');
+      H[source] = query(undefined, { isPending: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+      expect(section('map').getByText(label).closest('li')).toHaveTextContent('Refresh paused');
+      expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+      fireEvent.click(section('map').getByRole('button', { name: `Retry unavailable sources: ${label}` }));
+      expect(H[source].refetch).toHaveBeenCalledOnce();
+      expect(H.state.refetch).not.toHaveBeenCalled();
+      if (source === 'config') H.config = query(config());
+      else if (source === 'events') H.events = query([]);
+      else H.geofences = query([geofence]);
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+      expect(section('map').queryByText('Refresh paused')).not.toBeInTheDocument();
+      expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+      expect(screen.getByTestId('geofence-circle')).toHaveAttribute('data-radius', '100');
+      expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    },
+  );
+
+  it('accepts successful empty overlays and zero coordinates without fabricating a circle or event trail', () => {
+    H.config = query(config({ home_geofence_id: null }));
+    H.geofences = query([]);
+    H.events = query([]);
+    H.state = query(state({ state: { latitude: 0, longitude: 0 } }));
+    renderPage();
+    expect(screen.getByTestId('guard-map')).toHaveAttribute('data-latitude', '0');
+    expect(screen.getByTestId('guard-map')).toHaveAttribute('data-longitude', '0');
+    expect(screen.queryByTestId('geofence-circle')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('event-trail')).not.toBeInTheDocument();
+    expect(section('map').queryByRole('button', { name: 'Retry unavailable sources' })).not.toBeInTheDocument();
+    expect(metric('Total events')).toHaveTextContent('0');
+  });
+
+  it('preserves a confirmed zero-radius geofence rather than treating zero as missing', () => {
+    H.geofences = query([{ ...geofence, radius: 0, latitude: 0, longitude: 0 }]);
+    renderPage();
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(screen.getByTestId('geofence-circle')).toHaveAttribute('data-radius', '0');
+  });
+
+  it.each(['config', 'events', 'geofences'] as const)(
+    'keeps initial %s overlay failure and retry local to the map', source => {
+      H[source] = query(undefined, { isError: true, error: new Error('Overlay unavailable'), dataUpdatedAt: 0 });
+      renderPage();
+      const label = source === 'config' ? 'Guard settings' : source === 'events' ? 'Event timeline' : 'Home geofence';
+      expect(section('map').getByText(label).closest('li')).toHaveTextContent('Failed');
+      expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+      fireEvent.click(section('map').getByRole('button', { name: `Retry unavailable sources: ${label}` }));
+      expect(H[source].refetch).toHaveBeenCalledOnce();
+      expect(H.state.refetch).not.toHaveBeenCalled();
+      expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['config', 'events', 'geofences'] as const)(
+    'retains the circle and marker through %s refresh failure and independent recovery', source => {
+      const view = renderPage();
+      const marker = screen.getByTestId('guard-map');
+      const circle = screen.getByTestId('geofence-circle');
+      Object.assign(H[source], { isError: true, error: new Error('Overlay refresh failed') });
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+      const label = source === 'config' ? 'Guard settings' : source === 'events' ? 'Event timeline' : 'Home geofence';
+      expect(section('map').getByText(label).closest('li')).toHaveTextContent('Cached · refresh failed');
+      expect(screen.getByTestId('guard-map')).toBe(marker);
+      expect(screen.getByTestId('geofence-circle')).toBe(circle);
+      fireEvent.click(section('map').getByRole('button', { name: `Retry unavailable sources: ${label}` }));
+      expect(H[source].refetch).toHaveBeenCalledOnce();
+      expect(H.state.refetch).not.toHaveBeenCalled();
+      Object.assign(H[source], { isError: false, error: null, dataUpdatedAt: Date.now() });
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+      expect(section('map').queryByText('Cached · refresh failed')).not.toBeInTheDocument();
+      expect(screen.getByTestId('geofence-circle')).toBe(circle);
+      expect(H.setConfig.mutate).not.toHaveBeenCalled();
+      expect(H.panic.mutate).not.toHaveBeenCalled();
+      expect(H.ack.mutate).not.toHaveBeenCalled();
+    },
+  );
+
+  it('uses current date preferences for the policy and preserves the raw observed instant', () => {
+    const updatedAt = '2026-06-01T10:00:00+02:00';
+    const observedAt = Date.parse('2026-06-01T08:30:00Z');
+    H.datePreferences = { locale: 'de-DE', tz: 'Europe/Berlin' };
+    H.config = query(config({ updated_at: updatedAt }));
+    H.state = query(state({ observedAt }));
+    const view = renderPage();
+    const initialLabel = `Policy updated ${formatDateTime(updatedAt, H.datePreferences)}`;
+    expect(section('status').getByText(initialLabel)).toBeInTheDocument();
+    expect(H.formatDateTime).toHaveBeenCalledWith(updatedAt);
+    expect(H.state.data?.observedAt).toBe(observedAt);
+    expect(H.state.data?.state?.is_locked).toBe(true);
+    expect(H.state.data?.state?.sentry_mode).toBe(true);
+    expect(section('status').getByText('No active alerts')).toBeInTheDocument();
+
+    H.datePreferences = { locale: 'en-US', tz: 'America/Los_Angeles' };
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    const updatedLabel = `Policy updated ${formatDateTime(updatedAt, H.datePreferences)}`;
+    expect(updatedLabel).not.toBe(initialLabel);
+    expect(section('status').getByText(updatedLabel)).toBeInTheDocument();
+    expect(section('status').queryByText(initialLabel)).not.toBeInTheDocument();
+    expect(H.config.data?.updated_at).toBe(updatedAt);
+    expect(H.state.data?.observedAt).toBe(observedAt);
+  });
+
+  it.each(['paused', 'idle'] as const)('explains %s initial sources locally, preserves unknowns and recovers without commands', fetchStatus => {
+    const deferred = { isPending: true, fetchStatus, dataUpdatedAt: 0 };
+    H.config = query(undefined, deferred);
+    H.events = query(undefined, deferred);
+    H.state = query(undefined, deferred);
+    H.geofences = query(undefined, deferred);
+    const view = renderPage();
+    const reason = fetchStatus === 'paused' ? 'paused' : 'pending';
+    for (const name of ['events', 'map', 'arming', 'settings']) {
+      const panel = document.querySelector(`[data-guard-section="${name}"]`);
+      expect(panel?.querySelector(`[data-initial-deferred="${reason}"]`)).toBeInTheDocument();
+    }
+    expect(section('settings').getAllByRole('status')).toHaveLength(2);
+    expect(section('events').queryByText('No guard events yet')).not.toBeInTheDocument();
+    expectMissingMetric('Guard state');
+    expectMissingMetric('Total events');
+    expectMissingMetric('Lock state');
+    expect(section('settings').getByRole('button', { name: 'Save settings' })).toBeDisabled();
+    expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
+    fireEvent.click(section('events').getByRole('button', { name: 'Refresh' }));
+    expect(H.events.refetch).toHaveBeenCalledOnce();
+    expect(H.config.refetch).not.toHaveBeenCalled();
+    expect(H.state.refetch).not.toHaveBeenCalled();
+    fireEvent.click(section('map').getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(section('arming').getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(section('settings').getByRole('button', { name: 'Refresh: Guard settings' }));
+    fireEvent.click(section('settings').getByRole('button', { name: 'Refresh: Home geofence' }));
+    expect(H.state.refetch).toHaveBeenCalledOnce();
+    expect(H.config.refetch).toHaveBeenCalledTimes(2);
+    expect(H.geofences.refetch).toHaveBeenCalledOnce();
+    H.config = query(config());
+    H.events = query([event()]);
+    H.state = query(state());
+    H.geofences = query([geofence]);
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    expect(document.querySelector('[data-initial-deferred]')).not.toBeInTheDocument();
+    expect(section('events').getByText('false → true')).toBeInTheDocument();
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(screen.getByTestId('geofence-circle')).toHaveAttribute('data-radius', '100');
+    expect(section('settings').getByRole('button', { name: 'Save settings' })).not.toBeDisabled();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
+  });
+
+  it('does not classify retained paused sources as deferred initial loads', () => {
+    H.config = query(config(), { fetchStatus: 'paused' });
+    H.events = query([event()], { fetchStatus: 'paused' });
+    H.state = query(state(), { fetchStatus: 'paused' });
+    H.geofences = query([geofence], { fetchStatus: 'paused' });
+    renderPage();
+    expect(document.querySelector('[data-initial-deferred]')).not.toBeInTheDocument();
+    expect(section('events').getByText('false → true')).toBeInTheDocument();
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toHaveValue('5');
+    expect(section('settings').getByRole('button', { name: 'Save settings' })).not.toBeDisabled();
+  });
+
+  it('keeps deferred geofence recovery independent of loaded policy and location', () => {
+    H.geofences = query(undefined, { isPending: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
+    renderPage();
+    expect(section('settings').getByRole('status')).toHaveTextContent('Home geofence: Refresh paused');
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toBeDisabled();
+    expect(section('settings').getByRole('combobox', { name: 'Sensitivity' })).not.toBeDisabled();
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(screen.queryByTestId('geofence-circle')).not.toBeInTheDocument();
+    fireEvent.click(section('settings').getByRole('button', { name: 'Refresh: Home geofence' }));
+    expect(H.geofences.refetch).toHaveBeenCalledOnce();
+    expect(H.config.refetch).not.toHaveBeenCalled();
+    expect(H.state.refetch).not.toHaveBeenCalled();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+  });
+
+  it('keeps named canonical form groups and pending command protection without issuing commands on mount', () => {
+    H.setConfig.isPending = true;
+    renderPage();
+    const settings = screen.getByRole('group', { name: 'Guard settings' });
+    const arming = screen.getByRole('group', { name: 'Guard mode' });
+    expect(within(settings).getByRole('button', { name: 'Save settings' })).toBeDisabled();
+    expect(arming).toHaveTextContent('Saved policy only');
+    expect(arming).toHaveTextContent('Enabling saves policy');
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([{ events: undefined }, { events: [] }])('refreshes unknown and measured-empty events independently of location without issuing commands', ({ events }) => {
+    H.events = query(events);
+    H.state = query(state({ verifiedFields: [] }));
+    renderPage();
+    fireEvent.click(section('events').getByRole('button', { name: 'Refresh' }));
+    expect(H.events.refetch).toHaveBeenCalledOnce();
+    expect(H.state.refetch).not.toHaveBeenCalled();
+    fireEvent.click(section('map').getByRole('button', { name: 'Refresh' }));
+    expect(H.state.refetch).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
+  });
+
+  it('offers vehicle navigation instead of querying an unselected vehicle', () => {
+    H.vehicleId = 0;
+    H.events = query(undefined);
+    H.state = query(state({ verifiedFields: [] }));
+    renderPage();
+    for (const name of ['events', 'map']) {
+      expect(section(name).getByRole('link', { name: 'Manage vehicles' })).toHaveAttribute('href', '/vehicles');
+      expect(section(name).queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    }
+    expect(H.events.refetch).not.toHaveBeenCalled();
+    expect(H.state.refetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps every panel, reported metrics and the single card grid when sources fail independently', () => {
+    H.config = query(undefined, { error: new Error('config unavailable'), isError: true });
+    H.events = query(undefined, { error: new Error('events unavailable'), isError: true });
+    renderPage();
+    for (const name of ['map', 'arming', 'panic', 'settings', 'status', 'events'])
+      expect(document.querySelector(`[data-guard-section="${name}"]`)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    expectOverviewMetadata('4 empty fields are hidden.');
+    expect(document.querySelectorAll('[data-card-grid]')).toHaveLength(1);
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(metric('Lock state')).toHaveTextContent('Locked');
+    expectMissingMetric('Total events');
+    expect(document.querySelector('[data-initial-deferred]')).not.toBeInTheDocument();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes unknown policy and events from disabled policy and measured zero events', () => {
+    H.config = query(undefined);
+    H.events = query(undefined);
+    const view = renderPage();
+    expectMissingMetric('Guard state');
+    expectMissingMetric('Unacknowledged');
+    expect(section('status').queryByText('No active alerts')).not.toBeInTheDocument();
+    H.config = query(config({ enabled: false }));
+    H.events = query([]);
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    expect(metric('Guard state')).toHaveTextContent('Disarmed');
+    expect(metric('Unacknowledged')).toHaveTextContent('0');
+    expect(metric('Total events')).toHaveAttribute('data-value-state', 'value');
+  });
+
+  it('accepts null unsaved config without inventing a saved disabled policy', () => {
+    H.config = query(null);
+    renderPage();
+    expectMissingMetric('Guard state');
+    expect(section('settings').getByText('No saved guard policy yet')).toBeInTheDocument();
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenCalledWith({
+      vehicleId: 42, enabled: false, home_geofence_id: null, sensitivity: 'medium', auto_panic: false,
+    });
+  });
+
+  it('treats verified false as off/unlocked and stale/unverified/null fields as unknown', () => {
+    H.state = query(state({ state: { vehicle_id: 42, is_locked: false, sentry_mode: false } }));
+    const view = renderPage();
+    expect(metric('Sentry mode')).toHaveTextContent('Off');
+    expect(metric('Lock state')).toHaveTextContent('Unlocked');
+    H.state = query(state({ freshness: 'stale' }));
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    expectMissingMetric('Sentry mode');
+    expectMissingMetric('Lock state');
+    expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
+  });
+
+  it('does not coerce a verified but absent boolean into false', () => {
+    H.state = query(state({ state: { vehicle_id: 42 } }));
+    renderPage();
+    expectMissingMetric('Sentry mode');
+    expectMissingMetric('Lock state');
+  });
+
+  it('does not trust unverified fields despite a fresh stream and numeric coordinates', () => {
+    H.state = query(state({ verifiedFields: [] }));
+    renderPage();
+    expectMissingMetric('Sentry mode');
+    expectMissingMetric('Lock state');
+    expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
+  });
+
+  it('keeps a returned triggered event while the saved policy is initially loading', () => {
+    H.config = query(undefined, { isLoading: true, isFetching: true, dataUpdatedAt: 0 });
+    H.events = query([event()]);
+    renderPage();
+    expect(metric('Guard state')).toHaveTextContent('Triggered');
+    expect(metric('Unacknowledged')).toHaveTextContent('1');
+    expect(metric('Lock state')).toHaveTextContent('Locked');
+    expectPendingMetric('Sensitivity');
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+  });
+
+  it('marks independent initial source loading without masking already available live fields', () => {
+    H.events = query(undefined, { isLoading: true });
+    H.config = query(undefined, { isLoading: true });
+    renderPage();
+    expectPendingMetric('Total events');
+    expectPendingMetric('Guard state');
+    expect(metric('Lock state')).toHaveTextContent('Locked');
+    expect(section('events').queryByText('No guard events yet')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-initial-deferred]')).not.toBeInTheDocument();
+  });
+
+  it('marks the overview busy only until the first independent metric source returns', () => {
+    const pending = { isLoading: true, isFetching: true, dataUpdatedAt: 0 };
+    H.config = query(undefined, pending);
+    H.events = query(undefined, pending);
+    H.state = query(undefined, pending);
+    const view = renderPage();
+    const overview = () => screen.getByRole('region', { name: 'Guard status overview' });
+    expect(overview()).toHaveAttribute('aria-busy', 'true');
+    expectOverviewMetadata('Loading source');
+    expect(overview().querySelectorAll('[data-operational-value]')).toHaveLength(0);
+
+    H.events = query([]);
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    expect(overview()).not.toHaveAttribute('aria-busy');
+    expectOverviewMetadata('Returned evidence');
+    expect(metric('Total events')).toHaveTextContent('0');
+    expect(metric('Unacknowledged')).toHaveAttribute('data-value-state', 'value');
+    expectPendingMetric('Guard state');
+    expectPendingMetric('Lock state');
+  });
+
+  it.each(['config', 'events', 'state'] as const)(
+    'preserves successful metrics while the %s source initially loads', source => {
+      H.config = query(config({ enabled: false }));
+      H.state = query(state({ state: { vehicle_id: 42, is_locked: false, sentry_mode: false } }));
+      H[source] = query(undefined, { isLoading: true, isFetching: true, dataUpdatedAt: 0 });
+      renderPage();
+      const overview = screen.getByRole('region', { name: 'Guard status overview' });
+      expect(overview).not.toHaveAttribute('aria-busy');
+      expectOverviewMetadata('Returned evidence');
+      for (const label of ({ config: ['Guard state', 'Sensitivity'], events: ['Total events', 'Unacknowledged'], state: ['Lock state', 'Sentry mode'] }[source])) expectPendingMetric(label);
+      if (source !== 'config') {
+        expect(metric('Guard state')).toHaveTextContent('Disarmed');
+        expect(metric('Sensitivity')).toHaveTextContent('High');
+      }
+      if (source !== 'events') {
+        expect(metric('Total events')).toHaveTextContent('0');
+        expect(metric('Unacknowledged')).toHaveTextContent('0');
+      }
+      if (source !== 'state') {
+        expect(metric('Lock state')).toHaveTextContent('Unlocked');
+        expect(metric('Sentry mode')).toHaveTextContent('Off');
+      }
+    },
+  );
+
+  it('does not treat retained unsaved policy or unknown vehicle fields as initial loading', () => {
+    H.config = query(null, { isFetching: true });
+    H.state = query(state({ verifiedFields: [] }), { isFetching: true });
+    renderPage();
+    const overview = screen.getByRole('region', { name: 'Guard status overview' });
+    expect(overview).not.toHaveAttribute('aria-busy');
+    expectMissingMetric('Guard state');
+    expect(section('settings').getByText('No saved guard policy yet')).toBeInTheDocument();
+    expectMissingMetric('Lock state');
+    expect(section('status').getByText('Lock state unavailable')).toBeInTheDocument();
+    expect(metric('Total events')).toHaveTextContent('0');
+  });
+
+  it('retains independent geofence recovery while config is unavailable', () => {
+    H.config = query(undefined, { isError: true, error: new Error('policy failed') });
+    H.geofences = query([geofence], { isError: true, error: new Error('geofence refresh failed') });
+    renderPage();
+    fireEvent.click(section('settings').getByRole('button', { name: 'Refresh' }));
+    expect(H.geofences.refetch).toHaveBeenCalledOnce();
+    expect(H.config.refetch).not.toHaveBeenCalled();
+  });
+
+  it('retains history, policy and map during refresh errors with source-local recovery', () => {
+    H.events = query([event()], { error: new Error('history refresh failed'), isError: true });
+    H.config = query(config(), { error: new Error('policy refresh failed'), isError: true });
+    H.state = query(state(), { error: new Error('state refresh failed'), isError: true });
+    renderPage();
+    expect(section('events').getByText('false → true')).toBeInTheDocument();
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(metric('Guard state')).toHaveTextContent('Triggered');
+    fireEvent.click(section('events').getByRole('button', { name: 'Refresh' }));
+    expect(H.events.refetch).toHaveBeenCalledTimes(1);
+    expect(H.config.refetch).not.toHaveBeenCalled();
+    expect(H.state.refetch).not.toHaveBeenCalled();
+  });
+
+  it('preserves saved auto-panic true on save and explicit false on save and arm/disarm', () => {
+    renderPage();
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: true, home_geofence_id: 5, sensitivity: 'high', auto_panic: true,
+    });
+    fireEvent.click(section('settings').getByRole('switch', { name: 'Auto-panic on trigger' }));
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: true, home_geofence_id: 5, sensitivity: 'high', auto_panic: false,
+    });
+    fireEvent.click(section('arming').getByRole('switch', { name: 'Guard mode' }));
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: false, home_geofence_id: 5, sensitivity: 'high', auto_panic: false,
+    });
+  });
+
+  it('preserves draft sensitivity/geofence operands and reconciles untouched saved policy after arming failure', () => {
+    const { result, rerender } = renderHook(() => useGuardPageModel());
+    act(() => {
+      result.current.setSensitivity('low');
+      result.current.setHomeGeofenceId('9');
+      result.current.setAutoPanic(false);
+    });
+    act(() => result.current.handleSaveSettings());
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: true, home_geofence_id: 9, sensitivity: 'low', auto_panic: false,
+    });
+    H.config = query(config({ enabled: false }));
+    H.setConfig.error = new Error('saved policy but arming failed');
+    rerender();
+    expect(result.current.policyEnabled).toBe(false);
+    expect(result.current.effectiveAutoPanic).toBe(false);
+    expect(result.current.effectiveSensitivity).toBe('low');
+    expect(result.current.effectiveHomeGeofenceId).toBe('9');
+  });
+
+  it('requires panic confirmation and cancellation does not invoke the callback', () => {
+    renderPage();
+    const effects = 'This requests Sentry mode on, then horn honking, then light flashing. It does not lock doors, send notifications, or create a guard event. Commands can fail or complete only partially.';
+    expect(section('panic').getByText(effects)).toBeInTheDocument();
+    expect(section('panic').queryByText('Flash lights, honk horn, lock doors, enable sentry, and notify all channels')).not.toBeInTheDocument();
+    fireEvent.click(section('panic').getByRole('button', { name: 'Activate panic' }));
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent(effects);
+    expect(dialog).not.toHaveTextContent('send alerts to all notification channels');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    fireEvent.click(section('panic').getByRole('button', { name: 'Activate panic' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Activate panic' }));
+    expect(H.panic.mutate).toHaveBeenCalledWith(42);
+  });
+
+  it('retains unknown event types, transitions, attribution, timestamp and ack identity', () => {
+    H.events = query([
+      event({ event_type: 'future_security_event', from_state: null, to_state: '0' }),
+      event({ id: 8, acknowledged_at: '2026-06-01T11:00:00Z', acknowledged_by: 'operator' }),
+    ]);
+    renderPage();
+    expect(section('events').getByText('future_security_event')).toBeInTheDocument();
+    expect(section('events').getByText('— → 0')).toBeInTheDocument();
+    expect(section('events').getByText('Acknowledged by: operator')).toBeInTheDocument();
+    expect(document.querySelector('[data-guard-event="7"] time')).toBeInTheDocument();
+    fireEvent.click(section('events').getByRole('button', { name: 'Acknowledge event' }));
+    expect(H.ack.mutate).toHaveBeenCalledWith({ vehicleId: 42, eventId: 7 });
+  });
+
+  it('does not label test alerts as triggered and never draws fictitious security event trails', () => {
+    H.events = query([event({ event_type: 'test_alert' })]);
+    renderPage();
+    expect(metric('Guard state')).toHaveTextContent('Armed');
+    expect(screen.queryByText('Guard alert triggered!')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('event-trail')).not.toBeInTheDocument();
+    expect(screen.getByTestId('geofence-circle')).toHaveAttribute('data-radius', '100');
+    expect(screen.getByText('Test vehicle')).toBeInTheDocument();
+  });
+
+  it('keeps disabled/pending states and mutation errors without automatically replaying commands', () => {
+    H.setConfig.isPending = true;
+    H.panic.isPending = true;
+    H.ack.isPending = true;
+    H.setConfig.error = new Error('arming failed after save');
+    H.events = query([event()]);
+    renderPage();
+    expect(section('settings').getByRole('button', { name: /Save settings/ })).toBeDisabled();
+    expect(section('arming').getByRole('switch', { name: 'Guard mode' })).toBeDisabled();
+    expect(section('events').getByRole('button', { name: 'Acknowledge event' })).toBeDisabled();
+    expect(section('panic').getByRole('button', { name: /Sending/ })).toBeDisabled();
+    expect(section('arming').getByText(/Policy may have been saved even if arming failed/)).toBeInTheDocument();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+  });
+
+  it('leaves manual panic reachable with an unavailable policy, but guards invalid vehicle commands', () => {
+    H.config = query(undefined, { isError: true, error: new Error('policy failed') });
+    const view = renderPage();
+    expect(section('panic').getByRole('button', { name: 'Activate panic' })).not.toBeDisabled();
+    H.vehicleId = 0;
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    expect(section('panic').getByRole('button', { name: 'Activate panic' })).toBeDisabled();
+    expect(screen.getByText('Select a vehicle in the workspace header to load guard data.')).toBeInTheDocument();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { label: 'zero latitude', latitude: 0, longitude: -121.9 },
+    { label: 'zero longitude', latitude: 37.5, longitude: 0 },
+    { label: 'both zero', latitude: 0, longitude: 0 },
+    { label: 'positive geographic boundaries', latitude: 90, longitude: 180 },
+    { label: 'negative geographic boundaries', latitude: -90, longitude: -180 },
+  ])('renders verified finite $label coordinates without changing their values', ({ latitude, longitude }) => {
+    H.state = query(state({ state: { vehicle_id: 42, latitude, longitude } }));
+    renderPage();
+    expect(screen.getByTestId('guard-map')).toHaveAttribute('data-latitude', String(latitude));
+    expect(screen.getByTestId('guard-map')).toHaveAttribute('data-longitude', String(longitude));
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { label: 'missing latitude', latitude: undefined, longitude: 0 },
+    { label: 'missing longitude', latitude: 0, longitude: undefined },
+    { label: 'null latitude', latitude: null, longitude: 0 },
+    { label: 'null longitude', latitude: 0, longitude: null },
+    { label: 'both null', latitude: null, longitude: null },
+    { label: 'NaN latitude', latitude: Number.NaN, longitude: 0 },
+    { label: 'NaN longitude', latitude: 0, longitude: Number.NaN },
+    { label: 'infinite latitude', latitude: Number.POSITIVE_INFINITY, longitude: 0 },
+    { label: 'negative infinite longitude', latitude: 0, longitude: Number.NEGATIVE_INFINITY },
+    { label: 'latitude above range', latitude: 90.001, longitude: 0 },
+    { label: 'latitude below range', latitude: -90.001, longitude: 0 },
+    { label: 'longitude above range', latitude: 0, longitude: 180.001 },
+    { label: 'longitude below range', latitude: 0, longitude: -180.001 },
+  ])('rejects $label rather than inventing or coercing a location', ({ latitude, longitude }) => {
+    H.state = query(state({ state: { vehicle_id: 42, latitude, longitude } }));
+    renderPage();
+    expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
+    expect(section('map').getByText('Current vehicle location unavailable')).toBeInTheDocument();
+  });
+
+  it.each(['stale', 'unverified'] as const)('does not let valid zeros bypass %s source trust', condition => {
+    H.state = query(state({
+      state: { vehicle_id: 42, latitude: 0, longitude: 0 },
+      freshness: condition === 'stale' ? 'stale' : 'fresh',
+      verifiedFields: condition === 'unverified' ? [] : ['latitude', 'longitude'],
+    }));
+    renderPage();
+    expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
+  });
+
+  it('rejects incorrectly typed coordinates without treating the string zero as measured zero', () => {
+    // Deliberately corrupted wire input: the real typed DTO permits only numbers/null.
+    H.state = query(state({ state: { vehicle_id: 42, latitude: '0' as unknown as number, longitude: 0 } }));
+    renderPage();
+    expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
+  });
+
+  it('preserves an untouched loaded geofence on Save, but explicit clear sends null on Save and arm/disarm', () => {
+    renderPage();
+    const select = section('settings').getByRole('combobox', { name: 'Home geofence' });
+    expect(select).toHaveValue('5');
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: true, home_geofence_id: 5, sensitivity: 'high', auto_panic: true,
+    });
+    fireEvent.change(select, { target: { value: '' } });
+    expect(select).toHaveValue('');
+    expect(screen.queryByTestId('geofence-circle')).not.toBeInTheDocument();
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: true, home_geofence_id: null, sensitivity: 'high', auto_panic: true,
+    });
+    fireEvent.click(section('arming').getByRole('switch', { name: 'Guard mode' }));
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: false, home_geofence_id: null, sensitivity: 'high', auto_panic: true,
+    });
+  });
+
+  it('follows loaded/refreshed config only while the geofence draft is untouched', () => {
+    H.config = query(undefined, { isLoading: true });
+    const { result, rerender } = renderHook(() => useGuardPageModel());
+    expect(result.current.effectiveHomeGeofenceId).toBe('');
+    H.config = query(config({ home_geofence_id: 5 }));
+    rerender();
+    expect(result.current.effectiveHomeGeofenceId).toBe('5');
+    H.config = query(config({ home_geofence_id: 9 }));
+    rerender();
+    expect(result.current.effectiveHomeGeofenceId).toBe('9');
+    act(() => result.current.handleSaveSettings());
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: true, home_geofence_id: 9, sensitivity: 'high', auto_panic: true,
+    });
+    H.config = query(config({ home_geofence_id: null }));
+    rerender();
+    expect(result.current.effectiveHomeGeofenceId).toBe('');
+    H.config = query(config({ home_geofence_id: 5 }));
+    rerender();
+    expect(result.current.effectiveHomeGeofenceId).toBe('5');
+    act(() => result.current.setHomeGeofenceId('9'));
+    H.config = query(config({ home_geofence_id: 5 }));
+    rerender();
+    expect(result.current.effectiveHomeGeofenceId).toBe('9');
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an explicit clear through pending failure and config refetch without replaying a command', () => {
+    const view = renderPage();
+    fireEvent.change(section('settings').getByRole('combobox', { name: 'Home geofence' }), { target: { value: '' } });
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(1);
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: true, home_geofence_id: null, sensitivity: 'high', auto_panic: true,
+    });
+    H.setConfig.isPending = true;
+    H.config = query(config({ home_geofence_id: 5 }), { isFetching: true });
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toHaveValue('');
+    expect(section('settings').getByRole('button', { name: /Save settings/ })).toBeDisabled();
+    H.setConfig.isPending = false;
+    H.setConfig.error = new Error('arming failed after saved policy');
+    H.config = query(config({ home_geofence_id: null }));
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toHaveValue('');
+    H.config = query(config({ home_geofence_id: 5 }), { isError: true, error: new Error('refresh failed') });
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toHaveValue('');
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(1);
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(2);
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: true, home_geofence_id: null, sensitivity: 'high', auto_panic: true,
+    });
+  });
+
+  it('retains all edited settings through permission denial and source recovery without replaying a save', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = () => <MemoryRouter initialEntries={['/guard-mode']}><QueryClientProvider client={client}>
+      <GuardModePage />
+    </QueryClientProvider></MemoryRouter>;
+    const view = render(ui());
+    H.geofences = query([geofence, { ...geofence, id: '9', name: 'Office' }]);
+    view.rerender(ui());
+    fireEvent.change(section('settings').getByRole('combobox', { name: 'Home geofence' }), {
+      target: { value: '9' },
+    });
+    fireEvent.change(section('settings').getByRole('combobox', { name: 'Sensitivity' }), {
+      target: { value: 'low' },
+    });
+    fireEvent.click(section('settings').getByRole('switch', { name: 'Auto-panic on trigger' }));
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    const payload = {
+      vehicleId: 42, enabled: true, home_geofence_id: 9, sensitivity: 'low', auto_panic: false,
+    };
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(1);
+    expect(H.setConfig.mutate).toHaveBeenCalledWith(payload);
+
+    H.setConfig.error = new ApiError('Policy denied', 403, 'PERMISSION_DENIED');
+    H.config = query(config(), { isError: true, error: new Error('Policy refresh failed') });
+    view.rerender(ui());
+    expect(section('settings').getByText('Permission denied')).toBeInTheDocument();
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toHaveValue('9');
+    expect(section('settings').getByRole('combobox', { name: 'Sensitivity' })).toHaveValue('low');
+    expect(section('settings').getByRole('switch', { name: 'Auto-panic on trigger' }))
+      .toHaveAttribute('aria-checked', 'false');
+    expect(section('settings').getByText(/Policy may have been saved even if arming failed/))
+      .toBeInTheDocument();
+    fireEvent.click(section('settings').getByRole('button', { name: 'Refresh' }));
+    expect(H.config.refetch).toHaveBeenCalledOnce();
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(1);
+
+    H.config = query(config({ sensitivity: 'medium', home_geofence_id: 5, auto_panic: true }));
+    H.setConfig.error = null;
+    view.rerender(ui());
+    expect(section('settings').queryByText('Permission denied')).not.toBeInTheDocument();
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toHaveValue('9');
+    expect(section('settings').getByRole('combobox', { name: 'Sensitivity' })).toHaveValue('low');
+    expect(section('settings').getByRole('switch', { name: 'Auto-panic on trigger' }))
+      .toHaveAttribute('aria-checked', 'false');
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(1);
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(2);
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith(payload);
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
+  });
+
+  it('requires a fresh confirmation after panic permission failure and keeps pending recovery non-replaying', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = () => <MemoryRouter initialEntries={['/guard-mode']}><QueryClientProvider client={client}>
+      <GuardModePage />
+    </QueryClientProvider></MemoryRouter>;
+    const view = render(ui());
+    fireEvent.click(section('panic').getByRole('button', { name: 'Activate panic' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Activate panic' }));
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+    expect(H.panic.mutate).toHaveBeenCalledWith(42);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    H.panic.isPending = true;
+    view.rerender(ui());
+    expect(section('panic').getByRole('button', { name: /Sending/ })).toBeDisabled();
+    fireEvent.click(section('panic').getByRole('button', { name: /Sending/ }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+
+    H.panic.isPending = false;
+    H.panic.error = new ApiError('Panic denied', 403, 'PERMISSION_DENIED');
+    view.rerender(ui());
+    expect(section('panic').getByText('Permission denied')).toBeInTheDocument();
+    expect(section('panic').queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(section('panic').getByRole('button', { name: 'Activate panic' })).toBeEnabled();
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+
+    H.panic.error = null;
+    view.rerender(ui());
+    expect(section('panic').queryByText('Permission denied')).not.toBeInTheDocument();
+    fireEvent.click(section('panic').getByRole('button', { name: 'Activate panic' }));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+    fireEvent.click(section('panic').getByRole('button', { name: 'Activate panic' }));
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Activate panic' }));
+    expect(H.panic.mutate).toHaveBeenCalledTimes(2);
+    expect(H.panic.mutate).toHaveBeenLastCalledWith(42);
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
+  });
+});

@@ -24,12 +24,12 @@
  * framer-motion to a passthrough to keep module load hermetic in jsdom, and
  * react-i18next to echo the English fallback with `{{name}}` interpolation so
  * the copy (and the interpolated aria-label) is deterministic without booting
- * the real catalog. `@testing-library/user-event` is not installed in this
- * repo, so interactions are driven with `fireEvent`, matching every sibling
- * test in this directory.
+ * the real catalog. Click interactions use `fireEvent`; keyboard coverage
+ * uses `userEvent` to exercise native Space/Enter activation.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ComponentProps, ReactNode } from 'react';
 
 vi.mock('framer-motion', () => ({
@@ -198,6 +198,25 @@ describe('NotificationSoundChannelRow — master gate', () => {
 });
 
 describe('NotificationSoundChannelRow — accessibility & hardening', () => {
+  it('operates the switch with Space and the test action with Enter', async () => {
+    const user = userEvent.setup();
+    const { onToggle, onTest } = setup();
+    getSwitch().focus();
+    await user.keyboard(' ');
+    expect(onToggle).toHaveBeenCalledExactlyOnceWith(true);
+    await user.tab();
+    expect(getTestButton()).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onTest).toHaveBeenCalledOnce();
+    expect(onToggle).toHaveBeenCalledOnce();
+  });
+
+  it('uses mobile touch targets while retaining desktop sizes and focus outlines', () => {
+    setup();
+    expect(getSwitch()).toHaveClass('h-11', 'min-w-11', 'md:h-6', 'md:w-9');
+    expect(getTestButton()).toHaveClass('min-h-11', 'md:min-h-9', 'focus-visible:outline-2');
+  });
+
   it('renders the Test control as an explicit type="button" (never a submit)', () => {
     setup();
     // A bare <button> defaults to type="submit" and would post an enclosing

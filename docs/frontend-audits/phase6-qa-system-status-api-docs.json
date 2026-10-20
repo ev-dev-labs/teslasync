@@ -1,0 +1,1559 @@
+{
+  "item": "phase6-qa-system-status-api-docs",
+  "attempt": 1,
+  "status": "PARTIAL",
+  "acceptance": "PARTIAL_SOURCE_ONLY_NATIVE_RUNTIME_NOTRUN",
+  "createdAtUtc": "2026-10-14T02:48:53.623122+00:00",
+  "reservation": {
+    "original": "2026-10-14T02:29:12.925Z",
+    "returnBy": "2026-10-14T02:49:12.925Z",
+    "hardBy": "2026-10-14T02:54:12.925Z",
+    "renewed": false,
+    "actualActorCreation": "NOT_EXPOSED; conservative original reservation wins"
+  },
+  "writableFiles": [
+    "docs/frontend-audits/phase6-qa-system-status-api-docs.json",
+    "web/logs/phase6-qa-system-status-api-docs.log"
+  ],
+  "page": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+  "routes": [
+    {
+      "path": "/docs/status-api",
+      "lazyImport": {
+        "file": "web/src/App.tsx",
+        "line": 298,
+        "endLine": 298,
+        "quote": "const StatusApiDocs = lazy(() => import('./features/system/pages/StatusApiDocsPage'))"
+      },
+      "mount": {
+        "file": "web/src/App.tsx",
+        "line": 694,
+        "endLine": 694,
+        "quote": "        <Route path=\"docs/status-api\" element={<SafeRoute name=\"StatusApiDocs\"><StatusApiDocs /></SafeRoute>} />"
+      }
+    }
+  ],
+  "purpose": "Static operator reference for six read-only Status API routes; not a live health probe.",
+  "primaryGoal": "Understand transport, authentication, response/query contracts and external integration wiring without invoking endpoints.",
+  "objectiveDuplicateCheck": {
+    "queueLine": 241,
+    "phase5Dependency": {
+      "line": 2252,
+      "status": "[x]",
+      "commit": "919541500ec967babb0cd3757283365bb99ff9a0"
+    },
+    "priorAudit": {
+      "line": 998,
+      "item": "audit-page-196",
+      "status": "[x]"
+    },
+    "duplicateCompletedPhase6ObjectiveMatches": 0,
+    "reason": "Phase0 inventory and Phase5 source adoption are not finished-page Phase6 QA; assigned artifacts absent at initial inspection."
+  },
+  "instructionsRead": [
+    "docs/orchestrator-loop.md (FULL)",
+    "docs/frontend-design-contract.md (FULL)",
+    "docs/frontend-mission.md (FULL; relevant §§0,15-16,21-26,30-37,43-45)",
+    "docs/frontend-inventory.md (StatusApiDocs row247)",
+    "docs/session-handoff.md (current recovery/conventions; lines1-220)",
+    "migration-queue.md (exact row and owner/duplicate searches, not entire historical queue)",
+    "docs/frontend-worker-conventions.md",
+    "docs/CONTRIBUTING.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md"
+  ],
+  "dataSources": [
+    {
+      "kind": "bundled-documentation",
+      "endpoints": [
+        "/api/v1/status",
+        "/api/v1/status/components",
+        "/api/v1/status/resources",
+        "/api/v1/status/uptime",
+        "/api/v1/status/incidents",
+        "/api/v1/status/live"
+      ],
+      "requestExecuted": false,
+      "routeEvidence": {
+        "file": "internal/api/router.go",
+        "line": 4565,
+        "endLine": 4584,
+        "quote": "\t\tr.Route(\"/status\", func(r chi.Router) {\n\t\t\tr.With(httprate.LimitByIP(120, 1*time.Minute)).Get(\"/\", statusV1.Overall)\n\t\t\tr.With(httprate.LimitByIP(120, 1*time.Minute)).Get(\"/components\", statusV1.Components)\n\t\t\tr.With(httprate.LimitByIP(120, 1*time.Minute)).Get(\"/resources\", statusV1.Resources)\n\t\t\tr.With(httprate.LimitByIP(120, 1*time.Minute)).Get(\"/uptime\", statusV1.Uptime)\n\t\t\t// SSE endpoint — no per-IP rate limit because it's a long-lived\n\t\t\t// connection. The connection itself acts as the throttle.\n\t\t\tr.Get(\"/live\", statusV1.Live)\n\t\t\t// Incidents CRUD + timeline append.\n\t\t\tr.Route(\"/incidents\", func(r chi.Router) {\n\t\t\t\tr.With(httprate.LimitByIP(120, 1*time.Minute)).Get(\"/\", incidentsHandler.List)\n\t\t\t\tr.With(httprate.LimitByIP(30, 1*time.Minute)).Post(\"/\", incidentsHandler.Create)\n\t\t\t\tr.Route(\"/{id}\", func(r chi.Router) {\n\t\t\t\t\tr.With(httprate.LimitByIP(120, 1*time.Minute)).Get(\"/\", incidentsHandler.Get)\n\t\t\t\t\tr.With(httprate.LimitByIP(60, 1*time.Minute)).Patch(\"/\", incidentsHandler.Patch)\n\t\t\t\t\tr.With(httprate.LimitByIP(60, 1*time.Minute)).Post(\"/updates\", incidentsHandler.AppendUpdate)\n\t\t\t\t\tr.With(httprate.LimitByIP(30, 1*time.Minute)).Delete(\"/\", incidentsHandler.Delete)\n\t\t\t\t})\n\t\t\t})\n\t\t})"
+      }
+    },
+    {
+      "kind": "inherited-preferences-query",
+      "mechanism": "SystemSummaryBrief -> useOperationalMetrics -> useUnits/useFormatting -> useSettings TanStack Query -> getSettings -> request(/settings). Thus documentation payloads are static, but mounting can revalidate shared settings; no mount performed.",
+      "evidence": [
+        {
+          "file": "web/src/hooks/useOperationalMetrics.tsx",
+          "line": 14,
+          "endLine": 20,
+          "quote": "  const { t } = useTranslation();\n  const { unitPrefs } = useUnits();\n  const { currencySymbol } = useFormatting();\n  const effective = useMemo<MetricPreferences>(() => preferences ?? {\n    units: unitPrefs,\n    currency: { kind: 'symbol', value: currencySymbol },\n  }, [preferences, unitPrefs, currencySymbol]);"
+        },
+        {
+          "file": "web/src/hooks/useSettings.ts",
+          "line": 81,
+          "endLine": 88,
+          "quote": "export function useSettings() {\n  const query = useQuery({\n    queryKey: ['settings'],\n    queryFn: getSettings,\n    staleTime: 5 * 60 * 1000,\n    refetchOnMount: 'always',\n    retry: 1,\n  })"
+        },
+        {
+          "file": "web/src/api/settings.ts",
+          "line": 24,
+          "endLine": 24,
+          "quote": "export const getSettings = () => request<AppSettings>('/settings')"
+        }
+      ]
+    }
+  ],
+  "components": [
+    "PageLayout -> PageContainer",
+    "SystemSummaryBrief -> OperationalBrief -> Drawer -> OperationalNarrativeDetails -> CalculationDetails",
+    "GlassPanel",
+    "KVList",
+    "Button",
+    "Badge",
+    "IconBox",
+    "Text/PanelTitle/SectionTitle/Caption",
+    "StatusApiEndpointCard -> Accordion/CopyButton",
+    "InlineCallout",
+    "FadeIn"
+  ],
+  "sections": [
+    {
+      "name": "API surface summary",
+      "line": 207,
+      "metrics": 4
+    },
+    {
+      "name": "Overview",
+      "line": 223,
+      "facts": 4
+    },
+    {
+      "name": "Designed for",
+      "line": 245,
+      "targets": 4
+    },
+    {
+      "name": "Endpoints",
+      "line": 274,
+      "cards": 6
+    },
+    {
+      "name": "Footer issue callout",
+      "line": 291
+    }
+  ],
+  "actions": {
+    "pageVisibleControlCount": 15,
+    "components": [
+      {
+        "name": "Back",
+        "count": 1,
+        "line": 191,
+        "destination": "/system-status"
+      },
+      {
+        "name": "Copy endpoint path",
+        "count": 6,
+        "line": 63,
+        "file": "web/src/features/system/components/StatusApiEndpointCard.tsx"
+      },
+      {
+        "name": "Example disclosure",
+        "count": 6,
+        "line": 85,
+        "file": "web/src/features/system/components/StatusApiEndpointCard.tsx"
+      },
+      {
+        "name": "Open an issue",
+        "count": 1,
+        "line": 296,
+        "destination": "https://github.com/ev-dev-labs/teslasync/issues"
+      },
+      {
+        "name": "Review details",
+        "count": 1,
+        "line": 168,
+        "file": "web/src/components/data-display/OperationalBrief.tsx"
+      }
+    ],
+    "inheritedDrawerCloseControls": 2,
+    "drawerDismissal": "header/footer Close, backdrop, Escape via useDialogFocus; unexecuted",
+    "drawerContents": [
+      "decision narrative: what changed/impact/cause/response/confidence/limitations/evidence",
+      "calculation methods/sources/period/coverage/version/exclusions",
+      "four operational metrics",
+      "empty attention fallback"
+    ]
+  },
+  "states": {
+    "initialLoading": "No Status API query: static content remains mounted. Inherited settings query may use defaults; no fake measured availability.",
+    "nullUnknown": "Summary freshness is explicitly unknown and not_scored; null cause/impact/response/evidence receive shared readable fallbacks.",
+    "empty": "Card keeps shell and renders exampleEmpty for empty/missing object. Real incident and component empty arrays stay literal API examples.",
+    "error": "Card catches JSON serialization errors and shows exampleUnavailable; clipboard failure is SAD-N02.",
+    "pausedRetained": "No page-specific source to pause or retry. Static panels/examples do not depend on settings health; shared preferences use retained query data/defaults. No connectivity status synthesized.",
+    "trust": "available refers to bundled reference; explicit non-runtime scope survives both summary and drawer. Uptime current_snapshot and note preserved; zero/unknown interpretation SAD-N04.",
+    "independentSections": "All five section shells unconditional; icon/query/disclosure gates are optional presentation, not missing-data section suppression."
+  },
+  "apiExampleReview": {
+    "allSixReviewed": true,
+    "status": "SAD02; active incidents snapshot IDs are strings in StatusIncident while list IDs are integers; do not merge schemas.",
+    "components": "Generated time, counts and array align; last_check_at optional/omitted, errors optional; no invented last-check freshness.",
+    "resources": "goroutines count, uptime_seconds raw seconds, go_version string match; HTTP120/min route limit is source evidence, not an executed rate test.",
+    "uptime": "24h/7d/30d/90d/1y allowed, default30d; invalid window400; snapshot health ratio not history, SAD-N04.",
+    "incidents": "Mounted CRUD List, integer ID and timeline author match; SAD02/SAD03, limit50 and cap200.",
+    "live": "initial status event plus default30s updates and25s heartbeat; Content-Type text/event-stream, SAD01. EventSource() is prose, not direct instantiation.",
+    "auth": "Inherits parent authentication per router source; authorization capabilities/key formats/proxy and deployment behavior NOTRUN/UNKNOWN."
+  },
+  "preferencesSI": {
+    "rawWirePreserved": true,
+    "details": "JSON fixtures retain technical keys, unlocalized machine timestamps and uptime_seconds; do not unit-convert/translate wire examples. Endpoint count uses raw number via preference-aware formatting. Locale/timezone/density/theme persistence not modified.",
+    "legacyConversions": "No conversion introduced or changed."
+  },
+  "i18n": {
+    "literalCoreKeysChecked": 51,
+    "missingCanonicalKeys": [],
+    "technicalExceptions": [
+      "GET, JSON, REST + SSE, MIME type, version/schema enums, paths/query tokens, product names, static illustrative response strings; not operational readings"
+    ],
+    "runtimeCatalogAndLocaleLoading": "NOTRUN",
+    "rtl": "SAD05; long labels/200%text/real RTL layout remain NOTRUN"
+  },
+  "responsive": {
+    "sourceStrategy": "Overview/integrations stack then xl3 columns; cards auto-fit min(100%,22rem); paths/query break-all; integration hints break-words. Example has contained scroll. Drawer consumes shell bottom-chrome.",
+    "widthsNotRun": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "candidates": [
+      "SAD-N01",
+      "SAD-N03",
+      "SAD-N05"
+    ],
+    "geometryMapping": "page auto-fit arbitrary grid is a retained geometry-review candidate, not static-inline-style or runtime overflow proof."
+  },
+  "accessibility": {
+    "sourceMechanisms": "Named regions/headings; decorative SVG hidden; path-specific localized Copy names and shared success live feedback; Accordion expanded/controls unique IDs; Review Drawer label/modal/focus owner. Keyboard/focus/contrast/touch acceptance NOTRUN.",
+    "candidates": [
+      "SAD-N01",
+      "SAD-N02",
+      "SAD-N03",
+      "SAD-N05"
+    ]
+  },
+  "confirmedIssues": [
+    {
+      "id": "SAD01",
+      "rule": "api-media-contract",
+      "detail": "Overview and content-type fact generalize JSON to every response, although /status/live is text/event-stream. The live example is a JSON note containing escaped event text, not the actual SSE response.",
+      "fix": "Qualify JSON as REST-only and show a genuine static SSE frame plus heartbeat; keep every endpoint and no live requests.",
+      "owner": "page + serialized canonical-copy owner",
+      "confidence": "high-source-mechanism",
+      "priority": "P1",
+      "sites": [
+        {
+          "file": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+          "line": 171,
+          "endLine": 171,
+          "quote": "      { label: t('statusApi.facts.contentType', 'Content-type'), value: 'application/json' },"
+        },
+        {
+          "file": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+          "line": 233,
+          "endLine": 233,
+          "quote": "                'All endpoints are mounted under the base path and inherit the same authentication as the rest of the API. If you proxy this with ForwardAuth (Authelia, Authentik, Tinyauth, etc.), the proxy handles auth — otherwise pass an API key in the standard Authorization header. Every response is JSON over HTTP.',"
+        },
+        {
+          "file": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+          "line": 151,
+          "endLine": 153,
+          "quote": "        example: {\n          note: 'event: status\\\\ndata: <full StatusSnapshot JSON>\\\\n\\\\n',\n        },"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "internal/api/status/v1.go",
+          "line": 355,
+          "endLine": 358,
+          "quote": "\tw.Header().Set(\"Content-Type\", \"text/event-stream\")\n\tw.Header().Set(\"Cache-Control\", \"no-cache\")\n\tw.Header().Set(\"Connection\", \"keep-alive\")\n\tw.Header().Set(\"X-Accel-Buffering\", \"no\")"
+        },
+        {
+          "file": "internal/api/status/v1.go",
+          "line": 370,
+          "endLine": 371,
+          "quote": "\t\t\treturn false\n\t\t}"
+        },
+        {
+          "file": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+          "line": 149,
+          "endLine": 149,
+          "quote": "          'Server-Sent Events stream. Pushes a `status` event with the full snapshot every 30 seconds. Heartbeat events emitted every 25s so reverse proxies don\\'t garbage-collect the connection mid-flight. Browsers consume this via EventSource(). For curl: -N --no-buffer.',"
+        }
+      ],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Read the content-type fact and Overview, then the Live card; compare the response example with the handler headers and fmt.Fprintf frame. Do not invoke the endpoint."
+        ]
+      },
+      "runtimeStatus": "NOTRUN"
+    },
+    {
+      "id": "SAD02",
+      "rule": "api-example-schema",
+      "detail": "Overall example omits the mandatory components array. Incident example omits non-omitempty description and created_at. Examples are not complete representations of the advertised stable response shapes.",
+      "fix": "Fill in required response fields using explicitly synthetic documentation samples, or label examples as excerpts without removing existing fields. Keep snapshot incident string IDs distinct from list integer IDs.",
+      "owner": "page example + directly covering page test owner",
+      "confidence": "high-source-mechanism",
+      "priority": "P2",
+      "sites": [
+        {
+          "file": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+          "line": 59,
+          "endLine": 66,
+          "quote": "        example: {\n          status: 'operational',\n          generated_at: '2025-01-15T14:32:11Z',\n          version: { build: '1.4.2', go_version: 'go1.22.5', started_at: '2025-01-10T08:00:00Z' },\n          counts: { components_total: 8, components_healthy: 8, components_degraded: 0, components_unhealthy: 0 },\n          resources: { goroutines: 142, uptime_seconds: 458321.4, go_version: 'go1.22.5' },\n          incidents: [],\n        },"
+        },
+        {
+          "file": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+          "line": 131,
+          "endLine": 140,
+          "quote": "              id: 17, title: 'MQTT broker reconnect storm', status: 'monitoring', severity: 'minor',\n              source: 'manual', affected_components: ['mqtt'],\n              started_at: '2025-01-15T13:55:00Z', updated_at: '2025-01-15T14:20:00Z',\n              updates: [\n                { at: '2025-01-15T13:55:00Z', status: 'investigating', message: 'Incident opened.', author: 'operator' },\n                { at: '2025-01-15T14:10:00Z', status: 'identified', message: 'Cause: TLS cert rotation gap.', author: 'operator' },\n                { at: '2025-01-15T14:20:00Z', status: 'monitoring', message: 'Cert rotated; watching.', author: 'operator' },\n              ],\n            },\n          ],"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "internal/api/status/v1.go",
+          "line": 50,
+          "endLine": 59,
+          "quote": "// pushed by /api/v1/status/live. Stable contract — additive only.\ntype StatusSnapshot struct {\n\tStatus      string             `json:\"status\"` // operational | degraded | down | maintenance\n\tGeneratedAt time.Time          `json:\"generated_at\"`\n\tVersion     StatusVersion      `json:\"version\"`\n\tComponents  []StatusComponent  `json:\"components\"`\n\tResources   StatusResources    `json:\"resources\"`\n\tMaintenance *StatusMaintenance `json:\"maintenance,omitempty\"`\n\tIncidents   []StatusIncident   `json:\"incidents\"` // active only — empty array (never null) for stability\n\tCounts      StatusCounts       `json:\"counts\"`"
+        },
+        {
+          "file": "internal/database/observability/status_incidents_repo.go",
+          "line": 73,
+          "endLine": 87,
+          "quote": "type Incident struct {\n\tID                 int64            `json:\"id\"`\n\tTitle              string           `json:\"title\"`\n\tDescription        string           `json:\"description\"`\n\tSeverity           string           `json:\"severity\"`\n\tStatus             string           `json:\"status\"`\n\tSource             string           `json:\"source\"`\n\tAffectedComponents []string         `json:\"affected_components\"`\n\tUpdates            []IncidentUpdate `json:\"updates\"`\n\tStartedAt          time.Time        `json:\"started_at\"`\n\tResolvedAt         *time.Time       `json:\"resolved_at,omitempty\"`\n\tCreatedAt          time.Time        `json:\"created_at\"`\n\tUpdatedAt          time.Time        `json:\"updated_at\"`\n\tCreatedBy          string           `json:\"created_by,omitempty\"`\n\tAutoDedupeKey      string           `json:\"-\"`"
+        }
+      ],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Compare source example keys against Go JSON tags, noting omitempty; no API call or test execution."
+        ]
+      },
+      "runtimeStatus": "NOTRUN"
+    },
+    {
+      "id": "SAD03",
+      "rule": "api-default-filter-contract",
+      "detail": "The incidents description calls the default an active list; actual mounted List defaults ActiveOnly=false and includes resolved rows unless active=1/true.",
+      "fix": "Describe the unfiltered default and explicit active filter; document default limit 50, accepted cap 200, and composable parameters without changing endpoint behavior.",
+      "owner": "page + serialized canonical-copy owner",
+      "confidence": "high-source-mechanism",
+      "priority": "P1",
+      "sites": [
+        {
+          "file": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+          "line": 125,
+          "endLine": 125,
+          "quote": "          'Active incidents list. Pass active=1 to filter to incidents whose resolved_at is NULL.',"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "internal/api/status/incidents.go",
+          "line": 57,
+          "endLine": 70,
+          "quote": "func (h *StatusIncidentsHandler) List(w http.ResponseWriter, r *http.Request) {\n\tq := r.URL.Query()\n\tactiveOnly := q.Get(\"active\") == \"1\" || strings.EqualFold(q.Get(\"active\"), \"true\")\n\tlimit, _ := strconv.Atoi(q.Get(\"limit\"))\n\trows, err := h.repo.List(r.Context(), dbobs.IncidentListParams{\n\t\tActiveOnly: activeOnly, Limit: limit,\n\t})\n\tif err != nil {\n\t\thttpx.WriteError(w, http.StatusInternalServerError, err.Error())\n\t\treturn\n\t}\n\thttpx.WriteJSON(w, http.StatusOK, map[string]interface{}{\n\t\t\"incidents\": rows,\n\t\t\"count\":     len(rows),"
+        },
+        {
+          "file": "internal/database/observability/status_incidents_repo.go",
+          "line": 343,
+          "endLine": 356,
+          "quote": "\tlimit := p.Limit\n\tif limit <= 0 || limit > 200 {\n\t\tlimit = 50\n\t}\n\tq := `\n\t\tSELECT id, title, description, severity, status, source,\n\t\t       affected_components, updates, started_at, resolved_at,\n\t\t       created_at, updated_at, COALESCE(created_by, ''),\n\t\t       COALESCE(auto_dedupe_key, '')\n\t\t  FROM status_incidents`\n\tif p.ActiveOnly {\n\t\tq += ` WHERE resolved_at IS NULL`\n\t}\n\tq += ` ORDER BY started_at DESC LIMIT $1`"
+        }
+      ],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Trace an absent active query through List to ActiveOnly=false and the conditional WHERE; no request/DB operation."
+        ]
+      },
+      "runtimeStatus": "NOTRUN"
+    },
+    {
+      "id": "SAD04",
+      "rule": "preference-independent-palette",
+      "detail": "Endpoint icon/path classes use fixed text-cyan-300 instead of existing neutral/semantic theme ink; long paths are supporting content, not a status.",
+      "fix": "Use existing typography secondary/primary or justified semantic tokens; preserve copyable full paths and method labels.",
+      "owner": "existing feature-card owner",
+      "confidence": "high-source-mechanism",
+      "priority": "P2",
+      "sites": [
+        {
+          "file": "web/src/features/system/components/StatusApiEndpointCard.tsx",
+          "line": 56,
+          "endLine": 56,
+          "quote": "          <span className=\"inline-flex text-cyan-300 [&>svg]:h-4 [&>svg]:w-4\" aria-hidden=\"true\">"
+        },
+        {
+          "file": "web/src/features/system/components/StatusApiEndpointCard.tsx",
+          "line": 60,
+          "endLine": 60,
+          "quote": "        <Text as=\"code\" mono size=\"sm\" className=\"min-w-0 break-all text-cyan-300\">"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/components/ui/GlassPanel.tsx",
+          "line": 31,
+          "endLine": 35,
+          "quote": "  cyan: 'hover:border-[var(--semantic-info-border)]',\n  green: 'hover:border-[var(--semantic-success-border)]',\n  purple: 'hover:border-[var(--semantic-purple-border)]',\n  none: '',\n} as const;"
+        }
+      ],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Trace both fixed Tailwind foreground classes under a light/custom theme; composed contrast remains NOTRUN."
+        ]
+      },
+      "runtimeStatus": "NOTRUN"
+    },
+    {
+      "id": "SAD05",
+      "rule": "i18n-rtl-physical-margin",
+      "detail": "Copy control uses physical ml-auto, rather than logical inline-start spacing.",
+      "fix": "Use ms-auto at this owner, preserving flex wrapping, copy target, accessible name and desktop behavior.",
+      "owner": "existing feature-card owner",
+      "confidence": "high-source-mechanism",
+      "priority": "P2",
+      "sites": [
+        {
+          "file": "web/src/features/system/components/StatusApiEndpointCard.tsx",
+          "line": 68,
+          "endLine": 68,
+          "quote": "          className=\"ml-auto shrink-0\""
+        }
+      ],
+      "evidence": [],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Reason through direction=rtl with physical margin-left:auto; verify actual positions only in separately authorized native QA."
+        ]
+      },
+      "runtimeStatus": "NOTRUN"
+    },
+    {
+      "id": "SAD06",
+      "rule": "preference-independent-palette",
+      "detail": "The inherited Review details drawer renders both limitation lists in fixed text-amber-300; this route supplies two real limitation strings, and CalculationDetails receives them again.",
+      "fix": "Replace only these two shared limitation ink sites with existing restrained warning roles; preserve both lists and every narrative/unknown/provenance field.",
+      "owner": "shared OperationalNarrativeDetails + CalculationDetails owners",
+      "confidence": "high-source-mechanism",
+      "priority": "P2",
+      "sites": [
+        {
+          "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+          "line": 161,
+          "endLine": 161,
+          "quote": "              <Text key={limitation} as=\"p\" size=\"xs\" className=\"text-amber-300\">"
+        },
+        {
+          "file": "web/src/components/data-display/CalculationDetails.tsx",
+          "line": 110,
+          "endLine": 110,
+          "quote": "                <Text as=\"span\" size=\"xs\" className=\"text-amber-300\">"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+          "line": 50,
+          "endLine": 55,
+          "quote": "        whatChanged: description, whyItMatters: null,\n        confidence: { label: 'not_scored', score: null, basis: [] },\n        likelyCause: null, recommendedResponse: null,\n        limitations: [\n          ...(typeof scope === 'string' ? [scope] : []),\n          ...(typeof observation === 'string' ? [observation] : []),"
+        },
+        {
+          "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+          "line": 239,
+          "endLine": 239,
+          "quote": "        }"
+        }
+      ],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Follow SystemSummaryBrief limitations to the drawer, then exclusions={narrative.limitations}; reason about fixed amber ink in light/custom themes, without opening a browser."
+        ]
+      },
+      "runtimeStatus": "NOTRUN"
+    }
+  ],
+  "conditionalNativeCandidates": [
+    {
+      "id": "SAD-N01",
+      "rule": "native-mobile-targets",
+      "detail": "Back and all six copy controls select Button sm (h-9), with no mobile44 override. This is source sizing evidence, not measured rectangles or WCAG failure.",
+      "fix": "Separately measure and if necessary adopt scoped min-h-11/min-w-11 with explicit md restoration and wrapLabel for Back; no global Button resize.",
+      "owner": "page Back + feature-card copy owners",
+      "confidence": "conditional-or-native-candidate",
+      "priority": "P2",
+      "sites": [
+        {
+          "file": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+          "line": 191,
+          "endLine": 191,
+          "quote": "      size=\"sm\""
+        },
+        {
+          "file": "web/src/features/system/components/StatusApiEndpointCard.tsx",
+          "line": 66,
+          "endLine": 66,
+          "quote": "          size=\"sm\""
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 36,
+          "endLine": 41,
+          "quote": "  sm: 'h-9 px-3 text-sm',\n  md: 'h-10 px-4 text-sm',\n  lg: 'h-12 px-6 text-base',\n  // Density-aware sizing follows the user's `ui_density` setting via the\n  // density Tailwind utilities (`min-h-d-row px-d-pad-x text-d-base`).\n  auto: 'min-h-d-row px-d-pad-x text-d-base',"
+        }
+      ],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "At 320/375/390/430/767 and md768, measure Back and six copy controls and five-point hit tests, long translations and 200% text. NOT EXECUTED."
+        ]
+      },
+      "runtimeStatus": "NOTRUN",
+      "classification": "NOT_CONFIRMED_RUNTIME"
+    },
+    {
+      "id": "SAD-N02",
+      "rule": "conditional-clipboard-recovery",
+      "detail": "Caller supplies neither withToast nor onCopyError; rejected clipboard writes reach console-only handling with unchanged visible name.",
+      "fix": "If denial/unavailable clipboard is supported, provide existing localized persistent feedback/manual-copy recovery at the caller; keep success announcements.",
+      "owner": "feature-card caller; CopyButton shared owner stays readonly",
+      "confidence": "conditional-or-native-candidate",
+      "priority": "P2",
+      "sites": [
+        {
+          "file": "web/src/features/system/components/StatusApiEndpointCard.tsx",
+          "line": 63,
+          "endLine": 69,
+          "quote": "        <CopyButton\n          text={path}\n          iconOnly\n          size=\"sm\"\n          ariaLabel={t('statusApi.copyPath', 'Copy endpoint path {{path}}', { path })}\n          className=\"ml-auto shrink-0\"\n        />"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/components/ui/CopyButton.tsx",
+          "line": 100,
+          "endLine": 108,
+          "quote": "    } catch (err) {\n      console.error('CopyButton: clipboard write failed', err)\n      if (attempt !== copyAttempt.current) return\n      setCopied(false)\n      if (withToast) {\n        toast?.error(t('common.copyButton.errorToast', 'Failed to copy'))\n      }\n      onCopyError?.(err)\n      return"
+        }
+      ],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Condition: clipboard permission rejection or missing API. Trace catch with default withToast=false and absent onCopyError; no clipboard/auth/browser action executed."
+        ]
+      },
+      "runtimeStatus": "NOTRUN",
+      "classification": "NOT_CONFIRMED_RUNTIME"
+    },
+    {
+      "id": "SAD-N03",
+      "rule": "native-keyboard-code-scroll",
+      "detail": "Example pre owns overflow-auto but lacks an explicit accessible scroll label/tab stop. Browser auto-focusability varies.",
+      "fix": "Exercise keyboard horizontal/vertical scrolling, focus visibility and full-value selection; only then reserve a contained-scroll accessibility fix.",
+      "owner": "feature-card example owner",
+      "confidence": "conditional-or-native-candidate",
+      "priority": "P2",
+      "sites": [
+        {
+          "file": "web/src/features/system/components/StatusApiEndpointCard.tsx",
+          "line": 97,
+          "endLine": 106,
+          "quote": "          <pre\n            className={cn(\n              'max-h-72 overflow-auto p-3 leading-relaxed bg-[var(--surface-overlay)]',\n              typography.family.mono,\n              typography.size['2xs'],\n              typography.color.secondary,\n            )}\n          >\n            {json}\n          </pre>"
+        }
+      ],
+      "evidence": [],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Expand a long example and attempt Tab/Shift+Tab plus arrow/page scrolling in the actual supported host at mission widths. NOT EXECUTED."
+        ]
+      },
+      "runtimeStatus": "NOTRUN",
+      "classification": "NOT_CONFIRMED_RUNTIME"
+    },
+    {
+      "id": "SAD-N04",
+      "rule": "conditional-empty-health-assumption",
+      "detail": "Uptime backend returns 100 when counted total is zero; Counts total excludes unknown components. Documentation correctly labels current_snapshot, but consumers must not treat this as measured historical availability or verified completeness.",
+      "fix": "Keep historical_source/note and add precise zero/unknown interpretation after integration-owner contract review; do not fabricate heartbeat history or change backend here.",
+      "owner": "integration/documentation contract owner",
+      "confidence": "conditional-or-native-candidate",
+      "priority": "P2",
+      "sites": [
+        {
+          "file": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+          "line": 108,
+          "endLine": 116,
+          "quote": "        example: {\n          window: '30d',\n          uptime_percent: 100,\n          healthy_count: 8,\n          total_count: 8,\n          generated_at: '2025-01-15T14:32:11Z',\n          historical_source: 'current_snapshot',\n          note: 'Per-window uptime requires the heartbeat history backend (planned). This value reflects the current snapshot only.',\n        },"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "internal/api/status/v1.go",
+          "line": 261,
+          "endLine": 268,
+          "quote": "\t\t},\n\t\tMaintenance: maint,\n\t\tIncidents:   incidents,\n\t\tCounts: StatusCounts{\n\t\t\tComponentsTotal:     healthy + degraded + unhealthy,\n\t\t\tComponentsHealthy:   healthy,\n\t\t\tComponentsDegraded:  degraded,\n\t\t\tComponentsUnhealthy: unhealthy,"
+        },
+        {
+          "file": "internal/api/status/v1.go",
+          "line": 327,
+          "endLine": 340,
+          "quote": "\ttotal := snap.Counts.ComponentsTotal\n\thealthy := snap.Counts.ComponentsHealthy\n\tpct := 100.0\n\tif total > 0 {\n\t\tpct = float64(healthy) / float64(total) * 100.0\n\t}\n\thttpx.WriteJSON(w, http.StatusOK, StatusUptimeWindow{\n\t\tWindow:           window,\n\t\tUptimePercent:    pct,\n\t\tHealthyCount:     healthy,\n\t\tTotalCount:       total,\n\t\tGeneratedAt:      snap.GeneratedAt,\n\t\tHistoricalSource: \"current_snapshot\",\n\t\tNote:             \"Per-window uptime requires the heartbeat history backend (planned). This value reflects the current snapshot only.\","
+        }
+      ],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Condition: nil/all-unknown health monitor. Trace zero counted total to pct=100 without requests or provider configuration."
+        ]
+      },
+      "runtimeStatus": "NOTRUN",
+      "classification": "NOT_CONFIRMED_RUNTIME"
+    },
+    {
+      "id": "SAD-N05",
+      "rule": "native-drawer-footer-target",
+      "detail": "Inherited drawer footer Close uses default Button md h-10 (40px at nominal root), whereas header Close and Review details have explicit44 allocations.",
+      "fix": "Separate native measurement and a narrowly leased shared footer correction if confirmed; preserve default footer, focus restoration, shell offsets and desktop sizing.",
+      "owner": "shared Drawer footer owner",
+      "confidence": "conditional-or-native-candidate",
+      "priority": "P2",
+      "sites": [
+        {
+          "file": "web/src/components/ui/Drawer.tsx",
+          "line": 198,
+          "endLine": 198,
+          "quote": "                <Button type=\"button\" variant=\"secondary\" onClick={onClose}>"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 38,
+          "endLine": 38,
+          "quote": "  lg: 'h-12 px-6 text-base',"
+        },
+        {
+          "file": "web/src/components/ui/Drawer.tsx",
+          "line": 176,
+          "endLine": 176,
+          "quote": "              className=\"h-11 w-11 shrink-0 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]\""
+        },
+        {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "line": 164,
+          "endLine": 164,
+          "quote": "                  className=\"min-h-11 md:min-h-9\""
+        }
+      ],
+      "sourceRepro": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Open Review details on authorized mobile host, measure both Close actions and last-item/footer reachability with shell safe areas. NOT EXECUTED."
+        ]
+      },
+      "runtimeStatus": "NOTRUN",
+      "classification": "NOT_CONFIRMED_RUNTIME"
+    }
+  ],
+  "requiredOwnerNeeds": [
+    {
+      "name": "status-api-response-contract",
+      "existingOwnerFiles": [
+        "web/src/features/system/pages/StatusApiDocsPage.tsx",
+        "web/src/features/system/pages/StatusApiDocsPage.test.tsx"
+      ],
+      "findingIds": [
+        "SAD01",
+        "SAD02",
+        "SAD03"
+      ],
+      "catalogKeysReadonlyNeeds": [
+        "statusApi.overview.body",
+        "statusApi.endpoints.incidents.desc"
+      ],
+      "queueMatches": [],
+      "disposition": "new-narrow-owner-needed-not-queued-here",
+      "dependsOn": []
+    },
+    {
+      "name": "status-api-card-ink-rtl",
+      "existingOwnerFiles": [
+        "web/src/features/system/components/StatusApiEndpointCard.tsx",
+        "web/src/features/system/components/StatusApiEndpointCard.test.tsx"
+      ],
+      "findingIds": [
+        "SAD04",
+        "SAD05"
+      ],
+      "catalogKeysReadonlyNeeds": [],
+      "queueMatches": [],
+      "disposition": "new-narrow-owner-needed-not-queued-here",
+      "dependsOn": []
+    },
+    {
+      "name": "shared-narrative-limitation-ink",
+      "existingOwnerFiles": [
+        "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+        "web/src/components/data-display/CalculationDetails.tsx"
+      ],
+      "findingIds": [
+        "SAD06"
+      ],
+      "catalogKeysReadonlyNeeds": [],
+      "queueMatches": [],
+      "disposition": "new-narrow-owner-needed-not-queued-here",
+      "dependsOn": []
+    }
+  ],
+  "duplicatedPatterns": {
+    "competingImplementations": [],
+    "reused": "Existing endpoint card, layout, brief, disclosure, copy and callout owners; no replacement component proposed.",
+    "limitationLists": "Existing shared narrative and calculation exclusions both retained; duplicated content is not authorization to delete either."
+  },
+  "guidelineScan": {
+    "scope": [
+      "web/src/features/system/pages/StatusApiDocsPage.tsx",
+      "web/src/features/system/components/StatusApiEndpointCard.tsx",
+      "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx"
+    ],
+    "rawOutput": "See exact grep scripts/results in owned log. Counts are candidates, not lint/compiler verdicts.",
+    "exceptions": [
+      "PageLayout forwards PageContainer: not missing-page-container.",
+      "API_BASE composes public documented paths, no hook request: not double-prefix.",
+      "icon &&, query &&, Accordion open gates are optional content/disclosure: not hidden-section.",
+      "Shared motion owner vendor import and UI primitive native button are expected building-block boundaries.",
+      "GlassPanel glow=cyan means semantic border tint only, not actual glow shadow."
+    ],
+    "noBroadZeroViolationClaim": true
+  },
+  "tests": {
+    "mode": "DECLARATIONS_ONLY",
+    "declarations": [
+      {
+        "file": "web/src/features/system/pages/StatusApiDocsPage.test.tsx",
+        "direct": 13,
+        "parameterized": 1,
+        "expandedCases": "UNKNOWN_NOT_INSPECTED"
+      },
+      {
+        "file": "web/src/features/system/components/StatusApiEndpointCard.test.tsx",
+        "direct": 10,
+        "parameterized": 0
+      },
+      {
+        "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.test.tsx",
+        "direct": 3,
+        "parameterized": 0
+      }
+    ],
+    "runnerDiscovery": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "status": "NOTRUN; no bodies/assertions/oracles inspected or executed"
+  },
+  "preservation": {
+    "pins": [
+      {
+        "file": "internal/api/router.go",
+        "before": {
+          "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+          "bytes": 260353,
+          "lines": 5363
+        },
+        "after": {
+          "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+          "bytes": 260353,
+          "lines": 5363
+        },
+        "unchanged": true
+      },
+      {
+        "file": "internal/api/status/incidents.go",
+        "before": {
+          "sha256": "eb88d4c928614b7acc9070010c95c583e8a4d4d7c7ffe34de0d9a66400909975",
+          "bytes": 8262,
+          "lines": 261
+        },
+        "after": {
+          "sha256": "eb88d4c928614b7acc9070010c95c583e8a4d4d7c7ffe34de0d9a66400909975",
+          "bytes": 8262,
+          "lines": 261
+        },
+        "unchanged": true
+      },
+      {
+        "file": "internal/api/status/v1.go",
+        "before": {
+          "sha256": "a8eba0625c912506d002835b179382418fe4317a40833c4730524632ceadc109",
+          "bytes": 14846,
+          "lines": 433
+        },
+        "after": {
+          "sha256": "a8eba0625c912506d002835b179382418fe4317a40833c4730524632ceadc109",
+          "bytes": 14846,
+          "lines": 433
+        },
+        "unchanged": true
+      },
+      {
+        "file": "internal/database/observability/status_incidents_repo.go",
+        "before": {
+          "sha256": "e3281272191a694f57632a0b1d4b418263018b76299c0624bb76a48d9cf8d260",
+          "bytes": 17812,
+          "lines": 572
+        },
+        "after": {
+          "sha256": "e3281272191a694f57632a0b1d4b418263018b76299c0624bb76a48d9cf8d260",
+          "bytes": 17812,
+          "lines": 572
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/App.tsx",
+        "before": {
+          "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+          "bytes": 68125,
+          "lines": 919
+        },
+        "after": {
+          "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+          "bytes": 68125,
+          "lines": 919
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/settings.ts",
+        "before": {
+          "sha256": "ca29e09f902efc13d6c97d735bfc824871b73fa147af6a7ee98de572f1b25817",
+          "bytes": 7750,
+          "lines": 133
+        },
+        "after": {
+          "sha256": "ca29e09f902efc13d6c97d735bfc824871b73fa147af6a7ee98de572f1b25817",
+          "bytes": 7750,
+          "lines": 133
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/data-display/CalculationDetails.tsx",
+        "before": {
+          "sha256": "e9f93eee62b180c8c25985fe75789cc1cb2a3cf0eea432ca683d21adb7ea478e",
+          "bytes": 3727,
+          "lines": 127
+        },
+        "after": {
+          "sha256": "e9f93eee62b180c8c25985fe75789cc1cb2a3cf0eea432ca683d21adb7ea478e",
+          "bytes": 3727,
+          "lines": 127
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "before": {
+          "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+          "bytes": 11591,
+          "lines": 321
+        },
+        "after": {
+          "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+          "bytes": 11591,
+          "lines": 321
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+        "before": {
+          "sha256": "42d86533a953d9ee7c25e933fa7200890a420ee31868fa515f01d89b4f0e6fa1",
+          "bytes": 8350,
+          "lines": 244
+        },
+        "after": {
+          "sha256": "42d86533a953d9ee7c25e933fa7200890a420ee31868fa515f01d89b4f0e6fa1",
+          "bytes": 8350,
+          "lines": 244
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/feedback/InlineCallout.tsx",
+        "before": {
+          "sha256": "3e58e0b84d4b4f18d8e214f759657af40e6e18d8314477a232ccc92af3cf6331",
+          "bytes": 3199,
+          "lines": 115
+        },
+        "after": {
+          "sha256": "3e58e0b84d4b4f18d8e214f759657af40e6e18d8314477a232ccc92af3cf6331",
+          "bytes": 3199,
+          "lines": 115
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "before": {
+          "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+          "bytes": 658,
+          "lines": 17
+        },
+        "after": {
+          "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+          "bytes": 658,
+          "lines": 17
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "before": {
+          "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+          "bytes": 1493,
+          "lines": 39
+        },
+        "after": {
+          "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+          "bytes": 1493,
+          "lines": 39
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Accordion.tsx",
+        "before": {
+          "sha256": "131ed6c4eeea787cab62417c293919f1e97b47cbcd27bb9e27a00d46d0eb7658",
+          "bytes": 5343,
+          "lines": 139
+        },
+        "after": {
+          "sha256": "131ed6c4eeea787cab62417c293919f1e97b47cbcd27bb9e27a00d46d0eb7658",
+          "bytes": 5343,
+          "lines": 139
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "before": {
+          "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+          "bytes": 5174,
+          "lines": 93
+        },
+        "after": {
+          "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+          "bytes": 5174,
+          "lines": 93
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/CopyButton.tsx",
+        "before": {
+          "sha256": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+          "bytes": 5307,
+          "lines": 155
+        },
+        "after": {
+          "sha256": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+          "bytes": 5307,
+          "lines": 155
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Drawer.tsx",
+        "before": {
+          "sha256": "f4e17ba0f8c43c4c567fedf3cb17d3e7f27ff13b2219f45c9bd62cebe1f7f72d",
+          "bytes": 6711,
+          "lines": 211
+        },
+        "after": {
+          "sha256": "f4e17ba0f8c43c4c567fedf3cb17d3e7f27ff13b2219f45c9bd62cebe1f7f72d",
+          "bytes": 6711,
+          "lines": 211
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/GlassPanel.tsx",
+        "before": {
+          "sha256": "e60a182c5579269b2a3d9869b0fc8fe14b3b1dc191db09a3a3c19bb13a88f3af",
+          "bytes": 3129,
+          "lines": 76
+        },
+        "after": {
+          "sha256": "e60a182c5579269b2a3d9869b0fc8fe14b3b1dc191db09a3a3c19bb13a88f3af",
+          "bytes": 3129,
+          "lines": 76
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/components/StatusApiEndpointCard.test.tsx",
+        "before": {
+          "sha256": "e375d5a6f060e6a54ee5077d0a4f329c863496e14396f2a2abc8f6d34717c5a7",
+          "bytes": 7087,
+          "lines": 184
+        },
+        "after": {
+          "sha256": "e375d5a6f060e6a54ee5077d0a4f329c863496e14396f2a2abc8f6d34717c5a7",
+          "bytes": 7087,
+          "lines": 184
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/components/StatusApiEndpointCard.tsx",
+        "before": {
+          "sha256": "5fb157f5443a2197fe2d8f2ea2398d6d2befed313629130621298099d286fbc4",
+          "bytes": 3682,
+          "lines": 111
+        },
+        "after": {
+          "sha256": "5fb157f5443a2197fe2d8f2ea2398d6d2befed313629130621298099d286fbc4",
+          "bytes": 3682,
+          "lines": 111
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.test.tsx",
+        "before": {
+          "sha256": "affb7986e86a1d54be36d8f2e1d8893f861e00d3086e53352029885467b0ebbf",
+          "bytes": 4333,
+          "lines": 68
+        },
+        "after": {
+          "sha256": "affb7986e86a1d54be36d8f2e1d8893f861e00d3086e53352029885467b0ebbf",
+          "bytes": 4333,
+          "lines": 68
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+        "before": {
+          "sha256": "161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891",
+          "bytes": 2399,
+          "lines": 63
+        },
+        "after": {
+          "sha256": "161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891",
+          "bytes": 2399,
+          "lines": 63
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/pages/StatusApiDocsPage.test.tsx",
+        "before": {
+          "sha256": "a43b8db53c035b780fc6244276aaaccb5b7923a9064778064a77b45c6d6c6e59",
+          "bytes": 15672,
+          "lines": 393
+        },
+        "after": {
+          "sha256": "a43b8db53c035b780fc6244276aaaccb5b7923a9064778064a77b45c6d6c6e59",
+          "bytes": 15672,
+          "lines": 393
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/pages/StatusApiDocsPage.tsx",
+        "before": {
+          "sha256": "92cb8aebf38b140dddaaa516c34a83cb9145e64e9b8d6a6334655ed9d081f097",
+          "bytes": 14008,
+          "lines": 309
+        },
+        "after": {
+          "sha256": "92cb8aebf38b140dddaaa516c34a83cb9145e64e9b8d6a6334655ed9d081f097",
+          "bytes": 14008,
+          "lines": 309
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useFormatting.ts",
+        "before": {
+          "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+          "bytes": 4608,
+          "lines": 106
+        },
+        "after": {
+          "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+          "bytes": 4608,
+          "lines": 106
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useOperationalMetrics.tsx",
+        "before": {
+          "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+          "bytes": 1161,
+          "lines": 24
+        },
+        "after": {
+          "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+          "bytes": 1161,
+          "lines": 24
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useSettings.ts",
+        "before": {
+          "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+          "bytes": 5253,
+          "lines": 146
+        },
+        "after": {
+          "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+          "bytes": 5253,
+          "lines": 146
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useUnits.ts",
+        "before": {
+          "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+          "bytes": 6545,
+          "lines": 194
+        },
+        "after": {
+          "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+          "bytes": 6545,
+          "lines": 194
+        },
+        "unchanged": true
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "before": {
+          "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+          "bytes": 1843667,
+          "lines": 39002
+        },
+        "after": {
+          "sha256": "dc87a2c46dd3f82d84746b042d0c42d41e8a6d5b64487e543485f4aaaea35886",
+          "bytes": 1846735,
+          "lines": 39035
+        },
+        "unchanged": false
+      }
+    ],
+    "totalPinnedFiles": 28,
+    "allUnchanged": false,
+    "sourceCoreLineCount": 483,
+    "currentVsBeforeRatio": 1.0,
+    "historyLimit": "No Git/original-source retrieval; this is immutable current-before/current-after preservation, not new historical-baseline acceptance. Core before pins02:41; later support pins captured after first source read and before report creation, explicitly not pre-session pins.",
+    "sections": 5,
+    "endpointCards": 6,
+    "examples": 6,
+    "integrationTargets": 4,
+    "summaryMetrics": 4
+  },
+  "summary": {
+    "confirmedMechanisms": 6,
+    "confirmedSourceSites": 11,
+    "conditionalNativeCandidates": 5,
+    "byRule": {
+      "api-media-contract": 1,
+      "api-example-schema": 1,
+      "api-default-filter-contract": 1,
+      "preference-independent-palette": 2,
+      "i18n-rtl-physical-margin": 1
+    },
+    "filesWithMostIssues": {
+      "page": 3,
+      "featureCard": 2,
+      "sharedNarrativeCalculationChain": 1
+    },
+    "priorityFixes": [
+      "SAD01",
+      "SAD03",
+      "SAD02",
+      "SAD04",
+      "SAD06",
+      "SAD05"
+    ]
+  },
+  "evidenceLimits": [
+    "Source-only; every repro UNEXECUTED. No native/runtime/visual/application/page acceptance.",
+    "No Git, source/test/catalog/queue edits, agents, installs, helper files, tests, lint, build, compiler, server, browser, network, API, Try-it, auth or provider actions.",
+    "Initial exploratory PowerShell command2935 failed with cp1252 UnicodeEncodeError exit1; UTF-8 repeat0. Earlier formatted discovery output obscured fields; corrected bounded reads used.",
+    "Large tool outputs auto-saved by host; raw receipts recovered into authorized log; no agent output redirection.",
+    "Preliminary exact command transcript is incomplete in log; raw output recovered, later scripts exact. This evidence gap is explicit; no fabricated full-command receipt."
+  ],
+  "commandEvidenceStatus": "PARTIAL_PRELIMINARY_TRANSCRIPT; exact logged scripts from02:42:17 onward; failed initial final-pin assertion retained; canonical en.json drifted externally, no rewrite/renewal",
+  "filesRead": [
+    "internal/api/router.go",
+    "internal/api/status/incidents.go",
+    "internal/api/status/v1.go",
+    "internal/database/observability/status_incidents_repo.go",
+    "web/src/App.tsx",
+    "web/src/api/settings.ts",
+    "web/src/components/data-display/CalculationDetails.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+    "web/src/components/feedback/InlineCallout.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/ui/Accordion.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/CopyButton.tsx",
+    "web/src/components/ui/Drawer.tsx",
+    "web/src/components/ui/GlassPanel.tsx",
+    "web/src/features/system/components/StatusApiEndpointCard.test.tsx",
+    "web/src/features/system/components/StatusApiEndpointCard.tsx",
+    "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.test.tsx",
+    "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+    "web/src/features/system/pages/StatusApiDocsPage.test.tsx",
+    "web/src/features/system/pages/StatusApiDocsPage.tsx",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useSettings.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/i18n/en.json"
+  ],
+  "release": {
+    "artifactWrites": "RELEASED after this final validation",
+    "sourceTestCatalogQueueGit": "NEVER_ACQUIRED/NEVER_WRITTEN",
+    "commands": "RELEASED; no background commands or services launched"
+  },
+  "validation": {
+    "utc": "2026-10-14T02:49:20.742554+00:00",
+    "jsonParse": "PASS",
+    "citationsChecked": 40,
+    "citationErrors": 0,
+    "countValidation": "PASS",
+    "afterPinNewDrift": [],
+    "beforeAfterDrift": [
+      "web/src/i18n/en.json"
+    ],
+    "sourceTestReadonlyPins": "27/27 unchanged; canonical catalog external drift retained"
+  },
+  "queueDispositionContinuation": {
+    "status": "COMPLETE_QUEUE_DISPOSITIONS_ONLY",
+    "scope": "Complete the original six confirmed findings and five conditional candidates' missing canonical-queue dispositions. No source re-audit, repeated proven checks, new findings or page approval.",
+    "originalAttempt": 1,
+    "originalReportStatusPreserved": "PARTIAL",
+    "originalEvidencePreserved": true,
+    "authority": "This continuation supplies current queue representation decisions for the original requiredOwnerNeeds; their empty queueMatches were the original audit's historical observation, not a current queue search.",
+    "clock": {
+      "queueStarted": "2026-10-14T05:06:00Z",
+      "returnBy": "2026-10-14T05:26:00Z",
+      "hardBy": "2026-10-14T05:31:00Z",
+      "renewed": false,
+      "originalReservationUnchanged": true
+    },
+    "queueSnapshot": {
+      "file": "migration-queue.md",
+      "readAtUtc": "2026-10-14T05:11:05.205863+00:00",
+      "sha256": "7d486e556799a3765b4655e7a051baf28570737955d972961b9fb411e65784f3",
+      "lines": 2599,
+      "itemLine": 351,
+      "itemStatus": "[~]",
+      "queueReadonly": true,
+      "coverageMethod": "Read the full queue text locally; normalize path separators/case for exact claims against the original requiredOwnerNeeds files. Review bounded original-ID, API-docs, limitation-ink, clipboard and inherited primitive objective matches. Inspect exact neighboring rows rather than treating shared terminology or a completed migration as a duplicate fix.",
+      "exactOwnerScopeMatches": [
+        {
+          "line": 1108,
+          "item": "audit-page-196",
+          "status": "[x]",
+          "commit": "ae63e70e91",
+          "disposition": "RELATED_COMPLETED_NOT_DUPLICATE",
+          "reason": "Phase0 source audit, not implementation of SAD01-SAD03. Preserve completed audit; no redispatch."
+        },
+        {
+          "line": 2362,
+          "item": "phase5-page-system-status-api-docs",
+          "status": "[x]",
+          "commit": "919541500ec967babb0cd3757283365bb99ff9a0",
+          "disposition": "RELATED_COMPLETED_NOT_DUPLICATE",
+          "reason": "Phase5 adoption and its historical 19-case source receipt retain five sections/six endpoints. The row does not own these later response-contract findings. Preserve completion and passes; do not remigrate or rerun them."
+        }
+      ],
+      "representationLimit": "A missing matching fix objective is not proof the current source still contains the defect. Findings retain their original source-evidence timestamp; source and catalogs were not revalidated in this continuation. Queue lines/statuses are snapshot evidence, not live-worker counts or current leases."
+    },
+    "findingDispositions": [
+      {
+        "findingId": "SAD01",
+        "originalClassification": "confirmed-source-mechanism",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX_OWNER_NEEDED",
+        "need": "status-api-response-contract",
+        "representedBy": [],
+        "relatedNotDuplicate": [
+          "audit-page-196",
+          "phase5-page-system-status-api-docs"
+        ],
+        "reason": "No queue objective covers REST-only JSON wording and the static SSE frame/heartbeat presentation. Historical page migration is not this response-media correction.",
+        "runtimeStatus": "NOTRUN"
+      },
+      {
+        "findingId": "SAD02",
+        "originalClassification": "confirmed-source-mechanism",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX_OWNER_NEEDED",
+        "need": "status-api-response-contract",
+        "representedBy": [],
+        "relatedNotDuplicate": [
+          "audit-page-196",
+          "phase5-page-system-status-api-docs"
+        ],
+        "reason": "No queue objective covers required snapshot components or incident description/created_at fields. Preserve the separate snapshot string-ID/list integer-ID contracts; prior retained-example tests are not proof of schema completeness.",
+        "runtimeStatus": "NOTRUN"
+      },
+      {
+        "findingId": "SAD03",
+        "originalClassification": "confirmed-source-mechanism",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX_OWNER_NEEDED",
+        "need": "status-api-response-contract",
+        "representedBy": [],
+        "relatedNotDuplicate": [
+          "audit-page-196",
+          "phase5-page-system-status-api-docs"
+        ],
+        "reason": "No queue objective covers the unfiltered incident default, explicit active filter and actual limit behavior. A limit above 200 falls back to 50; do not describe it as clamped to 200.",
+        "runtimeStatus": "NOTRUN"
+      },
+      {
+        "findingId": "SAD04",
+        "originalClassification": "confirmed-source-mechanism",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX_OWNER_NEEDED",
+        "need": "status-api-card-ink-rtl",
+        "representedBy": [],
+        "reason": "No queue claim or explicit objective matches the two endpoint-card cyan foreground sites. Other page palette work is not ownership of this feature card.",
+        "runtimeStatus": "NOTRUN"
+      },
+      {
+        "findingId": "SAD05",
+        "originalClassification": "confirmed-source-mechanism",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX_OWNER_NEEDED",
+        "need": "status-api-card-ink-rtl",
+        "representedBy": [],
+        "reason": "No queue objective matches the feature-card physical ml-auto to logical ms-auto correction. Keep this separate from unmeasured native layout/target acceptance.",
+        "runtimeStatus": "NOTRUN"
+      },
+      {
+        "findingId": "SAD06",
+        "originalClassification": "confirmed-source-mechanism",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX_OWNER_NEEDED",
+        "need": "shared-narrative-limitation-ink",
+        "representedBy": [],
+        "relatedNotDuplicate": [
+          "phase6-fix-advanced-evidence-date-preferences",
+          "regression-brief-drawer-context"
+        ],
+        "reason": "No queue claim matches either shared amber limitation-ink site. The advanced-evidence row addresses domain date preferences and explicitly excludes shared UI; its separately mentioned narrative date callsite is not limitation ink. Preserving supplied brief scope/freshness also does not fix these two ink sites.",
+        "runtimeStatus": "NOTRUN"
+      },
+      {
+        "findingId": "SAD-N01",
+        "originalClassification": "NOT_CONFIRMED_RUNTIME",
+        "disposition": "CONDITIONAL_NATIVE_HOLD_NOT_CONFIRMED_FIX",
+        "representedBy": [],
+        "prospectiveOwner": "StatusApiDocsPage Back and StatusApiEndpointCard copy callers",
+        "relatedNotDuplicate": [
+          "phase6-fix-schema-copy-feedback-targets"
+        ],
+        "reason": "SchemaFingerprints caller targets are a different exact scope. No page/card target objective represents this candidate, but source h-9 alone is not a measured failure.",
+        "prerequisite": "Separately authorized native measurement at the original stated widths, long translations, 200% text and hit testing. Only a confirmed result can authorize a scoped mobile target fix; no global Button resize.",
+        "runtimeStatus": "NOTRUN"
+      },
+      {
+        "findingId": "SAD-N02",
+        "originalClassification": "NOT_CONFIRMED_RUNTIME",
+        "disposition": "CONDITIONAL_CONTRACT_HOLD_NOT_CONFIRMED_FIX",
+        "representedBy": [],
+        "prospectiveOwner": "StatusApiEndpointCard caller; shared CopyButton remains readonly",
+        "relatedNotDuplicate": [
+          "phase3-copy-button",
+          "phase6-fix-schema-copy-feedback-targets"
+        ],
+        "reason": "Completed shared CopyButton work does not supply this caller's absent error feedback. The completed schema caller fix is not a StatusApiEndpointCard fix. Preserve the original conditional classification rather than promoting a clipboard-denial scenario to a measured failure.",
+        "prerequisite": "Integration owner confirms supported denial/unavailable clipboard behavior, then separately authorized causal evidence for localized persistent/manual-copy recovery. No clipboard/browser action here.",
+        "runtimeStatus": "NOTRUN"
+      },
+      {
+        "findingId": "SAD-N03",
+        "originalClassification": "NOT_CONFIRMED_RUNTIME",
+        "disposition": "CONDITIONAL_NATIVE_HOLD_NOT_CONFIRMED_FIX",
+        "representedBy": [],
+        "prospectiveOwner": "StatusApiEndpointCard example scroll container",
+        "relatedNotDuplicate": [
+          "phase3-accordion",
+          "phase3-accordion-font-adoption"
+        ],
+        "reason": "Shared disclosure/font ownership does not establish keyboard accessibility of the caller-owned pre scroll region. Browser auto-focusability remains an unexecuted candidate, not a proven accessibility defect.",
+        "prerequisite": "Separately authorized supported-host keyboard scrolling, visible focus and full-value selection. Reserve a contained-scroll fix only if confirmed.",
+        "runtimeStatus": "NOTRUN"
+      },
+      {
+        "findingId": "SAD-N04",
+        "originalClassification": "NOT_CONFIRMED_RUNTIME",
+        "disposition": "CONDITIONAL_CONTRACT_HOLD_NOT_CONFIRMED_FIX",
+        "representedBy": [],
+        "prospectiveOwner": "Status API integration/documentation contract owner",
+        "reason": "No queue objective explicitly owns zero/all-unknown uptime interpretation. The original example already retains current_snapshot and its note; this is a conditional consumer-contract concern, not authority for a backend change or historical availability claim.",
+        "prerequisite": "Integration-owner contract review of zero counted total and excluded unknown components before deciding whether a precise documentation clarification is needed.",
+        "runtimeStatus": "NOTRUN"
+      },
+      {
+        "findingId": "SAD-N05",
+        "originalClassification": "NOT_CONFIRMED_RUNTIME",
+        "disposition": "CONDITIONAL_NATIVE_HOLD_NOT_CONFIRMED_FIX",
+        "representedBy": [],
+        "prospectiveOwner": "Existing shared Drawer default footer owner",
+        "relatedNotDuplicate": [
+          "primitive-drawer",
+          "overlay-drawer-adoption"
+        ],
+        "reason": "Completed Drawer theme/motion and overlay-layer/typography objectives are not a native footer-target measurement or correction. Preserve them as done without reopening them.",
+        "prerequisite": "Separately authorized mobile footer/header Close measurements and last-item reachability. A confirmed defect needs its own narrow shared lease preserving focus restoration, shell offsets and desktop sizing.",
+        "runtimeStatus": "NOTRUN"
+      }
+    ],
+    "unrepresentedConfirmedFixes": [
+      {
+        "name": "status-api-response-contract",
+        "findingIds": [
+          "SAD01",
+          "SAD02",
+          "SAD03"
+        ],
+        "proposedItem": "phase6-fix-status-api-response-contract",
+        "proposalOnlyNotQueued": true,
+        "owner": "Existing StatusApiDocsPage page/covering-test owner; parent serialized canonical-copy integration",
+        "sourceFiles": [
+          "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx",
+          "web\\src\\features\\system\\pages\\StatusApiDocsPage.test.tsx"
+        ],
+        "originalSites": "SAD01 page171,233,151-153; SAD02 page59-66,131-140; SAD03 page125 (original citations, not refreshed source positions).",
+        "scope": "Qualify JSON as REST-only and display a genuine static SSE frame/heartbeat; add required synthetic example fields or explicit excerpt labels; document unfiltered incidents default, active=1/true, limit default50 and valid1-200 with out-of-range fallback50. Preserve all six endpoint cards, sections/actions/auth scope and distinct incident schemas. No live requests or backend behavior changes.",
+        "canonicalCopyNeeds": [
+          {
+            "key": "statusApi.overview.body",
+            "change": "Remove the assertion that every response is JSON; distinguish REST JSON from the live SSE media contract."
+          },
+          {
+            "key": "statusApi.endpoints.incidents.desc",
+            "change": "Describe the unfiltered default and explicit active filter plus the actual limit behavior."
+          }
+        ],
+        "dependsOn": [],
+        "dependencyReason": "Existing page/card capability is sufficient. Shared palette/RTL work and native QA are not prerequisites. Parent must serialize actual canonical-copy integration if wording changes; no catalog worker/edit is authorized here."
+      },
+      {
+        "name": "status-api-card-ink-rtl",
+        "findingIds": [
+          "SAD04",
+          "SAD05"
+        ],
+        "proposedItem": "phase6-fix-status-api-card-ink-rtl",
+        "proposalOnlyNotQueued": true,
+        "owner": "Existing StatusApiEndpointCard feature-card/covering-test owner",
+        "sourceFiles": [
+          "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx",
+          "web\\src\\features\\system\\components\\StatusApiEndpointCard.test.tsx"
+        ],
+        "originalSites": "Feature-card56,60 (ink) and68 (logical spacing), retained original citations.",
+        "scope": "Use existing neutral/justified semantic theme ink at the two cyan sites and logical ms-auto for copy alignment. Preserve full copy targets, GET labels, wrapping, accessible names, success feedback and examples. Do not absorb the unconfirmed target, clipboard-denial or scroll-container candidates into a confirmed fix.",
+        "canonicalCopyNeeds": [],
+        "dependsOn": []
+      },
+      {
+        "name": "shared-narrative-limitation-ink",
+        "findingIds": [
+          "SAD06"
+        ],
+        "proposedItem": "phase6-fix-shared-narrative-limitation-ink",
+        "proposalOnlyNotQueued": true,
+        "owner": "Existing shared OperationalNarrativeDetails and CalculationDetails owners under one explicit narrow shared lease",
+        "sourceFiles": [
+          "web\\src\\components\\data-display\\OperationalNarrativeDetails.tsx",
+          "web\\src\\components\\data-display\\CalculationDetails.tsx"
+        ],
+        "originalSites": "OperationalNarrativeDetails161 and CalculationDetails110, retained original citations.",
+        "scope": "Replace only the two fixed amber limitation/exclusion foregrounds with existing restrained warning roles. Retain both lists and every narrative, unknown, provenance and calculation field; do not delete repeated information or add date-formatting/Drawer changes.",
+        "coveringTestNeeds": "Parent must claim existing directly covering tests with the future shared lease; exact test files were not discovered or read during this disposition-only continuation.",
+        "canonicalCopyNeeds": [],
+        "dependsOn": []
+      }
+    ],
+    "counts": {
+      "originalFindingsDisposed": 11,
+      "confirmedFindingsUnrepresented": 6,
+      "narrowConfirmedOwnerNeeds": 3,
+      "confirmedFindingsRepresentedByExistingFix": 0,
+      "duplicateConfirmedFixObjectives": 0,
+      "conditionalCandidatesHeld": 5,
+      "newFindings": 0,
+      "queueEdits": 0
+    },
+    "evidenceLimits": [
+      "Dispositions only: all original findings, quotes, source-repro UNEXECUTED markers, preservation pins, test evidence and native NOTRUN remain historical and unchanged.",
+      "No code/catalog/test inspection or re-audit in this continuation; no browser, network, API, business actions, tests, lint, compiler, Git, helper files, server, installs, Docker or nested agents.",
+      "Early queue-search output exceeded the host display limit; later bounded candidate lists/exact rows and the snapshot receipt were used. Host auto-saved output was not accessed. One invalid negative view_range failed before reading; bounded owned-log tail read succeeded.",
+      "The original incomplete preliminary-command transcript, failed pin assertion and external catalog drift remain preserved. No new clean-source, current-pin or page-acceptance claim.",
+      "No current matching fix objective found is a bounded queue-representation decision, not authorization to dispatch proposals, reopen completed work or promote conditional candidates."
+    ],
+    "artifactValidation": {
+      "utc": "2026-10-14T05:14:45.588147+00:00",
+      "status": "PASS_ARTIFACT_ONLY",
+      "jsonParse": "PASS",
+      "originalReportReconstructionShaMatch": true,
+      "originalEvidenceSectionsUnchanged": "7/7",
+      "originalFindingDispositionCoverage": "11/11 unique original IDs",
+      "confirmedUnrepresented": 6,
+      "confirmedOwnerNeeds": 3,
+      "conditionalHeld": 5,
+      "originalLogPrefixLinesPreserved": 1287,
+      "applicationChecks": "NOTRUN"
+    },
+    "release": {
+      "artifactWrites": "RELEASED after final report/log persistence and serialization readback; no further writes",
+      "ownedFiles": [
+        "docs\\frontend-audits\\phase6-qa-system-status-api-docs.json",
+        "web\\logs\\phase6-qa-system-status-api-docs.log"
+      ],
+      "sourceCatalogTestQueueGit": "NEVER_ACQUIRED/NEVER_WRITTEN",
+      "commands": "RELEASED; no background commands, servers or agents launched",
+      "needs": "Parent may queue the three precise confirmed owner proposals after its own exclusive-claim decision. Five conditional candidates remain held pending separate authorization/contract evidence. No page approval."
+    }
+  }
+}

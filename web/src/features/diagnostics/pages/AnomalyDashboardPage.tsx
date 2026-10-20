@@ -1,39 +1,54 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity, AlertTriangle, Clock, HeartPulse, BarChart3, ShieldCheck,
+  AlertTriangle, HeartPulse, BarChart3, ShieldCheck,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { GlassPanel, Icon, PanelTitle } from '@/components/ui';
 
-import { MetricCard } from '@/components/data-display';
+import { OperationalBrief } from '@/components/data-display';
 import {
-  ChartTooltip, CHART_COLORS,
+  ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, StatGridSkeleton } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, DataSourceNotice, resolveDataSourceStatus } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useAnomalies } from '@/api/hooks/useAnomalies';
-import { AIAnomalyExplanations } from '@/components/ai/AIAnomalyExplanations';
-import { AILearnedAnomalyBaselines } from '@/components/ai/AILearnedAnomalyBaselines';
+import { AIAnomalyExplanations } from '@/components/ai';
+import { AILearnedAnomalyBaselines } from '@/components/ai';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { chartTokens, typography } from '@/lib/tokens';
 
 import { AnomalyTimelineCard, SystemHealthCard } from '../components/anomaly-dashboard';
+import { anomalySummary } from '../components/statstrip-anomaly/anomalySummary';
+import { healthStatus } from '../components/anomaly-dashboard/anomalyHelpers';
 
 export default function AnomalyDashboardPage() {
   const { t } = useTranslation();
-  usePageTitle(t('anomaly.title', 'Anomaly Detection'));
+  const { fmtInt } = useNumberFormatting();
+  usePageTitle(t('anomaly.title', 'Anomaly detection'));
 
   const { vehicleId: selectedId } = useSelectedVehicle();
   const activeIdStr = selectedId != null ? String(selectedId) : null;
   const noVehicle = activeIdStr === null;
 
   const anomaliesQuery = useAnomalies(activeIdStr);
-  const { data, isLoading, error, refetch } = anomaliesQuery;
+  const { data, refetch } = anomaliesQuery;
+  const state = useDataState(anomaliesQuery, { provenance: 'inferred' });
+  const source = { id: 'anomalies', label: t('anomaly.title', 'Anomaly detection'), query: anomaliesQuery, enabled: !noVehicle };
+  const sourceStatus = resolveDataSourceStatus(source);
+  const error = state.fatalError;
+  const isLoading = !noVehicle && !state.hasData && sourceStatus === 'loading';
+  const initialBlocked = !noVehicle && !state.hasData && sourceStatus === 'paused';
+  const retained = state.hasData && (state.refreshError != null || state.isRefreshBlocked);
+  const pausedLabel = t('dataSources.status.paused', 'Refresh paused');
 
   /* Stable retry handler shared by all three error panels (frequency, health,
      timeline) so we don't allocate three fresh closures on every render. */
@@ -55,58 +70,49 @@ export default function AnomalyDashboardPage() {
 
   const anomalies = data?.anomalies ?? [];
   const healthEntries = Object.entries(data?.health_summary ?? {});
+  const summary = anomalySummary(data, t);
+  const briefMetrics = useOperationalMetrics(summary.metrics);
 
   const signalFrequencyColumns = useMemo<ChartDataColumn[]>(
     () => [
       { key: 'signal', label: t('anomaly.colSignal', 'Signal') },
-      { key: 'count', label: t('anomaly.count', 'Anomalies'), format: (v) => String(v ?? 0) },
+      { key: 'count', label: t('anomaly.count', 'Anomalies'), kind: 'count' },
     ],
     [t],
   );
 
   const emptyMessage = noVehicle
     ? t('anomaly.selectVehicle', 'Select a vehicle to view its anomaly analysis.')
-    : t('anomaly.noData', 'No data available yet.');
+    : initialBlocked ? pausedLabel : t('anomaly.noData', 'No data available yet.');
 
   return (
-    <PageContainer
-      title={t('anomaly.title', 'Anomaly Detection')}
+    <PageLayout
+      title={t('anomaly.title', 'Anomaly detection')}
       subtitle={t('anomaly.subtitle', 'Automatic health monitoring and signal anomaly detection')}
       query={anomaliesQuery}
     >
-      {/* ── 1. KPI band — full-width responsive metric grid ─────────── */}
+      <StaleRefreshWarning state={state} />
+      {initialBlocked && <DataSourceNotice sources={[source]} />}
+      {/* ── 1. Summary — independently scoped source metrics ───────── */}
       <FadeIn>
         <section aria-label={t('anomaly.kpis', 'Summary metrics')}>
-          {isLoading && !data ? (
-            <StatGridSkeleton cards={4} />
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-              <MetricCard
-                label={t('anomaly.monitored', 'Signals Monitored')}
-                value={data?.signals_monitored ?? 0}
-                icon={<Activity className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('anomaly.last7d', 'Anomalies (7d)')}
-                value={data?.anomalies_last_7d ?? 0}
-                icon={<AlertTriangle className="h-5 w-5" />}
-                color="amber"
-              />
-              <MetricCard
-                label={t('anomaly.last24h', 'Anomalies (24h)')}
-                value={data?.anomalies_last_24h ?? 0}
-                icon={<Clock className="h-5 w-5" />}
-                color="red"
-              />
-              <MetricCard
-                label={t('anomaly.categories', 'Health Categories')}
-                value={healthEntries.length}
-                icon={<HeartPulse className="h-5 w-5" />}
-                color="green"
-              />
-            </div>
-          )}
+          <OperationalBrief
+            compact
+            testId="anomaly-summary"
+            eyebrow={t('anomaly.title', 'Anomaly detection')}
+            title={t('anomaly.summary.title', 'Coverage and anomaly windows')}
+            description={summary.period.kind === 'unknown' ? summary.period.reason ?? summary.period.label : summary.period.label}
+            metrics={briefMetrics}
+            scope={summary.period.label}
+            statusLabel={isLoading ? t('common.loading', 'Loading')
+              : error ? t('error.loadFailed', 'Failed to load data')
+                : initialBlocked ? pausedLabel
+                  : retained ? t('developerReference.stats.state.retained', 'Showing retained measurements')
+                  : state.hasData ? t('anomaly.summary.available', 'Detector snapshot available')
+                    : t('anomaly.summary.unavailable', 'Detector snapshot unavailable')}
+            statusTone={error ? 'danger' : retained ? 'warning' : 'neutral'}
+            loading={isLoading}
+          />
         </section>
       </FadeIn>
 
@@ -132,10 +138,14 @@ export default function AnomalyDashboardPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
           {/* Frequency chart — spans two columns on wide screens. */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('anomaly.frequency', 'Most Frequent Anomalies')}
+          <GlassPanel
+            role="region"
+            aria-label={t('anomaly.frequency', 'Most frequent anomalies')}
+            className="min-w-0 p-4 sm:p-5 xl:col-span-2"
+          >
+            <PanelTitle as="h2" className="mb-3 flex items-center gap-2 break-words">
+              <Icon icon={BarChart3} className={typography.color.secondary} />
+              {t('anomaly.frequency', 'Most frequent anomalies')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={300} />
@@ -143,13 +153,13 @@ export default function AnomalyDashboardPage() {
               <QueryError error={error} onRetry={handleRetry} />
             ) : signalFrequency.length === 0 ? (
               <EmptyState /* no-action: transient — appears until the detector has produced results */
-                icon={<BarChart3 className="h-8 w-8" />}
-                message={noVehicle ? emptyMessage : t('anomaly.noFrequency', 'Anomaly frequency data will appear after detection runs.')}
+                icon={<Icon icon={BarChart3} size="xl" />}
+                message={noVehicle || initialBlocked ? emptyMessage : t('anomaly.noFrequency', 'Anomaly frequency data will appear after detection runs.')}
               />
             ) : (
-              <div className="h-72 sm:h-80">
+              <div className="h-72 min-w-0 sm:h-80">
                 <EmbeddedChart
-                  title={t('anomaly.frequency', 'Most Frequent Anomalies')}
+                  title={t('anomaly.frequency', 'Most frequent anomalies')}
                   ariaLabel={t('anomaly.frequencyAria', 'Bar chart of the most frequently anomalous signals')}
                   data={signalFrequency}
                   dataColumns={signalFrequencyColumns}
@@ -157,11 +167,11 @@ export default function AnomalyDashboardPage() {
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={signalFrequency} layout="vertical" margin={{ left: 8, right: 16 }}>
-                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                      <YAxis dataKey="signal" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} width={140} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                      <Bar dataKey="count" fill={CHART_COLORS[3]} radius={[0, 4, 4, 0]} name={t('anomaly.count', 'Anomalies')} />
+                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                      <XAxis type="number" tick={{ fill: chartTokens.axisStroke, className: typography.size.xs }} tickLine={false} axisLine={false} allowDecimals={false} tickFormatter={(value) => fmtInt(value)} />
+                      <YAxis dataKey="signal" type="category" tick={{ fill: chartTokens.axisStroke, className: typography.size.xs }} tickLine={false} axisLine={false} width={140} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: chartTokens.brush.fill }} />
+                      <Bar dataKey="count" fill={chartTokens.series[0]} radius={[0, 4, 4, 0]} name={t('anomaly.count', 'Anomalies')} />
                     </BarChart>
                   </ResponsiveContainer>
                 </EmbeddedChart>
@@ -170,10 +180,14 @@ export default function AnomalyDashboardPage() {
           </GlassPanel>
 
           {/* System health — compact side panel of category statuses. */}
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('anomaly.healthSummary', 'System Health')}
+          <GlassPanel
+            role="region"
+            aria-label={t('anomaly.healthSummary', 'System health')}
+            className="min-w-0 p-4 sm:p-5"
+          >
+            <PanelTitle as="h2" className="mb-3 flex items-center gap-2 break-words">
+              <Icon icon={ShieldCheck} className={typography.color.secondary} />
+              {t('anomaly.healthSummary', 'System health')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={220} />
@@ -181,13 +195,13 @@ export default function AnomalyDashboardPage() {
               <QueryError error={error} onRetry={handleRetry} />
             ) : healthEntries.length === 0 ? (
               <EmptyState /* no-action: transient — health grid populates once telemetry is available */
-                icon={<HeartPulse className="h-8 w-8" />}
-                message={noVehicle ? emptyMessage : t('anomaly.noHealth', 'Health data will appear once telemetry is available.')}
+                icon={<Icon icon={HeartPulse} size="xl" />}
+                message={noVehicle || initialBlocked ? emptyMessage : t('anomaly.noHealth', 'Health data will appear once telemetry is available.')}
               />
             ) : (
               <ul className="space-y-2">
                 {healthEntries.map(([category, status]) => (
-                  <SystemHealthCard key={category} category={category} status={status} />
+                  <SystemHealthCard key={category} category={category} status={healthStatus(status)} />
                 ))}
               </ul>
             )}
@@ -197,10 +211,14 @@ export default function AnomalyDashboardPage() {
 
       {/* ── 4. Anomaly timeline — full-width detail band, reflows wide ─ */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
-            {t('anomaly.timeline', 'Anomaly Timeline')}
+        <GlassPanel
+          role="region"
+          aria-label={t('anomaly.timeline', 'Anomaly timeline')}
+          className="min-w-0 p-4 sm:p-5"
+        >
+          <PanelTitle as="h2" className="mb-3 flex items-center gap-2 break-words">
+            <Icon icon={AlertTriangle} className={typography.color.secondary} />
+            {t('anomaly.timeline', 'Anomaly timeline')}
           </PanelTitle>
           {isLoading ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
@@ -211,9 +229,9 @@ export default function AnomalyDashboardPage() {
           ) : error ? (
             <QueryError error={error} onRetry={handleRetry} />
           ) : anomalies.length === 0 ? (
-            <EmptyState /* no-action: healthy state — no anomalies detected, nothing to recover */
-              icon={<ShieldCheck className="h-8 w-8" />}
-              message={noVehicle ? emptyMessage : t('anomaly.noAnomalies', 'No anomalies detected — all systems normal.')}
+            <EmptyState /* no-action: an empty result is not a system-health assessment */
+              icon={<Icon icon={AlertTriangle} size="xl" />}
+              message={emptyMessage}
             />
           ) : (
             <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
@@ -224,6 +242,6 @@ export default function AnomalyDashboardPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

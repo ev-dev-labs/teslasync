@@ -1,6 +1,7 @@
 package rul
 
 import (
+	"encoding/json"
 	"math"
 	"testing"
 	"time"
@@ -152,6 +153,13 @@ func TestRemainingDays(t *testing.T) {
 		{"zero rate -> indeterminate", 90, 70, 0, 0, false},
 		{"negative rate -> indeterminate", 90, 70, -0.01, 0, false},
 		{"NaN rate -> indeterminate", 90, 70, math.NaN(), 0, false},
+		{"missing current represented by NaN", math.NaN(), 70, 1, 0, false},
+		{"invalid current infinity", math.Inf(1), 70, 1, 0, false},
+		{"invalid eol", 90, math.Inf(-1), 1, 0, false},
+		{"infinite rate", 90, 70, math.Inf(1), 0, false},
+		{"measured zero at eol", 70, 70, 0.5, 0, true},
+		{"signed current and eol", -1.25, -2.5, 0.5, 2.5, true},
+		{"fractional overdue", 69.75, 70, 0.5, -0.5, true},
 		{"tiny rate capped at horizon", 100, 0, 1e-9, maxProjectionDays, true},
 	}
 	for _, tc := range tests {
@@ -166,6 +174,98 @@ func TestRemainingDays(t *testing.T) {
 			}
 			if math.IsNaN(gotDays) || math.IsInf(gotDays, 0) {
 				t.Errorf("non-finite days: %v", gotDays)
+			}
+		})
+	}
+}
+
+func TestRULAvailability(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		build      func() (ComponentRUL, projInputs)
+		observed   bool
+		projected  bool
+		basis      BasisKind
+		health     float64
+		days       float64
+	}{
+		{"missing battery history", func() (ComponentRUL, projInputs) {
+			return BatteryRUL(batteryCfg(), "Battery", nil, testNow)
+		}, false, false, BasisMissingHistory, 0, maxProjectionDays},
+		{"invalid battery history", func() (ComponentRUL, projInputs) {
+			return BatteryRUL(batteryCfg(), "Battery", []Point{{0, math.NaN()}, {math.Inf(1), 90}}, testNow)
+		}, false, false, BasisInvalidInput, 0, maxProjectionDays},
+		{"measured zero battery with zero confidence", func() (ComponentRUL, projInputs) {
+			return BatteryRUL(batteryCfg(), "Battery", []Point{{0, 0}}, testNow)
+		}, true, false, BasisNoDecline, 0, maxProjectionDays},
+		{"flat battery with zero confidence", func() (ComponentRUL, projInputs) {
+			return BatteryRUL(batteryCfg(), "Battery", []Point{{-0.5, 95.5}, {0.5, 95.5}}, testNow)
+		}, true, false, BasisNoDecline, 95.5, maxProjectionDays},
+		{"battery reaches eol exactly", func() (ComponentRUL, projInputs) {
+			return BatteryRUL(batteryCfg(), "Battery", []Point{{-0.5, 71}, {0.5, 70}}, testNow)
+		}, true, true, BasisSoHTrend, 70, 0},
+		{"missing wear configuration", func() (ComponentRUL, projInputs) {
+			return WearRUL(ComponentConfig{}, "Tires", 0, 0, 0, testNow)
+		}, false, false, BasisMissingConfig, 100, 0},
+		{"invalid wear input", func() (ComponentRUL, projInputs) {
+			return WearRUL(wearCfg(100), "Tires", math.NaN(), 1, 0, testNow)
+		}, false, false, BasisInvalidInput, 0, maxProjectionDays},
+		{"invalid nominal life", func() (ComponentRUL, projInputs) {
+			return WearRUL(wearCfg(math.Inf(-1)), "Tires", 0, 1, 0, testNow)
+		}, false, false, BasisInvalidInput, 0, maxProjectionDays},
+		{"wear reaches zero with zero confidence", func() (ComponentRUL, projInputs) {
+			return WearRUL(wearCfg(100), "Tires", 100, 0.5, 0, testNow)
+		}, true, true, BasisWholeLifeOdometer, 0, 0},
+		{"fractional wear estimate", func() (ComponentRUL, projInputs) {
+			return WearRUL(wearCfg(100), "Tires", 99.75, 0.5, 0, testNow)
+		}, true, true, BasisWholeLifeOdometer, 0.3, 0.5},
+		{"signed distance retains existing clamp", func() (ComponentRUL, projInputs) {
+			return WearRUL(wearCfg(100), "Tires", -0.5, -0.25, 0, testNow)
+		}, true, false, BasisWholeLifeOdometer, 100, maxProjectionDays},
+		{"missing age configuration", func() (ComponentRUL, projInputs) {
+			return AgeRUL(ComponentConfig{}, "Filter", 0, testNow)
+		}, false, false, BasisMissingConfig, 100, 0},
+		{"invalid age", func() (ComponentRUL, projInputs) {
+			return AgeRUL(ageCfg(365), "Filter", math.Inf(1), testNow)
+		}, false, false, BasisInvalidInput, 0, maxProjectionDays},
+		{"age reaches zero", func() (ComponentRUL, projInputs) {
+			return AgeRUL(ageCfg(365), "Filter", 365, testNow)
+		}, true, true, BasisEnrollmentAge, 0, 0},
+		{"fractional age estimate", func() (ComponentRUL, projInputs) {
+			return AgeRUL(ageCfg(365), "Filter", 364.5, testNow)
+		}, true, true, BasisEnrollmentAge, 0.1, 0.5},
+		{"signed age retains existing clamp", func() (ComponentRUL, projInputs) {
+			return AgeRUL(ageCfg(365), "Filter", -0.5, testNow)
+		}, true, true, BasisEnrollmentAge, 100, 365},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			c, _ := tc.build()
+			if c.ObservationAvailable != tc.observed || c.ProjectionAvailable != tc.projected || c.BasisKind != tc.basis {
+				t.Fatalf("availability = %+v, want observed=%v projected=%v basis=%s", c, tc.observed, tc.projected, tc.basis)
+			}
+			if !approx(c.HealthPct, tc.health, 1e-9) || !approx(c.RemainingDays, tc.days, 1e-9) {
+				t.Errorf("health/days = %v/%v, want %v/%v", c.HealthPct, c.RemainingDays, tc.health, tc.days)
+			}
+			// Both endpoints must expose false flags explicitly, not omit them.
+			for _, response := range []any{c, ComponentDetailResponse{ComponentRUL: c}} {
+				body, err := json.Marshal(response)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var wire struct {
+					Observed  *bool     `json:"observation_available"`
+					Projected *bool     `json:"projection_available"`
+					Basis     BasisKind `json:"basis_kind"`
+				}
+				if err := json.Unmarshal(body, &wire); err != nil {
+					t.Fatal(err)
+				}
+				if wire.Observed == nil || *wire.Observed != tc.observed || wire.Projected == nil || *wire.Projected != tc.projected || wire.Basis != tc.basis {
+					t.Errorf("incorrect wire metadata: %s", body)
+				}
 			}
 		})
 	}
@@ -292,6 +392,25 @@ func TestBuildSoHSeries(t *testing.T) {
 	}
 	if BuildSoHSeries(nil, 75000) != nil {
 		t.Error("empty input must yield nil series")
+	}
+}
+
+func TestBuildSoHSeriesRejectsNonFiniteInputs(t *testing.T) {
+	t.Parallel()
+	rows := []DailyBattery{
+		{Day: testNow, MaxEnergyWh: math.NaN(), MaxSocPct: 90},
+		{Day: testNow, MaxEnergyWh: 67500, MaxSocPct: math.Inf(1)},
+		{Day: testNow, MaxEnergyWh: math.Inf(1), MaxSocPct: 90},
+		{Day: testNow, MaxEnergyWh: 67500, MaxSocPct: 90},
+	}
+	got := BuildSoHSeries(rows, 75000)
+	if len(got) != 1 || got[0].Y != 100 {
+		t.Fatalf("series = %+v, want only the valid observation", got)
+	}
+	for _, nominal := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
+		if got := BuildSoHSeries(rows, nominal); got != nil {
+			t.Errorf("nominal %v yielded invalid series: %+v", nominal, got)
+		}
 	}
 }
 

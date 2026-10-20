@@ -122,7 +122,7 @@ export function ThemePicker({
         <div>
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
-              {t('theme.displayMode', 'Display Mode')}
+              {t('theme.displayMode', 'Display mode')}
             </p>
           </div>
           {showAllModes && (
@@ -159,7 +159,6 @@ export function ThemePicker({
                           ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
                           : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',
                       )}
-                      style={modeId === m.id ? { boxShadow: 'inset 0 0 12px rgba(var(--theme-primary-rgb), 0.15)' } : undefined}
                     >
                       <div
                         className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
@@ -223,23 +222,22 @@ export function ThemePicker({
               className={cn(
                 'group relative rounded-xl border p-4 text-left h-auto transition-all duration-normal justify-start items-start flex-col',
                 themeId === thm.id
-                  ? 'bg-[var(--surface-3)]'
+                  ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
                   : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]',
                 themeId !== thm.id && 'border-[var(--glass-border)]',
               )}
-              style={themeId === thm.id ? { borderColor: thm.primary } : undefined}
             >
               <div
                 className="h-6 w-6 rounded-full mb-3"
                 style={{
-                  background: `linear-gradient(135deg, ${thm.primary}, ${thm.accent})`,
-                  boxShadow: themeId === thm.id ? `0 0 12px ${thm.primary}` : 'none',
+                  // The swatch is the exact hex the app applies.
+                  background: thm.primary,
                 }}
               />
               <p className="text-xs font-medium text-[var(--text-primary)]">{thm.name}</p>
               {themeId === thm.id && (
                 <div className="absolute top-2.5 right-2.5">
-                  <CheckCircle aria-hidden="true" className="h-4 w-4" style={{ color: thm.primary }} />
+                  <CheckCircle aria-hidden="true" className="h-4 w-4 text-[var(--theme-primary)]" />
                 </div>
               )}
             </Button>
@@ -256,23 +254,21 @@ export function ThemePicker({
               className={cn(
                 'group relative rounded-xl border p-4 text-left h-auto transition-all duration-normal justify-start items-start flex-col',
                 themeId === 'custom'
-                  ? 'bg-[var(--surface-3)]'
+                  ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
                   : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]',
                 themeId !== 'custom' && 'border-[var(--glass-border)]',
               )}
-              style={themeId === 'custom' ? { borderColor: customPrimary } : undefined}
             >
               <div
                 className="h-6 w-6 rounded-full mb-3"
                 style={{
-                  background: `linear-gradient(135deg, ${customPrimary}, ${customAccent})`,
-                  boxShadow: themeId === 'custom' ? `0 0 12px ${customPrimary}` : 'none',
+                  background: customPrimary,
                 }}
               />
               <p className="text-xs font-medium text-[var(--text-primary)]">{t('theme.custom', 'Custom')}</p>
               {themeId === 'custom' && (
                 <div className="absolute top-2.5 right-2.5">
-                  <CheckCircle aria-hidden="true" className="h-4 w-4" style={{ color: customPrimary }} />
+                  <CheckCircle aria-hidden="true" className="h-4 w-4 text-[var(--theme-primary)]" />
                 </div>
               )}
             </Button>

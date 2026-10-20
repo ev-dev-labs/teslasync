@@ -216,6 +216,8 @@ describe('LayoutSwitcher', () => {
 
     const menu = screen.getByRole('menu', { name: 'Saved layouts' });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass('top-full', 'mt-1');
+    expect(menu).not.toHaveClass('bottom-full');
     expect(trigger()).toHaveAttribute('aria-expanded', 'true');
 
     const mainItem = screen.getByRole('menuitemradio', { name: 'Main' });

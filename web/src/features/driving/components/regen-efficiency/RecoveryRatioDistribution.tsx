@@ -15,7 +15,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 
 import type {
   RegenEfficiencyModel,
@@ -23,6 +23,7 @@ import type {
 } from '../../lib/regenEfficiency';
 import { DetailScopeNotice } from './DetailScopeNotice';
 import type { RegenSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RecoveryRatioDistributionProps {
   model: RegenEfficiencyModel;
@@ -33,6 +34,7 @@ export function RecoveryRatioDistribution({
   model,
   state,
 }: RecoveryRatioDistributionProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const bucketLabel = (key: RegenRatioBucketKey): string => {
     switch (key) {
@@ -72,15 +74,15 @@ export function RecoveryRatioDistribution({
             {
               median:
                 model.ratioStatistics.medianPct != null
-                  ? fmtPercent(model.ratioStatistics.medianPct, 1)
+                  ? fmtPercent(model.ratioStatistics.medianPct)
                   : '—',
               q1:
                 model.ratioStatistics.q1Pct != null
-                  ? fmtPercent(model.ratioStatistics.q1Pct, 1)
+                  ? fmtPercent(model.ratioStatistics.q1Pct)
                   : '—',
               q3:
                 model.ratioStatistics.q3Pct != null
-                  ? fmtPercent(model.ratioStatistics.q3Pct, 1)
+                  ? fmtPercent(model.ratioStatistics.q3Pct)
                   : '—',
             },
           );
@@ -125,7 +127,7 @@ export function RecoveryRatioDistribution({
           {
             key: 'share',
             label: t('regen.distribution.share', 'Eligible share'),
-            format: (value) => fmtPercent(value, 1),
+            format: (value) => fmtPercent(value),
           },
         ]}
       >

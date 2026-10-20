@@ -1,0 +1,603 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-admin-dev-tools",
+  "phase": 6,
+  "status": "SOURCE_QA_COMPLETE_WITH_FINDINGS",
+  "page": "web\\src\\features\\admin\\pages\\DevToolsPage.tsx",
+  "routes": ["/dev-tools"],
+  "acceptance": {
+    "sourceReview": "COMPLETE",
+    "sourceCorrectness": "FAIL",
+    "native": "NOTRUN",
+    "wholePage": "NOT_ACCEPTED",
+    "wholeApplication": "NOT_ACCEPTED",
+    "meaning": "Report completion only. Individual PASS entries are bounded source observations, not executed functional, visual, accessibility or native acceptance."
+  },
+  "timebox": {
+    "creationAt": "2026-10-13T16:20:09.100Z",
+    "firstMeasuredClock": "2026-10-13T16:20:27.7084472Z",
+    "sourceScanAt": "2026-10-13T16:27:27.3393482Z",
+    "latestInspectionClock": "2026-10-13T16:29:11.0883130Z",
+    "returnBoundary": "2026-10-13T16:40:09.100Z",
+    "hardBoundary": "2026-10-13T16:45:09.100Z",
+    "commandLimitSeconds": 480,
+    "clockReset": false,
+    "finalValidationAndRelease": "Recorded in web\\logs\\phase6-qa-admin-dev-tools.log before the DONE return."
+  },
+  "authority": {
+    "queueContract": "migration-queue.md:143-157",
+    "queueRow": "migration-queue.md:195",
+    "originalAcceptedSourceRow": "migration-queue.md:1523",
+    "originalInventory": "docs\\frontend-audits\\audit-page-008.json:1-320",
+    "read": [
+      "docs\\orchestrator-loop.md:1-296",
+      "docs\\session-handoff.md:1-110",
+      "docs\\frontend-design-contract.md:1-230,419-607",
+      "docs\\frontend-mission.md:1-230,704-826,1000-1250,1416-1525",
+      "docs\\frontend-inventory.md:1-58",
+      ".github\\instructions\\react-frontend.instructions.md:1-600",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md"
+    ],
+    "siAuthority": "Current SI cutover/design contract supersedes the historical source-unit/legacy converter examples in older frontend/unit-conversion instructions. No measurements, unit fields or source code changed.",
+    "skillsRead": ["audit-violations", "verify-api-hooks"],
+    "helperScripts": "NOTRUN: assignment prohibits helpers. Script guidance was read; direct source searches were used instead."
+  },
+  "safety": {
+    "onlyWritableFiles": [
+      "docs\\frontend-audits\\phase6-qa-admin-dev-tools.json",
+      "web\\logs\\phase6-qa-admin-dev-tools.log"
+    ],
+    "applicationWrites": 0,
+    "sourceTestCatalogConfigWrites": 0,
+    "developerToolsExecuted": 0,
+    "apiRequests": 0,
+    "mutations": 0,
+    "browserCalls": 0,
+    "gitOperations": 0,
+    "subagents": 0,
+    "installs": 0,
+    "extensions": 0,
+    "serversStarted": 0,
+    "dockerOperations": 0,
+    "realIdentitiesOrSecretsRead": false,
+    "privacy": "Only source contracts and static synthetic/example text inspected. No actual roster, tokens, PEM secrets, live payloads or user data obtained.",
+    "ignoredLogEvidence": ".gitignore contains logs/. An optional read of nonexistent web\\.gitignore ended exit1; no Git command was used."
+  },
+  "checks": [
+    {
+      "id": "C01",
+      "check": "Page independent sources and no whole-page data gate",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DevToolsPage.tsx:45-55,85-125", "web\\src\\components\\layout\\PageContainer.tsx:243-257"],
+      "scope": "fatalError is rendered nonblockingly; children are not suppressed by PageLayout query metadata. Two summaries and the selected tab remain source-reachable."
+    },
+    {
+      "id": "C02",
+      "check": "Overview unknown, retained and paused trust",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DevToolsPage.tsx:47-48,98-123", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\DevToolsBrief.tsx:22-45", "web\\src\\api\\dataState.ts:187-248", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:57-110"],
+      "scope": "Missing observations pass undefined rawValue, not measured zero. Cached refresh failures and paused retained data keep counts with stale notices. Initial paused sources remain unknown; paused/offline native presentation NOTRUN."
+    },
+    {
+      "id": "C03",
+      "check": "Overview refresh action feedback and scope",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DevToolsPage.tsx:53-59,72-81", "web\\src\\components\\ui\\Button.tsx:61-79"],
+      "scope": "Refresh calls both overview refetch functions, tracks either isFetching, disables through loading and has a localized accessible name. It is explicitly overview status, not a claim to refresh every tool tab."
+    },
+    {
+      "id": "C04",
+      "check": "Tab URL, naming and native-button semantics",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DevToolsPage.tsx:28-44,127-145", "web\\src\\hooks\\useUrlState.ts:102-134,187-197", "web\\src\\components\\ui\\TabNav.tsx:25-64"],
+      "scope": "Five accepted values, invalid URL falls back, default omitted, other URL parameters retained. Named pressed-button group is intentional, not an incomplete ARIA tablist. The old inventory's missing group-label issue is fixed at page:135."
+    },
+    {
+      "id": "C05",
+      "check": "Preserved source sections, tools and comparable line count",
+      "status": "PASS",
+      "evidence": ["migration-queue.md:1523", "web\\src\\features\\admin\\pages\\DevToolsPage.tsx:114-144", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:847-874", "web\\src\\features\\admin\\components\\devtools\\ClientUtilitiesSection.tsx:39-54", "web\\src\\features\\admin\\components\\devtools\\constants.ts:136-158"],
+      "scope": "Current page149 versus original144; comparable composed3945 versus historical original3940. Two summaries, five tabs, wizard, nine Fleet API tools, two telemetry panels, five infrastructure tools, fifteen utilities and four links present. Not runtime parity."
+    },
+    {
+      "id": "C06",
+      "check": "HTTP method/path registration",
+      "status": "PASS",
+      "evidence": ["internal\\api\\router.go:3362-3363,3626-3630,4788-4816", "web\\src\\api\\hooks\\useTelemetry.ts:636-683", "web\\src\\api\\hooks\\useVehicles.ts:73-79", "web\\src\\features\\admin\\components\\devtools\\helpers.ts:8-30"],
+      "scope": "All 26 used unique method/path pairs match router source. No API calls; payload and response semantics independently FAIL below."
+    },
+    {
+      "id": "C07",
+      "check": "Source-scoped prohibited-pattern searches",
+      "status": "PASS",
+      "evidence": ["web\\logs\\phase6-qa-admin-dev-tools.log", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:765", "web\\src\\features\\admin\\components\\devtools\\tools\\ColorConverter.tsx:50"],
+      "scope": "31 production files: static CSS-variable inline style0/raw controls0/direct vendor imports0/old API imports0/double prefix calls0/camel query names0/deprecated converter candidates0. Two inspected dynamic styles are legitimate. Not blanket engineering compliance; category import, palette, typography and trust failures remain."
+    },
+    {
+      "id": "C08",
+      "check": "Reference and utility source affordances",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\ReferenceLinksSection.tsx:29-75", "web\\src\\features\\admin\\components\\devtools\\ClientUtilitiesSection.tsx:67-151"],
+      "scope": "Reference links have safe new-tab attributes, hidden localized new-tab hint, icon fallback and explicit empty state. Utility search has a name and filtered-no-match status; existing Accordion owns disclosure. Open/focus behavior NOTRUN."
+    },
+    {
+      "id": "C09",
+      "check": "Declared null handling and raw SI boundaries",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DevToolsPage.tsx:50-51", "web\\src\\features\\admin\\components\\devtools\\helpers.ts:128-166", "web\\src\\features\\admin\\components\\devtools\\ResultPanel.tsx:20-37", "web\\src\\features\\admin\\components\\devtools\\constants.ts:122-133"],
+      "scope": "Top-level optional arrays and error extraction have guards; ResultPanel safely prints ordinary null/primitive/circular values. Catalog Tesla signal names, including ChargeRateMilePerHour, are upstream identifiers, not new non-SI measurements. No legacy display converter call found. Arbitrarily malformed roster elements not certified."
+    },
+    {
+      "id": "C10",
+      "check": "Telemetry initial/loading/retained/paused states",
+      "status": "FAIL",
+      "finding": "F06",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetTelemetryHealth.tsx:19-25,114-115,143-164,188-214"]
+    },
+    {
+      "id": "C11",
+      "check": "Read/mutation errors, retry and success-only feedback",
+      "status": "FAIL",
+      "finding": "F02",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\helpers.ts:13-20", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:26-39,255-257,265-271"]
+    },
+    {
+      "id": "C12",
+      "check": "Upload request JSON contract",
+      "status": "FAIL",
+      "finding": "F01",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:256", "internal\\api\\devtools\\handler.go:466-471"]
+    },
+    {
+      "id": "C13",
+      "check": "Fleet configuration/authentication response contract",
+      "status": "FAIL",
+      "finding": "F03",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:43-44,67-78,724-725", "internal\\api\\devtools\\handler.go:242-251", "web\\src\\lib\\resilience.ts:26-40"]
+    },
+    {
+      "id": "C14",
+      "check": "Public-key address and pairing provenance",
+      "status": "FAIL",
+      "finding": "F04",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:275,297-302,348-360", "internal\\api\\devtools\\handler.go:242-251,533-537"]
+    },
+    {
+      "id": "C15",
+      "check": "MQTT input/action API semantics",
+      "status": "FAIL",
+      "finding": "F05",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\InfrastructureSection.tsx:17-44", "internal\\api\\devtools\\handler.go:312-337"]
+    },
+    {
+      "id": "C16",
+      "check": "VIN/result/export ownership",
+      "status": "FAIL",
+      "finding": "F07",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:499-505,550-582,633-679", "web\\src\\features\\admin\\components\\devtools\\TelemetryErrorsPanel.tsx:91-105"]
+    },
+    {
+      "id": "C17",
+      "check": "Live-only mutation boundary",
+      "status": "FAIL",
+      "finding": "F08",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\helpers.ts:14-17", "web\\src\\api\\client.ts:373-392", "web\\src\\lib\\operationalMode.ts:66-76", "web\\src\\api\\offlineCache.ts:50-78"]
+    },
+    {
+      "id": "C18",
+      "check": "Destructive action confirmation",
+      "status": "FAIL",
+      "finding": "F09",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:313-318,564", "internal\\api\\devtools\\handler.go:440-442,542-550", "internal\\api\\router.go:4801-4804,4810"]
+    },
+    {
+      "id": "C19",
+      "check": "Required-input validation before action dispatch",
+      "status": "FAIL",
+      "finding": "F10",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:391-410,461-469,633-675", "internal\\api\\devtools\\handler.go:688-701,919-977"]
+    },
+    {
+      "id": "C20",
+      "check": "Visible textarea label associations",
+      "status": "FAIL",
+      "finding": "F11",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:325-330,440-447", "web\\src\\components\\ui\\Textarea.tsx:57-84"]
+    },
+    {
+      "id": "C21",
+      "check": "Unknown versus authoritative-empty telemetry response",
+      "status": "FAIL",
+      "finding": "F12",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\helpers.ts:128-145", "web\\src\\features\\admin\\components\\devtools\\TelemetryErrorsPanel.tsx:114-136", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:583"]
+    },
+    {
+      "id": "C22",
+      "check": "User-facing i18n",
+      "status": "FAIL",
+      "finding": "F13",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\constants.ts:137-144", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:781,792,804-806", "web\\src\\features\\admin\\components\\devtools\\helpers.ts:60-74,179-186", "web\\src\\api\\hooks\\useTelemetry.ts:662-680"]
+    },
+    {
+      "id": "C23",
+      "check": "Cron grammar and next-run correctness",
+      "status": "FAIL",
+      "finding": "F14",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\tools\\CronParser.tsx:16-22,62-88", "web\\src\\features\\admin\\components\\devtools\\helpers.ts:85-89"]
+    },
+    {
+      "id": "C24",
+      "check": "Timestamp temporal direction",
+      "status": "FAIL",
+      "finding": "F15",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\helpers.ts:173-186", "web\\src\\features\\admin\\components\\devtools\\tools\\TimestampTool.tsx:135-157"]
+    },
+    {
+      "id": "C25",
+      "check": "Restrained local presentation and category imports",
+      "status": "FAIL",
+      "finding": "F16",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\constants.ts:7-13", "web\\src\\features\\admin\\components\\devtools\\ToolCard.tsx:25-26", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:10,764", "web\\src\\features\\admin\\components\\devtools\\ResultPanel.tsx:45-46"]
+    },
+    {
+      "id": "C26",
+      "check": "Mobile, allocated containers, touch targets and fixed-footer reachability",
+      "status": "NOTRUN",
+      "evidence": ["docs\\frontend-design-contract.md:502-541,597-601", "web\\src\\features\\admin\\components\\devtools\\FleetTelemetryHealth.tsx:45,113,124", "web\\src\\features\\admin\\components\\devtools\\tools\\ByteSizeConverter.tsx:72"],
+      "reason": "Browser prohibited. Source candidates listed separately; no measured clipping, hit target or viewport acceptance."
+    },
+    {
+      "id": "C27",
+      "check": "Native keyboard/focus/screen reader/contrast/themes/forced colors/reduced motion",
+      "status": "NOTRUN",
+      "evidence": ["docs\\frontend-design-contract.md:525-541,597-601", "web\\src\\components\\ui\\TabNav.tsx:38-63", "web\\src\\features\\admin\\components\\devtools\\ReferenceLinksSection.tsx:55-59"],
+      "reason": "Static semantics are not mounted acceptance. No native provider invoked or capture produced."
+    },
+    {
+      "id": "C28",
+      "check": "Literal TypeScript, lint, build and scoped tests",
+      "status": "NOTRUN",
+      "evidence": ["migration-queue.md:1523", "docs\\session-handoff.md:68-78", "docs\\frontend-design-contract.md:582-600"],
+      "reason": "Report-only QA with no application changes. Unchanged passing tests/gates were not rerun; helpers/full suites forbidden. Historical source12/12 and gate exit0 are not fresh results.",
+      "freshTestCounts": {"discovered": null, "executed": null, "passed": null, "failed": null, "skipped": null}
+    },
+    {
+      "id": "C29",
+      "check": "Live API/auth/capability enforcement and mutation outcomes",
+      "status": "NOTRUN",
+      "evidence": ["internal\\api\\router.go:4788-4816", "web\\src\\api\\client.ts:373-420"],
+      "reason": "No requests, reauthentication, registration, key changes, subscription/delete, Tesla refresh or MQTT publish performed. Source failures do not claim successful live exploitation or backend authorization absence."
+    },
+    {
+      "id": "C30",
+      "check": "Frontend observability bootstrap isolation",
+      "status": "PASS",
+      "evidence": [".github\\instructions\\observability.instructions.md:18", "web\\src\\features\\admin\\pages\\DevToolsPage.tsx:1-24", "web\\src\\features\\admin\\components\\devtools\\helpers.ts:1-20"],
+      "scope": "Inspected page/tool sources do not add RUM initialization or log actual vehicle/credential payloads. Whole tracing coverage, backend spans and production logging NOTRUN/out of scope."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "F01",
+      "severity": "high",
+      "title": "Public-key upload uses the wrong JSON field",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:256", "internal\\api\\devtools\\handler.go:466-471"],
+      "mechanism": "UI serializes {pem: pemInput}; handler decodes public_key_pem. With a database available, even a valid nonempty PEM produces an empty decoded PublicKeyPEM and HTTP400 before PEM validation.",
+      "repro": "Source-derived, NOT EXECUTED: submit a synthetic valid public PEM through Upload key. Expected stored; source contract necessarily takes public_key_pem-is-required branch.",
+      "needs": "One narrow frontend request-contract correction to public_key_pem, covered by the existing handler contract; preserve PEM on failure.",
+      "historicalRelation": "Backend field implementation was outside the original inventory's verified scope."
+    },
+    {
+      "id": "F02",
+      "severity": "high",
+      "title": "Caught request failures are treated as successful query/mutation resolutions",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\helpers.ts:13-20", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:26-39,255-257,265-271,411"],
+      "mechanism": "apiFetch returns {error} instead of rejecting. Reads replace last valid cache payload with that error object, bypass query retries and retained-data error states. Mutation onSuccess still runs; upload clears controlled PEM input on failed requests, including F01.",
+      "repro": "Source-derived, NOT EXECUTED: first resolve a config/status read, then reject its refresh; retained fields disappear behind an error banner. Reject upload; onSuccess invalidates status and sets PEM to empty despite failure.",
+      "needs": "One bounded typed-query/mutation integration fix preserving rejection, cancellation, current payloads/query IDs and error surfaces across all helper consumers. Lifecycle changes only on confirmed success.",
+      "historicalRelation": "Original audit-page-008 trust issue remains."
+    },
+    {
+      "id": "F03",
+      "severity": "high",
+      "title": "Actual Fleet API info falsely renders unauthenticated and no regions",
+      "evidence": ["internal\\api\\devtools\\handler.go:242-251", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:41-44,67-78,724-725", "web\\src\\lib\\resilience.ts:26-40"],
+      "mechanism": "Handler supplies has_valid_token and a region-name-to-URL object. UI reads authenticated and requires a regions array. camelCaseKeys adds hasValidToken, not authenticated, and does not change object to array. Valid auth therefore renders Not authenticated; regions show dash; onboarding auth cannot auto-detect.",
+      "repro": "Source-derived, NOT EXECUTED: feed the exact successful handler shape with has_valid_token=true and three regions. Source derives authStatus=false and regions=[], even though base_url/client_id aliases work.",
+      "needs": "One response-contract adapter fix using actual snake_case fields/typed existing FleetSetup contracts, with truthful null/unknown handling. Do not rename unrelated wire fields."
+    },
+    {
+      "id": "F04",
+      "severity": "medium",
+      "title": "Public-key location is hidden and pairing URL always uses an example host",
+      "evidence": ["internal\\api\\devtools\\handler.go:242-251,533-537", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:275,297-302,348-360", "web\\src\\lib\\resilience.ts:26-40"],
+      "mechanism": "PublicKeyStatus supplies well_known_path/wellKnownPath, not wellKnownUrl, so the actual path is hidden. FleetAPIInfo supplies no hostname, so pairing uses https://tesla.com/_ak/yourapp.example.com, presented as a normal copyable pairing value rather than unknown configuration.",
+      "repro": "Source-derived, NOT EXECUTED: resolve either exact handler payload. Configured key's well-known path has no rendered branch; pairing remains the example host.",
+      "needs": "One key-address/provenance integration correction. Render actual well-known path; obtain an existing authorized configured hostname or explicitly mark it unknown instead of inventing a production pairing host."
+    },
+    {
+      "id": "F05",
+      "severity": "medium",
+      "title": "MQTT topic/message controls cannot affect the advertised publish action",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\InfrastructureSection.tsx:17-44", "internal\\api\\devtools\\handler.go:312-337"],
+      "mechanism": "UI sends entered topic/message; handler never decodes the body and publishes fixed teslasync/dev-tools/ping with a generated timestamp/source payload. A successful result is a connectivity ping, not the requested message.",
+      "repro": "Source-derived, NOT EXECUTED: enter any synthetic topic and message and inspect dispatch versus handler. Published destination/content stay fixed regardless of both inputs.",
+      "needs": "One narrow frontend/API semantic alignment: accurately present the existing fixed ping contract or explicitly authorize/implement a validated publish contract; do not silently expand broker capabilities."
+    },
+    {
+      "id": "F06",
+      "severity": "high",
+      "title": "Telemetry tab reports unknown as healthy zero and discards retained tables",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetTelemetryHealth.tsx:19-25,114-115,143-164,188-214"],
+      "mechanism": "Undefined data defaults to []; unconditional affected badge shows success0 during initial loading/failure. Both isError branches replace previously loaded rows with QueryError. No local stale/paused trust adapter marks retained rows when query fetchStatus is paused.",
+      "repro": "Source-derived, NOT EXECUTED: render initial pending/failure with no VINs: badge0 affected. Then resolve nonempty data and fail refresh: table replaced. Retained paused query has no local blocked-refresh distinction.",
+      "needs": "One telemetry-tab state fix using per-source useDataState/fatalError and retained warnings/independent retry; never fabricate zero before authoritative empty.",
+      "historicalRelation": "Original audit-page-008 states issue remains; overview correctness does not cover this child."
+    },
+    {
+      "id": "F07",
+      "severity": "high",
+      "title": "VIN changes leave prior result payloads labeled with the new VIN",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:499-505,550-582,633-679", "web\\src\\features\\admin\\components\\devtools\\TelemetryErrorsPanel.tsx:91-105"],
+      "mechanism": "Controlled VIN change only calls setVin. Config/errors/delete and vehicle-data mutation results are not reset or bound to submitted VIN. Errors panel receives current VIN for filename while rows remain from the previous query.",
+      "repro": "Source-derived, NOT EXECUTED: retrieve synthetic vehicle A errors, select synthetic B without another request, then inspect the existing rows/download: A data remains and filename becomes telemetry-errors-B.json. Four vehicle-data actions similarly keep A output under B selection.",
+      "needs": "One response-scope correction: retain submitted VIN/action provenance or reset affected result state on selection change, including in-flight completion ordering and export name.",
+      "historicalRelation": "Original audit-page-008 VIN/result issue remains."
+    },
+    {
+      "id": "F08",
+      "severity": "high",
+      "title": "Developer-tool writes do not opt into the existing live-mode guard",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\helpers.ts:14-17", "web\\src\\api\\client.ts:373-392", "web\\src\\lib\\operationalMode.ts:66-76", "web\\src\\api\\offlineCache.ts:50-78", "web\\src\\api\\hooks\\useTelemetry.ts:659,674"],
+      "mechanism": "requiresLiveMode defaults false and is never passed by apiFetch. assertOperationalWriteAllowed returns immediately when the flag is false; offline defense patterns do not include /dev-tools. DevTools write controls have no local operational-mode condition. The source client therefore does not reject these writes in online as_of mode; offline mutations may pause under TanStack defaults.",
+      "repro": "Source-derived, NOT EXECUTED: load /dev-tools?as_of=2026-01-01T00:00:00Z with an online environment, activate a key/subscription/MQTT write. Source has no live-only client boundary before request. No actual write or server-authorization conclusion claimed.",
+      "needs": "One exact DevTools live-only boundary fix with visible reason, immediate rejection/no delayed offline writes and preserved query read behavior. Check related Tesla-refresh POSTs explicitly.",
+      "limitation": "Backend authentication remains independent and was not tested; this is not an exploit or an assertion that all server guards are absent."
+    },
+    {
+      "id": "F09",
+      "severity": "high",
+      "title": "Key replacement/deletion and telemetry deletion dispatch immediately",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:313-318,564", "internal\\api\\devtools\\handler.go:440-442,542-550", "internal\\api\\router.go:4801-4804,4810"],
+      "mechanism": "Click handlers directly call mutate, with no confirmation and no configured-key predicate. Generate uses backend ON CONFLICT replacement, Delete removes singleton public key, and Delete config immediately deletes current selected vehicle's telemetry configuration.",
+      "repro": "Source-derived, NOT EXECUTED: with a configured key, one Generate/Delete keypair click dispatches replacement/deletion; with VIN selected, one Delete config click dispatches DELETE. No dialog or explicit destructive-context confirmation intervenes in the inspected path.",
+      "needs": "One bounded destructive-action confirmation correction naming real scope/consequences and guarding concurrent destructive operations. Preserve existing server auth; no new privilege capability."
+    },
+    {
+      "id": "F10",
+      "severity": "medium",
+      "title": "Subscription and vehicle-data actions dispatch without required selection validation",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:391-410,461-469,633-675", "internal\\api\\devtools\\handler.go:688-701,919-977"],
+      "mechanism": "Subscribe has no disabled/validation predicate for VIN/hostname/port and serializes vins:[''] initially; invalid port parse can serialize null. Four vehicle-data buttons are enabled with initial vin='', constructing required-vin requests guaranteed to take handler400 branches.",
+      "repro": "Source-derived, NOT EXECUTED: mount Fleet API tab without choosing a vehicle and inspect enabled Subscribe/vehicle-data controls. Vehicle-data requests contain vin=; subscription carries an empty VIN. Invalid port text reaches serialization with no input error.",
+      "needs": "One local required-input validation/disabled-reason fix, preserving server-authorized hostname defaults and per-signal interval_seconds semantics rather than requiring invented backend fields."
+    },
+    {
+      "id": "F11",
+      "severity": "medium",
+      "title": "Visible PEM and CA labels are not associated with their textareas",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:325-330,440-447", "web\\src\\components\\ui\\Textarea.tsx:57-84"],
+      "mechanism": "Both controls have a nearby span but no label prop, associated htmlFor/id pair or aria-labelledby. Shared Textarea only renders a Label when label is provided. Placeholder fallback is not a programmatic association with the visible label.",
+      "repro": "Source-derived, NOT EXECUTED: inspect rendered naming inputs under Upload PEM and CA cert. The visible spans reference neither generated textarea ID.",
+      "needs": "One two-field association correction using existing localized Textarea label API; preserve controlled contents and descriptions."
+    },
+    {
+      "id": "F12",
+      "severity": "medium",
+      "title": "Unrecognized Tesla error shape still says no errors reported",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\helpers.ts:128-145", "web\\src\\features\\admin\\components\\devtools\\TelemetryErrorsPanel.tsx:114-136", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:583"],
+      "mechanism": "Unknown successful payload yields rows=[] and ok=false. Badge changes to ?, but the same authoritative healthy emptyMessage is always rendered; raw disclosure does not retract the no-errors statement.",
+      "repro": "Source-derived, NOT EXECUTED: resolve errors to a successful object without any recognized errors array. Panel shows ? beside No Fleet Telemetry errors reported for this vehicle.",
+      "needs": "One unknown-shape-versus-authoritative-empty wording/state correction retaining the raw disclosure and real-zero state."
+    },
+    {
+      "id": "F13",
+      "severity": "medium",
+      "title": "Onboarding, helper phrases and refresh toasts bypass localization",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\constants.ts:137-144", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:781,792,804-806", "web\\src\\features\\admin\\components\\devtools\\helpers.ts:60-74,179-186", "web\\src\\api\\hooks\\useTelemetry.ts:662-680"],
+      "mechanism": "Onboarding constant English labels/descriptions render directly; translating the aria-label outer phrase does not translate its label parameter. Cron/relative-time helpers return English text. Refresh success/failure hooks pass literal English to toast.",
+      "repro": "Source-derived, NOT EXECUTED: use a non-English locale and inspect these code paths: fixed labels/descriptions and helper/toast strings are independent of t/i18n.",
+      "needs": "One scoped localization adoption retaining step IDs/persistence and calculator values, with parent-owned canonical catalog integration. Exhaustive locale/catalog completeness NOTRUN.",
+      "historicalRelation": "Original audit-page-008 localization issue remains."
+    },
+    {
+      "id": "F14",
+      "severity": "medium",
+      "title": "Cron parser accepts five invalid fields and ignores step range/base",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\tools\\CronParser.tsx:16-22,62-88", "web\\src\\features\\admin\\components\\devtools\\helpers.ts:85-89"],
+      "mechanism": "isValid checks only field count. The slash branch discards the range/base and applies value % step to the whole field domain, so 10-20/5 includes minutes0,5,25 and others outside10-20; five garbage tokens enter the valid/no-upcoming-runs branch instead of invalid syntax.",
+      "repro": "Source-derived, NOT EXECUTED: enter 10-20/5 * * * * or a b c d e and follow parsing predicates. The first loses its range; the second is accepted as valid solely because it has five fields.",
+      "needs": "One bounded existing cron-helper correctness/validation fix preserving presets and next-run count, with direct grammar cases. No helper execution occurred in QA."
+    },
+    {
+      "id": "F15",
+      "severity": "medium",
+      "title": "Future timestamps render as time ago",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\helpers.ts:173-186", "web\\src\\features\\admin\\components\\devtools\\tools\\TimestampTool.tsx:135-157"],
+      "mechanism": "Math.abs(Date.now()-ms) discards temporal direction and every branch appends ago. Valid future Unix/ISO inputs therefore display a past-tense relative value.",
+      "repro": "Source-derived, NOT EXECUTED: input an ISO instant one hour in the future. Absolute difference takes the1h branch and emits1h ago.",
+      "needs": "One direction-aware localized relative-time correction using existing date/time utilities; keep valid negative Unix epochs and invalid-date guard."
+    },
+    {
+      "id": "F16",
+      "severity": "low",
+      "title": "Child tool palette, typography and modal import still bypass current design contract",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\constants.ts:7-13", "web\\src\\features\\admin\\components\\devtools\\ToolCard.tsx:25-26", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:10,764", "web\\src\\features\\admin\\components\\devtools\\ResultPanel.tsx:45-46"],
+      "mechanism": "Five category-only neon icon families and neon gradient are explicit source styling choices, not demonstrated measured contrast failures. Local headings use ad-hoc text classes and SignalConfigModal is imported directly from implementation instead of its category API.",
+      "repro": "Source inspection only: every ToolCard resolves category ICON_COLOR_MAP; wizard progress requests cyan-to-green gradient; modal import directly names the implementation file.",
+      "needs": "After correctness fixes, one narrow local adoption using existing restrained tokens/type roles/category exports. No remodernization, data removal or new component system.",
+      "historicalRelation": "Original audit-page-008 visual/typography/import issues remain; no fresh visual acceptance claimed."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "P01",
+      "status": "NOTRUN",
+      "candidate": "Narrow-card toolbar/command/result overflow",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetTelemetryHealth.tsx:113", "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:116-125,809", "web\\src\\features\\admin\\components\\devtools\\tools\\ByteSizeConverter.tsx:72"],
+      "reason": "Unwrapped VIN/action rows, long code, three wizard actions and fixed five-column results are risk mechanisms. Actual clipping, horizontal document scroll, 200% text and RTL behavior require mounted measurement."
+    },
+    {
+      "id": "P02",
+      "status": "NOTRUN",
+      "candidate": "Undersized mobile targets and focus visibility",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\FleetTelemetryHealth.tsx:45,124", "web\\src\\components\\ui\\Button.tsx:36-47", "web\\src\\features\\admin\\components\\devtools\\ReferenceLinksSection.tsx:58"],
+      "reason": "Explicit !h-auto/!min-h-0/zero padding and small button sizing warrant44px/spacing/focus checks. No measured rectangles or WCAG failure asserted."
+    },
+    {
+      "id": "P03",
+      "status": "NOTRUN",
+      "candidate": "Null/malformed local vehicle records and loss of source metadata",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\helpers.ts:25-35", "web\\src\\api\\hooks\\useVehicles.ts:73-79"],
+      "reason": "Local useVehicleOptions duplicates shared ['vehicles'] query without AbortSignal, safeArray or exposed loading/error state. Exact malformed-record reachability and race effects unexecuted; reuse concern is source-confirmed, arbitrary backend shape is not."
+    },
+    {
+      "id": "P04",
+      "status": "NOTRUN",
+      "candidate": "Utility computation responsiveness and result/input race",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\tools\\RegexTester.tsx:27-57", "web\\src\\features\\admin\\components\\devtools\\helpers.ts:101-116", "web\\src\\features\\admin\\components\\devtools\\tools\\HashCalculator.tsx:32-49,68-72"],
+      "reason": "Synchronous regex/cron work and asynchronous digest followed by editable input warrant bounded profiling/state checks. No stress payload, tool computation, timing or freeze reproduced."
+    },
+    {
+      "id": "P05",
+      "status": "NOTRUN",
+      "candidate": "Byte-size trailing-input and overflow validation",
+      "evidence": ["web\\src\\features\\admin\\components\\devtools\\tools\\ByteSizeConverter.tsx:34-43"],
+      "reason": "parseFloat accepts a numeric prefix, and only input num, not multiplied bytes, is finite-checked. Presentation outcome under huge values and intended permissive grammar need a bounded existing-case review; no computed output claimed."
+    }
+  ],
+  "apiContracts": {
+    "status": "PASS_PATHS_FAIL_SEMANTICS",
+    "requestClient": "web\\src\\api\\client.ts:75-99,288,373-392",
+    "queryNames": ["vin", "domain"],
+    "pathsWithoutClientPrefix": true,
+    "rows": [
+      {"method": "GET", "path": "/vehicles", "caller": "web\\src\\api\\hooks\\useVehicles.ts:73-79; web\\src\\features\\admin\\components\\devtools\\helpers.ts:28-30", "router": "internal\\api\\router.go:3362-3363", "status": "PASS"},
+      {"method": "GET", "path": "/tesla/fleet-telemetry/error-vins", "caller": "web\\src\\api\\hooks\\useTelemetry.ts:639", "router": "internal\\api\\router.go:3627", "status": "PASS"},
+      {"method": "GET", "path": "/tesla/fleet-telemetry/errors", "caller": "web\\src\\api\\hooks\\useTelemetry.ts:649", "router": "internal\\api\\router.go:3629", "status": "PASS"},
+      {"method": "POST", "path": "/tesla/fleet-telemetry/error-vins/refresh", "caller": "web\\src\\api\\hooks\\useTelemetry.ts:659", "router": "internal\\api\\router.go:3628", "status": "PASS"},
+      {"method": "POST", "path": "/tesla/fleet-telemetry/errors/refresh", "caller": "web\\src\\api\\hooks\\useTelemetry.ts:674", "router": "internal\\api\\router.go:3630", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/fleet-api-info", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:28,348,718", "router": "internal\\api\\router.go:4790", "status": "PASS", "semanticFindings": ["F03", "F04"]},
+      {"method": "POST", "path": "/dev-tools/register-partner", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:92", "router": "internal\\api\\router.go:4792", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/partner-public-key", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:160", "router": "internal\\api\\router.go:4793", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/public-key-status", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:247,712", "router": "internal\\api\\router.go:4803", "status": "PASS", "semanticFindings": ["F04"]},
+      {"method": "POST", "path": "/dev-tools/generate-keypair", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:251", "router": "internal\\api\\router.go:4801", "status": "PASS"},
+      {"method": "POST", "path": "/dev-tools/upload-public-key", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:256", "router": "internal\\api\\router.go:4802", "status": "PASS", "semanticFindings": ["F01", "F02"]},
+      {"method": "DELETE", "path": "/dev-tools/public-key", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:261", "router": "internal\\api\\router.go:4804", "status": "PASS"},
+      {"method": "POST", "path": "/dev-tools/fleet-telemetry-subscribe", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:400-409", "router": "internal\\api\\router.go:4808", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/fleet-telemetry-config", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:503", "router": "internal\\api\\router.go:4809", "status": "PASS"},
+      {"method": "DELETE", "path": "/dev-tools/fleet-telemetry-config", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:505", "router": "internal\\api\\router.go:4810", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/fleet-telemetry-errors", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:504", "router": "internal\\api\\router.go:4811", "status": "PASS"},
+      {"method": "POST", "path": "/dev-tools/fleet-status", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:599", "router": "internal\\api\\router.go:4812", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/nearby-charging", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:641", "router": "internal\\api\\router.go:4813", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/release-notes", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:642", "router": "internal\\api\\router.go:4814", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/recent-alerts", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:643", "router": "internal\\api\\router.go:4815", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/service-data", "caller": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx:644", "router": "internal\\api\\router.go:4816", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/db-stats", "caller": "web\\src\\features\\admin\\components\\devtools\\InfrastructureSection.tsx:80", "router": "internal\\api\\router.go:4796", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/migration-status", "caller": "web\\src\\features\\admin\\components\\devtools\\InfrastructureSection.tsx:87", "router": "internal\\api\\router.go:4797", "status": "PASS"},
+      {"method": "POST", "path": "/dev-tools/mqtt-test", "caller": "web\\src\\features\\admin\\components\\devtools\\InfrastructureSection.tsx:21", "router": "internal\\api\\router.go:4798", "status": "PASS", "semanticFindings": ["F05"]},
+      {"method": "GET", "path": "/dev-tools/env-check", "caller": "web\\src\\features\\admin\\components\\devtools\\InfrastructureSection.tsx:95", "router": "internal\\api\\router.go:4799", "status": "PASS"},
+      {"method": "GET", "path": "/dev-tools/runtime-info", "caller": "web\\src\\features\\admin\\components\\devtools\\InfrastructureSection.tsx:102", "router": "internal\\api\\router.go:4800", "status": "PASS"}
+    ],
+    "workspace": "web\\src\\lib\\workspaceScope.ts:118,158-166 intentionally disables global vehicle scope; /dev-tools is not range-enabled. Local VIN-backed operational selectors must be retained; no duplicate workspace range required.",
+    "cancellation": "Top-level useVehicles/useTelemetry reads forward AbortSignal. Local apiFetch/useVehicleOptions omit it. Existing typed useFleetSetup contracts at web\\src\\api\\hooks\\useFleetSetup.ts:26-34,71-86,95-105 can inform a bounded integration fix; their entire behavior was not audited."
+  },
+  "preservation": {
+    "baseline": "Existing audit-page-008 section/action inventory and migration-queue.md:1523 accepted receipt; neither rewritten nor regenerated.",
+    "historicalOriginalPageLines": 144,
+    "currentPageLines": 149,
+    "historicalOriginalComposedLines": 3940,
+    "currentPagePlusDevtoolsDirectoryLines": 3853,
+    "currentDevToolsBriefLines": 48,
+    "currentAdminSummaryLines": 44,
+    "currentComparableComposedLines": 3945,
+    "minimumOriginal70PercentLines": 2758,
+    "lineCountStatus": "PASS_SOURCE_COUNT_ONLY",
+    "countMethod": "Get-Content line counts over page plus every non-test .ts/.tsx devtools-directory file and the two current summary owners. Includes the retained unused DevToolsOverview export, not evidence of mounted coverage.",
+    "sections": {
+      "overviewSummaries": 2,
+      "tabAreas": 5,
+      "fleetApiWizard": 1,
+      "fleetApiTools": 9,
+      "telemetryPanels": 2,
+      "infrastructureTools": 5,
+      "clientUtilities": 15,
+      "referenceLinks": 4,
+      "glassPanelMatchingLines": 11,
+      "chartContainerMatchingLines": 0,
+      "toolCardMatchingLines": 28
+    },
+    "sourceOnlyParity": "Names and source actions matched existing inventory. Selected tabs intentionally mount one area at a time; this is not data-null hiding. Individual failed config/error paths can still remove a tool shell as documented in F02.",
+    "sharedNativeUnknown": "SignalConfigModal internals, nested drawer focus, table mobile details/exports, fixed footer, scroll owner, whole translation projection and all native widths remain unaccepted."
+  },
+  "sourcePins": {
+    "algorithm": "SHA256",
+    "measuredAt": "2026-10-13T16:27:27Z",
+    "limitation": "Snapshot measured during review, not a Git commit pin or full pre/post stability proof. No source files written by this worker.",
+    "files": {
+      "web\\src\\features\\admin\\pages\\DevToolsPage.tsx": "B1596C9324D1C4120654A2129756358AB407BA6974CB6F39A0CE7287A2B9466E",
+      "web\\src\\features\\admin\\components\\operationalbrief-a-g\\DevToolsBrief.tsx": "78978A09A8BF06ABADA0A0F57ADFEA7B695DB9724DB147EA181D6EE90DDD24AA",
+      "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx": "8ADC0EB4CB1475C52FA5096BDFF16E7C5DC66618282CDF2B5208B85975705E49",
+      "web\\src\\features\\admin\\components\\devtools\\FleetTelemetryHealth.tsx": "B855980C70DCD5BE4C3B5A3DF29DE6BDAA7DA191CC922B3CF3BFA9F26ACA49C9",
+      "web\\src\\features\\admin\\components\\devtools\\helpers.ts": "3545E1DE60F572520361ADC80C2890E324CE3FDF608635B229FE9082CA55BB05",
+      "internal\\api\\devtools\\handler.go": "E048820A3B441A44641E9E7A9FB65314F10AD0F67AE05BB223DB9D7F7C06BBCB",
+      "internal\\api\\router.go": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C"
+    }
+  },
+  "verification": {
+    "rawLog": "web\\logs\\phase6-qa-admin-dev-tools.log",
+    "auditScope": "31 production files: page, 29 devtools-directory source files and DevToolsBrief; tests excluded. AdminSummary read/count separately.",
+    "patternCounts": {
+      "staticCssVariableInlineStyles": 0,
+      "rawControls": 0,
+      "directVendorImports": 0,
+      "oldApiImports": 0,
+      "doublePrefixCalls": 0,
+      "camelQueryParameters": 0,
+      "deprecatedUnitCallCandidates": 0,
+      "explicitAnyCandidateMatchedLines": 1,
+      "explicitAnyActualTypeViolations": 0
+    },
+    "candidateAdjudication": "The sole explicit-any regex match is JwtDecoder.tsx:38 JSDoc text 'throws: any malformed input', not a type declaration. No blanket zero-violations claim.",
+    "commands": [
+      {"command": "Direct built-in source/contract Get-Content and Select-String reads; shell4512,4535,4554", "exitCodes": [0, 0, 0], "result": "Read contracts, exact row, original acceptance and clock; no application execution."},
+      {"command": "rg -n --glob '*.ts' --glob '*.tsx' --glob '!*.test.*' --glob '!*.spec.* [scoped pattern] [exact scopes]", "shellId": "4591", "exitCode": 1, "result": "Execution failure: rg executable not on this PowerShell PATH; no counts produced. Separate built-in rg tool source searches succeeded."},
+      {"command": "Select-String -LiteralPath [31 enumerated production files] -CaseSensitive -Pattern [eight exact regexes in raw log]; Get-Content line counts; Get-FileHash -Algorithm SHA256 [seven pins]", "shellId": "4618", "exitCode": 0, "result": "Fresh source pattern counts, line counts, section rows and pins logged. Initial command label32 was corrected to actual31."},
+      {"command": "Select-String exact feature/handler contracts; Get-Content DevToolsBrief/AdminSummary line counts", "shellId": "4632", "exitCode": 0, "result": "Exact field/state evidence and comparable3945 total logged."},
+      {"command": "Select-String live-mode/confirmation callsites; read root and optional web .gitignore logs rules", "shellId": "4649", "exitCode": 1, "result": "Source read completed; root logs/ rule found. Optional web\\.gitignore absent, so final shell exit1. No Git operation or missing-scan pass claimed."},
+      {"command": "Get-Content report -Raw | ConvertFrom-Json; validate IDs/references and source-file coordinate bounds; Get-FileHash pin readback", "shellId": "4694", "exitCode": 1, "result": "JSON parsed;30checks/16findings/5candidates/26APIrows; duplicateIDs0/unresolvedfindings0. Five overlong evidence ranges found, then corrected in this report. Seven snapshot pins matched. This draft validation was not a pass."}
+    ],
+    "freshTests": "NOTRUN; no new or changed application/test code and no unchanged passing-test reruns.",
+    "typeScript": "NOTRUN; no literal npx tsc --noEmit executed by this worker.",
+    "fullSuitesBuildDocker": "NOTRUN/prohibited.",
+    "documentValidation": "Draft check found five evidence ranges beyond EOF; corrected. Final built-in JSON parsing, identifier/reference/range validation and output-path checks recorded in raw log; not a frontend test result.",
+    "sourceReadback": "At2026-10-13T16:34:21.7141194Z all seven recorded source pins still matched. This is limited pin readback, not full-worktree/Git stability proof.",
+    "checkStatusCounts": {"PASS": 10, "FAIL": 16, "NOTRUN": 4}
+  },
+  "needs": {
+    "parentIntake": "Consume this exact existing QA report; do not modify original accepted inventories or count it as native/page acceptance.",
+    "confirmedFixScopes": "F01-F16 each include source-proven mechanism, exact coordinates and an unexecuted bounded repro. Preserve original histories; register narrow owners rather than redispatching accepted source or starting a broad campaign.",
+    "highestPriority": ["F01 upload contract", "F02 rejected-failure/success-only lifecycle", "F03 Fleet info contract", "F06 child retained/unknown trust", "F07 VIN provenance", "F08 live-only writes", "F09 destructive confirmation"],
+    "nativeDeferred": "After real browser ownership grant, guarded synthetic-only native acceptance must separately cover contract widths, themes, RTL/text scale, keyboard/focus, contrast/forced colors, offline/paused/retained sources and final-action reachability. No blanket native acceptance.",
+    "sourceChangesByWorker": "NONE"
+  },
+  "closure": {
+    "allOwnershipReleasedOnDoneReturn": true,
+    "releasedScopes": [
+      "docs\\frontend-audits\\phase6-qa-admin-dev-tools.json",
+      "web\\logs\\phase6-qa-admin-dev-tools.log",
+      "all read-only application/source/test/catalog/config inspection ownership",
+      "all worker command ownership",
+      "all browser/native/resource ownership (never acquired)"
+    ],
+    "backgroundCommandsStarted": 0,
+    "activeOwnedCommandsAtReturn": 0,
+    "browserLeaseAcquired": false,
+    "sourceWriteClaimAcquired": false,
+    "postReturnWritesAllowed": false,
+    "postReturnWorkPlanned": false,
+    "stopContract": "An explicit STOP requires immediate return with ALL ownership released; no follow-up writes, commands or retries."
+  }
+}

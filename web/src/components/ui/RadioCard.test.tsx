@@ -12,7 +12,7 @@
  *   4. `disabled` fully blocks selection.
  *   5. `label`, `description`, and `icon` render (and the two optional
  *      slots are omitted when not supplied — no empty/blank nodes).
- *   6. The `accent` prop maps onto the neon token classes, and an
+ *   6. The `accent` prop maps onto restrained checked-indicator roles, and an
  *      out-of-contract accent degrades to the cyan default instead of
  *      crashing the card.
  *   7. Forwarded refs land on the `<input>`, and arbitrary input
@@ -21,7 +21,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { createRef } from 'react';
-import { RadioCard } from './RadioCard';
+import userEvent from '@testing-library/user-event';
+import { RadioCard, type RadioCardProps } from './RadioCard';
 
 afterEach(() => cleanup());
 
@@ -120,39 +121,43 @@ describe('RadioCard', () => {
     expect(screen.queryByTestId('mode-icon')).toBeNull();
   });
 
-  it('applies the neon accent classes to the card only when checked', () => {
+  it('applies accent identity only to the checked indicator, keeping card chrome neutral', () => {
     const { rerender } = render(
       <RadioCard label="Local" value="local" accent="green" checked onChange={() => {}} />,
     );
     // The visible card is the span immediately after the sr-only input.
     const card = screen.getByRole('radio').nextElementSibling as HTMLElement;
-    expect(card.className).toContain('border-neon-green/30');
-    expect(card.className).toContain('bg-neon-green/10');
+    expect(card.className).toContain('border-[var(--control-border-hover)]');
+    expect(card.className).toContain('bg-[var(--control-bg)]');
+    expect(card.firstElementChild).toHaveClass('text-[var(--semantic-success)]');
+    expect(card.firstElementChild?.firstElementChild).toHaveClass('bg-[var(--semantic-success)]');
 
     rerender(
       <RadioCard label="Local" value="local" accent="green" checked={false} onChange={() => {}} />,
     );
-    expect(card.className).not.toContain('border-neon-green/30');
-    expect(card.className).toContain('border-[var(--border-subtle)]');
+    expect(card.firstElementChild).not.toHaveClass('text-[var(--semantic-success)]');
+    expect(card.firstElementChild?.firstElementChild).toHaveClass('bg-transparent');
+    expect(card.className).toContain('border-[var(--control-border)]');
   });
 
   it('defaults the accent to cyan when none is supplied', () => {
     render(<RadioCard label="Default" value="d" checked onChange={() => {}} />);
     const card = screen.getByRole('radio').nextElementSibling as HTMLElement;
-    expect(card.className).toContain('border-neon-cyan/30');
+    expect(card.firstElementChild).toHaveClass('text-[var(--semantic-info)]');
   });
 
   it('degrades an out-of-contract accent to the cyan default without crashing', () => {
     // A shared primitive must not hard-crash on a bad (untyped-caller)
     // accent — the source falls back to the cyan token map.
+    const props: RadioCardProps = { label: 'Bad', value: 'b', accent: 'cyan', checked: true, onChange: () => {} };
+    Reflect.set(props, 'accent', 'lime');
     expect(() =>
       render(
-         
-        <RadioCard label="Bad" value="b" accent={'lime' as any} checked onChange={() => {}} />,
+        <RadioCard {...props} />,
       ),
     ).not.toThrow();
     const card = screen.getByRole('radio').nextElementSibling as HTMLElement;
-    expect(card.className).toContain('border-neon-cyan/30');
+    expect(card.firstElementChild).toHaveClass('text-[var(--semantic-info)]');
   });
 
   it('forwards refs to the underlying input', () => {
@@ -176,5 +181,44 @@ describe('RadioCard', () => {
     const radio = screen.getByTestId('ai-mode-cloud') as HTMLInputElement;
     expect(radio.name).toBe('ai-mode');
     expect(radio).toHaveAttribute('value', 'cloud');
+  });
+
+  it('associates descriptions with the native input without dropping external help', () => {
+    render(<RadioCard id="choice" label="Choice" description="Details" aria-describedby="external-help" checked={false} onChange={() => {}} />);
+    expect(screen.getByRole('radio')).toHaveAttribute('aria-describedby', 'external-help choice-description');
+    expect(screen.getByText('Details')).toHaveAttribute('id', 'choice-description');
+    expect(screen.getByRole('radio').closest('label')).toHaveAttribute('for', 'choice');
+  });
+
+  it('retains unique implicit IDs and native keyboard radio selection', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<>
+      <RadioCard label="First" name="keyboard-mode" value="first" checked onChange={onChange} />
+      <RadioCard label="Second" name="keyboard-mode" value="second" checked={false} onChange={onChange} />
+    </>);
+    const first = screen.getByRole<HTMLInputElement>('radio', { name: 'First' });
+    const second = screen.getByRole<HTMLInputElement>('radio', { name: 'Second' });
+    expect(first.id).not.toBe(second.id);
+    await user.tab();
+    expect(first).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(second).toHaveFocus();
+    expect(onChange).toHaveBeenCalledWith('second');
+    expect(first).toBeChecked();
+    expect(second).not.toBeChecked();
+  });
+
+  it('keeps disabled labels inert and removes hover chrome while retaining focus and system-color roles', () => {
+    const onChange = vi.fn();
+    render(<RadioCard label="Disabled choice" disabled checked onChange={onChange} className="caller-class" />);
+    const radio = screen.getByRole('radio');
+    const card = radio.nextElementSibling;
+    fireEvent.click(screen.getByText('Disabled choice'));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(radio.closest('label')).toHaveClass('caller-class', 'cursor-not-allowed');
+    expect(card).not.toHaveClass('hover:bg-[var(--control-bg-hover)]');
+    expect(card).toHaveClass('peer-focus-visible:outline-offset-2', 'peer-focus-visible:outline-[var(--focus-ring)]', 'motion-reduce:transition-none', 'forced-colors:bg-[ButtonFace]');
+    expect(card?.firstElementChild?.firstElementChild).toHaveClass('forced-colors:bg-[ButtonText]');
   });
 });

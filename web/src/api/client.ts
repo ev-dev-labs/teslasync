@@ -26,10 +26,11 @@
  * first; only on non-sudo failures do we fall through to the resilient
  * pipeline.
  */
-import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys } from '../lib/resilience'
+import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys, parseError } from '../lib/resilience'
 import { authHeaders, isRemoteMode } from '../lib/serverConnection'
 import { assertOperationalWriteAllowed } from '../lib/operationalMode'
 import { assertNeverQueuedOffline } from './offlineCache'
+import { assertDocumentActive } from '../lib/documentCancellation'
 import {
   demoCredentialsMode,
   getDemoApiBase,
@@ -225,26 +226,6 @@ export function __resetSudoStateForTests(): void {
 }
 
 /**
- * Parses an error response body. Returns the human message AND the
- * structured `code` (when present) so the SUDO_REQUIRED interceptor
- * can dispatch on the latter without parsing the body twice.
- */
-async function parseError(res: Response): Promise<{ message: string; code?: string }> {
-  const contentType = res.headers.get('content-type') ?? ''
-  if (contentType.includes('json')) {
-    const body = await res.json().catch(() => ({}) as Record<string, unknown>)
-    const message =
-      typeof body.error === 'string' && body.error.trim() !== ''
-        ? body.error
-        : res.statusText
-    const code = typeof body.code === 'string' && body.code.trim() !== '' ? body.code : undefined
-    return { message, code }
-  }
-  const text = await res.text()
-  return { message: text || res.statusText }
-}
-
-/**
  * Internal direct-fetch path used by both the interceptor and the
  * `skipAuthRefresh` opt-in. Exposed only to this module — external
  * callers should always go through {@link request} so they pick up
@@ -256,6 +237,7 @@ async function directRequest<T>(
   responseType: 'json' | 'text',
   acceptedStatuses: readonly number[],
 ): Promise<T> {
+  assertDocumentActive()
   const { headers, body, ...rest } = options
   const credentials = demoCredentialsMode()
   const res = await fetch(apiUrl(path), {

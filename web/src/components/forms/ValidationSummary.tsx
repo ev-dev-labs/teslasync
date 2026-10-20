@@ -31,11 +31,14 @@
  *   />
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Text } from '@/components/ui/Typography';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { typography } from '@/lib/tokens';
 
 export interface ValidationError {
   /**
@@ -82,6 +85,7 @@ export function ValidationSummary({
   className,
 }: ValidationSummaryProps) {
   const { t } = useTranslation();
+  const headingId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastSignature = useRef<string | null>(null);
 
@@ -131,19 +135,20 @@ export function ValidationSummary({
       // container programmatically focusable without adding it to the
       // tab order.
       role="alert"
-      aria-labelledby={undefined}
+      aria-labelledby={headingId}
       tabIndex={-1}
       data-validation-summary="true"
       className={cn(
-        'rounded-panel border border-rose-500/40 bg-rose-500/10 px-4 py-3 outline-none',
-        'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
+        'rounded-panel border border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)] px-4 py-3',
+        'focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--focus-ring)]',
+        'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:focus:outline-[Highlight]',
         className,
       )}
     >
       <div className="flex items-start gap-2">
-        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden="true" />
+        <Icon icon={AlertCircle} className="mt-0.5 text-[var(--semantic-danger)] forced-colors:text-[CanvasText]" />
         <div className="min-w-0 flex-1">
-          <Text as="p" variant="bodySm" weight="semibold" className="text-rose-200">
+          <Text as="p" id={headingId} size="sm" weight="semibold" color="primary" className="break-words forced-colors:text-[CanvasText]">
             {heading}
           </Text>
           <ul className="mt-1.5 space-y-1">
@@ -158,19 +163,21 @@ export function ValidationSummary({
               return (
                 <li key={`${error.fieldId ?? 'form'}-${index}`}>
                   {error.fieldId ? (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      wrapLabel
                       onClick={() => focusField(error.fieldId!)}
                       className={cn(
-                        'text-left text-sm text-rose-200 underline underline-offset-2',
-                        'hover:text-rose-100',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400',
+                        typography.role.bodySm,
+                        'min-h-11 md:min-h-6 justify-start px-0 py-1 font-normal text-start underline underline-offset-2',
+                        'forced-colors:text-[ButtonText]',
                       )}
                     >
                       {text}
-                    </button>
+                    </Button>
                   ) : (
-                    <Text as="span" variant="bodySm" className="text-rose-200">
+                    <Text as="span" variant="bodySm" className="break-words forced-colors:text-[CanvasText]">
                       {text}
                     </Text>
                   )}

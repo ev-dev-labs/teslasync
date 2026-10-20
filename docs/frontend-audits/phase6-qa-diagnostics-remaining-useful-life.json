@@ -1,0 +1,1142 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-diagnostics-remaining-useful-life",
+  "attempt": 1,
+  "actor": "2c998df9-34aa-4e41-b6a6-0b1d2b2ae12b",
+  "delivery": "SOURCE_REPORT_ONLY",
+  "page": "web/src/features/diagnostics/pages/RemainingUsefulLifePage.tsx",
+  "route": "/diagnostics/rul",
+  "snapshotUTC": "2026-10-14T01:06:14.9181739Z",
+  "applicationPreserved": true,
+  "existingReportCheck": {
+    "result": "ABSENT",
+    "checkedUTC": "2026-10-14T01:02:16.1070436Z",
+    "noChangeDisposition": "Application unchanged; absent reserved QA report requires report delivery, not remigration."
+  },
+  "reservation": {
+    "conservativeUTC": "2026-10-14T01:00:00.625Z",
+    "returnUTC": "2026-10-14T01:20:00.625Z",
+    "hardUTC": "2026-10-14T01:25:00.625Z",
+    "earlierActualPlus20Or25Wins": true,
+    "noBrowserLock": true,
+    "parentPreviewPort": 5173,
+    "laterAuthorizedBrowserChannelOnly": "msedge"
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "dependency": "phase5-page-diagnostics-remaining-useful-life",
+    "dependencyStatus": "[x]",
+    "dependencyAttempt": 2,
+    "dependencyCommitAsRecordedNotGitVerified": "b3f2862ffc6f9b7c3442b83c54957fcf765f5856",
+    "rescue": "phase6-rescue-diagnostics-remaining-useful-life",
+    "rescueStatus": "[x]",
+    "historicalReceipt": "Queue records superseding 15/15 scoped pass and native0, unchanged source pair. Historical only; no fresh tests or page acceptance here.",
+    "currentHandoff": "docs/session-handoff.md:5-46 (new-machine recovery 2026-10-14T00:44Z)",
+    "readFull": [
+      "docs/orchestrator-loop.md:1-296",
+      "docs/frontend-design-contract.md:1-2539",
+      ".github/instructions/frontend-si-cutover.instructions.md:1-94",
+      ".github/instructions/react-frontend.instructions.md:1-629",
+      ".github/instructions/observability.instructions.md:1-45",
+      ".github/instructions/unit-conversion.instructions.md:1-221"
+    ],
+    "missionAcceptance": [
+      "docs/frontend-mission.md:1416-1464 (43)",
+      "docs/frontend-mission.md:1465-1487 (44)",
+      "docs/frontend-mission.md:1488-1517 (45)"
+    ],
+    "instructionResolution": "Current SI/design contract overrides legacy mixed-unit and unknown-to-zero examples and old neon guidance. Wiring-time nil-pool panic is not runtime error handling. No page RUM initialization or direct EventSource found. Backend context reads are support evidence, not a whole-backend audit. User restrictions prohibit runtime gates and heartbeats.",
+    "exactRows": [
+      {
+        "exactRow": "| [~] | 6 | phase6-qa-diagnostics-remaining-useful-life | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-remaining-useful-life.json | phase5-page-diagnostics-remaining-useful-life | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=2c998df9-34aa-4e41-b6a6-0b1d2b2ae12b; LastConsumed=-1 | - |CurrentacceptedRemainingUsefulLifePage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Predicted-vs-observed/lifetime-denominators/unknownzero/SI/preferences/scopes/trust/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 2c998df9-34aa-4e41-b6a6-0b1d2b2ae12b, no browser lock. |",
+        "line": 383
+      },
+      {
+        "exactRow": "| [x] | 6 | phase6-rescue-diagnostics-remaining-useful-life | single-blocker-rescue | web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.test.tsx | - | 1 | actualactor=adcd250f-ac6d-419a-bdbe-827060e2fc35; polled15:40:34Z; return15:50/hard15:55; terminal results consumed; ALL claims released | - | Continue phase5-page-diagnostics-remaining-useful-life: compatibility/heading/real chart boundary corrections retained, four earlier failures unverified. Both series/confidence/times/selection/source status and original motion assertions stay intact. Superseding terminal receipt: 15/15 pass,native0,unchangedpair; fresh raw+JSON/current scopediff verified; SOURCE ONLY, native/fullsuiteNOTRUN; allclaims released, originalattempts2 unchanged. |",
+        "line": 457
+      },
+      {
+        "exactRow": "| [x] | 5 | phase5-page-diagnostics-remaining-useful-life | original-page-migration | web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.test.tsx | - | 2 | 2026-10-12T16:06:05.6476683Z | b3f2862ffc6f9b7c3442b83c54957fcf765f5856 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/diagnostics/rul; audit=docs\\frontend-audits\\audit-page-100.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fresh previously unstarted scope reserved for rolling dispatch; original Page+namedtest only. Returning fixture has actual5173 origin; E2E_STORAGE_STATE supported variable. Parent-owned generator closure, no worker catalog edits/bypass. Original source/fullQA separation and all preservation/helper budget rules remain. Actual worker=0ab58e86-fe0e-413f-abcb-17483218e83c; lifecycle=awaitingterminalnotification; doNOTpoll/duplicate/rereadownedsource. Supported instructions in session files; separate path/private screenshot boundaries. Actual parent wave2 scoped run: 15 executed, 4 failed; file=failed. Evidence logs\\phase5-parent-wave2-blocked-tests.json. Retained original-owner continuation required; no assertion weakening/capture rerun; awaiting available slot. User-observed idle gap reconciled: actual source attempt1 assertion failures confirmed in parent600case run; bounded retained-owner attempt2 now resumes exact existing page/test files, no restart, helper rerun, assertion weakening or full suite. Parent handles current generated closure. Consumed actual terminal delivery; WIP ONLY, not source/QA acceptance; no capture/helper reset; Actual NEW terminal1 FAILED partial attempt2. Compatibility correction/component-specific heading selectors/actual chartboundary observation BOTHseries persisted; originalmotionassertions unchanged, rawSI/confidence/timestamps/componentselection/source status preserved. Scopedlint0/style0/candidate0, page412/388/three sections. VITEST_NOTRUN latestHEALTHSTOP, no newtest/compilerpass; priorfourparentfailures corrections unexecuted. Exact pair WIP ONLY pushed, secondfailure[!] notpending/no extra rescue as onlyaggregate dependent. Claimreleased/terminalheartbeat/nolocks; no screenshots/helper/native acceptance.; commit=b3f2862ffc6f9b7c3442b83c54957fcf765f5856; pushed. Superseding user-authorized phase6-rescue-diagnostics-remaining-useful-life: 15/15 pass,native0,unchangedpair; fresh raw+JSON/scopediff verified; sourceaccepted ONLY,native/fullQApending; originalattempts2/fullfailedchronology preserved. |",
+        "line": 1847
+      }
+    ],
+    "finalQueueRead": {
+      "exactRows": [
+        {
+          "exactRow": "| [~] | 6 | phase6-qa-diagnostics-remaining-useful-life | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-remaining-useful-life.json | phase5-page-diagnostics-remaining-useful-life | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=2c998df9-34aa-4e41-b6a6-0b1d2b2ae12b; LastConsumed=-1 | - |CurrentacceptedRemainingUsefulLifePage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Predicted-vs-observed/lifetime-denominators/unknownzero/SI/preferences/scopes/trust/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 2c998df9-34aa-4e41-b6a6-0b1d2b2ae12b, no browser lock. |",
+          "line": 383
+        },
+        {
+          "exactRow": "| [x] | 6 | phase6-rescue-diagnostics-remaining-useful-life | single-blocker-rescue | web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.test.tsx | - | 1 | actualactor=adcd250f-ac6d-419a-bdbe-827060e2fc35; polled15:40:34Z; return15:50/hard15:55; terminal results consumed; ALL claims released | - | Continue phase5-page-diagnostics-remaining-useful-life: compatibility/heading/real chart boundary corrections retained, four earlier failures unverified. Both series/confidence/times/selection/source status and original motion assertions stay intact. Superseding terminal receipt: 15/15 pass,native0,unchangedpair; fresh raw+JSON/current scopediff verified; SOURCE ONLY, native/fullsuiteNOTRUN; allclaims released, originalattempts2 unchanged. |",
+          "line": 457
+        },
+        {
+          "exactRow": "| [x] | 5 | phase5-page-diagnostics-remaining-useful-life | original-page-migration | web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.test.tsx | - | 2 | 2026-10-12T16:06:05.6476683Z | b3f2862ffc6f9b7c3442b83c54957fcf765f5856 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/diagnostics/rul; audit=docs\\frontend-audits\\audit-page-100.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fresh previously unstarted scope reserved for rolling dispatch; original Page+namedtest only. Returning fixture has actual5173 origin; E2E_STORAGE_STATE supported variable. Parent-owned generator closure, no worker catalog edits/bypass. Original source/fullQA separation and all preservation/helper budget rules remain. Actual worker=0ab58e86-fe0e-413f-abcb-17483218e83c; lifecycle=awaitingterminalnotification; doNOTpoll/duplicate/rereadownedsource. Supported instructions in session files; separate path/private screenshot boundaries. Actual parent wave2 scoped run: 15 executed, 4 failed; file=failed. Evidence logs\\phase5-parent-wave2-blocked-tests.json. Retained original-owner continuation required; no assertion weakening/capture rerun; awaiting available slot. User-observed idle gap reconciled: actual source attempt1 assertion failures confirmed in parent600case run; bounded retained-owner attempt2 now resumes exact existing page/test files, no restart, helper rerun, assertion weakening or full suite. Parent handles current generated closure. Consumed actual terminal delivery; WIP ONLY, not source/QA acceptance; no capture/helper reset; Actual NEW terminal1 FAILED partial attempt2. Compatibility correction/component-specific heading selectors/actual chartboundary observation BOTHseries persisted; originalmotionassertions unchanged, rawSI/confidence/timestamps/componentselection/source status preserved. Scopedlint0/style0/candidate0, page412/388/three sections. VITEST_NOTRUN latestHEALTHSTOP, no newtest/compilerpass; priorfourparentfailures corrections unexecuted. Exact pair WIP ONLY pushed, secondfailure[!] notpending/no extra rescue as onlyaggregate dependent. Claimreleased/terminalheartbeat/nolocks; no screenshots/helper/native acceptance.; commit=b3f2862ffc6f9b7c3442b83c54957fcf765f5856; pushed. Superseding user-authorized phase6-rescue-diagnostics-remaining-useful-life: 15/15 pass,native0,unchangedpair; fresh raw+JSON/scopediff verified; sourceaccepted ONLY,native/fullQApending; originalattempts2/fullfailedchronology preserved. |",
+          "line": 1847
+        }
+      ],
+      "lines": 2043,
+      "result": "Snapshot queue hash drifted due to concurrent activity; reread actual current exact target/dependency/rescue and all RUL-name/file roots. No separately queued repair for the five reported mechanisms found. Snapshot SHA256 remains preserved, not silently replaced.",
+      "UTC": "2026-10-14T01:14:18.5107566Z",
+      "sha256": "cc82e491ac168af3c270b5c859878df6ee6c1724be765147a36a8561921bf7ed",
+      "dedupRows": [
+        {
+          "line": 383,
+          "exactRow": "| [~] | 6 | phase6-qa-diagnostics-remaining-useful-life | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-remaining-useful-life.json | phase5-page-diagnostics-remaining-useful-life | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=2c998df9-34aa-4e41-b6a6-0b1d2b2ae12b; LastConsumed=-1 | - |CurrentacceptedRemainingUsefulLifePage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Predicted-vs-observed/lifetime-denominators/unknownzero/SI/preferences/scopes/trust/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 2c998df9-34aa-4e41-b6a6-0b1d2b2ae12b, no browser lock. |",
+          "status": "[~]",
+          "files": "docs\\frontend-audits\\phase6-qa-diagnostics-remaining-useful-life.json",
+          "item": "phase6-qa-diagnostics-remaining-useful-life"
+        },
+        {
+          "line": 457,
+          "exactRow": "| [x] | 6 | phase6-rescue-diagnostics-remaining-useful-life | single-blocker-rescue | web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.test.tsx | - | 1 | actualactor=adcd250f-ac6d-419a-bdbe-827060e2fc35; polled15:40:34Z; return15:50/hard15:55; terminal results consumed; ALL claims released | - | Continue phase5-page-diagnostics-remaining-useful-life: compatibility/heading/real chart boundary corrections retained, four earlier failures unverified. Both series/confidence/times/selection/source status and original motion assertions stay intact. Superseding terminal receipt: 15/15 pass,native0,unchangedpair; fresh raw+JSON/current scopediff verified; SOURCE ONLY, native/fullsuiteNOTRUN; allclaims released, originalattempts2 unchanged. |",
+          "status": "[x]",
+          "files": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.test.tsx",
+          "item": "phase6-rescue-diagnostics-remaining-useful-life"
+        },
+        {
+          "line": 591,
+          "exactRow": "| [x] | 0 | audit-page-100 | page | web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; docs\\frontend-audits\\audit-page-100.json | - | 1 | 2026-10-07T07:23:14.608Z | acc45fc335 | - / 1 / 2026-10-07T07:23:14.608Z / web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; routes=/diagnostics/rul; read-only audit; report docs\\frontend-audits\\audit-page-100.json; actor=a572a1b4-5ceb-4188-b623-12ad12e430a5; verified source audit; commit=acc45fc335; runtime unverified |",
+          "status": "[x]",
+          "files": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; docs\\frontend-audits\\audit-page-100.json",
+          "item": "audit-page-100"
+        },
+        {
+          "line": 1847,
+          "exactRow": "| [x] | 5 | phase5-page-diagnostics-remaining-useful-life | original-page-migration | web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.test.tsx | - | 2 | 2026-10-12T16:06:05.6476683Z | b3f2862ffc6f9b7c3442b83c54957fcf765f5856 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/diagnostics/rul; audit=docs\\frontend-audits\\audit-page-100.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fresh previously unstarted scope reserved for rolling dispatch; original Page+namedtest only. Returning fixture has actual5173 origin; E2E_STORAGE_STATE supported variable. Parent-owned generator closure, no worker catalog edits/bypass. Original source/fullQA separation and all preservation/helper budget rules remain. Actual worker=0ab58e86-fe0e-413f-abcb-17483218e83c; lifecycle=awaitingterminalnotification; doNOTpoll/duplicate/rereadownedsource. Supported instructions in session files; separate path/private screenshot boundaries. Actual parent wave2 scoped run: 15 executed, 4 failed; file=failed. Evidence logs\\phase5-parent-wave2-blocked-tests.json. Retained original-owner continuation required; no assertion weakening/capture rerun; awaiting available slot. User-observed idle gap reconciled: actual source attempt1 assertion failures confirmed in parent600case run; bounded retained-owner attempt2 now resumes exact existing page/test files, no restart, helper rerun, assertion weakening or full suite. Parent handles current generated closure. Consumed actual terminal delivery; WIP ONLY, not source/QA acceptance; no capture/helper reset; Actual NEW terminal1 FAILED partial attempt2. Compatibility correction/component-specific heading selectors/actual chartboundary observation BOTHseries persisted; originalmotionassertions unchanged, rawSI/confidence/timestamps/componentselection/source status preserved. Scopedlint0/style0/candidate0, page412/388/three sections. VITEST_NOTRUN latestHEALTHSTOP, no newtest/compilerpass; priorfourparentfailures corrections unexecuted. Exact pair WIP ONLY pushed, secondfailure[!] notpending/no extra rescue as onlyaggregate dependent. Claimreleased/terminalheartbeat/nolocks; no screenshots/helper/native acceptance.; commit=b3f2862ffc6f9b7c3442b83c54957fcf765f5856; pushed. Superseding user-authorized phase6-rescue-diagnostics-remaining-useful-life: 15/15 pass,native0,unchangedpair; fresh raw+JSON/scopediff verified; sourceaccepted ONLY,native/fullQApending; originalattempts2/fullfailedchronology preserved. |",
+          "status": "[x]",
+          "files": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx; web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.test.tsx",
+          "item": "phase5-page-diagnostics-remaining-useful-life"
+        }
+      ]
+    }
+  },
+  "counts": {
+    "pageFiles": 1,
+    "directPresentationFiles": 1,
+    "pageLines": 412,
+    "presentationLines": 64,
+    "pagePlusPresentationLines": 476,
+    "hookFiles": 1,
+    "hookLines": 112,
+    "pagePresentationHookLines": 588,
+    "pageTestLinesReadOnly": 275,
+    "majorSections": 3,
+    "briefMetricOccurrences": 2,
+    "forecastSeries": 2,
+    "forecastSourceColumns": 4,
+    "featureActionTemplates": 7,
+    "featureDistinctActionBehaviors": 5,
+    "sharedHeaderHelpActionTemplates": 1,
+    "includingHeaderActionTemplates": 8,
+    "actionCountDefinition": "1 repeated component-selection template + 2 fatal retry templates + 2 retained refresh templates + 1 review-details + 1 drawer dismissal = 7. Fatal/retained retry templates collapse to one behavior per source: select, board retry, detail retry, review, close = 5. Number of rendered selection buttons is payload components.length, not a fixed five; configured backend currently builds five component specs. Header subtitle-help is an additional shared action. Conditional branches are not simultaneously counted as rendered controls.",
+    "confirmedRoots": 5,
+    "candidates": 3,
+    "confirmedByRule": {
+      "inference-as-certainty": 1,
+      "unknown-as-measured": 1,
+      "initial-paused-as-empty": 1,
+      "unlocalized-source-presentation": 1,
+      "display-preference-bypass": 1
+    },
+    "filesWithMostConfirmedSites": [
+      "RemainingUsefulLifePage.tsx: mechanisms in four roots",
+      "NextServiceBrief.tsx: primary/direct mechanisms in two roots; additional supports in RUL-04/RUL-05",
+      "internal/api/rul/prognostics.go: source support in three roots"
+    ],
+    "structuralDebt": "Page is 412 lines, exceeding the react-frontend 300-line limit. Direct presentation total is 476. Recorded as inherited structural debt, not a new remigration assignment or proof of preservation regression. No immutable original was available in this scope to compute a historical retention ratio."
+  },
+  "sections": [
+    {
+      "id": "next-service",
+      "source": "RemainingUsefulLifePage.tsx:170-178; NextServiceBrief.tsx:14-64",
+      "content": "Always-mounted OperationalBrief; two source metrics, explicit projected-not-guaranteed limitation, board-snapshot/no observation timestamp, review drawer narrative/metrics/attention. Unknown metrics retained as null. Root RUL-01 qualifies no-projection description.",
+      "actions": [
+        "OperationalBrief.tsx:159-169 opens review",
+        "OperationalBrief.tsx:246-250 delegates dismissal to Drawer"
+      ],
+      "states": "No vehicle/loading/fatal/retained/available/unavailable branches; initial paused branch needs RUL-03."
+    },
+    {
+      "id": "component-health",
+      "source": "RemainingUsefulLifePage.tsx:180-288",
+      "content": "PanelTitle and section shell; one native shared SelectableCard per returned component. Label, status, health, remaining time/distance, replace-by date, confidence, basis. Null remaining_km -> dash; real zero survives; sentinel days hidden unless projected date exists; overdue with no date remains Overdue. Unknown status maps neutral via own-key recognition.",
+      "actions": [
+        "page:94,219-224 component selection",
+        "page:202 fatal board retry",
+        "page:168 retained board refresh"
+      ],
+      "states": "No vehicle, source-shaped skeletons, fatal-only error/retry, successful empty, populated, retained refresh failure/paused; initial paused misclassified per RUL-03."
+    },
+    {
+      "id": "health-forecast",
+      "source": "RemainingUsefulLifePage.tsx:291-408",
+      "content": "Always-present GlassPanel, label/subtitle, inferred detail state, band+line+optional EOL reference. All date/projected/low/high raw rows preserved for canonical accessible table; basis and notes remain visible without a curve. Chart frame receives the actual chart children.",
+      "actions": [
+        "page:316 fatal detail retry",
+        "page:298 retained detail refresh"
+      ],
+      "states": "No vehicle, missing component prerequisite, loading, fatal, empty projection, successful curve, retained refresh failure/paused. EmbeddedChart defaults export/fullscreen off and no annotations config supplied; no lost pre-existing action claimed."
+    }
+  ],
+  "routeAndScope": {
+    "mount": "web/src/App.tsx:217 lazy import;753 SafeRoute mount; web/src/lib/routeRegistry.ts:106 canonical route",
+    "vehicleOwnership": "web/src/lib/workspaceScope.ts:95-168: route is not vehicle-disabled, so header/mobile workspace owns selection. Page:69 reads useSelectedVehicle; no second picker. useSelectedVehicle.ts:48-74 resolves path > vehicle_id query > validated store > first fleet vehicle; URL/store reconciliation at79-85,143-163. Query keys include vehicle and detail component (useRUL.ts:93,106), both requests propagate signal (94,108). No identity/API activity performed.",
+    "rangeOwnership": "workspaceScope.ts:23-77 excludes /diagnostics/rul;156-167 resolves range=false, vehicle=true. Neither hook takes range bounds. Backend explicitly uses 400-day SoH, 90-day recent rate, lifetime odometer and enrollment age. No header-owned selected range to drop: both start and exclusive end are NOT APPLICABLE to current page, not a confirmed scope violation. These fixed/lifetime supports must not be falsely labeled the workspace range.",
+    "bothBounds": "NOT_APPLICABLE_CURRENT_ROUTE; do not invent a ranged payload or add a range registration without a separately accepted API/query contract."
+  },
+  "numericSupportAndProvenance": {
+    "wireUnits": "useRUL.ts:35-38 and dtos.go:22-36 return remaining_km in kilometres and remaining_days in days (legacy endpoint, not SI metre/second fields). Page:111-113 converts km*1000 solely at display boundary into useUnits.formatDistance. Hooks pass raw payloads without conversion. Do not relabel this API as SI metres.",
+    "preferences": "useUnits.ts:118-147 derives distance/locale/precision from settings and delegates; useNumberFormatting.ts:20-45 subscribes live formatter preferences. Health and projected numbers use formatters; explicit distance precision0 is a specialist override, candidate C-03 rather than assumed defect. RUL-05 records unformatted dates/confidence digits.",
+    "denominators": "prognostics.go:266-296 reconstructs SoH from separate daily energy and SOC maxima divided by estimated nominalWh, not a direct measured component lifespan. WearRUL:376-416 uses configured nominal km minus whole-life odometer, divided by recent km/day; no per-service reset. AgeRUL:423-460 uses nominal calendar days minus time since enrollment, fixed confidence0.6; no replacement history. Detail DTO includes nullable nominal_life_km/nominal_life_days/eol_threshold and notes; handler.go:382-389 returns them. Page plots EOL and retains basis/notes but does not explicitly display nominal-life fields or wear_rate_per_day. Missing battery nominal capacity/method/observation counts/timestamps are not proved DTO capabilities.",
+    "predictionNotObservation": "Page labels projected health/forecast/band; NextServiceBrief:32 says not guaranteed failure date; board/detail states use inferred provenance (page:74,91). No observed-lifespan series exists in this contract. Fetch dataUpdatedAt is successful retrieval time, not source observation. Backend fallback semantics create RUL-02.",
+    "physicalSigns": "No numeric abs() or sign-flipping conversion in page/hook. Backend intentionally bounds life/health and overdue remaining time/distance at zero (prognostics.go:396-406,453-455). Page does not independently erase an observed signed physical reading. Invalid/null numerical payload behavior remains C-01, not an invented incident."
+  },
+  "findings": [
+    {
+      "id": "RUL-01",
+      "rule": "inference-as-certainty",
+      "priority": "P1",
+      "status": "CONFIRMED_SOURCE_MECHANISM_RUNTIME_NOTRUN",
+      "file": "web/src/features/diagnostics/components/operationalbrief-all/NextServiceBrief.tsx",
+      "lines": [
+        18,
+        19,
+        39,
+        40
+      ],
+      "mechanism": "Any retained board with no next-service date selects 'No upcoming service projected — all components healthy.' No component statuses or adequacy are checked. Backend NextServiceDue skips null dates even for overdue components; absence of a projectable date is not health evidence.",
+      "supports": [
+        "internal/api/rul/prognostics.go:468-483 skips every nil projected date",
+        "internal/api/rul/prognostics.go:394-406 can return overdue wear with nil date",
+        "web/src/i18n/en.json:rul.nextService.none retains the same assertion",
+        "RemainingUsefulLifePage.test.tsx:146-159 asserts this text even with components=[] (read-only, NOTRUN)"
+      ],
+      "sourceDerivedReproduction": {
+        "execution": "NOTRUN",
+        "steps": [
+          "Source-walk WearRUL with positive nominal life and lifetime odometer at/above nominal: status=overdue and projected_eol_date=nil.",
+          "With no other dated component, NextServiceDue returns nil.",
+          "Feed that successful board through existing prop mapping: available=true, projected=false; line40 claims all healthy while card says Overdue."
+        ],
+        "notAnObservedIncident": true
+      },
+      "narrowNeed": "Separately claim NextServiceBrief.tsx and directly covering test; separate canonical rul.nextService.none copy/generated-owner lease removes only the unjustified health assertion. Preserve projected metrics, limitations and every other state; do not infer replacement urgency from absent dates.",
+      "dedup": "No existing fix row owns this mechanism; phase6 rescue [x] covered historical test/source compatibility, not this assertion. Queue unchanged."
+    },
+    {
+      "id": "RUL-02",
+      "rule": "unknown-as-measured",
+      "priority": "P1",
+      "status": "CONFIRMED_SOURCE_MECHANISM_RUNTIME_NOTRUN",
+      "file": "internal/api/rul/prognostics.go",
+      "lines": [
+        324,
+        325,
+        326,
+        328,
+        329,
+        382,
+        384,
+        430,
+        432
+      ],
+      "mechanism": "Empty battery history produces health_pct=0/confidence=0 but projection currentHealth=100; missing nominal wear/age configuration produces health_pct=100 and a default flat projection. Page sends these finite placeholders to a numeric gauge/forecast. Thus no-history can become a 0% card beside a modeled 100% curve. Raw payload currently lacks a structured availability discriminator, so frontend cannot safely distinguish true zero by numeric value alone.",
+      "supports": [
+        "RemainingUsefulLifePage.tsx:240 gauge receives c.health_pct",
+        "RemainingUsefulLifePage.tsx:130-138 maps every projection without adequacy gate",
+        "internal/api/rul/prognostics.go:499-536 uses default180-day horizon and returns steps+1 points",
+        "internal/api/rul/handler.go:382-389 always builds/returns projection for configured components",
+        "web/src/components/charts/LinearGauge.tsx:129-147 finite zero is a real meter reading"
+      ],
+      "sourceDerivedReproduction": {
+        "execution": "NOTRUN",
+        "steps": [
+          "Source-walk configured HV battery with empty BuildSoHSeries output.",
+          "BatteryRUL assigns 0% card and 100% projection seed; Component calls ProjectHealthSeries with zero rate/default horizon.",
+          "Page's existing gauge and two chart series render finite model defaults, although basis states no history."
+        ],
+        "notAnObservedIncident": true
+      },
+      "narrowNeed": "Backend/API owner must disposition the exact availability/fallback semantics at rul/prognostics.go, handler.go, dtos.go and existing covering tests; any necessary frontend type/hook and page adoption gets a later exclusive lease. Do not parse English basis, equate confidence0 with missing, delete valid zero, or invent new wire fields here. This source report does not approve a new contract.",
+      "dedup": "No queued RUL availability/fallback repair found in full current queue search. Historical page acceptance remains preserved."
+    },
+    {
+      "id": "RUL-03",
+      "rule": "initial-paused-as-empty",
+      "priority": "P2",
+      "status": "CONFIRMED_SOURCE_MECHANISM_RUNTIME_NOTRUN",
+      "file": "web/src/features/diagnostics/pages/RemainingUsefulLifePage.tsx",
+      "lines": [
+        73,
+        90,
+        195,
+        205,
+        313,
+        317
+      ],
+      "mechanism": "Section loading checks use isLoading, which is false for an initial pending/paused TanStack query. useDataState correctly reports initial plus isRefreshBlocked, but StaleRefreshWarning suppresses all no-data states. Board falls into empty telemetry copy; detail with active component falls into no-forecast copy; brief says unavailable rather than a paused initial request. No authoritatively empty payload has resolved.",
+      "supports": [
+        "api/dataState.ts:192-221 distinguishes no-data initial and paused",
+        "StaleRefreshWarning.tsx:59 suppresses no retained data",
+        "NextServiceBrief.tsx:37-41,51-55 uses loading prop, not state.status/blocked"
+      ],
+      "sourceDerivedReproduction": {
+        "execution": "NOTRUN",
+        "steps": [
+          "For a selected vehicle, consider normal TanStack initial state data=undefined, isPending=true, isLoading=false, fetchStatus=paused, no error.",
+          "Board loading/fatal branches do not match; components default [] and show telemetry empty explanation.",
+          "With a known active component, identical detail state shows no forecast. No retained warning or fatal retry appears."
+        ],
+        "notAnObservedIncident": true
+      },
+      "narrowNeed": "Separate page plus direct NextServiceBrief and matching owned test lease to render shared initial/paused presentation with truthful deferred-refresh wording and recovery. No source hook/query policy or global notice rewrite; preserve retained branch behavior.",
+      "dedup": "Full queue search found no matching RUL initial-paused repair; generic unrelated page scopes are not reused as this root."
+    },
+    {
+      "id": "RUL-04",
+      "rule": "unlocalized-source-presentation",
+      "priority": "P2",
+      "status": "CONFIRMED_SOURCE_MECHANISM_RUNTIME_NOTRUN",
+      "file": "web/src/features/diagnostics/pages/RemainingUsefulLifePage.tsx",
+      "lines": [
+        223,
+        230,
+        279,
+        295,
+        402
+      ],
+      "mechanism": "Known component labels and generated model basis are rendered verbatim. Their authoritative producer is fixed English, not user-authored content. Wear basis embeds literal km/km-day and numeric fmt.Sprintf formatting, so a translated UI with mile preference still presents English kilometre-based rationale. Notes may be arbitrary configured/user text and are not automatically translatable.",
+      "supports": [
+        "internal/api/rul/handler.go:68-74 fixed English component labels",
+        "internal/api/rul/prognostics.go:328,357-364,384,412-413,432,457-458 fixed English generated rationale",
+        "NextServiceBrief.tsx:23,39 preserves raw component label",
+        "44 static tkeys present in canonical catalog does not localize these dynamic fields"
+      ],
+      "sourceDerivedReproduction": {
+        "execution": "NOTRUN",
+        "steps": [
+          "Choose non-English locale and mile display preference; follow the current WearRUL response.",
+          "Distance-left uses the preference formatter; card label and basis still output backend English, raw km and km/day.",
+          "Accessible selection name interpolates that same untranslated label."
+        ],
+        "notAnObservedIncident": true
+      },
+      "narrowNeed": "Known-component label localization can be an exact page/direct-part adoption using approved canonical keys, with a separately serialized catalog lease if truly missing. Generated numeric rationale needs a source/API presentation disposition using actual structured supports; never translate by parsing the free-text sentence or rewrite user notes. Existing raw rationale must remain available, not silently dropped.",
+      "dedup": "No existing queue fix owns RUL labels/rationale. This is not the unrelated advanced-evidence date-preference item or future-relative-date shared fix."
+    },
+    {
+      "id": "RUL-05",
+      "rule": "display-preference-bypass",
+      "priority": "P2",
+      "status": "CONFIRMED_SOURCE_MECHANISM_RUNTIME_NOTRUN",
+      "file": "web/src/features/diagnostics/pages/RemainingUsefulLifePage.tsx",
+      "lines": [
+        143,
+        217,
+        263,
+        275,
+        343
+      ],
+      "mechanism": "Replace-by date, forecast table dates, and month ticks remain raw YYYY-MM-DD/YYYY-MM; brief treats date as text and concatenates it. Confidence sublabel interpolates Math.round result directly instead of the existing locale formatter. Number preferences update health/projected values but not these date/digit presentations. Date-only wire semantics must be preserved; a timezone shift is not an authorized fix.",
+      "supports": [
+        "NextServiceBrief.tsx:29,39 date as text/raw sentence",
+        "useNumberFormatting.ts:20-45 preference-aware fmtInt/number available",
+        "useDateFormat.ts:74-92 existing locale/timezone formatter owner"
+      ],
+      "sourceDerivedReproduction": {
+        "execution": "NOTRUN",
+        "steps": [
+          "Change locale/date preferences on the mounted source in a later authorized check.",
+          "Source walk now: ISO dates remain identical because no date formatter is called; confidence visible digits use raw JS interpolation while health uses fmtNumber.",
+          "Preserve original date-only value in raw rows; later compare localized display without changing the calendar date."
+        ],
+        "notAnObservedIncident": true
+      },
+      "narrowNeed": "Separate exact RemainingUsefulLifePage.tsx/NextServiceBrief.tsx and covering tests lease; reuse existing date/number preference owners after confirming date-only parsing. No shared date helper rewrite or catalog campaign; keep raw source dates and chart rows unchanged.",
+      "dedup": "phase6-fix-relative-future-dates is a dateFormat relative-time root, not these raw date callsites. phase6-fix-advanced-evidence-date-preferences owns other files. No duplicate RUL repair row found."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C-01",
+      "status": "UNPROVED_NOT_PROMOTED",
+      "source": "page:116-119,217,272-275; useRUL.ts:31,41; MetricBar.tsx:50-63",
+      "question": "Runtime null/invalid/out-of-range confidence could be Math.round-coerced to0/NaN then described Low; health gauge can clamp out-of-range values. Inspected backend normal fields are finite numbers with bounded confidence. No such payload was observed or proved.",
+      "needs": "Only separately authorized synthetic boundary tests can establish a supported malformed/nullable contract and exact behavior; do not change types/thresholds or count an incident.",
+      "execution": "NOTRUN"
+    },
+    {
+      "id": "C-02",
+      "status": "UNPROVED_VISUAL_NOT_PROMOTED",
+      "source": "page:157-158,347-349; prognostics.go:505-536",
+      "question": "yMin=eol-10 can sit above a sufficiently wide forecast lower band (e.g. eol70 and modeled low59.5). Table still keeps raw bound. No actual payload/DOM clipping measurement was captured; this is an axis-extent/composed-render candidate, not confirmed visual loss.",
+      "needs": "Later authorized synthetic low-confidence bound test and mounted plot inspection; preserve complete band/raw table and do not invent a production observation.",
+      "execution": "NOTRUN"
+    },
+    {
+      "id": "C-03",
+      "status": "PRESENTATION_DECISION_UNKNOWN_NOT_PROMOTED",
+      "source": "page:111-113; useRUL.ts:76-79; handler.go:386-389",
+      "question": "Distance precision0 may be an intentional specialist convention. Nominal life km/days and wear rate are returned but not explicit numeric UI fields; rationale contains denominator/whole-life caveats. Whether additional display is required is a presentation decision, not a demonstrated deleted original section or wrong denominator.",
+      "needs": "Exact denominator/precision disposition at this page only, with existing nullable configured references, preference-aware display and raw rationale preserved. No speculative capacity/source timestamp, per-service reset, ranged API, or new stat family.",
+      "execution": "NOTRUN"
+    }
+  ],
+  "rawScanEvidence": {
+    "method": "PowerShell Select-String exact regex probes on page, NextServiceBrief.tsx and useRUL.ts. Counts are matched lines, not AST coverage or defect totals; manual source review classified results.",
+    "frontendMatchedLines": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 1,
+      "page-wrapper-positive-presence": 1,
+      "fetch-useeffect": 0,
+      "rum-eventsource": 0,
+      "unsafe-any": 0
+    },
+    "classification": "Hardcoded-string probe's one match is useRUL.ts:94 request<RULResponse> generic syntax, not visible English. Wrapper positive match is PageLayout:163, resolved through PageLayout.tsx:11 to PageContainer, so not missing-page-container. Conditional basis/notes/detail label are optional details, not hidden major sections. Recharts presentation props and computed token colors are acceptable; shared native button/table implementations are expected. No whole-repository zero-violation claim.",
+    "backendSupportMatchedLines": {
+      "sql-interpolation": 0,
+      "fmt-println": 0,
+      "bare-panic": 1,
+      "db-http-context-call-probe": 4
+    },
+    "backendClassification": "handler.go:45 nil-pool construction invariant panic is not runtime error handling. All four matched DB calls pass ctx (157,190,209,238); parameterized SQL $1. No HTTP request construction in scoped support. Backend observability/global SQL audit not performed.",
+    "canonicalStaticKeyCount": 44,
+    "canonicalMissingStaticKeyCount": 0,
+    "dynamicStatusKeys": "STATUS_META:40-47 uses known rul.status keys and common.unknown; canonical rul subtree read. Arbitrary server labels/basis are separate RUL-04. Generator/catalog-runtime checks NOTRUN."
+  },
+  "accessibilityAndMobile": {
+    "sourceDeclarationOnly": true,
+    "sourceMechanisms": [
+      "PageContainer.tsx:180-196 shared semantic route-focus heading; page section aria-label/busy and shared localized error/empty notices",
+      "SelectableCard.tsx:34-50 native type=button, aria-pressed, focus/forced-color classes, min-h-11; full per-component label",
+      "OperationalBrief.tsx:159-169 min-h-11 md:min-h-9 review action; shared Drawer dismissal/focus ownership not executed",
+      "StaleRefreshWarning.tsx:87-110 role=status, polite, retry disabled while refreshing, min-h-11 md:min-h-9",
+      "ChartContainer.tsx:855-950 canonical accessible figure/table with complete four-column raw rows; hidden table revealed in forced-colors",
+      "page:196,214 responsive 1/md2/xl3 grid,235 @container stack/reflow,259 wrapping metadata,324 chart h72/sm:h80",
+      "page:386-389 reduced/low-bandwidth motion preference governs projected line; confidence area always nonanimated",
+      "tokens.ts:11-25,339-350,382-384 existing semantic/neutral/chart roles; legacy neonColorMap name alone is not fluorescent paint evidence"
+    ],
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "allWidthsExecution": "NOTRUN",
+    "themesRtlLongLabels200PercentForcedColorsReducedMotionSafeAreasKeyboardScreenReaderTouchContrast": "NOTRUN",
+    "limits": "No measured rectangles, focus restoration, contrast ratios, hidden-table reachability, short viewport, mobile/device/native acceptance or screenshot evidence. Source declarations do not satisfy mission43-45."
+  },
+  "checksNotRun": {
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "freshTests": "NOTRUN",
+    "pageAcceptance": "NOTRUN",
+    "mission43VisualQA": "NOTRUN",
+    "mission44PageDone": "NOTRUN",
+    "mission45ApplicationDone": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "globalTypeScript": "NOTRUN",
+    "browserScreenshots": "NOTRUN",
+    "APIRealDataDeviceIdentityMutations": "NOTRUN",
+    "catalogGenerator": "NOTRUN",
+    "preservationCLI": "NOTRUN",
+    "testCounts": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "reason": "Explicit report/log-only authorization. No tests/lint/build/TSC/browser/servers/Docker/installs/Git/subagents/custom helpers/extensions/heartbeats permitted. Parent5173 untouched; no browser lock."
+  },
+  "limits": [
+    "Source-derived reproductions are NOTRUN and are not real incidents or actual payload captures.",
+    "Regex matched-line counts are bounded probes, not compiler/lint/AST guarantees.",
+    "Historical queue scoped pass does not establish a fresh test or acceptance pass.",
+    "Read-only test assertions are evidence of current intent, not executed behavior.",
+    "No original preservation baseline was regenerated or compared; no historical >=70% claim.",
+    "No branch/status Git commands run; branch was not changed by this audit. Concurrent parent activity is not attributed to this worker.",
+    "Initial catalog read failed on case-distinct subFSMs/subFsms keys with exit1; corrected -AsHashtable read succeeded. Catalog untouched; failure is recorded, not an application JSON corruption claim.",
+    "Large raw outputs were tool-truncated; bounded views read omitted contract ranges. Complete command-produced evidence remains in authorized ignored log.",
+    "Final pin verification found only migration-queue.md drift (1/40), no source/support/guidance/catalog drift. Current queue was reread and exact relevant rows/dedup retained under authority.finalQueueRead. Not attributed to this audit."
+  ],
+  "priorityNeeds": [
+    "RUL-01 remove unsupported all-healthy assertion via exact summary/copy owners",
+    "RUL-02 obtain authoritative unknown/fallback disposition before any frontend contract adoption",
+    "RUL-03 truthful initial-paused sections and recovery",
+    "RUL-04 localize known source-owned labels and disposition generated rationale without parsing",
+    "RUL-05 existing date/number formatter callsite adoption only"
+  ],
+  "release": {
+    "reportWriteReleased": true,
+    "logWriteReleased": true,
+    "allOwnedCommandsComplete": true,
+    "noSourceTestBackendCatalogConfigQueueHandoffWrites": true,
+    "noBrowserLockHeldOrAcquired": true,
+    "parent5173Untouched": true,
+    "postReturnContinuation": false,
+    "terminal": "DONE source report delivered; not application acceptance",
+    "verifiedUTC": "2026-10-14T01:14:18.6403322Z"
+  },
+  "pins": [
+    {
+      "sha256": "33a6cf61556c8a8400c9713292912c3c3122c0e8b3f5e84949450d350b7ccd59",
+      "lines": 412,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/features/diagnostics/pages/RemainingUsefulLifePage.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "5b3ea4ef248a7bb050953da0668417e5df746f5a79e798f8102f599182bdcb80",
+      "lines": 64,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/features/diagnostics/components/operationalbrief-all/NextServiceBrief.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "d1a18556895a17d5c676a62aea61d04394554596742834e1e758106927face27",
+      "lines": 275,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/features/diagnostics/pages/RemainingUsefulLifePage.test.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "ed8692eff03962a98ef4cb65608f4fd8ac26abd24417515e4f79581c228517f6",
+      "lines": 112,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/api/hooks/useRUL.ts",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines": 174,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/hooks/useDataState.ts",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/api/dataState.ts",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines": 194,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/hooks/useUnits.ts",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines": 47,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "lines": 500,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/lib/unitConversion.ts",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/lib/workspaceScope.ts",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "lines": 289,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/lib/routeRegistry.ts",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lines": 919,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/App.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "lines": 42,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/components/charts/EmbeddedChart.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lines": 1006,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "f02c0cff30b5a3e8a4016235c73f23d482ece9ef7e15566c3e62308250fe2e7a",
+      "lines": 251,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/components/charts/LinearGauge.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+      "lines": 93,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/components/data-display/MetricBar.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "f736cb0cacc4f6d7095cf14d4ab34c328d133d6c1c6d7fce95f8b8a1a0ebba20",
+      "lines": 58,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/components/ui/SelectableCard.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "lines": 321,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lines": 115,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "66dcdb19df209cc30835aa290e5020075b76e8c4f42262367460b51a6e83e47a",
+      "lines": 78,
+      "scope": "READ_ONLY_AUTHORITATIVE_SUPPORT",
+      "path": "internal/api/rul/dtos.go",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "78c396d10874081094151c8a59e7c7e58c14003c48f41b815755b2d2d90c8e4e",
+      "lines": 422,
+      "scope": "READ_ONLY_AUTHORITATIVE_SUPPORT",
+      "path": "internal/api/rul/handler.go",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "3690032e65613ea2a094c0468f409d9084038f2f777087013eb644fba23f6983",
+      "lines": 543,
+      "scope": "READ_ONLY_AUTHORITATIVE_SUPPORT",
+      "path": "internal/api/rul/prognostics.go",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "3cf5e091cb7710acd134162dc388d0a2eec7b130d8138476a30b31cd6841eb3f",
+      "lines": 2041,
+      "scope": "READ_ONLY_AUTHORITY_OR_CATALOG_MAY_CHANGE_CONCURRENTLY",
+      "path": "migration-queue.md",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "lines": 2460,
+      "scope": "READ_ONLY_AUTHORITY_OR_CATALOG_MAY_CHANGE_CONCURRENTLY",
+      "path": "docs/session-handoff.md",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "lines": 296,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "docs/orchestrator-loop.md",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "lines": 2539,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "docs/frontend-design-contract.md",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "lines": 1593,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "docs/frontend-mission.md",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "lines": 94,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "lines": 629,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "lines": 45,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": ".github/instructions/observability.instructions.md",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "lines": 221,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "snapshotUTC": "2026-10-14T01:06:14.9181739Z"
+    },
+    {
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lines": 458,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/api/client.ts",
+      "snapshotUTC": "2026-10-14T01:08:14.7558334Z",
+      "timestampLimit": "Command completion timestamp; source read earlier within this short command, not an exact atomic read instant."
+    },
+    {
+      "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "lines": 439,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": "web/src/lib/tokens.ts",
+      "snapshotUTC": "2026-10-14T01:08:14.7558334Z",
+      "timestampLimit": "Command completion timestamp; source read earlier within this short command, not an exact atomic read instant."
+    },
+    {
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lines": 5363,
+      "scope": "READ_ONLY_AUTHORITATIVE_SUPPORT",
+      "path": "internal/api/router.go",
+      "snapshotUTC": "2026-10-14T01:08:14.7558334Z",
+      "timestampLimit": "Command completion timestamp; source read earlier within this short command, not an exact atomic read instant."
+    },
+    {
+      "sha256": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+      "lines": 130,
+      "scope": "READ_ONLY_SOURCE_OR_GUIDANCE",
+      "path": ".gitignore",
+      "snapshotUTC": "2026-10-14T01:08:14.7558334Z",
+      "timestampLimit": "Command completion timestamp; source read earlier within this short command, not an exact atomic read instant."
+    },
+    {
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "lines": 38994,
+      "scope": "READ_ONLY_AUTHORITY_OR_CATALOG_MAY_CHANGE_CONCURRENTLY",
+      "path": "web/src/i18n/en.json",
+      "snapshotUTC": "2026-10-14T01:08:14.7558334Z",
+      "timestampLimit": "Command completion timestamp; source read earlier within this short command, not an exact atomic read instant."
+    },
+    {
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lines": 148,
+      "scope": "READ_ONLY_SUPPORT",
+      "path": "web/src/hooks/useDateFormat.ts",
+      "snapshotUTC": "2026-10-14T01:12:21.2756743Z"
+    }
+  ],
+  "commands": [
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Inspect existing report/log and locate audit, handoff, queue, mission, and instruction documents (no Git)"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Read current handoff, mission acceptance43-45 and applicable instructions"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Read FULL orchestrator-loop.md and frontend-design-contract.md; locate exact queue/current dependency rows"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Document line counts; exact target queue row/dependency and active handoff"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Locate mission43-45, RUL router/workspace dependencies and queued root dedup matches"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Bounded numbered dependency/source citations, mission acceptance locator, and narrow queue root matches"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Read numbered page/direct-part/hook; identify exact backend, router and support seams; dedup actual queue IDs"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 1,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Locate RUL authoritative backend and exact route metadata; inspect scoped catalog and queue duplicates (shell501)"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Corrected bounded backend/router/catalog/dedup/ignore read; ConvertFrom-Json -AsHashtable"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Pin source/support snapshot SHA256; execute raw Select-String rule probes/counts; locate exact mounted route and actions"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Capture authoritative source-derived mechanisms, section/action counts, preferences seams and final narrow queue search"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Concise raw count receipts, canonical-key parity, request prefix and current queue authority"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Exact finding line anchors and token/date support ranges"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Write authorized source-only JSON report with exact queue rows, SHA256 pins and raw command receipts; ConvertFrom-Json -AsHashtable / ConvertTo-Json -Depth 32 / IO.WriteAllText"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log (matching COMMAND block)",
+      "numericExit": 0,
+      "kind": "PowerShell bounded source/report read or authorized report/log write; no native runtime gate",
+      "command": "Final JSON/count/NOTRUN verification and all 40 SHA256 pin comparisons; Get-Content / ConvertFrom-Json -AsHashtable / Get-FileHash"
+    },
+    {
+      "rawOutput": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log",
+      "numericExit": 0,
+      "kind": "final authority drift reconciliation and source report release",
+      "command": "Get-Content migration-queue.md; reread exact current target/dependency/rescue and RUL dedup rows after authority-only drift; ConvertFrom-Json -AsHashtable; verify final JSON/SHA256"
+    }
+  ],
+  "evidenceLog": "web/logs/phase6-qa-diagnostics-remaining-useful-life.log",
+  "writtenUTC": "2026-10-14T01:12:21.3862272Z",
+  "pinVerification": {
+    "verifiedUTC": "2026-10-14T01:13:23.1664594Z",
+    "sourceSupportGuidanceDrift": 0,
+    "checked": 40,
+    "results": [
+      {
+        "actualSHA256": "33a6cf61556c8a8400c9713292912c3c3122c0e8b3f5e84949450d350b7ccd59",
+        "path": "web/src/features/diagnostics/pages/RemainingUsefulLifePage.tsx",
+        "matches": true,
+        "expectedSHA256": "33a6cf61556c8a8400c9713292912c3c3122c0e8b3f5e84949450d350b7ccd59"
+      },
+      {
+        "actualSHA256": "5b3ea4ef248a7bb050953da0668417e5df746f5a79e798f8102f599182bdcb80",
+        "path": "web/src/features/diagnostics/components/operationalbrief-all/NextServiceBrief.tsx",
+        "matches": true,
+        "expectedSHA256": "5b3ea4ef248a7bb050953da0668417e5df746f5a79e798f8102f599182bdcb80"
+      },
+      {
+        "actualSHA256": "d1a18556895a17d5c676a62aea61d04394554596742834e1e758106927face27",
+        "path": "web/src/features/diagnostics/pages/RemainingUsefulLifePage.test.tsx",
+        "matches": true,
+        "expectedSHA256": "d1a18556895a17d5c676a62aea61d04394554596742834e1e758106927face27"
+      },
+      {
+        "actualSHA256": "ed8692eff03962a98ef4cb65608f4fd8ac26abd24417515e4f79581c228517f6",
+        "path": "web/src/api/hooks/useRUL.ts",
+        "matches": true,
+        "expectedSHA256": "ed8692eff03962a98ef4cb65608f4fd8ac26abd24417515e4f79581c228517f6"
+      },
+      {
+        "actualSHA256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "path": "web/src/hooks/useSelectedVehicle.ts",
+        "matches": true,
+        "expectedSHA256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3"
+      },
+      {
+        "actualSHA256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "path": "web/src/hooks/useDataState.ts",
+        "matches": true,
+        "expectedSHA256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b"
+      },
+      {
+        "actualSHA256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "path": "web/src/api/dataState.ts",
+        "matches": true,
+        "expectedSHA256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761"
+      },
+      {
+        "actualSHA256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+        "path": "web/src/hooks/useUnits.ts",
+        "matches": true,
+        "expectedSHA256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14"
+      },
+      {
+        "actualSHA256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "path": "web/src/hooks/useNumberFormatting.ts",
+        "matches": true,
+        "expectedSHA256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7"
+      },
+      {
+        "actualSHA256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+        "path": "web/src/lib/unitConversion.ts",
+        "matches": true,
+        "expectedSHA256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce"
+      },
+      {
+        "actualSHA256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "path": "web/src/lib/workspaceScope.ts",
+        "matches": true,
+        "expectedSHA256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7"
+      },
+      {
+        "actualSHA256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+        "path": "web/src/lib/routeRegistry.ts",
+        "matches": true,
+        "expectedSHA256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97"
+      },
+      {
+        "actualSHA256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "path": "web/src/App.tsx",
+        "matches": true,
+        "expectedSHA256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c"
+      },
+      {
+        "actualSHA256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "matches": true,
+        "expectedSHA256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b"
+      },
+      {
+        "actualSHA256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "path": "web/src/components/layout/PageContainer.tsx",
+        "matches": true,
+        "expectedSHA256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a"
+      },
+      {
+        "actualSHA256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+        "path": "web/src/components/charts/EmbeddedChart.tsx",
+        "matches": true,
+        "expectedSHA256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721"
+      },
+      {
+        "actualSHA256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+        "path": "web/src/components/charts/ChartContainer.tsx",
+        "matches": true,
+        "expectedSHA256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694"
+      },
+      {
+        "actualSHA256": "f02c0cff30b5a3e8a4016235c73f23d482ece9ef7e15566c3e62308250fe2e7a",
+        "path": "web/src/components/charts/LinearGauge.tsx",
+        "matches": true,
+        "expectedSHA256": "f02c0cff30b5a3e8a4016235c73f23d482ece9ef7e15566c3e62308250fe2e7a"
+      },
+      {
+        "actualSHA256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+        "path": "web/src/components/data-display/MetricBar.tsx",
+        "matches": true,
+        "expectedSHA256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc"
+      },
+      {
+        "actualSHA256": "f736cb0cacc4f6d7095cf14d4ab34c328d133d6c1c6d7fce95f8b8a1a0ebba20",
+        "path": "web/src/components/ui/SelectableCard.tsx",
+        "matches": true,
+        "expectedSHA256": "f736cb0cacc4f6d7095cf14d4ab34c328d133d6c1c6d7fce95f8b8a1a0ebba20"
+      },
+      {
+        "actualSHA256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+        "path": "web/src/components/data-display/OperationalBrief.tsx",
+        "matches": true,
+        "expectedSHA256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7"
+      },
+      {
+        "actualSHA256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "matches": true,
+        "expectedSHA256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9"
+      },
+      {
+        "actualSHA256": "66dcdb19df209cc30835aa290e5020075b76e8c4f42262367460b51a6e83e47a",
+        "path": "internal/api/rul/dtos.go",
+        "matches": true,
+        "expectedSHA256": "66dcdb19df209cc30835aa290e5020075b76e8c4f42262367460b51a6e83e47a"
+      },
+      {
+        "actualSHA256": "78c396d10874081094151c8a59e7c7e58c14003c48f41b815755b2d2d90c8e4e",
+        "path": "internal/api/rul/handler.go",
+        "matches": true,
+        "expectedSHA256": "78c396d10874081094151c8a59e7c7e58c14003c48f41b815755b2d2d90c8e4e"
+      },
+      {
+        "actualSHA256": "3690032e65613ea2a094c0468f409d9084038f2f777087013eb644fba23f6983",
+        "path": "internal/api/rul/prognostics.go",
+        "matches": true,
+        "expectedSHA256": "3690032e65613ea2a094c0468f409d9084038f2f777087013eb644fba23f6983"
+      },
+      {
+        "actualSHA256": "fb97dd1abcfcf948c8d7c51f661c632eb04dbe749fb212d28ce372b259813420",
+        "path": "migration-queue.md",
+        "matches": false,
+        "expectedSHA256": "3cf5e091cb7710acd134162dc388d0a2eec7b130d8138476a30b31cd6841eb3f"
+      },
+      {
+        "actualSHA256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+        "path": "docs/session-handoff.md",
+        "matches": true,
+        "expectedSHA256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2"
+      },
+      {
+        "actualSHA256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+        "path": "docs/orchestrator-loop.md",
+        "matches": true,
+        "expectedSHA256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767"
+      },
+      {
+        "actualSHA256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+        "path": "docs/frontend-design-contract.md",
+        "matches": true,
+        "expectedSHA256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e"
+      },
+      {
+        "actualSHA256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "path": "docs/frontend-mission.md",
+        "matches": true,
+        "expectedSHA256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f"
+      },
+      {
+        "actualSHA256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+        "path": ".github/instructions/frontend-si-cutover.instructions.md",
+        "matches": true,
+        "expectedSHA256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4"
+      },
+      {
+        "actualSHA256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+        "path": ".github/instructions/react-frontend.instructions.md",
+        "matches": true,
+        "expectedSHA256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e"
+      },
+      {
+        "actualSHA256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+        "path": ".github/instructions/observability.instructions.md",
+        "matches": true,
+        "expectedSHA256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42"
+      },
+      {
+        "actualSHA256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+        "path": ".github/instructions/unit-conversion.instructions.md",
+        "matches": true,
+        "expectedSHA256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315"
+      },
+      {
+        "actualSHA256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "path": "web/src/api/client.ts",
+        "matches": true,
+        "expectedSHA256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5"
+      },
+      {
+        "actualSHA256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+        "path": "web/src/lib/tokens.ts",
+        "matches": true,
+        "expectedSHA256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3"
+      },
+      {
+        "actualSHA256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+        "path": "internal/api/router.go",
+        "matches": true,
+        "expectedSHA256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c"
+      },
+      {
+        "actualSHA256": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+        "path": ".gitignore",
+        "matches": true,
+        "expectedSHA256": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e"
+      },
+      {
+        "actualSHA256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+        "path": "web/src/i18n/en.json",
+        "matches": true,
+        "expectedSHA256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893"
+      },
+      {
+        "actualSHA256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "path": "web/src/hooks/useDateFormat.ts",
+        "matches": true,
+        "expectedSHA256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542"
+      }
+    ],
+    "limit": "Hashes pin file bytes at read time, not a Git commit or atomic multi-file snapshot. Concurrent parent-owned authority/catalog drift, if any, is separate.",
+    "changed": 1,
+    "atomicRepositorySnapshot": null,
+    "matched": 39
+  },
+  "validation": {
+    "candidateExecutionsAllNOTRUN": true,
+    "uniqueFindingIds": 5,
+    "numericExit": 0,
+    "jsonParse": "PASS",
+    "sourceReproductionsAllNOTRUN": true,
+    "uniqueCandidateIds": 3,
+    "majorSections": 3
+  }
+}

@@ -42,16 +42,19 @@ export function RepairCaseCollaboration({
           <UserRound className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           <PanelTitle>{t('dataRepair.cases.assignmentTitle', 'Ownership')}</PanelTitle>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="min-w-0 w-full sm:flex-1">
           <Input
-            className="flex-1"
-            aria-label={t('dataRepair.cases.assignee', 'Assignee')}
+            className="h-10"
+            label={t('dataRepair.cases.assignee', 'Assignee')}
             placeholder={t('dataRepair.cases.assigneePlaceholder', 'Operator name')}
             value={assignee}
             onChange={(event) => setAssignee(event.target.value)}
             disabled={!canWrite}
           />
+          </div>
           <Button
+            className="h-10 w-full shrink-0 sm:w-auto"
             variant="secondary"
             loading={assign.isPending}
             disabled={!canWrite}

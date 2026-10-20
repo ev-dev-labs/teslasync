@@ -47,7 +47,7 @@ export function RecommendationList({
       <QueryError
         error={error}
         onRetry={onRetry}
-        resourceName={t('actionCenter.resource', 'Action Center recommendations')}
+        resourceName={t('actionCenter.resource', 'Action center recommendations')}
       />
     );
   }

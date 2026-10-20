@@ -191,6 +191,20 @@ describe('AIChargingCurveFingerprintClustering — AI-off render gate', () => {
 })
 
 describe('AIChargingCurveFingerprintClustering — canStart mirrors vehicle_id > 0 across string|number', () => {
+  it.each([undefined, 42])('discloses independent narrator provenance with vehicleId=%s', (vehicleId) => {
+    mockUseSettings.mockReturnValue(enabled())
+
+    render(<AIChargingCurveFingerprintClustering vehicleId={vehicleId} />)
+
+    const root = screen.getByTestId(ROOT_TESTID)
+    expect(root).toHaveTextContent('retrieved charging history')
+    expect(root).toHaveTextContent('separate per-vehicle feature-query tool')
+    expect(root).toHaveTextContent('own lookback window (90 days by default), not the workspace date range')
+    expect(root).toHaveTextContent('retrieved history is not limited to the chart window')
+    expect(root).toHaveTextContent('not established as equivalent to the charts below')
+    expect(root).not.toHaveTextContent('same per-cluster numbers the curves below render')
+  })
+
   it('disables the button and shows the empty-state hint when no vehicle is selected', () => {
     mockUseSettings.mockReturnValue(enabled())
 
@@ -305,6 +319,7 @@ describe('AIChargingCurveFingerprintClustering — on-mode SSE wiring', () => {
       expect(root).toHaveTextContent(
         'Vehicle Roadie shows a dominant L2 home cluster with steady 7 kW peaks.',
       )
+      expect(root).toHaveTextContent('own lookback window (90 days by default)')
     })
   })
 

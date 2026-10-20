@@ -1,78 +1,102 @@
 import { useTranslation } from 'react-i18next';
-import { Zap, BatteryCharging } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import type { StatMetric } from '@/components/data-display';
+import { Badge } from '@/components/ui';
+import { deriveDataState, knownNumber } from '@/api/dataState';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const { data: vehicles } = vehiclesQuery;
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
+  const query = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
   /* SI-floor: state.rated_range and state.charge_rate arrive in METERS / m·h⁻¹.
    * convertDistanceFromSI handles the meters→user-unit conversion. */
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const state = stateData?.state;
+  const vehiclesState = deriveDataState(vehiclesQuery);
+  const sourceState = deriveDataState({
+    ...query,
+    data: stateData ?? (isLoading || isError || error ? undefined : null),
+  }, { provenance: stateData?.live ? 'live' : 'cached', unavailable: state == null });
+  const dataState = id > 0 ? sourceState : vehiclesState;
+  const batteryMetric: StatMetric = {
+    metricId: 'percent', occurrenceId: 'charge-status-battery', rawValue: knownNumber(state?.battery_level),
+    label: t('widget.battery', 'Battery'),
+    description: t('widget.chargeStatusBatteryDescription', 'Returned battery percentage; a measured zero is not a missing reading.'),
+    display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) },
+  };
+  const chargingMetrics: StatMetric[] = [
+    // VehicleService exposes charger_power in kW, unlike canonical signal-store watts.
+    { metricId: 'number', occurrenceId: 'charge-status-power', rawValue: knownNumber(state?.charger_power),
+      label: t('widget.power', 'Power'),
+      description: t('widget.chargeStatusPowerDescription', 'Returned charger power in the established kW API contract; no additional scaling is applied.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kW' }) } },
+    { metricId: 'rate', occurrenceId: 'charge-status-rate', rawValue: knownNumber(state?.charge_rate),
+      label: t('widget.rate', 'Rate'),
+      description: t('widget.chargeStatusRateDescription', 'Meters of range added per hour, converted to the distance preference; this is not vehicle speed.'),
+      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: `${distanceUnit}/h` }) } },
+    batteryMetric,
+    { metricId: 'number', occurrenceId: 'charge-status-time-to-full', rawValue: knownNumber(state?.time_to_full_charge),
+      label: t('widget.timeToFull', 'Time to full'),
+      description: t('widget.chargeStatusTimeDescription', 'The existing hours display is retained; the wire unit is not independently established. Negative estimates remain unknown.'),
+      display: { formatter: raw => ({ value: raw >= 0 ? `${fmtNumber(raw)}h` : '—', unit: '' }) } },
+  ];
+  const idleMetrics: StatMetric[] = [
+    batteryMetric,
+    { metricId: 'distance', occurrenceId: 'charge-status-range', rawValue: knownNumber(state?.rated_range),
+      label: t('widget.range', 'Range'),
+      description: t('widget.chargeStatusRangeDescription', 'Returned rated range in meters, converted only to the distance preference.'),
+      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) } },
+  ];
+  const scope = t('widget.chargeStatusSummaryScope', 'Vehicle {{id}} · returned state snapshot; not a completed charging session or continuous recording.', { id });
 
   return (
     <WidgetShell
-      loading={isLoading}
+      title={t('widget.chargeStatusLive', 'Charge status')}
+      loading={isLoading && !stateData}
+      error={!stateData && isError ? String(error ?? 'Request failed') : null}
+      dataState={dataState}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={() => { if (id > 0) void refetch(); else void vehiclesQuery.refetch(); }}
     >
-      <div className="h-full flex flex-col justify-center">
+      <div className="h-full flex flex-col justify-center [&_[role=list]]:!grid-cols-1 @xs:[&_[role=list]]:!grid-cols-2">
         {state?.is_charging ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <BatteryCharging className="h-4 w-4 text-neon-green animate-pulse" />
-              <span className="text-sm font-semibold text-emerald-300">
-                {t('widget.charging', 'Charging')}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-2xs text-[var(--text-muted)]">{t('widget.power', 'Power')}</p>
-                <p className="text-sm font-bold text-emerald-300">{fmtNumber(state.charger_power)} kW</p>
-              </div>
-              <div>
-                <p className="text-2xs text-[var(--text-muted)]">{t('widget.rate', 'Rate')}</p>
-                <p className="text-sm font-bold text-[var(--text-primary)]">
-                  {fmtInt(convertDistanceFromSI(state.charge_rate ?? 0, distanceUnit))} {distanceUnit}/h
-                </p>
-              </div>
-              <div>
-                <p className="text-2xs text-[var(--text-muted)]">{t('widget.battery', 'Battery')}</p>
-                <p className="text-sm font-bold text-[var(--text-primary)]">{state.battery_level ?? 0}%</p>
-              </div>
-              <div>
-                <p className="text-2xs text-[var(--text-muted)]">
-                  {t('widget.timeToFull', 'Time to Full')}
-                </p>
-                <p className="text-sm font-bold text-[var(--text-primary)]">
-                  {(state.time_to_full_charge ?? 0) > 0
-                    ? `${fmtNumber(state.time_to_full_charge, 1)}h`
-                    : '—'}
-                </p>
-              </div>
-            </div>
+          <div className="min-w-0 space-y-3">
+            <Badge variant="success" size="sm">{t('widget.charging', 'Charging')}</Badge>
+            <DashboardSourceBrief metrics={chargingMetrics} state={dataState}
+              eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+              title={t('widget.chargeStatusChargingSummaryTitle', 'Returned charging readings')}
+              description={t('widget.chargeStatusChargingSummaryDescription', 'Power, range-addition rate, battery and time estimate remain separate source readings; missing values are not zero.')}
+              scope={scope}
+              testId="dashboard-charge-status-charging-brief" />
           </div>
         ) : state ? (
-          <div className="flex flex-col items-center justify-center text-center">
-            <Zap className="h-6 w-6 text-[var(--text-muted)] mb-2" />
-            <p className="text-sm font-medium text-[var(--text-primary)]">
-              {t('widget.notCharging', 'Not Charging')}
-            </p>
-            <p className="text-xs text-[var(--text-muted)]">
-              {state.battery_level ?? 0}% · {fmtNumber(convertDistanceFromSI(state.rated_range ?? 0, distanceUnit), 0)} {distanceUnit}
-            </p>
+          <div className="min-w-0 space-y-3">
+            <Badge variant="neutral" size="sm">
+              {state.is_charging === false ? t('widget.notCharging', 'Not charging') : t('widget.chargingSchedule.modeUnknown', 'Unknown')}
+            </Badge>
+            <DashboardSourceBrief metrics={idleMetrics} state={dataState}
+              eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+              title={t('widget.chargeStatusIdleSummaryTitle', 'Returned battery and range')}
+              description={t('widget.chargeStatusIdleSummaryDescription', 'Battery and rated range remain visible for both idle and unknown charging status; the status badge does not establish source freshness.')}
+              scope={scope}
+              testId="dashboard-charge-status-idle-brief" />
           </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

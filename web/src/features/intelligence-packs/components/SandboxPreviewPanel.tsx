@@ -27,15 +27,20 @@ import {
   YAxis,
 } from '@/components/charts';
 import { MetricTile } from '@/components/data-display';
-import { Badge, Caption, GlassPanel, Select, Text } from '@/components/ui';
+import { Badge, Button, Caption, Select, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { EmptyState, InlineCallout } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { useCatalog } from '../hooks/useCatalog';
 import { useTrustDecision } from '../hooks/useTrustDecision';
 import { useSandboxPreview } from '../hooks/useSandboxPreview';
 import { resolveDashboardWidgetResults } from '../lib/sandboxRunner';
 import type { FormulaRunResult } from '../lib/sandboxRunner';
 import type { PackCapabilityId, PackVizKind } from '../lib/manifestTypes';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { useChartPalette } from '@/hooks/useChartPalette';
+import { SandboxRunBrief } from './operationalbrief-all/SandboxRunBrief';
 
 function seriesToChartData(series: number[]) {
   return series.map((value, i) => ({ i, value }));
@@ -45,12 +50,15 @@ function FormulaSeriesChart({
   title,
   kind,
   data,
+  unit,
 }: {
   title: string;
   kind: 'line' | 'area' | 'bar';
   data: { i: number; value: number }[];
+  unit?: string;
 }) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
 
   return (
     // chart-legend-audit:skip line, area, and bar are mutually exclusive render modes for one formula series
@@ -64,7 +72,7 @@ function FormulaSeriesChart({
       data={data}
       dataColumns={[
         { key: 'i', label: t('intelPacks.sandbox.row', 'Sample') },
-        { key: 'value', label: t('intelPacks.sandbox.value', 'Value') },
+        { key: 'value', label: `${t('intelPacks.sandbox.value', 'Value')}${unit ? ` (${unit})` : ''}` },
       ]}
       fluid={false}
       mobileHeight={120}
@@ -77,7 +85,7 @@ function FormulaSeriesChart({
             <XAxis dataKey="i" hide />
             <YAxis width={36} tick={{ fontSize: 10 }} />
             <Tooltip content={<ChartTooltip />} />
-            <Line type="monotone" dataKey="value" stroke="#22d3ee" dot={false} strokeWidth={2} isAnimationActive={false} />
+            <Line type="monotone" dataKey="value" stroke={palette[0]} dot={false} strokeWidth={2} isAnimationActive={false} />
           </LineChart>
         ) : kind === 'area' ? (
           <AreaChart data={data}>
@@ -85,7 +93,7 @@ function FormulaSeriesChart({
             <XAxis dataKey="i" hide />
             <YAxis width={36} tick={{ fontSize: 10 }} />
             <Tooltip content={<ChartTooltip />} />
-            <Area type="monotone" dataKey="value" stroke="#34d399" fill="#34d39933" isAnimationActive={false} />
+            <Area type="monotone" dataKey="value" stroke={palette[1]} fill={palette[1]} fillOpacity={0.08} isAnimationActive={false} />
           </AreaChart>
         ) : (
           <BarChart data={data}>
@@ -93,7 +101,7 @@ function FormulaSeriesChart({
             <XAxis dataKey="i" hide />
             <YAxis width={36} tick={{ fontSize: 10 }} />
             <Tooltip content={<ChartTooltip />} />
-            <Bar dataKey="value" fill="#a78bfa" isAnimationActive={false} />
+            <Bar dataKey="value" fill={palette[2]} isAnimationActive={false} />
           </BarChart>
         )}
       </ResponsiveContainer>
@@ -102,26 +110,26 @@ function FormulaSeriesChart({
 }
 
 function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind; result: FormulaRunResult | null }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
   if (!result) {
     return (
-      <GlassPanel padding="sm" className="flex flex-col gap-1">
-        <p className="text-xs font-medium text-[var(--text-primary)]">{title}</p>
-        <p className="text-xs text-[var(--text-muted)]">{t('intelPacks.sandbox.formulaMissing', 'Referenced formula not found.')}</p>
-      </GlassPanel>
+      <LayoutCard title={title}>
+        <Text as="p" variant="caption">{t('intelPacks.sandbox.formulaMissing', 'Referenced formula not found.')}</Text>
+      </LayoutCard>
     );
   }
   const data = seriesToChartData(result.series);
 
   return (
-    <GlassPanel padding="sm" className="flex flex-col gap-2">
-      <p className="text-xs font-medium text-[var(--text-primary)]">{title}</p>
+    <LayoutCard title={title}>
       {data.length === 0 ? (
-        <p className="text-xs text-[var(--text-muted)]">{t('intelPacks.sandbox.noData', 'No output rows.')}</p>
+        <Text as="p" variant="caption">{t('intelPacks.sandbox.noData', 'No output rows.')}</Text>
       ) : kind === 'line' || kind === 'area' || kind === 'bar' ? (
-        <FormulaSeriesChart title={title} kind={kind} data={data} />
+        <FormulaSeriesChart title={title} kind={kind} data={data} unit={result.unit} />
       ) : kind === 'sparkline' ? (
-        <Sparkline data={result.series} ariaLabel={title} />
+        <Sparkline data={result.series} color={palette[0]} ariaLabel={title} />
       ) : kind === 'radial-gauge' ? (
         // A pack formula has no declared ceiling, so the previous ring scaled
         // itself to the sample's own peak — which pinned it to a full circle
@@ -135,17 +143,17 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
           align="start"
           decimals={1}
           sublabel={t('intelPacks.sandbox.sampleRange', 'sample {{min}}–{{max}}{{unit}}', {
-            min: fmtNumber(Math.min(...result.series), 1),
-            max: fmtNumber(Math.max(...result.series), 1),
+            min: fmtNumber(Math.min(...result.series)),
+            max: fmtNumber(Math.max(...result.series)),
             unit: result.unit ? ` ${result.unit}` : '',
           })}
         />
       ) : (
         <div>
-          <Text variant="metricValue">{result.latest != null ? fmtNumber(result.latest, 1) : '—'}</Text>
-          <p className="text-xs text-[var(--text-muted)]">
-            {t('intelPacks.sandbox.average', 'avg {{value}}{{unit}}', { value: result.average != null ? fmtNumber(result.average, 1) : '—', unit: result.unit ? ` ${result.unit}` : '' })}
-          </p>
+          <Text variant="metricValue">{result.latest != null ? `${fmtNumber(result.latest)}${result.unit ? ` ${result.unit}` : ''}` : '—'}</Text>
+          <Text as="p" variant="caption">
+            {t('intelPacks.sandbox.average', 'avg {{value}}{{unit}}', { value: result.average != null ? fmtNumber(result.average) : '—', unit: result.unit ? ` ${result.unit}` : '' })}
+          </Text>
         </div>
       )}
       {result.budgetError && <Caption className="block text-amber-300">{result.budgetError}</Caption>}
@@ -154,7 +162,7 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
           {t('intelPacks.sandbox.deniedFields', 'Fields evaluated as 0 (capability denied): {{fields}}', { fields: result.deniedFieldRefs.join(', ') })}
         </Caption>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }
 
@@ -165,6 +173,17 @@ export function SandboxPreviewPanel() {
 
   const selectedEntry = useMemo(() => entries.find((e) => e.envelope.manifest.id === selectedPackId) ?? null, [entries, selectedPackId]);
   const trustQuery = useTrustDecision(selectedEntry?.installedVersion != null ? selectedPackId : null);
+  const trustState = useDataState(trustQuery);
+  const installed = selectedEntry?.installedVersion != null;
+  const grantLabel = t('intelPacks.sandbox.usingInstalledGrant', 'Using installed capability grant');
+  const grantRetained = trustState.refreshError != null || trustState.isRefreshBlocked || trustState.isRefreshing;
+  const trustNotice = trustState.isRefreshBlocked
+    ? t('intelPacks.source.paused', 'The local {{label}} read is paused; no empty result is inferred.', { label: grantLabel })
+    : trustState.fatalError || trustState.refreshError
+      ? t('intelPacks.source.error', 'Could not read {{label}} from local storage.', { label: grantLabel })
+      : trustQuery.fetchStatus === 'fetching'
+        ? t('developerReference.layout.source.loading', 'Loading {{label}}', { label: grantLabel })
+        : null;
 
   const grantedCapabilities = useMemo<ReadonlySet<PackCapabilityId>>(() => {
     if (!selectedEntry) return new Set();
@@ -176,6 +195,13 @@ export function SandboxPreviewPanel() {
   }, [selectedEntry, trustQuery.data]);
 
   const run = useSandboxPreview(selectedEntry?.envelope.manifest ?? null, grantedCapabilities);
+  const grantDescription = trustQuery.data
+    ? grantRetained
+      ? t('dataState.staleNamed.title', '{{label}} may be out of date', { label: grantLabel })
+      : grantLabel
+    : selectedEntry?.installedVersion != null
+      ? t('intelPacks.sandbox.installedGrantUnavailable', 'Installed pack: synthetic preview is simulating the full requested-capability grant because no installed grant is currently available.')
+      : t('intelPacks.sandbox.usingFullGrant', 'Preview mode: simulating full requested-capability grant (not installed)');
 
   if (entries.length === 0) {
     // no-action: preview entries are sourced from the same bundled catalog fixture as the Catalog tab, which always ships at least one demo entry.
@@ -199,11 +225,33 @@ export function SandboxPreviewPanel() {
       />
 
       {selectedEntry && (
-        <Badge variant={trustQuery.data ? 'success' : 'neutral'} size="sm">
-          {trustQuery.data
-            ? t('intelPacks.sandbox.usingInstalledGrant', 'Using installed capability grant')
-            : t('intelPacks.sandbox.usingFullGrant', 'Preview mode: simulating full requested-capability grant (not installed)')}
+        <Badge variant={trustQuery.data && !grantRetained ? 'success' : 'neutral'} size="sm">
+          {grantDescription}
         </Badge>
+      )}
+
+      {installed && trustNotice && (
+        <InlineCallout variant={trustState.fatalError || trustState.refreshError ? 'warning' : 'info'}>
+          <div className="space-y-2" role="status" aria-live="polite">
+            <Text as="p" variant="bodySm">{trustNotice}</Text>
+            {trustState.refreshError && (
+              <Text as="p" variant="bodySm">
+                {t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')}
+              </Text>
+            )}
+            {trustState.retry && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={trustQuery.fetchStatus === 'fetching'}
+                onClick={trustState.retry}
+              >
+                {t('error.retry', 'Retry')}
+              </Button>
+            )}
+          </div>
+        </InlineCallout>
       )}
 
       {run == null || !selectedEntry ? (
@@ -224,14 +272,12 @@ export function SandboxPreviewPanel() {
               </div>
             </div>
           ))}
-          <p className="text-xs text-[var(--text-muted)]">
-            {t('intelPacks.sandbox.runStats', '{{rows}} sample rows · {{steps}} evaluation steps · {{ms}}ms{{truncated}}', {
-              rows: run.rowsUsed,
-              steps: run.totalStepsUsed,
-              ms: run.durationMs,
-              truncated: run.truncated ? t('intelPacks.sandbox.truncatedSuffix', ' · truncated by budget') : '',
-            })}
-          </p>
+          <SandboxRunBrief
+            run={run}
+            packName={selectedEntry.envelope.manifest.name}
+            packVersion={selectedEntry.envelope.manifest.version}
+            grantDescription={grantDescription}
+          />
         </div>
       )}
     </div>

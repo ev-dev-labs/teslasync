@@ -1,0 +1,524 @@
+{
+  "item": "audit-page-221",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\HvacCyclingPage.tsx",
+  "routes": [
+    "/hvac-cycling"
+  ],
+  "purpose": "Explain HVAC cycling through returned climate rows, qualified intervals, run fragments, observed transitions and complete-cycle evidence.",
+  "primaryGoal": "Understand duration-weighted duty and short-cycle support without mistaking censored, unknown or forward-filled evidence for measurements or diagnosis.",
+  "auditMode": "Phase 0, source inspection only; no source edits, Git, tests, lint, builds, browser or production requests.",
+  "dataSources": [
+    {
+      "hook": "useClimateHistory",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 36,
+      "endpoint": "GET /api/v1/climate?vehicle_id=<selected ID>",
+      "routeEvidence": "internal\\api\\router.go:4116-4118",
+      "sourceOwner": "internal\\api\\climate\\handler.go:80-116",
+      "source": "signal.StateReader.Timeline, forward-folded signal history, not live state",
+      "window": "Server defaults to now minus seven calendar days through now; start and end supported together by the handler but not exposed by this hook.",
+      "query": "['climate','history',vehicleId]; enabled only for nonempty vehicleId; forwards AbortSignal; safeArray selection; inherited query policy.",
+      "wire": "Backend maps HvacPower to hvac_power and HvacACEnabled to is_ac_on. ClimateState declares camelCase mirrors. No watt or energy interpretation is justified: the page strictly interprets HVAC power as boolean state.",
+      "trust": "deriveDataState(provenance historical) separates fatal errors from refresh errors; retained rows survive refresh failure and pause.",
+      "verification": "Hook and router match by source; actual HTTP/server behavior unverified."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "sourceOwner": "Existing header selection, URL vehicle_id, persisted selection and useVehicles fallback",
+      "behavior": "Page consumes shared vehicle selection rather than adding a local vehicle control.",
+      "verification": "Selection source inspected; underlying fleet request and mounted shell not exercised."
+    },
+    {
+      "function": "summarizeHvacCycling",
+      "file": "web\\src\\features\\vehicle-systems\\lib\\hvacCycling.ts",
+      "line": 642,
+      "sourceOwner": "Page-specific pure derivation",
+      "behavior": "Strict booleans and finite fan numbers; valid timestamp alias fallback; first-returned duplicate policy; continuity barriers; default 1800-second maximum gap and 600-second short threshold; complete active runs only in qualified rate; newest-first directory capped at 50; duration values remain seconds.",
+      "verification": "Inspected declarations, normalization, hourly splitting and final summary; middle helper implementation was only keyword-scanned, not fully reviewed or executed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Grid / LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": "PageLayout.tsx:5-16; LayoutCard.tsx:8-64; HvacCyclingPage.tsx:76-167",
+      "contract": "Existing PageContainer adapter, full-width min-w-0 container, shared Card with title association, responsive Grid; no replacement surface or shell.",
+      "disposition": "reuse"
+    },
+    {
+      "name": "VehicleOperationalBrief / SourceAvailabilityBrief",
+      "owner": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+      "evidence": "VehicleOperationalBrief.tsx:8-78; SourceAvailabilityBrief.tsx:6-30",
+      "contract": "Typed raw StatMetric values, specialist formatter, StatPeriod, loading/available/retained/error, useOperationalMetrics, OperationalBrief; source-local support and denominator retained.",
+      "disposition": "reuse existing domain adapter; do not create a competing stats renderer"
+    },
+    {
+      "name": "EmbeddedChart",
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "evidence": "EmbeddedChart.tsx:19-45; ChartContainer.tsx:131-215,417-452; HvacCyclingHourlyDuty.tsx:62-120; HvacCyclingRunLengthDistribution.tsx:88-144",
+      "contract": "Existing chart controller with toolbar, image export and data-table alternative; fixed heights 230/220; distribution chartKey hvac-cycling-run-length and hiddenSeries; completeOn remains available in tabular data even though only on/off are plotted. CSV requires exportData, which these callers do not supply. Fullscreen is not opted in.",
+      "disposition": "reuse; preserve exact existing export/legend/table scope"
+    },
+    {
+      "name": "Typography / Badge / Button / feedback",
+      "owner": "Existing @/components/ui and @/components/feedback category owners",
+      "evidence": "HvacCyclingQueryStatus.tsx:9-17,65-100; HvacCyclingRunDirectory.tsx:3-5,104-128",
+      "contract": "Localized typography roles and status text, semantic Badge variants, shared retry Button, QueryError, Skeleton, AlertBanner, EmptyState.",
+      "disposition": "reuse; underlying primitive runtime and contrast not verified"
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "evidence": "FadeIn.tsx:24-37; HvacCyclingPage.tsx:84-165",
+      "contract": "Existing reduced-motion hook; reduced initial=false, zero delay; ten page entrance wrappers.",
+      "disposition": "reuse; actual OS/low-bandwidth motion unverified"
+    },
+    {
+      "name": "HvacCyclingSectionBody / HvacCyclingQueryStatus / VehicleSourcePause",
+      "owner": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingSectionBody.tsx",
+      "evidence": "HvacCyclingSectionBody.tsx:49-145; HvacCyclingQueryStatus.tsx:24-155; VehicleSourcePause.tsx:4-16",
+      "contract": "One actionable retry surface plus passive per-section gates for vehicle/loading/fatal/unresolved/known/interval/run availability. Pause reuses SourceContent.",
+      "disposition": "keep domain gate logic local; reuse source-trust primitives"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingSourceAvailability.tsx",
+      "line": 25,
+      "rule": "MDC-002 / mission section 4",
+      "detail": "Section + LayoutCard + localized caption + HvacCyclingSectionBody repeats across the evidence chain. State gating is already centralized; generic stats and charts are already shared.",
+      "fix": "Keep specialist gates and captions; reuse existing layout/composite APIs. Do not add an application-wide HVAC card or remove evidence sections to reduce repetition.",
+      "owner": "page",
+      "confidence": "high",
+      "classification": "reuse opportunity, not a proven behavioral defect"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "Page grid stacks to one column below xl. Directory details use 2/3/6 columns; hourly support uses 3/6/12; methodology uses 1/2/3; threshold matrix starts at two columns. Existing shared layout supplies min-w-0.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingRunDirectory.tsx",
+        "line": 78,
+        "rule": "MDC-043 / mission sections 15-16",
+        "detail": "Nested max-height 42rem scrolling and two-column mobile detail cells can constrain long localized dates/boundary labels. Source does not establish clipping or actual overflow.",
+        "fix": "Exercise 320 through 2560 widths, long labels, 200% text and container widths; preserve all details and newest-first order. Adjust only after actual overflow evidence.",
+        "owner": "page",
+        "confidence": "medium",
+        "classification": "unverified responsive risk"
+      }
+    ],
+    "testedViewports": [],
+    "status": "unverified"
+  },
+  "accessibility": {
+    "sourcePositives": [
+      "KPI ledger has localized aria-label; loading status is polite; refresh warning is an alert; meaningful badges include text.",
+      "Shared LayoutCard labels its Card using generated title identity.",
+      "Both charts supply localized ariaLabel and dataColumns; directory uses ol/li.",
+      "Decorative icons use aria-hidden; retry uses shared Button; shared FadeIn supports reduced motion."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingRunDirectory.tsx",
+        "line": 78,
+        "rule": "MDC-040",
+        "detail": "Scroll region has no explicit focus target or accessible region label. Whether users can keyboard-scroll its offscreen rows depends on actual browser behavior; no browser was exercised.",
+        "fix": "Test keyboard access to every capped run row and nested scroll. If inaccessible, add a localized named focusable region using existing semantics, without another focus system.",
+        "owner": "page",
+        "confidence": "medium",
+        "classification": "unverified keyboard risk"
+      }
+    ],
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified",
+    "forcedColors": "unverified",
+    "reducedMotionRuntime": "unverified"
+  },
+  "states": {
+    "initialLoading": "Ledger loading and status announcement; section skeletons, with geometry-specific chart heights.",
+    "noVehicle": "Single actionable-area no-vehicle message plus passive sections; shared workspace owns selection.",
+    "empty": "Resolved empty endpoint produces genuine zero returned-row accounting; interval/run-dependent sections explain absence, ratios remain null.",
+    "unknown": "Returned but uninterpretable rows and absent interval support have distinct messaging; no guessed HVAC activity.",
+    "fatalError": "QueryError with refetch retry; passive evidence bodies rather than whole-page content removal.",
+    "refreshError": "Retained summary and section content survive; warning and retry show at ledger.",
+    "offlinePause": "VehicleSourcePause distinguishes initial pause and retained evidence; no invented empty response.",
+    "partial": "Unknown/gap/censored evidence is disclosed through accounting, coverage and qualified denominator rather than inferred completeness.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingMethodology.tsx",
+        "line": 108,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Methodology's numeric observational notice is outside the source gate and receives only summary. Before history resolves, after fatal failure without retained data, or with no vehicle, summarizeHvacCycling([]) yields zero returned rows/runs/complete runs and the notice presents those counts as source support.",
+        "fix": "Keep all six methodology explanations visible, but gate only its source-dependent notice using explicit source resolution/trust; display unknown rather than inferred zero until a successful response exists.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingRunDirectory.tsx",
+        "line": 64,
+        "rule": "MDC-026",
+        "detail": "Showing 0 of 0 runs is rendered above HvacCyclingSectionBody while source is loading/unresolved/failed. The body is gated, but this source-dependent cap caption is not.",
+        "fix": "Keep the directory section/cap policy visible; show resolved counts only with retained/successful evidence, and use localized unresolved support text otherwise.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtime": "unverified"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingEvidenceKpiLedger.tsx",
+      "line": 47,
+      "rule": "MDC-010 / MDC-012 / mission section 7",
+      "detail": "Six KPI contexts use fixed indigo/cyan/purple/amber-300 icon colors for mostly categorical decoration, while the rest of the page uses neutral tokens. No neon text or inline styles were found in scoped source. Composed contrast was not measured.",
+      "fix": "Prefer restrained semantic/muted icon tokens for ordinary source stages; reserve warning accent for qualified warning meaning. Do not change persisted chart palettes or manufacture a new palette.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\HvacCyclingPage.tsx",
+      "line": 40,
+      "rule": "MDC-032 / workspace range ownership",
+      "detail": "Historical analytics page calls a vehicle-only climate hook and never consumes useRangeState. /hvac-cycling is absent from RANGE_ENABLED_PATHS. The server already accepts start/end, but this page remains on its default seven-day window rather than shared workspace date scope.",
+      "fix": "Coordinate workspace registry and typed hook extension to accept both bounds and include them in query identity; consume shared range state on this page. Preserve rolling/custom/DST semantics, all sections and server-wide filtering. Never add a page-local date picker.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\api\\hooks\\useVehicleSystems.ts:36-43",
+        "web\\src\\lib\\workspaceScope.ts:23-77,150-167",
+        "internal\\api\\climate\\handler.go:87-100"
+      ]
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\lib\\hvacCycling.ts",
+      "line": 367,
+      "rule": "MDC-032 / MDC-044",
+      "detail": "Hourly bucket splitting and transition allocation use browser-local Date.getHours/setHours. Date displays pass locale only. No explicit timezone reaches the summarizer or timestamp formatting, so timezone ownership is implicit rather than stated by the shared workspace.",
+      "fix": "Resolve and disclose intended analytical timezone with the existing workspace/date mechanisms; coordinate any bucket timezone change, retaining interval duration and DST behavior. Do not silently change the business calculation in a palette/layout pass.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\features\\vehicle-systems\\lib\\hvacCycling.ts:694",
+        "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingCoverageCadence.tsx:31-32",
+        "web\\src\\lib\\dateFormat.ts:29-40,54-62"
+      ]
+    }
+  ],
+  "priority": {
+    "overall": "P1 data trust and workspace integration; P2 restrained presentation and responsive/keyboard verification",
+    "first": "Prevent unresolved counts from presenting measured zero without hiding methodology or directory sections.",
+    "next": "Coordinate date-bound hook/registry adoption and explicit timezone ownership.",
+    "later": "Subdue decorative icon accents and exercise actual viewport/accessibility/chart/export behavior."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Climate history workspace range contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "propsVariantsStates": "Optional typed start/end bounds for useClimateHistory; vehicle and both bounds in query key; forward AbortSignal; keep safeArray, existing callers and retained/fatal trust behavior.",
+      "usedBy": [
+        "/hvac-cycling"
+      ],
+      "dependsOn": [
+        "Existing useRangeState startInstant/endInstantExclusive",
+        "web\\src\\lib\\workspaceScope.ts RANGE_ENABLED_PATHS registration",
+        "Existing /climate handler date parser; boundary semantics still need runtime proof"
+      ],
+      "owner": "integration",
+      "backendChangeRequired": "Not established; handler already accepts date bounds. Do not invent a new endpoint."
+    },
+    {
+      "name": "Explicit analysis timezone adoption",
+      "existingOwnerFile": "web\\src\\lib\\dateFormat.ts",
+      "propsVariantsStates": "Reuse existing FormatOptions.tz for timestamps; page-specific hourly derivation needs explicitly agreed timezone/DST support while preserving SI durations. Missing timezone must remain disclosed, not guessed.",
+      "usedBy": [
+        "/hvac-cycling"
+      ],
+      "dependsOn": [
+        "Existing workspace timezone owner; its full implementation not inspected",
+        "Page-specific splitIntervalByHour and transition allocation",
+        "Centralized DST/timezone acceptance"
+      ],
+      "owner": "integration",
+      "newSharedComponentRequired": false
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "assessment": "No competing page-local date picker, vehicle selector, query store, stats library, chart engine or token system found in inspected assigned page dependencies. Domain summaries compose the existing operational brief and chart pipeline.",
+    "limit": "Not a repository-wide duplication audit."
+  },
+  "preservation": {
+    "sourceHash": "C05016A7C1A34B4506649E2AAA7475F8A19760A1415C5D03BCBD77696FE06A05",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 168,
+    "sectionCount": 14,
+    "layoutCardCount": 13,
+    "embeddedChartCount": 2,
+    "sections": [
+      "Evidence KPI ledger (six metrics and single actionable query status)",
+      "Source and signal availability",
+      "Chronological coverage and cadence",
+      "Interval disposition",
+      "On/off duty composition",
+      "Hourly HVAC duty and 24-hour support grid",
+      "Observed transition matrix",
+      "Run-length distribution and eight quantiles",
+      "Complete-cycle and short-cycle diagnostics",
+      "Threshold and gate matrix",
+      "Run evidence directory",
+      "Exact source and interval accounting",
+      "Data-availability matrix",
+      "Methodology and limitations (six explanations plus support notice)"
+    ],
+    "actions": [
+      "Global vehicle selection through the existing workspace",
+      "Climate query retry/refetch at ledger fatal, refresh-failure and pause recovery",
+      "Existing two chart toolbars, image export and data-table alternatives",
+      "Distribution on/off legend visibility using hvac-cycling-run-length",
+      "Directory nested scrolling with all six details, support badges, newest-first order and omission disclosure"
+    ],
+    "dataBehavior": [
+      "Raw boolean HVAC state is not watts; no energy use or electrical-power conclusion.",
+      "Forward-filled climate history is timeline evidence, not an independent measurement at every row.",
+      "Strict input interpretation; active wins conflicts and conflicts disclosed.",
+      "SI-second intervals/durations and display-boundary useUnits formatting; no legacy unit helpers.",
+      "Missing/invalid timestamps, duplicate policy, unknown barriers and terminal support remain accounted for.",
+      "Only qualified observed intervals contribute duty; complete observed-transition-bounded active runs determine short-cycle denominator.",
+      "No denominator implies null rate, not zero; censored fragments remain visible.",
+      "Retained payload is preserved on refresh error/pause; independent section availability remains visible.",
+      "Keep 1800-second gap ceiling, 600-second short threshold, 50-run default and 500 maximum directory cap.",
+      "No wear/efficiency/fault/causal or maintenance diagnosis inferred."
+    ],
+    "sourceInventory": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\HvacCyclingPage.tsx",
+        "lineCount": 168,
+        "sourceHash": "C05016A7C1A34B4506649E2AAA7475F8A19760A1415C5D03BCBD77696FE06A05",
+        "role": "root page"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingCoverageCadence.tsx",
+        "lineCount": 69,
+        "sourceHash": "88485C0C29E242042DEEE3F2D02A42477CB2E74DC14569AF2D816FCEA52C5D8F",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingCycleDiagnostics.tsx",
+        "lineCount": 90,
+        "sourceHash": "0262E28D021659DE813DF59555CB22E0D52BE4CB136CD3B651375FB5C022E496",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingDataAvailability.tsx",
+        "lineCount": 111,
+        "sourceHash": "EA4610EDCC4B466D2491618538DD468EAC8321DE6E2C359F2DA007744E65F7C2",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingDutyComposition.tsx",
+        "lineCount": 74,
+        "sourceHash": "C7A8C0642EB0C43A811DD3D8F96F3ECAC2DF14D0C9A6DE6C052A3D71968E57A1",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingEvidenceKpiLedger.tsx",
+        "lineCount": 117,
+        "sourceHash": "BA16E5922ED2578DD0D122A7C5CEEDC5ADC5210A7EDE3A501DD2355399DCB5E7",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingExactAccounting.tsx",
+        "lineCount": 150,
+        "sourceHash": "A5EA58B6BEF911D7CB9E201FEFC7C5C0B3F1B674CFB851135DDE01025209B083",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingHourlyDuty.tsx",
+        "lineCount": 138,
+        "sourceHash": "C4F8C8454C2862E54E2FB33B8B8EA21E7FF8303305F651E235D6533E3AC06226",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingIntervalDisposition.tsx",
+        "lineCount": 71,
+        "sourceHash": "53FBA50FEFF33E3D97928EDE5D6C29DDF0F7B1647C01B6754B6D95499B565EFF",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingMethodology.tsx",
+        "lineCount": 123,
+        "sourceHash": "C13F755DC32849583C301CD5FB563409FF257BED872FE441AF5DEFF61BC6380E",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingQueryStatus.tsx",
+        "lineCount": 156,
+        "sourceHash": "A1BAF3D3F31E09C8164CE469C5C17BBBB92DD080A355A5070DEAE05E113FFF50",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingRunDirectory.tsx",
+        "lineCount": 159,
+        "sourceHash": "01A1D95DB97A4D359C238CBF296C96153BDE113AEEFBA9DB65395861B92A70AB",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingRunLengthDistribution.tsx",
+        "lineCount": 144,
+        "sourceHash": "7161A7212A0F1A10FA46CDE14C28736068BB816B550B0EB7A452B48140EAB95A",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingSectionBody.tsx",
+        "lineCount": 146,
+        "sourceHash": "71F7986919BAA8BCD1F2E07FF0582564844AC3A5C00E9291B332E1182B84BCE7",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingSourceAvailability.tsx",
+        "lineCount": 58,
+        "sourceHash": "9C26A830335DB654B9036EF483F29CB08D355F2040ACEC0828C1EDD66DEF3EA1",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingThresholdGateMatrix.tsx",
+        "lineCount": 110,
+        "sourceHash": "ACF4EE7ACD8A97575E9900084CFDF6978AD3D57269FA89447517D4830EB1C73E",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingTransitionMatrix.tsx",
+        "lineCount": 80,
+        "sourceHash": "86621F4BBE88329DC8B0A5886D37498CAF586630DAEDCF74EF292BD359B34E82",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\index.ts",
+        "lineCount": 20,
+        "sourceHash": "216C7D0A1A0ED6ADB23D9B7545430DDB7494F8B7E6BA5F98D727EACC3D6C970B",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\types.ts",
+        "lineCount": 15,
+        "sourceHash": "F247155CE392A3012D32CA23F26AD51EFCD30B439A91AAE505C00334F7B1F4CD",
+        "role": "page-specific presentation"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\lib\\hvacCycling.ts",
+        "lineCount": 857,
+        "sourceHash": "E12C1EB30AC06A0A8689C2A2D9843BA3DFD6E7D2D9A82D6549CA67715EF9FDF8",
+        "role": "relevant source dependency"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+        "lineCount": 73,
+        "sourceHash": "563533FB54B38E658E80CBC494990FC9EA91F57DB57CF4BDC1B96E08F9A5B0C4",
+        "role": "relevant source dependency"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\SourceAvailabilityBrief.tsx",
+        "lineCount": 30,
+        "sourceHash": "849E5F5FD2A48D11A4C75D4FDB6E4093C9B54D78CCDB61A6AD525CBF254081AC",
+        "role": "relevant source dependency"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\VehicleSourcePause.tsx",
+        "lineCount": 17,
+        "sourceHash": "B31AF60876946923007B55116BDD184B9AE39DE124B86F61534307232BCCA7CC",
+        "role": "relevant source dependency"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+        "lineCount": 176,
+        "sourceHash": "06474D1DC7E0B1D63BE82589D14ABBB39AC33A29E5319A888A1236A295881C8D",
+        "role": "relevant source dependency"
+      }
+    ],
+    "inventoryNote": "Exact bounded source-file hashes and line counts are populated from the read snapshot; extracted HVAC presentation files count toward preservation, not only the 168-line orchestrator.",
+    "pagePlusHvacPresentationLineCount": 1999.0
+  },
+  "evidenceLimits": {
+    "sourceOnly": true,
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "viewport": "unverified",
+    "HTTP": "unverified",
+    "tests": "not run; no validation baton and read-only assignment",
+    "typescript": "not run; no typecheck claim",
+    "auditScript": "Read but not executed because it invokes project-wide TypeScript; equivalent bounded pattern scans performed instead.",
+    "staticCounts": {
+      "scope": "Root page plus components\\hvac-cycling files only",
+      "inlineStyleAttributes": 0,
+      "caseSensitiveRawFormTableElements": 0,
+      "directRechartsLeafletMotionImports": 0,
+      "neonWhiteGrayTextMatches": 0,
+      "note": "Initial case-insensitive raw-element scan counted shared <Button>; corrected case-sensitive scan returned zero. Text-[var(...)] icon colors are tokens, not arbitrary font sizing."
+    },
+    "notEstablished": [
+      "Full implementation of middle derivation helpers or signal.StateReader.Timeline.",
+      "Actual route mount, shell affordances, range parsing/exclusivity and server filtering.",
+      "Every transitive shared primitive, formatter, i18n catalog, auth/offline/demo/query provider.",
+      "Focus, nested-scroll keyboard reachability, chart legend/table/export interaction, colors/contrast, forced colors and reduced-motion behavior.",
+      "Concurrent source drift after this bounded snapshot; report does not lock other workers."
+    ],
+    "writes": [
+      "docs\\frontend-audits\\audit-page-221.json",
+      ".agent-status\\audit-page-221.txt"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\HvacCyclingPage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingCoverageCadence.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingCycleDiagnostics.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingDataAvailability.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingDutyComposition.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingEvidenceKpiLedger.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingExactAccounting.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingHourlyDuty.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingIntervalDisposition.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingMethodology.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingQueryStatus.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingRunDirectory.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingRunLengthDistribution.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingSectionBody.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingSourceAvailability.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingThresholdGateMatrix.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingTransitionMatrix.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\index.ts",
+    "web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\types.ts",
+    "web\\src\\features\\vehicle-systems\\lib\\hvacCycling.ts",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\SourceAvailabilityBrief.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\VehicleSourcePause.tsx",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\types\\vehicle-systems.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\lib\\climateState.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\climate\\handler.go"
+  ]
+}

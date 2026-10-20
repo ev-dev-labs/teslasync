@@ -51,11 +51,11 @@ export function BrowserPermissionPanel({
     <GlassPanel className={className} data-tour="settings-notifications">
       <div className="space-y-4 p-4 sm:p-5">
         <div className="flex items-center gap-3">
-          <IconBox color="cyan">
+          <IconBox color="neutral">
             <Bell className="h-5 w-5" aria-hidden="true" />
           </IconBox>
           <div className="min-w-0">
-            <PanelTitle>{t('browserNotifications.title', 'Browser Notifications')}</PanelTitle>
+            <PanelTitle>{t('browserNotifications.title', 'Browser notifications')}</PanelTitle>
             <Text variant="caption" as="p">
               {t(
                 'browserNotifications.subtitle',
@@ -77,11 +77,13 @@ export function BrowserPermissionPanel({
             <div className="flex flex-wrap items-center gap-3">
               {permission === 'default' && (
                 <Button
+                  wrapLabel
                   variant="primary"
+                  className="min-h-11 md:min-h-10"
                   icon={<Bell className="h-4 w-4" aria-hidden="true" />}
                   onClick={handleEnable}
                 >
-                  {t('browserNotifications.enable', 'Enable Browser Notifications')}
+                  {t('browserNotifications.enable', 'Enable browser notifications')}
                 </Button>
               )}
               {permission === 'default' && permissionError && (
@@ -103,7 +105,7 @@ export function BrowserPermissionPanel({
             </div>
 
             {permission === 'granted' && (
-              <div className="space-y-3 border-t border-white/[0.06] pt-4">
+              <div className="space-y-3 border-t border-[var(--border-subtle)] pt-4">
                 <Label>{t('browserNotifications.events', 'Notify me about')}</Label>
                 <Toggle
                   label={t('browserNotifications.alerts', 'Alerts')}

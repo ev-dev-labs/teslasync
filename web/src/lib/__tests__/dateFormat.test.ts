@@ -3,11 +3,163 @@ import {
   formatDateTime, formatDate, formatTime, formatDateShort, tzAbbreviation,
   formatRelativeDays, formatRelativeDayKey, formatDayKey, ymdInTz,
   isoUtcToLocalDatetimeInput, localDatetimeInputToIso,
+  formatDurationMs, formatDurationMsCompact, formatDurationMsLong,
+  formatDurationSecondsAsMinutes, formatDurationMinutes, formatDurationRange,
+  formatDurationClock,
 } from '../dateFormat';
+import {
+  fmtNumber, fmtWithUnit, getGlobalLocale, getGlobalPrecision,
+  isFiniteNumber, setGlobalLocale, setGlobalPrecision,
+} from '../numberFormat';
 
 const ISO = '2026-04-04T14:30:00Z'; // 2026-04-04 14:30 UTC
 
+describe('elapsed duration validity', () => {
+  const formatters = [
+    formatDurationMs, formatDurationMsCompact, formatDurationMsLong,
+    formatDurationSecondsAsMinutes, formatDurationMinutes, formatDurationClock,
+  ];
+  const originalLocale = getGlobalLocale();
+  const originalPrecision = getGlobalPrecision();
+
+  afterEach(() => {
+    setGlobalLocale(originalLocale);
+    setGlobalPrecision(originalPrecision);
+  });
+
+  it.each([null, undefined])('keeps missing duration %s unknown', (value) => {
+    for (const format of formatters) expect(format(value)).toBe('—');
+  });
+
+  it.each([NaN, Infinity, -Infinity, -1, -0.25, -60_000])(
+    'rejects invalid elapsed duration %s before rounding',
+    (value) => {
+      for (const format of formatters) expect(format(value)).toBe('—');
+    },
+  );
+
+  it('renders measured zero rather than a missing-value placeholder', () => {
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+    expect(formatDurationMs(0)).toBe('0.00ms');
+    expect(formatDurationMsCompact(0)).toBe('0.00ms');
+    expect(formatDurationSecondsAsMinutes(0)).toBe('0m');
+    expect(formatDurationMinutes(0)).toBe('0m');
+    expect(formatDurationClock(0)).toBe('0:00');
+  });
+
+  it('treats a zero long duration as "no run yet" rather than measured', () => {
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+    expect(formatDurationMsLong(0)).toBe('—');
+  });
+
+  it('preserves fractional measurements and existing unit transitions', () => {
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+    for (const format of [formatDurationMs, formatDurationMsCompact, formatDurationMsLong]) {
+      expect(format(0.25)).toBe('0.25ms');
+      expect(format(1000)).toBe('1.00s');
+      expect(format(1250)).toBe('1.25s');
+    }
+    expect(formatDurationMs(60_000)).toBe('60.00s');
+    expect(formatDurationMsCompact(60_000)).toBe('1.00m');
+    expect(formatDurationMsLong(65_000)).toBe('1m 5s');
+    expect(formatDurationSecondsAsMinutes(90)).toBe('2m');
+    expect(formatDurationMinutes(1.5)).toBe('2m');
+    expect(formatDurationClock(1250)).toBe('0:01');
+  });
+
+  it('distinguishes missing, invalid, reversed, equal and fractional timestamp ranges', () => {
+    expect(formatDurationRange(null, ISO)).toBe('—');
+    expect(formatDurationRange(ISO, undefined)).toBe('—');
+    expect(formatDurationRange('not-a-date', ISO)).toBe('—');
+    expect(formatDurationRange(ISO, new Date(NaN))).toBe('—');
+    expect(formatDurationRange(ISO, '2026-04-04T14:29:59.999Z')).toBe('—');
+    expect(formatDurationRange(ISO, ISO)).toBe('0m');
+    expect(formatDurationRange(ISO, '2026-04-04T14:30:00.250Z')).toBe('0m');
+    expect(formatDurationRange(ISO, '2026-04-04T14:31:30Z')).toBe('2m');
+  });
+
+  it('leaves zero, signed and fractional physical/net number formatting intact', () => {
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+    expect(isFiniteNumber(-0.25)).toBe(true);
+    expect(fmtNumber(0)).toBe('0.00');
+    expect(fmtNumber(-1.25)).toBe('-1.25');
+    expect(fmtNumber(1.25)).toBe('1.25');
+    expect(fmtWithUnit(-1.25, 'W')).toBe('-1.25 W');
+    expect(fmtWithUnit(-0.25, '°C')).toBe('-0.25 °C');
+  });
+
+  it.each(['de-DE', 'ar-EG'])('uses the effective numeric locale %s for utilization durations', (locale) => {
+    setGlobalLocale(locale);
+    setGlobalPrecision(3);
+    const integer = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 0, maximumFractionDigits: 0,
+    });
+    expect(formatDurationSecondsAsMinutes(0)).toBe(`${integer.format(0)}m`);
+    expect(formatDurationSecondsAsMinutes(0.25)).toBe(`${integer.format(0)}m`);
+    expect(formatDurationSecondsAsMinutes(89.5)).toBe(`${integer.format(1)}m`);
+    expect(formatDurationSecondsAsMinutes(90)).toBe(`${integer.format(2)}m`);
+    expect(formatDurationSecondsAsMinutes(3600)).toBe(`${integer.format(1)}h`);
+    expect(formatDurationSecondsAsMinutes(3629.5)).toBe(`${integer.format(1)}h`);
+    expect(formatDurationSecondsAsMinutes(3630)).toBe(`${integer.format(1)}h ${integer.format(1)}m`);
+    expect(formatDurationSecondsAsMinutes(1234 * 3600 + 90))
+      .toBe(`${integer.format(1234)}h ${integer.format(2)}m`);
+    for (const value of [null, undefined, NaN, Infinity, -Infinity, -0.25, -90]) {
+      expect(formatDurationSecondsAsMinutes(value)).toBe('—');
+    }
+    expect(fmtNumber(-1.25)).toBe(new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 3, maximumFractionDigits: 3,
+    }).format(-1.25));
+  });
+
+  it('uses numeric locale fallback without changing rounded-minute precision', () => {
+    setGlobalLocale('invalid_locale');
+    setGlobalPrecision(3);
+    expect(formatDurationSecondsAsMinutes(90)).toBe('2m');
+    expect(formatDurationSecondsAsMinutes(1234 * 3600 + 90)).toBe('1,234h 2m');
+  });
+});
+
 describe('dateFormat — tz override', () => {
+  it('localizes publication days without converting them into zoned instants', () => {
+    for (const tz of ['America/Los_Angeles', 'Pacific/Kiritimati']) {
+      expect(formatDayKey('2026-07-02', { tz, locale: 'en-US' })).toBe('Jul 2, 2026');
+      expect(formatDayKey('2026-07-02', { tz, locale: 'de-DE' })).toBe('2. Juli 2026');
+    }
+    expect(formatDate('2026-07-02T00:00:00Z', { tz: 'America/Los_Angeles', locale: 'en-US' }))
+      .toBe('Jul 1, 2026');
+  });
+
+  it.each([null, undefined, '', '2026-00-01', '2026-13-01', '2026-04-31', '2026-02-29', '2026-07-02T00:00:00Z'])(
+    'rejects missing or invalid publication day %s rather than normalizing it',
+    (value) => {
+      expect(formatDayKey(value, { locale: 'en-US' })).toBe('—');
+    },
+  );
+
+  it('preserves valid leap days and years below 100', () => {
+    expect(formatDayKey('2024-02-29', { locale: 'en-US' })).toBe('Feb 29, 2024');
+    expect(formatDayKey('0099-07-02', { locale: 'en-US' })).toBe('Jul 2, 99');
+  });
+
+  it('preserves explicit seconds and clock conventions without changing default precision', () => {
+    const instant = '2026-04-05T02:30:47Z';
+    const opts = { tz: 'America/Los_Angeles', locale: 'en-US' };
+    expect(formatDateTime(instant, { ...opts, clock: { second: '2-digit', hour12: false } }))
+      .toBe('Apr 4, 2026, 19:30:47');
+    expect(formatDateTime(instant, { ...opts, clock: { second: '2-digit', hour12: true } }))
+      .toBe('Apr 4, 2026, 07:30:47 PM');
+    expect(formatDateTime(instant, opts)).toBe('Apr 4, 2026, 07:30 PM');
+    expect(formatTime(instant, opts)).toBe('07:30 PM');
+    expect(formatTime(instant, { ...opts, clock: { second: '2-digit', hour12: false } })).toBe('19:30:47');
+    expect(formatTime(instant, opts)).toBe('07:30 PM');
+    expect(formatDate(instant, { ...opts, clock: { second: '2-digit' } })).toBe('Apr 4, 2026');
+    expect(formatDayKey('2026-04-05', { ...opts, clock: { second: '2-digit' } })).toBe('Apr 5, 2026');
+  });
+
   it('formatDateTime renders the same instant in different zones', () => {
     const ny = formatDateTime(ISO, { tz: 'America/New_York', locale: 'en-US' });
     const tokyo = formatDateTime(ISO, { tz: 'Asia/Tokyo', locale: 'en-US' });

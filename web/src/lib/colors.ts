@@ -9,9 +9,9 @@
  *   - `buildChartPalette(theme, mode)` is the pure builder for non-React contexts
  *
  * Color-blind-safe default palette:
- *   - `CHART_COLORS_CB_SAFE` (Okabe-Ito) is the new default for `CHART_COLORS`.
- *   - `CHART_COLORS_NEON` retains the original neon palette for the stylistic
- *     dashboard surfaces, exposed via the user `chart_palette` Settings pref.
+ *   - `CHART_COLORS_CB_SAFE` retains the Okabe-Ito hue order as the default.
+ *   - `CHART_COLORS_NEON` retains the saved palette's hue identities, with
+ *     restrained presentation rather than fluorescent chart strokes.
  *   - The reactive `useChartPalette()` (in `@/hooks/useChartPalette`) returns
  *     the user-preferred palette as `readonly string[]` so any chart can opt
  *     in to live re-rendering when the user toggles palettes in Settings.
@@ -23,42 +23,87 @@ import { useMemo } from 'react'
 import { useTheme, type ColorTheme, type ModeTheme } from '@/components/ui/ThemeProvider'
 
 /**
- * Color-blind-safe Okabe-Ito palette (Wong, Nature Methods 2011).
- * Adjacent entries are distinguishable by all three common CVD types
- * (deuteranopia, protanopia, tritanopia). The trailing dark grey replaces
- * pure black so the palette reads on dark surfaces.
+ * Resolve map paint in a connected theme context. Null means the caller must
+ * defer paint or apply its own declared fallback; this never chooses a palette.
+ * Browser probes are transient and no DOM is accessed at module initialization.
+ */
+export function resolveMapRendererColor(input: string, context: HTMLElement): string | null {
+  if (typeof document === 'undefined' || !input.trim() || !context.isConnected) return null
+  const doc = context.ownerDocument
+  const view = doc.defaultView
+  if (!view || typeof view.getComputedStyle !== 'function') return null
+
+  const parent = doc.createElement('span')
+  const probe = doc.createElement('span')
+  try {
+    // Different inherited paints expose invalid-at-computed-value declarations,
+    // including missing/cyclic vars, without mistaking browser black for success.
+    parent.style.setProperty('all', 'initial', 'important')
+    parent.style.setProperty('display', 'none', 'important')
+    // Forced text substitution must not collapse the two validation sentinels.
+    // System-color inputs still resolve through the browser's active palette.
+    parent.style.setProperty('forced-color-adjust', 'none', 'important')
+    parent.style.setProperty('color-scheme', view.getComputedStyle(context).colorScheme, 'important')
+    probe.style.setProperty('all', 'unset', 'important')
+    probe.style.setProperty('color', 'inherit', 'important')
+    probe.style.setProperty('color', input, 'important')
+    probe.style.setProperty('background-color', input, 'important')
+    if (!probe.style.color || probe.style.color === 'inherit') return null
+    parent.appendChild(probe)
+    context.appendChild(parent)
+    parent.style.setProperty('color', 'rgb(1, 2, 3)', 'important')
+    const computed = view.getComputedStyle(probe)
+    const first = computed.color
+    // CSS-wide defaults differ between these properties; a real color does
+    // not. This also permits valid vars whose unused fallback is "initial".
+    if (first !== computed.backgroundColor) return null
+    parent.style.setProperty('color', 'rgb(4, 5, 6)', 'important')
+    const second = view.getComputedStyle(probe).color
+    if (!first || first !== second || /(?:var|light-dark)\s*\(|\b(?:currentcolor|initial|inherit|unset|revert)\b/i.test(first)) return null
+    // A fresh assignment validates the computed serialization, not a retained
+    // prior Canvas fillStyle. Unsupported/non-color computed output is unresolved.
+    const validation = doc.createElement('span')
+    validation.style.color = first
+    return validation.style.color ? first : null
+  } catch {
+    return null
+  } finally {
+    parent.remove()
+  }
+}
+
+/**
+ * Restrained dark presentation in the saved Okabe-Ito hue order.
+ * Labels/markers remain necessary; derived colors require separate CVD QA.
  */
 export const CHART_COLORS_CB_SAFE = [
-  '#0072B2', // blue
-  '#E69F00', // orange
-  '#009E73', // bluish green
-  '#F0E442', // yellow
-  '#56B4E9', // sky blue
-  '#D55E00', // vermillion
-  '#CC79A7', // reddish purple
-  '#4B4B4B', // neutral grey (replaces pure black for dark-theme legibility)
+  '#91b4d2', // blue
+  '#c0a384', // orange
+  '#91b9a5', // bluish green
+  '#cfbf81', // yellow
+  '#99bfd0', // sky blue
+  '#c69b89', // vermillion
+  '#c0a1b5', // reddish purple
+  '#abb4bf', // neutral grey
 ] as const
 
 /**
- * Original neon palette retained as an opt-in for the stylistic dashboard.
- * Selectable via the `chart_palette` Settings preference. New code should
- * prefer the CB-safe default unless the surface is intentionally stylistic.
+ * Persisted neon choice retains its hue order, not fluorescent intensity.
  */
 export const CHART_COLORS_NEON = [
-  '#00f0ff', // neon cyan
-  '#10b981', // emerald green
-  '#a855f7', // purple
-  '#f59e0b', // amber
-  '#4f46e5', // indigo
-  '#ef4444', // red
-  '#ec4899', // pink
-  '#14b8a6', // teal
+  '#91bbc0', // cyan
+  '#91b9a5', // emerald green
+  '#b5a8c9', // purple
+  '#cfb481', // amber
+  '#a5aac9', // indigo
+  '#d6a0a5', // red
+  '#c3a2b7', // pink
+  '#91bcb2', // teal
 ] as const
 
 /**
- * Default static chart palette. This uses the CB-safe Okabe-Ito palette so
- * every consumer that imports the bare `CHART_COLORS` constant gets a
- * CVD-safe default automatically. Consumers
+ * Default static dark chart palette, preserving the CB-safe preference.
+ * Consumers
  * that should react to the user's `chart_palette` preference should switch to
  * `useChartPalette()` in `@/hooks/useChartPalette`.
  */
@@ -283,18 +328,18 @@ function hslToHex(h: number, s: number, l: number): string {
 /**
  * Produce the deterministic chart palette for a given theme + mode. Pure
  * function — same inputs always yield the same output. The series array
- * starts at the theme's primary and ends at its accent, with intermediate
+ * starts at the theme's primary hue and ends at its accent hue, with intermediate
  * stops generated by interpolating around the colour wheel along the
- * shorter arc.
+ * shorter arc. Optional saved series retain their own hue order. Only chart
+ * presentation is derived; saved theme colors and semantic roles stay intact.
  */
-export function buildChartPalette(theme: ColorTheme, mode: ModeTheme): ChartPalette {
-  const [hPrim, sPrim, lPrim] = hexToHsl(theme.primary)
-  const [hAcc, sAcc, lAcc] = hexToHsl(theme.accent)
+export function buildChartPalette(theme: ColorTheme, mode: ModeTheme, sourceSeries?: readonly string[]): ChartPalette {
+  const [hPrim, sPrim] = hexToHsl(theme.primary)
+  const [hAcc, sAcc] = hexToHsl(theme.accent)
 
   const isLight = mode.colorScheme === 'light'
-  // Boost saturation slightly + clamp lightness so series stay readable on
-  // both light and dark surfaces.
-  const targetL = isLight ? 0.42 : 0.58
+  const targetL = isLight ? 0.36 : 0.7
+  const present = (h: number, s: number) => hslToHex(h, Math.min(0.3, s), targetL)
 
   // Walk the shorter arc between primary and accent.
   let delta = hAcc - hPrim
@@ -306,15 +351,17 @@ export function buildChartPalette(theme: ColorTheme, mode: ModeTheme): ChartPale
   for (let i = 0; i < SERIES_LEN; i++) {
     const t = i / (SERIES_LEN - 1)
     const h = hPrim + delta * t
-    const s = Math.max(0.5, Math.min(0.95, sPrim + (sAcc - sPrim) * t))
-    const l = Math.max(0.35, Math.min(0.7, targetL + (lPrim + (lAcc - lPrim) * t - targetL) * 0.4))
-    series.push(hslToHex(h, s, l))
+    const s = sPrim + (sAcc - sPrim) * t
+    series.push(present(h, s))
   }
 
   return {
-    primary: theme.primary,
-    accent: theme.accent,
-    series,
+    primary: present(hPrim, sPrim),
+    accent: present(hAcc, sAcc),
+    series: sourceSeries?.map(color => {
+      const [h, s] = hexToHsl(color)
+      return present(h, s)
+    }) ?? series,
     positive: COLOR.GOOD,
     negative: COLOR.BAD,
     warning: COLOR.WARN,

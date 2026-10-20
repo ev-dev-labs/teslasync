@@ -98,13 +98,14 @@ describe('Textarea — label association', () => {
     expect(label.getAttribute('for')).toBe(el.id);
   });
 
-  it('slugifies a multi-word label into the shared id', () => {
+  it('uses a generated id independent of the visible label', () => {
     render(<Textarea label="Release Notes" />);
     const el = screen.getByRole('textbox', { name: 'Release Notes' });
-    expect(el.id).toBe('release-notes');
+    expect(el.id).toBeTruthy();
+    expect(el.id).not.toBe('release-notes');
   });
 
-  it('prefers an explicit id over the label-derived slug', () => {
+  it('preserves an explicit caller id', () => {
     render(<Textarea label="Notes" id="custom-id" />);
     const el = screen.getByRole('textbox', { name: 'Notes' });
     expect(el.id).toBe('custom-id');
@@ -144,7 +145,7 @@ describe('Textarea — sizing', () => {
     const className = screen.getByRole('textbox', { name: 'C' }).className;
     // caller's rounded-none must win over the shared control shape.
     expect(className).toContain('rounded-none');
-    expect(className).not.toContain('rounded-shape-md');
+    expect(className).not.toContain('rounded-shape-sm');
   });
 });
 
@@ -187,7 +188,7 @@ describe('Textarea — error a11y wiring', () => {
 
   it('applies the error border utility when an error is present', () => {
     render(<Textarea label="Notes" error="bad" />);
-    expect(screen.getByRole('textbox', { name: 'Notes' }).className).toContain('border-rose-500');
+    expect(screen.getByRole('textbox', { name: 'Notes' }).className).toContain('border-[var(--semantic-danger)]');
   });
 
   it('associates the error even for an aria-label-only textarea (useId fallback)', () => {
@@ -236,19 +237,18 @@ describe('Textarea — error a11y wiring', () => {
     const textarea = screen.getByRole('textbox', { name: 'Notes' });
     expect(textarea).toHaveAttribute(
       'aria-describedby',
-      'external-help notes-hint',
+      `external-help ${textarea.id}-hint`,
     );
-    expect(document.getElementById('notes-hint')).toHaveTextContent(
+    expect(document.getElementById(`${textarea.id}-hint`)).toHaveTextContent(
       'Up to 120 characters',
     );
   });
 });
 
 describe('Textarea — help icon', () => {
-  it('renders a HelpIcon whose accessible name defaults to "Help for {id}"', () => {
+  it('names implicit field help using the visible label, not the generated id', () => {
     render(<Textarea label="Notes" help={{ content: 'Explain the field' }} />);
-    // textareaId derives from the label slug -> "notes".
-    expect(screen.getByRole('button', { name: 'Help for notes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Help for Notes' })).toBeInTheDocument();
   });
 
   it('honours an explicit help.for override for the trigger label', () => {
@@ -290,5 +290,135 @@ describe('Textarea — ref & interaction', () => {
     expect(textarea.className).toContain('disabled:bg-[var(--surface-2)]');
     expect(textarea.className).toContain('disabled:text-[var(--text-secondary)]');
     expect(textarea.className).toContain('disabled:opacity-100');
+  });
+});
+
+describe('Textarea — restrained states and preservation', () => {
+  it('keeps implicit identity, value, focus and descriptions across translated labels', () => {
+    const { rerender } = render(
+      <Textarea label="Notes" defaultValue="Saved notes" hint="Description" />,
+    );
+    const textarea = screen.getByRole('textbox', { name: 'Notes' });
+    const id = textarea.id;
+    textarea.focus();
+
+    rerender(<Textarea label="Notizen" defaultValue="Saved notes" hint="Beschreibung" />);
+
+    expect(screen.getByRole('textbox', { name: 'Notizen' })).toBe(textarea);
+    expect(textarea.id).toBe(id);
+    expect(textarea).toHaveFocus();
+    expect(textarea).toHaveValue('Saved notes');
+    expect(textarea).toHaveAttribute('aria-describedby', `${id}-hint`);
+    expect(document.getElementById(`${id}-hint`)).toHaveTextContent('Beschreibung');
+  });
+
+  it('retains explicit ids, including an intentionally empty caller id', () => {
+    const { rerender } = render(<Textarea label="Notes" id="saved-setting" />);
+    expect(screen.getByRole('textbox')).toHaveAttribute('id', 'saved-setting');
+    rerender(<Textarea label="Notizen" id="saved-setting" />);
+    expect(screen.getByRole('textbox')).toHaveAttribute('id', 'saved-setting');
+    rerender(<Textarea aria-label="Comment" id="" />);
+    expect(screen.getByRole('textbox', { name: 'Comment' })).toHaveAttribute('id', '');
+  });
+
+  it('switches hint and error while retaining every external description', () => {
+    const { rerender } = render(
+      <>
+        <span id="context">Context</span>
+        <span id="limits">Limits</span>
+        <Textarea id="notes" label="Notes" hint="Hint" aria-describedby="context limits" />
+      </>,
+    );
+    const textarea = screen.getByRole('textbox', { name: 'Notes' });
+    expect(textarea).toHaveAttribute('aria-describedby', 'context limits notes-hint');
+    rerender(
+      <>
+        <span id="context">Context</span>
+        <span id="limits">Limits</span>
+        <Textarea id="notes" label="Notes" hint="Hint" error="Invalid" aria-describedby="context limits" />
+      </>,
+    );
+    expect(textarea).toHaveAttribute('aria-describedby', 'context limits notes-error');
+    expect(screen.queryByText('Hint')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveClass('text-[var(--semantic-danger)]');
+    rerender(
+      <>
+        <span id="context">Context</span>
+        <span id="limits">Limits</span>
+        <Textarea id="notes" label="Notes" hint="Hint" aria-describedby="context limits" />
+      </>,
+    );
+    expect(textarea).toHaveAttribute('aria-describedby', 'context limits notes-hint');
+    expect(textarea).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('retains native form ownership, serialization, reset and constraints', () => {
+    render(
+      <>
+        <form id="notes-form" />
+        <Textarea
+          aria-label="Comment"
+          form="notes-form"
+          name="comment"
+          defaultValue="Original"
+          required
+          minLength={2}
+          wrap="hard"
+          readOnly
+        />
+      </>,
+    );
+    const textarea = screen.getByRole('textbox', { name: 'Comment' });
+    const form = document.getElementById('notes-form');
+    if (!(form instanceof HTMLFormElement)) throw new Error('Expected native form');
+    expect(new FormData(form).get('comment')).toBe('Original');
+    expect(textarea).toHaveAttribute('minlength', '2');
+    expect(textarea).toHaveAttribute('wrap', 'hard');
+    expect(textarea).toHaveAttribute('readonly');
+    fireEvent.change(textarea, { target: { value: 'Changed' } });
+    form.reset();
+    expect(textarea).toHaveValue('Original');
+  });
+
+  it('uses a semantic invalid border and visible offset focus without decorative glow', () => {
+    render(<Textarea aria-label="Comment" error="Invalid" />);
+    const textarea = screen.getByRole('textbox', { name: 'Comment' });
+    expect(textarea).toHaveClass(
+      'border-[var(--semantic-danger)]',
+      'focus-visible:border-[var(--semantic-danger)]',
+      'focus-visible:outline-2',
+      'focus-visible:outline-offset-2',
+      'focus-visible:outline-[var(--focus-ring)]',
+    );
+    expect(textarea.className).not.toMatch(/rose-|neon-|shadow-|ring-2/);
+  });
+
+  it('wraps long labels and feedback while preserving reachable mobile and dense desktop controls', () => {
+    const label = 'LangesWort'.repeat(30);
+    render(<Textarea label={label} hint={label} rows={1} size="auto" />);
+    const textarea = screen.getByRole('textbox', { name: label });
+    expect(screen.getAllByText(label)[0].closest('label')).toHaveClass('min-w-0', 'break-words');
+    expect(document.getElementById(`${textarea.id}-hint`)).toHaveClass('break-words');
+    expect(textarea).toHaveClass('min-h-11', 'md:min-h-0', 'min-w-0', 'max-w-full');
+    expect(textarea).toHaveClass('px-d-pad-x', 'py-d-pad-y', 'text-d-base');
+    expect(textarea).toHaveAttribute('rows', '1');
+  });
+
+  it('preserves default vertical resizing and caller resizing overrides', () => {
+    const { rerender } = render(<Textarea aria-label="Comment" />);
+    expect(screen.getByRole('textbox')).toHaveClass('resize-y');
+    rerender(<Textarea aria-label="Comment" className="resize-none" />);
+    expect(screen.getByRole('textbox')).toHaveClass('resize-none');
+    expect(screen.getByRole('textbox')).not.toHaveClass('resize-y');
+  });
+
+  it('uses existing motion tokens and the reduced-motion safety net', () => {
+    render(<Textarea aria-label="Comment" />);
+    expect(screen.getByRole('textbox')).toHaveClass(
+      'transition-colors',
+      'duration-fast',
+      'ease-standard',
+      'motion-reduce:transition-none',
+    );
   });
 });

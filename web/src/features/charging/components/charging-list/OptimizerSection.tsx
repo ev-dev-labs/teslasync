@@ -1,36 +1,80 @@
 import { useTranslation } from 'react-i18next';
-import { Calendar, DollarSign, Lightbulb, Shield } from 'lucide-react';
+import { DollarSign, Lightbulb, Shield } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { AlertBanner } from '@/components/feedback';
-import { fmtNumber, safeNumber } from '@/lib/numberFormat';
+import { safeNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { ChargingOptimizerData } from '@/types/charging';
 import { CostHeatmap } from './CostHeatmap';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { type StatMetric } from '@/components/data-display';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 
 interface OptimizerSectionProps {
   optimizer: ChargingOptimizerData;
 }
 
 export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  // The optimizer aggregates recorded costs without returning their currencies.
+  const costSource = t('resaleVault.brief.cost.description', 'Recorded cost; the source does not supply a currency denomination. No currency conversion is applied.');
+  const locationPct = optimizer.current_schedule.home_charging_pct;
+  const hasLocationEvidence = Number.isFinite(locationPct) && locationPct > 0 && locationPct <= 100;
   // Neutralise NaN/undefined so the gauge never emits a NaN stroke-dashoffset
   // (which renders a broken arc) and the threshold branches stay deterministic.
   const score = safeNumber(optimizer.battery_health_score);
+  const habitMetrics: StatMetric[] = [
+    { metricId: 'rate', occurrenceId: 'sessions-week',
+      label: t('charging.optimizer.sessionsWeek', 'Sessions/week'), rawValue: optimizer.current_schedule.avg_sessions_per_week,
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } },
+    { metricId: 'percent', occurrenceId: 'location',
+      label: t('charging.optimizer.locationPct', 'Most-used recorded location'), rawValue: hasLocationEvidence ? locationPct : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) } },
+    { metricId: 'percent', occurrenceId: 'target',
+      label: t('charging.optimizer.avgTarget', 'Avg charge target'), rawValue: optimizer.current_schedule.avg_charge_to_pct,
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) } },
+    { metricId: 'text', occurrenceId: 'hour', label: t('charging.optimizer.commonHour', 'Common start hour'),
+      rawValue: optimizer.current_schedule.most_common_start_hour != null ? `${optimizer.current_schedule.most_common_start_hour}:00` : null },
+    { metricId: 'text', occurrenceId: 'day', label: t('charging.optimizer.commonDay', 'Most common'),
+      rawValue: optimizer.current_schedule.most_common_day },
+  ];
+  const costMetrics: StatMetric[] = [
+    { metricId: 'currency', occurrenceId: 'peak', label: t('charging.optimizer.peakRate', 'Peak rate'),
+      rawValue: optimizer.cost_analysis.peak_cost_per_kwh,
+      description: costSource,
+      display: { formatter: raw => ({ value: `${fmtNumber(raw)}/kWh`, unit: '' }) } },
+    { metricId: 'currency', occurrenceId: 'offpeak', label: t('charging.optimizer.offpeakRate', 'Off-peak rate'),
+      rawValue: optimizer.cost_analysis.offpeak_cost_per_kwh,
+      description: costSource,
+      display: { formatter: raw => ({ value: `${fmtNumber(raw)}/kWh`, unit: '' }) } },
+    { metricId: 'percent', occurrenceId: 'peak-sessions', label: t('charging.optimizer.peakSessions', 'Sessions during peak'),
+      rawValue: optimizer.cost_analysis.sessions_during_peak_pct,
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) } },
+    { metricId: 'text', occurrenceId: 'peak-hours', label: t('charging.optimizer.peakHours', 'Peak hours'),
+      rawValue: (optimizer.cost_analysis.peak_hours ?? []).map(h => `${h}:00`).join(', ') || null },
+    { metricId: 'text', occurrenceId: 'offpeak-hours', label: t('charging.optimizer.offpeakHours', 'Off-peak hours'),
+      rawValue: (optimizer.cost_analysis.offpeak_hours ?? []).map(h => `${h}:00`).join(', ') || null },
+  ];
+  const period = { kind: 'unknown',
+    label: t('charging.optimizer.habits', 'Charging Habits'),
+    reason: t('charging.brief.optimizerScope', 'Independent optimizer source; its history bounds are not reported. Recommendations and savings are illustrative, not measured outcomes.') } as const;
 
   return (
     <>
       {/* Savings banner */}
-      {optimizer.cost_analysis.potential_monthly_savings > 5 && (
+      {Number.isFinite(optimizer.cost_analysis.potential_monthly_savings) && optimizer.cost_analysis.potential_monthly_savings > 5 && (
         <FadeIn delay={0.23}>
           <AlertBanner
             variant="success"
             icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
-            title={t('charging.optimizer.savingsBanner', 'Save ~${{amount}}/month by adjusting your charging schedule', { amount: fmtNumber(optimizer.cost_analysis.potential_monthly_savings, 0) })}
+            title={`${t('charging.forecast.monthlySavings', 'Monthly savings')}: ~${fmtNumber(optimizer.cost_analysis.potential_monthly_savings)}`}
           >
             {t('charging.optimizer.savingsDetail', 'Based on your charging patterns, shifting to off-peak hours could reduce your monthly costs.')}
+            <p>{costSource}</p>
           </AlertBanner>
         </FadeIn>
       )}
@@ -39,38 +83,23 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Current Habits */}
         <FadeIn delay={0.24}>
-          <GlassPanel className="p-6">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-              <Calendar className="h-4 w-4 text-neon-cyan" aria-hidden="true" />
-              {t('charging.optimizer.habits', 'Charging Habits')}
-            </h3>
-            <div className="space-y-3">
-              {[
-                { label: t('charging.optimizer.sessionsWeek', 'Sessions/week'), value: fmtNumber(optimizer.current_schedule.avg_sessions_per_week, 1) },
-                { label: t('charging.optimizer.homePct', 'Home charging'), value: `${fmtNumber(optimizer.current_schedule.home_charging_pct, 0)}%` },
-                { label: t('charging.optimizer.avgTarget', 'Avg charge target'), value: `${fmtNumber(optimizer.current_schedule.avg_charge_to_pct, 0)}%` },
-                { label: t('charging.optimizer.commonHour', 'Common start hour'), value: optimizer.current_schedule.most_common_start_hour != null ? `${optimizer.current_schedule.most_common_start_hour}:00` : '—' },
-                { label: t('charging.optimizer.commonDay', 'Most common'), value: optimizer.current_schedule.most_common_day ?? '—' },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between text-xs">
-                  <span className="text-[var(--text-secondary)]">{item.label}</span>
-                  <span className="font-semibold text-[var(--text-primary)]">{item.value}</span>
-                </div>
-              ))}
-            </div>
+          <GlassPanel className="h-full p-6">
+            <ChargingSummaryBrief metrics={habitMetrics} period={period}
+              title={t('charging.optimizer.habits', 'Charging Habits')}
+              description={t('charging.optimizer.locationEvidence', 'Location clusters do not confirm home charging. Missing location evidence is shown as unknown.')} />
           </GlassPanel>
         </FadeIn>
 
         {/* Battery Health Score */}
         <FadeIn delay={0.25}>
-          <GlassPanel className="flex flex-col items-center justify-center p-6">
+          <GlassPanel className="flex h-full flex-col items-center justify-center p-6">
             <LinearGauge
               value={score}
               max={100}
               label={t('charging.optimizer.batteryScore', 'Battery-Friendly Score')}
               color={
-                score >= 75 ? '#22c55e' :
-                score >= 50 ? '#f59e0b' : '#ef4444'
+                score >= 75 ? 'var(--semantic-success)' :
+                score >= 50 ? 'var(--semantic-warning)' : 'var(--semantic-danger)'
               }
               size={150}
             />
@@ -86,39 +115,12 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
 
         {/* Cost Analysis */}
         <FadeIn delay={0.26}>
-          <GlassPanel className="p-6">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-              <DollarSign className="h-4 w-4 text-neon-green" aria-hidden="true" />
-              {t('charging.optimizer.costAnalysis', 'Cost Analysis')}
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--text-secondary)]">{t('charging.optimizer.peakRate', 'Peak rate')}</span>
-                <span className="font-semibold text-red-400">${fmtNumber(optimizer.cost_analysis.peak_cost_per_kwh, 3)}/kWh</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--text-secondary)]">{t('charging.optimizer.offpeakRate', 'Off-peak rate')}</span>
-                <span className="font-semibold text-emerald-300">${fmtNumber(optimizer.cost_analysis.offpeak_cost_per_kwh, 3)}/kWh</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--text-secondary)]">{t('charging.optimizer.peakSessions', 'Sessions during peak')}</span>
-                <span className={cn('font-semibold',
-                  optimizer.cost_analysis.sessions_during_peak_pct > 30 ? 'text-red-400' : 'text-emerald-300',
-                )}>
-                  {fmtNumber(optimizer.cost_analysis.sessions_during_peak_pct, 0)}%
-                </span>
-              </div>
-              <div className="mt-2 pt-2 border-t border-white/[0.06]">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[var(--text-secondary)]">{t('charging.optimizer.peakHours', 'Peak hours')}</span>
-                  <span className="text-[var(--text-secondary)] tabular-nums">{(optimizer.cost_analysis.peak_hours ?? []).map((h) => `${h}:00`).join(', ') || '—'}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs mt-1">
-                  <span className="text-[var(--text-secondary)]">{t('charging.optimizer.offpeakHours', 'Off-peak hours')}</span>
-                  <span className="text-[var(--text-secondary)] tabular-nums">{(optimizer.cost_analysis.offpeak_hours ?? []).map((h) => `${h}:00`).join(', ') || '—'}</span>
-                </div>
-              </div>
-            </div>
+          <GlassPanel className="h-full p-6">
+            <ChargingSummaryBrief metrics={costMetrics} period={period}
+              title={t('charging.optimizer.costAnalysis', 'Cost Analysis')}
+              metricTones={{ peak: 'danger', offpeak: 'success',
+                'peak-sessions': optimizer.cost_analysis.sessions_during_peak_pct > 30 ? 'danger' : 'success' }}
+              description={t('charging.optimizer.observedCostEvidence', 'Hourly costs combine recorded charging locations, not a confirmed tariff. Savings are illustrative, not guaranteed.')} />
           </GlassPanel>
         </FadeIn>
       </div>
@@ -136,7 +138,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
       <FadeIn delay={0.28}>
         <GlassPanel className="p-6">
           <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-            <Lightbulb className="h-4 w-4 text-neon-amber" aria-hidden="true" />
+            <Lightbulb className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('charging.optimizer.recommendations', 'Optimization Recommendations')}
           </h3>
           {(optimizer.recommendations ?? []).length > 0 ? (
@@ -144,30 +146,21 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
               {(optimizer.recommendations ?? []).map((rec, i) => (
                 <div
                   key={i}
-                  className={cn(
-                    'flex items-start gap-3 rounded-xl p-4',
-                    rec.priority === 'high' ? 'bg-red-500/[0.06] border border-red-500/10' :
-                    rec.priority === 'medium' ? 'bg-neon-amber/[0.06] border border-neon-amber/10' :
-                    'bg-white/[0.03] border border-white/[0.06]',
-                  )}
+                  className="flex items-start gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
                 >
                   <Shield className={cn('h-5 w-5 mt-0.5 shrink-0',
-                    rec.priority === 'high' ? 'text-red-400' :
-                    rec.priority === 'medium' ? 'text-amber-300' : 'text-emerald-300',
+                    rec.priority === 'high' ? 'text-[var(--semantic-danger)]' :
+                    rec.priority === 'medium' ? 'text-[var(--semantic-warning)]' : 'text-[var(--text-secondary)]',
                   )} aria-hidden="true" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-semibold text-[var(--text-primary)]">{rec.title}</span>
-                      <span className={cn('text-2xs px-1.5 py-0.5 rounded-full uppercase tracking-wider font-medium',
-                        rec.priority === 'high' ? 'bg-red-500/20 text-red-400' :
-                        rec.priority === 'medium' ? 'bg-neon-amber/20 text-neon-amber' :
-                        'bg-neon-green/20 text-neon-green',
-                      )}>
+                      <span className="text-2xs px-1.5 py-0.5 rounded-full bg-[var(--surface-3)] font-medium text-[var(--text-secondary)]">
                         {rec.priority}
                       </span>
-                      {rec.estimated_savings != null && rec.estimated_savings > 0 && (
-                        <span className="text-2xs px-1.5 py-0.5 rounded-full bg-neon-green/20 text-neon-green font-medium">
-                          ~${fmtNumber(rec.estimated_savings, 0)}/mo
+                      {rec.estimated_savings != null && Number.isFinite(rec.estimated_savings) && rec.estimated_savings > 0 && (
+                        <span className="text-2xs px-1.5 py-0.5 rounded-full bg-[var(--surface-3)] text-[var(--text-secondary)] font-medium" title={costSource}>
+                          {t('charging.forecast.monthlySavings', 'Monthly savings')}: ~{fmtNumber(rec.estimated_savings)}
                         </span>
                       )}
                     </div>

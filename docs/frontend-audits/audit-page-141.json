@@ -1,0 +1,280 @@
+{
+  "item": "audit-page-141",
+  "phase": 0,
+  "auditMode": "read-only source inspection",
+  "page": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx",
+  "routes": ["/alert-studio"],
+  "classification": "Mounted compatibility redirect, not a visual page",
+  "purpose": "Keep legacy Alert Studio entry points working by handing their router location context to the existing /notifications/studio destination.",
+  "primaryGoal": "Reach the canonical Studio without losing the incoming search string, hash or navigation state, and replace the legacy history entry so Back does not bounce through it.",
+  "routeEvidence": {
+    "lazyImport": {"file": "web\\src\\App.tsx", "line": 203},
+    "mount": {"file": "web\\src\\App.tsx", "line": 620},
+    "parent": {"file": "web\\src\\App.tsx", "line": 573, "path": "/", "component": "Layout"},
+    "wrapper": "SafeRoute name=\"LegacyAlertStudioRedirect\"",
+    "canonicalMount": {"file": "web\\src\\App.tsx", "line": 631, "path": "/notifications/studio"},
+    "canonicalImport": {"file": "web\\src\\App.tsx", "line": 194, "component": "AlertStudioPage"},
+    "registry": {"file": "web\\src\\lib\\routeRegistry.ts", "line": 44},
+    "prefetch": {"file": "web\\src\\lib\\routePrefetch.ts", "line": 40},
+    "sourceMounted": true,
+    "runtimeMounted": "unverified"
+  },
+  "dataSources": [
+    {
+      "name": "React Router location",
+      "hook": "useLocation",
+      "owner": "react-router-dom",
+      "fieldsRead": ["search", "hash", "state"],
+      "knownEndpoints": [],
+      "sourceOwnership": "The current router location supplies deep-link context; the redirect does not fetch, mutate or transform business data.",
+      "evidence": {"file": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx", "line": 21},
+      "backendBehavior": "Not applicable locally. Destination API behavior and server rewrites/authentication were not audited."
+    }
+  ],
+  "components": [
+    {
+      "name": "LegacyAlertStudioRedirect",
+      "category": "feature-owned routing compatibility module",
+      "owner": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx",
+      "evidence": {"file": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx", "line": 20},
+      "presentation": "Returns only Navigate. No header, panels, charts, forms, tables, metrics, explanatory content or controls."
+    },
+    {
+      "name": "Navigate",
+      "category": "existing routing primitive",
+      "owner": "react-router-dom",
+      "props": ["to: { pathname: '/notifications/studio', search, hash }", "state: incoming location.state", "replace: true"],
+      "evidence": {"file": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx", "line": 23}
+    },
+    {
+      "name": "SafeRoute",
+      "category": "application integration wrapper",
+      "owner": "web\\src\\App.tsx",
+      "evidence": {"file": "web\\src\\App.tsx", "line": 367},
+      "composition": "ErrorBoundary keyed and reset by pathname at line 374 wraps SuspenseProgressBoundary with PageLoadSkeleton at line 375.",
+      "verification": "Source composition inspected; no loading/failure/recovery rendering exercised."
+    },
+    {
+      "name": "Layout",
+      "category": "existing application shell owner",
+      "owner": "web\\src\\components\\layout\\Layout.tsx",
+      "evidence": {"file": "web\\src\\App.tsx", "line": 573},
+      "verification": "Parent registration inspected only; implementation outside this redirect audit."
+    },
+    {
+      "name": "AlertStudioPage",
+      "category": "canonical destination owner, not a duplicate legacy page",
+      "owner": "web\\src\\features\\notifications\\pages\\AlertStudioPage.tsx",
+      "evidence": {"file": "web\\src\\features\\notifications\\pages\\AlertStudioPage.tsx", "line": 7},
+      "scope": "Inspected the small destination orchestrator for redirect-chain semantics, not its visual/data dependencies."
+    }
+  ],
+  "duplicatedPatterns": [],
+  "responsive": {
+    "applicability": "Not applicable to local presentation: this module has no layout, controls, breakpoints or visual geometry to modernize.",
+    "issues": [],
+    "viewportTesting": "unverified at 320, 375, 390, 430, 768, 1024, 1280, 1440, 1920 and 2560 pixels",
+    "integrationLimit": "The shell, suspense fallback and eventual destination are visual surfaces with independent responsive obligations. This report does not accept them."
+  },
+  "accessibility": {
+    "applicability": "No module-owned DOM controls, text, labels, landmarks, touch targets, tables, charts or animation.",
+    "issues": [],
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "contrast": "not applicable locally; composed shell/fallback/destination unverified",
+    "focus": "No local focus implementation. App mounts RouteAnnouncer at line 546 and RouteFocusManager at line 551; manager implementations and redirect outcomes were not exercised.",
+    "hashLanding": "Forwarding a hash string is source-confirmed; destination anchor existence, scrolling, focus, timing and announcement are unverified.",
+    "reducedMotion": "No local animation; integration behavior unverified.",
+    "evidence": [
+      {"file": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx", "line": 23},
+      {"file": "web\\src\\App.tsx", "line": 546},
+      {"file": "web\\src\\App.tsx", "line": 551}
+    ]
+  },
+  "states": {
+    "loading": {
+      "local": "not applicable; no local request or loading state",
+      "integration": "App.tsx:203 lazy import is wrapped at App.tsx:620 by SafeRoute; App.tsx:375 declares suspense skeleton/progress handling.",
+      "runtime": "unverified"
+    },
+    "empty": {"local": "not applicable; no local data collection", "destination": "outside scope"},
+    "error": {
+      "local": "No local error UI, retry or asynchronous business operation.",
+      "integration": "App.tsx:374 declares pathname-keyed/reset ErrorBoundary; rendering and recovery unverified."
+    },
+    "offline": {
+      "local": "No module network request; no local offline data state.",
+      "integration": "Cold lazy-chunk availability, application startup, authentication and destination requests remain unverified; offline route reachability is not established."
+    },
+    "stale": {"local": "not applicable; no cache or freshness model"},
+    "unknown": {"local": "not applicable; no business measurement or classification"},
+    "partial": {"local": "not applicable; no combined data sources"}
+  },
+  "visualIssues": [],
+  "architectureIssues": [],
+  "priority": {
+    "level": "low",
+    "disposition": "Preserve the compatibility redirect; do not invent a visual page or add presentation primitives.",
+    "rationale": "No local source defect established. Route/context preservation is the relevant mission section 0 and MDC-030 obligation; downstream semantic limits need distinct integration acceptance, not cosmetic replacement."
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "classification": "Legacy alias delegating to one canonical Studio, not a competing visual implementation",
+    "confirmed": [],
+    "canonicalOwner": "web\\src\\features\\notifications\\pages\\AlertStudioPage.tsx",
+    "canonicalMount": {"file": "web\\src\\App.tsx", "line": 631},
+    "limit": "No repository-wide duplication inspection. Empty arrays describe only this bounded module."
+  },
+  "preservation": {
+    "sourceFile": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx",
+    "sourceHash": "6320f12e6af46ac08836590c067ad3899449cdab7a9693699f26eaef382b1fff",
+    "hashAlgorithm": "SHA-256 of root module file bytes",
+    "currentLineCount": 29,
+    "sections": [],
+    "sectionCount": 0,
+    "glassPanelCount": 0,
+    "chartContainerCount": 0,
+    "visualSectionApplicability": "not applicable; no visual sections exist to preserve or invent",
+    "actions": [
+      {
+        "name": "Automatic canonical-route handoff",
+        "trigger": "Mount at /alert-studio",
+        "target": "/notifications/studio",
+        "history": "replace, not push",
+        "context": "Forward original search, hash and navigation state.",
+        "evidence": {"file": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx", "line": 23}
+      }
+    ],
+    "dataBehavior": [
+      "Keep the legacy /alert-studio route registration, lazy import and existing fixed internal canonical target.",
+      "Read search, hash and state from useLocation and pass them directly to Navigate.",
+      "Do not parse, decode, re-encode, reorder, whitelist or rename query keys in this shim.",
+      "Retain hash-only, query-only, combined query/hash and empty-context handoffs.",
+      "Preserve incoming navigation state without synthesizing, serializing or persisting it.",
+      "Keep replace semantics rather than adding another history entry.",
+      "No local hooks fetching API data, endpoints, mutations, query keys, SSE subscriptions, SI fields, display conversion, exports, browser persistence or settings exist."
+    ],
+    "compatibility": {
+      "pathname": "Fixed target /notifications/studio; no wildcard suffix, parameter translation or user-controlled redirect target.",
+      "query": "The incoming router search string is passed unchanged, including opaque/unrecognized names and encoded values.",
+      "hash": "The incoming router hash string is passed unchanged, independently of whether a query exists.",
+      "navigationState": "Explicit state={state} forwards the router payload at line 25; this does not turn transient navigation state into reload/bookmark persistence.",
+      "history": "replace at line 26 replaces the current legacy entry; actual browser Back/Forward behavior is unverified.",
+      "destinationBoundary": {
+        "file": "web\\src\\features\\notifications\\pages\\AlertStudioPage.tsx",
+        "line": 11,
+        "detail": "Destination reads only searchParams.get('rule') in this orchestrator. Nonempty rule values cause a second replace at lines 12-15: a positive safe integer goes to /notifications/rules?rule=<numeric id>; otherwise /notifications/rules. Empty or absent rule renders AlertRuleEditor with rule=null at line 17.",
+        "contextLimit": "The second redirect does not forward other query keys, hash or state explicitly. First-hop context preservation does not prove end-to-end preservation for links containing a nonempty rule.",
+        "semanticLimit": "id=42, signals/from and test=1 are forwarded by this shim, not translated into rule selection, rule prefill or test execution here. Downstream editor/draft/anchor semantics are not accepted by this audit.",
+        "classification": "Documented source integration boundary, not an established regression or invented fix requirement"
+      },
+      "examples": [
+        {"input": "/alert-studio", "sourceDerivedFirstHop": "/notifications/studio"},
+        {"input": "/alert-studio?id=42#channels", "sourceDerivedFirstHop": "/notifications/studio?id=42#channels"},
+        {"input": "/alert-studio#builder", "sourceDerivedFirstHop": "/notifications/studio#builder"},
+        {"input": "/alert-studio?signals=battery_level%2Cvehicle_speed&from=signal-diff", "sourceDerivedFirstHop": "/notifications/studio?signals=battery_level%2Cvehicle_speed&from=signal-diff"},
+        {"input": "/alert-studio?test=1", "sourceDerivedFirstHop": "/notifications/studio?test=1"},
+        {"input": "/alert-studio?rule=42&from=email#channels", "sourceDerivedFirstHop": "/notifications/studio?rule=42&from=email#channels", "sourceDerivedSecondHop": "/notifications/rules?rule=42"},
+        {"input": "/alert-studio?rule=not-an-id", "sourceDerivedFirstHop": "/notifications/studio?rule=not-an-id", "sourceDerivedSecondHop": "/notifications/rules"}
+      ],
+      "inspectedCallers": [
+        {"file": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx", "line": 241, "behavior": "Selected IDs joined as CSV, encoded into signals with from=signal-diff."},
+        {"file": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "line": 355, "behavior": "Same legacy signal-diff CTA handoff."},
+        {"file": "web\\src\\lib\\commandRegistry.ts", "line": 343, "behavior": "Send a test alert action navigates to /alert-studio?test=1; this redirect itself sends no test."},
+        {"file": "web\\src\\lib\\commandRegistry.ts", "line": 334, "behavior": "Create new alert action already targets /notifications/studio."},
+        {"file": "web\\src\\lib\\draftIndex.ts", "line": 19, "behavior": "Documentation shows stored /alert-studio?id=42 recovery example; not proof of a currently emitted URL or successfully restored rule."},
+        {"file": "web\\src\\lib\\draftIndex.ts", "line": 95, "behavior": "Current alertstudio:rule: fallback metadata targets /notifications/studio."}
+      ],
+      "externalLinks": "Email/bookmark compatibility intent is documented in module lines 2-11 and test lines 4-18. No external email producer, historic payload or live bookmark was inspected."
+    },
+    "existingTests": {
+      "file": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.test.tsx",
+      "execution": "not run; source inspected only",
+      "cases": [
+        {"line": 82, "behavior": "Bare path reaches synthetic destination, not wildcard; empty search/hash."},
+        {"line": 94, "behavior": "Simple id=42 search retained."},
+        {"line": 102, "behavior": "Encoded signals/from CTA is decoded and checked; assertions do not compare the raw complete search string."},
+        {"line": 116, "behavior": "Search and channels hash retained together."},
+        {"line": 125, "behavior": "Hash-only builder link retained."},
+        {"line": 134, "behavior": "In-memory navigation state forwarded."},
+        {"line": 144, "behavior": "Replace entry; Back reaches /prev."}
+      ],
+      "limits": "MemoryRouter harness at lines 46-78 mounts a synthetic div destination at lines 69-72, not the production Studio or shell. Its comment about a real destination route means the declared harness route, not production runtime acceptance. No tests were executed."
+    }
+  },
+  "evidenceLimits": {
+    "sourceSnapshotUtc": "2026-10-07T07:37:03.0287273Z",
+    "method": "Direct source/range reads, bounded text search and root-module hash/regex counts; only owned JSON and heartbeat written.",
+    "runtime": "unverified; no application launch, browser navigation or test execution",
+    "visual": "Not applicable to local content; shell, fallback and destination remain unverified.",
+    "backend": "No local endpoint. No backend implementation or destination API contract inspected; hook URL verification is not applicable to this redirect.",
+    "validationNotRun": [
+      "TypeScript, lint, build and suites not run during read-only Phase 0/concurrent source work.",
+      "Skill audit.sh not executed because it unconditionally runs project TypeScript; scoped source counts used instead, not claimed as an equivalent full audit.",
+      "No focused test execution: no validation baton supplied; source assertions recorded without pass/fail claims.",
+      "No viewport, keyboard, contrast, screen-reader, real browser history, offline, authentication or native checks."
+    ],
+    "scopeExclusions": [
+      "Destination page visual/data audit and downstream editor hydration",
+      "Shared shell, focus/announcement manager and scroll-restoration implementations",
+      "Server rewrite, authentication and production reachability",
+      "Other redirect module implementation audits",
+      "External email/bookmark producer history"
+    ],
+    "sourceOnlyConclusion": "No local visual or architectural issue established in this 29-line redirect. Empty issue arrays are bounded source findings, not runtime acceptance or a whole-app clearance.",
+    "inspectionReceipts": [
+      {
+        "command": "Get-FileHash -Path 'web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx' -Algorithm SHA256",
+        "exitCode": 0,
+        "output": "SHA256 6320F12E6AF46AC08836590C067AD3899449CDAB7A9693699F26EAEF382B1FFF"
+      },
+      {
+        "command": "(Get-Content -Path 'web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx').Count",
+        "exitCode": 0,
+        "output": "29"
+      },
+      {
+        "command": "Scoped PowerShell regex counts against root redirect only",
+        "exitCode": 0,
+        "patterns": ["<GlassPanel\\b", "<ChartContainer\\b", "<(button|input|textarea|select|table)\\b", "style\\s*=", "\\b(fetch|request|useQuery|useMutation)\\s*\\("],
+        "output": "GlassPanel: 0\nChartContainer: 0\nrawControls: 0\ninlineStyles: 0\nfetchPatterns: 0"
+      },
+      {
+        "command": "Get-Content -Raw 'docs\\frontend-audits\\audit-page-141.json' | ConvertFrom-Json; required-key, exact page/routes and root hash/line-count assertions; Select-String -Path 'web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.test.tsx' -Pattern \"^  it\\(\"",
+        "exitCode": 0,
+        "output": "Phase 0 required fields: PASS\nExact page/routes: PASS\nRoot SHA-256/line count: PASS\nTest cases located at lines 82, 94, 102, 116, 125, 134, 144\nRuntime/tests/TypeScript/lint/build: NOT RUN",
+        "limit": "JSON parsing and the listed structural/preservation assertions only; not a repository schema validator or runtime verification."
+      }
+    ],
+    "governingReferences": [
+      "docs\\frontend-worker-conventions.md:43-80 Phase 0 schema, source evidence and owned-file return contract",
+      "docs\\frontend-mission.md sections 0/1 audit and preservation",
+      "docs\\frontend-mission.md sections 3/4 architecture and reuse, 5-14 visual hierarchy/shell/layout, 15/16 responsive/mobile, 22-25 states, 30/31 accessibility/motion and 33 data separation",
+      "docs\\frontend-design-contract.md MDC-001, MDC-002, MDC-026, MDC-030, MDC-040, MDC-042, MDC-043, MDC-045, MDC-046, MDC-047 and MDC-070"
+    ]
+  },
+  "filesRead": [
+    {"path": "docs\\frontend-worker-conventions.md", "ranges": ["entire file"]},
+    {"path": "docs\\frontend-design-contract.md", "ranges": ["1-250 (initial output truncated, continuation 185-250)", "251-395"]},
+    {"path": "docs\\frontend-mission.md", "ranges": ["1-230", "230-660", "690-785", "915-1010"]},
+    {"path": "docs\\frontend-audits\\audit-page-140.json", "ranges": ["1-230"], "limit": "Previous redirect report context only; its schema deviations and prior evidence were not reused as current proof."},
+    {"path": ".github\\skills\\audit-violations\\audit.sh", "ranges": ["entire file"], "limit": "Read to determine validation scope; not executed."},
+    {"path": "web\\package.json", "ranges": ["1-130"], "limit": "Validation scripts read, none executed."},
+    {"path": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.tsx", "ranges": ["1-29"]},
+    {"path": "web\\src\\features\\notifications\\components\\LegacyAlertStudioRedirect.test.tsx", "ranges": ["entire file"]},
+    {"path": "web\\src\\App.tsx", "ranges": ["180-210", "350-382", "540-580", "612-638"], "limit": "Mounts, imports, wrapper and manager registration only."},
+    {"path": "web\\src\\features\\notifications\\pages\\AlertStudioPage.tsx", "ranges": ["1-18"]},
+    {"path": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx", "ranges": ["223-246"]},
+    {"path": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "ranges": ["342-360"]},
+    {"path": "web\\src\\lib\\commandRegistry.ts", "ranges": ["321-348"]},
+    {"path": "web\\src\\lib\\draftIndex.ts", "ranges": ["1-27", "87-100"]},
+    {"path": "web\\src\\lib\\routePrefetch.ts", "ranges": ["33-44", "104-112"]},
+    {"path": "web\\src\\lib\\routeRegistry.ts", "ranges": ["38-47", "176-183"]},
+    {"path": "web\\src\\features\\notifications\\components\\AlertRuleEditor.tsx", "ranges": ["27-38", "scoped search matches"], "limit": "Controller linkage only, not a presentation audit."},
+    {"path": "web\\src\\features\\notifications\\hooks\\useAlertRuleEditorController.ts", "ranges": ["scoped search matches only"], "limit": "Not a complete controller or hydration trace; downstream semantics remain unverified."}
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-141.json",
+    ".agent-status\\audit-page-141.txt"
+  ]
+}

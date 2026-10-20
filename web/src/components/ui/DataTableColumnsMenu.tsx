@@ -1,3 +1,4 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Columns3 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -115,23 +116,7 @@ export function DataTableColumnsMenu({
       {trigger ? (
         trigger(() => setOpen((v) => !v))
       ) : (
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          aria-label={t('table.columns.menu', 'Show or hide columns')}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs',
-            'border border-white/[0.08] bg-white/[0.03]',
-            'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-            'transition-colors',
-          )}
-        >
-          <Columns3 className="h-3.5 w-3.5" aria-hidden="true" />
-          <span>{t('table.columns.button', 'Columns')}</span>
-        </button>
+        <IconButton icon={<Columns3 className="h-3.5 w-3.5" aria-hidden="true" />} label={t('table.columns.button', 'Columns')} onClick={() => setOpen((v) => !v)} aria-label={t('table.columns.menu', 'Show or hide columns')} aria-expanded={open} aria-haspopup="menu" />
       )}
 
       {open && (

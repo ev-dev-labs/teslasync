@@ -19,8 +19,9 @@
  * Network is never touched: the four `useOperatorConfidence` hooks are mocked
  * and driven per-test.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -128,10 +129,11 @@ function lastAuditParams(): any {
   return calls[calls.length - 1]?.[0];
 }
 
-// Read the value <p> that sits immediately after a MetricCard's label span.
+// Read the canonical tile value without depending on typography wrappers.
+// Unknown metrics are omitted from the face, so a missing label reads as ''.
 function metricValue(label: string): string {
-  const labelSpan = screen.getByText(label);
-  const valueEl = labelSpan.closest('p')?.nextElementSibling;
+  const labelSpan = within(screen.getByTestId('admin-audit-summary')).queryByText(label);
+  const valueEl = labelSpan?.closest('[data-operational-metric]')?.querySelector('[data-operational-value]');
   return valueEl?.textContent ?? '';
 }
 
@@ -201,7 +203,7 @@ describe('AuditLogPage — populated view', () => {
     renderPage();
 
     // Page + section scaffolding (all headings always present).
-    expect(screen.getByRole('heading', { name: 'Audit Log', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Audit log', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Filters' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hash chain integrity' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Entries' })).toBeInTheDocument();
@@ -224,13 +226,58 @@ describe('AuditLogPage — populated view', () => {
 
   it('exposes the CSV export affordance when there are rows to export', () => {
     renderPage();
-    expect(
-      screen.getByRole('button', { name: 'Download CSV' }),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    expect(screen.getByRole('menuitem', { name: 'Download as CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Download as JSON' })).toBeInTheDocument();
   });
 });
 
 describe('AuditLogPage — degraded data sources', () => {
+  it('preserves independent catalog loading, failed refresh counts and unknown versus measured zero', () => {
+    mockUseAuditLog.mockReturnValue(makeQuery({ data: { rows: [], limit: 100 } }));
+    const categories = makeQuery({ data: { categories: ['auth', 'config'] },
+      error: new ApiError('catalog refresh failed', 500) });
+    mockUseAuditCategories.mockReturnValue(categories);
+    mockUseAuditActions.mockReturnValue(makeQuery({ isLoading: true, isFetching: true }));
+    renderPage();
+    const strip = screen.getByTestId('admin-audit-summary');
+    assertOperationalBriefDisclosure(strip, 'Retained source data', { contains: true });
+    // Freshness and per-source loader copy live in the drawer, not the face.
+    expect(strip).not.toHaveTextContent('Showing retained measurements');
+    expect(metricValue('Entries shown')).toBe('0');
+    expect(metricValue('Categories')).toBe('2');
+    expect(metricValue('Action types')).toBe('');
+    expect(strip.querySelector('[data-operational-metric="actions"]')).toBeNull();
+    expect(within(strip).queryByText('Loading measurements')).not.toBeInTheDocument();
+    expect(strip.querySelector('[data-operational-metric="categories"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('Showing retained measurements');
+    // The still-loading actions metric is omitted: it contributes only the
+    // hidden count, and its loader copy is not rendered as a drawer row.
+    expect(drawer).not.toHaveTextContent('Loading measurements');
+    expect(drawer).toHaveTextContent('1 empty fields are hidden.');
+    // The failed catalog source still offers independent retry from the drawer.
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Retry' }));
+    expect(categories.refetch).toHaveBeenCalledOnce();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.getByRole('heading', { name: 'Entries' })).toBeInTheDocument();
+  });
+
+  it('does not turn null or missing catalog arrays into measured zero counts', () => {
+    mockUseAuditCategories.mockReturnValue(makeQuery({ data: { categories: null } }));
+    mockUseAuditActions.mockReturnValue(makeQuery({ data: {} }));
+    renderPage();
+    const strip = screen.getByTestId('admin-audit-summary');
+    expect(metricValue('Categories')).toBe('');
+    expect(metricValue('Action types')).toBe('');
+    expect(strip.querySelector('[data-operational-metric="categories"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="actions"]')).toBeNull();
+    expect(metricValue('Entries shown')).toBe('2');
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('2 empty fields are hidden.');
+  });
+
   it('shows the subsystem-unavailable banner and blanks KPIs to "—" on a 503 (no lying zeros)', () => {
     mockUseAuditLog.mockReturnValue(
       makeQuery({
@@ -245,9 +292,16 @@ describe('AuditLogPage — degraded data sources', () => {
     ).toBeInTheDocument();
 
     // The header must not fabricate a "0" when the ledger could not load.
-    expect(metricValue('Entries shown')).toBe('—');
-    expect(metricValue('OK (in view)')).toBe('—');
-    expect(metricValue('Failed (in view)')).toBe('—');
+    const strip = screen.getByTestId('admin-audit-summary');
+    expect(metricValue('Entries shown')).toBe('');
+    expect(metricValue('OK (in view)')).toBe('');
+    expect(metricValue('Failed (in view)')).toBe('');
+    expect(strip.querySelector('[data-operational-metric="entries"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="ok"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="failed"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="actors"]')).toBeNull();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('4 empty fields are hidden.');
 
     // A 503-subsystem case is NOT the generic table error path.
     expect(screen.queryByText('Server error')).toBeNull();
@@ -259,17 +313,25 @@ describe('AuditLogPage — degraded data sources', () => {
     renderPage();
 
     expect(screen.getByText('Server error')).toBeInTheDocument();
-    expect(metricValue('Entries shown')).toBe('—');
+    const strip = screen.getByTestId('admin-audit-summary');
+    expect(metricValue('Entries shown')).toBe('');
+    expect(strip.querySelector('[data-operational-metric="entries"]')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(q.refetch).toHaveBeenCalled());
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('4 empty fields are hidden.');
   });
 
   it('keeps KPIs honest as "—" while the first page is still loading', () => {
     mockUseAuditLog.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     renderPage();
 
-    expect(metricValue('Entries shown')).toBe('—');
+    const strip = screen.getByTestId('admin-audit-summary');
+    expect(metricValue('Entries shown')).toBe('');
+    expect(strip.querySelector('[data-operational-metric="entries"]')).toBeNull();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('4 empty fields are hidden.');
     // Loading is not "empty": the empty-state copy must not show yet.
     expect(screen.queryByText('No audit entries')).toBeNull();
   });
@@ -290,7 +352,7 @@ describe('AuditLogPage — filtering', () => {
     mockUseAuditLog.mockReturnValue(q);
     renderPage();
 
-    fireEvent.change(screen.getByLabelText('Actor'), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Actor' }), {
       target: { value: 'root@local' },
     });
     await waitFor(() => {
@@ -354,7 +416,7 @@ describe('AuditLogPage — pagination', () => {
 });
 
 describe('AuditLogPage — row expansion (ExpandedDetail + formatJSON)', () => {
-  it('renders the drawer with IP, pretty-printed valid JSON, and raw invalid JSON', () => {
+  it('renders the expanded detail with IP, pretty-printed valid JSON, and raw invalid JSON', () => {
     const row: AuditLogRow = {
       id: 7,
       ts: '2024-01-01T10:00:00Z',
@@ -379,7 +441,7 @@ describe('AuditLogPage — row expansion (ExpandedDetail + formatJSON)', () => {
     // Collapsed by default.
     expect(screen.queryByText('192.168.1.9')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Expand row/ }));
 
     expect(screen.getByText('192.168.1.9')).toBeInTheDocument();
     // formatJSON valid branch => pretty-printed with a space after the colon.
@@ -398,7 +460,7 @@ describe('AuditLogPage — hash-chain verification', () => {
 
     expect(
       screen.getByText(
-        'Re-derive every row_hash server-side. No data is sent or written — this is read-only.',
+        'Read-only GET re-derives at most 1,000 non-null row hashes, oldest first, from the server-selected lower bound (default: 30 days ago). It does not verify the full ledger or row adjacency.',
       ),
     ).toBeInTheDocument();
 
@@ -436,8 +498,8 @@ describe('AuditLogPage — hash-chain verification', () => {
       makeQuery({ error: new Error('chain verify failed') }),
     );
     const { unmount } = renderPage();
-    expect(screen.getByText('Verification failed')).toBeInTheDocument();
-    expect(screen.getByText('chain verify failed')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.getByText('Verification failed: chain verify failed')).toBeInTheDocument();
     unmount();
 
     // Fetching state.

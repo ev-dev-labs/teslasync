@@ -43,8 +43,8 @@ const noop = (): void => {}
 // window is what the trainer needs to cover representative
 // L1/L2/DC behaviour. The Go trainer clamps the upper bound at
 // mlchargingcurves.MaxLookbackDays=365, so wider values are
-// silently capped server-side. Mirrors the SPA Charging Curve
-// page's default lookback for parity with the baseline charts.
+// rejected server-side. This learning window is independent of the
+// workspace range and does not establish parity with the baseline charts.
 const DEFAULT_LOOKBACK_DAYS = 90
 
 interface InnerSectionProps {
@@ -92,8 +92,8 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
         'Learn per-vehicle charging-curve clusters',
       )}
       description={t(
-        'charging.aiMlClustering.description',
-        'Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle’s recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging Curve page today.',
+        'charging.aiMlClustering.independentDescription',
+        'Compute a learned charging envelope for the selected vehicle over an independent 90-day window. Helix narrates the training and cluster-query tool results, including rule-label fallbacks when data is insufficient. The workspace date range does not filter this request; these results are not established as equivalent to the charts below and do not replace them.',
       )}
       buttonLabel={t(
         'charging.aiMlClustering.generateButton',

@@ -48,6 +48,7 @@ import { CHART_COLORS } from '@/components/charts';
 import { ALERT_SEVERITY_COLORS } from './constants';
 import { getWeekRange } from './helpers';
 import { useWeeklyDigest } from './useWeeklyDigest';
+import { useAlertHistory } from '@/api/hooks/useNotifications';
 import type { Drive, ChargingSession, Alert } from './types';
 import type { Vehicle } from '@/types/vehicle';
 
@@ -176,6 +177,145 @@ const urlsCalled = () =>
   mockedRequest.mock.calls.map(([u]) => u).filter((u): u is string => typeof u === 'string');
 const callsFor = (prefix: string) => urlsCalled().filter((u) => u.startsWith(prefix)).length;
 
+describe('scoped alert history regression', () => {
+  it('counts fleet and multi-vehicle rules without treating an excluded subset as fleet-wide', async () => {
+    const [start] = getWeekRange(0);
+    const created_at = atNoon(start, 0);
+    installRoutes();
+    mockedRequest.mockImplementation((url: string) => {
+      if (url.startsWith('/alerts')) return Promise.resolve([
+        { id: 1, vehicle_id: 0, all_vehicles: true, vehicle_ids: [], severity: 'info', created_at },
+        { id: 2, vehicle_id: 0, all_vehicles: false, vehicle_ids: [1, 2], severity: 'warning', created_at },
+        { id: 3, vehicle_id: 0, all_vehicles: false, vehicle_ids: [2], severity: 'critical', created_at },
+        { id: 4, vehicle_id: 0, all_vehicles: false, vehicle_ids: [], severity: 'critical', created_at },
+      ]);
+      if (url === '/vehicles') return Promise.resolve(DEFAULT_VEHICLES);
+      return Promise.resolve([]);
+    });
+    const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.metrics.alertTotal).toBe(2));
+    expect(result.current.metrics.alertsByType).toEqual({ info: 1, warning: 1 });
+  });
+
+  it('traverses scoped pages and re-keys alerts when navigating to an older week', async () => {
+    const [start] = getWeekRange(0);
+    const [olderStart] = getWeekRange(-1);
+    const created_at = atNoon(start, 1);
+    const firstPage = Array.from({ length: 1000 }, (_, index) => ({
+      id: 2000 - index, vehicle_id: 1, severity: 'info', created_at,
+    }));
+    installRoutes();
+    mockedRequest.mockImplementation((url: string) => {
+      if (url === '/vehicles') return Promise.resolve(DEFAULT_VEHICLES);
+      if (!url.startsWith('/alerts?')) return Promise.resolve([]);
+      const params = new URLSearchParams(url.split('?')[1]);
+      return Promise.resolve(params.has('before_id') ? [
+        { id: 1, vehicle_id: 1, severity: 'critical', created_at: atNoon(olderStart, 0) },
+      ] : firstPage);
+    });
+    const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.metrics.alertTotal).toBe(1000));
+    const pages = urlsCalled().filter((url) => url.startsWith('/alerts?'));
+    expect(pages).toHaveLength(2);
+    const first = new URLSearchParams(pages[0].split('?')[1]);
+    const second = new URLSearchParams(pages[1].split('?')[1]);
+    for (const key of ['vehicle_id', 'from', 'to', 'limit']) {
+      expect(second.get(key)).toBe(first.get(key));
+    }
+    expect(second.get('before_id')).toBe('1001');
+    expect(second.get('before_created_at')).toBe(created_at);
+    expect(mockedRequest.mock.calls.find(([url]) => url === pages[1])?.[1].signal)
+      .toBeInstanceOf(AbortSignal);
+    act(() => result.current.goToPrevWeek());
+    await waitFor(() => expect(result.current.metrics.alertTotal).toBe(1));
+    expect(urlsCalled().filter((url) => url.startsWith('/alerts?'))).toHaveLength(4);
+  });
+
+  it.each([null, undefined, {}, 'invalid'])('reports missing/invalid history %s rather than measured zero', async (payload) => {
+    mockedRequest.mockResolvedValue(payload);
+    const { result } = renderHook(() => useAlertHistory(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it('recognizes a complete empty response as measured zero', async () => {
+    mockedRequest.mockResolvedValue([]);
+    const { result } = renderHook(() => useAlertHistory(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual([]);
+  });
+
+  it.each([
+    { created_at: undefined },
+    { created_at: 'invalid' },
+    { id: 1.5 },
+    { vehicle_ids: [1.5] },
+    { all_vehicles: 'true' },
+    { severity: undefined },
+  ])('reports invalid alert fields %j instead of discarding them as zero', async (fields) => {
+    mockedRequest.mockResolvedValue([{
+      id: 1, vehicle_id: 1, severity: 'info',
+      created_at: '2026-10-14T00:00:00Z', ...fields,
+    }]);
+    const { result } = renderHook(() => useAlertHistory(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.error?.message).toMatch(/invalid alert fields/);
+  });
+
+  it('surfaces stalled cursors through the digest error channel instead of healthy zero', async () => {
+    const [start] = getWeekRange(0);
+    const page = Array.from({ length: 1000 }, (_, index) => ({
+      id: 1000 - index, vehicle_id: 1, severity: 'info', created_at: atNoon(start, 0),
+    }));
+    installRoutes({ alerts: page });
+    const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.alertsError).toBeTruthy());
+    expect(result.current.alertsError?.message).toMatch(/cursor did not advance/);
+    expect(callsFor('/alerts')).toBe(2);
+  });
+
+  it.each([NaN, Infinity, -1, 0])('rejects invalid page limit %s before requesting', async (limit) => {
+    const { result } = renderHook(() => useAlertHistory(limit), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { vehicle_id: 1.5 },
+    { vehicle_id: -1 },
+    { from: 'invalid' },
+    { to: '' },
+    { from: '2026-10-14T00:00:00Z', to: '2026-10-13T00:00:00Z' },
+  ])('rejects invalid scope %j before requesting', async (scope) => {
+    const { result } = renderHook(() => useAlertHistory(1000, scope), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('preserves valid signed and fractional measurements while fetching scoped alerts', async () => {
+    const [start] = getWeekRange(0);
+    installRoutes({
+      drives: [makeDrive({
+        id: 1, startTs: atNoon(start, 0), distanceM: 10.5, energyUsedWh: -2.25,
+      })],
+      charging: [makeCharge({
+        id: 1, started_at: atNoon(start, 0), cost_decimal: -0.125,
+        total_energy_added_wh: 0.5, start_soc_pct: 0, end_soc_pct: 0.25,
+      })],
+    });
+    const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.metrics.totalDrives).toBe(1));
+    expect(result.current.metrics.energyUsedWh).toBe(-2.25);
+    expect(result.current.metrics.avgEfficiencyWhPerM).toBeCloseTo(-2.25 / 10.5);
+    expect(result.current.metrics.chargingCost).toBe(-0.125);
+    expect(result.current.metrics.chargeEnergyAddedWh).toBe(0.5);
+    expect(result.current.metrics.batteryStart).toBe(0);
+    expect(result.current.metrics.batteryEnd).toBe(0.25);
+  });
+});
+
 /* ── A representative fully-populated week ── */
 function seedFullWeek() {
   const [curStart] = getWeekRange(0);
@@ -259,11 +399,18 @@ describe('request wiring', () => {
       const u = urlsCalled();
       expect(u.some((url) => url.startsWith('/drives?vehicle_id=1&'))).toBe(true);
       expect(u.some((url) => url.startsWith('/charging?vehicle_id=1&'))).toBe(true);
-      expect(u).toContain('/alerts?limit=1000');
+      expect(u.some((url) => url.startsWith('/alerts?'))).toBe(true);
     });
 
     const urls = urlsCalled();
     expect(urls).toContain('/vehicles');
+    const alertParams = new URLSearchParams(urls.find((url) => url.startsWith('/alerts?'))?.split('?')[1]);
+    const [previousStart] = getWeekRange(-1);
+    const [, currentEnd] = getWeekRange(0);
+    expect(alertParams.get('vehicle_id')).toBe('1');
+    expect(alertParams.get('from')).toBe(previousStart.toISOString());
+    expect(alertParams.get('to')).toBe(new Date(currentEnd.getTime() + 1).toISOString());
+    expect(alertParams.get('limit')).toBe('1000');
     for (const url of urls.filter((value) => /^\/(drives|charging)\?/.test(value))) {
       const params = new URLSearchParams(url.split('?')[1]);
       expect(params.get('vehicle_id')).toBe('1');
@@ -290,6 +437,7 @@ describe('request wiring', () => {
     expect(callsFor('/drives')).toBe(0);
     expect(callsFor('/charging')).toBe(0);
     expect(callsFor('/analytics/fsd')).toBe(0);
+    expect(callsFor('/alerts')).toBe(0);
     expect(result.current.metrics.totalDistanceM).toBe(0);
   });
 });
@@ -346,7 +494,7 @@ describe('aggregated metrics', () => {
     expect(m.totalDistanceM).toBe(0);
     expect(m.avgEfficiencyWhPerM).toBe(0);
     expect(m.avgChargePowerW).toBe(0);
-    expect(m.batteryStart).toBe(0);
+    expect(m.batteryStart).toBeNull();
     expect(m.topDrive).toBeUndefined();
     expect(Number.isNaN(m.avgEfficiencyWhPerM)).toBe(false);
     expect(result.current.hasData).toBe(false);
@@ -444,7 +592,7 @@ describe('fun fact', () => {
     expect(result.current.funFact).toEqual({
       from: 'New York',
       to: 'Boston',
-      times: '0.4', // fmtNumber(150 / 350, 1)
+      times: '0.43', // fmtNumber(150 / 350), Settings precision
     });
   });
 

@@ -48,6 +48,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { chartTokens } from '@/lib/tokens';
 
 import {
   TripReplayCharts,
@@ -60,6 +61,7 @@ type SyncMouseState = { activeLabel?: string | number } | null;
 type ClickState = { activeTooltipIndex?: number } | null;
 
 const state = vi.hoisted(() => ({
+  palette: ['#91b4d2', '#c0a384'],
   onMouseMove: (() => {}) as (s: SyncMouseState) => void,
   syncProps: {} as {
     syncId?: string;
@@ -69,7 +71,19 @@ const state = vi.hoisted(() => ({
   syncedX: null as string | number | null,
 }));
 
+vi.mock('@/hooks/useChartPalette', () => ({ useChartPalette: () => state.palette }));
+
 const captured = vi.hoisted(() => ({
+  chartCard: [] as Array<{
+    data?: ReadonlyArray<Record<string, string | number | null | undefined>>;
+    dataColumns?: ReadonlyArray<{
+      key: string;
+      label: string;
+      format?: (value: unknown) => string;
+    }>;
+    chartKey?: string;
+    exportable?: boolean;
+  }>,
   areaChart: [] as Array<{
     data?: ReadonlyArray<Record<string, unknown>>;
     syncId?: string;
@@ -96,6 +110,10 @@ vi.mock('react-i18next', () => {
 //    their children so the series/axis/data bindings surface as testable DOM;
 //    the sync hooks read hoisted state so the persistent-cursor bridge and the
 //    onMouseMove wiring can be driven from a test. ──
+vi.mock('@/components/layout', async () => ({
+  ChartCard: (await import('@/components/charts')).ChartContainer,
+}));
+
 vi.mock('@/components/charts', () => {
   const Inert = () => null;
   return {
@@ -123,8 +141,8 @@ vi.mock('@/components/charts', () => {
     fmt: (v: number, d = 0) => Number(v).toFixed(d),
     CHART_COLORS: ['#00f0ff', '#ff00aa', '#00ffaa'],
     AREA_DEFAULTS: { type: 'monotone', strokeWidth: 2 },
-    areaGradient: (id: string, color: string) => (
-      <span data-testid="area-gradient" data-id={id} data-color={color} />
+    areaGradient: (id: string, color: string, opacity: number) => (
+      <span data-testid="area-gradient" data-id={id} data-color={color} data-opacity={opacity} />
     ),
     ChartTooltip: Inert,
     CartesianGrid: Inert,
@@ -136,15 +154,25 @@ vi.mock('@/components/charts', () => {
       ariaLabel,
       height,
       children,
+      ...props
     }: {
       title?: string;
       subtitle?: string;
       ariaLabel?: string;
       height?: number;
+      data?: ReadonlyArray<Record<string, string | number | null | undefined>>;
+      dataColumns?: ReadonlyArray<{
+        key: string;
+        label: string;
+        format?: (value: unknown) => string;
+      }>;
+      chartKey?: string;
+      exportable?: boolean;
       children?: ReactNode | ((context: {
         hiddenSeries: { isHidden: (key: string) => boolean };
       }) => ReactNode);
     }) => {
+        captured.chartCard.push(props);
         const content = typeof children === 'function'
           ? children({ hiddenSeries: { isHidden: () => false } })
           : children;
@@ -251,6 +279,8 @@ const gradientById = (id: string) =>
   screen.getAllByTestId('area-gradient').find((el) => el.getAttribute('data-id') === id);
 
 beforeEach(() => {
+  state.palette = ['#91b4d2', '#c0a384'];
+  captured.chartCard.length = 0;
   captured.areaChart.length = 0;
   state.onMouseMove = vi.fn();
   state.syncProps = { syncId: 'trip-replay', syncMethod: 'value', onMouseMove: state.onMouseMove };
@@ -311,6 +341,46 @@ describe('nearestIndexByTime', () => {
 // ── 2. Panel chrome + provider wiring ────────────────────────────────────────
 
 describe('TripReplayCharts — panel chrome', () => {
+  it.each(['km/h', 'mph'])('provides every replay sample and unit-aware table columns for %s', (speedUnit) => {
+    const data: TripReplayChartPoint[] = [
+      { index: 100, time: 0, speed: 0, power: 0 },
+      { index: 107, time: 0.5, speed: null, power: -12.5 },
+      { index: 125, time: 1.25, speed: 35.5, power: null },
+      { index: 140, time: 2, speed: null, power: null },
+    ];
+    renderCharts({ data, speedUnit });
+
+    const card = captured.chartCard.at(-1);
+    expect(card?.data).toEqual(data);
+    expect(card?.dataColumns?.map(({ key, label }) => ({ key, label }))).toEqual([
+      { key: 'index', label: 'Position (index)' },
+      { key: 'time', label: 'Time (min)' },
+      { key: 'speed', label: `Speed (${speedUnit})` },
+      { key: 'power', label: 'Power (kW)' },
+    ]);
+    for (const column of card?.dataColumns?.filter(column => column.format) ?? []) {
+      expect(Number(column.format?.(0))).toBe(0);
+      expect(column.format?.(null)).toBe('—');
+      expect(column.format?.(undefined)).toBe('—');
+      expect(column.format?.(NaN)).toBe('—');
+      expect(column.format?.(-12.5)).not.toBe('—');
+    }
+    expect(card?.chartKey).toBe('trip-replay-speed-power');
+    expect(card?.exportable).toBe(true);
+    expect(JSON.parse(screen.getByTestId('area-chart-data').textContent || '[]')).toEqual(data);
+  });
+
+  it('keeps fully missing samples in the alternative without fabricating telemetry', () => {
+    const data: TripReplayChartPoint[] = [
+      { index: 42, time: 0, speed: null, power: null },
+    ];
+    renderCharts({ data });
+
+    expect(captured.chartCard.at(-1)?.data).toEqual(data);
+    expect(screen.getByRole('status')).toHaveTextContent('No telemetry data available');
+    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
+  });
+
   it('frames the timeline with the i18n title, subtitle and accessible chart label', () => {
     renderCharts();
 
@@ -348,6 +418,26 @@ describe('TripReplayCharts — panel chrome', () => {
 // ── 3. Series / axis / gradient bindings (populated) ─────────────────────────
 
 describe('TripReplayCharts — series, axes and gradients', () => {
+  it('refreshes palette strokes and restrained fills while preserving series identity and a neutral cursor', () => {
+    const onSeekToIndex = vi.fn();
+    const { rerender } = renderCharts({ currentIndex: 2, onSeekToIndex });
+    expect(gradientById('speedGrad')).toHaveAttribute('data-opacity', '0.08');
+    expect(gradientById('powerGrad')).toHaveAttribute('data-opacity', '0.08');
+    state.palette = ['#385e7e', '#625077'];
+    rerender(<TripReplayCharts data={DATA} currentIndex={2} speedUnit="km/h" onSeekToIndex={onSeekToIndex} />);
+    expect(seriesByKey('speed')).toHaveAttribute('data-stroke', state.palette[0]);
+    expect(seriesByKey('power')).toHaveAttribute('data-stroke', state.palette[1]);
+    expect(gradientById('speedGrad')).toHaveAttribute('data-color', state.palette[0]);
+    expect(screen.getByTestId('reference-line')).toHaveAttribute('data-stroke', chartTokens.cursor.stroke);
+    expect(captured.chartCard.at(-1)?.chartKey).toBe('trip-replay-speed-power');
+    expect(onSeekToIndex).not.toHaveBeenCalled();
+  });
+
+  it('labels the power axis using the supplied display unit', () => {
+    renderCharts({ powerUnit: 'W' });
+    expect(axisById('power')).toHaveAttribute('data-label', 'W');
+  });
+
   it('feeds the full data array with value-based sync props + hover handler onto the chart', () => {
     renderCharts({ speedUnit: 'km/h' });
 
@@ -367,7 +457,7 @@ describe('TripReplayCharts — series, axes and gradients', () => {
     const speed = seriesByKey('speed');
     expect(speed).toHaveAttribute('data-yaxis', 'speed');
     expect(speed).toHaveAttribute('data-name', 'Speed');
-    expect(speed).toHaveAttribute('data-stroke', '#00f0ff');
+    expect(speed).toHaveAttribute('data-stroke', state.palette[0]);
     expect(speed).toHaveAttribute('data-fill', 'url(#speedGrad)');
   });
 
@@ -377,7 +467,7 @@ describe('TripReplayCharts — series, axes and gradients', () => {
     const power = seriesByKey('power');
     expect(power).toHaveAttribute('data-yaxis', 'power');
     expect(power).toHaveAttribute('data-name', 'Power');
-    expect(power).toHaveAttribute('data-stroke', '#ff00aa');
+    expect(power).toHaveAttribute('data-stroke', state.palette[1]);
     expect(power).toHaveAttribute('data-fill', 'url(#powerGrad)');
   });
 
@@ -401,8 +491,8 @@ describe('TripReplayCharts — series, axes and gradients', () => {
   it('renders both fill gradients with stable ids and the matching palette colours', () => {
     renderCharts();
 
-    expect(gradientById('speedGrad')).toHaveAttribute('data-color', '#00f0ff');
-    expect(gradientById('powerGrad')).toHaveAttribute('data-color', '#ff00aa');
+    expect(gradientById('speedGrad')).toHaveAttribute('data-color', state.palette[0]);
+    expect(gradientById('powerGrad')).toHaveAttribute('data-color', state.palette[1]);
   });
 });
 

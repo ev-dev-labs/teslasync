@@ -214,8 +214,8 @@ describe('PowertrainPanel — torque split', () => {
   it('renders front + rear torque in Nm', () => {
     render(<PowertrainPanel motorData={makeMotor({ torque_nm_front: 320.5, torque_nm_rear: 280 })} />)
 
-    expect(screen.getByText('Front Torque')).toBeInTheDocument()
-    expect(screen.getByText('Rear Torque')).toBeInTheDocument()
+    expect(screen.getByText('Front torque')).toBeInTheDocument()
+    expect(screen.getByText('Rear torque')).toBeInTheDocument()
     expect(screen.getByText('320.50')).toBeInTheDocument()
     expect(screen.getByText('280.00')).toBeInTheDocument()
     expect(screen.getAllByText('Nm')).toHaveLength(2)
@@ -223,7 +223,7 @@ describe('PowertrainPanel — torque split', () => {
 
   it('renders an em dash for a null torque axle', () => {
     render(<PowertrainPanel motorData={makeMotor({ torque_nm_front: null })} />)
-    expect(screen.getByText('Front Torque').closest('div')).toHaveTextContent('—')
+    expect(screen.getByText('Front torque').closest('div')).toHaveTextContent('—')
   })
 })
 
@@ -259,7 +259,7 @@ describe('PowertrainPanel — motor temperature', () => {
       />,
     )
 
-    expect(screen.getByText('Motor Temp (peak)').parentElement).toHaveTextContent('—')
+    expect(screen.getByText('Motor temp (peak)').parentElement).toHaveTextContent('—')
     // Peak formatter is bypassed (only inverter's 30 °C reaches it).
     expect(mockFormatTemperature).not.toHaveBeenCalledWith(-Infinity)
   })
@@ -270,7 +270,7 @@ describe('PowertrainPanel — inverter temperature', () => {
     render(<PowertrainPanel motorData={makeMotor({ inverter_temp_c: 42 })} />)
 
     expect(mockFormatTemperature).toHaveBeenCalledWith(42)
-    expect(screen.getByText('Inverter Temp').parentElement).toHaveTextContent('42°C')
+    expect(screen.getByText('Inverter temp').parentElement).toHaveTextContent('42°C')
   })
 
   it('renders the formatter fallback when inverter temp is null', () => {
@@ -281,7 +281,7 @@ describe('PowertrainPanel — inverter temperature', () => {
     )
 
     expect(mockFormatTemperature).toHaveBeenCalledWith(null)
-    expect(screen.getByText('Inverter Temp').parentElement).toHaveTextContent('—')
+    expect(screen.getByText('Inverter temp').parentElement).toHaveTextContent('—')
   })
 })
 

@@ -8,11 +8,12 @@
  * (`TotpStatusHero`, `TotpEnrollModal`, `TotpBackupCodesModal`) stay
  * dumb and easy to test.
  *
- * Extracted verbatim from the former monolithic
- * `TOTPEnrollmentSection` so behaviour — and every error branch — is
- * unchanged; only the composition boundary moved.
+ * Pending mutations retain their dialog until settlement. UI settlement
+ * belongs to the captured query-client/auth-mode instance and attempt;
+ * invalidating that ownership does not cancel the server operation.
  */
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { isApiError } from '@/api/client'
 import {
@@ -28,11 +29,13 @@ import {
 import type { TOTPEnrollment } from '@/api/types'
 
 export type TotpDialogStep = 'enroll' | 'backupCodes' | 'closed'
+type PendingAction = 'enroll' | 'verify' | 'revoke' | 'regenerate'
 
 export function useTotpEnrollmentFlow() {
   const { t } = useTranslation('settings')
 
   const status = useTOTPStatus()
+  const queryClient = useQueryClient()
   const enrollMut = useTOTPEnroll()
   const verifyMut = useTOTPVerify()
   const revokeMut = useTOTPRevoke()
@@ -44,6 +47,44 @@ export function useTotpEnrollmentFlow() {
   const [verifyCode, setVerifyCode] = useState('')
   const [verifyError, setVerifyError] = useState<string | null>(null)
   const [showDisableConfirm, setShowDisableConfirm] = useState(false)
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  const instance = useRef<object | null>(null)
+  const pendingAttempt = useRef<object | null>(null)
+  const mode = status.data?.mode ?? 'session'
+
+  useLayoutEffect(() => {
+    instance.current = {}
+    pendingAttempt.current = null
+    setPendingAction(null)
+    setDialogStep('closed')
+    setEnrollment(null)
+    setRevealedCodes(null)
+    setVerifyCode('')
+    setVerifyError(null)
+    setShowDisableConfirm(false)
+    return () => {
+      // Invalidate UI ownership only; the server mutation is not aborted.
+      instance.current = null
+      pendingAttempt.current = null
+    }
+  }, [queryClient, mode])
+
+  const beginAttempt = useCallback((action: PendingAction) => {
+    if (!instance.current || pendingAttempt.current || mode === 'open') return null
+    const owner = instance.current
+    const attempt = {}
+    pendingAttempt.current = attempt
+    setPendingAction(action)
+    const isCurrent = () => instance.current === owner && pendingAttempt.current === attempt
+    return {
+      isCurrent,
+      settle: () => {
+        if (!isCurrent()) return
+        pendingAttempt.current = null
+        setPendingAction(null)
+      },
+    }
+  }, [mode])
 
   const disableTypedLabel = useMemo(
     () => t('totp.disable.typedLabel', 'Type DISABLE to confirm'),
@@ -51,6 +92,7 @@ export function useTotpEnrollmentFlow() {
   )
 
   const closeDialog = useCallback(() => {
+    if (pendingAttempt.current) return
     setDialogStep('closed')
     setEnrollment(null)
     setRevealedCodes(null)
@@ -59,8 +101,11 @@ export function useTotpEnrollmentFlow() {
   }, [])
 
   const handleEnroll = useCallback(async () => {
+    const attempt = beginAttempt('enroll')
+    if (!attempt) return
     try {
       const result = await enrollMut.mutateAsync()
+      if (!attempt.isCurrent()) return
       setEnrollment(result)
       setVerifyCode('')
       setVerifyError(null)
@@ -68,21 +113,28 @@ export function useTotpEnrollmentFlow() {
     } catch {
       // toast already surfaced by useTOTPEnroll's onError; the dialog
       // stays closed and the section's pill is unchanged.
+    } finally {
+      attempt.settle()
     }
-  }, [enrollMut])
+  }, [enrollMut, beginAttempt])
 
   const handleVerify = useCallback(async () => {
+    if (pendingAttempt.current) return
     setVerifyError(null)
     const code = verifyCode.replace(/\D/g, '')
     if (code.length !== 6) {
       setVerifyError(t('totp.errors.codeLength', 'Enter all 6 digits.'))
       return
     }
+    const attempt = beginAttempt('verify')
+    if (!attempt) return
     try {
       await verifyMut.mutateAsync({ code })
+      if (!attempt.isCurrent()) return
       setRevealedCodes(enrollment?.backup_codes ?? [])
       setDialogStep('backupCodes')
     } catch (err) {
+      if (!attempt.isCurrent()) return
       const errCode = isApiError(err) ? err.code : undefined
       if (errCode === TOTP_INVALID_CODE) {
         setVerifyError(t('totp.errors.invalidCode', 'Code did not match. Try the next one.'))
@@ -101,22 +153,30 @@ export function useTotpEnrollmentFlow() {
             : t('totp.errors.verifyGeneric', 'Verification failed.'),
         )
       }
+    } finally {
+      attempt.settle()
     }
-  }, [enrollment, verifyCode, verifyMut, t])
+  }, [enrollment, verifyCode, verifyMut, t, beginAttempt])
 
   const handleConfirmDisable = useCallback(async () => {
+    const attempt = beginAttempt('revoke')
+    if (!attempt) return
     try {
       await revokeMut.mutateAsync()
     } catch {
       // toast already surfaced; dialog closes via finally below.
     } finally {
-      setShowDisableConfirm(false)
+      if (attempt.isCurrent()) setShowDisableConfirm(false)
+      attempt.settle()
     }
-  }, [revokeMut])
+  }, [revokeMut, beginAttempt])
 
   const handleRegenerate = useCallback(async () => {
+    const attempt = beginAttempt('regenerate')
+    if (!attempt) return
     try {
       const result = await regenMut.mutateAsync()
+      if (!attempt.isCurrent()) return
       // Mirror handleVerify's `?? []` guard: a malformed response missing
       // `backup_codes` must still leave `revealedCodes` a real array so the
       // state stays `string[] | null` (never `undefined`) and the
@@ -127,8 +187,10 @@ export function useTotpEnrollmentFlow() {
       setDialogStep('backupCodes')
     } catch {
       // toast already surfaced; nothing else to do.
+    } finally {
+      attempt.settle()
     }
-  }, [regenMut])
+  }, [regenMut, beginAttempt])
 
   const downloadCodes = useCallback(() => {
     if (!revealedCodes || revealedCodes.length === 0) return
@@ -148,10 +210,16 @@ export function useTotpEnrollmentFlow() {
     URL.revokeObjectURL(url)
   }, [revealedCodes, t])
 
-  const openDisableConfirm = useCallback(() => setShowDisableConfirm(true), [])
-  const closeDisableConfirm = useCallback(() => setShowDisableConfirm(false), [])
+  const openDisableConfirm = useCallback(() => {
+    if (!pendingAttempt.current) setShowDisableConfirm(true)
+  }, [])
+  const closeDisableConfirm = useCallback(() => {
+    if (!pendingAttempt.current) setShowDisableConfirm(false)
+  }, [])
   const changeVerifyCode = useCallback(
-    (raw: string) => setVerifyCode(raw.replace(/\D/g, '').slice(0, 6)),
+    (raw: string) => {
+      if (!pendingAttempt.current) setVerifyCode(raw.replace(/\D/g, '').slice(0, 6))
+    },
     [],
   )
 
@@ -164,10 +232,10 @@ export function useTotpEnrollmentFlow() {
     verifyError,
     showDisableConfirm,
     disableTypedLabel,
-    enrolling: enrollMut.isPending,
-    verifying: verifyMut.isPending,
-    regenerating: regenMut.isPending,
-    revoking: revokeMut.isPending,
+    enrolling: pendingAction === 'enroll',
+    verifying: pendingAction === 'verify',
+    regenerating: pendingAction === 'regenerate',
+    revoking: pendingAction === 'revoke',
     handleEnroll,
     handleVerify,
     handleConfirmDisable,

@@ -4,8 +4,10 @@ import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
 
 import {
+  chargeAdvisorCoverageWindow,
   computeChargeAdvice,
   RESERVE_FLOOR_PCT,
+  validSoc,
   type ChargeAdvisorLiveSnapshot,
 } from './chargeAdvisor';
 
@@ -25,7 +27,6 @@ function drive(
     id: nextId++,
     vehicleId: 1,
     startTs,
-    endTs,
     durationS,
     distanceM: 10_000,
     startAddress: null,
@@ -106,7 +107,111 @@ function qualifiedHistory(burn = 5): Drive[] {
   ].map((date) => drive(date, burn));
 }
 
+function coveredHistory(windowDays = 180): { coveredLocalDates: string[] } {
+  return {
+    coveredLocalDates: Array.from({ length: windowDays - 1 }, (_, index) =>
+      new Date(NOW - (index + 1) * 86_400_000).toISOString().slice(0, 10)),
+  };
+}
+
 describe('computeChargeAdvice', () => {
+  it('does not equate missing qualified history with measured zero calendar use', () => {
+    const result = computeChargeAdvice(qualifiedHistory(), [], live(80), NOW, 'UTC');
+    expect(result.evidenceGatePassed).toBe(false);
+    expect(result.coverageEstablished).toBe(false);
+    expect(result.guidance).toBe('insufficient_history');
+    expect(result.scenarios.meanPath).toEqual([]);
+    expect(result.burnDistribution.meanPct).toBe(5);
+    for (const profile of result.weekdayProfiles) {
+      expect(profile.meanPct).toBeNull();
+      expect(profile.p75Pct).toBeNull();
+      expect(profile.observedNoDrivingDays).toBe(0);
+      expect(profile.unknownOccurrences).toBe(profile.calendarOccurrences);
+    }
+    const empty = computeChargeAdvice([], [], live(10), NOW, 'UTC');
+    expect(empty.weekdayProfiles.every((profile) => profile.meanPct === null)).toBe(true);
+    expect(empty.reserveSensitivity.every((item) => item.meanDaysToCross === null)).toBe(true);
+  });
+
+  it('distinguishes certified no-driving dates from unknown dates and partial today', () => {
+    const result = computeChargeAdvice(
+      [drive('2026-06-01T09:00:00Z', 10)], [], live(80), NOW, 'UTC',
+      { historyWindowDays: 8, coveredLocalDates: ['2026-05-26', '2026-06-01', '2026-06-02'] },
+    );
+    expect(result.weekdayProfiles[1]).toMatchObject({
+      meanPct: 10, activeDayMeanPct: 10, coveredOccurrences: 1,
+    });
+    expect(result.weekdayProfiles[2]).toMatchObject({
+      calendarOccurrences: 1, meanPct: 0, activeDayMeanPct: null,
+      observedNoDrivingDays: 1, unknownOccurrences: 0,
+    });
+    expect(result.weekdayProfiles[3]).toMatchObject({
+      meanPct: null, coveredOccurrences: 0, unknownOccurrences: 1,
+    });
+    expect(result.evidenceGatePassed).toBe(false);
+  });
+
+  it.each([
+    { startTs: '', endTs: '2026-06-01T10:00:00Z' },
+    { startTs: undefined, endTs: '2026-06-01T10:00:00Z' },
+    { startTs: 'not-a-date', endTs: '2026-06-01T10:00:00Z' },
+    { startTs: '2026-02-30T09:00:00Z', endTs: '2026-03-02T10:00:00Z' },
+    { endTs: 'invalid-date' },
+    { endTs: null },
+    { startBatteryPct: null },
+    { durationS: 0, endTs: '2026-06-01T10:00:00Z' },
+  ] satisfies Partial<Drive>[])('withholds coverage when a drive is excluded: %j', (overrides) => {
+    const result = computeChargeAdvice(
+      [...qualifiedHistory(), drive('2026-06-01T09:00:00Z', 5, overrides)],
+      [], live(80), NOW, 'UTC', coveredHistory(),
+    );
+    expect(result.evidenceGatePassed).toBe(false);
+    expect(result.scenarios.meanPath).toEqual([]);
+    expect(result.weekdayProfiles.every((profile) => profile.meanPct === null)).toBe(true);
+  });
+
+  it('withholds readiness for capped history even with declared complete dates', () => {
+    const result = computeChargeAdvice(
+      qualifiedHistory(), [], live(80), NOW, 'UTC',
+      { ...coveredHistory(), historyLimit: 8 },
+    );
+    expect(result.evidence.historyCapReached).toBe(true);
+    expect(result.evidenceGatePassed).toBe(false);
+    expect(result.scenarios.meanPath).toEqual([]);
+  });
+
+  it('keeps local coverage keys Gregorian across a non-default locale and midnight boundary', () => {
+    const boundaryNow = Date.parse('2026-06-02T18:00:00Z');
+    const result = computeChargeAdvice(
+      [
+        drive('2026-06-01T16:00:00Z', 5),
+        drive('2026-06-01T17:00:00Z', 7),
+      ], [], live(80, boundaryNow), boundaryNow, 'Asia/Bangkok',
+      {
+        historyWindowDays: 3,
+        coveredLocalDates: ['2026-06-01', '2026-06-02', '', '2026-02-30', '2569-06-01'],
+      },
+    );
+    expect(new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
+      timeZone: 'Asia/Bangkok', year: 'numeric',
+    }).format(boundaryNow)).toContain('2569');
+    expect(result.evidence.windowEndLocalDate).toBe('2026-06-03');
+    expect(result.dailyTrend.map((day) => day.localDate)).toEqual(['2026-06-01', '2026-06-02']);
+    expect(result.weekdayProfiles[1]?.meanPct).toBe(5);
+    expect(result.weekdayProfiles[2]?.meanPct).toBe(7);
+    expect(result.scenarios.startsLocalDate).toBe('2026-06-04');
+  });
+
+  it('rejects invalid coverage dates rather than certifying an empty day', () => {
+    const result = computeChargeAdvice([], [], live(80), NOW, 'UTC', {
+      historyWindowDays: 2,
+      coveredLocalDates: ['', '2026-06-00', '2026-05-32', '2026-06-01T00:00:00Z'],
+    });
+    expect(result.weekdayProfiles[1]).toMatchObject({
+      meanPct: null, coveredOccurrences: 0, unknownOccurrences: 1,
+    });
+  });
+
   it('reconciles every drive row into one mutually exclusive category', () => {
     const rows = [
       drive('2026-06-01T09:00:00Z', 10),
@@ -156,7 +261,8 @@ describe('computeChargeAdvice', () => {
     expect(sunday.calendarOccurrences).toBe(1);
     expect(sunday.drivingDays).toBe(1);
     expect(monday.calendarOccurrences).toBe(1);
-    expect(monday.medianPct).toBe(20);
+    expect(monday.medianPct).toBeNull();
+    expect(monday.activeDayMedianPct).toBe(20);
     expect(result.weekdayProfiles[2]!.drivingDays).toBe(0);
   });
 
@@ -223,6 +329,7 @@ describe('computeChargeAdvice', () => {
       live(80),
       NOW,
       'UTC',
+      coveredHistory(),
     );
     expect(result.scenarios.startsLocalDate).toBe('2026-06-03');
     expect(result.scenarios.meanPath).toHaveLength(7);
@@ -244,7 +351,7 @@ describe('computeChargeAdvice', () => {
       live(80, liveObservedAt),
       NOW,
       'UTC',
-      { currentStateNowMs },
+      { currentStateNowMs, ...coveredHistory() },
     );
     expect(result.nowMs).toBe(NOW);
     expect(result.currentStateNowMs).toBe(currentStateNowMs);
@@ -262,6 +369,7 @@ describe('computeChargeAdvice', () => {
       live(90),
       NOW,
       'UTC',
+      coveredHistory(),
     );
     const monday = result.weekdayProfiles[1]!;
     expect(monday.calendarOccurrences).toBe(26);
@@ -279,6 +387,7 @@ describe('computeChargeAdvice', () => {
       live(90),
       NOW,
       'UTC',
+      coveredHistory(),
     );
     const denseMonday = dense.weekdayProfiles[1]!;
     expect(denseMonday.meanPct).toBe(5);
@@ -298,6 +407,42 @@ describe('computeChargeAdvice', () => {
     expect(result.reserveSensitivity.map((item) => item.floorPct)).toEqual([10, 20, 30]);
     expect(result.reserveSensitivity.every((item) => item.meanDaysToCross == null || item.meanDaysToCross >= 0)).toBe(true);
   });
+
+  it.each(['sparse', 'dense'] as const)(
+    'keeps displayed mean and p75 end values paired with their independent %s paths',
+    (density) => {
+      const rows = density === 'sparse'
+        ? [drive('2026-05-04T09:00:00Z', 50)]
+        : Array.from({ length: 13 }, (_, index) => {
+          const date = new Date(Date.UTC(2025, 11, 8 + index * 14));
+          return drive(`${date.toISOString().slice(0, 10)}T09:00:00Z`, 10);
+        });
+      const result = computeChargeAdvice(rows, [], live(90), NOW, 'UTC', {
+        ...coveredHistory(),
+        reserveFloorPct: 82,
+        reserveSensitivityPcts: [82],
+      });
+      const { meanPath, p75Path } = result.scenarios;
+      expect(meanPath).toHaveLength(7);
+      expect(p75Path).toHaveLength(7);
+      for (const [index, day] of meanPath.entries()) {
+        expect(day.localDate).toBe(p75Path[index]?.localDate);
+        expect(day.meanEndSocPct).toBe(p75Path[index]?.meanEndSocPct);
+        expect(day.p75EndSocPct).toBe(p75Path[index]?.p75EndSocPct);
+      }
+      const monday = meanPath.find((day) => day.weekday === 1)!;
+      expect(monday.meanEndSocPct).toBe(density === 'sparse' ? 88.08 : 85);
+      expect(monday.p75EndSocPct).toBe(density === 'sparse' ? 90 : 80);
+      expect(result.scenarios.meanEndSocPct).toBe(meanPath[meanPath.length - 1]?.meanEndSocPct);
+      expect(result.scenarios.p75EndSocPct).toBe(meanPath[meanPath.length - 1]?.p75EndSocPct);
+      expect(result.scenarios.meanDaysToCrossReserve).toBeNull();
+      expect(result.scenarios.p75DaysToCrossReserve).toBe(density === 'sparse' ? null : 6);
+      expect(result.reserveSensitivity.find((item) => item.floorPct === 82)).toMatchObject({
+        meanDaysToCross: null,
+        p75DaysToCross: density === 'sparse' ? null : 6,
+      });
+    },
+  );
 
   it('gives charging precedence over all scenario guidance', () => {
     const result = computeChargeAdvice(
@@ -395,6 +540,7 @@ describe('computeChargeAdvice', () => {
       live(15),
       NOW,
       'UTC',
+      coveredHistory(),
     );
     expect(result.evidenceGatePassed).toBe(true);
     expect(result.guidance).toBe('charge_before_next_use');
@@ -411,14 +557,16 @@ describe('computeChargeAdvice', () => {
       live(90),
       NOW,
       'UTC',
-      { historyWindowDays: 30 },
+      { historyWindowDays: 30, ...coveredHistory(30) },
     );
     expect(result.evidenceGatePassed).toBe(true);
     expect(result.guidance).toBe('monitor');
   });
 
   it('returns no immediate need when neither path crosses the selected floor', () => {
-    const result = computeChargeAdvice(qualifiedHistory(1), [], live(95), NOW, 'UTC');
+    const result = computeChargeAdvice(
+      qualifiedHistory(1), [], live(95), NOW, 'UTC', coveredHistory(),
+    );
     expect(result.guidance).toBe('no_immediate_need');
     expect(result.scenarios.meanDaysToCrossReserve).toBeNull();
   });
@@ -578,5 +726,61 @@ describe('computeChargeAdvice', () => {
 
   it('exports the configured default reserve floor', () => {
     expect(RESERVE_FLOOR_PCT).toBe(20);
+  });
+
+  it.each([0, -0, 0.25, 80.6, 100])('shares valid battery percentage %s with callers', (value) => {
+    expect(validSoc(value)).toBe(true);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -0.25, 100.25, null, undefined, '80'])(
+    'shares invalid battery percentage %s with callers',
+    (value) => {
+      expect(validSoc(value)).toBe(false);
+    },
+  );
+});
+
+describe('chargeAdvisorCoverageWindow', () => {
+  it('derives the same 180-day window the analysis uses', () => {
+    const window = chargeAdvisorCoverageWindow(NOW, 'UTC');
+    expect(window.startDate).toBe('2025-12-05');
+    expect(window.endDate).toBe('2026-06-02');
+    expect(window.lastCompleteDate).toBe('2026-06-01');
+    expect(window.coveredLocalDates).toHaveLength(179);
+    expect(window.coveredLocalDates[0]).toBe('2025-12-05');
+    expect(window.coveredLocalDates[178]).toBe('2026-06-01');
+  });
+
+  it('uses the vehicle timezone for the window bounds', () => {
+    const window = chargeAdvisorCoverageWindow(NOW, 'America/Los_Angeles');
+    expect(window.startDate).toBe('2025-12-05');
+    expect(window.endDate).toBe('2026-06-02');
+    expect(window.lastCompleteDate).toBe('2026-06-01');
+    expect(window.coveredLocalDates).toHaveLength(179);
+  });
+
+  it('honors a custom history window', () => {
+    const window = chargeAdvisorCoverageWindow(NOW, 'UTC', 30);
+    expect(window.startDate).toBe('2026-05-04');
+    expect(window.endDate).toBe('2026-06-02');
+    expect(window.lastCompleteDate).toBe('2026-06-01');
+    expect(window.coveredLocalDates).toHaveLength(29);
+  });
+
+  it('normalizes a hostile clock and timezone like the analysis', () => {
+    const window = chargeAdvisorCoverageWindow(Number.NaN, 'Not/AZone');
+    expect(window.startDate).toBe('1969-07-06');
+    expect(window.endDate).toBe('1970-01-01');
+    expect(window.coveredLocalDates).toHaveLength(179);
+  });
+
+  it('establishes coverage when the certified window is passed back in', () => {
+    const window = chargeAdvisorCoverageWindow(NOW, 'UTC');
+    const result = computeChargeAdvice(
+      qualifiedHistory(), [], live(80), NOW, 'UTC',
+      { coveredLocalDates: window.coveredLocalDates },
+    );
+    expect(result.coverageEstablished).toBe(true);
+    expect(result.scenarios.meanPath).toHaveLength(7);
   });
 });

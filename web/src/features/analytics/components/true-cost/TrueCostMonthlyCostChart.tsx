@@ -15,11 +15,9 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { TrueCostSectionBody } from './TrueCostSectionBody';
 import type { TrueCostSectionProps } from './types';
-
-const EV_COLOR = '#22d3ee';
-const GAS_COLOR = '#fb7185';
 
 export function TrueCostMonthlyCostChart({
   analysis,
@@ -27,6 +25,7 @@ export function TrueCostMonthlyCostChart({
   display,
 }: TrueCostSectionProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const rows = useMemo(
     () => analysis.eligibleMonthly
       .filter((row) =>
@@ -94,21 +93,23 @@ export function TrueCostMonthlyCostChart({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatCurrency(value, 0)}
+                    tickFormatter={(value: number) => display.formatCurrency(value)}
                   />
-                  <Tooltip content={<ChartTooltip />} />
+                  <Tooltip content={<ChartTooltip valueFormatter={(value) =>
+                    display.formatCurrency(typeof value === 'number' ? value : null)
+                  } />} />
                   <ChartLegend />
                   <Bar
                     dataKey="evCost"
                     name={t('tco.charts.monthlyCost.evSeries', 'Recorded EV cost')}
-                    fill={EV_COLOR}
+                    fill={palette[0]}
                     radius={[4, 4, 0, 0]}
                     hide={hiddenSeries?.isHidden('evCost')}
                   />
                   <Bar
                     dataKey="gasCost"
                     name={t('tco.charts.monthlyCost.gasSeries', 'Modeled gas equivalent')}
-                    fill={GAS_COLOR}
+                    fill={palette[5]}
                     radius={[4, 4, 0, 0]}
                     hide={hiddenSeries?.isHidden('gasCost')}
                   />

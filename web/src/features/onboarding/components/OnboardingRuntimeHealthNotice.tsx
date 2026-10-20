@@ -81,6 +81,8 @@ export function OnboardingRuntimeHealthNotice({
             <Button
               size="sm"
               variant="outline"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
               icon={<Plug className="h-4 w-4" />}
               onClick={() => navigate('/tesla-account')}
             >
@@ -91,6 +93,8 @@ export function OnboardingRuntimeHealthNotice({
             <Button
               size="sm"
               variant="outline"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
               icon={<Gauge className="h-4 w-4" />}
               onClick={() => navigate('/system-status')}
             >
@@ -100,6 +104,8 @@ export function OnboardingRuntimeHealthNotice({
           <Button
             size="sm"
             variant="outline"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             icon={<Bell className="h-4 w-4" />}
             onClick={() => navigate('/notifications/channels')}
           >

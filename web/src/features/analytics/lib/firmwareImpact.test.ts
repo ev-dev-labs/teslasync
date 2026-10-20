@@ -127,6 +127,43 @@ describe('welchTTest', () => {
   it('returns null below two observations', () => {
     expect(welchTTest({ n: 1, mean: 1, sd: 1 }, { n: 10, mean: 2, sd: 1 })).toBeNull();
   });
+
+  it.each([0, 10])('cannot test constant samples with a mean difference of %s', (delta) => {
+    expect(welchTTest({ n: 5, mean: 180, sd: 0 }, { n: 5, mean: 180 + delta, sd: 0 })).toBeNull();
+  });
+
+  it.each([
+    { n: Number.NaN, mean: 0, sd: 1 },
+    { n: Infinity, mean: 0, sd: 1 },
+    { n: 2.5, mean: 0, sd: 1 },
+    { n: 5, mean: Number.NaN, sd: 1 },
+    { n: 5, mean: Infinity, sd: 1 },
+    { n: 5, mean: 0, sd: Number.NaN },
+    { n: 5, mean: 0, sd: Infinity },
+    { n: 5, mean: 0, sd: -1 },
+  ])('rejects invalid statistics on either side: %j', (invalid) => {
+    const valid = { n: 5, mean: 0, sd: 1 };
+    expect(welchTTest(invalid, valid)).toBeNull();
+    expect(welchTTest(valid, invalid)).toBeNull();
+  });
+
+  it('accepts measured zero, negative and fractional means with one constant sample', () => {
+    const r = welchTTest({ n: 5, mean: 0, sd: 0 }, { n: 5, mean: -0.25, sd: 0.01 })!;
+    expect(r.t).toBeLessThan(0);
+    expect(r.df).toBeCloseTo(4);
+    expect(r.p).toBeLessThan(0.001);
+  });
+
+  it('keeps near-zero positive variance numerically testable', () => {
+    const r = welchTTest(
+      { n: 5, mean: 0, sd: 1e-100 },
+      { n: 5, mean: 1e-100, sd: 1e-100 },
+    )!;
+    expect(r.t).toBeCloseTo(Math.sqrt(2.5));
+    expect(r.df).toBeCloseTo(8);
+    expect(r.p).toBeGreaterThan(0);
+    expect(r.p).toBeLessThan(1);
+  });
 });
 
 describe('normalizeInstalls', () => {
@@ -217,6 +254,58 @@ describe('analyzeFirmwareImpact', () => {
     expect(summary.impacts[0]!.verdict).toBe('insufficient');
     expect(summary.impacts[0]!.p).toBeNull();
     expect(summary.skipped).toBe(1);
+  });
+
+  it.each([0, -20.5, 20.5])('preserves a constant-sample delta of %s without claiming a test', (delta) => {
+    const drives = [
+      ...Array.from({ length: 5 }, (_, i) => driveAt(-5 + i, 180)),
+      ...Array.from({ length: 5 }, (_, i) => driveAt(i, 180 + delta)),
+    ];
+    const summary = analyzeFirmwareImpact([install(0, 'constant')], drives);
+    expect(summary.impacts[0]).toMatchObject({
+      before: { n: 5, meanWhPerKm: 180, sdWhPerKm: 0 },
+      after: { n: 5, meanWhPerKm: 180 + delta, sdWhPerKm: 0 },
+      deltaWhPerKm: delta,
+      t: null, df: null, p: null, cohensD: null, verdict: 'insufficient',
+    });
+    expect(summary.skipped).toBe(1);
+    expect(summary.significantCount).toBe(0);
+    expect(summary.analyzedDrives).toBe(10);
+  });
+
+  it('does not report noChange when fractional variance rounds to zero', () => {
+    const drives = [
+      ...Array.from({ length: 5 }, (_, i) => driveAt(-5 + i, 180 + i * 0.001)),
+      ...Array.from({ length: 5 }, (_, i) => driveAt(i, 180.5 + i * 0.001)),
+    ];
+    expect(analyzeFirmwareImpact([install(0, 'fractional')], drives).impacts[0]).toMatchObject({
+      deltaWhPerKm: 0.5, p: null, verdict: 'insufficient',
+    });
+  });
+
+  it('keeps missing and invalid energy distinct from observed consumption', () => {
+    const drives = [null, Number.NaN, Infinity].map((energyUsedWh, i) => ({
+      ...driveAt(-3 + i, 180), energyUsedWh,
+    }));
+    const summary = analyzeFirmwareImpact([install(0, 'invalid')], drives);
+    expect(summary.analyzedDrives).toBe(0);
+    expect(summary.impacts[0]).toMatchObject({
+      before: { n: 0 }, after: { n: 0 }, verdict: 'insufficient', p: null,
+    });
+  });
+
+  it.each([0, -0.5, 0.5])('retains valid measured consumption of %s Wh/km', (consumption) => {
+    const drives = [
+      ...Array.from({ length: 5 }, (_, i) => driveAt(-5 + i, consumption)),
+      ...Array.from({ length: 5 }, (_, i) => driveAt(i, consumption)),
+    ];
+    const summary = analyzeFirmwareImpact([install(0, 'measured')], drives);
+    expect(summary.analyzedDrives).toBe(10);
+    expect(summary.impacts[0]).toMatchObject({
+      before: { n: 5, meanWhPerKm: consumption },
+      after: { n: 5, meanWhPerKm: consumption },
+      deltaWhPerKm: 0, verdict: 'insufficient',
+    });
   });
 
   it('credits every post-install drive to exactly one version', () => {

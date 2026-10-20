@@ -1,0 +1,360 @@
+{
+  "item": "phase6-qa-advanced-charging-site-twin",
+  "status": "DONE",
+  "acceptance": "Completed bounded read-only source QA report only. Native, runtime, fresh tests and full-page acceptance are NOTRUN; no repair or application acceptance is claimed.",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+  "routes": ["/intelligence/charging-site-twin"],
+  "purpose": "Review the accepted vehicle-scoped planning simulation and its directly relevant presentation, publication, display and route contracts without executing a simulation.",
+  "primaryGoal": "Keep modeled queue, utilization, electrical constraints and mitigations distinguishable from observations and from currently edited, unsubmitted scenario inputs.",
+  "authority": {
+    "queueRow": "migration-queue.md:227",
+    "finishedPageQaContract": "migration-queue.md:159-169",
+    "acceptedSourceRow": "migration-queue.md:1597",
+    "acceptedSourceCommitFromQueue": "9b08b684d50a9cefd07def0a86dfc21f03eb22df",
+    "acceptedSourceDisposition": "Historical SOURCE ONLY acceptance; not repeated, reverted or re-migrated.",
+    "instructionsRead": [
+      "docs\\frontend-worker-conventions.md",
+      "docs\\frontend-design-contract.md:1-260,419-605",
+      "docs\\frontend-mission.md:1-110,529-625,704-809,921-964,1416-1487",
+      ".github\\instructions\\react-frontend.instructions.md:1-550",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\agents\\code-auditor.agent.md",
+      ".github\\skills\\audit-violations\\audit.sh"
+    ],
+    "skillsLoaded": ["audit-violations", "verify-api-hooks", "a11y-debugging"],
+    "executionOverride": "The assignment forbids global TypeScript, helper scripts/extensions and browser activity. Those skill workflows were NOTRUN; normal builtin source reads, bounded PowerShell pattern checks and JSON lookup/validation were used instead.",
+    "historicalAudit": "docs\\frontend-audits\\audit-page-031.json was read for preservation and unresolved findings, not treated as a fresh passing receipt.",
+    "startedAt": "2026-10-13T18:15:54.465Z"
+  },
+  "preservation": {
+    "currentSourceSha256": "bbaf8e79a22eed1a8fa078c2a6dff1e4fe18a071f1f16dd6c2cabecf13c1aca5",
+    "historicalOriginalPageLinesFromAcceptedQueue": 295,
+    "acceptedPageLinesFromQueue": 326,
+    "currentPageLinesMeasured": 326,
+    "currentDirectPartLinesMeasured": {
+      "InsightPanel.tsx": 95,
+      "EvidencePanel.tsx": 132,
+      "MutationError.tsx": 23,
+      "SiNumberInput.tsx": 46,
+      "operationalbrief-all\\AnalysisBrief.tsx": 164
+    },
+    "pagePlusReviewedDirectPartsLines": 786,
+    "baselineLimit": "No Git or historical reconstruction. The 295-to-326 page baseline is inherited queue evidence; the current page alone exceeds 70% of that original. Shared direct-part counts are review composition, not newly extracted or exclusively page-owned components.",
+    "sectionCount": 5,
+    "acceptedSectionCountFromQueue": 5,
+    "literalGlassPanelOrChartContainerPageCount": 0,
+    "sectionCountMethod": "Actual persistent callsites: one AlertBanner, two InsightPanel, one AnalysisBrief and one EvidencePanel. The obsolete GlassPanel/ChartContainer grep alone would incorrectly imply no sections.",
+    "sections": [
+      {"name": "Design scenario, not site control", "pageLine": 100, "behavior": "Persistent planning-versus-control notice."},
+      {"name": "Site scenario", "pageLine": 108, "behavior": "Ten controls and explicit confirmed submit; blank numeric drafts and optional null solar/storage remain supported."},
+      {"name": "Utilization and constraints", "pageLine": 257, "behavior": "Six metrics, source status, generated timestamp, evidence narrative and existing OperationalBrief details action."},
+      {"name": "Ranked mitigations and assumptions", "pageLine": 277, "behavior": "Persistent shell; caller order, ranks, signed effects, individual assumptions and empty/pending/error/paused distinctions retained."},
+      {"name": "Evidence, quality, and limitations", "pageLine": 313, "behavior": "Three persistent subsections plus explicitly unsupported site-control and guaranteed-performance capabilities."}
+    ],
+    "fieldCount": 10,
+    "metricCount": 6,
+    "metrics": ["utilization", "queue-p50", "queue-p90", "peak", "panel", "projection-status"],
+    "actions": [
+      "One page-owned confirmed simulation submit at ChargingSiteTwinPage.tsx:241-250; NEVER executed by this worker.",
+      "Existing OperationalBrief Review details is preserved through AnalysisBrief; drawer implementation and interaction were not exercised.",
+      "Run button is disabled without a vehicle or while publication.pending; field editing remains possible while a previous result is visible.",
+      "Mutation success/error toasts remain owned by the existing hook; MutationError carries role=alert and aria-atomic=true."
+    ],
+    "sourceChanges": "NONE; all application, tests, catalogs, API and backend files remained read-only."
+  },
+  "dataSources": [
+    {
+      "name": "Scenario calculation",
+      "hook": "useRunChargingSiteTwin",
+      "hookFile": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "hookLines": "156-170,186-189",
+      "endpoint": "POST /api/v1/advanced-intelligence/charging-site-twin/scenarios",
+      "routeEvidence": ["internal\\api\\router.go:3210,3960", "internal\\handler\\v1\\advancedintelligence\\handler.go:71,79"],
+      "scope": "Explicit submitted vehicle_id and canonical SI scenario body; no automatic scenario read, historical range query or polling.",
+      "transport": "Existing request client adds the single /api/v1 prefix. Hook supplies POST and JSON.stringify(body), preserving existing toast policy.",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Workspace selection",
+      "hook": "useSelectedVehicle -> useVehicles",
+      "hookEvidence": ["web\\src\\hooks\\useSelectedVehicle.ts:50-75", "web\\src\\api\\hooks\\useVehicles.ts:73-79"],
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": ["internal\\api\\router.go:3362-3363"],
+      "scope": "Existing URL/store/fleet selection; no duplicate page vehicle selector.",
+      "execution": "NOTRUN; no identities or fleet response requested."
+    },
+    {
+      "name": "Saved display preferences",
+      "hook": "useUnits/useOperationalMetrics -> hooks/useSettings -> getSettings",
+      "hookEvidence": ["web\\src\\hooks\\useSettings.ts:81-87", "web\\src\\api\\settings.ts:24"],
+      "endpoint": "GET /api/v1/settings",
+      "routeEvidence": ["internal\\api\\router.go:3700-3702"],
+      "scope": "Existing settings query and number-formatting subscription; no preference read request or mutation executed.",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Scoped publication",
+      "hook": "useRetainedMutation",
+      "hookFile": "web\\src\\hooks\\useRetainedMutation.ts",
+      "endpoint": null,
+      "behavior": "Keeps raw successful response and cloned submitted inputs; guards both request and reply vehicle scope and detaches obsolete-scope observer."
+    }
+  ],
+  "components": {
+    "layout": ["PageLayout -> PageContainer", "InsightPanel -> LayoutCard/SourceContent"],
+    "primitives": ["Input", "Select", "Button", "Badge", "Icon", "Text"],
+    "domain": ["SiNumberInput", "MutationError", "EvidencePanel", "AnalysisBrief"],
+    "dataDisplay": ["OperationalBrief", "KVList", "existing metric-reference formatter"],
+    "feedback": ["AlertBanner", "EmptyState", "ErrorDisplay"],
+    "motion": "Four FadeIn wrappers; FadeIn.tsx uses the existing reduced-motion preference, not a page-specific motion engine."
+  },
+  "states": {
+    "notSubmitted": "No fabricated result. AnalysisBrief shows not-calculated/vehicle prerequisite and null raw metrics. Mitigation shell shows submit-scenario guidance rather than successful-empty copy.",
+    "loading": "publication.pending feeds submit loading and AnalysisBrief; mitigation body uses loading only without a retained result. Whole-page loading/error props are not passed, so all five section shells survive.",
+    "initialFailure": "MutationError announces the failure; AnalysisBrief and mitigation source display source-specific error content. Scenario form and evidence limitations remain present.",
+    "successfulEmpty": "Only a successful result with both normalized mitigation and assumption arrays empty gets the supported-mitigations empty message.",
+    "retainedFailure": "useRetainedMutation keeps the previous payload. AnalysisBrief derives stale trust and shows retained-result status/nonblocking warning; mitigations and evidence remain visible.",
+    "retainedRefresh": "The brief advertises updating result while keeping previous metrics. Published-input provenance remains missing as ST-001 describes.",
+    "paused": "Explicit publication.source reaches AnalysisBrief even on the first paused mutation, and mitigations have paused copy. This is a conditional source branch, NOT a production offline behavior receipt.",
+    "offlineProductionPolicy": "main.tsx:103 uses createQueryClient; queryClient.ts:67-74 gives mutations networkMode=always and retry=0. The production source does NOT establish offline queued replay. ChargingSiteTwinPage.test.tsx:25-27 instead creates a default QueryClient; its paused case is not evidence that the production client queues this action.",
+    "scopeChange": "Retained helper render guard clears previous-scope publication before its reset effect; late old-scope results are blocked. No real vehicle selection or mutation was performed.",
+    "nullAndZero": "Required drafts retain null/blank and are guarded before submit. Solar/storage start null and accept explicit zero. Result arrays use ?? []; nullable queue percentiles remain missing rather than zero. false projected_unstable renders Stable, while absent status remains unknown.",
+    "limits": "No malformed payload, deferred completion, focus announcement or production offline state was executed."
+  },
+  "contracts": {
+    "siAndUseUnits": "TS request/response fields at advancedIntelligence.ts:218-255 match Go planning.go:48-85 JSON tags for W, Wh and s. Inputs remain raw SI; hints and signed mitigation peak deltas use useUnits. Brief metrics remain raw numeric inputs and formatOperationalMetrics/formatMetric apply preference conversion and missing/nonfinite handling only at display.",
+    "savedNumberFormatting": "Percentage deltas use useNumberFormatting; useUnits carries saved locale/precision; quality sample/coverage displays use fmtInt/fmtNumber. Evidence sample interpolation bypasses that bridge as ST-004 describes.",
+    "savedDateFormatting": "Bare lib formatDateTime in both direct evidence adapters omits saved locale/timezone, confirmed in ST-002. No 12/24-hour behavior or native formatting was exercised.",
+    "dateWorkspace": "workspaceScope.ts:23-77 does not enable range for this scenario route, while its vehicle-disabled sets/prefixes do not disable this route. The request contract has no date bounds. This planning form does not require a duplicate range picker or speculative historical filtering.",
+    "actions": "The form prevents default, checks vehicle/pending, required numeric drafts, positive arrival rate and native reportValidity, then sends confirmed=true only on explicit submit. Existing production mutation retry/networkMode policies are preserved; no action was invoked.",
+    "i18n": "Builtin source lookup checked 90 unique literal t() keys in the page and five direct parts: zero missing canonical English keys. Dynamic/runtime split-catalog loading and translated rendering are NOTRUN. The raw quality badge and unformatted evidence counts remain confirmed issues, not a claim that all localization passes.",
+    "routeAgreement": "Mounted SPA route, lazy import and all three relevant transport paths agree in inspected source. Backend validation, authorization, units computation and actual HTTP behavior are NOTRUN.",
+    "accessibilitySource": "Input/Select use React useId, htmlFor, describedBy and shared focus classes. Page actions have localized visible names and a decorative Icon; errors have alert semantics; paused copy has role=status. Native keyboard/focus/drawer, announcement timing, target rectangles and composed contrast are NOTRUN."
+  },
+  "confirmedSourceFindings": [
+    {
+      "id": "ST-001",
+      "priority": "medium",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+      "line": 63,
+      "rule": "MDC-026/MDC-033: result provenance must identify the submitted assumptions, not the current draft",
+      "detail": "The page consumes publication.result but never publication.published.inputs. Every field change updates the visible draft while the published response, generated time, metrics and mitigation assumptions remain from the previous submission; editing alone produces neither a draft-versus-result marker nor an input snapshot.",
+      "mechanism": "useRetainedMutation.ts:64-68 clones submitted variables and :80-86 publishes that clone with the response, but ChargingSiteTwinPage.tsx:63,120-238,257-320 renders only result and live form values.",
+      "sourceDerivedRepro": "Reason about one synthetic successful scenario with charger_power_w=11500, then its field onChange setting 90000 without invoking submit. setForm changes the visible field/hint; publication.result remains the prior response and no render path consumes its saved inputs or marks the mismatch. This sequence was NOT executed.",
+      "historicalDisposition": "Reconfirmed unresolved audit-page-031 submitted-input finding; not a new regression, Phase5 redo or re-migration.",
+      "fix": "Assign one narrow page fix to expose or compare the existing published input snapshot and label unsubmitted draft changes without dropping retained outputs, changing raw SI or firing another request.",
+      "owner": "page",
+      "confidence": "high, source-proven",
+      "runtimeRepro": "NOTRUN"
+    },
+    {
+      "id": "ST-002",
+      "priority": "medium",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 62,
+      "rule": "MDC-044/MDC-045: preserve saved date locale and timezone",
+      "detail": "Observation windows/times and result generation timestamps use the bare library formatter with no preference options; the same defect is present in AnalysisBrief.",
+      "mechanism": "EvidencePanel.tsx:6,62,90-92 and AnalysisBrief.tsx:10,71-72,118 call formatDateTime(value). dateFormat.ts:37-49 supplies timezone/locale only from optional opts, and :54-62 passes that to Date.toLocaleString. With opts absent it uses the browser defaults. Existing useDateFormat.ts:76-100 instead resolves saved settings locale/timezone.",
+      "sourceDerivedRepro": "Assume a browser default locale/timezone differs from saved settings.locale and saved tz_display_default=user/timezone_user. Render a synthetic valid generated_at or observation timestamp. These callsites pass no settings-derived opts and do not subscribe to useDateFormat, so saved changes cannot govern their date output. No settings change, date render or browser interaction was executed.",
+      "fix": "Assign the existing two domain adapters to reuse useDateFormat and its current timezone semantics; retain raw timestamps, unknown placeholders and complete observation-window information. Do not add a competing date formatter.",
+      "owner": "shared domain adapters: EvidencePanel and AnalysisBrief",
+      "confidence": "high, source-proven",
+      "runtimeRepro": "NOTRUN"
+    },
+    {
+      "id": "ST-003",
+      "priority": "medium",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 57,
+      "rule": "MDC-044: localize client-owned status meanings",
+      "detail": "The quality badge directly renders quality.status: sufficient, limited or insufficient. The adjacent AnalysisBrief already translates those same finite enum meanings.",
+      "mechanism": "EvidencePanel.tsx:57 places the enum directly in Badge children. AnalysisBrief.tsx:45-52 uses advancedIntelligence.brief.quality.sufficient/limited/insufficient, all confirmed present in canonical English by command 2.",
+      "sourceDerivedRepro": "Assume translated UI with a supported quality.status=limited. The brief chooses t(advancedIntelligence.brief.quality.limited); the evidence badge emits literal limited regardless of translator state. No locale switch or rendered capture was performed.",
+      "historicalDisposition": "Reconfirmed unresolved audit-page-031 raw-quality-label finding; not a newly introduced regression.",
+      "fix": "Use the existing localized quality labels in EvidencePanel while preserving raw status for badge variant selection and API contracts.",
+      "owner": "shared domain EvidencePanel",
+      "confidence": "high, source-proven",
+      "runtimeRepro": "NOTRUN"
+    },
+    {
+      "id": "ST-004",
+      "priority": "low",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 89,
+      "rule": "MDC-044/MDC-045: display evidence counts with saved numeric formatting",
+      "detail": "Evidence counts are interpolated as raw numbers in both evidence adapters, unlike their quality sample totals, which use the existing saved-number formatting bridge.",
+      "mechanism": "EvidencePanel.tsx:89 and AnalysisBrief.tsx:154 pass count:item.sample_count. Canonical sampleLine/evidenceSamples contain plain {{count}}, with no numeric formatter directive; i18n/index.ts:136 only configures escapeValue=false. The available fmtInt is already used at EvidencePanel.tsx:59 and AnalysisBrief.tsx:139.",
+      "sourceDerivedRepro": "For a synthetic evidence count 1234 and a saved locale requiring grouped/localized digits, the evidence interpolation receives unformatted 1234 while the quality sample display receives fmtInt(1234). The caller has no formatting step or settings-aware numeric interpolation directive. This is a source-derived mismatch; no i18next instance, app render or fresh test was run.",
+      "fix": "Retain numeric count for plural selection where required, and interpolate a separately fmtInt-formatted display value using the existing localization/formatting owners. Keep count null distinct from zero; do not change API data.",
+      "owner": "shared domain adapters; any changed canonical interpolation key requires a separate catalog owner",
+      "confidence": "high, source-proven display-bridge omission",
+      "runtimeRepro": "NOTRUN"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "ST-C01",
+      "file": "web\\src\\components\\ui\\Input.tsx",
+      "line": 31,
+      "rule": "MDC-040/MDC-043 mobile target matrix",
+      "detail": "Default md Input declares min-h-10 rather than a below-md 44px minimum. The page's three Input fields and five SiNumberInput fields do not override size or add touch-target. Select and submit do declare min-h-11.",
+      "whyNotConfirmed": "This proves a weaker declared minimum, not the final composed hit rectangle. Font scaling, CSS composition and actual geometry were not measured; no native mobile failure is claimed.",
+      "nextEvidence": "Separately authorized owner should measure all eight field rectangles below md and resolve existing shared Input target policy without globally resetting density."
+    },
+    {
+      "id": "ST-C02",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+      "line": 279,
+      "rule": "MDC-026 retained-result communication",
+      "detail": "With a retained result the mitigation panel always receives ready and EvidencePanel has no query prop, while AnalysisBrief carries the shared calculation's retained warning.",
+      "whyNotConfirmed": "All outputs belong to one calculation and a page-level warning may adequately govern them. No user navigation, detached view or assistive-technology reading order was tested; duplicate warnings are not automatically required.",
+      "nextEvidence": "Review whether scope/status remains clear when reading the lower panels independently, without erasing retained content."
+    },
+    {
+      "id": "ST-C03",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "line": 39,
+      "rule": "MDC-013 typography-role adoption",
+      "detail": "The SI suffix remains a span with text-xs and a CSS text variable rather than an existing caption wrapper. This is the historical bounded typography candidate, not evidence that its physical unit is incorrect.",
+      "whyNotConfirmed": "Source role adoption is incomplete, but actual readability, scaling, contrast and visual divergence were not exercised.",
+      "nextEvidence": "Existing SiNumberInput owner can assess caption-role reuse without changing SI values, input bounds or hint association."
+    },
+    {
+      "id": "ST-C04",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+      "line": 119,
+      "rule": "MDC-040-043/060-070 native matrix",
+      "detail": "Container-aware grids, min-w-0, wrapping mitigation articles, full-width mobile submit, shared form associations and reduced-motion source hooks are present.",
+      "whyNotConfirmed": "Source presence cannot prove no overflow, readable translated labels, open native Select behavior, logical focus, drawer restoration, forced-colors contrast or screen-reader announcements.",
+      "nextEvidence": "Future separately authorized QA must exercise mission widths, narrow containers, dark/light/saved modes, RTL, 200% text, long labels, keyboard and forced colors with synthetic/non-sensitive authorized data."
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "PageLayout supplies @container/min-w-0; form uses one column, @2xl two columns and @5xl three columns. Evidence uses bounded min-w-0 sections and lg three columns. Mitigation articles use break-words and the submit uses wrapLabel/min-h-11/w-full below sm.",
+    "nativeWidths": "NOTRUN at 320/375/390/430/768/1024/1280/1440/1920/2560px",
+    "overflowAndTargetAcceptance": "NOTRUN; ST-C01 and ST-C04 are unpromoted candidates."
+  },
+  "accessibility": {
+    "sourceEvidence": "Shared form label identities/feedback associations, localized visible action text, explicit error alert, textual quality/projection status and conditional paused status copy were inspected.",
+    "keyboardFocusScreenReaderContrastForcedColors": "NOTRUN",
+    "reducedMotion": "Existing FadeIn source respects reduce; actual OS/browser behavior NOTRUN."
+  },
+  "visualIssues": "No native visual failure asserted. Typography and target-size signals remain candidates; zero neon-body/static-inline matches is not visual acceptance.",
+  "architectureIssues": "No competing implementation introduced. Existing typed hooks, scoped publication, shared layout/metric/evidence adapters and display bridges remain intact.",
+  "duplicatedPatterns": "Evidence date and count display omissions affect the two existing direct domain adapters; resolve at those owners rather than copying new page formatters.",
+  "competingImplementations": "NONE created; no source implementation was changed.",
+  "priority": "Assign narrow provenance/date/localization followups for ST-001 through ST-004; keep native candidates unpromoted pending authorized evidence.",
+  "requiredSharedChanges": [
+    {
+      "name": "Preference-aware date and evidence-count display",
+      "existingOwnerFiles": ["web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx"],
+      "propsVariantsStates": "Keep current nullable timestamps/counts, quality, evidence and retained-result props; reuse existing useDateFormat/useNumberFormatting without a new public API.",
+      "usedBy": ["ChargingSiteTwinPage evidence panel", "ChargingSiteTwinPage six-metric brief and narrative"],
+      "dependsOn": ["existing date/timezone and number preference bridges", "separate catalog ownership only if interpolation placeholders change"],
+      "scopeLimit": "Other production consumers were not re-audited and are not newly claimed."
+    },
+    {
+      "name": "Localized quality badge",
+      "existingOwnerFiles": ["web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx"],
+      "propsVariantsStates": "Preserve sufficient/limited/insufficient raw enum semantics, variant and absent-quality fallback; reuse existing advanced-intelligence quality labels.",
+      "usedBy": ["ChargingSiteTwinPage evidence panel"],
+      "dependsOn": ["existing canonical quality labels"],
+      "scopeLimit": "No catalog or shared source edit authorized in this report task."
+    }
+  ],
+  "verification": {
+    "log": "web\\logs\\phase6-qa-advanced-charging-site-twin.log",
+    "commandsRun": [
+      {"command": "Builtin PowerShell metadata/hash/Select-String bounded pattern checks on page and five direct parts", "result": "exit 0; current page 326 lines, composed 786; five sections, ten fields; static-inline 0, direct-vendor 0, old-API 0, ad-hoc-fetch 0, any-type candidates 0, neon-body 0, hidden-panel candidates 0; simulation hook double-prefix/camelCase patterns 0."},
+      {"command": "Case-sensitive raw-control grep, 90 literal t-key canonical lookup and exact SPA/API/mutation-policy source grep", "result": "exit 0; raw controls 0, missing canonical English keys 0; source route composition agrees; production mutations always/retry0."},
+      {"command": "Final builtin JSON parse, exact finding/count checks and six source SHA-256 stability checks", "result": "Recorded in the owned ignored log; no application validation implied."}
+    ],
+    "rawOutput": "Actual command names, UTC stamps, output and exit codes are preserved in the ignored log; bounded tails were read. Command 1's case-insensitive raw-controls count 8 is explicitly preserved as false positives and superseded by command 2's case-sensitive count 0.",
+    "patternLimits": "Line-pattern checks cover the exact reviewed source, not every frontend rule or TypeScript semantics. Literal translation lookup is not runtime catalog loading or all dynamic localization coverage.",
+    "typeScript": "NOTRUN: global npx tsc --noEmit expressly prohibited by worker assignment.",
+    "auditSkillScript": "NOTRUN: includes prohibited global TypeScript/helper workflow; bounded builtin equivalents recorded instead.",
+    "apiSkillScript": "NOTRUN: helper execution prohibited; exact relevant source paths were inspected directly.",
+    "freshTests": "NOTRUN: read-only/no-change worker; eight colocated authored cases inspected as historical/source coverage only.",
+    "lintBuildSuites": "NOTRUN",
+    "supportedRuntime": "NOTRUN; no version gate, install or runtime substitution attempted.",
+    "nativeRuntimeFullPage": "NOTRUN",
+    "realHttpBrowserActionsMutationsCaptures": "NOTRUN",
+    "gitDockerServersInstallsHelpersExtensionsSubagentsSchedules": "NOTRUN"
+  },
+  "evidenceLimits": [
+    "Confirmed findings are deterministic source mechanisms with described synthetic reproductions, not executed tests or observed runtime failures.",
+    "No site, address, location, VIN, identity, credentials or real response was requested or captured.",
+    "Backend inspection was limited to route composition and relevant Go wire structs; computation, authorization, bounds and current production data remain unverified.",
+    "Accepted source, historic lint/style/test startup/capture receipts and old audit findings were not promoted into current native or passing test evidence.",
+    "The two adapters' date/count findings require separately assigned narrow followups; this report does not reopen the accepted Phase5 source item.",
+    "Source hashes cover the page and five reviewed direct parts. Other readonly imports were read as needed but no full dependency tree, full page execution or global source-stability claim is made."
+  ],
+  "filesRead": [
+    "migration-queue.md:159-169,227,1597",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md:1-260,419-605",
+    "docs\\frontend-mission.md:1-110,529-625,704-809,921-964,1090-1150,1416-1487",
+    "docs\\frontend-audits\\audit-page-031.json:1-100 and bounded relevant search matches",
+    "docs\\frontend-audits\\phase6-qa-analytics-carbon-intelligence.json:1-90",
+    ".gitignore:80",
+    ".github\\instructions\\react-frontend.instructions.md:1-550",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\agents\\code-auditor.agent.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.test.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+    "web\\src\\hooks\\useRetainedMutation.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useFormatting.ts:1-180",
+    "web\\src\\hooks\\useDateFormat.ts:1-210",
+    "web\\src\\hooks\\useSettings.ts:1-28,81-99 and bounded relevant search matches",
+    "web\\src\\hooks\\useSelectedVehicle.ts:1-110",
+    "web\\src\\api\\dataState.ts:120-223",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:1-85,150-190",
+    "web\\src\\api\\hooks\\useVehicles.ts:60-86",
+    "web\\src\\api\\hooks\\useSettings.ts:27-31 and search matches",
+    "web\\src\\api\\settings.ts:24 and bounded search matches",
+    "web\\src\\api\\client.ts:72-105",
+    "web\\src\\api\\queryClient.ts",
+    "web\\src\\types\\advancedIntelligence.ts:1-33,218-255",
+    "web\\src\\lib\\workspaceScope.ts:1-215",
+    "web\\src\\lib\\dateFormat.ts:1-84",
+    "web\\src\\lib\\operationalMetrics.tsx:1-220",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts:1-235",
+    "web\\src\\components\\ui\\Input.tsx:1-240",
+    "web\\src\\components\\ui\\Select.tsx:1-180",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:1-185",
+    "web\\src\\components\\layout\\PageContainer.tsx:240-258",
+    "web\\src\\components\\motion\\FadeIn.tsx:1-95",
+    "web\\src\\index.css:1978-2020 and bounded target-related search matches",
+    "web\\src\\i18n\\index.ts:110-147",
+    "web\\src\\i18n\\en.json:readonly builtin lookup of 90 literal keys and five relevant template/status values",
+    "web\\src\\App.tsx:237,771",
+    "web\\src\\main.tsx:5,100-103",
+    "web\\src\\lib\\routeRegistry.ts:146 and bounded route reference matches",
+    "internal\\api\\router.go:3210,3362-3363,3700-3703,3960 and bounded search matches",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go:67-81,216-231 and bounded search matches",
+    "internal\\domain\\advancedintelligence\\planning.go"
+  ],
+  "ownershipAndRelease": {
+    "soleVersionedReport": "docs\\frontend-audits\\phase6-qa-advanced-charging-site-twin.json",
+    "soleIgnoredLog": "web\\logs\\phase6-qa-advanced-charging-site-twin.log",
+    "otherWrites": "NONE",
+    "releaseOnReturn": "STOP; all report/log/command ownership released. No continuing process, followup write, helper, parent loop or schedule.",
+    "postReturnWrites": false
+  }
+}

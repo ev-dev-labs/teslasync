@@ -1,0 +1,443 @@
+{
+  "item": "audit-page-040",
+  "phase": 0,
+  "page": "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx",
+  "routes": [
+    {
+      "path": "/analytics",
+      "evidence": ["web\\src\\App.tsx:154", "web\\src\\App.tsx:612"],
+      "mount": "Lazy AnalyticsPage within SafeRoute; source registration confirmed, actual mounted runtime unverified."
+    }
+  ],
+  "purpose": "Inspect fleet performance across overview, driving, charging and battery using the returned fleet analytics aggregate.",
+  "primaryGoal": "Review selected-range fleet evidence, compare vehicles and inspect/export specialist trends without losing source context or saved display preferences.",
+  "dataSources": [
+    {
+      "hook": "useFleetAnalytics({ start, end })",
+      "owner": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "endpoint": "GET /api/v1/analytics/fleet?start=<calendar-date>&end=<calendar-date>",
+      "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:21-26", "web\\src\\api\\hooks\\useAnalytics.ts:49-66", "web\\src\\api\\client.ts:75-93", "internal\\api\\router.go:3852"],
+      "queryContract": "analyticsKeys.fleet(days,start,end); AbortSignal forwarded to request; explicit start/end suppress days. No page-specific polling, retry or staleTime override. All four tabs share one query.",
+      "typeOwner": "web\\src\\api\\types.ts:999-1049",
+      "sourceOwnership": "Router binds analyticsHandler.Fleet; handler/database calculations and actual response were not inspected or exercised. Type declarations document derived km, kWh and Wh/km plus battery capacity_wh. This audit does not certify wire units or backend completeness.",
+      "consumers": ["FleetOverviewBrief", "OverviewTab", "DrivingTab", "ChargingTab", "BatteryTab"],
+      "limitations": "No backend capability, timezone filtering, selected-vehicle filtering or continuous-recording coverage is inferred from hook comments."
+    },
+    {
+      "hook": "useRangeState({ persistKey: 'analytics.range' })",
+      "owner": "web\\src\\hooks\\useRangeState.ts",
+      "endpoint": null,
+      "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:21-25", "web\\src\\hooks\\useRangeState.ts:111-123", "web\\src\\hooks\\useRangeState.ts:520-608", "web\\src\\lib\\workspaceScope.ts:23-25"],
+      "queryContract": "Shared workspace range remains owner; no duplicate local picker. Page currently forwards date-only start/end, not precise startInstant/endInstantExclusive.",
+      "sourceOwnership": "Existing workspace URL/persistence and rolling-range hook; runtime URL, timezone and DST behavior unverified."
+    },
+    {
+      "hook": "useUnits, useFormatting, useNumberFormatting, useOperationalMetrics",
+      "owner": "Existing app formatting/settings bridges",
+      "endpoint": "Not independently traced; these are display-context dependencies, not additional fleet endpoints.",
+      "evidence": ["web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetOverviewBrief.tsx:3-41", "web\\src\\features\\analytics\\components\\analytics\\DrivingPerformanceCards.tsx:1-49", "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx:22-68"],
+      "queryContract": "Keep numeric raw metrics and occurrence IDs; retain localized currency/number formatting and display-boundary conversion. Do not move conversions into query/cache or replace existing source denominations by assumption."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "kind": "shared layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:38-48", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-17", "web\\src\\components\\layout\\PageContainer.tsx:215-258"],
+      "contract": "Title/subtitle, original query freshness, busy and dataSources; full-width min-w-0 container, page error boundary and source notice. Page does not globally hide content behind loading/error/empty."
+    },
+    {
+      "name": "AnalyticsWorkspace / AnalyticsPlacedContent",
+      "kind": "page-specific presentation",
+      "owner": "web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx",
+      "evidence": ["web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx:9-80", "web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsPlacedContent.tsx:10-23"],
+      "contract": "tabs, activeTab, onTabChange, summary, children; shared CardGrid full-width items analytics-summary/navigation/domain; placement context reused without a second packer."
+    },
+    {
+      "name": "TabNav",
+      "kind": "shared primitive",
+      "owner": "web\\src\\components\\ui\\TabNav.tsx",
+      "evidence": ["web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx:54-62", "web\\src\\components\\ui\\TabNav.tsx:19-60"],
+      "contract": "Native buttons in named group, aria-pressed, focus ring and horizontally scrolling strip. Page sets minimum 44px button dimensions. This is a segmented group, not an incomplete ARIA tablist."
+    },
+    {
+      "name": "OperationalBrief / FleetOverviewBrief / FleetSectionBrief",
+      "kind": "shared composite with domain adapters",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "evidence": ["web\\src\\components\\data-display\\OperationalBrief.tsx:152-160", "web\\src\\components\\data-display\\OperationalBrief.tsx:234-300", "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetOverviewBrief.tsx:21-53", "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetSectionBrief.tsx:14-38"],
+      "contract": "Compact numeric metrics, loading suppression, source status/scope/provenance and Review details drawer; keep source estimates explicit rather than presenting them as observed savings."
+    },
+    {
+      "name": "AnalyticsChartPanel / ChartCard",
+      "kind": "domain adapter over shared chart composite",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "evidence": ["web\\src\\features\\analytics\\components\\analytics\\AnalyticsChartPanel.tsx:20-47", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:13-46"],
+      "contract": "Forwards children/data/dataColumns/exportData and query states; fullscreen/exportable default true; default standard size, detail where specified; LayoutCard and EmbeddedChart retain canonical chart controls."
+    },
+    {
+      "name": "AnalyticsPanel / SourceContent",
+      "kind": "domain state/surface adapter",
+      "owner": "web\\src\\features\\analytics\\components\\analytics\\AnalyticsPanel.tsx",
+      "evidence": ["web\\src\\features\\analytics\\components\\analytics\\AnalyticsPanel.tsx:49-87"],
+      "contract": "LayoutCard title, decorative icon, aria-busy, contextual Skeleton and actionable EmptyState description, SourceContent retry. No replacement panel system needed."
+    },
+    {
+      "name": "OverviewTab, OverviewVehicleComparison, DrivingTab, DrivingPerformanceCards, DrivingTemperatureStats, ChargingTab, ChargingDetailSection, BatteryTab",
+      "kind": "existing domain renderers",
+      "owner": "web\\src\\features\\analytics\\components\\analytics",
+      "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:56-59", "web\\src\\features\\analytics\\components\\analytics\\index.ts:1-8"],
+      "contract": "Preserve all extracted sections and calculations. Use existing chart/motion/UI category barrels and current typed FleetAnalyticsQuery."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx",
+      "line": 76,
+      "rule": "MDC-002 / mission section 4",
+      "detail": "Brand leaderboard and vehicle-efficiency leaderboard both use label/value rows with proportional rails; domain ranking math differs.",
+      "fix": "Consider reuse of an existing metric-bar presentation only after checking its exact numeric/unknown/accessibility contract. Keep ranking and normalization domain-owned; no speculative new shared component.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx:160-179"]
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx",
+      "line": 89,
+      "rule": "MDC-031 / MDC-043",
+      "detail": "Four domain tabs repeat the same 1/md:2/2xl:3-column chart grid; this is consistent existing behavior, not proof that a new grid implementation is necessary.",
+      "fix": "Reuse current Grid/CardGrid contracts if modernization consolidates allocation; retain explicit full-width hero spans and every child.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:52-55", "web\\src\\features\\analytics\\components\\analytics\\ChargingTab.tsx:67-70", "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx:79-82"]
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "Workspace summary, navigation and active domain allocate full width; placement preserves min-w-0 and w-full.",
+      "Tab charts reflow 1 column to 2 at md and 3 at 2xl; selected hero charts span the full grid.",
+      "Quick links reflow 1/sm:2/lg:3/2xl:5; TabNav scrolls horizontally rather than hiding actions.",
+      "ChartCard sizing uses existing placement or explicit standard/detail contract."
+    ],
+    "evidence": ["web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx:33-77", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:55", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:166-176", "web\\src\\components\\ui\\TabNav.tsx:30", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:17-22"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx",
+        "line": 111,
+        "rule": "MDC-043 / preserve full content",
+        "detail": "Cost-by-type rows reserve w-28 and w-20 plus gaps and a flexible rail; type label is truncated with no explicit full-label alternative. At narrow containers/long translations rail and label readability need verification.",
+        "fix": "Allow label/value stacking or wrapping at narrow allocated widths while retaining type identity, count and percentage. Do not remove rows or metadata.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx",
+        "line": 175,
+        "rule": "MDC-043 / MDC-044",
+        "detail": "Quick-link labels use truncate; long translated destination labels may lose visible meaning.",
+        "fix": "Wrap labels or use an existing accessible full-label disclosure; retain all five native navigation destinations.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "No viewport exercised. 320/375/390/430/768/1024/1280/1440/1920/2560, allocated-container widths, RTL, 200% text and open overlays all unverified."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Named sections and navigation, native focusable segmented buttons, aria-pressed and visible token focus ring; button minimum 44px at this call site.",
+      "Charts pass localized ariaLabel, dataColumns and data to the canonical chart frame.",
+      "AnalyticsPanel exposes aria-busy and marks decorative title icons aria-hidden.",
+      "Quick-link icon wrappers/chevrons are decorative and destination text remains the accessible name.",
+      "Review details reuses the shared Drawer rather than creating another overlay."
+    ],
+    "evidence": ["web\\src\\components\\ui\\TabNav.tsx:26-59", "web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx:54-62", "web\\src\\features\\analytics\\components\\analytics\\AnalyticsPanel.tsx:53-62", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:65-71", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:170-179", "web\\src\\components\\data-display\\OperationalBrief.tsx:234-300"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx",
+        "line": 30,
+        "rule": "MDC-016 / MDC-040",
+        "detail": "The four TabNav icon nodes lack explicit aria-hidden at their creation; TabNav renders the icon unchanged. Actual SVG accessibility defaults were not exercised.",
+        "fix": "Explicitly mark these redundant decorative icons aria-hidden while retaining visible localized button names.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "Keyboard traversal, horizontal-strip scroll-on-focus, focus restoration after tab unmount, drawer/fullscreen trapping, screen-reader announcements, forced colors, actual contrast and reduced motion remain unverified. Source contracts are not acceptance."
+  },
+  "states": {
+    "initialLoading": "Workspace and active renderer stay mounted; per-chart loading and AnalyticsPanel Skeleton, OperationalBrief suppresses measurements until data. Evidence: AnalyticsPage.tsx:38-60; AnalyticsPanel.tsx:63-71; FleetSectionBrief.tsx:17-26.",
+    "empty": "Null-safe arrays and per-panel emptiness; battery uses returned trend length; temperature requires positive independent sample counts. Evidence: OverviewTab.tsx:32-34; BatteryTab.tsx:37-39; DrivingTemperatureStats.tsx:24-37,54-55.",
+    "initialError": "Original query reaches PageLayout and dataSources; contentQuery is unchanged if no data, panels receive errors and refetch. Evidence: AnalyticsPage.tsx:25-26,41-47; retainFleetContent.ts:10-11; AnalyticsPanel.tsx:63-69.",
+    "refreshError": "Adapter retains existing data and removes error flags only from content view; original page query preserves freshness/error/recovery evidence. Evidence: retainFleetContent.ts:10-22; AnalyticsPage.tsx:41-54.",
+    "offlineStale": "Original query remains freshness owner; paused fetch is explicitly retained in overview and section brief status logic. Browser/network freshness rendering was not exercised.",
+    "partialUnknown": "Operational metrics keep absent power/regen as null; temperature count prevents false zero temperatures. Some chart projectors still use safe() zero fallback; see issue.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetSectionBrief.tsx",
+        "line": 19,
+        "rule": "MDC-026 / preserve retained-evidence status",
+        "detail": "Specialist briefs inspect query.isError to label retained data, but every tab receives contentQuery after retainFleetContent clears isError. On failed non-paused refresh with retained data, specialist briefs can say Returned evidence while the overview correctly receives an explicit retained flag. Page-level original error remains intact.",
+        "fix": "Carry original trust/retained status separately into specialist briefs while continuing to retain content. Do not revert the retention migration or erase page-level error evidence.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:25-26,53-59", "web\\src\\features\\analytics\\components\\overview-modernization\\retainFleetContent.ts:13-22", "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetSectionBrief.tsx:29-33"]
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx",
+        "line": 64,
+        "rule": "MDC-026 / unknown is not zero",
+        "detail": "safe() turns missing/nonfinite values into zero before chart projection. Battery capacity/range, overview distances and driving scatter points can therefore encode unknown as measured zero if actual payload is partial. Declared types do not prove runtime completeness.",
+        "fix": "At domain projection boundaries distinguish missing/invalid values from legitimate zero and retain row identities/export semantics. Do not globally change safe() without its shared consumers being audited.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\components\\charts\\chartUtils.tsx:12", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:38-45", "web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx:68-72"]
+      }
+    ],
+    "verification": "No loading/error/offline/partial fixtures or real responses executed; findings are source-based."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx",
+      "line": 171,
+      "rule": "MDC-010 / MDC-015 / mission visual intensity",
+      "detail": "Quick links nest hover GlassPanels in another panel and request cyan glow chrome for every destination. Current GlassPanel glow is only a tinted hover border, not an actual luminous bloom; its elevation is already neutral. Do not misclassify the preserved public prop name as proof of emitted glow.",
+      "fix": "Prefer restrained neutral link chrome with existing focus/hover tokens; avoid multiple attention accents and redundant surfaces while preserving five links.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\components\\ui\\GlassPanel.tsx:27-35,59-75"]
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx",
+      "line": 172,
+      "rule": "MDC-010 / MDC-012 / mission section 6",
+      "detail": "Fixed-white low-opacity icon tile surface is theme-independent. No fixed pure-white text class was found in inspected reachable feature renderers.",
+      "fix": "Use the existing neutral surface token; preserve icon identity and decorative semantics.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx",
+      "line": 87,
+      "rule": "MDC-010 / mission visual intensity",
+      "detail": "Every brand rail uses fixed saturated emerald-500 although rank/session volume is not an operational success state; AnalyticsPanel also gives every title icon fixed cyan emphasis.",
+      "fix": "Use restrained neutral or shared data-emphasis tokens for non-status rails/icons, preserving comparative lengths and labels.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\analytics\\components\\analytics\\AnalyticsPanel.tsx:56-59"]
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx",
+      "line": 210,
+      "rule": "MDC-034 / mission section 27",
+      "detail": "Multi-vehicle radar and categorical donuts can accumulate strong hues. They use the shared color-blind-safe default palette, not the NEON palette; gradients are data fills, not evidence of luminous UI. Saturation hierarchy with many series remains a visual-QA risk, not a proven runtime failure.",
+      "fix": "Keep all series, source order, accessible alternatives and user palette preferences; consider existing legend/selection controls to manage emphasis rather than deleting series or inventing a page palette.",
+      "owner": "page",
+      "confidence": "medium",
+      "relatedEvidence": ["web\\src\\features\\analytics\\components\\analytics\\constants.tsx:22", "web\\src\\lib\\colors.ts:31-40,61-68", "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx:109-113"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx",
+      "line": 25,
+      "rule": "MDC-032 / accurate workspace bounds",
+      "detail": "Page sends calendar start/end instead of the hook's precise rolling/timezone bounds. The route advertises 24h in standard workspace quick presets, so exact rolling scope is not represented by this request shape.",
+      "fix": "Integration owner must verify handler bound semantics and adopt existing startInstant/endInstantExclusive through a compatible typed hook/server contract. Preserve custom/calendar/DST behavior; do not invent filtering support or add a second date picker.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\hooks\\useRangeState.ts:114-123", "web\\src\\lib\\workspaceScope.ts:80-87", "web\\src\\api\\hooks\\useAnalytics.ts:55-65"]
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 162,
+      "rule": "MDC-032 / truthful fleet workspace scope",
+      "detail": "/analytics is absent from the inspected vehicle-disabled paths/prefixes, so getWorkspaceRouteScope('/analytics') advertises vehicle=true. AnalyticsPage neither consumes selected vehicle nor sends vehicle_id, and its hook is explicitly fleet-wide. Actual shell control rendering was not exercised.",
+      "fix": "Coordinate shell scope owner: if this remains intentionally fleet-wide, hide the irrelevant vehicle selector for this route. Otherwise establish supported filtering with backend evidence before changing query scope. Do not silently pretend the selection filters fleet results.",
+      "owner": "shared",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\lib\\workspaceScope.ts:97-135,162-174", "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:21-25", "web\\src\\api\\hooks\\useAnalytics.ts:49-65"]
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx",
+      "line": 3,
+      "rule": "MDC-002 / category barrels",
+      "detail": "Feature imports shared layout-reference internals directly even though the contract specifies the layout category barrel; AnalyticsPlacedContent similarly imports useCardPlacement internally. Both still reuse the current layout implementation, not a competing engine.",
+      "fix": "Use existing public category exports where available; ask layout owner about useCardPlacement exposure if missing rather than edit shared barrels in a page task.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsPlacedContent.tsx:2", "docs\\frontend-design-contract.md:111-119"]
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx",
+      "line": 98,
+      "rule": "MDC-045 / truthful measurement labels",
+      "detail": "Cost by charger type renders ct.count and count-share percentage, not cost. This is an existing semantic mismatch in label versus displayed data; no per-type cost field or endpoint has been established.",
+      "fix": "Retain the existing count/share information and use a truthful localized label, or resolve separately with backend evidence. Never fabricate per-type cost or drop the section.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx:107-122", "web\\src\\api\\types.ts:1037"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "sequence": [
+      "Resolve truthful shared range/vehicle scope with integration owners.",
+      "Preserve trust migration while repairing specialist retained-status propagation and unknown chart inputs.",
+      "Apply scoped neutral visual tokens and category imports without rebuilding shared architecture.",
+      "Verify narrow/long-label layouts and accessibility with all specialist/chart/detail actions."
+    ],
+    "rationale": "Scope and trust correctness outrank cosmetic simplification. Existing shared layout/chart/stat migrations are substantial and must not be reverted."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Fleet analytics workspace vehicle visibility",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "getWorkspaceRouteScope('/analytics'): retain range=true; coordinate vehicle=false for the intentionally fleet-wide page, pending integration decision. Keep other routes and persisted selection unchanged.",
+      "usedBy": ["/analytics", "Existing shell workspace controls"],
+      "dependsOn": ["Confirm fleet-wide product scope; useFleetAnalytics currently has no vehicle parameter", "Shell source/runtime acceptance owned by integration"],
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:97-174", "web\\src\\api\\hooks\\useAnalytics.ts:49-65"]
+    },
+    {
+      "name": "Precise fleet analytics time-bound contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "propsVariantsStates": "Existing start/end options and query key must represent RFC3339 startInstant/endInstantExclusive if the endpoint supports them; retain cancellation, calendar custom ranges, rolling 24h and timezone/DST semantics. Backend bound capability remains unknown.",
+      "usedBy": ["/analytics"],
+      "dependsOn": ["web\\src\\hooks\\useRangeState.ts:114-123", "Backend analyticsHandler.Fleet bound contract verification", "No page-owned server mutation"],
+      "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:21-25", "web\\src\\api\\hooks\\useAnalytics.ts:49-66", "internal\\api\\router.go:3852"]
+    }
+  ],
+  "competingImplementations": {
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\analytics\\index.ts",
+        "line": 1,
+        "rule": "Preserve inherited migrations / MDC-002",
+        "detail": "Barrel still exports HeroGauges, but AnalyticsPage imports FleetOverviewBrief instead and has no HeroGauges call. This is an inactive export in the scoped source graph, not proof of duplicate mounted summaries elsewhere.",
+        "fix": "Keep current OperationalBrief migration. Do not reinstate HeroGauges or remove other consumers outside scope; broader unused-export decisions belong to their owner.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "positiveEvidence": "AnalyticsWorkspace wraps existing chart/tab renderers and placement context; AnalyticsChartPanel delegates to ChartCard, AnalyticsPanel to LayoutCard/SourceContent. No new theme/query/layout/chart engine identified in inspected reachable code.",
+    "limits": "No whole-repository duplicate or unused-code audit; inactive HeroGauges/helpers bodies were not semantically audited."
+  },
+  "preservation": {
+    "sourceSha256": "CC8FE3287ACFB217760EA01BBFFA05EE5617970118C2F8E5591AA0E27FF7B8FA",
+    "currentLineCount": 63,
+    "sourcePath": "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx",
+    "reachableProductionLineCount": 1911,
+    "lineCountScope": "Page plus 15 inspected reachable feature renderer/adapter files; excludes barrels, tests, inactive HeroGauges/helpers and shared components. This is a current source baseline, not a historical no-loss comparison.",
+    "sectionCounts": {
+      "workspaceAllocations": 3,
+      "domainTabs": 4,
+      "domainContentSectionsAcrossAllTabs": 30,
+      "overviewSections": 8,
+      "drivingSections": 9,
+      "chargingSections": 8,
+      "batterySections": 5,
+      "analyticsChartPanelCallSites": 21,
+      "analyticsPanelCallSites": 5,
+      "overviewQuickLinkGlassPanelCallSites": 2,
+      "fleetOverviewMetrics": 6,
+      "specialistMetricOccurrences": 27
+    },
+    "countDefinition": "Domain sections count named content panels plus summary briefs; excludes workspace wrappers/navigation. Overview 6 charts + leaderboard + quick links; driving 7 charts + performance brief + temperature; charging 4 charts + 3 detail panels + summary brief; battery 4 charts + latest-row brief. All tabs counted even though only active tab mounts. Quick-link inner GlassPanel is one source call repeated five times.",
+    "sections": [
+      {"name": "Fleet performance summary", "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetOverviewBrief.tsx", "line": 21, "preserve": "Distance, drives, energy, efficiency, gas savings estimate, CO2 saved estimate; original formulas, status, selected range and unknown coverage."},
+      {"name": "Overview", "file": "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx", "line": 52, "children": ["Distance by vehicle (58)", "Day of week pattern (89)", "Monthly cost comparison (125)", "Quick links (165)"]},
+      {"name": "Overview comparison", "file": "web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx", "line": 110, "children": ["Fleet usage (112)", "Efficiency leaderboard (151)", "Vehicle comparison (184)", "Energy and activity (226)"]},
+      {"name": "Driving", "file": "web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx", "line": 85, "children": ["Performance metrics (87; DrivingPerformanceCards.tsx:31-49)", "Speed distribution (95)", "Trip distance distribution (123)", "Hourly driving (151)", "Temperature vs efficiency (189)", "Daily driving (222)", "Drive duration (260)", "Efficiency trend (289)", "Observed temperature measurements (320; DrivingTemperatureStats.tsx:32-60)"]},
+      {"name": "Charging", "file": "web\\src\\features\\analytics\\components\\analytics\\ChargingTab.tsx", "line": 61, "children": ["Charging summary (63)", "Charger types (73)", "Start battery distribution (112)", "Hourly charging (140)", "Detail section (173)"]},
+      {"name": "Charging details", "file": "web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx", "line": 62, "children": ["Charger brands (65)", "Cost by charger type count/share (98)", "Cost distribution (131)", "Monthly charging trend (148)"]},
+      {"name": "Battery", "file": "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx", "line": 72, "children": ["Latest returned battery measurements (74)", "Health score timeline (86)", "Capacity trend (118)", "Range trend (150)", "Degradation and cycles (187)"]}
+    ],
+    "actions": [
+      {"name": "Switch Overview / Driving / Charging / Battery", "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:19,28-35,49-59"], "preserve": "Overview default; four localized native buttons; active-tab-only mount; do not invent URL persistence."},
+      {"name": "Workspace range change", "evidence": ["web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx:21-25", "web\\src\\lib\\workspaceScope.ts:25"], "preserve": "Shared header ownership, URL/preferences and complete server-scoped range; no local duplicate selector."},
+      {"name": "Retry failed source/sections", "evidence": ["web\\src\\features\\analytics\\components\\analytics\\AnalyticsPanel.tsx:68-69", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:29,62"], "preserve": "Original query refetch, independent panel state and retained payload."},
+      {"name": "Chart fullscreen, data alternatives, export and persistent series controls", "evidence": ["web\\src\\features\\analytics\\components\\analytics\\AnalyticsChartPanel.tsx:23-46", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:28-42"], "preserve": "All 21 chart data/dataColumns and export filenames; all explicit chartKeys and hiddenSeries predicates. Actual control runtime not audited."},
+      {"name": "Review details", "evidence": ["web\\src\\components\\data-display\\OperationalBrief.tsx:152-160,234-300"], "preserve": "Every rendered brief details drawer, source context and loading suppression."},
+      {"name": "Quick-link navigation", "evidence": ["web\\src\\features\\analytics\\components\\analytics\\constants.tsx:37-43", "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx:168-181"], "destinations": ["/statistics", "/period-compare", "/weekly-digest", "/mileage", "/timeline"], "preserve": "Native links, localized labels and route destinations; destination pages outside scope."}
+    ],
+    "exportFilenames": [
+      "fleet-distance-by-vehicle", "fleet-distance-share", "fleet-vehicle-comparison", "fleet-energy-activity", "fleet-day-of-week", "fleet-monthly-cost-comparison",
+      "fleet-speed-distribution", "fleet-distance-distribution", "fleet-hourly-driving", "fleet-temperature-efficiency", "fleet-daily-driving", "fleet-drive-duration-distribution", "fleet-efficiency-trend",
+      "fleet-charger-types", "fleet-start-battery-distribution", "fleet-hourly-charging", "fleet-monthly-charging",
+      "fleet-battery-health", "fleet-battery-capacity", "fleet-battery-range", "fleet-battery-degradation-cycles"
+    ],
+    "chartPersistenceKeys": ["analytics-day-of-week", "analytics-monthly-cost-comparison", "analytics-vehicle-radar-comparison", "analytics-energy-activity", "analytics-hourly-driving", "analytics-daily-driving", "analytics-hourly-charging", "analytics-monthly-charging", "analytics-battery-degradation-cycles"],
+    "dataBehavior": [
+      "One original query owns cache and trust; retainFleetContent is only a presentation adaptation, not a second server-state store.",
+      "Do not revert the existing PageLayout/CardGrid/ChartCard/SourceContent/OperationalBrief migrations.",
+      "Keep specialist source denominators and display-only conversion; unknown raw values remain unknown and legitimately measured zero remains zero.",
+      "Keep existing estimate formulas: gas savings max(distance_km*0.085*1.5-total_cost,0), CO2 distance_km*0.12; retain explicit estimate descriptions.",
+      "Efficiency leaderboard lower Wh/km is better with best-positive normalization; radar normalizes metrics and inverts efficiency, requires at least two vehicles.",
+      "Driving efficiency trend filters positive efficiency; temperature panels treat inside/outside observed sample counts independently.",
+      "Battery summary describes final returned trend row, not inferred current live state.",
+      "Maintain source ordering, series names, all axes, legends, gradients where meaningful, data tables, export data and full-width hero bands.",
+      "No new backend fields, fabricated aggregates or wire/cache unit changes are authorized by this audit."
+    ]
+  },
+  "evidenceLimits": {
+    "scope": "One page and its reachable presentation/data dependencies; selected shared owners inspected only to resolve concrete page contracts. No unrelated pages, agents, Git operations or UI/source modifications.",
+    "proofType": "Source-only current snapshot; no runtime, browser, keyboard, visual, contrast or viewport acceptance.",
+    "backend": "Only router binding inspected. Handler/repository SQL, bound parsing, null/zero response behavior, actual units and full-history coverage unverified. Frontend comments/types are not backend proof.",
+    "shared": "ChartCard forwards into EmbeddedChart but deep chart toolbar/export/focus behavior was not traced; Drawer and SourceContent internals not reviewed. Shared reference contract status remains pending runtime acceptance. filesRead includes bounded range or matching-line inspections for large shared/API/router files, not claims of whole-file semantic coverage.",
+    "reportValidation": {
+      "method": "PowerShell ConvertFrom-Json; required top-level fields; required issue keys; existence and line bounds for every issue file; existence of filesRead; unchanged source SHA256",
+      "exitCode": 0,
+      "rawOutput": "JSON schema fields: 20/20 present\nIssue records: 16 complete\nSource SHA256 unchanged: CC8FE3287ACFB217760EA01BBFFA05EE5617970118C2F8E5591AA0E27FF7B8FA\nPage line count: 63\nReport JSON parse: PASS"
+    },
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx).Count", "exitCode": 0, "output": "SHA256 CC8FE3287ACFB217760EA01BBFFA05EE5617970118C2F8E5591AA0E27FF7B8FA; 63 lines"},
+      {"command": "PowerShell Select-String over the 16 reachable production page/feature files listed in preservation.lineCountScope; scoped raw-control/import/static-style/neon/white/glow patterns", "exitCode": 0, "output": "rawControls=0\ndirectLibraryImports=0\noldApiImports=0\nstaticCssVariableInlineStyles=0\nneonClasses=0\nfixedWhiteText=0\nwhiteSurface=1 (OverviewTab.tsx:172)\nglowProps=1 (OverviewTab.tsx:171)\nreachableProductionLines=1911", "limits": "Lexical counts, not exhaustive violations or contrast tests; computed proportional inline widths are intentionally not counted as static CSS-variable violations."}
+    ],
+    "notRun": [
+      "Full skill audit.sh: inspected but not run because it unconditionally invokes project TypeScript, outside this bounded source-only Phase 0 assignment.",
+      "npx tsc --noEmit, lint, build, unit/component tests and browser validation: not run; no claims that they pass.",
+      "Historical baseline comparison or inherited test receipts: not used as current acceptance."
+    ],
+    "contractEvidence": ["docs\\frontend-worker-conventions.md:43-76", "docs\\frontend-design-contract.md:31-69,111-119,166-188", "docs\\frontend-mission.md:19-105,309-394,507-580,704-870,921-1052,1416-1485"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\AnalyticsPage.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\index.ts",
+    "web\\src\\features\\analytics\\components\\analytics\\constants.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\AnalyticsChartPanel.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\AnalyticsPanel.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\OverviewTab.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\OverviewVehicleComparison.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\DrivingTab.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\DrivingPerformanceCards.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\DrivingTemperatureStats.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\ChargingTab.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\ChargingDetailSection.tsx",
+    "web\\src\\features\\analytics\\components\\analytics\\BatteryTab.tsx",
+    "web\\src\\features\\analytics\\components\\overview-modernization\\index.ts",
+    "web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsWorkspace.tsx",
+    "web\\src\\features\\analytics\\components\\overview-modernization\\AnalyticsPlacedContent.tsx",
+    "web\\src\\features\\analytics\\components\\overview-modernization\\retainFleetContent.ts",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetOverviewBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetSectionBrief.tsx",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\ui\\TabNav.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\charts\\chartUtils.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\lib\\colors.ts"
+  ]
+}

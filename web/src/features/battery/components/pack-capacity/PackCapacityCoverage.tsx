@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
+import { MetricGrid } from '@/components/layout';
 import {
   GlassPanel,
   PanelTitle,
@@ -62,7 +63,7 @@ export function PackCapacityCoverage({
           state={state}
           requirement="none"
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <MetricGrid>
             <MetricCard
               label={t(
                 'packCapacity.coverage.returned',
@@ -200,7 +201,7 @@ export function PackCapacityCoverage({
               icon={<Database className="h-5 w-5" />}
               color="red"
             />
-          </div>
+          </MetricGrid>
           <AlertBanner className="mt-4" variant="info">
             <Text as="p" variant="caption">
               {t(

@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react'
 import { Badge, Button as UiButton, DataTable, type Column } from '@/components/ui'
 import { TimeStamp } from '@/components/data-display'
-import { Skeleton, QueryError } from '@/components/feedback'
+import { Skeleton, QueryError, StaleRefreshWarning, DataStateNotice } from '@/components/feedback'
+import { useDataState } from '@/hooks/useDataState'
 import { cn } from '@/lib/cn'
 import {
   useFleetTelemetryErrorVINs, useFleetTelemetryErrors,
@@ -16,16 +17,15 @@ export function FleetTelemetryHealth() {
   const { t } = useTranslation()
   const [selectedVin, setSelectedVin] = useState('')
 
-  const { data: errorVINs, isLoading: vinsLoading, isError: vinsIsError, error: vinsError, refetch: refetchVINs } = useFleetTelemetryErrorVINs()
-  const { data: errors, isLoading: errorsLoading, isError: errorsIsError, error: errorsError, refetch: refetchErrors } = useFleetTelemetryErrors(selectedVin || undefined)
+  const vinsQuery = useFleetTelemetryErrorVINs()
+  const errorsQuery = useFleetTelemetryErrors(selectedVin || undefined)
+  const vinsState = useDataState(vinsQuery)
+  const errorsState = useDataState(errorsQuery)
   const refreshVINs = useRefreshFleetTelemetryErrorVINs()
   const refreshErrors = useRefreshFleetTelemetryErrors()
 
-  const vinList = errorVINs ?? []
-  const errorList = errors ?? []
-
-  const handleRetryVINs = useCallback(() => { void refetchVINs() }, [refetchVINs])
-  const handleRetryErrors = useCallback(() => { void refetchErrors() }, [refetchErrors])
+  const vinList = vinsState.data ?? []
+  const errorList = errorsState.data ?? []
 
   const isRecent = (dateStr: string | null) => {
     if (!dateStr) return false
@@ -36,6 +36,7 @@ export function FleetTelemetryHealth() {
   const vinColumns: Column<FleetTelemetryErrorVIN>[] = useMemo(() => [
     {
       key: 'vin',
+      filterValue: (r) => r.vin ?? null,
       header: t('devtools.health.vin', 'VIN'),
       render: (r) => (
         <UiButton
@@ -50,12 +51,14 @@ export function FleetTelemetryHealth() {
     },
     {
       key: 'first_seen_at',
-      header: t('devtools.health.firstSeen', 'First Seen'),
+      filterValue: (r) => r.first_seen_at ?? null,
+      header: t('devtools.health.firstSeen', 'First seen'),
       render: (r) => <TimeStamp value={r.first_seen_at} className="text-xs text-[var(--text-secondary)]" />,
     },
     {
       key: 'last_seen_at',
-      header: t('devtools.health.lastSeen', 'Last Seen'),
+      filterValue: (r) => r.last_seen_at ?? null,
+      header: t('devtools.health.lastSeen', 'Last seen'),
       render: (r) => (
         <TimeStamp
           value={r.last_seen_at}
@@ -68,22 +71,26 @@ export function FleetTelemetryHealth() {
   const errorColumns: Column<FleetTelemetryError>[] = useMemo(() => [
     {
       key: 'vin',
+      filterValue: (r) => r.vin ?? null,
       header: t('devtools.health.vin', 'VIN'),
       render: (r) => <span className="text-xs font-mono text-[var(--text-primary)]">{r.vin}</span>,
     },
     {
       key: 'error_code',
-      header: t('devtools.health.errorCode', 'Error Code'),
+      filterValue: (r) => r.error_code ?? null,
+      header: t('devtools.health.errorCode', 'Error code'),
       render: (r) => r.error_code ? <Badge variant="danger" size="sm">{r.error_code}</Badge> : <span className="text-xs text-[var(--text-muted)]">—</span>,
     },
     {
       key: 'error_message',
+      filterValue: (r) => r.error_message ?? null,
       header: t('devtools.health.message', 'Message'),
       render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.error_message ?? '—'}</span>,
     },
     {
       key: 'reported_at',
-      header: t('devtools.health.reportedAt', 'Reported At'),
+      filterValue: (r) => r.reported_at ?? null,
+      header: t('devtools.health.reportedAt', 'Reported at'),
       render: (r) => (
         <TimeStamp
           value={r.reported_at}
@@ -104,9 +111,17 @@ export function FleetTelemetryHealth() {
       >
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <Badge variant={vinList.length > 0 ? 'danger' : 'success'} size="sm">
-              {vinList.length} {t('devtools.health.affectedVehicles', 'affected')}
+            <Badge
+              variant={!vinsState.hasData ? 'neutral' : vinsState.status === 'stale' ? 'warning' : vinList.length > 0 ? 'danger' : 'success'}
+              size="sm"
+            >
+              {vinsState.hasData ? vinList.length : t('common.unknown', 'Unknown')} {t('devtools.health.affectedVehicles', 'affected')}
             </Badge>
+            {vinsState.isRefreshing && (
+              <Badge variant="info" size="sm" role="status">
+                {t('dataSources.status.refreshing', 'Refreshing')}
+              </Badge>
+            )}
             {selectedVin && (
               <Badge variant="info" size="sm">
                 {t('devtools.health.filteredBy', 'Filtered')}: {selectedVin}
@@ -133,20 +148,38 @@ export function FleetTelemetryHealth() {
               {t('devtools.health.refreshVins', 'Refresh from Tesla')}
             </UiButton>
           </div>
-          {vinsLoading ? (
-            <Skeleton className="h-24" />
-          ) : vinsIsError ? (
+          <StaleRefreshWarning
+            state={vinsState}
+            label={t('devtools.health.errorVinsResource', 'telemetry error VINs')}
+            message={vinsState.isRefreshBlocked && !vinsState.refreshError ? t('dataSources.status.paused', 'Refresh paused') : undefined}
+          />
+          {!vinsState.hasData && vinsState.isRefreshBlocked && (
+            <DataStateNotice
+              state="partial"
+              role="status"
+              title={t('dataSources.status.paused', 'Refresh paused')}
+              message={t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+            >
+              <UiButton type="button" variant="ghost" size="sm" onClick={vinsState.retry ?? undefined}>
+                {t('common.retry', 'Retry')}
+              </UiButton>
+            </DataStateNotice>
+          )}
+          {vinsState.fatalError ? (
             <QueryError
-              error={vinsError}
-              onRetry={handleRetryVINs}
+              error={vinsState.fatalError}
+              onRetry={vinsState.retry ?? undefined}
               resourceName={t('devtools.health.errorVinsResource', 'telemetry error VINs')}
             />
+          ) : !vinsState.hasData ? (
+            <Skeleton className="h-24" />
           ) : vinList.length > 0 ? (
             <DataTable
               tableId="admin:fleet-health-vins"
               columns={vinColumns}
               mobileColumns={['vin', 'last_seen_at']}
               data={vinList}
+              enableValueFilters
               keyExtractor={(r) => r.vin}
               compact
             />
@@ -162,11 +195,16 @@ export function FleetTelemetryHealth() {
       <ToolCard
         icon={AlertCircle}
         color="amber"
-        title={t('devtools.health.errorLogTitle', 'Error Log')}
+        title={t('devtools.health.errorLogTitle', 'Error log')}
         description={t('devtools.health.errorLogDesc', 'Detailed fleet telemetry error history')}
       >
         <div className="space-y-3">
           <div className="flex items-center gap-3">
+            {errorsState.isRefreshing && (
+              <Badge variant="info" size="sm" role="status">
+                {t('dataSources.status.refreshing', 'Refreshing')}
+              </Badge>
+            )}
             <UiButton
               type="button"
               variant="secondary"
@@ -178,20 +216,38 @@ export function FleetTelemetryHealth() {
               {t('devtools.health.refreshErrors', 'Refresh from Tesla')}
             </UiButton>
           </div>
-          {errorsLoading ? (
-            <Skeleton className="h-40" />
-          ) : errorsIsError ? (
+          <StaleRefreshWarning
+            state={errorsState}
+            label={t('devtools.health.errorLogResource', 'telemetry error log')}
+            message={errorsState.isRefreshBlocked && !errorsState.refreshError ? t('dataSources.status.paused', 'Refresh paused') : undefined}
+          />
+          {!errorsState.hasData && errorsState.isRefreshBlocked && (
+            <DataStateNotice
+              state="partial"
+              role="status"
+              title={t('dataSources.status.paused', 'Refresh paused')}
+              message={t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+            >
+              <UiButton type="button" variant="ghost" size="sm" onClick={errorsState.retry ?? undefined}>
+                {t('common.retry', 'Retry')}
+              </UiButton>
+            </DataStateNotice>
+          )}
+          {errorsState.fatalError ? (
             <QueryError
-              error={errorsError}
-              onRetry={handleRetryErrors}
+              error={errorsState.fatalError}
+              onRetry={errorsState.retry ?? undefined}
               resourceName={t('devtools.health.errorLogResource', 'telemetry error log')}
             />
+          ) : !errorsState.hasData ? (
+            <Skeleton className="h-40" />
           ) : errorList.length > 0 ? (
             <DataTable
               tableId="admin:fleet-health-errors"
               columns={errorColumns}
               mobileColumns={['vin', 'error_code', 'reported_at']}
               data={errorList}
+              enableValueFilters
               keyExtractor={(r) => String(r.id)}
               compact
               pagination

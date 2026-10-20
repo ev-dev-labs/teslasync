@@ -11,6 +11,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { formatTime } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...actual, useSettings: () => ({ ...actual.useSettings(), locale: datePreferences.locale }) };
+});
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return { ...actual, useTimezone: () => datePreferences.tz };
+});
 
 // ── i18n stub ──
 vi.mock('react-i18next', () => {
@@ -113,12 +124,20 @@ function renderPanel() {
 }
 
 beforeEach(() => {
+  Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC' });
   vi.clearAllMocks();
   mockLive.mockReturnValue(idle({ data: view }));
   mockQueuedCheckIn.mockReturnValue({ checkIn: vi.fn(), queued: 0, flushing: false, isPending: false });
 });
 
 describe('LiveTripPanel', () => {
+  it('formats the last fix in the selected locale and timezone without rewriting evidence', () => {
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    renderPanel();
+    expect(screen.getByText(`Last fix ${formatTime(view.latest.recorded_at, datePreferences)} · 2 fixes`)).toBeInTheDocument();
+    expect(screen.getByText(`· ${view.evidence[0]}`)).toBeInTheDocument();
+  });
+
   it('renders progress, range verdict, next stop, and evidence', () => {
     renderPanel();
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
@@ -172,6 +191,8 @@ describe('LiveTripPanel', () => {
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.getByText('No scored stop yet')).toBeInTheDocument();
+    expect(screen.queryByText(/No fixes yet/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Check in' })).toHaveLength(1);
   });
 
   it('surfaces failures with a retry path', () => {
@@ -180,5 +201,47 @@ describe('LiveTripPanel', () => {
     renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('retains progress, range, next stop and queued count while a check-in is pending', () => {
+    mockLive.mockReturnValue(idle({
+      data: view, error: new Error('live refresh failed'), isError: true, isFetching: true,
+    }));
+    mockQueuedCheckIn.mockReturnValue({
+      checkIn: vi.fn(), queued: 3, flushing: true, isPending: true,
+    });
+    renderPanel();
+    expect(screen.getByRole('heading', { name: 'Live trip' })).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Progress' })).toHaveAttribute('aria-valuenow', '50');
+    expect(screen.getByText('Charge soon')).toBeInTheDocument();
+    expect(screen.getByText(/Flagler SC/)).toBeInTheDocument();
+    expect(screen.getByText('3 queued')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Check in' })).toBeDisabled();
+    expect(screen.getByText(/2 fixes/)).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+  });
+
+  it('preserves real zero progress and zero energy without changing the range verdict', () => {
+    mockLive.mockReturnValue(idle({
+      data: {
+        ...view,
+        progress: { ...view.progress, done_m: 0 },
+        range: { ...view.range, have_wh: 0, need_wh: 0 },
+      },
+    }));
+    renderPanel();
+    expect(screen.getByRole('progressbar', { name: 'Progress' })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByText(/0 Wh have · 0 Wh need/)).toBeInTheDocument();
+    expect(screen.getByText('Charge soon')).toBeInTheDocument();
+  });
+
+  it('does not offer another initial check-in while the first fix is pending', () => {
+    mockLive.mockReturnValue(idle({ data: { ...view, latest: null, trail: [] } }));
+    const checkIn = vi.fn();
+    mockQueuedCheckIn.mockReturnValue({ checkIn, queued: 1, flushing: false, isPending: true });
+    renderPanel();
+    expect(screen.queryByRole('button', { name: 'Check in' })).not.toBeInTheDocument();
+    expect(screen.getByText('1 queued')).toBeInTheDocument();
+    expect(checkIn).not.toHaveBeenCalled();
   });
 });

@@ -1,0 +1,1427 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-driving-dynamics",
+  "status": "DONE_SOURCE_AUDIT_REPORT",
+  "repoRoot": "D:/repos/teslasync",
+  "cwd": "D:/repos/teslasync/web",
+  "page": "web/src/features/driving/pages/DrivingDynamicsPage.tsx",
+  "componentRoot": "web/src/features/driving/components/",
+  "actor": "9761dd85-ab84-4bd7-823a-410c3fe42725",
+  "attempt": 1,
+  "deadline": {
+    "reservationUTC": "2026-10-14T01:04:13.296Z",
+    "firstCommandUTC": "2026-10-14T01:06:17.9855394Z",
+    "returnByUTC": "2026-10-14T01:24:13.296Z",
+    "hardByUTC": "2026-10-14T01:29:13.296Z",
+    "rule": "Earlier reserved or actual start +20/+25 wins; not renewed; all bounded commands under15 minutes.",
+    "returnDeadlineMissed": true
+  },
+  "firstReportNoChange": {
+    "existsBeforeWrite": false,
+    "decision": "Missing exact QA report created only. Accepted ride-first page needs no whole-page remigration; source findings require new parent leases.",
+    "sourceWrites": 0,
+    "testWrites": 0
+  },
+  "authorityRead": {
+    "fullOrchestrator": "docs/orchestrator-loop.md:1-296",
+    "fullDesignContract": "docs/frontend-design-contract.md:1-2539",
+    "mission43to45": "docs/frontend-mission.md:1416-1517",
+    "latestHandoff": "docs/session-handoff.md:1-47; closure504-562; conventions2219-2250",
+    "instructions": [
+      ".github/instructions/frontend-si-cutover.instructions.md:1-94",
+      ".github/instructions/react-frontend.instructions.md:1-629",
+      ".github/instructions/observability.instructions.md:1-45",
+      ".github/instructions/unit-conversion.instructions.md:1-221"
+    ],
+    "reconciliation": "Current design contract raw SI, unknown-not-zero and restrained roles govern conflicting legacy car-unit/null-to-zero/neon examples. No vendor-unit guess."
+  },
+  "phases": {
+    "closedPreserved": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "phase6": "UNFINISHED",
+    "phase7": "NOT_STARTED",
+    "sourceAcceptance": "Historical source only, NOT runtime/page acceptance"
+  },
+  "queueAuthority": {
+    "file": "migration-queue.md",
+    "reservationLineFirstRead": 393,
+    "reservationLineLaterRead": 401,
+    "acceptedPhase5LineFirstRead": 1857,
+    "acceptedPhase5LineLaterRead": 1865,
+    "acceptedItem": "phase5-page-driving-driving-dynamics",
+    "commit": "31e55fa5a297b8a6e6e1dc6888a981391e65742b",
+    "limit": "Historical external usage-manifest test startup failure, zeroexecuted. Historical ESLint/style0 not rerun.16 boundaries/4 groups source accepted only.",
+    "concurrentReads": "Parent changed queue line positions during audit. Exact attached rows belong to read snapshot, not lock/Git verification.",
+    "rawExactRow": "| [~] | 6 | phase6-qa-driving-driving-dynamics | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-driving-driving-dynamics.json | phase5-page-driving-driving-dynamics | 1 | conservative reservation=2026-10-14T01:04:13.296Z; return=2026-10-14T01:24:13.296Z; hard=2026-10-14T01:29:13.296Z; actor=9761dd85-ab84-4bd7-823a-410c3fe42725; LastConsumed=-1 | - | CurrentacceptedDrivingDynamicsPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Physicalsign/series/SI/preferences/scopes/denominators/trust/unknownzero/actions/sections; no remigration. Historical start: -; rolling exact reservation only/NOT running, no browser lock. Actual builtin background launch accepted; no browserlock. |",
+    "rawAcceptedRow": "| [x] | 5 | phase5-page-driving-driving-dynamics | original-page-migration | web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx; web\\src\\features\\driving\\pages\\DrivingDynamicsPage.test.tsx | - | 1 | 2026-10-13T01:51:11.596Z | 31e55fa5a297b8a6e6e1dc6888a981391e65742b | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/driving-dynamics; audit=docs\\frontend-audits\\audit-page-113.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fourteenth rolling refill from actual16-runtime census (AlertRules since concluded): genuinely unstarted originalpage/exclusivepair, not wholepage rework/prior no-output/provenance/new audit. Actor pending; no runtime/QA/source delivery inferred from reservation. Actual fresh actor=21165bf9-070f-48a5-8c6e-d27da5f3d586 successfully launched, exact existing original-fresh-page; source/native/behavioral evidence not yet delivered. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; ActualREADterminal0/idle exclusivepair/scopedlogverified; SOURCEONLY externalusage-manifeststartupVitest1 zeroexecuted no pass. SIXTEENwidgetboundaries/neutraldisclaimer FOURsections/originalassertions retained; ESLint/style0. No Type/nativeQA/runnerretry/catalogbypass. Existingparentcatalogroot normalclosedbutreceiptremainsunexecutedhistorical source-only/no applicationacceptance. Otherindependentshared/range/trustneedsreported notmasked.; commit=31e55fa5a297b8a6e6e1dc6888a981391e65742b; pushed. |"
+  },
+  "routes": [
+    {
+      "path": "/driving-dynamics",
+      "mount": "web/src/App.tsx:786",
+      "lazy": "web/src/App.tsx:123; web/src/lib/routeLoaders.ts:41",
+      "scope": "web/src/lib/workspaceScope.ts:42,95-135,155-166",
+      "vehicle": true,
+      "range": true,
+      "runtime": "NOT RUN"
+    }
+  ],
+  "workspace": {
+    "vehicle": "Page94-96 uses useSelectedVehicle; hook48-74 known URL vehicle_id > store > first fleet vehicle,87-138 deliberate selection URL synchronization; no local page vehicle picker.",
+    "range": "Page140-150 uses timezone,startInstant,endInstantExclusive. useRangeState298-318 ignores page persistKey on header-owned route;656-683 derives rolling or calendar/DST instants. No duplicate range picker.",
+    "selection": "Drive URL selector independent business state; page101,167-183,201-204. pickDynamicsDrive8-22 URL > open > newest; mergeOpenDrives25-33 merges capped range rows with open records from latest5.",
+    "queryBounds": "useDriving107-131 sends bothbounds/vehicle_id/limit, enabled by vehicle and cancellation signal; range1000/latest5. useVehicles385-411 motor key includes vehicle/limit/start/end, preserves enabled/refetchInterval. Selected history200 samples; open polling, closed pollingfalse.",
+    "endWindow": "pickDynamicsDrive36-47 closed end or now +1000ms; page173-183 memo keyed selectedDrive. Exact backend resolution/open-end progression remains C02.",
+    "realWorkspaceValues": "NOT ACCESSED: source wiring only, no real drive/identity/location/API data."
+  },
+  "counts": {
+    "primaryFiles": 28,
+    "primaryPhysicalLines": 3085,
+    "pagePhysicalLines": 395,
+    "pagePlusDirectWidgetFiles": 17,
+    "widgetBoundaries": 16,
+    "visualSourceFiles": 21,
+    "visualSourcePhysicalLines": 2604,
+    "nonvisualSourceFiles": 7,
+    "pageSections": 4,
+    "pageCardGridCalls": 3,
+    "pageDynamicsPlacementCalls": 6,
+    "sourceDefinitionTags": {
+      "GlassPanel": 12,
+      "LayoutCard": 8,
+      "ChartCard": 3,
+      "ChartContainer": 3,
+      "EmbeddedChart": 1,
+      "OperationalBrief": 2,
+      "Select": 1,
+      "Link": 2,
+      "StaleRefreshWarning": 14
+    },
+    "chartFrames": 7,
+    "numericChartSeries": 11,
+    "meaning": "Exact JSX/source definitions, not mounted DOM counts. GlassPanel12 includes per-drive coach table intentionally not mounted; active coach surfaces6. Shared internal cards/controls excluded from definition counts."
+  },
+  "sections": [
+    {
+      "name": "Trip review",
+      "lines": [
+        194,
+        240
+      ],
+      "widgets": [
+        "DynamicsTripToolbar",
+        "RideOverview",
+        "PowertrainSummary"
+      ],
+      "preserved": "Drive selector, recorded distance/duration/used and recovered energy, average/peak speed,battery,addresses,timestamps,detail navigation; motor samples not inferred trip totals."
+    },
+    {
+      "name": "Inside this ride",
+      "lines": [
+        243,
+        275
+      ],
+      "widgets": [
+        "MotorSamplesBrief",
+        "MotorEfficiencyInsights",
+        "MotorHistoryCharts",
+        "DrivingTips"
+      ],
+      "preserved": "Six metrics, torque/power/thermal insights,3 traces/6 series, measurement-qualified guidance; same200sample window, no live-fill."
+    },
+    {
+      "name": "Vehicle now",
+      "lines": [
+        280,
+        361
+      ],
+      "widgets": [
+        "LiveSourceWarnings",
+        "LiveMotorStatus",
+        "PedalUsage",
+        "GrokDynamicsBriefing",
+        "SpeedGearPanel",
+        "GForcePanel",
+        "AutopilotSection"
+      ],
+      "preserved": "Motor/dynamics/vehicle/cruise/follow independent sources; signed torque/RPM/axes, temperature,gear,nullable pedals and true/false/unknown brake; loaded speeds not selected/current; trusted state speed distinct from historical cruise."
+    },
+    {
+      "name": "Beyond this ride",
+      "lines": [
+        365,
+        390
+      ],
+      "widgets": [
+        "DrivingCoachSection",
+        "DriveAnalyticsSection"
+      ],
+      "preserved": "Fixed30day coaching with6 active surfaces; showPerDriveScores=false at375 is accepted choice, not new null deletion. Loaded-trip speed distribution/scatter/latest20 power-energy profile retain physical definitions."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Drive selection",
+      "source": "driving-dynamics-modernization/DynamicsTripToolbar.tsx:50-59; page201-204",
+      "mechanism": "Shared labeled Select stable dynamics-drive id, URL change; disabled nooptions. Not activated."
+    },
+    {
+      "name": "Trip details",
+      "source": "driving-dynamics-modernization/RideOverview.tsx:59-62",
+      "mechanism": "Native Link /drives/{id}, min-h-11; not activated."
+    },
+    {
+      "name": "Physics cockpit",
+      "source": "driving-dynamics/GrokDynamicsBriefing.tsx:195-200",
+      "mechanism": "Native Link /physics-cockpit; F07; not activated."
+    },
+    {
+      "name": "Source retries",
+      "source": "page210,213; PowertrainSummary51,68-69; MotorSamplesBrief50; MotorHistoryCharts48,52-53,74,116,154; DrivingTips43,56-57; LiveMotorStatus117-122; PedalUsage62-67; GForcePanel45,68; LiveSourceWarnings35-50; DrivingCoachSection119",
+      "mechanism": "Actual matching refetch callbacks; shared retained-warning retry. No request executed."
+    },
+    {
+      "name": "Composite retry",
+      "source": "AutopilotSection128-132; GrokDynamicsBriefing56-59,109-112",
+      "mechanism": "Contributing source refetch, independent live warnings still individually retry. Not executed."
+    },
+    {
+      "name": "Legend preferences",
+      "source": "MotorHistoryCharts29-31,90-92,128-130,166-168; DriveAnalyticsSection229-242",
+      "mechanism": "motor-power-history/motor-torque-history/motor-rpm-history/driving-dynamics-power-profile identities retained, not mutated."
+    },
+    {
+      "name": "Chart controls/export",
+      "source": "MotorHistoryCharts65-77,107-119,145-157; DriveAnalyticsSection148-161,177-185,209-227; ChartContainer471-483,721-734",
+      "mechanism": "6 exportable frames,3 history toolbars; shared PNG/SVG/copy-image and opt-in fullscreen. CSV requires exportData absent here; C05. No download/clipboard/browser action."
+    }
+  ],
+  "physicalDefinitions": [
+    {
+      "source": "api/types.ts:1348-1357; MotorHistoryCharts32-40",
+      "meaning": "Documented V*I pack power splits nonnegative drive power_kw and reverse-flow magnitude regen_kw. Metric adapters *1000 toW. No guessed vendor normalization/signed-net reconstruction."
+    },
+    {
+      "source": "driving-dynamics/helpers.ts:54-93",
+      "meaning": "Finite reported-axle sums, signed torque mean/max. highTorquePct numerator=sum>200Nm, denominator=finite torque sums, not allrows/time/driving score. Thermal mean uses hotter reported motor eachsample, not per-axle/time weighting. totalReadings=returned rows, not finite count for every field."
+    },
+    {
+      "source": "api/types.ts:1321-1340,1378-1388; GForcePanel22-40; LiveMotorStatus42-54; PedalUsage19-27",
+      "meaning": "Nm, RPM explicitly non-SI, Celsius, signed g right/forward positive. Magnitude requires both finite axes. Pedals0..100 and false brake retained. Source axis not0 forunknown; F04/F08 presentation losses."
+    },
+    {
+      "source": "grokDynamics103-113; GrokDynamicsBriefing68-70,140-157",
+      "meaning": "Rear absolute torque/(frontabsolute+rearabsolute)*100; shown only both finite axles and total>=1Nm. Abs legitimate labeled magnitude share, not blanket signed conversion. Tiny/zero total unknown."
+    },
+    {
+      "source": "SpeedGearPanel46-55,99-107; DriveAnalyticsSection78-127,178-180,211-242",
+      "meaning": "Mean of supplied non-null trip avgSpeedMps, max of maxSpeedMps, not weighted. Display-unit speed buckets count trips. Scatter avgPowerW/1000 vs display distance, not acceleration/peak. Latest20 profile avgPowerW/1000 leftkW and regenEnergyWh/1000 rightkWh. Not complete-range aggregate."
+    },
+    {
+      "source": "DrivingCoachSection45-54,94-115,146-164; useDriving338-345; AutopilotSection65-112",
+      "meaning": "Fixed30day response; explicit Wh/km adapts Wh/m at metric boundary and display prefs, not vendor guess. Style/pattern server total denominator, missing analyzed count F03. Current speed trusted+finite SI; independent cruise historical; follow suffix is bars not metres. Backend coach algorithm/population/continuous freshness not newly verified."
+    }
+  ],
+  "states": {
+    "loading": "Page busy, not destructive loading/error. PageLayout11 delegates PageContainer; PageContainer243-256 replaces children only explicit loading/error/empty, none provided.4 groups/16 boundaries remain. Source skeletons suppress invented values.",
+    "initialPaused": "F02: pending paused has isLoadingfalse; DataState isRefreshBlocked carried but StaleRefreshWarning59 suppresses no-data notice. Pause not authoritative empty/offline.",
+    "fatal": "Source QueryError+real refetch and local SectionErrorBoundary; range failure not global prop erasing current/coach neighbors.",
+    "retained": "DataState184-260 retains bytes, fatal only no retained data; same keys in history/live warnings. C04 null payload and C07 legacy insight trust remain bounded needs.",
+    "empty": "Panel shell+EmptyState/unknown metric placeholders, no broad data&&panel gate. Explicit accepted perdrive omission preserved. F02/F03 not waived.",
+    "retry": "Real per-source callbacks, not executed; F06 duplicate same-history notices, never merge distinct live sources.",
+    "unknownZero": "formatMetric24-44 keeps missing/invalid unknown. Finite0/false and signed raw values preserved before F04/F08 losses; missing analyzed counts0 is F03.",
+    "provenance": "Recorded totals, selected sample window,current projections,loaded subset and30day coach separate. Motor ts not fetch time; gobservedAt explicitlynull. Poll/SSE/request success no continuous freshness/completeness guarantee."
+  },
+  "i18n": {
+    "staticOccurrences": 303,
+    "distinctKeys": 218,
+    "missingCanonicalOccurrences": 0,
+    "dynamicCallLines": 3,
+    "checkedDynamicKeys": [
+      "dynamics.coach.styles.efficient",
+      "dynamics.coach.styles.moderate",
+      "dynamics.coach.styles.aggressive",
+      "dynamics.coach.impact.high",
+      "dynamics.coach.impact.medium",
+      "dynamics.coach.impact.low"
+    ],
+    "limit": "Canonical existence only, no generator/guards/translation-quality pass. rec.tip/unrecognized enum strings remain backend evidence, not invented translated identity."
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "rule": "category-import",
+      "priority": "P2",
+      "instances": 10,
+      "unit": "runtime import statement",
+      "sites": [
+        "driving-dynamics-modernization/DrivingTips.tsx:3",
+        "driving-dynamics-modernization/DynamicsPlacement.tsx:2",
+        "driving-dynamics-modernization/DynamicsTripToolbar.tsx:3",
+        "driving-dynamics-modernization/GForcePanel.tsx:3",
+        "driving-dynamics-modernization/LiveMotorStatus.tsx:4",
+        "driving-dynamics-modernization/MotorHistoryCharts.tsx:8",
+        "driving-dynamics-modernization/PedalUsage.tsx:4",
+        "driving-dynamics-modernization/PowertrainSummary.tsx:2",
+        "driving-dynamics-modernization/RideOverview.tsx:3",
+        "driving-dynamics-modernization/SpeedGearPanel.tsx:2"
+      ],
+      "mechanism": "Runtime layout-reference import bypass; components/layout/index.ts10-12 already exports same symbols.9 matched type-only stat-reference imports erased/exempt.",
+      "fix": "Separate caller-only @/components/layout adoption; no barrel expansion."
+    },
+    {
+      "id": "F02",
+      "rule": "initial-paused-as-empty",
+      "priority": "P1",
+      "instances": 1,
+      "unit": "initial selector state mechanism",
+      "sites": [
+        "web/src/features/driving/pages/DrivingDynamicsPage.tsx:206-217",
+        "driving-dynamics-modernization/DynamicsTripToolbar.tsx:56-57",
+        "web/src/api/dataState.ts:194-220",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:57-60"
+      ],
+      "mechanism": "No retained rows+initial paused: isLoadingfalse, no fatal/stale notice; selector says No drives in this range without resolved evidence.",
+      "fix": "Exact parent-owned pending/initialPaused presentation and real retry, no asserted device offline/invented error."
+    },
+    {
+      "id": "F03",
+      "rule": "unknown-denominator-as-zero",
+      "priority": "P1",
+      "instances": 2,
+      "unit": "visible count fallback",
+      "sites": [
+        "driving-dynamics/DrivingCoachSection.tsx:136",
+        "driving-dynamics/DrivingCoachSection.tsx:201"
+      ],
+      "mechanism": "total_drives_analyzed ??0 claims0drives during unresolved/loading/fatal source, including provenance reason.",
+      "fix": "Missing count unknown/loading/fatal; measured0 only resolved evidence; preserve denominator."
+    },
+    {
+      "id": "F04",
+      "rule": "signed-reading-loss",
+      "priority": "P1",
+      "instances": 1,
+      "unit": "signed reading presentation",
+      "sites": [
+        "driving-dynamics/GrokDynamicsBriefing.tsx:229-233"
+      ],
+      "mechanism": "Lateral accelerometer narrative applies Math.abs(read.lateralG), erasing left/right sign preserved in signed metric/type.",
+      "fix": "Retain sign or explicitly qualified magnitude+direction decision; keep legitimate axle-share abs."
+    },
+    {
+      "id": "F05",
+      "rule": "chart-preference-bypass",
+      "priority": "P2",
+      "instances": 8,
+      "unit": "fixed series color prop",
+      "sites": [
+        "driving-dynamics-modernization/MotorHistoryCharts.tsx:83",
+        "driving-dynamics-modernization/MotorHistoryCharts.tsx:84",
+        "driving-dynamics-modernization/MotorHistoryCharts.tsx:91",
+        "driving-dynamics-modernization/MotorHistoryCharts.tsx:92",
+        "driving-dynamics-modernization/MotorHistoryCharts.tsx:129",
+        "driving-dynamics-modernization/MotorHistoryCharts.tsx:130",
+        "driving-dynamics-modernization/MotorHistoryCharts.tsx:167",
+        "driving-dynamics-modernization/MotorHistoryCharts.tsx:168"
+      ],
+      "mechanism": "Fixed literals at6series+2gradients bypass saved palette role. Vendor props exempt static-inline-style but not MDC034 preference requirement.",
+      "fix": "Existing palette owner adoption with stable series/points/signs/gaps/axes/legend/export, no newpalette/sampling."
+    },
+    {
+      "id": "F06",
+      "rule": "duplicate-source-notices",
+      "priority": "P2",
+      "instances": 3,
+      "unit": "excess notice beyond one shared source",
+      "sites": [
+        "driving-dynamics-modernization/PowertrainSummary.tsx:50",
+        "operationalbrief-a-m/MotorSamplesBrief.tsx:41",
+        "driving-dynamics-modernization/MotorHistoryCharts.tsx:57",
+        "driving-dynamics-modernization/DrivingTips.tsx:42"
+      ],
+      "mechanism": "4 StaleRefreshWarnings use same vehicle/limit200/bounds key useVehicles398;1 event produces3excess notices/retries.",
+      "fix": "One group history notice+retry, preserve panels/local fatal/empty; never collapse independent live sources."
+    },
+    {
+      "id": "F07",
+      "rule": "mobile-target-allocation",
+      "priority": "P1",
+      "instances": 2,
+      "unit": "control without below-md44 allocation",
+      "sites": [
+        "driving-dynamics-modernization/DynamicsTripToolbar.tsx:58",
+        "driving-dynamics/GrokDynamicsBriefing.tsx:195-200"
+      ],
+      "mechanism": "Select auto uses min-h-d-row (Select38) allowing32px compact (index.css236-241,Tailwind268); cockpit Link text-only inline without44floor. No caller exception.",
+      "fix": "Caller-only mobile44 floor, restore >=md compact; preserve native name/navigation. Measured rectangles NOT RUN."
+    },
+    {
+      "id": "F08",
+      "rule": "measurement-clamped-for-display",
+      "priority": "P1",
+      "instances": 1,
+      "unit": "shared clamp mechanism",
+      "sites": [
+        "web/src/components/charts/BipolarBar.tsx:80-82",
+        "web/src/components/charts/BipolarBar.tsx:94-106",
+        "driving-dynamics-modernization/LiveMotorStatus.tsx:103-114"
+      ],
+      "mechanism": "Clamp to scale precedes visible and ARIA formatting; valid beyond-scale torque/RPM displayed as limit rather than original finite signed measurement.",
+      "fix": "Separate existing BipolarBar.tsx/BipolarBar.test.tsx root; raw label/accessibility, bounded geometry separately, explicit out-of-scale context; no blanket source clamp/abs/newgauge."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "promoted": false,
+      "sites": [
+        "page145-154",
+        "useMotorStats7",
+        "SpeedGearPanel46-55,99-107",
+        "DriveAnalyticsSection119-126"
+      ],
+      "need": "Complete-range/time-weighted requirement needs backend totals/pagination/bounds evidence. Current1000trips/200samples/latest20 caps and subset disclaimers not automatic defects; no API checked."
+    },
+    {
+      "id": "C02",
+      "promoted": false,
+      "sites": [
+        "pickDynamicsDrive36-47",
+        "page173-183"
+      ],
+      "need": "Verify +1000ms exclusive boundary precision and open memo end progression on structurally unchanged drive; no guessed bounds or vendor units."
+    },
+    {
+      "id": "C03",
+      "promoted": false,
+      "sites": [
+        "helpers65-70",
+        "LiveMotorStatus42-48",
+        "grokDynamics128-144,157-159,176-205",
+        "GrokDynamicsBriefing216-227"
+      ],
+      "need": "Qualify partial reported-axle sum and generic load narrative when torque missing; preserve accepted sum, no invented missing axle0. Both-axle share already guarded."
+    },
+    {
+      "id": "C04",
+      "promoted": false,
+      "sites": [
+        "useVehicles368-374,425-431",
+        "api/dataState194-232",
+        "LiveMotorStatus117-123",
+        "PedalUsage62-68"
+      ],
+      "need": "hasData=data!==undefined treats successful null snapshot as retained on error; exact authoritative-empty versus usable-payload trust needs domain decision, not model-wide rewrite."
+    },
+    {
+      "id": "C05",
+      "promoted": false,
+      "sites": [
+        "MotorHistoryCharts64-78,106-120,144-158",
+        "DrivingCoachSection213-230",
+        "DriveAnalyticsSection176-185",
+        "ChartContainer471-477,721-726"
+      ],
+      "need": "P199 existing nonvisual-data issue:3history/scatter/weeklytrend optout not equivalent series alternative. Scatter comment claimsCSV but exportData absent; CSV action notwired. Preserve image export; authorize exact accessible-data/export adoption/equivalent decision, no export executed."
+    },
+    {
+      "id": "C06",
+      "promoted": false,
+      "sites": [
+        "DrivingCoachSection123,157-173,207,227",
+        "DriveAnalyticsSection165,192-198,232-242",
+        "LiveMotorStatus29-33,61,92,105-113"
+      ],
+      "need": "P199 remaining neon/fixed colors/viewport grid and arbitrary geometry review; exact roles/theme contrast/narrow allocation evidence before promotion. No blanket recolor, guessed contrast or wholefile remigration."
+    },
+    {
+      "id": "C07",
+      "promoted": false,
+      "sites": [
+        "MotorEfficiencyInsights35-43,55-108",
+        "useMotorStats35-54",
+        "LiveSourceWarnings23-34"
+      ],
+      "need": "P199 historical raw isError/local fatal-refresh gap; neighbors retain samehistory warnings. Exact retained-partial/fatal/paused/observation-age proof before narrow presenter/hook lease, no invented continuous freshness."
+    }
+  ],
+  "queueDedup": {
+    "sourceFileMatchedRows": [
+      {
+        "line": 395,
+        "item": "phase6-qa-driving-driving-dynamics"
+      },
+      {
+        "line": 604,
+        "item": "audit-page-113"
+      },
+      {
+        "line": 1150,
+        "item": "phase3-full-test-driving-dynamics-query-provider-fixture"
+      },
+      {
+        "line": 1152,
+        "item": "phase3-full-test-driving-motor-summary-fixture"
+      },
+      {
+        "line": 1468,
+        "item": "phase3-suite939-file-013"
+      },
+      {
+        "line": 1542,
+        "item": "phase3-suite939-file-087"
+      },
+      {
+        "line": 1859,
+        "item": "phase5-page-driving-driving-dynamics"
+      }
+    ],
+    "sameLookingNotDuplicate": [
+      "2032 phase6-drivetrain-live-isolation-trust owns other LiveMotorPanel/isolation",
+      "2034 phase6-live-vehicle-identity-reset owns useVehicleLive scalar merge, not these query/gauge mechanisms",
+      "479 phase6-native-drives-preview-mobile-target owns other DriveHistory preview action"
+    ],
+    "bipolarPhase6MatchLines": 0,
+    "history": "P199 docs/frontend-inventory.md164/audit-page-113 already records import/palette/count/trust/export/geometry review. Refresh evidence, not new wholepage objective. Exact file/mechanism scans found closed audits/test repairs/migration, not matching corrective leases; scope of absence limited to logged searches.",
+    "policy": "All findings unqueued, candidates separately unpromoted. Parent must reread livequeue and reserve exact mechanism. No queue/handoff edits or closed-phase restart."
+  },
+  "preciseNeeds": [
+    "Parent exact leases for F02 firstpaused selector, F03 missingcoach count, F04 lateral sign, F07 drive-selector/cockpit mobile allocation.",
+    "Separate shared BipolarBar.tsx and verified existing BipolarBar.test.tsx root F08; rawmeasurement separate from gauge geometry.",
+    "10caller category imports already exported, single history notice owner and stable existing palette adoption; no competing shared APIs.",
+    "P199 candidates C01-C07 need exact evidence/disposition, not automatic requeue/backend/catalog expansion.",
+    "Later authorized safe mounted QA on parent5173 with explicit lock and installed Edge channel msedge; no downloads. Matrix320/375/390/430/768/1024/1280/1440/1920/2560,narrowcards,themes,RTL,200%text,forcedcolors,reducedmotion/lowbandwidth,allsource states/actions."
+  ],
+  "exceptions": [
+    "2dynamic width styles DrivingCoachSection160,255 are acceptable, not staticinline violations.",
+    "9type-only stat-reference imports erased; excluded from10 runtime violations.",
+    "PageLayout delegates actual PageContainer, no missing wrapper.",
+    "Shared UI native HTML and chart API props expected; source vendor props not static-inline violations.",
+    "Accepted showPerDriveScores=false not new nullhidden section.",
+    "Axle abs share/intensity thresholds and combined-g magnitude legitimate; no blanket abs/clamp."
+  ],
+  "limits": {
+    "nativeAcceptance": "NOT RUN",
+    "runtimeAcceptance": "NOT RUN",
+    "pageAcceptance": "NOT RUN",
+    "browser": "NOT RUN, no grant/lock",
+    "server": "Parent-owned5173 handoff only; not probed/restarted/stopped",
+    "tests": {
+      "status": "NOT RUN",
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "meaning": "No execution, not pass"
+    },
+    "lint": "NOT RUN",
+    "build": "NOT RUN",
+    "globalTSC": "NOT RUN; npx tsc --noEmit not invoked",
+    "nativeAuditTools": "NOT RUN; bounded native text/JSON/hash reads only",
+    "Git": "NOT RUN",
+    "API": "NOT RUN",
+    "device": "NOT RUN",
+    "mutations": "NOT RUN",
+    "screenshots": "NOT RUN",
+    "data": "No realdrive/identity/location read",
+    "other": "No installs/servers/Docker/subagents/helpers/extensions/heartbeats or source/test/backend/catalog/config/queue/handoff writes",
+    "scan": "Regex not AST/runtime certification;28primaryfiles and bounded necessary shared/hook reads only, not repository/backend audit. Backend rules11-14 NA/notchecked. Source-derived implications not executedfixtures."
+  },
+  "commandFailures": [
+    {
+      "exit": 1,
+      "reason": "Quote regex ScriptBlock.Create parse failure; scan not executed; corrected once, raw retained."
+    },
+    {
+      "exit": 1,
+      "reason": "Wrong assumed PageLayout path; corrected real category barrel to layout-reference; raw retained."
+    },
+    {
+      "exit": 1,
+      "reason": "Overlong report tool launch os error206, shell1031; not executed/no reportwrite; recovered smaller direct artifact command."
+    }
+  ],
+  "scannerCorrection": "First dynamic diagnostic overbroad listed staticcalls; not used as dynamic count. Corrected regex produced3dynamic lines; raworiginal retained.",
+  "release": {
+    "report": "RELEASED on terminal delivery",
+    "log": "RELEASED on terminal delivery",
+    "allCommands": "RELEASED, synchronous bounded commands complete; none launched inbackground",
+    "sourceClaims": "NONE acquired",
+    "browserLock": "NONE acquired",
+    "allReportLogCommandClaimsReleased": true,
+    "noPostReturnWrites": true
+  },
+  "snapshotUTC": "2026-10-14T01:25:26.2469426Z",
+  "createdAt": "2026-10-14T01:25:26.2469426Z",
+  "sourcePins": [
+    {
+      "sha256": "d3c4b805964d099d9423d03cc9cbff832b358c0f0df02e9772433659837ee4a9",
+      "lineCount": 395,
+      "file": "web/src/features/driving/pages/DrivingDynamicsPage.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "53983b78321f370151c12b3d33bfc23c6975d13e33da7a727dc816a1ef568598",
+      "lineCount": 61,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/DrivingTips.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "074524ce27677415941835226b740b931f8ed9d256895ce661dca6a0ff1c84c4",
+      "lineCount": 18,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/DynamicsPlacement.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "43a3b165c074a31bbb83829fca37b101eadb90e9ba0eab8701d9a9d05313c12e",
+      "lineCount": 63,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/DynamicsTripToolbar.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "41e957f419eb2eebade0298e302efa036ad81e749dc5e9f57d18ea1ba60d9d5e",
+      "lineCount": 72,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/GForcePanel.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "068b156fd75eca5cef8aa9ea527d016ac1f9537b0a1f3a922b562c8b0dd933d1",
+      "lineCount": 12,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/index.ts",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "8d6a74a3cfa8a96bf35ecb81222bc2f875465f284150966416e5e2d1438f3858",
+      "lineCount": 126,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/LiveMotorStatus.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "18247866ab09b6031f9992c0529cb1475f9486b67891bd116946ec64665eb464",
+      "lineCount": 55,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/LiveSourceWarnings.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "af2c0209cbe95c83cb587fe92fa71e91d0d230953e9cb85c949a330bcaeb2068",
+      "lineCount": 180,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/MotorHistoryCharts.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "60d2e855d70fc5e8e01dc21ac8f27f405a4ed1c419b00891f296a8239eeefa36",
+      "lineCount": 71,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/PedalUsage.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "b196961d8ac62c72e3320a0e7ae90711453a03cc9e712217a54e814542e75bfd",
+      "lineCount": 74,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/PowertrainSummary.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "c6a5d15e7db579ed07d14eaa626bdf7b53df831ed0920ca5915c8ebc062e6ad1",
+      "lineCount": 104,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/RideOverview.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "8e04224a7c078a72c32e1c1236817dd86e140b776e4bdfde289d70a54587ae4b",
+      "lineCount": 11,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/SignedMotorReading.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "5bf4c658864f446d282ab194bc46898811886f2d4aabcaa54fb9e3e260512867",
+      "lineCount": 111,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/SpeedGearPanel.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "7043588191d8c2fd6f806f6d80007e329f49ee9434ad38c45c10d507d4432bc8",
+      "lineCount": 22,
+      "file": "web/src/features/driving/components/driving-dynamics-modernization/useMotorEvidence.ts",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "d4926b0be3d154510b7a0aa48df7ad98804ff0afa25ef4d238de0a0ce02ce27a",
+      "lineCount": 143,
+      "file": "web/src/features/driving/components/driving-dynamics/AutopilotSection.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "31d359e3357c994b3a3d0529f9640b397433be3a2255422043869069fb513a31",
+      "lineCount": 113,
+      "file": "web/src/features/driving/components/driving-dynamics/MotorEfficiencyInsights.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "74d8cb4bc1f34e58745adf3aa5673a4a249cede855897a60cf208dda4351ef3d",
+      "lineCount": 324,
+      "file": "web/src/features/driving/components/driving-dynamics/DrivingCoachSection.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "4b4e00ea6f339d4de1fbe80628413ca1483541582bfcafc9dbb4aa60fe60dd66",
+      "lineCount": 250,
+      "file": "web/src/features/driving/components/driving-dynamics/DriveAnalyticsSection.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "06b393166890d8783d17f68fdb311add1bb8668f30fe460e126bcf81f9ff3085",
+      "lineCount": 265,
+      "file": "web/src/features/driving/components/driving-dynamics/GrokDynamicsBriefing.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "2bb5d1dec7561bee563cf01fa3398099c79655b615afd4996ab67f4d3407e6c8",
+      "lineCount": 95,
+      "file": "web/src/features/driving/components/driving-dynamics/helpers.ts",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "542951ca7ea7ce01704e43e1e59350055ba78b3119b59069dded58235063cd80",
+      "lineCount": 235,
+      "file": "web/src/features/driving/components/driving-dynamics/grokDynamics.ts",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "6a06736f9cac1ae4a5fbd28dbd15f58c1f85b2a47776972fe5d8f99f914379aa",
+      "lineCount": 55,
+      "file": "web/src/features/driving/components/driving-dynamics/useMotorStats.ts",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "9bfaf7c08226092d381f44d2bf6aca28e7d987e10b96f81b6ef527c9e2a6c671",
+      "lineCount": 47,
+      "file": "web/src/features/driving/components/driving-dynamics/pickDynamicsDrive.ts",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "87d086e297462dbf309869723a05060b3b0ebb3013920c5ee21eefa37ec89d38",
+      "lineCount": 15,
+      "file": "web/src/features/driving/components/driving-dynamics/index.ts",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "3eaaaa88adb67b2029f5b9c2657012e30f3e65c1c127703cf893258a71f39902",
+      "lineCount": 52,
+      "file": "web/src/features/driving/components/operationalbrief-a-m/MotorSamplesBrief.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+      "lineCount": 53,
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba",
+      "lineCount": 63,
+      "file": "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+      "initialPinUTC": "2026-10-14T01:10:47.5631243Z",
+      "unchangedAtReportWrite": true
+    }
+  ],
+  "supportPins": [
+    {
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "lineCount": 454,
+      "file": "web/src/api/hooks/useDriving.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "lineCount": 1898,
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "f536fbdb5705d3abb19869b0b5d73e65e72fb5e992f50e664754e4fa4f76853e",
+      "lineCount": 683,
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "lineCount": 4194,
+      "file": "web/src/api/types.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lineCount": 434,
+      "file": "web/src/api/dataState.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lineCount": 65,
+      "file": "web/src/hooks/useDataState.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lineCount": 194,
+      "file": "web/src/hooks/useUnits.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "lineCount": 694,
+      "file": "web/src/hooks/useRangeState.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lineCount": 174,
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "e443db81ed45c86fac89e3f3b264478872e2f4f6671bac08e45f6e9ed571e0ab",
+      "lineCount": 114,
+      "file": "web/src/hooks/useSignalQueryInvalidation.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lineCount": 168,
+      "file": "web/src/lib/workspaceScope.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "lineCount": 127,
+      "file": "web/src/lib/routeLoaders.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lineCount": 919,
+      "file": "web/src/App.tsx",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "16105443f3f6c85fc73ae940f65f8b61f751a1fb30e77369b229d24ec7dfc642",
+      "lineCount": 27,
+      "file": "web/src/components/layout/index.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lineCount": 17,
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "7003a02baede8079ba897b91a0c84b68a0ea5ecca5607587dd23f5210d0148cf",
+      "lineCount": 44,
+      "file": "web/src/components/layout/layout-reference/CardGrid.tsx",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "42fa701bc8905a582347cffe2aa644af62ae09fbacf624f2963049071e4a15b8",
+      "lineCount": 66,
+      "file": "web/src/components/layout/layout-reference/layoutPolicy.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "lineCount": 48,
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lineCount": 115,
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lineCount": 119,
+      "file": "web/src/components/ui/Select.tsx",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lineCount": 1006,
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "lineCount": 137,
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "lineCount": 38994,
+      "file": "web/src/i18n/en.json",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "dd11232a7d6cb103a0656db6c1e548541a991245c4df18633a6ac0ac1eb8e037",
+      "lineCount": 2102,
+      "file": "web/src/index.css",
+      "snapshotUTC": "2026-10-14T01:15:31.3719693Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lineCount": 458,
+      "file": "web/src/api/client.ts",
+      "snapshotUTC": "2026-10-14T01:17:32.4812491Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "3ef90d33b3ac0d4c15462db03d5560ec91f33513dd7e5aec95be9ba59fb77e64",
+      "lineCount": 156,
+      "file": "web/src/components/charts/BipolarBar.tsx",
+      "snapshotUTC": "2026-10-14T01:17:32.4812491Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lineCount": 259,
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "snapshotUTC": "2026-10-14T01:17:32.4812491Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "89663c0a141f6d08d9c0f7f3a2724a3f592dbf7d6328aef96a88b5b8d79e6a29",
+      "lineCount": 323,
+      "file": "web/tailwind.config.js",
+      "snapshotUTC": "2026-10-14T01:17:32.4812491Z",
+      "unchangedAtReportWrite": true
+    },
+    {
+      "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "lineCount": 1460,
+      "file": "docs/frontend-inventory.md",
+      "snapshotUTC": "2026-10-14T01:17:32.4812491Z",
+      "unchangedAtReportWrite": true
+    }
+  ],
+  "rawBoundedCommands": [
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:06:17.9855394Z",
+      "rawCommand": "Get-ChildItem D:\\repos\\teslasync\\docs -Directory; Get-ChildItem D:\\repos\\teslasync -File; Get-ChildItem D:\\repos\\teslasync\\docs -Recurse -File | Where-Object { $_.Name -match \"queue|handoff|orchestrator|contract|mission|instruction|driving|phase6|current|react|observability|unit\" } | Select-Object FullName",
+      "rawOutputLogLines": [
+        1,
+        392,
+        1
+      ],
+      "number": 1
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:06:27.7394773Z",
+      "rawCommand": "$paths=@(\"D:\\repos\\teslasync\\docs\\orchestrator-loop.md\",\"D:\\repos\\teslasync\\docs\\frontend-design-contract.md\",\"D:\\repos\\teslasync\\docs\\frontend-mission.md\",\"D:\\repos\\teslasync\\docs\\session-handoff.md\",\"D:\\repos\\teslasync\\migration-queue.md\"); Get-Item $paths | Select-Object FullName,Length; Get-ChildItem D:\\repos\\teslasync\\.github -Recurse -File | Where-Object { $_.Name -match \"instruction|react|frontend|observability|unit\" } | Select-Object FullName; foreach($p in $paths[0..1]) { \"FILE: $p\"; $n=0; Get-Content -LiteralPath $p | ForEach-Object { $n++; \"${n}: $_\" } }; Select-String -Path D:\\repos\\teslasync\\migration-queue.md -Pattern \"phase6-qa-driving-driving-dynamics|DrivingDynamicsPage\" | Select-Object LineNumber,Line",
+      "rawOutputLogLines": [
+        395,
+        3263,
+        1
+      ],
+      "number": 2
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:06:42.7772255Z",
+      "rawCommand": "Get-ChildItem D:\\repos\\teslasync\\.github -Recurse -File | Where-Object { $_.Name -match \"instruction|react|frontend|observability|unit\" } | Select-Object FullName; foreach($p in @(\"D:\\repos\\teslasync\\docs\\frontend-design-contract.md\",\"D:\\repos\\teslasync\\docs\\session-handoff.md\",\"D:\\repos\\teslasync\\docs\\frontend-mission.md\")) { \"FILE: $p\"; $x=Get-Content -LiteralPath $p; \"LINE_COUNT: $($x.Count)\"; Select-String -LiteralPath $p -Pattern \"^#{1,3} |phase6-qa-driving-driving-dynamics|DrivingDynamicsPage|^## (43|44|45)\" | Select-Object LineNumber,Line }; Select-String -Path D:\\repos\\teslasync\\migration-queue.md -Pattern \"phase6-qa-driving-driving-dynamics|DrivingDynamicsPage\" | ForEach-Object { $s=$_.Line; if($s.Length -gt 3500){$s=$s.Substring(0,3500)}; \"$($_.LineNumber): $s\" }",
+      "rawOutputLogLines": [
+        3266,
+        3419,
+        1
+      ],
+      "number": 3
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:07:09.0585545Z",
+      "rawCommand": "foreach($p in @(\"D:\\repos\\teslasync\\docs\\frontend-mission.md\",\"D:\\repos\\teslasync\\docs\\session-handoff.md\")) { \"FILE: $p\"; Select-String -LiteralPath $p -Pattern \"^#{1,3} |DrivingDynamics|driving-dynamics|current|CURRENT\" | ForEach-Object { \"$($_.LineNumber): $($_.Line)\" } }; Get-Item D:\\repos\\teslasync\\.github\\copilot-instructions.md,D:\\repos\\teslasync\\.github\\instructions\\frontend-si-cutover.instructions.md,D:\\repos\\teslasync\\.github\\instructions\\react-frontend.instructions.md,D:\\repos\\teslasync\\.github\\instructions\\observability.instructions.md,D:\\repos\\teslasync\\.github\\instructions\\unit-conversion.instructions.md | ForEach-Object { \"$($_.FullName) BYTES=$($_.Length)\" }; Get-Content D:\\repos\\teslasync\\.gitignore",
+      "rawOutputLogLines": [
+        3422,
+        3689,
+        1
+      ],
+      "number": 4
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:07:20.4315408Z",
+      "rawCommand": "foreach($p in @(\"D:\\repos\\teslasync\\.github\\instructions\\frontend-si-cutover.instructions.md\",\"D:\\repos\\teslasync\\.github\\instructions\\react-frontend.instructions.md\",\"D:\\repos\\teslasync\\.github\\instructions\\observability.instructions.md\",\"D:\\repos\\teslasync\\.github\\instructions\\unit-conversion.instructions.md\",\"D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx\")) { \"FILE: $p\"; $n=0; Get-Content -LiteralPath $p | ForEach-Object { $n++; \"${n}: $_\" } }; Select-String -Path D:\\repos\\teslasync\\docs\\frontend-mission.md -Pattern \"43|44|45\" | ForEach-Object { \"$($_.LineNumber): $($_.Line)\" }",
+      "rawOutputLogLines": [
+        3692,
+        5092,
+        1
+      ],
+      "number": 5
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:07:38.4289305Z",
+      "rawCommand": "Select-String -Path D:\\repos\\teslasync\\docs\\frontend-mission.md -Pattern \"43|44|45\" | ForEach-Object { \"$($_.LineNumber): $($_.Line)\" }; Get-ChildItem D:\\repos\\teslasync\\web\\src\\features\\driving\\components -File | ForEach-Object { \"$($_.Name) $($_.Length)\" }; Get-Item D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx | ForEach-Object { \"PAGE_BYTES=$($_.Length) PAGE_LINES=$((Get-Content -LiteralPath $_.FullName).Count)\" }; Select-String -Path D:\\repos\\teslasync\\web\\src\\lib\\workspaceScope.ts,D:\\repos\\teslasync\\web\\src\\App.tsx -Pattern \"DrivingDynamics|driving-dynamics\" | ForEach-Object { \"$($_.Path):$($_.LineNumber): $($_.Line)\" }",
+      "rawOutputLogLines": [
+        5095,
+        5134,
+        1
+      ],
+      "number": 6
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:07:48.6023879Z",
+      "rawCommand": "$ranges=@(@(\"docs\\frontend-mission.md\",1416,1526),@(\"docs\\session-handoff.md\",1,47),@(\"docs\\session-handoff.md\",504,564),@(\"docs\\session-handoff.md\",2219,2250)); foreach($r in $ranges){$p=Join-Path D:\\repos\\teslasync $r[0]; \"FILE: $p LINES=$($r[1])-$($r[2])\"; $a=Get-Content -LiteralPath $p; for($i=[int]$r[1];$i -le [int]$r[2];$i++){\"${i}: $($a[$i-1])\"}}; foreach($d in @(\"driving-dynamics\",\"driving-dynamics-modernization\",\"operationalbrief-a-m\")){ Get-ChildItem (\"D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\\"+$d) -File | Where-Object { $_.Name -notmatch \"test\" } | ForEach-Object { \"$($_.FullName) LINES=$((Get-Content -LiteralPath $_.FullName).Count) BYTES=$($_.Length)\" }}; Get-Content D:\\repos\\teslasync\\docs\\frontend-audits\\audit-page-113.json",
+      "rawOutputLogLines": [
+        5137,
+        6032,
+        1
+      ],
+      "number": 7
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:08:14.9045596Z",
+      "rawCommand": "$root=\"D:\\repos\\teslasync\\web\\src\\features\\driving\\components\"; $files=@(\"driving-dynamics-modernization\\DynamicsPlacement.tsx\",\"driving-dynamics-modernization\\LiveSourceWarnings.tsx\",\"driving-dynamics-modernization\\DynamicsTripToolbar.tsx\",\"driving-dynamics-modernization\\RideOverview.tsx\",\"driving-dynamics-modernization\\PowertrainSummary.tsx\",\"operationalbrief-a-m\\MotorSamplesBrief.tsx\"); foreach($f in $files){$p=Join-Path $root $f; \"FILE: $p\"; $n=0; Get-Content -LiteralPath $p | ForEach-Object {$n++; \"${n}: $_\"}}",
+      "rawOutputLogLines": [
+        6035,
+        6409,
+        1
+      ],
+      "number": 8
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:08:26.0279866Z",
+      "rawCommand": "$root=\"D:\\repos\\teslasync\\web\\src\\features\\driving\\components\"; foreach($f in @(\"driving-dynamics-modernization\\MotorHistoryCharts.tsx\",\"driving-dynamics-modernization\\DrivingTips.tsx\",\"driving-dynamics\\MotorEfficiencyInsights.tsx\",\"driving-dynamics-modernization\\useMotorEvidence.ts\",\"driving-dynamics-modernization\\SignedMotorReading.tsx\",\"driving-dynamics\\useMotorStats.ts\",\"driving-dynamics\\pickDynamicsDrive.ts\")){ $p=Join-Path $root $f; \"FILE: $p\"; $n=0; Get-Content -LiteralPath $p | ForEach-Object {$n++; \"${n}: $_\"}}",
+      "rawOutputLogLines": [
+        6412,
+        6910,
+        1
+      ],
+      "number": 9
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:08:35.8030034Z",
+      "rawCommand": "$root=\"D:\\repos\\teslasync\\web\\src\\features\\driving\\components\"; foreach($f in @(\"driving-dynamics-modernization\\LiveMotorStatus.tsx\",\"driving-dynamics-modernization\\PedalUsage.tsx\",\"driving-dynamics-modernization\\SpeedGearPanel.tsx\",\"driving-dynamics-modernization\\GForcePanel.tsx\",\"driving-dynamics\\AutopilotSection.tsx\")){ $p=Join-Path $root $f; \"FILE: $p\"; $n=0; Get-Content -LiteralPath $p | ForEach-Object {$n++; \"${n}: $_\"}}",
+      "rawOutputLogLines": [
+        6913,
+        7443,
+        1
+      ],
+      "number": 10
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:08:47.8778215Z",
+      "rawCommand": "$root=\"D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\driving-dynamics\"; foreach($f in @(\"helpers.ts\",\"DriveAnalyticsSection.tsx\",\"grokDynamics.ts\")){ $p=Join-Path $root $f; \"FILE: $p\"; $n=0; Get-Content -LiteralPath $p | ForEach-Object {$n++; \"${n}: $_\"}}; Select-String -Path D:\\repos\\teslasync\\web\\src\\api\\hooks\\useVehicles.ts,D:\\repos\\teslasync\\web\\src\\api\\hooks\\useDriving.ts,D:\\repos\\teslasync\\web\\src\\api\\hooks\\useTelemetry.ts -Pattern \"useMotorLatest|MotorHistoryQuery|useMotorHistory|useDriveDynamicsLatest|useDrives\\(|useVehicleState\\(|useSignalObservations\\(|useDrivingCoach|interface Motor|interface DriveDynamics|interface DriveLatest|request<|queryKey:\" | ForEach-Object { \"$($_.Path):$($_.LineNumber): $($_.Line)\" }",
+      "rawOutputLogLines": [
+        7446,
+        8199,
+        1
+      ],
+      "number": 11
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:09:01.1196455Z",
+      "rawCommand": "$root=\"D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\driving-dynamics\"; foreach($f in @(\"DrivingCoachSection.tsx\",\"GrokDynamicsBriefing.tsx\")){ $p=Join-Path $root $f; \"FILE: $p\"; $n=0; Get-Content -LiteralPath $p | ForEach-Object {$n++; \"${n}: $_\"}}",
+      "rawOutputLogLines": [
+        8202,
+        8795,
+        1
+      ],
+      "number": 12
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:09:25.3571524Z",
+      "rawCommand": "Select-String -Path D:\\repos\\teslasync\\web\\src\\api\\hooks\\useVehicles.ts,D:\\repos\\teslasync\\web\\src\\api\\hooks\\useDriving.ts,D:\\repos\\teslasync\\web\\src\\api\\hooks\\useTelemetry.ts,D:\\repos\\teslasync\\web\\src\\api\\types.ts -Pattern \"export function useMotorLatest|export function useMotorHistory|export interface MotorHistoryQuery|export function useDriveDynamicsLatest|export function useVehicleState|export function useDrives|export function useDrivingCoach|export function useDrivingScore|export function useSignalObservations|interface MotorSnapshot|interface DriveDynamicsSnapshot\" | ForEach-Object { \"$($_.Path):$($_.LineNumber): $($_.Line)\" }; Select-String -Path D:\\repos\\teslasync\\migration-queue.md -Pattern \"dynamics|grokDynamics|MotorEfficiencyInsights|computeMotorStats|initial.paused|initialpaused|history.*sign|signed.*power|raw.*SI|motor.*trust|cruise.*trust\" | Where-Object { $_.Line -match \"\\| 6 \\|\" } | ForEach-Object { \"$($_.LineNumber): $($_.Line)\" }",
+      "rawOutputLogLines": [
+        8798,
+        8885,
+        1
+      ],
+      "number": 13
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:09:40.0347351Z",
+      "rawCommand": "$matches=Select-String -Path D:\\repos\\teslasync\\migration-queue.md -Pattern \"dynamics|grok|motor|cruise|initial.paused|initialpaused\" | Where-Object { $_.Line -match \"\\| 6 \\|\" }; \"QUEUE_MATCH_LINES=$($matches.Count)\"; foreach($m in $matches){$parts=$m.Line.Split(\"|\"); \"$($m.LineNumber): status=$($parts[1].Trim()) item=$($parts[3].Trim()) files=$($parts[5].Trim())\"}; $ranges=@(@(\"web\\src\\api\\hooks\\useVehicles.ts\",260,296),@(\"web\\src\\api\\hooks\\useVehicles.ts\",363,461),@(\"web\\src\\api\\hooks\\useDriving.ts\",1,140),@(\"web\\src\\api\\hooks\\useTelemetry.ts\",370,454)); foreach($r in $ranges){$p=Join-Path D:\\repos\\teslasync $r[0]; \"FILE: $p\"; $a=Get-Content -LiteralPath $p; for($i=[int]$r[1];$i -le [int]$r[2];$i++){\"${i}: $($a[$i-1])\"}}; Select-String -Path D:\\repos\\teslasync\\web\\src\\api\\types.ts -Pattern \"interface MotorSnapshot|interface DriveDynamicsSnapshot\" -Context 0,40 | ForEach-Object {\"FILE: $($_.Path)\"; \"$($_.LineNumber): $($_.Line)\"; $n=$_.LineNumber; $_.Context.PostContext | ForEach-Object {$n++; \"${n}: $_\"}}",
+      "rawOutputLogLines": [
+        8888,
+        9344,
+        1
+      ],
+      "number": 14
+    },
+    {
+      "numericExit": 1,
+      "utc": "2026-10-14T01:10:24.0791425Z",
+      "rawCommand": "$root=\"D:\\repos\\teslasync\\web\\src\"; $files=@(\"features\\driving\\pages\\DrivingDynamicsPage.tsx\") + @(Get-ChildItem \"$root\\features\\driving\\components\\driving-dynamics-modernization\" -File | Where-Object { $_.Extension -in \".ts\",\".tsx\" -and $_.Name -notmatch \"test|^SummaryStats\" } | ForEach-Object { $_.FullName.Substring($root.Length+1) }) + @(\"features\\driving\\components\\driving-dynamics\\AutopilotSection.tsx\",\"features\\driving\\components\\driving-dynamics\\MotorEfficiencyInsights.tsx\",\"features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx\",\"features\\driving\\components\\driving-dynamics\\DriveAnalyticsSection.tsx\",\"features\\driving\\components\\driving-dynamics\\GrokDynamicsBriefing.tsx\",\"features\\driving\\components\\driving-dynamics\\helpers.ts\",\"features\\driving\\components\\driving-dynamics\\grokDynamics.ts\",\"features\\driving\\components\\driving-dynamics\\useMotorStats.ts\",\"features\\driving\\components\\driving-dynamics\\pickDynamicsDrive.ts\",\"features\\driving\\components\\driving-dynamics\\index.ts\",\"features\\driving\\components\\operationalbrief-a-m\\MotorSamplesBrief.tsx\",\"features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx\",\"features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx\"); $paths=$files | ForEach-Object {Join-Path $root $_}; \"SCOPE_FILES=$($paths.Count)\"; $rules=[ordered]@{ \"static-inline-style\"=\"style=\\{\\{\"; \"raw-html\"=\"<(button|input|textarea|select|table)(\\s|>)\"; \"direct-library-import\"=\"from ['\\\"](recharts|react-leaflet|framer-motion)['\\\"]\"; \"old-api-import\"=\"from ['\\\"](\\.\\./)+api['\\\"]\"; \"double-prefix\"=\"/api/v1/\"; \"camelcase-param\"=\"[?&][a-z]+[A-Z][A-Za-z]*=\"; \"hidden-section\"=\"\\&\\&\\s*<(GlassPanel|LayoutCard|ChartCard|section)\"; \"hardcoded-string\"=\">[A-Za-z][^<{]*<\"; \"fetch-useeffect\"=\"\\bfetch\\s*\\(|\\buseEffect\\s*\\(\"; \"page-wrapper\"=\"<Page(Layout|Container)\\b\"; \"category-import\"=\"from ['\\\"]@/components/[^'\\\"]+/[^'\\\"]*['\\\"]\"; \"physical-and-denominator\"=\"Math\\.abs|Math\\.max|Math\\.min|\\?\\? 0|/ .*length|/.*total|regen_kw|power_kw\" }; foreach($key in $rules.Keys){$m=@(Select-String -LiteralPath $paths -Pattern $rules[$key]); \"SCAN: $key PATTERN=$($rules[$key]) MATCHED_LINES=$($m.Count) NUMERIC_EXIT=0\"; foreach($hit in $m){\"$($hit.Path.Substring($root.Length+1)):$($hit.LineNumber): $($hit.Line.Trim())\"}}; foreach($p in $paths){$h=Get-FileHash -LiteralPath $p -Algorithm SHA256; \"PIN: $($p.Substring($root.Length+1)) LINES=$((Get-Content -LiteralPath $p).Count) SHA256=$($h.Hash.ToLower())\"}",
+      "rawOutputLogLines": [
+        9347,
+        9397,
+        1
+      ],
+      "number": 15
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:10:47.5631243Z",
+      "rawCommand": "$root=\"D:\\repos\\teslasync\\web\\src\"; $files=@(\"features\\driving\\pages\\DrivingDynamicsPage.tsx\") + @(Get-ChildItem \"$root\\features\\driving\\components\\driving-dynamics-modernization\" -File | Where-Object { $_.Extension -in \".ts\",\".tsx\" -and $_.Name -notmatch \"test|^SummaryStats\" } | ForEach-Object { $_.FullName.Substring($root.Length+1) }) + @(\"features\\driving\\components\\driving-dynamics\\AutopilotSection.tsx\",\"features\\driving\\components\\driving-dynamics\\MotorEfficiencyInsights.tsx\",\"features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx\",\"features\\driving\\components\\driving-dynamics\\DriveAnalyticsSection.tsx\",\"features\\driving\\components\\driving-dynamics\\GrokDynamicsBriefing.tsx\",\"features\\driving\\components\\driving-dynamics\\helpers.ts\",\"features\\driving\\components\\driving-dynamics\\grokDynamics.ts\",\"features\\driving\\components\\driving-dynamics\\useMotorStats.ts\",\"features\\driving\\components\\driving-dynamics\\pickDynamicsDrive.ts\",\"features\\driving\\components\\driving-dynamics\\index.ts\",\"features\\driving\\components\\operationalbrief-a-m\\MotorSamplesBrief.tsx\",\"features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx\",\"features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx\"); $paths=$files | ForEach-Object {Join-Path $root $_}; \"SCOPE_FILES=$($paths.Count)\"; $rules=[ordered]@{ \"static-inline-style\"=\"style=\\{\\{\"; \"raw-html\"=\"<(button|input|textarea|select|table)(\\s|>)\"; \"direct-library-import\"=\"from [\\x27\\x22](recharts|react-leaflet|framer-motion)[\\x27\\x22]\"; \"old-api-import\"=\"from [\\x27\\x22](\\.\\./)+api[\\x27\\x22]\"; \"double-prefix\"=\"/api/v1/\"; \"camelcase-param\"=\"[?&][a-z]+[A-Z][A-Za-z]*=\"; \"hidden-section\"=\"\\&\\&\\s*<(GlassPanel|LayoutCard|ChartCard|section)\"; \"hardcoded-string\"=\">[A-Za-z][^<{]*<\"; \"fetch-useeffect\"=\"\\bfetch\\s*\\(|\\buseEffect\\s*\\(\"; \"page-wrapper\"=\"<Page(Layout|Container)\\b\"; \"category-import\"=\"from [\\x27\\x22]@/components/[^\\x27\\x22]+/[^\\x27\\x22]*[\\x27\\x22]\"; \"physical-and-denominator\"=\"Math\\.abs|Math\\.max|Math\\.min|\\?\\? 0|/ .*length|/.*total|regen_kw|power_kw\" }; foreach($key in $rules.Keys){$m=@(Select-String -LiteralPath $paths -Pattern $rules[$key]); \"SCAN: $key PATTERN=$($rules[$key]) MATCHED_LINES=$($m.Count) NUMERIC_EXIT=0\"; foreach($hit in $m){\"$($hit.Path.Substring($root.Length+1)):$($hit.LineNumber): $($hit.Line.Trim())\"}}; foreach($p in $paths){$h=Get-FileHash -LiteralPath $p -Algorithm SHA256; \"PIN: $($p.Substring($root.Length+1)) LINES=$((Get-Content -LiteralPath $p).Count) SHA256=$($h.Hash.ToLower())\"}",
+      "rawOutputLogLines": [
+        9400,
+        9521,
+        1
+      ],
+      "number": 16
+    },
+    {
+      "numericExit": 1,
+      "utc": "2026-10-14T01:11:17.9849968Z",
+      "rawCommand": "$ranges=@(@(\"web\\src\\lib\\workspaceScope.ts\",1,170),@(\"web\\src\\api\\hooks\\useDriving.ts\",505,535),@(\"web\\src\\api\\hooks\\useTelemetry.ts\",64,150),@(\"web\\src\\api\\hooks\\useVehicles.ts\",195,230),@(\"web\\src\\api\\types.ts\",1348,1365)); foreach($r in $ranges){$p=Join-Path D:\\repos\\teslasync $r[0]; \"FILE: $p\"; $a=Get-Content -LiteralPath $p; for($i=[int]$r[1];$i -le [int]$r[2];$i++){\"${i}: $($a[$i-1])\"}}; foreach($p in @(\"D:\\repos\\teslasync\\web\\src\\components\\feedback\\StaleRefreshWarning.tsx\",\"D:\\repos\\teslasync\\web\\src\\components\\layout\\PageLayout.tsx\",\"D:\\repos\\teslasync\\web\\src\\hooks\\useUnits.ts\")){\"FILE: $p\"; $n=0; Get-Content -LiteralPath $p | ForEach-Object {$n++; \"${n}: $_\"}}; Select-String -Path D:\\repos\\teslasync\\web\\src\\hooks\\useRangeState.ts,D:\\repos\\teslasync\\web\\src\\hooks\\useSelectedVehicle.ts,D:\\repos\\teslasync\\web\\src\\components\\ui\\Select.tsx,D:\\repos\\teslasync\\web\\src\\lib\\routeLoaders.ts -Pattern \"header|workspace|startInstant|endInstantExclusive|persistKey|isRange|managed|min-h|h-11|44|DrivingDynamics\" | ForEach-Object { \"$($_.Path):$($_.LineNumber): $($_.Line)\" }",
+      "rawOutputLogLines": [
+        9524,
+        9527,
+        1
+      ],
+      "number": 17
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:11:30.6770211Z",
+      "rawCommand": "Select-String -Path D:\\repos\\teslasync\\web\\src\\components\\layout\\index.ts,D:\\repos\\teslasync\\web\\src\\components\\layout\\layout-reference\\index.ts -Pattern \"PageLayout|CardGrid|LayoutCard|useCardPlacement\" | ForEach-Object { \"$($_.Path):$($_.LineNumber): $($_.Line)\" }; Get-ChildItem D:\\repos\\teslasync\\web\\src\\lib -File | Where-Object { $_.Name -match \"route\" } | ForEach-Object { $_.FullName }; Select-String -Path D:\\repos\\teslasync\\web\\src\\api\\hooks\\useTelemetry.ts,D:\\repos\\teslasync\\web\\src\\api\\hooks\\useDriving.ts -Pattern \"function useSignalObservations|function useDrivingCoach\" | ForEach-Object { \"$($_.Path):$($_.LineNumber): $($_.Line)\" }; Select-String -Path D:\\repos\\teslasync\\migration-queue.md -Pattern \"DrivingDynamicsPage|driving-dynamics-modernization|MotorEfficiencyInsights.tsx|grokDynamics.ts|MotorHistoryCharts.tsx\" | ForEach-Object {$p=$_.Line.Split(\"|\"); \"$($_.LineNumber): status=$($p[1].Trim()) phase=$($p[2].Trim()) item=$($p[3].Trim()) files=$($p[5].Trim())\" }",
+      "rawOutputLogLines": [
+        9530,
+        9558,
+        1
+      ],
+      "number": 18
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:11:44.2390286Z",
+      "rawCommand": "$ranges=@(@(\"web\\src\\lib\\workspaceScope.ts\",1,153),@(\"web\\src\\api\\hooks\\useDriving.ts\",334,350),@(\"web\\src\\api\\hooks\\useTelemetry.ts\",491,535),@(\"web\\src\\api\\hooks\\useVehicles.ts\",211,248)); foreach($r in $ranges){$p=Join-Path D:\\repos\\teslasync $r[0]; \"FILE: $p\"; $a=Get-Content -LiteralPath $p; for($i=[int]$r[1];$i -le [int]$r[2];$i++){\"${i}: $($a[$i-1])\"}}; foreach($p in @(\"D:\\repos\\teslasync\\web\\src\\components\\feedback\\StaleRefreshWarning.tsx\",\"D:\\repos\\teslasync\\web\\src\\components\\layout\\layout-reference\\PageLayout.tsx\",\"D:\\repos\\teslasync\\web\\src\\hooks\\useUnits.ts\")){\"FILE: $p\"; $n=0; Get-Content -LiteralPath $p | ForEach-Object {$n++; \"${n}: $_\"}}; Select-String -Path D:\\repos\\teslasync\\web\\src\\hooks\\useRangeState.ts,D:\\repos\\teslasync\\web\\src\\hooks\\useSelectedVehicle.ts,D:\\repos\\teslasync\\web\\src\\components\\ui\\Select.tsx,D:\\repos\\teslasync\\web\\src\\lib\\routeLoaders.ts -Pattern \"header|workspace|startInstant|endInstantExclusive|persistKey|isRange|managed|min-h|h-11|44|DrivingDynamics\" | ForEach-Object { \"$($_.Path):$($_.LineNumber): $($_.Line)\" }",
+      "rawOutputLogLines": [
+        9561,
+        10192,
+        1
+      ],
+      "number": 19
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:13:00.0119715Z",
+      "rawCommand": "$root=\"D:\\repos\\teslasync\\web\\src\"; $log=Get-Content -LiteralPath \"D:\\repos\\teslasync\\web\\logs\\phase6-qa-driving-driving-dynamics.log\"; $pinLines=@($log | Where-Object { $_ -match \"^PIN: \" }); $files=@($pinLines | ForEach-Object { if($_ -match \"^PIN: (.+) LINES=\\d+ SHA256=\"){Join-Path $root $Matches[1]} } | Select-Object -Unique); $catalog=Get-Content -Raw -LiteralPath \"$root\\i18n\\en.json\" | ConvertFrom-Json -AsHashtable; $occ=0; $keys=@{}; $missing=@(); foreach($p in $files){$text=Get-Content -Raw -LiteralPath $p; foreach($m in [regex]::Matches($text,\"\\bt\\(\\s*[\\x27\\x22]([a-zA-Z0-9_.-]+)[\\x27\\x22]\")){ $occ++; $key=$m.Groups[1].Value; $keys[$key]=$true; $leaf=$catalog; foreach($part in $key.Split(\".\")){if($leaf -is [System.Collections.IDictionary] -and $leaf.Contains($part)){$leaf=$leaf[$part]}else{$leaf=$null; break}}; if($null -eq $leaf){$line=$text.Substring(0,$m.Index).Split([char]10).Length; $missing+=\"$($p.Substring($root.Length+1)):${line}: $key\"} }}; \"I18N_SCOPE_FILES=$($files.Count) STATIC_T_CALL_OCCURRENCES=$occ DISTINCT_KEYS=$($keys.Count) MISSING_OCCURRENCES=$($missing.Count)\"; $missing; \"DYNAMIC_KEYS:\"; Select-String -LiteralPath $files -Pattern \"t\\(`|styles\\.\\$|impact\\.\\$\" | ForEach-Object {\"$($_.Path.Substring($root.Length+1)):$($_.LineNumber): $($_.Line.Trim())\"}; $counts=[ordered]@{}; foreach($tag in @(\"section\",\"SectionErrorBoundary\",\"CardGrid\",\"DynamicsPlacement\",\"GlassPanel\",\"LayoutCard\",\"ChartCard\",\"ChartContainer\",\"Select\",\"Link\")){$page=Get-Content -Raw -LiteralPath \"$root\\features\\driving\\pages\\DrivingDynamicsPage.tsx\"; $counts[$tag]=[regex]::Matches($page,\"<$tag\\b\").Count}; \"PAGE_TAG_COUNTS:\"; $counts | ConvertTo-Json -Compress; \"PRIMARY_PHYSICAL_LINES=$((($pinLines | ForEach-Object {if($_ -match \"LINES=(\\d+)\"){[int]$Matches[1]}}) | Measure-Object -Sum).Sum)\"; foreach($p in @(\"$root\\components\\layout\\layout-reference\\CardGrid.tsx\",\"$root\\components\\layout\\layout-reference\\layoutPolicy.ts\",\"$root\\components\\ui\\Select.tsx\",\"$root\\components\\charts\\ChartContainer.tsx\",\"$root\\lib\\routeLoaders.ts\",\"$root\\lib\\workspaceScope.ts\",\"$root\\hooks\\useRangeState.ts\",\"$root\\hooks\\useSelectedVehicle.ts\")){ Select-String -LiteralPath $p -Pattern \"DrivingDynamics|min-h|h-11|44|ResizeObserver|containerPolicy|startInstant|endInstantExclusive|workspaceRangeManaged|headerOwnsRange|workspaceVehicle|dataColumns|csv|CSV|export|safe-area|return.*range:|range:|vehicle:\" | ForEach-Object {\"$($_.Path.Substring($root.Length+1)):$($_.LineNumber): $($_.Line.Trim())\"} }",
+      "rawOutputLogLines": [
+        10195,
+        10785,
+        1
+      ],
+      "number": 20
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:13:37.4553350Z",
+      "rawCommand": "$log=\"D:\\repos\\teslasync\\web\\logs\\phase6-qa-driving-driving-dynamics.log\"; $a=Get-Content -LiteralPath $log; for($i=0;$i -lt $a.Count;$i++){if($a[$i] -match \"^I18N_SCOPE|^PAGE_TAG_COUNTS|^PRIMARY_PHYSICAL_LINES\"){ $a[$i]; if($a[$i] -eq \"PAGE_TAG_COUNTS:\"){$a[$i+1]} }}; $root=\"D:\\repos\\teslasync\\web\\src\"; $files=@($a | Where-Object {$_ -match \"^PIN: \"} | ForEach-Object {if($_ -match \"^PIN: (.+) LINES=\"){Join-Path $root $Matches[1]}} | Select-Object -Unique); $dynamic=@(Select-String -LiteralPath $files -Pattern \"\\bt\\(\\s*\\x60\"); \"DYNAMIC_T_CALL_LINES=$($dynamic.Count) NUMERIC_EXIT=0\"; $dynamic | ForEach-Object {\"$($_.Path.Substring($root.Length+1)):$($_.LineNumber): $($_.Line.Trim())\"}; foreach($p in @(\"$root\\components\\layout\\layout-reference\\CardGrid.tsx\",\"$root\\components\\layout\\layout-reference\\layoutPolicy.ts\",\"$root\\components\\ui\\Select.tsx\",\"$root\\components\\charts\\ChartContainer.tsx\",\"$root\\lib\\routeLoaders.ts\",\"$root\\lib\\workspaceScope.ts\",\"$root\\hooks\\useRangeState.ts\")){ Select-String -LiteralPath $p -Pattern \"DrivingDynamics|min-h|h-11|44|ResizeObserver|containerPolicy|startInstant|endInstantExclusive|isWorkspaceRangeManaged|headerOwnsRange|csv|CSV|safe-area|range:|vehicle:\" | ForEach-Object {\"$($_.Path.Substring($root.Length+1)):$($_.LineNumber): $($_.Line.Trim())\"} }; \"QUEUE_EXACT_RECORDS:\"; Select-String -Path D:\\repos\\teslasync\\migration-queue.md -Pattern \"\\| phase6-qa-driving-driving-dynamics \\||\\| phase5-page-driving-driving-dynamics \\||\\| phase6-drivetrain-live-isolation-trust \\|\" | ForEach-Object {\"$($_.LineNumber): $($_.Line)\"}; \"GOVERNANCE_PINS:\"; foreach($p in @(\"D:\\repos\\teslasync\\docs\\orchestrator-loop.md\",\"D:\\repos\\teslasync\\docs\\frontend-design-contract.md\",\"D:\\repos\\teslasync\\docs\\frontend-mission.md\",\"D:\\repos\\teslasync\\docs\\session-handoff.md\",\"D:\\repos\\teslasync\\migration-queue.md\")){\"$p SHA256=$((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLower()) LINES=$((Get-Content -LiteralPath $p).Count)\"}",
+      "rawOutputLogLines": [
+        10788,
+        10857,
+        1
+      ],
+      "number": 21
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:14:30.4736147Z",
+      "rawCommand": "$ranges=@(@(\"web\\src\\components\\ui\\Select.tsx\",1,165),@(\"web\\src\\hooks\\useRangeState.ts\",274,338),@(\"web\\src\\hooks\\useRangeState.ts\",470,515),@(\"web\\src\\hooks\\useRangeState.ts\",646,688),@(\"web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts\",1,90),@(\"web\\src\\components\\layout\\layout-reference\\CardGrid.tsx\",1,120),@(\"web\\src\\components\\charts\\ChartContainer.tsx\",467,483),@(\"web\\src\\components\\charts\\ChartContainer.tsx\",694,735)); foreach($r in $ranges){$p=Join-Path D:\\repos\\teslasync $r[0]; \"FILE: $p\"; $a=Get-Content -LiteralPath $p; for($i=[int]$r[1];$i -le [int]$r[2] -and $i -le $a.Count;$i++){\"${i}: $($a[$i-1])\"}}; $cat=Get-Content -Raw D:\\repos\\teslasync\\web\\src\\i18n\\en.json | ConvertFrom-Json -AsHashtable; foreach($k in @(\"efficient\",\"moderate\",\"aggressive\")){\"CANONICAL dynamics.coach.styles.$k = $($cat.dynamics.coach.styles[$k])\"}; foreach($k in @(\"high\",\"medium\",\"low\")){\"CANONICAL dynamics.coach.impact.$k = $($cat.dynamics.coach.impact[$k])\"}; \"EXACT_QUEUE_MECHANISM_SCAN:\"; $q=@(Select-String -Path D:\\repos\\teslasync\\migration-queue.md -Pattern \"initial.paused|initialpaused|signed.lateral|lateral.sign|motor.history.palette|dynamics.*palette|dynamics.*notice|coach.*unknown|identity-reset\" | Where-Object { $_.Line -match \"\\| 6 \\|\" }); \"QUEUE_MECHANISM_MATCH_LINES=$($q.Count)\"; foreach($m in $q){\"$($m.LineNumber): $($m.Line)\"}; \"PRIMARY_TAG_TOTALS:\"; $log=Get-Content D:\\repos\\teslasync\\web\\logs\\phase6-qa-driving-driving-dynamics.log; $ps=@($log | Where-Object {$_ -match \"^PIN: \"} | ForEach-Object {if($_ -match \"^PIN: (.+) LINES=\"){Join-Path D:\\repos\\teslasync\\web\\src $Matches[1]}} | Select-Object -Unique); foreach($tag in @(\"GlassPanel\",\"LayoutCard\",\"ChartCard\",\"ChartContainer\",\"EmbeddedChart\",\"OperationalBrief\",\"Select\",\"Link\",\"StaleRefreshWarning\")){ $hits=0; foreach($p in $ps){$hits += [regex]::Matches((Get-Content -Raw -LiteralPath $p),\"<$tag\\b\").Count}; \"$tag=$hits\" }",
+      "rawOutputLogLines": [
+        10860,
+        11332,
+        1
+      ],
+      "number": 22
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:15:31.3719693Z",
+      "rawCommand": "\"EXISTING_REPORT=$([bool](Test-Path -LiteralPath D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-driving-driving-dynamics.json))\"; Select-String -Path D:\\repos\\teslasync\\web\\src\\index.css,D:\\repos\\teslasync\\web\\tailwind.config.js -Pattern \"density.*compact|--density-row|--d-row|--shell-status-bar-height|--shell-chrome-bottom|minHeight|d-row\" | ForEach-Object {\"$($_.Path):$($_.LineNumber): $($_.Line)\"}; $root=\"D:\\repos\\teslasync\\web\\src\"; $a=Get-Content D:\\repos\\teslasync\\web\\logs\\phase6-qa-driving-driving-dynamics.log; $pins=@($a | Where-Object {$_ -match \"^PIN: \"}); $drift=@(); foreach($s in $pins){if($s -match \"^PIN: (.+) LINES=(\\d+) SHA256=(\\w+)\"){ $rel=$Matches[1]; $sha=$Matches[3]; $p=Join-Path $root $rel; $actual=(Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLower(); if($sha -ne $actual){$drift+=$rel}}}; \"PRIMARY_PIN_RECHECK_FILES=$($pins.Count) HASH_DRIFT=$($drift.Count)\"; $drift; \"RAWLOG_COMMAND_COUNTS:\"; \"COMMAND_RECORDS=$(@($a | Where-Object {$_ -match \"^COMMAND: \"}).Count) EXIT0=$(@($a | Where-Object {$_ -eq \"NUMERIC_EXIT: 0\"}).Count) EXIT1=$(@($a | Where-Object {$_ -eq \"NUMERIC_EXIT: 1\"}).Count)\"; \"SUPPORT_PINS:\"; $support=@(\"api\\hooks\\useDriving.ts\",\"api\\hooks\\useVehicles.ts\",\"api\\hooks\\useTelemetry.ts\",\"api\\types.ts\",\"api\\dataState.ts\",\"hooks\\useDataState.ts\",\"hooks\\useUnits.ts\",\"hooks\\useRangeState.ts\",\"hooks\\useSelectedVehicle.ts\",\"hooks\\useSignalQueryInvalidation.ts\",\"lib\\workspaceScope.ts\",\"lib\\routeLoaders.ts\",\"App.tsx\",\"components\\layout\\index.ts\",\"components\\layout\\layout-reference\\PageLayout.tsx\",\"components\\layout\\layout-reference\\CardGrid.tsx\",\"components\\layout\\layout-reference\\layoutPolicy.ts\",\"components\\layout\\layout-reference\\ChartCard.tsx\",\"components\\feedback\\StaleRefreshWarning.tsx\",\"components\\ui\\Select.tsx\",\"components\\charts\\ChartContainer.tsx\",\"lib\\metric-reference\\formatMetric.ts\",\"i18n\\en.json\",\"index.css\"); foreach($rel in $support){$p=Join-Path $root $rel; \"SUPPORT_PIN: $rel LINES=$((Get-Content -LiteralPath $p).Count) SHA256=$((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLower())\"}; \"GOVERNING_INSTRUCTION_PINS:\"; foreach($p in @(\"D:\\repos\\teslasync\\.github\\instructions\\frontend-si-cutover.instructions.md\",\"D:\\repos\\teslasync\\.github\\instructions\\react-frontend.instructions.md\",\"D:\\repos\\teslasync\\.github\\instructions\\observability.instructions.md\",\"D:\\repos\\teslasync\\.github\\instructions\\unit-conversion.instructions.md\",\"D:\\repos\\teslasync\\.gitignore\")){\"$p LINES=$((Get-Content -LiteralPath $p).Count) SHA256=$((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLower())\"}; \"UTC=$([DateTime]::UtcNow.ToString(\"o\"))\"",
+      "rawOutputLogLines": [
+        11335,
+        11389,
+        1
+      ],
+      "number": 23
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:15:57.5078655Z",
+      "rawCommand": "foreach($p in @(\"D:\\repos\\teslasync\\web\\src\\hooks\\useSelectedVehicle.ts\",\"D:\\repos\\teslasync\\web\\src\\hooks\\useSignalQueryInvalidation.ts\")){\"FILE: $p\"; $n=0; Get-Content -LiteralPath $p | ForEach-Object {$n++; \"${n}: $_\"}}; Select-String -Path D:\\repos\\teslasync\\docs\\frontend-inventory.md -Pattern \"DrivingDynamics|driving-dynamics|audit-page-113\" | ForEach-Object {\"$($_.LineNumber): $($_.Line)\"}; $ranges=@(@(\"web\\src\\api\\client.ts\",1,90),@(\"web\\src\\index.css\",229,247),@(\"web\\src\\index.css\",2090,2102),@(\"web\\src\\components\\charts\\BipolarBar.tsx\",1,155)); foreach($r in $ranges){$p=Join-Path D:\\repos\\teslasync $r[0]; \"FILE: $p\"; $a=Get-Content -LiteralPath $p; for($i=[int]$r[1];$i -le [int]$r[2] -and $i -le $a.Count;$i++){\"${i}: $($a[$i-1])\"}}",
+      "rawOutputLogLines": [
+        11392,
+        11970,
+        1
+      ],
+      "number": 24
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:17:32.4812491Z",
+      "rawCommand": "Select-String -Path D:\\repos\\teslasync\\migration-queue.md -Pattern \"BipolarBar|bipolar|signed.*clamp|clamp.*signed\" | Where-Object {$_.Line -match \"\\| 6 \\|\"} | ForEach-Object {\"$($_.LineNumber): $($_.Line)\"}; Get-ChildItem D:\\repos\\teslasync\\web\\src\\components\\charts -Recurse -File -Filter \"*Bipolar*\" | ForEach-Object {$_.FullName}; foreach($rel in @(\"web\\src\\api\\client.ts\",\"web\\src\\components\\charts\\BipolarBar.tsx\",\"web\\src\\components\\layout\\PageContainer.tsx\",\"web\\tailwind.config.js\",\"docs\\frontend-inventory.md\")){ $p=Join-Path D:\\repos\\teslasync $rel; \"EXTRA_PIN: $rel LINES=$((Get-Content -LiteralPath $p).Count) SHA256=$((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLower())\" }",
+      "rawOutputLogLines": [
+        11973,
+        11982,
+        1
+      ],
+      "number": 25
+    },
+    {
+      "numericExit": 0,
+      "utc": "2026-10-14T01:18:18.2949913Z",
+      "rawCommand": "$m=@(Select-String -Path D:\\repos\\teslasync\\migration-queue.md -Pattern \"BipolarBar|bipolar|signed.*clamp|clamp.*signed\" | Where-Object {$_.Line -match \"\\| 6 \\|\"}); \"BIPOLAR_PHASE6_QUEUE_MATCH_LINES=$($m.Count) NUMERIC_EXIT=0\"; $m | ForEach-Object {\"$($_.LineNumber): $($_.Line)\"}; $r=Get-Content -Raw D:\\repos\\teslasync\\docs\\frontend-audits\\audit-page-113.json | ConvertFrom-Json; \"HISTORICAL_AUDIT_TOPLEVEL_KEYS=$($r.PSObject.Properties.Name -join \",\")\"; foreach($p in $r.PSObject.Properties){if($p.Name -match \"line|count|original|route|status|page|created|scope\"){\"$($p.Name): $($p.Value | ConvertTo-Json -Depth 6 -Compress)\"}}; \"RULE_SCAN_HEADINGS:\"; Get-Content D:\\repos\\teslasync\\web\\logs\\phase6-qa-driving-driving-dynamics.log | Where-Object {$_ -match \"^SCAN: |^I18N_SCOPE_FILES=|^DYNAMIC_T_CALL_LINES=|^PRIMARY_PIN_RECHECK_FILES=\"}; \"UTC=$([DateTime]::UtcNow.ToString(\"o\"))\"",
+      "rawOutputLogLines": [
+        11985,
+        12009,
+        1
+      ],
+      "number": 26
+    },
+    {
+      "numericExit": 1,
+      "utc": "2026-10-14T01:25:26.2469426Z",
+      "rawCommand": "Report finalization attempt using overlong PowerShell tool argument (not executed).",
+      "rawOutputLogLines": [
+        12012,
+        12014,
+        1
+      ],
+      "number": 27
+    }
+  ],
+  "ruleScans": [
+    "SCAN: static-inline-style PATTERN=style=\\{\\{ MATCHED_LINES=2 NUMERIC_EXIT=0",
+    "SCAN: raw-html PATTERN=<(button|input|textarea|select|table)(\\s|>) MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: direct-library-import PATTERN=from [\\x27\\x22](recharts|react-leaflet|framer-motion)[\\x27\\x22] MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: old-api-import PATTERN=from [\\x27\\x22](\\.\\./)+api[\\x27\\x22] MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: double-prefix PATTERN=/api/v1/ MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: camelcase-param PATTERN=[?&][a-z]+[A-Z][A-Za-z]*= MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: hidden-section PATTERN=\\&\\&\\s*<(GlassPanel|LayoutCard|ChartCard|section) MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: hardcoded-string PATTERN=>[A-Za-z][^<{]*< MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: fetch-useeffect PATTERN=\\bfetch\\s*\\(|\\buseEffect\\s*\\( MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: page-wrapper PATTERN=<Page(Layout|Container)\\b MATCHED_LINES=1 NUMERIC_EXIT=0",
+    "SCAN: category-import PATTERN=from [\\x27\\x22]@/components/[^\\x27\\x22]+/[^\\x27\\x22]*[\\x27\\x22] MATCHED_LINES=19 NUMERIC_EXIT=0",
+    "SCAN: physical-and-denominator PATTERN=Math\\.abs|Math\\.max|Math\\.min|\\?\\? 0|/ .*length|/.*total|regen_kw|power_kw MATCHED_LINES=56 NUMERIC_EXIT=0",
+    "SCAN: static-inline-style PATTERN=style=\\{\\{ MATCHED_LINES=2 NUMERIC_EXIT=0",
+    "SCAN: raw-html PATTERN=<(button|input|textarea|select|table)(\\s|>) MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: direct-library-import PATTERN=from [\\x27\\x22](recharts|react-leaflet|framer-motion)[\\x27\\x22] MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: old-api-import PATTERN=from [\\x27\\x22](\\.\\./)+api[\\x27\\x22] MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: double-prefix PATTERN=/api/v1/ MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: camelcase-param PATTERN=[?&][a-z]+[A-Z][A-Za-z]*= MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: hidden-section PATTERN=\\&\\&\\s*<(GlassPanel|LayoutCard|ChartCard|section) MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: hardcoded-string PATTERN=>[A-Za-z][^<{]*< MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: fetch-useeffect PATTERN=\\bfetch\\s*\\(|\\buseEffect\\s*\\( MATCHED_LINES=0 NUMERIC_EXIT=0",
+    "SCAN: page-wrapper PATTERN=<Page(Layout|Container)\\b MATCHED_LINES=1 NUMERIC_EXIT=0",
+    "SCAN: category-import PATTERN=from [\\x27\\x22]@/components/[^\\x27\\x22]+/[^\\x27\\x22]*[\\x27\\x22] MATCHED_LINES=19 NUMERIC_EXIT=0",
+    "SCAN: physical-and-denominator PATTERN=Math\\.abs|Math\\.max|Math\\.min|\\?\\? 0|/ .*length|/.*total|regen_kw|power_kw MATCHED_LINES=56 NUMERIC_EXIT=0"
+  ],
+  "rawLog": {
+    "prefixSha256": "76bed5c64430874ff6fb1b77124d57ecdd97d01a5be242dd11617773bab955b5",
+    "ignoredBy": ".gitignore logs/",
+    "file": "web/logs/phase6-qa-driving-driving-dynamics.log",
+    "prefixBytes": 935974,
+    "note": "Prefix before finalization/verification append, not final whole-log hash"
+  },
+  "governancePins": [
+    {
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "file": "docs/orchestrator-loop.md",
+      "lines": 296,
+      "snapshotUTC": "2026-10-14T01:25:26.2469426Z"
+    },
+    {
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "file": "docs/frontend-design-contract.md",
+      "lines": 2539,
+      "snapshotUTC": "2026-10-14T01:25:26.2469426Z"
+    },
+    {
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "file": "docs/frontend-mission.md",
+      "lines": 1593,
+      "snapshotUTC": "2026-10-14T01:25:26.2469426Z"
+    },
+    {
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "file": "docs/session-handoff.md",
+      "lines": 2460,
+      "snapshotUTC": "2026-10-14T01:25:26.2469426Z"
+    },
+    {
+      "sha256": "8ea0d1bb05bf8472dbc4e0cb57fce1bb1e787d2e86e98418681bc2e256affbf8",
+      "file": "migration-queue.md",
+      "lines": 2049,
+      "snapshotUTC": "2026-10-14T01:25:26.2469426Z"
+    },
+    {
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "lines": 94,
+      "snapshotUTC": "2026-10-14T01:25:26.2469426Z"
+    },
+    {
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "lines": 629,
+      "snapshotUTC": "2026-10-14T01:25:26.2469426Z"
+    },
+    {
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "file": ".github/instructions/observability.instructions.md",
+      "lines": 45,
+      "snapshotUTC": "2026-10-14T01:25:26.2469426Z"
+    },
+    {
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "lines": 221,
+      "snapshotUTC": "2026-10-14T01:25:26.2469426Z"
+    },
+    {
+      "sha256": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+      "file": ".gitignore",
+      "lines": 130,
+      "snapshotUTC": "2026-10-14T01:25:26.2469426Z"
+    }
+  ],
+  "summary": {
+    "sourceWrites": 0,
+    "findingRecords": 8,
+    "byRule": [
+      {
+        "instances": 10,
+        "rule": "category-import",
+        "unit": "runtime import statement"
+      },
+      {
+        "instances": 1,
+        "rule": "initial-paused-as-empty",
+        "unit": "initial selector state mechanism"
+      },
+      {
+        "instances": 2,
+        "rule": "unknown-denominator-as-zero",
+        "unit": "visible count fallback"
+      },
+      {
+        "instances": 1,
+        "rule": "signed-reading-loss",
+        "unit": "signed reading presentation"
+      },
+      {
+        "instances": 8,
+        "rule": "chart-preference-bypass",
+        "unit": "fixed series color prop"
+      },
+      {
+        "instances": 3,
+        "rule": "duplicate-source-notices",
+        "unit": "excess notice beyond one shared source"
+      },
+      {
+        "instances": 2,
+        "rule": "mobile-target-allocation",
+        "unit": "control without below-md44 allocation"
+      },
+      {
+        "instances": 1,
+        "rule": "measurement-clamped-for-display",
+        "unit": "shared clamp mechanism"
+      }
+    ],
+    "testWrites": 0,
+    "confirmedRuleInstances": 28,
+    "unpromotedCandidates": 7,
+    "highestIssueFiles": {
+      "MotorHistoryCharts": 10,
+      "GrokDynamicsBriefing": 2,
+      "DrivingTips": 2,
+      "DrivingCoachSection": 2,
+      "DynamicsTripToolbar": 2
+    }
+  },
+  "verification": {
+    "finalJsonParse": "PASS by actual readback",
+    "commandsBeforeFinalization": 27,
+    "exit0": 24,
+    "hashDrift": 0,
+    "supportPins": 29,
+    "limits": "No Git cleanliness/original-test/runtime claim",
+    "exit1": 3,
+    "primaryPins": 28
+  }
+}

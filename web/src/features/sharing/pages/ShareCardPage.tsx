@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { CopyButton } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -29,14 +31,17 @@ import {
   useShareCardDisplay,
 } from '../components/share-card';
 import { analyzeShareCard } from '../lib/shareCard';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ShareCardPage() {
+  useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('shareCard.title', 'Share Card Studio'));
+  usePageTitle(t('shareCard.title', 'Share card studio'));
   const { vehicleId } = useSelectedVehicle();
+  const location = useLocation();
   const timezone = useTimezone('vehicle');
   const display = useShareCardDisplay();
-  const { start, end, startInstant, endInstantExclusive } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive, presetId } = useRangeState({
     persistKey: 'share-card.range',
     timezone,
   });
@@ -70,19 +75,29 @@ export default function ShareCardPage() {
     start,
     end,
   );
+  const copyUrl = new URL(location.pathname, window.location.origin);
+  copyUrl.searchParams.set('from', start);
+  copyUrl.searchParams.set('to', end);
+  copyUrl.searchParams.set('time_scope', presetId ?? 'custom');
+  const canCopyScope = vehicleId != null && Number.isSafeInteger(vehicleId) && vehicleId > 0;
+  if (canCopyScope) copyUrl.searchParams.set('vehicle_id', String(vehicleId));
 
   return (
-    <PageContainer
-      title={t('shareCard.title', 'Share Card Studio')}
+    <PageLayout
+      title={t('shareCard.title', 'Share card studio')}
       subtitle={t(
         'shareCard.subtitle',
         'Compose a local, evidence-backed SVG without overstating selected-window coverage',
       )}
       query={vehicleId != null ? drivesQuery : undefined}
-      copyLink
-      actions={(
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-        </div>
+      overflowActions={(
+        <CopyButton
+          text={copyUrl.toString()}
+          label={t('common.copyLink.action', 'Copy link')}
+          ariaLabel={t('common.copyLink.label', 'Copy link to this view')}
+          disabled={!canCopyScope}
+          withToast
+        />
       )}
     >
       <FadeIn><ShareCardEvidenceLedger {...sectionProps} /></FadeIn>
@@ -105,6 +120,6 @@ export default function ShareCardPage() {
       <FadeIn delay={0.12}><ShareCardRepresentativeDirectory {...sectionProps} /></FadeIn>
       <FadeIn delay={0.13}><ShareCardAccountingIdentities {...sectionProps} /></FadeIn>
       <FadeIn delay={0.14}><ShareCardMethodology {...sectionProps} /></FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

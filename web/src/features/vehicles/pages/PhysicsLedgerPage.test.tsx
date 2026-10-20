@@ -10,8 +10,9 @@
  */
 
 import React from 'react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -48,6 +49,8 @@ const { settingsMock } = vi.hoisted(() => ({
     decimal_precision: 1,
     locale: 'en-US',
     timezone_user: '',
+    tz_display_default: 'vehicle',
+    chart_palette: 'neon',
   },
 }));
 
@@ -61,7 +64,7 @@ vi.mock('@/hooks/useSettings', async (importActual) => {
       isFahrenheit: settingsMock.unit_of_temp === 'F',
       isPSI: settingsMock.unit_of_pressure === 'psi',
       decimals: 1,
-      locale: 'en-US',
+      locale: settingsMock.locale,
     }),
   };
 });
@@ -79,8 +82,27 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: useSelectedVehicleMock,
 }));
 
+vi.mock('@/lib/timezone', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/timezone')>();
+  return {
+    ...actual,
+    useTimezone: (mode: 'vehicle' | 'user' | 'utc' = 'vehicle') =>
+      actual.resolveTimezone(
+        mode,
+        useSelectedVehicleMock().vehicle?.timezone,
+        settingsMock.timezone_user,
+      ),
+  };
+});
+
 vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: vi.fn(),
+}));
+
+vi.mock('@/lib/csvExport', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/csvExport')>(),
+  downloadCSV: vi.fn(),
+  downloadJSON: vi.fn(),
 }));
 
 vi.mock('recharts', async (importOriginal) => {
@@ -106,7 +128,15 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 import PhysicsLedgerPage from './PhysicsLedgerPage';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { PhysicsLedger, PhysicsTerm } from '@/api/types';
+import { downloadCSV, downloadJSON } from '@/lib/csvExport';
+import { columnLayoutStorageKey, resetColumnLayout, setColumnLayout } from '@/lib/columnOrderStore';
+import { formatDateTime } from '@/lib/dateFormat';
+import { chartTokens } from '@/lib/tokens';
+import {
+  LEDGER_ACCENT, LEDGER_SECONDARY, LEDGER_TERTIARY, asList, downsample,
+} from '../components/physics-ledger/helpers';
 
 function queryState(over: Record<string, unknown> = {}) {
   return {
@@ -224,15 +254,16 @@ function ledgerResponse(over: Partial<PhysicsLedger> = {}): PhysicsLedger {
   };
 }
 
-function renderPage() {
+function renderPage(initialEntry = '/tesla-physics/ledger') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/tesla-only/ledger']}>
-        <PhysicsLedgerPage />
+      <MemoryRouter initialEntries={[initialEntry]}>
+        {children}
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  return render(<PhysicsLedgerPage />, { wrapper: Wrapper });
 }
 
 const oneCarFleet = {
@@ -247,11 +278,203 @@ beforeEach(() => {
   settingsMock.unit_of_length = 'km';
   settingsMock.unit_of_temp = 'C';
   settingsMock.unit_of_pressure = 'kPa';
+  settingsMock.locale = 'en-US';
+  settingsMock.timezone_user = '';
+  settingsMock.tz_display_default = 'vehicle';
   useSelectedVehicleMock.mockReturnValue(oneCarFleet);
   usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledgerResponse() }));
 });
 
+afterEach(() => {
+  resetColumnLayout('physics-ledger:epochs');
+  vi.restoreAllMocks();
+});
+
 describe('PhysicsLedgerPage', () => {
+  it('uses ordered chart presentation roles without changing source identity or saved IDs', () => {
+    const savedPalette = settingsMock.chart_palette;
+    setColumnLayout('physics-ledger:epochs', { order: ['samples', 'firmware'], hidden: ['predicted'] });
+    const storageKey = columnLayoutStorageKey('physics-ledger:epochs');
+    const savedColumns = window.localStorage.getItem(storageKey);
+    expect([LEDGER_ACCENT, LEDGER_SECONDARY, LEDGER_TERTIARY]).toEqual(
+      chartTokens.series.slice(0, 3),
+    );
+    const ledger = ledgerResponse();
+    const points = ledger.dynamics!.points;
+    const original = JSON.stringify(ledger);
+    expect(asList(points)).toEqual(points);
+    const displayed = downsample(points, 500);
+    displayed.forEach((point, index) => expect(point).toBe(points[index]));
+    usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledger }));
+    renderPage();
+    expect(screen.getByLabelText('Pack power and speed over the window')).toBeInTheDocument();
+    expect(screen.getByTestId('ledger-drive')).toHaveTextContent('Unexplained residual');
+    expect(JSON.stringify(ledger)).toBe(original);
+    expect(settingsMock.chart_palette).toBe(savedPalette);
+    expect(window.localStorage.getItem(storageKey)).toBe(savedColumns);
+  });
+
+  it('reactively formats the analysis window and brief scope without changing UTC query bounds', () => {
+    const start = '2026-09-13T12:00:00.000Z';
+    const end = '2026-09-14T12:00:00.000Z';
+    useSelectedVehicleMock.mockReturnValue({
+      ...oneCarFleet, vehicle: { ...oneCarFleet.vehicle, timezone: 'America/Los_Angeles' },
+    });
+    const { rerender } = renderPage(
+      `/tesla-only/ledger?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
+    );
+    const assertWindow = (locale: string, tz: string) => {
+      const label = `${formatDateTime(start, { locale, tz })} → ${formatDateTime(end, { locale, tz })}`;
+      expect(within(screen.getByRole('group', { name: 'Window' })).getByText(label)).toBeInTheDocument();
+      assertOperationalBriefDisclosure(screen.getByTestId('ledger-summary'), label, { contains: true });
+      expect(usePhysicsLedgerMock).toHaveBeenLastCalledWith({ vehicleId: '1', start, end });
+    };
+    assertWindow('en-US', 'America/Los_Angeles');
+
+    settingsMock.locale = 'de-DE';
+    useSelectedVehicleMock.mockReturnValue({
+      ...oneCarFleet, vehicle: { ...oneCarFleet.vehicle, timezone: 'Asia/Tokyo' },
+    });
+    rerender(<PhysicsLedgerPage />);
+    assertWindow('de-DE', 'Asia/Tokyo');
+
+    settingsMock.tz_display_default = 'user';
+    settingsMock.timezone_user = 'Europe/Berlin';
+    rerender(<PhysicsLedgerPage />);
+    assertWindow('de-DE', 'Europe/Berlin');
+
+    settingsMock.tz_display_default = 'utc';
+    rerender(<PhysicsLedgerPage />);
+    assertWindow('de-DE', 'UTC');
+    expect(screen.getByTestId('ledger-unknown')).toHaveTextContent('gap');
+    expect(screen.getByTestId('ledger-markers')).toHaveTextContent('drive');
+    expect(screen.getByLabelText('Pack power and speed over the window')).toBeInTheDocument();
+  });
+
+  it('exports matching loaded epochs as canonical rawJSON with SI, nulls, signs and window evidence', async () => {
+    const first = ledgerResponse().epochs![0];
+    const kept = { ...first, firmware: 'Kept', measured_wh: 0, predicted_wh: null, unexplained_wh: -25.125 };
+    const ledger = ledgerResponse({
+      epochs: [first, kept], truncated: true, contradictions: ['gear_P_with_speed'],
+    });
+    setColumnLayout('physics-ledger:epochs', { order: ['samples', 'firmware'], hidden: ['predicted', 'unexplained'] });
+    usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledger }));
+    renderPage();
+    const panel = screen.getByTestId('ledger-epochs');
+    expect(panel).toHaveTextContent('rawJSON (SI, Wh) / displayCSV (kWh)');
+    fireEvent.change(within(panel).getByRole('searchbox', { name: 'Search loaded rows' }), {
+      target: { value: 'Kept' },
+    });
+    await waitFor(() => expect(within(panel).queryByText(first.firmware)).not.toBeInTheDocument());
+    fireEvent.click(within(panel).getByRole('button', { name: 'Export list' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+    await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
+    const [filename, payload] = vi.mocked(downloadJSON).mock.calls[0];
+    expect(filename).toContain('rawJSON');
+    expect(JSON.parse(JSON.stringify(payload))).toEqual({
+      representation: 'rawJSON', scope: 'matchingLoaded',
+      vehicle_id: ledger.vehicle_id, kind: ledger.kind, start: ledger.start, end: ledger.end,
+      truncated: true, missing_signals: ledger.missing_signals,
+      unknown_intervals: ledger.unknown_intervals, unknown_hours: ledger.unknown_hours,
+      contradictions: ledger.contradictions, honesty: ledger.honesty, epochs: [kept],
+    });
+    expect(JSON.stringify(payload)).not.toContain('fullHistory');
+    expect(ledger.epochs).toEqual([first, kept]);
+  });
+
+  it('exports labeled displayCSV in visible-column order while retaining epoch and window provenance', async () => {
+    const first = ledgerResponse().epochs![0];
+    const ledger = ledgerResponse({ epochs: [
+      first, { ...first, firmware: 'Unknown', measured_wh: 0, predicted_wh: null, unexplained_wh: null },
+    ] });
+    setColumnLayout('physics-ledger:epochs', {
+      order: ['unexplained', 'firmware', 'predicted', 'measured', 'samples'], hidden: ['samples'],
+    });
+    usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledger }));
+    renderPage();
+    fireEvent.click(within(screen.getByTestId('ledger-epochs')).getByRole('button', { name: 'Export list' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }));
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledOnce());
+    const [filename, csv] = vi.mocked(downloadCSV).mock.calls[0];
+    expect(filename).toContain('displayCSV');
+    const [header, populated, unknown] = csv.split('\r\n');
+    expect(header).toMatch(/^Unexplained \(kWh\),Firmware,Predicted \(kWh\),Measured \(kWh\),epoch_honesty,/);
+    expect(header).not.toContain('Samples');
+    expect(populated).toMatch(/^'-0\.0 kWh,2026\.24\.3,1\.7 kWh,1\.7 kWh,/);
+    expect(populated).toContain('Correlation.,displayCSV,matchingLoaded,1,range,2026-09-13T12:00:00Z,2026-09-14T12:00:00Z');
+    expect(unknown).toMatch(/^Unknown,Unknown,Unknown,0\.0 kWh,/);
+    expect(csv).toContain('gap');
+    expect(downloadJSON).not.toHaveBeenCalled();
+  });
+
+  it('preserves all five epoch columns and source order on desktop', () => {
+    const first = ledgerResponse().epochs![0];
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: ledgerResponse({ epochs: [first, { ...first, firmware: '2026.24.4', sample_count: 121 }] }),
+    }));
+    renderPage();
+    const table = within(screen.getByTestId('ledger-epochs')).getByRole('table');
+    expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
+      'Firmware', 'Measured', 'Predicted', 'Unexplained', 'Samples',
+    ]);
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows[0]).toHaveTextContent('2026.24.3');
+    expect(rows[1]).toHaveTextContent('2026.24.4');
+    expect(within(rows[0]).getAllByRole('cell')).toHaveLength(5);
+    expect(rows[0]).toHaveTextContent('120');
+  });
+
+  it('opens complete epoch details by keyboard at mobile width and restores focus', async () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 375, height: 100, top: 0, left: 0, right: 375, bottom: 100,
+      x: 0, y: 0, toJSON: () => ({}),
+    });
+    const first = ledgerResponse().epochs![0];
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: ledgerResponse({ epochs: [first, {
+        ...first, firmware: '2026.24.4', measured_wh: 0, predicted_wh: null,
+        unexplained_wh: null, sample_count: 0,
+      }] }),
+    }));
+    const user = userEvent.setup();
+    renderPage();
+    const panel = screen.getByTestId('ledger-epochs');
+    expect(panel.querySelector('[data-mobile-table]')).not.toBeNull();
+    const triggers = within(panel).getAllByRole('button', { name: 'Quick view' });
+    triggers[0].focus();
+    await user.keyboard('{Enter}');
+    const details = screen.getByRole('dialog');
+    for (const label of ['Firmware', 'Measured', 'Predicted', 'Unexplained', 'Samples']) {
+      expect(within(details).getByText(label)).toBeInTheDocument();
+    }
+    expect(details).toHaveTextContent('2026.24.3');
+    expect(details).toHaveTextContent('120');
+    expect(details).toHaveTextContent(/1\.7\s*kWh/);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(triggers[0]).toHaveFocus());
+    triggers[1].focus();
+    await user.keyboard(' ');
+    const unknownDetails = screen.getByRole('dialog');
+    expect(unknownDetails).toHaveTextContent('2026.24.4');
+    expect(within(unknownDetails).getAllByText(/unknown/i)).toHaveLength(2);
+    expect(unknownDetails).toHaveTextContent(/0(?:\.0)?\s*kWh/);
+  });
+
+  it('reviews the real ledger brief without dropping truncation and contradiction evidence', () => {
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: ledgerResponse({ truncated: true, contradictions: ['gear_P_with_speed'] }),
+    }));
+    renderPage();
+    const brief = screen.getByTestId('ledger-summary');
+    expect(brief.querySelector('[data-operational-metric="ledger-kind"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText(/Sample cap hit/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/gear_P_with_speed/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Predicted vs measured.').length).toBeGreaterThan(0);
+  });
+
   it('renders all eleven domain panels with data', () => {
     renderPage();
     for (const testId of [
@@ -271,6 +494,24 @@ describe('PhysicsLedgerPage', () => {
     expect(drive.textContent).not.toMatch(/Grade[^]*\b0 Wh\b/);
   });
 
+  it('keeps accounting terms, unknown evidence, and the residual in semantic shared tables', () => {
+    const ledger = ledgerResponse();
+    ledger.drive.measured_wh = term(0, 'recorded_zero');
+    usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledger }));
+    renderPage();
+
+    const drive = screen.getByRole('table', { name: 'Drive energy ledger' });
+    expect(within(drive).getAllByRole('rowheader')).toHaveLength(8);
+    const measured = within(drive).getByRole('rowheader', { name: /Measured pack energy/ }).closest('tr')!;
+    expect(within(measured).getByRole('cell')).toHaveTextContent(/0(?:\.0+)?\s+(?:kWh|Wh)/);
+    const grade = within(drive).getByRole('rowheader', { name: /Grade/ }).closest('tr')!;
+    expect(grade).toHaveTextContent('PackVoltage');
+    expect(within(grade).getByRole('cell')).toHaveTextContent(/unknown/i);
+    expect(within(drive).getByRole('rowheader', { name: 'Unexplained residual' }).closest('tfoot')).not.toBeNull();
+    expect(within(screen.getByRole('table', { name: 'Charge physics' })).getAllByRole('rowheader')).toHaveLength(3);
+    expect(within(screen.getByRole('table', { name: 'Park / vampire physics' })).getAllByRole('rowheader')).toHaveLength(6);
+  });
+
   it('renders the residual, reconcile, and honesty strings', () => {
     renderPage();
     expect(screen.getByTestId('ledger-drive').textContent).toMatch(/Unexplained residual/);
@@ -282,8 +523,13 @@ describe('PhysicsLedgerPage', () => {
       queryState({ data: ledgerResponse({ truncated: true, contradictions: ['gear_P_with_speed'] }) }),
     );
     renderPage();
-    expect(screen.getByTestId('ledger-summary').textContent).toMatch(/Sample cap hit/);
-    expect(screen.getByTestId('ledger-summary').textContent).toMatch(/gear_P_with_speed/);
+    fireEvent.click(within(screen.getByTestId('ledger-summary')).getByRole('button', { name: 'Review details' }));
+    const badgeDrawer = screen.getByRole('dialog');
+    const windowGroup = within(badgeDrawer).getByRole('group', { name: 'Window' });
+    expect(windowGroup.textContent).toMatch(/Sample cap hit/);
+    expect(windowGroup.textContent).toMatch(/gear_P_with_speed/);
+    fireEvent.keyDown(badgeDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('renders skeletons while loading', () => {
@@ -338,7 +584,8 @@ describe('PhysicsLedgerPage', () => {
     expect(screen.queryByText(/Something went wrong/i)).not.toBeInTheDocument();
     expect(screen.getByTestId('ledger-dynamics')).toBeInTheDocument();
     expect(screen.getByTestId('ledger-drive').textContent).toMatch(/No drive interval/);
-    expect(screen.getByTestId('ledger-unknown').textContent).toMatch(/Full coverage/);
+    expect(screen.getByTestId('ledger-unknown')).toHaveTextContent('Unknown');
+    expect(screen.getByTestId('ledger-unknown')).not.toHaveTextContent(/Full coverage/);
     expect(screen.getByTestId('ledger-blackbox').textContent).toMatch(/Fewer than two samples/);
   });
 
@@ -350,5 +597,209 @@ describe('PhysicsLedgerPage', () => {
     const svgs = container.querySelectorAll('.recharts-wrapper svg');
     expect(svgs.length).toBeGreaterThanOrEqual(2);
     expect(container.querySelector('.recharts-area-curve')).not.toBeNull();
+  });
+
+  it('embeds actual motion series with accessible signed values and null gaps without duplicate chrome', () => {
+    const ledger = ledgerResponse();
+    ledger.black_box = [
+      { at: '2026-09-14T11:58:30Z', speed_mps: 20, power_pack_w: -8000, force_long_n: -200 },
+      { at: '2026-09-14T11:59:00Z', speed_mps: null, power_pack_w: null, force_long_n: null },
+      { at: '2026-09-14T11:59:30Z', speed_mps: 0, power_pack_w: 0, force_long_n: 0 },
+    ];
+    usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledger }));
+    renderPage();
+    for (const [panelId, labels] of [
+      ['ledger-dynamics', ['Pack power (kW)', 'Speed']],
+      ['ledger-blackbox', ['Pack power (kW)', 'Speed', 'Force (N)']],
+    ] as const) {
+      const panel = screen.getByTestId(panelId);
+      expect(within(panel).getAllByRole('figure')).toHaveLength(labels.length);
+      for (const label of labels) {
+        const frame = within(panel).getByRole('figure', { name: label });
+        expect(frame.querySelector('.recharts-area')).not.toBeNull();
+        expect(frame.querySelector('.recharts-wrapper svg')).not.toBeNull();
+        expect(frame.querySelector('[style*="--chart-height-desktop: 200px"]')).not.toBeNull();
+        expect(within(frame).getByRole('table')).toBeInTheDocument();
+        expect(within(frame).queryByRole('button')).not.toBeInTheDocument();
+        expect(within(frame).getByRole('heading', { name: label })).toHaveClass('sr-only');
+      }
+    }
+    const blackBox = screen.getByTestId('ledger-blackbox');
+    for (const [label, negative, zero] of [
+      ['Pack power (kW)', /-8(?:\.0+)? kW/, /0(?:\.0+)? kW/],
+      ['Speed', /72(?:\.0+)? km\/h/, /0(?:\.0+)? km\/h/],
+      ['Force (N)', /-200(?:\.0+)? N/, /0(?:\.0+)? N/],
+    ] as const) {
+      const table = within(within(blackBox).getByRole('figure', { name: label })).getByRole('table');
+      const rows = within(table).getAllByRole('row').slice(1);
+      expect(rows).toHaveLength(3);
+      expect(rows[0]).toHaveTextContent(negative);
+      expect(rows[1]).toHaveTextContent('—');
+      expect(rows[2]).toHaveTextContent(zero);
+    }
+    expect(ledger.black_box[1].power_pack_w).toBeNull();
+    expect(ledger.black_box[0].power_pack_w).toBe(-8000);
+    const dynamicsTable = within(within(screen.getByTestId('ledger-dynamics'))
+      .getByRole('figure', { name: 'Speed' })).getByRole('table');
+    expect(within(dynamicsTable).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
+      'Time', 'Speed (speed_mps)', 'accel_mps2', 'force_long_n', 'power_mech_w',
+      'power_pack_w', 'friction_brake_w', 'unknown',
+    ]);
+    const cells = within(within(dynamicsTable).getAllByRole('row')[2]).getAllByRole('cell');
+    expect(cells.map(cell => cell.textContent)).toEqual([
+      expect.stringContaining('2026-09-13T12:01:00Z'), expect.stringContaining('21 ('),
+      '0.01', '20', '420', '8100', '—', 'false',
+    ]);
+    expect(screen.queryByText(/Visual series is sampled/)).not.toBeInTheDocument();
+  });
+
+  it('keeps all returned motion rows and raw fields in frame tables independently of plotted sampling', () => {
+    const points = Array.from({ length: 501 }, (_, index) => ({
+      at: new Date(Date.UTC(2026, 8, 14, 11, 0, index)).toISOString(),
+      speed_mps: index === 500 ? null : 20.125,
+      power_pack_w: index === 500 ? null : -8000.125,
+      force_long_n: index === 500 ? null : -200.125,
+      latch: index === 500 ? 'unknown' : 'moving',
+    }));
+    usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledgerResponse({ black_box: points }) }));
+    renderPage();
+    const panel = screen.getByTestId('ledger-blackbox');
+    for (const label of ['Pack power (kW)', 'Speed', 'Force (N)']) {
+      const frame = within(panel).getByRole('figure', { name: label });
+      expect(within(frame).getByText('Showing 500 of 501 observations for display.')).toBeInTheDocument();
+      expect(within(frame).getByText('Visual series is sampled: 500 of 501 observations are rendered.')).toBeInTheDocument();
+      const table = within(frame).getByRole('table');
+      const rows = within(table).getAllByRole('row').slice(1);
+      expect(rows).toHaveLength(501);
+      expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
+        'Time', label === 'Speed' ? 'Speed (speed_mps)' : 'speed_mps',
+        label === 'Pack power (kW)' ? 'Pack power (kW) (power_pack_w)' : 'power_pack_w',
+        label === 'Force (N)' ? 'Force (N) (force_long_n)' : 'force_long_n', 'latch',
+      ]);
+      expect(rows[0]).toHaveTextContent('20.125');
+      expect(rows[0]).toHaveTextContent('-8000.125');
+      expect(rows[0]).toHaveTextContent('-200.125');
+      expect(rows[0]).toHaveTextContent('moving');
+      expect(within(rows[500]).getAllByRole('cell').map(cell => cell.textContent)).toEqual([
+        expect.stringContaining(points[500].at), '—', '—', '—', 'unknown',
+      ]);
+      expect(frame.querySelector('.recharts-area-curve')).not.toBeNull();
+    }
+    expect(points[500].power_pack_w).toBeNull();
+  });
+
+  it.each([false, true])('does not infer complete coverage from empty intervals (truncated=%s)', (truncated) => {
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: ledgerResponse({ unknown_intervals: [], unknown_hours: 0, truncated }),
+    }));
+    renderPage();
+    const panel = screen.getByTestId('ledger-unknown');
+    expect(panel).toHaveTextContent('No unknown intervals returned; coverage is not established.');
+    expect(panel).toHaveTextContent('Unknown hours: 0');
+    expect(panel).not.toHaveTextContent(/Full coverage/);
+    expect(panel.querySelector('[class*="semantic-success"]')).toBeNull();
+    if (truncated) {
+      expect(within(panel).getByText(/Sample cap hit/)).toBeInTheDocument();
+    } else {
+      expect(within(panel).queryByText(/Sample cap hit/)).not.toBeInTheDocument();
+    }
+  });
+
+  it('keeps absent intervals distinct from an empty returned list while retaining reported hours', () => {
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: ledgerResponse({ unknown_intervals: null, unknown_hours: 2 }),
+    }));
+    renderPage();
+    const panel = screen.getByTestId('ledger-unknown');
+    expect(within(panel).getByText('Unknown')).toBeInTheDocument();
+    expect(panel).toHaveTextContent('Unknown hours: 2');
+    expect(panel).not.toHaveTextContent(/No unknown intervals returned|Full coverage/);
+  });
+
+  it('retains populated unknown intervals, their durations, and capped evidence', () => {
+    usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledgerResponse({ truncated: true }) }));
+    renderPage();
+    const panel = screen.getByTestId('ledger-unknown');
+    expect(within(panel).getByText('gap')).toBeInTheDocument();
+    // Durations follow the saved duration unit (hours by default): 300 s → 0.1 h.
+    expect(panel).toHaveTextContent(/0\.1\s*h/);
+    expect(panel).toHaveTextContent(/Unknown hours: 0\.\d+/);
+    expect(panel).toHaveTextContent(/Sample cap hit/);
+    expect(within(panel).getByRole('table')).toBeInTheDocument();
+  });
+
+  it('keeps every shell on acquisition failure without claiming an empty measurement window', () => {
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: undefined, error: new Error('boom'), isError: true, isSuccess: false, status: 'error',
+    }));
+    const { container } = renderPage();
+    // Twelve domain panels plus their nested summary briefs.
+    expect(container.querySelectorAll('[data-testid^="ledger-"]').length).toBeGreaterThanOrEqual(12);
+    expect(screen.getAllByText('No requested source has returned usable data yet.')).toHaveLength(12);
+    expect(screen.queryByText(/No ledger samples/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('keeps paused initial evidence unresolved without a loading or offline claim', () => {
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: undefined, isPending: true, isSuccess: false, status: 'pending', fetchStatus: 'paused',
+    }));
+    const { container } = renderPage();
+    // Twelve domain panels plus their nested summary briefs.
+    expect(container.querySelectorAll('[data-testid^="ledger-"]').length).toBeGreaterThanOrEqual(12);
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(screen.queryByText(/No ledger samples|device is offline/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText('No requested source has returned usable data yet.')).toHaveLength(12);
+  });
+
+  it('marks capped evidence partial while retaining all domain panels and raw energy terms', () => {
+    const ledger = ledgerResponse({ truncated: true });
+    usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledger }));
+    const { container } = renderPage();
+    expect(container.querySelectorAll('[data-provenance="historical"][data-data-status="partial"]')).toHaveLength(1);
+    fireEvent.click(within(screen.getByTestId('ledger-summary')).getByRole('button', { name: 'Review details' }));
+    const provenanceDrawer = screen.getByRole('dialog');
+    expect(provenanceDrawer.querySelector('[data-provenance="historical"][data-data-status="partial"]')).not.toBeNull();
+    fireEvent.keyDown(provenanceDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Partial data');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Sample cap hit — oldest prefix solved');
+    // Twelve domain panels plus their nested summary briefs.
+    expect(container.querySelectorAll('[data-testid^="ledger-"]').length).toBeGreaterThanOrEqual(12);
+    expect(ledger.drive.measured_wh.value_wh).toBe(1650);
+    expect(ledger.drive.unexplained_wh).toBe(-25);
+    expect(ledger.dynamics.points[1].power_pack_w).toBe(8100);
+  });
+
+  it('retains the complete ledger and retry after a failed refresh of capped evidence', () => {
+    const refetch = vi.fn();
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: ledgerResponse({ truncated: true }), error: new Error('refresh failed'),
+      isError: true, isSuccess: false, status: 'error', refetch,
+    }));
+    const { container } = renderPage();
+    // Twelve domain panels plus their nested summary briefs.
+    expect(container.querySelectorAll('[data-testid^="ledger-"]').length).toBeGreaterThanOrEqual(12);
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveTextContent('Previously loaded data remains visible while affected sources recover.');
+    expect(screen.queryByText('No requested source has returned usable data yet.')).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Drive energy ledger' })).toBeInTheDocument();
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses shared rolling presets and preserves the vehicle scope', () => {
+    renderPage('/tesla-physics/ledger?time_scope=6h');
+    const sixHourScope = usePhysicsLedgerMock.mock.lastCall?.[0] as {
+      vehicleId: string; start: string; end: string;
+    };
+    expect(sixHourScope.vehicleId).toBe('1');
+    expect(Date.parse(sixHourScope.end) - Date.parse(sixHourScope.start)).toBe(6 * 3600 * 1000);
+    expect(screen.queryByRole('button', { name: 'Last 6h' })).not.toBeInTheDocument();
+
+    renderPage('/tesla-physics/ledger?time_scope=24h');
+    const twentyFourHourScope = usePhysicsLedgerMock.mock.lastCall?.[0] as typeof sixHourScope;
+    expect(twentyFourHourScope.vehicleId).toBe('1');
+    expect(Date.parse(twentyFourHourScope.end) - Date.parse(twentyFourHourScope.start)).toBe(24 * 3600 * 1000);
   });
 });

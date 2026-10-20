@@ -1,3 +1,5 @@
+import type { SignalHistoryPoint } from '@/api/types';
+
 export interface SignalPoint {
   timestamp: string;
   valueNum?: number;
@@ -18,7 +20,7 @@ export interface SignalHistoryResponse {
   from: string;
   to: string;
   count: number;
-  data: SignalPoint[];
+  data: SignalHistoryPoint[];
 }
 
 export interface SignalLogEntry {
@@ -50,7 +52,7 @@ export interface TelemetryStatus {
   uptimeSeconds?: number;
   uptime_seconds?: number;
   vehicles?: Record<string, VehicleTelemetry> | VehicleTelemetry[];
-  streaming_vehicles?: Record<string, VehicleTelemetry>;
+  streaming_vehicles?: Record<string, VehicleTelemetry> | VehicleTelemetry[];
   topics?: string[];
 }
 
@@ -59,9 +61,9 @@ export interface VehicleTelemetry {
   vehicleId?: number;
   vehicle_id?: number;
   state?: string;
-  signalCount: number;
+  signalCount?: number;
   signal_count?: number;
-  batchCount: number;
+  batchCount?: number;
   batch_count?: number;
   signalsPerSecond?: number;
   signals_per_second?: number;
@@ -90,17 +92,15 @@ export interface RangeStats {
 /*  the Go handler has itself shipped either casing — and either an    */
 /*  array or a `Record<vin, …>` map — across versions. Reading a       */
 /*  single spelling therefore silently loses data whenever the other   */
-/*  arrives: a `signalCount` of `undefined` renders as 0. These        */
+/*  arrives. Missing counters must remain unknown, not become zero.    */
 /*  helpers are the ONE place that resolves the pair to a canonical,   */
 /*  null-safe value so every consumer agrees.                          */
 /* ------------------------------------------------------------------ */
 
 /**
  * Resolve a single {@link VehicleTelemetry} to canonical camelCase fields,
- * preferring the camelCase spelling and falling back to snake_case. Count
- * fields default to `0` so callers can sum/format them without a guard; the
- * optional rate/last-seen fields stay `undefined` when absent so a missing
- * value is distinguishable from a real `0`.
+ * preferring the camelCase spelling and falling back to snake_case. Missing
+ * counters, rate and last-seen remain `undefined`, distinct from a real `0`.
  *
  * @param v   raw per-vehicle telemetry (either casing).
  * @param vin optional VIN override, supplied when the vehicle arrives keyed by
@@ -114,8 +114,8 @@ export function normalizeVehicleTelemetry(
   return {
     ...v,
     vin: vin ?? v.vin,
-    signalCount: v.signalCount ?? v.signal_count ?? 0,
-    batchCount: v.batchCount ?? v.batch_count ?? 0,
+    signalCount: v.signalCount ?? v.signal_count ?? undefined,
+    batchCount: v.batchCount ?? v.batch_count ?? undefined,
     signalsPerSecond: v.signalsPerSecond ?? v.signals_per_second,
     lastReceived: v.lastReceived ?? v.last_received,
   };
@@ -128,14 +128,16 @@ export function normalizeVehicleTelemetry(
  * The backend has shipped vehicles as an ARRAY and as a `Record<vin, …>` map
  * across versions, and under either the `vehicles` or the older
  * `streaming_vehicles` key. This resolves all four combinations to one array
- * whose every element carries canonical, null-safe fields — closing the latent
+ * whose every element carries canonical fields — closing the latent
  * gap where the array shape skipped snake_case normalization (leaving
  * `signalCount` `undefined`) and the record shape was silently dropped by
  * callers doing `Array.isArray(status.vehicles) ? status.vehicles : []`.
+ * An absent or unsupported container remains unknown (`undefined`); an
+ * explicitly supplied empty array or map remains an observed empty list.
  */
 export function telemetryVehicleList(
   status: TelemetryStatus | null | undefined,
-): VehicleTelemetry[] {
+): VehicleTelemetry[] | undefined {
   const raw = status?.vehicles ?? status?.streaming_vehicles;
   if (Array.isArray(raw)) {
     return raw.map((v) => normalizeVehicleTelemetry(v));
@@ -143,7 +145,7 @@ export function telemetryVehicleList(
   if (raw && typeof raw === 'object') {
     return Object.entries(raw).map(([vin, v]) => normalizeVehicleTelemetry(v, vin));
   }
-  return [];
+  return undefined;
 }
 
 /**

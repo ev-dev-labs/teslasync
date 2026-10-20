@@ -36,6 +36,7 @@ The audit covers these categories:
 
 ## Interpreting Results
 
+- Exit **0** means every check passed; exit **1** means reported violations or TypeScript errors. Other nonzero statuses indicate execution failures.
 - **0 violations** = file is clean
 - Each violation shows: file, line number, rule ID, matched code
 - Files inside `components/ui/`, `components/charts/`, `components/maps/` are EXCLUDED from raw HTML and library import checks (they are the shared components)

@@ -190,7 +190,7 @@ const overviewRegion = () => screen.getByRole('region', { name: 'Feature overvie
 
 /**
  * The header Refresh control is a real <button>. PageContainer also renders a
- * DataFreshness chip with role="button"/aria-label="Refresh", so filter down to
+ * FreshnessDot chip with role="button"/aria-label="Refresh", so filter down to
  * the actual button element.
  */
 function getRefreshButton(): HTMLButtonElement {
@@ -213,12 +213,16 @@ describe('TeslaFeatureFlagsPage', () => {
     renderPage();
 
     // Page shell + labelled KPI region are present from the first paint.
-    expect(screen.getByRole('heading', { level: 1, name: 'Feature Flags' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Feature flags' })).toBeInTheDocument();
     expect(kpiRegion()).toBeInTheDocument();
     expect(getRefreshButton()).toBeInTheDocument();
 
-    // KPI skeleton renders no metric labels yet...
-    expect(within(kpiRegion()).queryByText('Total Features')).toBeNull();
+    // The real OperationalBrief keeps labels mounted while all four values load.
+    expect(within(kpiRegion()).getByText('Total features')).toBeInTheDocument();
+    const strip = kpiRegion().querySelector('[data-operational-brief][data-testid="tesla-feature-config-summary"]')!;
+    expect(strip).toHaveAttribute('aria-busy', 'true');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(strip.querySelector('[data-operational-value]')).toBeNull();
     // ...and the interactive composition chart only exists once data lands.
     expect(screen.queryByRole('group', { name: /Enabled versus disabled/i })).toBeNull();
   });
@@ -231,14 +235,21 @@ describe('TeslaFeatureFlagsPage', () => {
     const region = kpiRegion();
     // Total is unique in the band; enabled + disabled both read "2".
     expect(await within(region).findByText('4')).toBeInTheDocument();
-    expect(within(region).getByText('Total Features')).toBeInTheDocument();
-    expect(within(region).getByText('50%')).toBeInTheDocument();
+    expect(within(region).getByText('Total features')).toBeInTheDocument();
+    const strip = region.querySelector('[data-operational-brief][data-testid="tesla-feature-config-summary"]')!;
+    const tiles = strip.querySelectorAll('[data-operational-metric]');
+    expect(tiles).toHaveLength(4);
+    // The sync caption moved from the face to the Review-details drawer.
+    expect(within(strip as HTMLElement).queryByText(/Last synced:/)).toBeNull();
+    expect(Array.from(tiles).map((tile) => tile.querySelector('[data-operational-value]')?.textContent))
+      .toEqual(['4', '2', '2', '50.00%']);
+    expect(tiles[3]).toHaveAttribute('data-value-state', 'value');
     expect(within(region).getAllByText('2')).toHaveLength(2);
     // Truthful data → no fabricated em-dash placeholders in the band.
     expect(within(region).queryByText('—')).toBeNull();
 
     // Overview bento: the enabled-rate gauge label + the grouped-bar chart.
-    expect(within(overviewRegion()).getByText('Enabled Rate')).toBeInTheDocument();
+    expect(within(overviewRegion()).getByText('Enabled rate')).toBeInTheDocument();
     expect(
       screen.getByRole('group', { name: /Enabled versus disabled feature counts/i }),
     ).toBeInTheDocument();
@@ -254,6 +265,12 @@ describe('TeslaFeatureFlagsPage', () => {
     expect(mockedRequest.mock.calls.some((c) => c[0] === '/api/v1/tesla/user/feature-config')).toBe(
       false,
     );
+    fireEvent.click(within(strip as HTMLElement).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Account feature configuration details' });
+    expect(drawer).toHaveTextContent('Total features');
+    expect(drawer).toHaveTextContent('Enabled rate');
+    expect(drawer).toHaveTextContent('50.00%');
+    expect(drawer).toHaveTextContent(/Last synced:/);
   });
 
   it('filters the table down to the matching feature as the user searches', async () => {
@@ -298,7 +315,7 @@ describe('TeslaFeatureFlagsPage', () => {
 
     const region = kpiRegion();
     // An empty payload is a KNOWN 0 (the fetch succeeded) — not an em-dash.
-    await waitFor(() => expect(within(region).getByText('0%')).toBeInTheDocument());
+    await waitFor(() => expect(region.querySelector('[data-operational-metric="features-enabled-rate"] [data-operational-value]')).toHaveTextContent('0.00%'));
     expect(within(region).getAllByText('0')).toHaveLength(3);
     expect(within(region).queryByText('—')).toBeNull();
 
@@ -310,7 +327,25 @@ describe('TeslaFeatureFlagsPage', () => {
     ).toBeInTheDocument();
 
     // A null timestamp reads as "never synced".
-    expect(screen.getByText('Not synced yet')).toBeInTheDocument();
+    expect(within(overviewRegion()).getByText('Not synced yet')).toBeInTheDocument();
+  });
+
+  it('keeps a missing feature blob distinct from an authoritative empty object', async () => {
+    installRequest({ envelope: makeEnvelope(null, null) });
+    renderPage();
+    await screen.findByText('No feature config data yet. Click Refresh to fetch from Tesla.');
+    const strip = kpiRegion().querySelector('[data-operational-brief][data-testid="tesla-feature-config-summary"]')!;
+    // Unknown counts are omitted from the face (never zero-filled)...
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(kpiRegion()).getByText('No metric values are available yet.')).toBeInTheDocument();
+    // ...and counted as hidden in the Review-details drawer.
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    expect(await screen.findByRole('dialog', { name: 'Account feature configuration details' }))
+      .toHaveTextContent('4 empty fields are hidden.');
+    expect(within(kpiRegion()).queryByText('0')).toBeNull();
+    expect(screen.getByText('No feature data to summarise yet.')).toBeInTheDocument();
+    expect(screen.getByText('No feature composition to chart yet.')).toBeInTheDocument();
+    expect(getRefreshButton()).toBeEnabled();
   });
 
   it('surfaces QueryError panels AND em-dash KPIs (no fabricated 0s) when the fetch fails with no data', async () => {
@@ -319,15 +354,21 @@ describe('TeslaFeatureFlagsPage', () => {
     renderPage();
 
     // All three data panels degrade to the actionable network error state.
-    expect(await screen.findAllByText("Can't reach server")).toHaveLength(3);
+    expect(await screen.findAllByRole('button', { name: 'Retry', exact: true })).toHaveLength(3);
 
-    // Truthfulness guard: the KPI band must NOT invent "0 features" — every
-    // value collapses to an em-dash while the labels stay put.
+    // Truthfulness guard: the KPI band must NOT invent "0 features" — unknown
+    // values are omitted from the face (labels stay put as chips) and counted
+    // as hidden in the Review-details drawer.
     const region = kpiRegion();
-    expect(within(region).getByText('Total Features')).toBeInTheDocument();
-    expect(within(region).getAllByText('—')).toHaveLength(4);
+    expect(within(region).getByText('Total features')).toBeInTheDocument();
+    expect(within(region).queryByText('—')).toBeNull();
+    expect(region.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(region).getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(within(region).getByRole('button', { name: 'Review details' }));
+    expect(await screen.findByRole('dialog', { name: 'Account feature configuration details' }))
+      .toHaveTextContent('4 empty fields are hidden.');
     expect(within(region).queryByText('0')).toBeNull();
-    expect(within(region).queryByText('0%')).toBeNull();
+    expect(within(region).queryByText('0.00%')).toBeNull();
 
     // Recovery affordance stays available.
     expect(getRefreshButton()).toBeInTheDocument();
@@ -343,6 +384,7 @@ describe('TeslaFeatureFlagsPage', () => {
 
     const refresh = getRefreshButton();
     expect(refresh).not.toBeDisabled();
+    expect(refresh).not.toHaveAttribute('aria-busy');
 
     fireEvent.click(refresh);
 
@@ -354,6 +396,15 @@ describe('TeslaFeatureFlagsPage', () => {
     );
     // The still-pending mutation keeps the button disabled.
     await waitFor(() => expect(getRefreshButton()).toBeDisabled());
+    expect(getRefreshButton()).toHaveAttribute('aria-busy', 'true');
+    expect(getRefreshButton()).toHaveAccessibleName('Refresh');
+    expect(getRefreshButton().querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(getRefreshButton().querySelector('svg')).toHaveClass('motion-reduce:animate-none');
+    expect(
+      mockedRequest.mock.calls.filter(([path, opts]) =>
+        path === REFRESH_PATH && (opts as ReqOpts)?.method === 'POST',
+      ),
+    ).toHaveLength(1);
   });
 
   it('keeps the last-good rows visible when a background refetch errors', async () => {
@@ -373,9 +424,9 @@ describe('TeslaFeatureFlagsPage', () => {
     await waitFor(() => expect(handle.getCallCount()).toBe(2));
 
     // Because stale data is still on hand, the page must NOT blank the panels:
-    // the rows stay and no error panel is shown.
+    // The rows stay; a source-level cause notice is allowed.
     expect(screen.getByText('vehicle_command_enabled')).toBeInTheDocument();
-    expect(screen.queryByText("Can't reach server")).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry', exact: true })).not.toBeInTheDocument();
     // KPIs keep their truthful last-good values (no em-dash degradation).
     expect(within(kpiRegion()).getByText('4')).toBeInTheDocument();
   });
@@ -395,5 +446,35 @@ describe('TeslaFeatureFlagsPage', () => {
     expect(screen.getByRole('searchbox', { name: 'Search features' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toBeInTheDocument();
     expect(getRefreshButton()).toBeInTheDocument();
+    // The header Refresh is an icon-only action with a tooltip description.
+    expect(getRefreshButton()).toHaveClass('h-9', 'w-9');
+    expect(getRefreshButton()).toHaveAttribute('aria-describedby');
+    expect(getRefreshButton().querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(getRefreshButton().querySelector('svg')).toHaveAttribute('focusable', 'false');
+    expect(getRefreshButton().querySelector('svg')).toHaveClass('shrink-0');
+  });
+
+  it('retains an authoritative empty feature snapshot after a failed refresh', async () => {
+    const handle = installRequest({
+      getSequence: [makeEnvelope({}, null), new Error('empty snapshot refresh failed')],
+      refreshResult: makeEnvelope({}, null),
+    });
+    renderPage();
+
+    await waitFor(() => expect(kpiRegion().querySelector('[data-operational-metric="features-enabled-rate"] [data-operational-value]')).toHaveTextContent('0.00%'));
+    fireEvent.click(getRefreshButton());
+    await waitFor(() => expect(handle.getCallCount()).toBe(2));
+    await waitFor(() => expect(screen.getByText('Data may be stale')).toBeInTheDocument());
+
+    expect(within(kpiRegion()).getAllByText('0')).toHaveLength(3);
+    // The retained status badge moved from the face to the Review-details drawer.
+    expect(within(kpiRegion()).queryByText('Retained account snapshot')).toBeNull();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    expect(await screen.findByRole('dialog', { name: 'Account feature configuration details' }))
+      .toHaveTextContent('Retained account snapshot');
+    expect(screen.getByText('No feature data to summarise yet.')).toBeInTheDocument();
+    expect(screen.getByText('No feature composition to chart yet.')).toBeInTheDocument();
+    expect(screen.getByText('No feature config data yet. Click Refresh to fetch from Tesla.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry', exact: true })).not.toBeInTheDocument();
   });
 });

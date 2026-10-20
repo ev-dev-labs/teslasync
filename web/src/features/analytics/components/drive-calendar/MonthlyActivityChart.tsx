@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
-  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -17,13 +16,16 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { QueryError } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import type { CalendarMonth } from '../../lib/driveCalendar';
 import { formatCalendarMonth } from './labels';
 import type { DriveCalendarSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MonthlyActivityChartProps extends DriveCalendarSectionState {
   months: CalendarMonth[];
@@ -38,6 +40,7 @@ export function MonthlyActivityChart({
   error,
   onRetry,
 }: MonthlyActivityChartProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { distance: distanceUnit, locale } = unitPrefs;
@@ -46,7 +49,9 @@ export function MonthlyActivityChart({
     () =>
       months.map((month) => ({
         month: formatCalendarMonth(month.month, locale, true),
-        distance: Math.round(convertDistanceFromSI(month.distanceM, distanceUnit) * 10) / 10,
+        distance: isFiniteNumber(month.distanceM)
+          ? convertDistanceFromSI(month.distanceM, distanceUnit)
+          : null,
         drives: month.drives,
         activeDays: month.activeDays,
       })),
@@ -63,8 +68,9 @@ export function MonthlyActivityChart({
   const drivesName = t('driveCalendar.monthly.drivesSeries', 'Drives');
 
   return (
-    <ChartContainer
-      className={className}
+    <div className={className}>
+    <ChartCard
+      size="standard"
       title={t('driveCalendar.monthly.title', 'Monthly distance & activity')}
       subtitle={t(
         'driveCalendar.monthly.subtitle',
@@ -86,7 +92,7 @@ export function MonthlyActivityChart({
         {
           key: 'distance',
           label: distanceName,
-          format: (value) => fmtNumber(value, 1),
+          format: (value) => isFiniteNumber(value) ? fmtNumber(value) : '—',
         },
         {
           key: 'drives',
@@ -121,7 +127,7 @@ export function MonthlyActivityChart({
                 tick={axisTick}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => fmtNumber(value, 0)}
+                tickFormatter={(value) => isFiniteNumber(value) ? fmtNumber(value) : '—'}
               />
               <YAxis
                 yAxisId="drives"
@@ -136,7 +142,7 @@ export function MonthlyActivityChart({
                   <ChartTooltip
                     valueFormatter={(value, name) =>
                       name === distanceName
-                        ? `${fmtNumber(value, 1)} ${distanceUnit}`
+                        ? isFiniteNumber(value) ? `${fmtNumber(value)} ${distanceUnit}` : '—'
                         : fmtInt(value)
                     }
                   />
@@ -166,6 +172,7 @@ export function MonthlyActivityChart({
           </ResponsiveContainer>
         )
       }
-    </ChartContainer>
+    </ChartCard>
+    </div>
   );
 }

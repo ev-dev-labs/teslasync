@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { PageContainer } from '@/components/layout';
-import { Text } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { useDayLog } from '@/api/hooks/useDayLog';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDataState } from '@/hooks/useDataState';
@@ -12,7 +13,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import { isValidYmd, todayYmd } from '../lib/daylog';
 import { DayLogControls } from '../components/daylog/DayLogControls';
-import { DayLogSummary } from '../components/daylog/DayLogSummary';
+import { DayLogOperationalSummary } from '../components/operationalbrief-a-m/DayLogOperationalSummary';
 import { DayLogTimeline } from '../components/daylog/DayLogTimeline';
 import { DayLogSources } from '../components/daylog/DayLogSources';
 
@@ -42,7 +43,11 @@ export default function DayLogPage() {
 
   // No layers param: the server defaults to the complete history.
   const dayLogQuery = useDayLog({ vehicleId, date, timezone });
-  const state = useDataState(dayLogQuery);
+  const state = useDataState(dayLogQuery, {
+    provenance: 'historical',
+    partial: dayLogQuery.data?.truncated === true
+      || (dayLogQuery.data?.sources?.some((source) => source.status === 'unavailable') ?? false),
+  });
 
   const setDate = useCallback(
     (next: string) => {
@@ -62,44 +67,83 @@ export default function DayLogPage() {
   }
 
   const data = state.data ?? null;
-  const isLoading = dayLogQuery.isPending;
+  const initialDeferred = !state.hasData && state.isRefreshBlocked && !state.fatalError;
+  const isLoading = !state.hasData && !state.isRefreshBlocked && dayLogQuery.isLoading;
   const fatalError = state.fatalError;
 
   return (
-    <PageContainer
+    <PageLayout
       actionLayout="scope-first"
       title={title}
-      subtitle={
-        <>
-          {t('dayLog.subtitle', 'What happened to this vehicle today')}
-          <Text as="span" variant="caption" className="mt-1 block [overflow-wrap:anywhere]" id="daylog-timezone">
-            {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
-          </Text>
-        </>
+      subtitle={t('dayLog.subtitle', 'What happened to this vehicle today')}
+      metadataActions={
+        <Text as="span" variant="caption" className="[overflow-wrap:anywhere]" id="daylog-timezone">
+          {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
+        </Text>
       }
       query={dayLogQuery}
       copyLink
       contextActions={<DayLogControls date={date} timezone={timezone} onDateChange={setDate} />}
     >
-      <FadeIn delay={0.05}>
-        <DayLogSummary summary={data?.summary ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
-      </FadeIn>
+      <StaleRefreshWarning
+        state={state}
+        label={title}
+        title={state.status === 'partial' ? t('dataState.partial.title', 'Partial data') : undefined}
+        message={state.status === 'partial'
+          ? data?.truncated
+            ? t('dayLog.timeline.truncated', 'Some records may be missing — the day exceeded the signal read cap. What loaded is shown in full.')
+            : t('dayLog.brief.status.partial', 'Some sources unavailable')
+          : undefined}
+      />
+      {initialDeferred ? (
+        [
+          { id: 'daylog-summary', title: t('dayLog.summary.title', 'Day summary') },
+          { id: 'daylog-timeline', title: t('dayLog.timeline.title', 'Timeline') },
+          { id: 'daylog-sources', title: t('dayLog.sources.title', 'Sources') },
+        ].map((section) => (
+          <GlassPanel key={section.id} className="min-w-0 space-y-3 p-6" data-testid={section.id}>
+            <PanelTitle>{section.title}</PanelTitle>
+            <Text as="p" variant="bodySm" color="secondary" role="status">
+              {t('fleetOps.brief.refreshBlocked', 'Refresh paused')}
+              {' · '}
+              {t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.')}
+            </Text>
+            <Button variant="secondary" onClick={retry}>
+              {t('error.retry', 'Retry')}
+            </Button>
+          </GlassPanel>
+        ))
+      ) : (
+        <>
+          <FadeIn delay={0.05}>
+            <DayLogOperationalSummary
+              data={data}
+              date={date}
+              timezone={timezone}
+              isLoading={isLoading}
+              error={fatalError}
+              status={state.status}
+              onRetry={retry}
+            />
+          </FadeIn>
 
-      <FadeIn delay={0.1}>
-        <DayLogTimeline
-          events={data?.events ?? null}
-          timezone={data?.timezone ?? timezone}
-          vehicleId={vehicleId}
-          truncated={data?.truncated ?? false}
-          isLoading={isLoading}
-          error={fatalError}
-          onRetry={retry}
-        />
-      </FadeIn>
+          <FadeIn delay={0.1}>
+            <DayLogTimeline
+              events={data?.events ?? null}
+              timezone={data?.timezone ?? timezone}
+              vehicleId={vehicleId}
+              truncated={data?.truncated ?? false}
+              isLoading={isLoading}
+              error={fatalError}
+              onRetry={retry}
+            />
+          </FadeIn>
 
-      <FadeIn delay={0.15}>
-        <DayLogSources sources={data?.sources ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
-      </FadeIn>
-    </PageContainer>
+          <FadeIn delay={0.15}>
+            <DayLogSources sources={data?.sources ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
+          </FadeIn>
+        </>
+      )}
+    </PageLayout>
   );
 }

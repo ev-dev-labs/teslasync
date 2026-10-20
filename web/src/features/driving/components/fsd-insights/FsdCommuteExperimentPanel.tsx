@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+import { neonColorMap, typography } from '@/lib/tokens';
+
 import type { FsdInsights } from '@/types/fsd';
 
 import {
@@ -14,6 +15,7 @@ import {
 } from '../../lib/fsdCommuteExperiment';
 import { FsdSectionBody } from './FsdSectionBody';
 import type { FsdSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const verdictVariant: Record<ExperimentVerdict, 'success' | 'info' | 'warning' | 'neutral'> = {
   changed: 'info',
@@ -29,6 +31,7 @@ export function FsdCommuteExperimentPanel({
   insights: FsdInsights | undefined;
   state: FsdSectionState;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const experiment = useMemo(() => buildFsdCommuteExperiment(insights), [insights]);
   const rows = [...experiment.firmware, ...experiment.commutes];
@@ -49,14 +52,14 @@ export function FsdCommuteExperimentPanel({
       header: t('fsd.experiment.before', 'Before'),
       render: (row) => row.fromSharePct == null
         ? t('fsd.experiment.unknown', 'Unknown')
-        : `${fmtNumber(row.fromSharePct, 1)}% · ${row.fromDrives}`,
+        : `${fmtNumber(row.fromSharePct)}% · ${row.fromDrives}`,
     },
     {
       key: 'toSharePct',
       header: t('fsd.experiment.after', 'After'),
       render: (row) => row.toSharePct == null
         ? t('fsd.experiment.unknown', 'Unknown')
-        : `${fmtNumber(row.toSharePct, 1)}% · ${row.toDrives}`,
+        : `${fmtNumber(row.toSharePct)}% · ${row.toDrives}`,
     },
     {
       key: 'verdict',
@@ -73,12 +76,12 @@ export function FsdCommuteExperimentPanel({
         </Badge>
       ),
     },
-  ], [t]);
+  ], [t, fmtNumber]);
 
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="fsd-commute-experiment">
       <PanelTitle className="mb-1 flex items-center gap-2">
-        <FlaskConical className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <FlaskConical className={`h-4 w-4 ${typography.color.muted}`} aria-hidden="true" />
         {t('fsd.experiment.title', 'Same-route experiment')}
       </PanelTitle>
       <Text as="p" variant="caption" className="mb-3">
@@ -94,7 +97,7 @@ export function FsdCommuteExperimentPanel({
             )}
       </Text>
       {(experiment.unknownDayCount > 0 || experiment.resetCount > 0) && (
-        <Text as="p" variant="caption" className="mb-3">
+        <Text as="p" variant="caption" className={`mb-3 ${neonColorMap.amber.text}`}>
           {t(
             'fsd.experiment.honesty',
             '{{unknown}} days with no counter · {{resets}} resets. Those km are not zero.',

@@ -122,7 +122,7 @@ for (const route of VISUAL_ROUTES) {
     await page.evaluate(() => window.scrollTo(0, 0));
     await waitForHarnessReady(page, mockApi);
     if (route.name === 'notifications' && scenario === 'populated') {
-      await expect(page.getByRole('region', { name: 'Notification activity' }).locator('[data-role="metric-value"]').first()).toHaveText('3');
+      await expect(page.getByRole('region', { name: 'Inbox summary' }).locator('[data-operational-value]').first()).toHaveText('3');
       await expect(page.getByText('Fleet connection restored')).toBeAttached();
       await expect(page.getByText('Charging schedule changed')).toBeAttached();
       await expect(page.getByText('Battery alert', { exact: true })).toBeAttached();
@@ -132,10 +132,12 @@ for (const route of VISUAL_ROUTES) {
       await sidebar.evaluate((element) => { element.scrollTop = 0; });
     }
     if (route.name === 'battery' && scenario !== 'error') {
-      await expect(page.getByText('State of Health', { exact: true })).toBeVisible();
+      // Redesign renamed the SoH metric presentation; Pack score is the populated marker.
+      await expect(page.getByText('Pack score', { exact: true })).toBeVisible();
     }
     if (route.name === 'battery' && scenario === 'error') {
-      await expect(page.getByText('Service unavailable', { exact: true })).toBeVisible();
+      // Both the banner and the inline error carry this text; either proves the error state.
+      await expect(page.getByText('Service unavailable', { exact: true }).first()).toBeVisible();
     }
     if (profile === 'large-fleet') {
       const fleetItems = page.locator('[role="listitem"][aria-setsize="120"]');

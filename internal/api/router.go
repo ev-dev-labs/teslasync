@@ -514,6 +514,49 @@ func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes, sudo func(http.Hand
 
 var nativeAppCORSHeaders = []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key", "X-Sudo-Token", "X-Teslasync-App"}
 
+// routerLiveSignalStore prefers the explicit reader dependency. Existing
+// telemetry-owning callers may still supply that same boundary via the handler.
+func routerLiveSignalStore(opt RouterOptions) signal.LiveSignalStore {
+	if opt.LiveSignalStore != nil {
+		return opt.LiveSignalStore
+	}
+	if opt.TelemetryHandler != nil {
+		return opt.TelemetryHandler.GetLiveSignalStore()
+	}
+	return nil
+}
+
+// mountSignalInspectRoutes keeps the read boundary independent of the optional
+// history/telemetry dependencies. A missing real boundary retains explicit 503.
+func mountSignalInspectRoutes(r chi.Router, db *database.DB, telemetryHandler *apitelem.Handler, opt RouterOptions, live signal.LiveSignalStore) {
+	var mongoRepo *signaldb.SignalLogRepo
+	if telemetryHandler != nil {
+		mongoRepo = telemetryHandler.SignalLogRepo()
+	}
+	h := apisignal.NewHandler(mongoRepo)
+	if db != nil {
+		h.WithDB(db)
+	}
+	if telemetryHandler != nil && telemetryHandler.SignalHistoryWriter() != nil {
+		h.WithSignalHistory(telemetryHandler.SignalHistoryWriter())
+	}
+	if opt.CacheStore != nil {
+		if rdb := opt.CacheStore.Underlying(); rdb != nil {
+			h.WithRedisCache(signal.NewRedisSignalCache(rdb))
+		}
+	}
+	if live != nil {
+		h.WithLiveSignalStore(live)
+	}
+	r.Get("/live", h.LiveState)
+	r.Get("/snapshot", h.Snapshot)
+	r.Get("/diff", h.Diff)
+	r.Get("/available", h.AvailableSignals)
+	r.Get("/stats", h.Stats)
+	r.Get("/transport-agreement", h.TransportAgreement)
+	r.Get("/{signalName}/history", h.History)
+}
+
 // NewRouter creates and configures the main HTTP router with all API routes,
 // middleware (logging, recovery, CORS, rate limiting, security headers), and
 // a static file server for the SPA frontend. It wires up handler dependencies
@@ -625,13 +668,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// signal_log; and
 	// * infrequent fields like Latitude / Longitude on a parked vehicle
 	// still surface from signal_log when L1+L2 has no entry.
-	// When TelemetryHandler is nil (test wiring), a NoopLiveSignalStore is
-	// used so the StateReader fallback alone serves the request.
-	var liveSignalStore signal.LiveSignalStore
-	if opt.TelemetryHandler != nil {
-		liveSignalStore = opt.TelemetryHandler.GetLiveSignalStore()
-	}
+	// Explicit App wiring serves API-only pods too. The telemetry accessor
+	// remains a dependency fallback for existing callers, not a second store.
+	configuredLiveSignalStore := routerLiveSignalStore(opt)
+	liveSignalStore := configuredLiveSignalStore
 	if liveSignalStore == nil {
+		// Preserve cold-only manual/test composition. Do not inject this no-op
+		// into /signals/live, where an unconfigured boundary must remain 503.
 		liveSignalStore = signal.NewNoopLiveSignalStore()
 	}
 	liveStateReader := signal.MustNewLiveStateReader(liveSignalStore, stateReader)
@@ -641,7 +684,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// single-vehicle GET /vehicles/{id}/state above, so the two surfaces
 	// cannot report different truths for the same car. `liveSignalStore` is
 	// the same L1+L2 boundary the single read uses (a no-op store when no
-	// telemetry source is configured) — no snapshot tables are involved.
+	// real read boundary is configured) — no snapshot tables are involved.
 	//
 	// CacheTTL enables coalescing + a 1s successful-result micro-cache: the
 	// SPA's multi-tab / SSE-burst thundering herd collapses into ONE storage
@@ -913,13 +956,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		pahoForAlerts = mqttClient.Underlying()
 	}
 	// alertLiveSignalStore is the same concrete store as liveSignalStore
-	// (above) when TelemetryHandler is set; we keep the local for clarity
+	// (above); we keep the local for clarity
 	// at the AlertHandler call site, which has its own narrow contract.
 	alertLiveSignalStore := liveSignalStore
 	alertHandler := apialerts.NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
-	alertMessageHandler := apialertmsg.NewAlertMessageHandler()
+	alertMessageHandler := apialertmsg.NewAlertMessageHandler(aiSettingsRepo)
 	commandHandler := apicommand.NewCommandHandler(db, teslaClient)
-	guardHandler := apiguard.NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
+	guardHandler := apiguard.NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg, aiSettingsRepo)
 	energyHandler := apienergy.NewEnergyHandler(energySvc)
 	signalLogReader := signaldb.NewSignalLogReader(db)
 	batteryHandler := apibattery.NewBatteryHandler(db, stateReader)
@@ -3417,10 +3460,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// (the SPA polls these from the dashboard). Acknowledge
 				// is a soft mark-read with per-IP rate-limit at 60/min
 				// matching every other vehicle-scoped POST. Panic is
-				// destructive (wakes the car, sounds horn, costs energy)
-				// and is sudo-gated + tightly rate-limited at 5/min.
+				// destructive (wakes the car, sounds horn, costs energy).
+				// Config writes may lock + enable Sentry. Both writes
+				// are sudo-gated + tightly rate-limited at 5/min.
 				r.Route("/guard", func(r chi.Router) {
 					r.Get("/", guardHandler.Status)
+					r.Get("/config", guardHandler.Config)
+					r.With(httprate.LimitByIP(5, 1*time.Minute), RequireSudo(sudoStore, sudoCfg)).Post("/", guardHandler.SetConfig)
 					r.Get("/events", guardHandler.Events)
 					r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/events/{eventID}/acknowledge", guardHandler.Acknowledge)
 					r.With(httprate.LimitByIP(5, 1*time.Minute), RequireSudo(sudoStore, sudoCfg)).Post("/panic", guardHandler.Panic)
@@ -4881,53 +4927,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Signal routes
 		r.Route("/signals/{vehicleID}", func(r chi.Router) {
-			// Signal History (Postgres primary, MongoDB optional fallback)
-			if telemetryHandler != nil {
-				var mongoRepo *signaldb.SignalLogRepo
-				if telemetryHandler.SignalLogRepo() != nil {
-					mongoRepo = telemetryHandler.SignalLogRepo()
-				}
-				signalHandler := apisignal.NewHandler(mongoRepo)
-				if db != nil {
-					signalHandler.WithDB(db)
-				}
-				if telemetryHandler.SignalHistoryWriter() != nil {
-					signalHandler.WithSignalHistory(telemetryHandler.SignalHistoryWriter())
-				}
-				if opt.CacheStore != nil {
-					if rdb := opt.CacheStore.Underlying(); rdb != nil {
-						signalHandler.WithRedisCache(signal.NewRedisSignalCache(rdb))
-					}
-				}
-				if store := telemetryHandler.GetLiveSignalStore(); store != nil {
-					signalHandler.WithLiveSignalStore(store)
-				}
-				r.Get("/live", signalHandler.LiveState)
-				r.Get("/snapshot", signalHandler.Snapshot)
-				r.Get("/diff", signalHandler.Diff)
-				r.Get("/available", signalHandler.AvailableSignals)
-				r.Get("/stats", signalHandler.Stats)
-				r.Get("/transport-agreement", signalHandler.TransportAgreement)
-				r.Get("/{signalName}/history", signalHandler.History)
-			} else {
-				// No telemetry handler at all — register with DB-only fallbacks
-				signalHandler := apisignal.NewHandler(nil)
-				if db != nil {
-					signalHandler.WithDB(db)
-				}
-				if opt.CacheStore != nil {
-					if rdb := opt.CacheStore.Underlying(); rdb != nil {
-						signalHandler.WithRedisCache(signal.NewRedisSignalCache(rdb))
-					}
-				}
-				r.Get("/live", signalHandler.LiveState)
-				r.Get("/snapshot", signalHandler.Snapshot)
-				r.Get("/diff", signalHandler.Diff)
-				r.Get("/available", signalHandler.AvailableSignals)
-				r.Get("/stats", signalHandler.Stats)
-				r.Get("/transport-agreement", signalHandler.TransportAgreement)
-				r.Get("/{signalName}/history", signalHandler.History)
-			}
+			mountSignalInspectRoutes(r, db, telemetryHandler, opt, configuredLiveSignalStore)
 		})
 
 		// Data Repair

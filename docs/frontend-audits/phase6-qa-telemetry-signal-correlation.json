@@ -1,0 +1,2468 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-telemetry-signal-correlation",
+  "attempt": 1,
+  "status": "DONE",
+  "completionMeaning": "DONE read-only source QA artifacts; all inspected source files stable. Mutable authority/canonical catalog/usage-manifest drift recorded. Exact missing key invariant rechecked after drift. NOT whole-page/native acceptance and NOT coherent normal-catalog guard acceptance.",
+  "sourceOnly": true,
+  "native": "NOTRUN",
+  "generatedAtUtc": "2026-10-14T02:52:48.145700+00:00",
+  "timebox": {
+    "reservationUtc": "2026-10-14T02:37:46.371Z",
+    "returnDeadlineUtc": "2026-10-14T02:57:46.371Z",
+    "hardDeadlineUtc": "2026-10-14T03:02:46.371Z",
+    "firstCommandUtc": "2026-10-14T02:39:54.8522713Z",
+    "earlierCreationDeadlineWins": true,
+    "reset": false,
+    "initialArtifacts": "ABSENT"
+  },
+  "authorizedWrites": [
+    "docs/frontend-audits/phase6-qa-telemetry-signal-correlation.json",
+    "web/logs/phase6-qa-telemetry-signal-correlation.log"
+  ],
+  "scope": {
+    "primary": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+    "directSupport": [
+      "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx",
+      "web/src/features/telemetry/lib/signalCorrelation.ts",
+      "web/src/features/telemetry/lib/signalHistorySamples.ts"
+    ],
+    "context": "Only pinned read-only hooks,tests,route/scope,shared primitives/frames and catalogs. No whole-repository/backend audit.",
+    "route": "/signal-correlation",
+    "routeCitations": [
+      {
+        "file": "web/src/App.tsx",
+        "line": 94,
+        "endLine": 94,
+        "quote": "const SignalCorrelation = lazy(() => import('./features/telemetry/pages/SignalCorrelationPage'))"
+      },
+      {
+        "file": "web/src/App.tsx",
+        "line": 867,
+        "endLine": 867,
+        "quote": "        <Route path=\"signal-correlation\" element={<SafeRoute name=\"SignalCorrelation\"><SignalCorrelation /></SafeRoute>} />"
+      },
+      {
+        "file": "web/src/lib/routeRegistry.ts",
+        "line": 225,
+        "endLine": 225,
+        "quote": "  { path: \"/signal-correlation\", name: \"SignalCorrelation\", label: \"Signal correlation\", i18nKey: \"routes.signalCorrelation\" },"
+      }
+    ]
+  },
+  "objectiveFirstCheck": {
+    "initialQueueLine": 216,
+    "currentQueueLine": 280,
+    "currentExactQueueRow": "| [~] | 6 | phase6-qa-telemetry-signal-correlation | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-telemetry-signal-correlation.json; web\\logs\\phase6-qa-telemetry-signal-correlation.log | phase5-page-telemetry-signal-correlation | 1 | reserved02:37:46.371Z; actor pending | - | SignalCorrelationPage/direct supports; source scope/units/evidence only. |",
+    "phase5AcceptedSourceOnly": true,
+    "historicalMigrationItem": "phase5-page-telemetry-signal-correlation",
+    "historicalAuditItem": "audit-page-203",
+    "completedDuplicateObjective": false,
+    "rationale": "One current reserved attempt1 QA row; no preexisting authorized report/log. Phase5 source-only receipt explicitly defers complete page QA. No remigration or repeated completed objective.",
+    "actorRoster": "4fb7ab57-f134-4e20-96f7-4ef1eb34fc11 (current orchestrator roster; not a new actor or lifecycle probe)",
+    "finalSourceOwnerQueueRows": [
+      {
+        "line": 1069,
+        "status": "[x]",
+        "item": "audit-page-203",
+        "files": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx; docs\\frontend-audits\\audit-page-203.json"
+      },
+      {
+        "line": 1113,
+        "status": "[x]",
+        "item": "namespace-correlation",
+        "files": "web\\src\\features\\telemetry\\components\\statstrip-correlation\\CorrelationStatStrip.tsx"
+      },
+      {
+        "line": 2323,
+        "status": "[x]",
+        "item": "phase5-page-telemetry-signal-correlation",
+        "files": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx; web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx"
+      }
+    ]
+  },
+  "authorityReads": {
+    "orchestratorLoop": "full",
+    "designContract": "full command read; core relevant MDC001/002/026/032/033/034/040-046/060/070 reviewed",
+    "mission": "full; particularly0,15-16,22-28,30,33-37,43-45",
+    "inventory": "existing full command read and relevant row254/G015/G207 source crosswalk",
+    "handoff": "existing full command read; current new-machine section1-48 governs; historical evidence not fresh acceptance",
+    "queue": "full initial read, exact objective/owner and narrow need searches, reread before delivery",
+    "applicableInstructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      ".github/instructions/observability.instructions.md",
+      "docs/I18N_GUIDELINES.md",
+      "docs/A11Y_GUIDELINES.md",
+      "docs/TABLE_GUIDELINES.md"
+    ],
+    "resolution": "Current modernization contract and SI cutover control over stale neon/legacy-unit examples. User prohibition means no Git, tests or compiler verification."
+  },
+  "sectionInventory": [
+    {
+      "section": "1 Signal pickers",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 176,
+          "endLine": 231,
+          "quote": "      {/* 1 — Signal pickers */}"
+        }
+      ],
+      "states": "Catalog initial skeleton, fatal error/retry and resolved empty message; retained catalog remains selectable. Two shared labeled Selects and described-by Toggle remain.",
+      "actions": [
+        "select A",
+        "select B",
+        "toggle differencing",
+        "selection help",
+        "retry catalog"
+      ]
+    },
+    {
+      "section": "2 KPI/evidence summary",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 237,
+          "endLine": 242,
+          "quote": "      <FadeIn delay={0.1}>"
+        },
+        {
+          "file": "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx",
+          "line": 23,
+          "endLine": 67,
+          "quote": "  const metrics: StatMetric[] = ["
+        }
+      ],
+      "states": "Four metrics stay mounted; missing result yields unknowns, initial loading suppresses values, retained refreshing/stale/paused payload preserves results, failed A/B retry independently.",
+      "actions": [
+        "Review details via canonical OperationalBrief",
+        "retry A",
+        "retry B"
+      ],
+      "metrics": [
+        "signed peak coefficient",
+        "signed best lag in seconds",
+        "existing significance status/threshold",
+        "effectiveN with paired-grid n context"
+      ]
+    },
+    {
+      "section": "3 Lagged correlogram",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 244,
+          "endLine": 331,
+          "quote": "      </FadeIn>"
+        }
+      ],
+      "states": "Shell persists as empty GlassPanel or ChartContainer; initial loading/fatal error/retry handled; valid data has lag/r/n accessible table. SC-02/03/06/07 limit evidence.",
+      "series": [
+        "r over lag",
+        "zero reference",
+        "positive and negative threshold",
+        "best-lag reference"
+      ],
+      "actions": [
+        "canonical image export when ready",
+        "fallback data table"
+      ]
+    },
+    {
+      "section": "4 Normalized overlay",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 113,
+          "endLine": 132,
+          "quote": "  const overlay = useMemo(() => {"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 333,
+          "endLine": 399,
+          "quote": "      {/* 4 — Normalised overlay */}"
+        }
+      ],
+      "states": "Both A/B normalized independently to0..1; constant values midpoint0.5, missing gaps remain null and connectNulls=false; epoch identity retained and saved formatter/timezone labels. Loading/error/empty use canonical frame.",
+      "series": [
+        "A dataKey=a",
+        "B dataKey=b"
+      ],
+      "actions": [
+        "toggle A/B via stable URL chart key",
+        "canonical image export when ready",
+        "fallback data table"
+      ]
+    },
+    {
+      "section": "5 Reading the result",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 401,
+          "endLine": 469,
+          "quote": "      {/* 5 — Reading the result */}"
+        }
+      ],
+      "states": "Panel persists with skeleton/error/empty interpretation; valid result displays significance and lead with not-proof-of-causation caveat. SC-05/06 limit trust.",
+      "actions": [
+        "retry failed histories"
+      ]
+    }
+  ],
+  "stateAudit": {
+    "noVehicle": "NoVehicleSelected wraps PageContainer; id0 queries disabled. No fabricated correlation.",
+    "nullAndZero": "Missing result metrics unknown; valid canonical numeric0/boolean false retained; missing zero-lag estimate failure SC-03.",
+    "initialLoading": "Catalog skeleton; both selected history initial loads drive summary/chart/reading skeletons.",
+    "fatalError": "Only fatal history errors replace derived chart/interpretation; successful source catalog and page shells remain.",
+    "empty": "Catalog explained empty; analysis all-null/short/disjoint outcomes misclassified by SC-02.",
+    "paused": "Shared named source notice distinguishes paused and offers source retry; retained paused states stale/retained; initial paused local analysis message is misleading (SC-02).",
+    "retained": "History data retained across refreshing and refresh failures; fatalError-only chart wiring; independent retries; catalog remains visible.",
+    "trust": "Historical states are explicit in useDataState; independent source notice remains. Fixed24h requested scope admits exact request bounds not supplied. Evidence labels/unknown/calibration defects SC-03/04/05/06.",
+    "SIAndSigns": "Canonical ts/kind/value only; finite numerics and boolean promotion in pure adapter; no source conversion. r and normalized values dimensionless, lag seconds signed. Positive lag means A leads; negative B; no significant lead=>none. Signed duration formatter permits negative values except unrelated roundedMinutes display.",
+    "preferences": "Saved dates/timezone in overlay; stable hidden_signal-correlation-overlay URL keys a/b; shared typography and color tokens; numeric summary locale/precision; locale fallback defect SC-07. No preferences reset.",
+    "rangeAndScope": "SelectedVehicle owner and id-keyed hook requests preserved; shared range bypass SC-01. No new local selector.",
+    "accessibilityAndMobile": "Shared label/ID/aria-describedby, chart named alternatives, responsive grids and44px mobile primitive targets verified only in source. Native geometry/contrast/focus/RTL/screenshots NOTRUN.",
+    "actionsNotOptedIn": [
+      "No CSV exportData",
+      "No fullscreen opt-in",
+      "No annotation mutations",
+      "No brush/zoom",
+      "No actual vehicle/signal/replay action"
+    ]
+  },
+  "findings": [
+    {
+      "id": "SC-01",
+      "rule": "workspace-range-bounds",
+      "severity": "high",
+      "title": "Historical comparison bypasses the shared analysis range",
+      "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+      "line": 29,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 29,
+          "endLine": 29,
+          "quote": "const HOURS = 24;"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 51,
+          "endLine": 52,
+          "quote": "  const historyA = useSignalHistory(id, signalA, HOURS);"
+        },
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 176,
+          "endLine": 186,
+          "quote": "export function useSignalHistory(vehicleId: number, signal: string, hours: number) {"
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 23,
+          "endLine": 77,
+          "quote": "export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set(["
+        }
+      ],
+      "mechanism": "HOURS is fixed at 24; both query keys and URLs contain only hours. The actual /signal-correlation route is absent from RANGE_ENABLED_PATHS; no useRangeState bounds reach either request.",
+      "sourceOnlyRepro": "Inspect the two request expressions while changing an abstract workspace from/to selection: their literal arguments remain HOURS=24. No workspace/browser/API action was executed.",
+      "fix": "A separately claimed integration owner should register this actual route and thread startInstant/endInstantExclusive through typed cache-keyed, cancellable history requests after confirming backend bound semantics; preserve current selected vehicle and independent histories.",
+      "needId": "N01",
+      "confirmation": "SOURCE_ONLY_CONFIRMED",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC-02",
+      "rule": "null-result-reason",
+      "severity": "medium",
+      "title": "Every settled null result is incorrectly described as no temporal overlap",
+      "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+      "line": 258,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 244,
+          "endLine": 266,
+          "quote": "      </FadeIn>"
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 236,
+          "endLine": 258,
+          "quote": "  if (pa.length < 2 || pb.length < 2) return null;"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 140,
+          "endLine": 149,
+          "quote": "  const isLoading = bothChosen && ("
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 198,
+          "endLine": 229,
+          "quote": "      : null"
+        }
+      ],
+      "mechanism": "crossCorrelate also returns null for fewer than two valid values and for no lag meeting minOverlap=10. Both selected plus no loading/fatal error always chooses noOverlap. An initial paused query with no data also reaches this branch; the shared source notice can correctly say paused while this section says no overlap.",
+      "sourceOnlyRepro": "Two valid points per history in the same overlapping sub-minute interval yield one grid point, no eligible lag and null. Settled queries then render the assertion that there was no overlapping history. This is a source trace, not a executed component test.",
+      "fix": "Use a truthful neutral insufficient-comparable-evidence fallback or reason-bearing domain result; distinguish unselected, pending/paused, resolved empty, nonnumeric/too-short and actual disjoint histories without removing shells.",
+      "needId": "N02",
+      "confirmation": "SOURCE_ONLY_CONFIRMED",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC-03",
+      "rule": "unknown-zero-lag",
+      "severity": "high",
+      "title": "An omitted zero-lag estimate becomes measured correlation zero",
+      "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+      "line": 294,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 255,
+          "endLine": 258,
+          "quote": "    if (n < opts.minOverlap) continue;"
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 270,
+          "endLine": 270,
+          "quote": "  const zero = correlogram.find((p) => p.lagS === 0);"
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 294,
+          "endLine": 294,
+          "quote": "    zeroLagR: zero?.r ?? 0,"
+        },
+        {
+          "file": "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx",
+          "line": 28,
+          "endLine": 30,
+          "quote": "      context: t('signalCorrelation.zeroLag', 'at zero lag: {{r}}', {"
+        }
+      ],
+      "mechanism": "The zero-lag point is omitted below minOverlap, but zero?.r ?? 0 invents a coefficient. The summary formats that value as at zero lag: 0 even when another lag is eligible.",
+      "sourceOnlyRepro": "Default step=60s/hold=600s. Abstract A timestamps at minutes 0,40..49,120; B at 20,60..69,140. Shared grid20..120 has A occupancy40..59,120 and B occupancy20..30,60..79. Logged arithmetic counts zero-lag n=0 versus +1200s n=20. Zero point is excluded, but returned zeroLagR is 0. No TS module/application or actual signal was executed.",
+      "fix": "Keep an unavailable zero-lag result nullable with reason and render an unknown marker; preserve actual measured zero, signed peak coefficients and lead orientation.",
+      "needId": "N03",
+      "confirmation": "SOURCE_ONLY_CONFIRMED",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC-04",
+      "rule": "resampled-evidence-label",
+      "severity": "medium",
+      "title": "Resampled held grid pairs are labeled raw source points",
+      "file": "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx",
+      "line": 45,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx",
+          "line": 44,
+          "endLine": 46,
+          "quote": "      description: t('telemetry.correlationBrief.samplesDescription', 'Autocorrelation-adjusted effective sample size at the best lag; raw points are overlapping samples at that lag.'),"
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 132,
+          "endLine": 147,
+          "quote": "  let cursor = 0;"
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 159,
+          "endLine": 176,
+          "quote": "  for (let i = 0; i < a.length; i++) {"
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 297,
+          "endLine": 297,
+          "quote": "    bestN: best.n,"
+        }
+      ],
+      "mechanism": "bestN is Pearson paired-grid n after last-observation hold, not the number of original source records; both rawN copy and samplesDescription call it raw points.",
+      "sourceOnlyRepro": "Two original measurements per source at minutes0 and20 produce filled grid minutes0..10 plus20 under the default hold. Logged arithmetic: original rows per source=2; paired grid samples=12; UI calls those 12 raw points.",
+      "fix": "Relabel bestN as overlapping resampled pairs and separately disclose original valid/source record counts only if available; retain effectiveN adjustment and all existing numeric values.",
+      "needId": "N04",
+      "confirmation": "SOURCE_ONLY_CONFIRMED",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC-05",
+      "rule": "one-sided-coverage-evidence",
+      "severity": "medium",
+      "title": "Reading evidence omits Signal B fill and gap counts",
+      "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+      "line": 431,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 429,
+          "endLine": 433,
+          "quote": "                  <Text variant=\"caption\">"
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 300,
+          "endLine": 301,
+          "quote": "    significant,"
+        }
+      ],
+      "mechanism": "The unlabeled filled/gaps badge uses only seriesA, although both series feed the inference and both independent resampled coverages are returned.",
+      "sourceOnlyRepro": "An abstract result with A filled1441/gaps0 and B filled12/gaps1429 renders only 1441 filled /0 gaps; the card does not state these are A-only counts. Source interpolation trace, not a runtime fixture.",
+      "fix": "Expose separately named A/B filled and gap evidence, or clearly qualify A-only coverage while retaining B coverage in reachable details; do not fabricate combined coverage.",
+      "needId": "N05",
+      "confirmation": "SOURCE_ONLY_CONFIRMED",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC-06",
+      "rule": "small-sample-confidence-copy",
+      "severity": "high",
+      "title": "Fixed normal critical value does not justify the claimed 95 percent small-sample threshold",
+      "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+      "line": 279,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 68,
+          "endLine": 71,
+          "quote": "  /** Autocorrelation-adjusted sample size at the best lag. */"
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 212,
+          "endLine": 216,
+          "quote": "  return Math.max(3, Math.min(n, adjusted));"
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 276,
+          "endLine": 283,
+          "quote": "  // 95 % critical |r| for n−2 degrees of freedom, via the t↔r identity with"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 435,
+          "endLine": 445,
+          "quote": "                </div>"
+        }
+      ],
+      "mechanism": "effectiveN can be clamped to3. The formula always uses tCrit=1.96 and comments that it is conservative below about30; it is not conservative for a Student-t correlation threshold with df=1. The reading text presents Real/Noise and an unlikely-artefact interpretation without qualifying this approximation.",
+      "sourceOnlyRepro": "Logged scalar arithmetic for effectiveN3/df1: code cutoff0.8908; exact two-sided95-percent Student-t df1 critical12.706204736 gives cutoff0.9969. Coefficient0.95 clears the code cutoff but not that threshold. This confirms the small-n confidence-copy mismatch; it does not validate Bartlett assumptions, an actual dataset, peak-selection calibration or causal significance.",
+      "fix": "Request a narrow domain/statistical-owner decision: qualify this as an approximate screening threshold or adopt an authorized calibrated rule with covering cases. Do not silently change existing scientific outputs in a page migration.",
+      "needId": "N06",
+      "confirmation": "SOURCE_ONLY_CONFIRMED",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC-07",
+      "rule": "locale-numeric-alternative",
+      "severity": "medium",
+      "title": "Accessible chart numeric columns bypass saved locale formatting",
+      "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+      "line": 286,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 285,
+          "endLine": 289,
+          "quote": "            dataColumns={["
+        },
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 352,
+          "endLine": 356,
+          "quote": "          dataColumns={["
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "line": 923,
+          "endLine": 933,
+          "quote": "                      const raw = row[col.key];"
+        }
+      ],
+      "mechanism": "Correlogram lag/r/n and overlay a/b dataColumns supply neither kind nor format. The canonical fallback table therefore String(raw)-coerces these numeric cells instead of fmtNumber/fmtInt. Tooltip and summary formatters are locale-aware, so the alternative is inconsistent.",
+      "sourceOnlyRepro": "For de-DE, raw coefficient0.8123 reaches String(raw)=\"0.8123\" rather than \"0,8123\"; sample count1441 reaches \"1441\" rather than \"1.441\". Logged source-branch and CultureInfo arithmetic only, not browser or i18next runtime execution.",
+      "fix": "Set count semantics for n and explicit locale-aware measurement formatting for lag/r/a/b; preserve null markers, signed seconds and normalized dimensionless values without changing chart data.",
+      "needId": "N07",
+      "confirmation": "SOURCE_ONLY_CONFIRMED",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC-08",
+      "rule": "missing-i18n-key",
+      "severity": "medium",
+      "title": "Signal selection explanation has no canonical English key",
+      "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+      "line": 184,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 182,
+          "endLine": 186,
+          "quote": "            <HelpTooltip"
+        },
+        {
+          "file": "web/src/components/ui/HelpTooltip.tsx",
+          "line": 59,
+          "endLine": 61,
+          "quote": "  const resolved = i18nKey"
+        }
+      ],
+      "mechanism": "HelpTooltip translates the exact i18nKey, not a suffixed key. help.signalCorrelation.pick is absent from both canonical English and the telemetry split, so the fallback renders but the actual message is not catalogued.",
+      "sourceOnlyRepro": "Read-only JSON lookup returns None for this exact scalar key in both pinned catalogs; the same lookup finds bestR and iconLabel. There are74 leaf reference sites/59 unique keys with exactly1 canonical missing key. Normal generator/namespace guards remain NOTRUN.",
+      "fix": "Serialized canonical catalog owner should add only help.signalCorrelation.pick with the exact existing fallback and regenerate normal registered projections; do not edit catalogs or weaken guards in this audit.",
+      "exactKey": "help.signalCorrelation.pick",
+      "exactFallback": "The two signals are resampled onto a shared time grid using last-known-value hold, with a staleness limit so a gap in reporting becomes a genuine gap rather than a flat line that would fake a correlation.",
+      "needId": "N08",
+      "confirmation": "SOURCE_ONLY_CONFIRMED",
+      "runtimeReproduction": "NOTRUN"
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "kind": "conditional-backend",
+      "title": "Returned history completeness, row caps and request/observed bounds",
+      "citations": [
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 176,
+          "endLine": 186,
+          "quote": "export function useSignalHistory(vehicleId: number, signal: string, hours: number) {"
+        },
+        {
+          "file": "web/src/types/telemetry.ts",
+          "line": 17,
+          "endLine": 23,
+          "quote": "export interface SignalHistoryResponse {"
+        },
+        {
+          "file": "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx",
+          "line": 54,
+          "endLine": 60,
+          "quote": "      description={t('telemetry.correlationBrief.periodReason', 'The two histories are queried independently. Only valid overlapping samples contribute; exact request bounds are not supplied by these queries.')}"
+        }
+      ],
+      "whyNotConfirmed": "No backend source/API/runtime was in this authorized pass. Response count/from/to exist in the frontend type, but their server semantics, caps and inclusive/exclusive behavior were not checked. No claim that actual data was truncated.",
+      "futureAcceptance": "Read-only synthetic backend-contract proof and explicit requested/observed/cap-unknown disclosure after separately authorized ownership."
+    },
+    {
+      "id": "C02",
+      "kind": "native-mobile-visual",
+      "title": "Composed responsive geometry, contrast and preference matrix",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 202,
+          "endLine": 216,
+          "quote": "            <div className=\"grid gap-4 sm:grid-cols-2 lg:grid-cols-3\">"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 333,
+          "endLine": 399,
+          "quote": "      {/* 4 — Normalised overlay */}"
+        },
+        {
+          "file": "web/src/components/ui/Select.tsx",
+          "line": 34,
+          "endLine": 39,
+          "quote": "const sizeClasses: Record<NonNullable<SelectProps['size']>, string> = {"
+        },
+        {
+          "file": "web/src/components/ui/Toggle.tsx",
+          "line": 107,
+          "endLine": 114,
+          "quote": "        >"
+        }
+      ],
+      "whyNotConfirmed": "Source shows stacked selectors, responsive chart ownership and44px mobile primitive targets. No rendered width, clipping, contrast, saved theme/font/palette, RTL,200percent text or forced-colors evidence was captured. Historical small-target allegations are not repeated as current failures.",
+      "futureAcceptance": "Native mission widths320/375/390/430/768/1024/1280/1440/1920/2560 and narrow allocations; dark/light/custom,RTL,scaled text,forced-colors,reduced-motion/low-bandwidth."
+    },
+    {
+      "id": "C03",
+      "kind": "native-keyboard-actions",
+      "title": "Mounted help, legend toggles, details and image export interactions",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 219,
+          "endLine": 225,
+          "quote": "                  checked={detrend}"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+          "line": 371,
+          "endLine": 397,
+          "quote": "              <ChartLegend state={overlayHidden} />"
+        },
+        {
+          "file": "web/src/components/charts/ChartLegend.tsx",
+          "line": 116,
+          "endLine": 132,
+          "quote": "        variant=\"ghost\""
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "line": 483,
+          "endLine": 490,
+          "quote": "    const showExportMenu = exportableResolved && !loading && !error && !empty;"
+        }
+      ],
+      "whyNotConfirmed": "Source associations and named controls are present. No real keyboard/screen reader, focus/escape/restoration, hidden-series deep-link, details drawer or image-export action ran. This page does not opt into CSV, fullscreen, annotations or brush; these are not reported as lost actions.",
+      "futureAcceptance": "Guarded synthetic mounted actions with existing native locks and no actual vehicle/signal mutations."
+    },
+    {
+      "id": "C04",
+      "kind": "conditional-statistical-validation",
+      "title": "Lag sweep multiplicity and full autocorrelation model calibration",
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+          "line": 251,
+          "endLine": 274,
+          "quote": ""
+        }
+      ],
+      "whyNotConfirmed": "SC-06 is a deterministic small-n copy/formula mismatch only. Multiple-lag peak-selection calibration, significance per-lag sample sizes and model adequacy require authorized statistical validation; no empirical false-positive claim is made.",
+      "futureAcceptance": "Dedicated domain-reviewed synthetic calibration design, keeping source signs and existing outputs until an authorized decision."
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "findingId": "SC-01",
+      "objective": "Historical comparison bypasses the shared analysis range",
+      "deduplication": "NO_EXACT_OPEN_OR_COMPLETED_FIX_MATCH_FOUND_IN_CURRENT_QUEUE",
+      "queueModified": false,
+      "sourceOwners": [
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx",
+        "web\\src\\api\\hooks\\useTelemetry.ts",
+        "web\\src\\lib\\workspaceScope.ts"
+      ],
+      "testOwners": [
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx",
+        "web\\src\\api\\hooks\\__tests__\\useTelemetry.test.tsx",
+        "web\\src\\lib\\__tests__\\workspaceScope.test.ts"
+      ],
+      "disposition": "UNREPRESENTED_CONFIRMED_FRONTEND_FIX_WITH_CONDITIONAL_BACKEND_EXTENSION",
+      "acceptanceNeed": "Register /signal-correlation and consume the shared range; both independently cancellable history requests and cache keys carry exact lower-inclusive/upper-exclusive instants, selected vehicle and signal. Cover rolling/custom/timezone changes and retain both chart sections. Backend support and exact backend source/test ownership remain C01, not an invented confirmed server defect or authorized backend scope.",
+      "catalogOwnerRequired": false,
+      "scopeNote": "Proposed narrow need only, not an assignment or claim. Overlapping page/domain/catalog owners must serialize. Historical accepted page migration, namespace prefix-only and MemoryRouter test fixes are not duplicates of this current defect."
+    },
+    {
+      "id": "N02",
+      "findingId": "SC-02",
+      "objective": "Every settled null result is incorrectly described as no temporal overlap",
+      "deduplication": "NO_EXACT_OPEN_OR_COMPLETED_FIX_MATCH_FOUND_IN_CURRENT_QUEUE",
+      "queueModified": false,
+      "sourceOwners": [
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx"
+      ],
+      "testOwners": [
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx"
+      ],
+      "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+      "acceptanceNeed": "Use truthful neutral insufficient-comparable-evidence copy and a pending/paused distinction rather than asserting no temporal overlap for every null result. Cover overlapping short, nonnumeric/empty and initially paused histories; retain unselected/loading/error states, independent retry and every section. A reason-bearing domain result is optional and would require a separate explicit signalCorrelation.ts/test claim, not silently expanded ownership.",
+      "catalogOwnerRequired": true,
+      "scopeNote": "Proposed narrow need only, not an assignment or claim. Overlapping page/domain/catalog owners must serialize. Historical accepted page migration, namespace prefix-only and MemoryRouter test fixes are not duplicates of this current defect."
+    },
+    {
+      "id": "N03",
+      "findingId": "SC-03",
+      "objective": "An omitted zero-lag estimate becomes measured correlation zero",
+      "deduplication": "NO_EXACT_OPEN_OR_COMPLETED_FIX_MATCH_FOUND_IN_CURRENT_QUEUE",
+      "queueModified": false,
+      "sourceOwners": [
+        "web\\src\\features\\telemetry\\lib\\signalCorrelation.ts",
+        "web\\src\\features\\telemetry\\components\\statstrip-correlation\\CorrelationStatStrip.tsx"
+      ],
+      "testOwners": [
+        "web\\src\\features\\telemetry\\lib\\signalCorrelation.test.ts",
+        "web\\src\\features\\telemetry\\components\\statstrip-correlation\\CorrelationStatStrip.test.tsx"
+      ],
+      "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+      "acceptanceNeed": "Return unavailable zeroLagR as null, not zero, and null-check that estimate at the stat-strip formatting boundary even when result is non-null. Cover an eligible nonzero lag with zero-lag overlap below minOverlap, plus a genuinely measured zero; preserve peak coefficient, signed lag, leading signal and all other result values. Both producer and consumer must share one claim.",
+      "catalogOwnerRequired": false,
+      "scopeNote": "Proposed narrow need only, not an assignment or claim. Overlapping page/domain/catalog owners must serialize. Historical accepted page migration, namespace prefix-only and MemoryRouter test fixes are not duplicates of this current defect."
+    },
+    {
+      "id": "N04",
+      "findingId": "SC-04",
+      "objective": "Resampled held grid pairs are labeled raw source points",
+      "deduplication": "NO_EXACT_OPEN_OR_COMPLETED_FIX_MATCH_FOUND_IN_CURRENT_QUEUE",
+      "queueModified": false,
+      "sourceOwners": [
+        "web\\src\\features\\telemetry\\components\\statstrip-correlation\\CorrelationStatStrip.tsx"
+      ],
+      "testOwners": [
+        "web\\src\\features\\telemetry\\components\\statstrip-correlation\\CorrelationStatStrip.test.tsx"
+      ],
+      "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+      "catalogKeys": [
+        "signalCorrelation.rawN",
+        "telemetry.correlationBrief.samplesDescription"
+      ],
+      "acceptanceNeed": "Relabel bestN as overlapping resampled pairs in visible context and details, not original raw records. Cover two source records yielding twelve held-grid pairs and unknown versus genuine zero. Retain effectiveN/bestN arithmetic; do not add fabricated original-record counts or change resampling.",
+      "catalogOwnerRequired": true,
+      "scopeNote": "Proposed narrow need only, not an assignment or claim. Overlapping page/domain/catalog owners must serialize. Historical accepted page migration, namespace prefix-only and MemoryRouter test fixes are not duplicates of this current defect."
+    },
+    {
+      "id": "N05",
+      "findingId": "SC-05",
+      "objective": "Reading evidence omits Signal B fill and gap counts",
+      "deduplication": "NO_EXACT_OPEN_OR_COMPLETED_FIX_MATCH_FOUND_IN_CURRENT_QUEUE",
+      "queueModified": false,
+      "sourceOwners": [
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx"
+      ],
+      "testOwners": [
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx"
+      ],
+      "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+      "acceptanceNeed": "Name Signal A and Signal B and expose both existing series.filled/series.gaps counts in the reading evidence. Cover asymmetric A1441/0 versus B12/1429 without implying combined coverage. Preserve real zeros, both normalized series, gap semantics and all reading-result sections.",
+      "catalogOwnerRequired": true,
+      "scopeNote": "Proposed narrow need only, not an assignment or claim. Overlapping page/domain/catalog owners must serialize. Historical accepted page migration, namespace prefix-only and MemoryRouter test fixes are not duplicates of this current defect."
+    },
+    {
+      "id": "N06",
+      "findingId": "SC-06",
+      "objective": "Fixed normal critical value does not justify the claimed 95 percent small-sample threshold",
+      "deduplication": "NO_EXACT_OPEN_OR_COMPLETED_FIX_MATCH_FOUND_IN_CURRENT_QUEUE",
+      "queueModified": false,
+      "sourceOwners": [
+        "web\\src\\features\\telemetry\\lib\\signalCorrelation.ts",
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx",
+        "web\\src\\features\\telemetry\\components\\statstrip-correlation\\CorrelationStatStrip.tsx"
+      ],
+      "testOwners": [
+        "web\\src\\features\\telemetry\\lib\\signalCorrelation.test.ts",
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx",
+        "web\\src\\features\\telemetry\\components\\statstrip-correlation\\CorrelationStatStrip.test.tsx"
+      ],
+      "disposition": "UNREPRESENTED_CONFIRMED_CONFIDENCE_COPY_FIX_DOMAIN_DECISION_REQUIRED",
+      "acceptanceNeed": "Have the statistical/domain owner qualify the fixed-normal cutoff as approximate screening and remove unsupported exact 95-percent/conservative-small-n interpretations from domain commentary and visible/details copy. Cover effectiveN3, cutoff0.8908 and coefficient0.95 without asserting exact Student-t acceptance. Preserve existing numeric outputs unless separately authorized calibrated-rule ownership is granted. C04 multiplicity/model calibration remains conditional; no scientific approval is inferred.",
+      "catalogOwnerRequired": true,
+      "scopeNote": "Proposed narrow need only, not an assignment or claim. Overlapping page/domain/catalog owners must serialize. Historical accepted page migration, namespace prefix-only and MemoryRouter test fixes are not duplicates of this current defect."
+    },
+    {
+      "id": "N07",
+      "findingId": "SC-07",
+      "objective": "Accessible chart numeric columns bypass saved locale formatting",
+      "deduplication": "NO_EXACT_OPEN_OR_COMPLETED_FIX_MATCH_FOUND_IN_CURRENT_QUEUE",
+      "queueModified": false,
+      "sourceOwners": [
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx"
+      ],
+      "testOwners": [
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx"
+      ],
+      "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+      "acceptanceNeed": "Supply count semantics for correlogram n and saved-locale formatting for lag/r/a/b in the page-owned dataColumns. Cover de-DE signed seconds, decimal coefficients, grouped counts, normalized zero and null markers. Keep timestamps, SI seconds and dimensionless data unchanged. ChartContainer already exposes kind/format; no shared chart root rewrite is indicated by the original evidence.",
+      "catalogOwnerRequired": false,
+      "scopeNote": "Proposed narrow need only, not an assignment or claim. Overlapping page/domain/catalog owners must serialize. Historical accepted page migration, namespace prefix-only and MemoryRouter test fixes are not duplicates of this current defect."
+    },
+    {
+      "id": "N08",
+      "findingId": "SC-08",
+      "objective": "Signal selection explanation has no canonical English key",
+      "deduplication": "NO_EXACT_OPEN_OR_COMPLETED_FIX_MATCH_FOUND_IN_CURRENT_QUEUE",
+      "queueModified": false,
+      "sourceOwners": [
+        "web\\src\\i18n\\en.json"
+      ],
+      "readOnlyCaller": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx",
+      "testOwners": [
+        "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx"
+      ],
+      "disposition": "UNREPRESENTED_ORIGINALLY_CONFIRMED_CATALOG_FIX_CURRENT_KEY_STATE_NOT_REAUDITED",
+      "catalogKeys": [
+        "help.signalCorrelation.pick"
+      ],
+      "projectionOwnership": "Serialized catalog owner only: normal registered projections actually changed by the existing generator, registered before writes. No blanket en directory claim or hand-written projection/runtime-manifest edits. Exact generated delta is not known from this disposition-only continuation.",
+      "acceptanceNeed": "Add only help.signalCorrelation.pick with the exact original finding fallback if still absent at authorized catalog integration. Existing caller already supplies this key and needs no production change. Cover help-key resolution through the existing page test and normal catalog/namespace guards without growing known-missing or weakening baselines. Current catalog state was deliberately not reread; an already-present exact key warrants no-change rather than a duplicate addition.",
+      "catalogOwnerRequired": true,
+      "scopeNote": "Proposed narrow need only, not an assignment or claim. Overlapping page/domain/catalog owners must serialize. Historical accepted page migration, namespace prefix-only and MemoryRouter test fixes are not duplicates of this current defect."
+    }
+  ],
+  "tests": {
+    "status": "NOTRUN",
+    "declarationsReviewed": 49,
+    "scopes": [
+      {
+        "file": "web/src/features/telemetry/pages/SignalCorrelationPage.test.tsx",
+        "readScope": "full",
+        "declarationCount": 6,
+        "declarations": [
+          {
+            "line": 82,
+            "name": "preserves raw inputs, both selections, detrend and both chart sections"
+          },
+          {
+            "line": 106,
+            "name": "keeps unknown summary values and the choose-two message before any selection"
+          },
+          {
+            "line": 115,
+            "name": "does not show or compute a correlation for an unselected vehicle"
+          },
+          {
+            "line": 122,
+            "name": "associates the changes switch with its full explanation without changing selection"
+          },
+          {
+            "line": 138,
+            "name": "retains epoch identities and saved date labels with normalized zeros and gaps"
+          },
+          {
+            "line": 169,
+            "name": "retains the constant-series midpoint and measured summary during refresh errors"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/telemetry/lib/signalCorrelation.test.ts",
+        "readScope": "full",
+        "declarationCount": 29,
+        "declarations": [
+          {
+            "line": 37,
+            "name": "keeps numerics, promotes booleans and drops text-only rows"
+          },
+          {
+            "line": 47,
+            "name": "sorts by time and collapses duplicate timestamps to the last value"
+          },
+          {
+            "line": 52,
+            "name": "discards unparseable timestamps"
+          },
+          {
+            "line": 64,
+            "name": "holds the last observation forward across the grid"
+          },
+          {
+            "line": 71,
+            "name": "marks samples older than the staleness limit as gaps"
+          },
+          {
+            "line": 79,
+            "name": "never interpolates backwards from a future sample"
+          },
+          {
+            "line": 85,
+            "name": "degrades safely on a nonsense window"
+          },
+          {
+            "line": 92,
+            "name": "is 1 for a series against itself"
+          },
+          {
+            "line": 97,
+            "name": "is −1 for a perfectly inverted series"
+          },
+          {
+            "line": 101,
+            "name": "skips index pairs where either side is a gap"
+          },
+          {
+            "line": 107,
+            "name": "returns 0 rather than NaN for a constant series"
+          },
+          {
+            "line": 111,
+            "name": "honours the offset when pairing samples"
+          },
+          {
+            "line": 120,
+            "name": "leaves an uncorrelated series untouched"
+          },
+          {
+            "line": 124,
+            "name": "shrinks a heavily autocorrelated series"
+          },
+          {
+            "line": 128,
+            "name": "never returns more than the raw n, nor fewer than 3"
+          },
+          {
+            "line": 135,
+            "name": "keeps canonical numeric zero and boolean false overlap without inventing correlation"
+          },
+          {
+            "line": 152,
+            "name": "returns null without enough data on both sides"
+          },
+          {
+            "line": 157,
+            "name": "returns null when the two signals never overlap in time"
+          },
+          {
+            "line": 163,
+            "name": "finds a zero lag for simultaneous signals"
+          },
+          {
+            "line": 172,
+            "name": "recovers a known delay and names the leading signal"
+          },
+          {
+            "line": 184,
+            "name": "reports a negative lag when the second signal leads"
+          },
+          {
+            "line": 192,
+            "name": "detects an inverse relationship"
+          },
+          {
+            "line": 200,
+            "name": "refuses to call two slow drifting signals significant"
+          },
+          {
+            "line": 211,
+            "name": "kills a spurious correlation from a signal that stopped reporting"
+          },
+          {
+            "line": 222,
+            "name": "detrending removes shared drift but keeps co-movement"
+          },
+          {
+            "line": 234,
+            "name": "produces a symmetric, ascending correlogram"
+          },
+          {
+            "line": 244,
+            "name": "reads canonical float and double histories without a row adapter"
+          },
+          {
+            "line": 256,
+            "name": "prefers the shortest lag when a periodic signal ties"
+          },
+          {
+            "line": 267,
+            "name": "correlates a boolean signal against a numeric one"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.test.tsx",
+        "readScope": "full",
+        "declarationCount": 5,
+        "declarations": [
+          {
+            "line": 45,
+            "name": "renders the actual OperationalBrief with four evidence metrics and original overlapping-history scope"
+          },
+          {
+            "line": 64,
+            "name": "keeps signed seconds, coefficients not percentages, adjusted samples and full scientific context"
+          },
+          {
+            "line": 90,
+            "name": "does not invent zero raw samples when result is null; true zeros remain valid"
+          },
+          {
+            "line": 104,
+            "name": "retains measurements and independently retries each failed history source"
+          },
+          {
+            "line": 122,
+            "name": "keeps the canonical four tiles in initial loading without leaking computed values"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web/src/api/hooks/__tests__/useTelemetry.useSignals.test.tsx",
+        "readScope": "full",
+        "declarationCount": 6,
+        "declarations": [
+          {
+            "line": 35,
+            "name": "extracts names from the post-Phase-42 rich catalog response shape"
+          },
+          {
+            "line": 58,
+            "name": "still accepts the legacy {signals: string[]} shape"
+          },
+          {
+            "line": 65,
+            "name": "still accepts the legacy bare string[] shape"
+          },
+          {
+            "line": 72,
+            "name": "drops malformed entries (missing name, non-string name, empty string)"
+          },
+          {
+            "line": 89,
+            "name": "returns empty array when signals key is missing or null"
+          },
+          {
+            "line": 96,
+            "name": "skips the request when vehicleId is 0"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web/src/api/hooks/__tests__/useTelemetry.test.tsx",
+        "readScope": [
+          296,
+          323
+        ],
+        "declarationCount": 3,
+        "declarations": [
+          {
+            "line": 297,
+            "name": "puts the signal NAME — not the AbortSignal — in the history URL"
+          },
+          {
+            "line": 312,
+            "name": "is disabled when the signal name is empty"
+          },
+          {
+            "line": 318,
+            "name": "is disabled when vehicleId is 0"
+          }
+        ],
+        "execution": "NOTRUN"
+      }
+    ],
+    "runnerDiscovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "runnerExitCode": null,
+    "reason": "User authorized test declarations only; no runner/fixtures/compiler/lint/build executed."
+  },
+  "engineeringRuleChecks": {
+    "scope": "Four primary leaf production files; relevant useSignals/useSignalHistory URL excerpts. Shared building blocks used for mechanism context, not a blanket repo audit.",
+    "candidateCountsBeforeClassification": {
+      "static-inline-style-broad-var-search": 5,
+      "raw-html-case-insensitive": 2,
+      "missing-page-container-presence-search": 2
+    },
+    "strictCorrectedMatchCounts": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string-direct-JSX": 0,
+      "fetch-useeffect": 0
+    },
+    "exceptions": [
+      "CSS variables inside Tailwind class strings are not style objects",
+      "Recharts stroke/reference props are API exceptions",
+      "Select false positives removed by case-sensitive lowercase grep",
+      "PageLayout delegates PageContainer; no-vehicle shared component also wraps it",
+      "Conditional annotation/reference nodes and source-specific QueryError are not hidden page sections",
+      "Shared ChartLegend/FadeIn vendor imports and UI native inputs are expected building-block boundaries",
+      "Technical signal IDs, r, SI s, DOM keys and em-dash are not untranslated English labels"
+    ],
+    "backendRules": "NOT_APPLICABLE: no internal/**/*.go in authorized scope",
+    "additionalContractIssues": "Eight confirmed source QA findings below; clean candidate grep lines do not establish whole-page acceptance."
+  },
+  "i18n": {
+    "referenceSites": 74,
+    "uniqueKeys": 59,
+    "missingCanonicalCount": 1,
+    "missingKeys": [
+      "help.signalCorrelation.pick"
+    ],
+    "normalGenerator": "NOTRUN",
+    "normalNamespaceAudit": "NOTRUN",
+    "otherLanguageRuntime": "NOTRUN",
+    "runtimeProjectionAcceptance": "NOTRUN"
+  },
+  "verificationLimits": {
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "compiler": "NOTRUN",
+    "server": "NOTRUN",
+    "browser": "NOTRUN",
+    "network": "NOTRUN",
+    "API": "NOTRUN",
+    "native": "NOTRUN",
+    "actualActions": "NOTRUN",
+    "Git": "NOTRUN",
+    "agents": "NOTRUN",
+    "installs": "NOTRUN",
+    "helpers": "No helper/source/test/tool files created; only bounded inline read/arithmetic/document-validation commands.",
+    "sourcePreservationBaseline": "No Git or preservation CLI run. Current page471 lines/support69; five source section comments and historical accepted455-to471 receipt are source crosschecks, not original-byte equivalence or runtime acceptance."
+  },
+  "commandFailures": [
+    {
+      "command": "rg --files web/src web/e2e docs -g ...",
+      "numericExit": 1,
+      "failure": "rg is not recognized on this host; fallback PowerShell searches executed."
+    },
+    {
+      "command": "initial inline JSON assembly",
+      "numericExit": 1,
+      "failure": "Own-row uniqueness assertion also matched newly added actor roster row. No JSON had been written. Retried with status/phase/task anchored authority row; no scope or clock reset."
+    },
+    {
+      "command": "postwrite validation raw JSON stdout emission",
+      "numericExit": 1,
+      "failure": "JSON reparse/citations/counts/source pin assertions succeeded and artifact was written, but Python cp1252 stdout failed on U+2212 while printing final JSON. Raw failure retained. Retried stdout with explicit UTF-8; not a source/compiler/test failure."
+    }
+  ],
+  "nonFailureLimits": [
+    "Initial large document reads exceeded console display limit; raw tool-output captures copied to authorized log.",
+    "registry.ts and operationalMetrics.ts probes absent; actual formatMetric/glossary and operationalMetrics.tsx owners resolved; these were not compiler failures.",
+    "Earlier R03 literal line296 corrected to actual294; raw earlier output retained."
+  ],
+  "inputPins": [
+    {
+      "file": ".github/copilot-instructions.md",
+      "before": {
+        "sha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+        "bytes": 37483,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+        "bytes": 37483,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/data-modeling.instructions.md",
+      "before": {
+        "sha256": "F9EFF24200F17FAA2942FC55EB5967FE8AD53CAD11A7A2224620AFE949EB3DE1",
+        "bytes": 12862,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "F9EFF24200F17FAA2942FC55EB5967FE8AD53CAD11A7A2224620AFE949EB3DE1",
+        "bytes": 12862,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "before": {
+        "sha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+        "bytes": 3585,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+        "bytes": 3585,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/github-workflows.instructions.md",
+      "before": {
+        "sha256": "586089C8D1CD0081A49728AD2AD27F837650929917CBBF90236A7A39F2B57CBC",
+        "bytes": 3020,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "586089C8D1CD0081A49728AD2AD27F837650929917CBBF90236A7A39F2B57CBC",
+        "bytes": 3020,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/go-backend.instructions.md",
+      "before": {
+        "sha256": "FDBB699709E5843E88C57D9CBBA924718F1B72780A7F1C4E5D31D5C50922B69F",
+        "bytes": 22438,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "FDBB699709E5843E88C57D9CBBA924718F1B72780A7F1C4E5D31D5C50922B69F",
+        "bytes": 22438,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/helm-docker.instructions.md",
+      "before": {
+        "sha256": "7ABC305F7825076757C265FB7E2BF72E8D26A6139197390F65944B2A051404FE",
+        "bytes": 8093,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "7ABC305F7825076757C265FB7E2BF72E8D26A6139197390F65944B2A051404FE",
+        "bytes": 8093,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/observability.instructions.md",
+      "before": {
+        "sha256": "B56E5B2639AC71DC6C7755E943EAE19DCE41A4BD372B00304819D99472301A42",
+        "bytes": 4267,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "B56E5B2639AC71DC6C7755E943EAE19DCE41A4BD372B00304819D99472301A42",
+        "bytes": 4267,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/prompt-engineering.instructions.md",
+      "before": {
+        "sha256": "DA5F6C622E873FAB1417D5FF60585CDBEB70EC5F2DDA91BF6E98BE4FA5397AAE",
+        "bytes": 6828,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "DA5F6C622E873FAB1417D5FF60585CDBEB70EC5F2DDA91BF6E98BE4FA5397AAE",
+        "bytes": 6828,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "before": {
+        "sha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+        "bytes": 22645,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+        "bytes": 22645,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/telemetry-pipeline.instructions.md",
+      "before": {
+        "sha256": "2EBAE23891DDE7A48353286A4425EC1C7087E284AC5924772F0FB8EDAB0B4C8D",
+        "bytes": 14423,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "2EBAE23891DDE7A48353286A4425EC1C7087E284AC5924772F0FB8EDAB0B4C8D",
+        "bytes": 14423,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/tesla-pipeline.instructions.md",
+      "before": {
+        "sha256": "23FABF1D297182FBAB049B2293B483B5500E454EA1E3FD3B7998253025C35003",
+        "bytes": 12035,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "23FABF1D297182FBAB049B2293B483B5500E454EA1E3FD3B7998253025C35003",
+        "bytes": 12035,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "before": {
+        "sha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+        "bytes": 6501,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.8548532Z"
+      },
+      "after": {
+        "sha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+        "bytes": 6501,
+        "lastWriteTimeUtc": "2026-10-13T06:09:16.854853+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": "docs/A11Y_GUIDELINES.md",
+      "before": {
+        "sha256": "5D8FF67CA9CECAB201C214D252304EEDEF653230D8463067A69B8B2C94697580",
+        "bytes": 10771,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.0125843Z"
+      },
+      "after": {
+        "sha256": "5D8FF67CA9CECAB201C214D252304EEDEF653230D8463067A69B8B2C94697580",
+        "bytes": 10771,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.012584+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": "docs/I18N_GUIDELINES.md",
+      "before": {
+        "sha256": "9DAFAA22475219A8DDB7E36905D428A6E0F7EF4A685006EE6D7F257878B8DE94",
+        "bytes": 8039,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.0125843Z"
+      },
+      "after": {
+        "sha256": "9DAFAA22475219A8DDB7E36905D428A6E0F7EF4A685006EE6D7F257878B8DE94",
+        "bytes": 8039,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.012584+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": "docs/TABLE_GUIDELINES.md",
+      "before": {
+        "sha256": "27067BD8BD57083F301509510E106546CB478C8F5B207601923A9231D9269411",
+        "bytes": 21041,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.5866836Z"
+      },
+      "after": {
+        "sha256": "27067BD8BD57083F301509510E106546CB478C8F5B207601923A9231D9269411",
+        "bytes": 21041,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.586684+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-203.json",
+      "before": {
+        "sha256": "47AAAE8D6A374A77806F159B3A23A879F14A65DC939EBA945D0CA9937F30F1B0",
+        "bytes": 21958,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.6594786Z"
+      },
+      "after": {
+        "sha256": "47AAAE8D6A374A77806F159B3A23A879F14A65DC939EBA945D0CA9937F30F1B0",
+        "bytes": 21958,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.659479+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "before": {
+        "sha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+        "bytes": 182554,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.7095452Z"
+      },
+      "after": {
+        "sha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+        "bytes": 182554,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.709545+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "before": {
+        "sha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+        "bytes": 1743758,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.7179123Z"
+      },
+      "after": {
+        "sha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+        "bytes": 1743758,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.717912+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "before": {
+        "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "bytes": 31079,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.7179123Z"
+      },
+      "after": {
+        "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "bytes": 31079,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.717912+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": "docs/orchestrator-loop.md",
+      "before": {
+        "sha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+        "bytes": 16978,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.7179123Z"
+      },
+      "after": {
+        "sha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+        "bytes": 16978,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.717912+00:00"
+      },
+      "match": true,
+      "kind": "read-only-contract"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "before": {
+        "sha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+        "bytes": 163930,
+        "lastWriteTimeUtc": "2026-10-14T00:49:12.6472024Z"
+      },
+      "after": {
+        "sha256": "09FA66582FCEACEB709073D64299B2CA24842837D7C8ED43EF6F3AF40C80BFEB",
+        "bytes": 170173,
+        "lastWriteTimeUtc": "2026-10-14T02:51:15.772584+00:00"
+      },
+      "match": false,
+      "kind": "mutable-authority"
+    },
+    {
+      "file": "migration-queue.md",
+      "before": {
+        "sha256": "B99617A253DBC607C066727A63DA9A4D09D03FFECF3CE8BD4476DEDEA6A90948",
+        "bytes": 2607992,
+        "lastWriteTimeUtc": "2026-10-14T02:38:37.9156528Z"
+      },
+      "after": {
+        "sha256": "01B3676F9D5B25B6DDD31F246B5A59DEB053DCB0055EAD33AB6F825BEFE7B9C7",
+        "bytes": 2613693,
+        "lastWriteTimeUtc": "2026-10-14T02:54:40.307146+00:00"
+      },
+      "match": false,
+      "kind": "mutable-authority"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "before": {
+        "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "bytes": 68125,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.8444677Z"
+      },
+      "after": {
+        "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "bytes": 68125,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.844468+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "before": {
+        "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+        "bytes": 17825,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.8468672Z"
+      },
+      "after": {
+        "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+        "bytes": 17825,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.846867+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "before": {
+        "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "bytes": 15482,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.7649888Z"
+      },
+      "after": {
+        "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "bytes": 15482,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.764989+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/api/hooks/__tests__/useTelemetry.test.tsx",
+      "before": {
+        "sha256": "9634776C9BF2FCF50D1CB876B168C8FB5426A88E4C3F3EBAA823F02AA2137D58",
+        "bytes": 40345,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.8468672Z"
+      },
+      "after": {
+        "sha256": "9634776C9BF2FCF50D1CB876B168C8FB5426A88E4C3F3EBAA823F02AA2137D58",
+        "bytes": 40345,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.846867+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/api/hooks/__tests__/useTelemetry.useSignals.test.tsx",
+      "before": {
+        "sha256": "1D3379FE995EA80C94B2250F3AC47261486E10BCA42F9AEE4AE8ADBD958CFF6F",
+        "bytes": 4485,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.7649888Z"
+      },
+      "after": {
+        "sha256": "1D3379FE995EA80C94B2250F3AC47261486E10BCA42F9AEE4AE8ADBD958CFF6F",
+        "bytes": 4485,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.764989+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "before": {
+        "sha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+        "bytes": 25746,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.8597018Z"
+      },
+      "after": {
+        "sha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+        "bytes": 25746,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.859702+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "before": {
+        "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+        "bytes": 120243,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.8597018Z"
+      },
+      "after": {
+        "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+        "bytes": 120243,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.859702+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "before": {
+        "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+        "bytes": 41517,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.8764844Z"
+      },
+      "after": {
+        "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+        "bytes": 41517,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.876484+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/charts/ChartLegend.tsx",
+      "before": {
+        "sha256": "E5F0B49F6F1159224D3B000CE2C57800DC13CE33C3053DC72EE1E35B2DA67095",
+        "bytes": 6830,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.8847524Z"
+      },
+      "after": {
+        "sha256": "E5F0B49F6F1159224D3B000CE2C57800DC13CE33C3053DC72EE1E35B2DA67095",
+        "bytes": 6830,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.884753+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/charts/ChartTooltip.tsx",
+      "before": {
+        "sha256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2",
+        "bytes": 6130,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.8864661Z"
+      },
+      "after": {
+        "sha256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2",
+        "bytes": 6130,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.886466+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "before": {
+        "sha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+        "bytes": 9480,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.9264222Z"
+      },
+      "after": {
+        "sha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+        "bytes": 9480,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.926422+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/feedback/DataStateNotice.tsx",
+      "before": {
+        "sha256": "D96D4E5BC8C1B8CCBDDCE808BFC31A277DAD60B82399D14431B7185E94BEA4C6",
+        "bytes": 5014,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.8637172Z"
+      },
+      "after": {
+        "sha256": "D96D4E5BC8C1B8CCBDDCE808BFC31A277DAD60B82399D14431B7185E94BEA4C6",
+        "bytes": 5014,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.863717+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "before": {
+        "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "bytes": 10783,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.9542141Z"
+      },
+      "after": {
+        "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "bytes": 10783,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.954214+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "before": {
+        "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "bytes": 658,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.9682184Z"
+      },
+      "after": {
+        "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "bytes": 658,
+        "lastWriteTimeUtc": "2026-10-14T00:29:40.968218+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "before": {
+        "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "bytes": 1493,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.9163834Z"
+      },
+      "after": {
+        "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "bytes": 1493,
+        "lastWriteTimeUtc": "2026-10-13T06:09:17.916384+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/ui/HelpTooltip.tsx",
+      "before": {
+        "sha256": "FB8D5D08643E810939608E5255F5F967084EC7C7AF3C49EB130E38A682A27C86",
+        "bytes": 4388,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.0015712Z"
+      },
+      "after": {
+        "sha256": "FB8D5D08643E810939608E5255F5F967084EC7C7AF3C49EB130E38A682A27C86",
+        "bytes": 4388,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.001571+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "before": {
+        "sha256": "3157A4B90D9142E619E619028FF33D8D980D80E4DAF880A45D1B120ED6782CD2",
+        "bytes": 4432,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.0099114Z"
+      },
+      "after": {
+        "sha256": "3157A4B90D9142E619E619028FF33D8D980D80E4DAF880A45D1B120ED6782CD2",
+        "bytes": 4432,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.009911+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/components/ui/Toggle.tsx",
+      "before": {
+        "sha256": "5FDC057826AF98BDF2E7E914806BC86A8FA1B6AB1472A822A9D6CAF6BC8BAA11",
+        "bytes": 5204,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.0113668Z"
+      },
+      "after": {
+        "sha256": "5FDC057826AF98BDF2E7E914806BC86A8FA1B6AB1472A822A9D6CAF6BC8BAA11",
+        "bytes": 5204,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.011367+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+      "before": {
+        "sha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+        "bytes": 2977,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.3540415Z"
+      },
+      "after": {
+        "sha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+        "bytes": 2977,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.354042+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.test.tsx",
+      "before": {
+        "sha256": "F5D9FBC6411CAEB33CC8DFF3BC3FDDF4255DCBCD649629636DEE9A0AB8DF56D3",
+        "bytes": 8039,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.7440060Z"
+      },
+      "after": {
+        "sha256": "F5D9FBC6411CAEB33CC8DFF3BC3FDDF4255DCBCD649629636DEE9A0AB8DF56D3",
+        "bytes": 8039,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.744006+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx",
+      "before": {
+        "sha256": "30C06ED374CA5D77B57D46C136005C97B70FB891696A6B9F76A4CFC3773281FE",
+        "bytes": 4855,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.7440060Z"
+      },
+      "after": {
+        "sha256": "30C06ED374CA5D77B57D46C136005C97B70FB891696A6B9F76A4CFC3773281FE",
+        "bytes": 4855,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.744006+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/features/telemetry/lib/signalCorrelation.test.ts",
+      "before": {
+        "sha256": "3A5580FE2C1C92733CAAD86B96E5537E4BC7065D9A6743CA99FC5B3D4270AAF1",
+        "bytes": 10728,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.7494692Z"
+      },
+      "after": {
+        "sha256": "3A5580FE2C1C92733CAAD86B96E5537E4BC7065D9A6743CA99FC5B3D4270AAF1",
+        "bytes": 10728,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.749469+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/features/telemetry/lib/signalCorrelation.ts",
+      "before": {
+        "sha256": "AD9EDC71E9F48C7CEBEA0BF51A1B64B8284D894557A332C7D4889474D89D4FE4",
+        "bytes": 10213,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.7494692Z"
+      },
+      "after": {
+        "sha256": "AD9EDC71E9F48C7CEBEA0BF51A1B64B8284D894557A332C7D4889474D89D4FE4",
+        "bytes": 10213,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.749469+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/features/telemetry/lib/signalHistorySamples.ts",
+      "before": {
+        "sha256": "B53DD46B07056C1BF5063787CEDACB75B088DA562A3316259B05A39BB9A954D5",
+        "bytes": 1642,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.7494692Z"
+      },
+      "after": {
+        "sha256": "B53DD46B07056C1BF5063787CEDACB75B088DA562A3316259B05A39BB9A954D5",
+        "bytes": 1642,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.749469+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/features/telemetry/pages/SignalCorrelationPage.test.tsx",
+      "before": {
+        "sha256": "19530116B46AA71DF363B1765384D3171DAF3BC008B59B4D9A2B7ADCB06215CA",
+        "bytes": 9991,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.7523023Z"
+      },
+      "after": {
+        "sha256": "19530116B46AA71DF363B1765384D3171DAF3BC008B59B4D9A2B7ADCB06215CA",
+        "bytes": 9991,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.752302+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
+      "before": {
+        "sha256": "53347A1532520CEB84AB14503E78D67ACD46537D15786CD77EDAA1042DF1E18B",
+        "bytes": 19511,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.7523023Z"
+      },
+      "after": {
+        "sha256": "53347A1532520CEB84AB14503E78D67ACD46537D15786CD77EDAA1042DF1E18B",
+        "bytes": 19511,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.752302+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "before": {
+        "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "bytes": 2035,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.5649346Z"
+      },
+      "after": {
+        "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "bytes": 2035,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.564934+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "before": {
+        "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "bytes": 5230,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.5649346Z"
+      },
+      "after": {
+        "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "bytes": 5230,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.564934+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/hooks/useHiddenSeries.ts",
+      "before": {
+        "sha256": "A7CFECEBBB60E53783E13DBFABCCA5CA685B06F72AB6684FE3B6F712409D876E",
+        "bytes": 3062,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.5679402Z"
+      },
+      "after": {
+        "sha256": "A7CFECEBBB60E53783E13DBFABCCA5CA685B06F72AB6684FE3B6F712409D876E",
+        "bytes": 3062,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.567940+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "before": {
+        "sha256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+        "bytes": 2081,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.5699407Z"
+      },
+      "after": {
+        "sha256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+        "bytes": 2081,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.569941+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "before": {
+        "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "bytes": 2095,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.8646135Z"
+      },
+      "after": {
+        "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "bytes": 2095,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.864614+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "before": {
+        "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "bytes": 1161,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.8646135Z"
+      },
+      "after": {
+        "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "bytes": 1161,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.864614+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/hooks/useRangeState.ts",
+      "before": {
+        "sha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+        "bytes": 22200,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.5715117Z"
+      },
+      "after": {
+        "sha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+        "bytes": 22200,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.571512+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "before": {
+        "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "bytes": 6593,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.5715117Z"
+      },
+      "after": {
+        "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "bytes": 6593,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.571512+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "before": {
+        "sha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+        "bytes": 1843667,
+        "lastWriteTimeUtc": "2026-10-14T01:45:34.0447866Z"
+      },
+      "after": {
+        "sha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+        "bytes": 1846735,
+        "lastWriteTimeUtc": "2026-10-14T02:47:10.644596+00:00"
+      },
+      "match": false,
+      "kind": "catalog-input"
+    },
+    {
+      "file": "web/src/i18n/en/locale-telemetry.json",
+      "before": {
+        "sha256": "C5AAEE5AB0B68C1FDF9C1B7CE310A0358D3AA011DF8B11CE09C033CAFABD83DD",
+        "bytes": 120213,
+        "lastWriteTimeUtc": "2026-10-14T01:50:41.7680125Z"
+      },
+      "after": {
+        "sha256": "C5AAEE5AB0B68C1FDF9C1B7CE310A0358D3AA011DF8B11CE09C033CAFABD83DD",
+        "bytes": 120213,
+        "lastWriteTimeUtc": "2026-10-14T02:50:18.781725+00:00"
+      },
+      "match": true,
+      "kind": "catalog-input"
+    },
+    {
+      "file": "web/src/i18n/en/runtime-manifest.json",
+      "before": {
+        "sha256": "F12336C510017FC79ED588E01D1DAA3C307F05D3FDC20A857FFCF6AA77FC9B0D",
+        "bytes": 81573,
+        "lastWriteTimeUtc": "2026-10-14T01:50:41.7795349Z"
+      },
+      "after": {
+        "sha256": "F12336C510017FC79ED588E01D1DAA3C307F05D3FDC20A857FFCF6AA77FC9B0D",
+        "bytes": 81573,
+        "lastWriteTimeUtc": "2026-10-14T02:50:18.793264+00:00"
+      },
+      "match": true,
+      "kind": "catalog-input"
+    },
+    {
+      "file": "web/src/i18n/en/usage-manifest.json",
+      "before": {
+        "sha256": "E8C13322D9518398436080F25B795266E21598262164D0216DF3292DC829BA37",
+        "bytes": 4484966,
+        "lastWriteTimeUtc": "2026-10-14T01:50:41.7831793Z"
+      },
+      "after": {
+        "sha256": "4CE06D27C87994038D26BE7331BB381296D33EF3A01821F6B69B396B12F62C9B",
+        "bytes": 4486199,
+        "lastWriteTimeUtc": "2026-10-14T02:50:18.796271+00:00"
+      },
+      "match": false,
+      "kind": "catalog-input"
+    },
+    {
+      "file": "web/src/lib/chartTypography.ts",
+      "before": {
+        "sha256": "A2CEC2F5C734EDE8A4E9C26262C8017317CCB531BDCCF6A3C5A69FF979D41902",
+        "bytes": 2654,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.6331636Z"
+      },
+      "after": {
+        "sha256": "A2CEC2F5C734EDE8A4E9C26262C8017317CCB531BDCCF6A3C5A69FF979D41902",
+        "bytes": 2654,
+        "lastWriteTimeUtc": "2026-10-13T06:09:18.633164+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "before": {
+        "sha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+        "bytes": 7868,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.9809331Z"
+      },
+      "after": {
+        "sha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+        "bytes": 7868,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.980933+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/lib/metric-reference/glossary.ts",
+      "before": {
+        "sha256": "3CDD7E4655B6ECD584D6FD0F799B740D762A5448F563BA12D22D54967F7D57A4",
+        "bytes": 4648,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.9809331Z"
+      },
+      "after": {
+        "sha256": "3CDD7E4655B6ECD584D6FD0F799B740D762A5448F563BA12D22D54967F7D57A4",
+        "bytes": 4648,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.980933+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/lib/metric-reference/types.ts",
+      "before": {
+        "sha256": "3B9EBC9538365FE381EF8969132361F28DA5501914A058A5D4EAC8E3AFC1B832",
+        "bytes": 3147,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.9809331Z"
+      },
+      "after": {
+        "sha256": "3B9EBC9538365FE381EF8969132361F28DA5501914A058A5D4EAC8E3AFC1B832",
+        "bytes": 3147,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.980933+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "before": {
+        "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+        "bytes": 6443,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.9860120Z"
+      },
+      "after": {
+        "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+        "bytes": 6443,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.986012+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "before": {
+        "sha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+        "bytes": 2801,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.9860120Z"
+      },
+      "after": {
+        "sha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+        "bytes": 2801,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.986012+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "before": {
+        "sha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+        "bytes": 31836,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.9890728Z"
+      },
+      "after": {
+        "sha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+        "bytes": 31836,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.989073+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "before": {
+        "sha256": "04BDAA937938F96AF3B2D39B8236608063DE83D7A530DB8C67FE6BD1DEE120A3",
+        "bytes": 20093,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.9890728Z"
+      },
+      "after": {
+        "sha256": "04BDAA937938F96AF3B2D39B8236608063DE83D7A530DB8C67FE6BD1DEE120A3",
+        "bytes": 20093,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.989073+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "before": {
+        "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "bytes": 4411,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.9890728Z"
+      },
+      "after": {
+        "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "bytes": 4411,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.989073+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    },
+    {
+      "file": "web/src/types/telemetry.ts",
+      "before": {
+        "sha256": "15AF5C9C884E582B7B79C19C97E21583F38E48F2B69BFDBDA0F3BDAB74989CE4",
+        "bytes": 5083,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.9942654Z"
+      },
+      "after": {
+        "sha256": "15AF5C9C884E582B7B79C19C97E21583F38E48F2B69BFDBDA0F3BDAB74989CE4",
+        "bytes": 5083,
+        "lastWriteTimeUtc": "2026-10-14T00:29:41.994265+00:00"
+      },
+      "match": true,
+      "kind": "read-only-source"
+    }
+  ],
+  "pinValidation": {
+    "checkedAtUtc": "2026-10-14T02:54:42.212040+00:00",
+    "totalInputs": 70,
+    "matched": 66,
+    "driftedFiles": [
+      "docs/session-handoff.md",
+      "migration-queue.md",
+      "web/src/i18n/en.json",
+      "web/src/i18n/en/usage-manifest.json"
+    ],
+    "readOnlySourceInputs": 44,
+    "readOnlySourceMatched": 44,
+    "sourceStable": true,
+    "allInputHashesStable": false,
+    "catalogKeyInvariantRechecked": true,
+    "catalogGuardAcceptance": "NOTRUN; canonical/catalog hash drift is explicitly preserved, not cleared by key presence check.",
+    "authorityInvariant": "Current status/phase/task-anchored row remains attempt1/reservation/exclusive files. Parent added an actor roster, which caused the earlier all-substring assertion failure. Handoff/queue changed externally; no writes here.",
+    "normalization": "Repeated Windows separator aliases merged to one canonical file; initial hashes retained, no baseline reset."
+  },
+  "continuationDisposition": {
+    "purpose": "Finish disposition and exact fix ownership for the original eight findings against the current canonical queue only; not another source audit, QA pass or approval.",
+    "firstRecordedCommandUtc": "2026-10-14T05:10:35.4327150Z",
+    "reservationUtc": "2026-10-14T05:06:00Z",
+    "returnDeadlineUtc": "2026-10-14T05:26:00Z",
+    "hardDeadlineUtc": "2026-10-14T05:31:00Z",
+    "attempt": 1,
+    "clockReset": false,
+    "canonicalAuthority": {
+      "file": "migration-queue.md",
+      "snapshotReadAtUtc": "2026-10-14T05:14:00.4606119Z",
+      "snapshotSha256": "7D486E556799A3765B4655E7A051BAF28570737955D972961B9FB411E65784F3",
+      "queueRowLine": 326,
+      "exactQueueRow": "| [~] | 6 | phase6-qa-telemetry-signal-correlation | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-telemetry-signal-correlation.json; web\\logs\\phase6-qa-telemetry-signal-correlation.log | phase5-page-telemetry-signal-correlation | 1 | 2026-10-14T05:06:00Z | - | SignalCorrelationPage/direct supports; source scope/units/evidence only.; Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot.; Actually running actor 22d76712-a49f-43ea-a766-2259ce1abb0e; no idle/completed counted; conservative return05:26/hard05:31 for new30, Docker original+20/25 unchanged. |",
+      "actorFromQueue": "22d76712-a49f-43ea-a766-2259ce1abb0e",
+      "lifecycleProbed": false,
+      "queueWrites": "NONE",
+      "authorityLimit": "Mutable read-only queue snapshot, not a final live census or claim release by the orchestrator. Queue row text alone is not lifecycle proof."
+    },
+    "contractRead": {
+      "orchestratorLoop": "docs\\orchestrator-loop.md read fully, including superseding strict rules and worker contract",
+      "existingReport": "Full original report read; original evidence dates, findings, conditional candidates, failures, input pins and native NOTRUN preserved",
+      "existingLog": "Original tail and bounded original finding/consumer excerpts read; no source file, catalog or test declaration reread",
+      "currentHandoff": "Current strict-intake header read: released reports require intake, not repeated audits or native/page approval",
+      "skillExecution": "Audit skill instructions loaded as required; audit script NOTRUN because user expressly prohibited repeated audits/tests/compiler"
+    },
+    "noChangeAssessment": {
+      "originalEvidenceContract": "Already met: eight source-only findings, four conditional candidates, historical document validation and explicit release/native NOTRUN. Do not recreate this audit or refresh its source/pin/catalog acceptance.",
+      "dispositionGap": "Original needs named only primary files and omitted coupled producer/consumer, integration and exact covering-test ownership. N01/N03/N06 were incomplete scopes and N08 incorrectly named the unchanged page as a production fix owner. This continuation corrects only those actionable needs and adds canonical-queue dispositions.",
+      "originalSourceAudit": "NO CHANGE NEEDED; no repeated pass performed"
+    },
+    "deduplication": {
+      "method": "Read-only canonical queue exact objective/symbol checks, complete 200-item Phase6 non-QA item-name index and exact relevant file-claim comparisons. Candidate central catalog/range/source-notice rows were read for their actual objective. Scope overlap or an accepted page migration is not an exact defect fix.",
+      "exactFindingSymbolMatches": 0,
+      "unrepresentedOriginalFindingIds": [
+        "SC-01",
+        "SC-02",
+        "SC-03",
+        "SC-04",
+        "SC-05",
+        "SC-06",
+        "SC-07",
+        "SC-08"
+      ],
+      "representedConfirmedFixIds": [],
+      "representationMeaning": "No exact open/completed fix objective found in this queue snapshot. Confirmed means original source evidence, not fresh current-source reproduction. In particular SC-08's current key state and SC-01's backend extension remain deliberately unverified.",
+      "duplicateOrRelatedObjectivesNotRequeued": [
+        {
+          "item": "phase6-qa-telemetry-signal-correlation",
+          "line": 326,
+          "status": "[~]",
+          "disposition": "This existing same-attempt report continuation; not a second QA item or audit."
+        },
+        {
+          "item": "audit-page-203",
+          "line": 1115,
+          "status": "[x]",
+          "disposition": "Historical page audit already accepted; do not restart. It is not an implementation fix for the original eight Phase6 findings."
+        },
+        {
+          "item": "namespace-correlation",
+          "line": 1159,
+          "status": "[x]",
+          "disposition": "Prefix-only namespace migration preserved fallbacks/operands. Not SC-03 null handling, SC-04 sample copy or SC-06 calibrated-confidence copy."
+        },
+        {
+          "item": "regression-correlation-test",
+          "line": 1180,
+          "status": "[x]",
+          "disposition": "MemoryRouter recovery context repair; not a new correlation domain/UI defect fix. Its accepted proof is not rerun."
+        },
+        {
+          "item": "phase5-page-telemetry-signal-correlation",
+          "line": 2369,
+          "status": "[x]",
+          "disposition": "Source-only modernization accepted and complete; explicitly deferred complete page QA. No remigration or whole-page acceptance inferred."
+        },
+        {
+          "item": "phase6-fix-source-notice-neutral-pause",
+          "line": 2566,
+          "status": "[x]",
+          "disposition": "Shared notice cause-neutral paused wording. SC-02 is the page-local null=>noOverlap assertion; correcting the shared notice does not correct that independent branch. No duplicate shared-root need."
+        },
+        {
+          "item": "phase6-drivetrain-exact-range-integration",
+          "line": 2457,
+          "status": "[x]",
+          "disposition": "Driving model/useDriving/drives backend range integration, not signal history or /signal-correlation registration. No reopening of this completed integration."
+        },
+        {
+          "item": "phase3-full-test-composed-page-scope-scanners",
+          "line": 1544,
+          "status": "[x]",
+          "disposition": "Imported-and-invoked hook scanner repair for composed driving pages; not SC-01 source registration/history request integration. Scanner/helper edits are not proposed."
+        }
+      ],
+      "catalogRelatedObjectives": [
+        {
+          "item": "phase6-fix-admin-manifest-dlq-caller-catalog",
+          "line": 250,
+          "status": "[x]",
+          "disposition": "31 exact admin caller leaves/two Lookup replacements, not help.signalCorrelation.pick."
+        },
+        {
+          "item": "phase6-fix-active-catalog-projections",
+          "line": 373,
+          "status": "[x]",
+          "disposition": "Two derived charging/usage artifacts; canonical catalog unchanged. Not the SC-08 missing canonical key."
+        },
+        {
+          "item": "phase6-fix-charger-milestone-canonical-leaves",
+          "line": 424,
+          "status": "[x]",
+          "disposition": "Six exact ChargerHealth/Milestones leaves only, not the correlation help key."
+        },
+        {
+          "item": "phase5-current-source-catalog-closure",
+          "line": 910,
+          "status": "[x]",
+          "disposition": "Historical 79-fallback source closure predates original finding evidence; no exact correlation-help repair recorded. Its successful guard receipt does not erase the original exact missing-key evidence."
+        },
+        {
+          "item": "phase5-integration-generated-i18n-closure",
+          "line": 2408,
+          "status": "[x]",
+          "disposition": "Three automation-derived artifacts; canonical English untouched. Not SC-08."
+        },
+        {
+          "item": "phase5-integration-wave2-i18n-closure",
+          "line": 2432,
+          "status": "[x]",
+          "disposition": "Historical source-reference projection closure; canonical English untouched. Not a new missing-key addition."
+        },
+        {
+          "item": "phase6-fix-evidence-plural-catalog",
+          "line": 2574,
+          "status": "[x]",
+          "disposition": "Exactly advancedIntelligence.evidence.sampleLine_one/_other and normal projections; not SC-04 correlation sample terminology or SC-08 help."
+        }
+      ]
+    },
+    "catalogIntegrationNeeds": {
+      "owner": "One separately authorized serialized canonical-English owner; these are requests only, no current catalog/source/test claim",
+      "canonicalSource": "web\\src\\i18n\\en.json",
+      "findingIds": [
+        "SC-02",
+        "SC-04",
+        "SC-05",
+        "SC-06",
+        "SC-08"
+      ],
+      "exactExistingKeyNeeds": [
+        "signalCorrelation.rawN",
+        "telemetry.correlationBrief.samplesDescription",
+        "help.signalCorrelation.pick"
+      ],
+      "copyDecisionNeeds": "SC-02 truthful null/pending reasons, SC-05 explicitly named A/B coverage and SC-06 domain-approved approximate-confidence wording require exact fallback/key requests from their authorized fix owners. Do not invent translations or preapprove scientific changes.",
+      "exactMissingKeyFallback": "The two signals are resampled onto a shared time grid using last-known-value hold, with a staleness limit so a gap in reporting becomes a genuine gap rather than a flat line that would fake a correlation.",
+      "normalProjectionRule": "Use only existing normal generation/namespace guards after authorized source/copy ownership and register the actual changed projection paths before writing. None run in this continuation."
+    },
+    "conditionalCandidatesDisposition": [
+      {
+        "id": "C01",
+        "disposition": "CONDITIONAL_NOT_CONFIRMED_BACKEND_FIX",
+        "needs": "Before SC-01 server integration, separately authorize contract inspection to identify exact router/handler/repository and test owners, bounded request semantics, completeness/caps and requested versus observed evidence. This pass cannot name an uninspected backend owner or claim truncation."
+      },
+      {
+        "id": "C02",
+        "disposition": "NATIVE_NOTRUN_NO_CONFIRMED_VISUAL_FIX",
+        "needs": "Existing native owner/locks and safe synthetic scope for the original viewport/preferences/accessibility matrix. No new source defect inferred from source-only evidence."
+      },
+      {
+        "id": "C03",
+        "disposition": "NATIVE_NOTRUN_NO_CONFIRMED_ACTION_FIX",
+        "needs": "Existing native owner/locks for help, keyboard, details, legend/deep-link and image export. No missing CSV/fullscreen/annotation/brush functionality invented."
+      },
+      {
+        "id": "C04",
+        "disposition": "CONDITIONAL_DOMAIN_CALIBRATION_NOT_AN_APPROVED_ALGORITHM_FIX",
+        "needs": "Dedicated statistical-owner decision for multiple-lag/model calibration. SC-06's original deterministic confidence-copy mismatch is confirmed separately; recalibration, empirical false-positive rates and causality are not."
+      }
+    ],
+    "ownershipAndRelease": {
+      "writableArtifacts": [
+        "docs\\frontend-audits\\phase6-qa-telemetry-signal-correlation.json",
+        "web\\logs\\phase6-qa-telemetry-signal-correlation.log"
+      ],
+      "fixClaimsGranted": false,
+      "sourceCatalogQueueGitWrites": "NONE",
+      "sourceTestCatalogReads": "NONE in this continuation",
+      "sourceAuditPasses": 0,
+      "testsLintCompilerBrowserNetworkServersInstallsDockerNestedAgents": "NOTRUN",
+      "native": "NOTRUN",
+      "originalEvidence": "Preserved at original timestamps; input-pin validation and artifactValidation above remain historical, not repeated current validation or source approval",
+      "artifactWrites": "RELEASED AT RETURN; report and matching ignored log only",
+      "releaseMeaning": "Return releases only this worker's report/log writes and bounded document commands. Parent alone may intake/update the queue; no lifecycle closure or native/page approval is fabricated."
+    },
+    "documentIntegrity": {
+      "validatedAtUtc": "2026-10-14T05:17:09.7092722Z",
+      "status": "PASS_DOCUMENT_ONLY",
+      "numericExit": 0,
+      "jsonReparse": true,
+      "originalEvidenceComparison": "Fourteen historical fields compared exactly with FINAL_JSON_BEGIN/END in the existing log: findings, conditionalCandidates, tests, engineeringRuleChecks, i18n, verificationLimits, commandFailures, inputPins, pinValidation, summary, release, artifactValidation, generatedAtUtc and timebox; all unchanged.",
+      "allEightNeedsHaveExactSourceAndTestOwners": true,
+      "finalQueueRowLine": 326,
+      "finalQueueRowMatchesInspectedRow": true,
+      "finalQueueSha256": "EF268EC7258706F19343E6F5D2761EEEBD4254571DDAF4C2B7D7673EC57576B0",
+      "queueDrift": "Queue changed externally between disposition snapshot and pre-return read; exact own objective/attempt/files/deadlines row unchanged. No source/catalog revalidation or whole-queue coherence claim.",
+      "acceptance": "Disposition-document integrity only; no tests, lint, compiler, new source pass, runtime reproduction, statistical approval, current catalog acceptance or native/application acceptance."
+    }
+  },
+  "summary": {
+    "confirmedFindingCount": 8,
+    "conditionalCandidateCount": 4,
+    "narrowNeedCount": 8,
+    "byRule": {
+      "workspace-range-bounds": 1,
+      "null-result-reason": 1,
+      "unknown-zero-lag": 1,
+      "resampled-evidence-label": 1,
+      "one-sided-coverage-evidence": 1,
+      "small-sample-confidence-copy": 1,
+      "locale-numeric-alternative": 1,
+      "missing-i18n-key": 1
+    },
+    "byPrimaryFile": {
+      "web/src/features/telemetry/pages/SignalCorrelationPage.tsx": 5,
+      "web/src/features/telemetry/lib/signalCorrelation.ts": 2,
+      "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx": 1
+    },
+    "priorityFixes": [
+      "SC-03 preserve unavailable zero-lag estimate",
+      "SC-01 shared exact scope integration",
+      "SC-06 qualify small-sample confidence",
+      "SC-04/05 truthful sample and two-source coverage evidence",
+      "SC-02 truthful null/paused/empty reasons",
+      "SC-07 localized numeric alternatives",
+      "SC-08 one exact serialized catalog key"
+    ]
+  },
+  "release": {
+    "releasedAtUtc": "2026-10-14T02:54:42.212040+00:00",
+    "artifactWrites": "RELEASED AFTER FINAL VALIDATION",
+    "sourceWrites": "NEVER AUTHORIZED; NONE PERFORMED",
+    "commands": "RELEASED; no background commands started and no ongoing command retained",
+    "queueWrites": "NONE",
+    "native": "NOTRUN",
+    "noClockReset": true
+  },
+  "artifactValidation": {
+    "status": "PASS_DOCUMENT_ONLY",
+    "validatedAtUtc": "2026-10-14T02:54:42.212040+00:00",
+    "jsonReparse": true,
+    "citationCount": 49,
+    "citationPathsLinesQuotesValid": true,
+    "findingCountValid": true,
+    "candidateCountValid": true,
+    "needCountValid": true,
+    "testDeclarationCountValid": true,
+    "sourcePinsMatch": true,
+    "allInputsMatch": false,
+    "numericExit": 0,
+    "meaning": "Only inline report integrity validation, not tests/lint/typecheck/build/native QA.",
+    "rawFinalJsonEmission": "UTF8 retry below; earlier output-only failure retained"
+  }
+}

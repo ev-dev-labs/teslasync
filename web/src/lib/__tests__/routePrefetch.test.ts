@@ -9,6 +9,13 @@ import {
   __getPrefetchedForTests,
 } from '../routePrefetch'
 
+const { vehicleLoader } = vi.hoisted(() => ({ vehicleLoader: vi.fn() }))
+
+vi.mock('../routeLoaders', async importOriginal => ({
+  ...await importOriginal<typeof import('../routeLoaders')>(),
+  VehicleDetail: vehicleLoader,
+}))
+
 /** Install a fake `navigator.connection` for one test. */
 function withConnection(connection: Record<string, unknown> | undefined) {
   Object.defineProperty(navigator, 'connection', {
@@ -21,6 +28,7 @@ describe('routePrefetch', () => {
   beforeEach(() => {
     __resetPrefetchedForTests()
     withConnection(undefined)
+    vehicleLoader.mockReset().mockResolvedValue({ default: () => null })
   })
 
   afterEach(() => {
@@ -29,6 +37,12 @@ describe('routePrefetch', () => {
   })
 
   describe('isPrefetchablePath', () => {
+    it('includes developer references in development only', () => {
+      for (const path of ['/dev/grid-states', '/dev/layout', '/dev/stats']) {
+        expect(isPrefetchablePath(path)).toBe(import.meta.env.DEV)
+      }
+    })
+
     it('returns true for known top-level routes', () => {
       expect(isPrefetchablePath('/')).toBe(true)
       expect(isPrefetchablePath('/battery')).toBe(true)
@@ -78,6 +92,35 @@ describe('routePrefetch', () => {
       prefetchRoute('/vehicles/123')
       prefetchRoute('/vehicles/456?tab=access')
       expect(__getPrefetchedForTests()).toEqual(['/vehicles/:id'])
+      expect(vehicleLoader).toHaveBeenCalledTimes(1)
+    })
+
+    it('evicts a rejected shared loader and retries on the next navigation intent', async () => {
+      vehicleLoader.mockRejectedValueOnce(new Error('chunk unavailable'))
+      prefetchRoute('/vehicles/123')
+      expect(__getPrefetchedForTests()).toEqual(['/vehicles/:id'])
+      await Promise.resolve()
+      expect(__getPrefetchedForTests()).toEqual([])
+      prefetchRoute('/vehicles/456')
+      expect(vehicleLoader).toHaveBeenCalledTimes(2)
+      expect(__getPrefetchedForTests()).toEqual(['/vehicles/:id'])
+    })
+
+    it('retains every Tesla Physics alias without changing path-level deduplication', () => {
+      const paths = [
+        '/tesla-physics', '/tesla-physics/clocks', '/tesla-physics/life-tape',
+        '/tesla-physics/contradictions', '/tesla-physics/meters', '/tesla-physics/unknown',
+        '/tesla-physics/car-kept-living', '/tesla-physics/logbook', '/tesla-physics/firmware-epochs',
+        '/tesla-physics/charge-port', '/tesla-physics/black-box', '/tesla-physics/dictionary',
+        '/tesla-physics/vault', '/tesla-physics/modes', '/tesla-physics/nervous-system',
+        '/tesla-physics/range',
+      ]
+      expect(paths).toHaveLength(16)
+      for (const path of paths) {
+        expect(isPrefetchablePath(path)).toBe(true)
+        prefetchRoute(path)
+      }
+      expect(__getPrefetchedForTests()).toEqual(paths)
     })
 
     it('prefetches known routes when navigation state adds a query or hash', () => {

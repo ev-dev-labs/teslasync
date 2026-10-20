@@ -5,6 +5,19 @@ import type {
   FleetReservation,
   FleetWorkOrder,
 } from '@/api/hooks/useFleetOps';
+import { ymdInTz } from '@/lib/dateFormat';
+import { getGlobalLocale, getGlobalPrecision, isFiniteNumber } from '@/lib/numberFormat';
+
+export function reservationCalendarDays(items: FleetReservation[], tz: string) {
+  const days = new Map<string | null, FleetReservation[]>();
+  for (const item of items) {
+    const day = item.starts_at ? ymdInTz(new Date(item.starts_at), tz) : null;
+    const reservations = days.get(day) ?? [];
+    reservations.push(item);
+    days.set(day, reservations);
+  }
+  return [...days.entries()].map(([day, reservations]) => ({ day, reservations }));
+}
 
 export interface FleetKpiValues {
   active_reservations: number;
@@ -40,8 +53,12 @@ export interface CostCenterAllocation {
   cost_center: FleetCostCenter;
   reservation_count: number;
   open_work_order_count: number;
-  cost_minor: number;
+  cost_minor: number | null;
   currency: string | null;
+  cost_state: 'known' | 'partial' | 'unknown';
+  /** Finite amounts with a valid currency; mixed currencies are never summed. */
+  qualifying_cost_count: number;
+  work_order_count: number;
 }
 
 export function costCenterAllocations(
@@ -51,17 +68,31 @@ export function costCenterAllocations(
 ): CostCenterAllocation[] {
   return costCenters.map((costCenter) => {
     const relatedOrders = workOrders.filter((item) => item.cost_center_id === costCenter.id);
-    const currencies = new Set(
-      relatedOrders.map((item) => item.currency).filter((value): value is string => value !== null),
+    const qualifyingOrders = relatedOrders.filter(
+      (item): item is FleetWorkOrder & { cost_minor: number; currency: string } =>
+        isFiniteNumber(item.cost_minor) && isCurrencyCode(item.currency),
     );
+    const currencies = new Set(
+      qualifyingOrders.map((item) => item.currency.toUpperCase()),
+    );
+    // A subtotal is meaningful only when its qualifying records share a currency.
+    const subtotal = qualifyingOrders.reduce((sum, item) => sum + item.cost_minor, 0);
+    const cost = qualifyingOrders.length > 0 && currencies.size === 1 && isFiniteNumber(subtotal)
+      ? subtotal
+      : null;
     return {
       cost_center: costCenter,
       reservation_count: reservations.filter((item) => item.cost_center_id === costCenter.id).length,
       open_work_order_count: relatedOrders.filter(
         (item) => item.status !== 'completed' && item.status !== 'cancelled',
       ).length,
-      cost_minor: relatedOrders.reduce((sum, item) => sum + (item.cost_minor ?? 0), 0),
+      cost_minor: cost,
       currency: currencies.size === 1 ? [...currencies][0] : null,
+      cost_state: cost === null
+        ? 'unknown'
+        : qualifyingOrders.length === relatedOrders.length ? 'known' : 'partial',
+      qualifying_cost_count: qualifyingOrders.length,
+      work_order_count: relatedOrders.length,
     };
   });
 }
@@ -99,7 +130,27 @@ export function aggregateForecast(points: FleetForecastPoint[]): ForecastChartPo
     });
 }
 
-export function formatMinorUnits(amount: number, currency: string | null): string {
-  if (!currency) return '—';
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount / 100);
+export function formatMinorUnits(
+  amount: number | null | undefined,
+  currency: string | null,
+  options: { locale?: string; precision?: number } = {},
+): string {
+  if (!isCurrencyCode(currency) || !isFiniteNumber(amount)) return '—';
+  const locale = options.locale ?? getGlobalLocale();
+  // The source currency's exponent is independent of the user's display precision.
+  const exponent = new Intl.NumberFormat(locale, {
+    style: 'currency', currency,
+  }).resolvedOptions().maximumFractionDigits ?? 0;
+  const precision = options.precision ?? getGlobalPrecision();
+  const formatter = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  });
+  return formatter.format(amount / 10 ** exponent);
+}
+
+function isCurrencyCode(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-z]{3}$/i.test(value);
 }

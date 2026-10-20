@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricBar } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { gaugeTone } from '@/lib/tokens';
 import type { FeatureFlagEntry } from '@/types/admin-diagnostics';
 
 import {
@@ -29,17 +30,16 @@ interface FlagCompositionPanelProps {
 }
 
 /**
- * Per-kind accent colours. Dynamic hex passed to the shared MetricBar's
- * `color` prop (mirrors the reference Timeline page's STATE_COLORS
- * pattern) — not a static `var(--*)` inline style.
+ * Existing mode-aware roles retain the kind hue families without local
+ * bright colours. These identify value types, not success/warning states.
  */
 const KIND_COLOR: Record<FlagValueKind, string> = {
-  boolean: '#10b981',
-  number: '#22d3ee',
-  string: '#8b5cf6',
-  object: '#f59e0b',
-  array: '#38bdf8',
-  null: '#64748b',
+  boolean: gaugeTone.success,
+  number: gaugeTone.info,
+  string: gaugeTone.purple,
+  object: gaugeTone.warning,
+  array: gaugeTone.info,
+  null: gaugeTone.neutral,
 };
 
 export function FlagCompositionPanel({
@@ -94,7 +94,7 @@ export function FlagCompositionPanel({
       <EmptyState
         message={t(
           'admin.flags.composition.empty',
-          'No flags to summarize yet. Add a flag to see its value-type breakdown here.',
+          'No flags to summarize yet. Stored values are text, including valid empty text.',
         )}
         // no-action: the create surface is the "Add flag" CTA in the page header.
       />
@@ -105,7 +105,7 @@ export function FlagCompositionPanel({
     <div
       className="space-y-3"
       role="list"
-      aria-label={t('admin.flags.composition.ariaLabel', 'Flag value-type composition')}
+      aria-label={t('admin.flags.composition.ariaLabel', 'Returned flag value presentation; stored values are text')}
     >
       {rows.map((row) => {
         const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
@@ -116,6 +116,7 @@ export function FlagCompositionPanel({
               value={row.count}
               max={total || row.count}
               color={KIND_COLOR[row.kind]}
+              fill="solid"
               sublabel={t('admin.flags.composition.sublabel', '{{count}} · {{pct}}%', {
                 count: row.count,
                 pct,

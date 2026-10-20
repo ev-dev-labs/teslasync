@@ -22,10 +22,10 @@
  * preview visible so the user can retry without re-uploading.
  */
 
-import { useCallback, useId, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, Download, Upload, FileJson, AlertTriangle } from 'lucide-react';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import {
   GlassPanel,
@@ -54,19 +54,23 @@ import {
   type SettingsBundle,
   type SettingsImportResult,
   type SettingsBundleSectionKey,
+  type SettingsBundleValidationIssue,
 } from '@/lib/settingsImportSchema';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const MAX_IMPORT_FILE_BYTES = 1 << 20; // 1 MiB — matches backend MaxSettingsImportBodyBytes
 
 type ImportStage = 'idle' | 'parsing' | 'preview' | 'applied';
 
 interface PendingImport {
+  generation: number;
   bundle: SettingsBundle;
   filename: string;
   sizeBytes: number;
 }
 
 export function SettingsExportImport() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('settings');
   const toast = useToast();
 
@@ -77,12 +81,20 @@ export function SettingsExportImport() {
   const [pending, setPending] = useState<PendingImport | null>(null);
   const [stage, setStage] = useState<ImportStage>('idle');
   const [parseError, setParseError] = useState<string | null>(null);
+  const [validationIssue, setValidationIssue] = useState<SettingsBundleValidationIssue | null>(null);
   const [previewResult, setPreviewResult] = useState<SettingsImportResult | null>(null);
   const [appliedResult, setAppliedResult] = useState<SettingsImportResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputId = useId();
+  const importGeneration = useRef(0);
+  const applyingGeneration = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    importGeneration.current += 1;
+  }, []);
 
   const summary = useMemo(
     () => (previewResult ? summariseImportResult(previewResult) : null),
@@ -90,9 +102,13 @@ export function SettingsExportImport() {
   );
 
   const resetImport = useCallback(() => {
+    importGeneration.current += 1;
+    applyingGeneration.current = null;
+    setIsApplying(false);
     setPending(null);
     setStage('idle');
     setParseError(null);
+    setValidationIssue(null);
     setPreviewResult(null);
     setAppliedResult(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -114,6 +130,8 @@ export function SettingsExportImport() {
   const ingestFile = useCallback(
     async (file: File) => {
       resetImport();
+      const generation = importGeneration.current;
+      const isCurrent = () => generation === importGeneration.current;
       setStage('parsing');
 
       if (file.size > MAX_IMPORT_FILE_BYTES) {
@@ -128,10 +146,12 @@ export function SettingsExportImport() {
       try {
         text = await file.text();
       } catch {
+        if (!isCurrent()) return;
         setStage('idle');
         setParseError(t('backup.import.errorRead', 'Failed to read the file.'));
         return;
       }
+      if (!isCurrent()) return;
 
       let parsed: unknown;
       try {
@@ -146,7 +166,12 @@ export function SettingsExportImport() {
         return;
       }
 
-      const validation = validateSettingsBundle(parsed);
+      const validation = validateSettingsBundle(parsed, (issue) => {
+        setValidationIssue(issue);
+        // Keep exact diagnostic detail until the catalog owner supplies the
+        // code-to-key mapping; do not invent canonical translation leaves.
+        return issue.message;
+      });
       if (typeof validation === 'string') {
         setStage('idle');
         setParseError(validation);
@@ -154,6 +179,7 @@ export function SettingsExportImport() {
       }
 
       const next: PendingImport = {
+        generation,
         bundle: validation,
         filename: file.name,
         sizeBytes: file.size,
@@ -162,9 +188,11 @@ export function SettingsExportImport() {
 
       try {
         const result = await dryRunMut.mutateAsync({ bundle: validation });
+        if (!isCurrent()) return;
         setPreviewResult(result);
         setStage('preview');
       } catch (err) {
+        if (!isCurrent()) return;
         setStage('idle');
         setPending(null);
         setParseError(
@@ -211,9 +239,17 @@ export function SettingsExportImport() {
   }, []);
 
   const handleApply = useCallback(async () => {
-    if (!pending) return;
+    if (
+      !pending || stage !== 'preview' || !previewResult ||
+      pending.generation !== importGeneration.current ||
+      applyingGeneration.current === pending.generation
+    ) return;
+    const generation = pending.generation;
+    applyingGeneration.current = generation;
+    setIsApplying(true);
     try {
       const result = await applyMut.mutateAsync({ bundle: pending.bundle });
+      if (generation !== importGeneration.current) return;
       setAppliedResult(result);
       setStage('applied');
       const applied = summariseImportResult(result);
@@ -232,8 +268,13 @@ export function SettingsExportImport() {
         return;
       }
       // useApplyImport already surfaces a toast via useMutationToast.
+    } finally {
+      if (generation === importGeneration.current) {
+        applyingGeneration.current = null;
+        setIsApplying(false);
+      }
     }
-  }, [applyMut, pending, t, toast]);
+  }, [applyMut, pending, previewResult, stage, t, toast]);
 
   return (
     <FadeIn>
@@ -244,11 +285,11 @@ export function SettingsExportImport() {
           </IconBox>
           <div className="flex-1 min-w-0">
             <Heading level="section">
-              {t('backup.title', 'Backup & Restore')}
+              {t('backup.title', 'Backup & restore')}
             </Heading>
             <Text variant="bodySm">
               {t(
-                'backup.subtitle',
+                "backup.configurationSubtitle",
                 'Export your TeslaSync configuration as a JSON file you can stash in a backup folder or git repo, and import it on a fresh install.',
               )}
             </Text>
@@ -335,9 +376,17 @@ export function SettingsExportImport() {
             <div
               className="rounded-md border border-tesla-red/30 bg-tesla-red/5 p-3 flex items-start gap-2"
               data-testid="settings-import-error"
+              data-validation-code={validationIssue?.code}
             >
               <AlertTriangle className="h-4 w-4 mt-0.5 text-rose-300 shrink-0" aria-hidden />
-              <ErrorText>{parseError}</ErrorText>
+              {validationIssue ? (
+                <div>
+                  <ErrorText>{t('backup.import.errorPreview', 'Failed to preview import.')}</ErrorText>
+                  <HelperText>{parseError}</HelperText>
+                </div>
+              ) : (
+                <ErrorText>{parseError}</ErrorText>
+              )}
             </div>
           )}
 
@@ -373,16 +422,16 @@ export function SettingsExportImport() {
               <SectionDiffList result={previewResult} />
 
               <div className="flex items-center justify-end gap-2 pt-2">
-                <Button variant="ghost" onClick={resetImport} disabled={applyMut.isPending}>
+                <Button variant="ghost" onClick={resetImport} disabled={isApplying}>
                   {t('backup.import.cancel', 'Cancel')}
                 </Button>
                 <Button
                   onClick={handleApply}
-                  disabled={applyMut.isPending || (summary != null && summary.total === 0)}
-                  loading={applyMut.isPending}
+                  disabled={isApplying || (summary != null && summary.total === 0)}
+                  loading={isApplying}
                   data-testid="settings-import-apply"
                 >
-                  {applyMut.isPending ? (
+                  {isApplying ? (
                     t('backup.import.applying', 'Applying…')
                   ) : summary && summary.total > 0 ? (
                     t('backup.import.applyCount', 'Apply {{count}} change(s)', {

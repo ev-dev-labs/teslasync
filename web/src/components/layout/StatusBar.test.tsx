@@ -126,10 +126,19 @@ vi.mock('./status-bar/HelpSegment', () => ({
 vi.mock('./status-bar/MoreSegment', () => ({
   MoreSegment: ({
     backgroundJobs,
+    iconOnly,
+    overflowStatus,
   }: {
     backgroundJobs: { count: number };
+    iconOnly?: boolean;
+    overflowStatus?: boolean;
   }) => (
-    <div data-testid="seg-more" data-count={backgroundJobs.count} />
+    <div
+      data-testid="seg-more"
+      data-count={backgroundJobs.count}
+      data-icon-only={String(!!iconOnly)}
+      data-overflow-status={String(!!overflowStatus)}
+    />
   ),
 }));
 vi.mock('@/hooks/useBackgroundJobs', () => ({
@@ -236,7 +245,9 @@ describe('StatusBar :: visibility & accessibility', () => {
     expect(bar.className).toContain('bottom-[var(--shell-tab-bar-height)]');
     expect(bar.className).toContain('xl:bottom-0');
     expect(bar.className).not.toContain('lg:bottom-0');
-    expect(bar.className).toContain('xl:h-7');
+    expect(bar.className).toContain('h-[var(--shell-status-bar-height)]');
+    expect(bar).toHaveClass('z-shell-status-bar');
+    expect(bar).not.toHaveClass('z-[55]');
   });
 
   it('renders all wide-screen status segments without More', () => {
@@ -302,12 +313,107 @@ describe('StatusBar :: visibility & accessibility', () => {
 
 // ── StatusBar: icon-only propagation ─────────────────────────────────────────
 
+describe('StatusBar :: restrained presentation', () => {
+  it('uses opaque neutral chrome and existing secondary typography without decorative blur', () => {
+    render(<StatusBar />);
+    const bar = screen.getByRole('contentinfo', { name: 'Application status' });
+    expect(bar).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]', 'text-xs', 'text-[var(--text-secondary)]');
+    expect(bar).not.toHaveClass('backdrop-blur-xl', 'bg-[var(--surface-1)]/95', 'border-[var(--glass-border)]');
+  });
+
+  it('keeps the Helix action neutral while retaining native focus and reduced-motion treatment', () => {
+    render(<StatusBar />);
+    const helix = screen.getByRole('button', { name: 'Open Helix chat' });
+    expect(helix).toHaveClass('text-[var(--text-secondary)]', 'focus-visible:outline-2', 'focus-visible:outline-offset-2', 'focus-visible:outline-[var(--focus-ring)]', 'motion-reduce:transition-none');
+    expect(helix).not.toHaveClass('text-[var(--theme-primary)]');
+    expect(helix).toHaveAttribute('type', 'button');
+    expect(helix).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
 describe('StatusBar :: icon-only propagation', () => {
   it('renders full (non-icon-only) segments by default on a wide viewport', () => {
     render(<StatusBar />);
     for (const id of SEGMENT_TESTIDS) {
       expect(iconOnlyOf(id)).toBe('false');
     }
+  });
+
+  describe('StatusBar :: bounded mobile frame', () => {
+    it('keeps one fixed-height, non-wrapping row and moves lower-priority items into More on phones', () => {
+      patchMatchMedia((query) => query.includes('767') || query.includes('1279'));
+      render(<StatusBar />);
+      const bar = screen.getByRole('contentinfo', { name: 'Application status' });
+      expect(bar).toHaveAttribute('data-status-tier', 'mobile');
+      expect(bar).toHaveClass('h-[var(--shell-status-bar-height)]', 'pb-[var(--shell-status-bar-safe-area)]');
+      expect(bar).not.toHaveClass('flex-col');
+      const row = screen.getByTestId('status-bar-row');
+      expect(row).toHaveClass('flex', 'flex-nowrap', 'items-center', 'gap-2', 'h-[var(--shell-status-bar-row)]');
+      expect(row).not.toHaveClass('overflow-x-auto');
+      const groups = screen.getAllByRole('group', { name: 'Application status' });
+      expect(groups).toHaveLength(2);
+      for (const group of groups) {
+        expect(group.parentElement).toBe(row);
+        expect(group).toHaveClass('flex', 'flex-nowrap', 'items-center', 'shrink-0');
+        expect(group).not.toHaveAttribute('tabindex');
+      }
+      expect(groups[0]).toContainElement(screen.getByTestId('seg-connection'));
+      expect(groups[0]).toContainElement(screen.getByTestId('seg-live'));
+      expect(groups[0]).toContainElement(screen.getByTestId('seg-alerts'));
+      expect(groups[1]).toContainElement(screen.getByTestId('seg-more'));
+      expect(iconOnlyOf('seg-connection')).toBe('false');
+      expect(iconOnlyOf('seg-live')).toBe('false');
+      // Honesty, data time, recent pages and Helix are reachable via More.
+      expect(screen.queryByTestId('seg-honesty')).toBeNull();
+      expect(screen.queryByTestId('seg-recent')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Open Helix chat' })).toBeNull();
+      expect(screen.getByTestId('seg-more')).toHaveAttribute('data-overflow-status', 'true');
+    });
+
+    it('restores compact desktop geometry without changing the group membership', () => {
+      patchMatchMedia(() => false);
+      const { container } = render(<StatusBar />);
+      expect(screen.getByRole('contentinfo', { name: 'Application status' })).toHaveAttribute('data-status-tier', 'desktop');
+      const helix = screen.getByRole('button', { name: 'Open Helix chat' });
+      expect(helix).toHaveClass('h-11', 'min-h-11', 'min-w-11', 'shrink-0', 'xl:h-5', 'xl:min-h-0', 'xl:min-w-0');
+      for (const group of screen.getAllByRole('group', { name: 'Application status' })) {
+        expect(group).not.toHaveAttribute('tabindex');
+        expect(group).toHaveClass('flex-nowrap', 'xl:gap-3');
+      }
+      container.querySelectorAll('span.w-px').forEach((divider) => {
+        expect(divider).toHaveClass('hidden', 'md:block');
+        expect(divider).toHaveAttribute('aria-hidden');
+      });
+      for (const id of SEGMENT_TESTIDS) {
+        expect(screen.getByTestId(id)).toBeInTheDocument();
+      }
+      expect(screen.queryByTestId('seg-more')).toBeNull();
+    });
+
+    it('steps down a tier when the row is wider than the bar instead of clipping items', () => {
+      patchMatchMedia((query) => query.includes('1279'));
+      const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+      const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        const width = this.getAttribute('role') === 'group' ? 200 : 0;
+        return { width, height: 44, top: 0, left: 0, right: width, bottom: 44, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+      });
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+        configurable: true,
+        get(this: HTMLElement) { return this.dataset.testid === 'status-bar-row' ? 300 : 0; },
+      });
+      try {
+        render(<StatusBar />);
+        const bar = screen.getByRole('contentinfo', { name: 'Application status' });
+        // Both groups (400px) never fit the 300px row, so it falls to the last resort.
+        expect(bar).toHaveAttribute('data-status-tier', 'compact');
+        expect(iconOnlyOf('seg-connection')).toBe('true');
+        expect(iconOnlyOf('seg-live')).toBe('true');
+        expect(screen.getByTestId('seg-more')).toHaveAttribute('data-overflow-status', 'true');
+      } finally {
+        rect.mockRestore();
+        if (clientWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      }
+    });
   });
 
   it('forces every segment to icon-only when compact is set', () => {
@@ -324,13 +430,18 @@ describe('StatusBar :: icon-only propagation', () => {
     expect(iconOnlyOf('seg-recent')).toBe('true');
   });
 
-  it('forces icon-only when the viewport is narrower than lg (max-width: 1023px)', () => {
-    patchMatchMedia((q) => q.includes('1023') || q.includes('1279'));
+  it('keeps API, Live and More labelled on tablets and shows the rest as icon + dot', () => {
+    patchMatchMedia((q) => q.includes('1279'));
     render(<StatusBar />);
-    for (const id of ['seg-connection', 'seg-live', 'seg-alerts', 'seg-recent']) {
+    expect(screen.getByRole('contentinfo', { name: 'Application status' })).toHaveAttribute('data-status-tier', 'tablet');
+    for (const id of ['seg-connection', 'seg-live', 'seg-more']) {
+      expect(iconOnlyOf(id)).toBe('false');
+    }
+    for (const id of ['seg-honesty', 'seg-alerts', 'seg-recent']) {
       expect(iconOnlyOf(id)).toBe('true');
     }
-    expect(screen.getByTestId('seg-more')).toBeInTheDocument();
+    expect(screen.getByTestId('seg-more')).toHaveAttribute('data-overflow-status', 'false');
+    expect(screen.getByRole('button', { name: 'Open Helix chat' })).toBeInTheDocument();
     expect(screen.queryByTestId('seg-background')).toBeNull();
   });
 

@@ -1,0 +1,1072 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-vehicle-systems-preconditioning-effectiveness",
+  "attempt": 1,
+  "actor": "23b33091-2829-420f-a514-db020d6a140b",
+  "status": "DONE",
+  "mode": "READONLY finished-page source QA; native acceptance NOTRUN",
+  "page": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.tsx",
+  "routes": [
+    "/preconditioning-effectiveness"
+  ],
+  "createdUtc": "2026-10-14T01:43:21.710976Z",
+  "writableFiles": [
+    "docs/frontend-audits/phase6-qa-vehicle-systems-preconditioning-effectiveness.json",
+    "web/logs/phase6-qa-vehicle-systems-preconditioning-effectiveness.log"
+  ],
+  "timebox": {
+    "actualFirstProbeUtc": "2026-10-14T01:27:51.0754839Z",
+    "returnByUtc": "2026-10-14T01:44:50.678Z",
+    "hardByUtc": "2026-10-14T01:49:50.678Z",
+    "clocksRenewed": false
+  },
+  "queue": {
+    "rows": [
+      {
+        "line": 90,
+        "raw": "| [~] | 6 | phase6-qa-vehicle-systems-preconditioning-effectiveness | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-vehicle-systems-preconditioning-effectiveness.json; web\\logs\\phase6-qa-vehicle-systems-preconditioning-effectiveness.log | phase5-page-vehicle-systems-preconditioning-effectiveness | 1 | actor=23b33091-2829-420f-a514-db020d6a140b; reserved01:24:50.678Z; LastConsumed=-1 | - | Acceptede0d5239e5 source only; PreconditioningEffectivenessPage/direct supports; actual versus estimate/coverage/SI provenance. |"
+      },
+      {
+        "line": 2034,
+        "raw": "| [x] | 5 | phase5-page-vehicle-systems-preconditioning-effectiveness | original-page-migration | web\\src\\features\\vehicle-systems\\pages\\PreconditioningEffectivenessPage.tsx; web\\src\\features\\vehicle-systems\\pages\\PreconditioningEffectivenessPage.test.tsx | - | 2 | actualterminal1/release/individualreceipt | e0d5239e5feb14adafae244ec43b670320924cf6 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/preconditioning-effectiveness; audit=docs\\frontend-audits\\audit-page-224.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Actual Anomaly/Exploreterminalreceipts collected andexclusiveclaimsreleased; existingindependent scope reserved to restore32 after their earlyguard-failure/source-only returns. Actualactor follows; no duplicatecompleteobjective/sharedcatalogscope. Actualactor=2dbf72df-430d-4295-bdd5-b2de1956f7b7, successful builtin launch; original20/25minclock measured byrealruntime; LastConsumed=-1. Currentactualindividualintake: Actual2testhandles stopped/no numericexit/runtimecounts/notpass,17authored11original+6unexecuted; lint0/syntax0/scans0/routes0/all54originalassertions retained. Page314vs299/test574vs483/all15sections/rawSI/defaults/1000limit. No keys; sharedretention/status needs unowned. Explicitrelease/no commands.  Status=[ ]/attempt1 retained. Originalfirstwork incomplete/malformed/unexecuted; current1 remainseligible next2 afteractualcatalog root, externalcatalogerror doesnotitself addfailurebudget. Actualindividualsourcecommit=a648c0f09659941bf168e36dc701cc27629b95be pushed=true. AfterROOT91650fc9d actualgen/check/strict0/79keys baselineunchanged/allcontributorspushed, continue exactretainedfirstwork asbudgetedattempt2. NOremodernization/[x]dispatch/failed2reuse. Ownboundedcoveringproof andsurgicalcorrectiononly; missingbeforelogmustnowexist. ActualfreshID/start follows;20minbox/25mincap, guardsON/480scommands/no customtools. All32claims pairwiseexclusive.  Parentactualnative/log/exactownscope verified: ActualVitestchild0/native17allpass/lint0/audit0; Unicodeconsolewrapper1 afterpersistedproof distinct. Unchanged314vs299/15sections; originalassertionhashreproduction limitation retained/no edits; unownedsharedpaused/nativegaps unchanged. Bothleasesreleased/no commands/LastConsumed=1; originalattempt2preserved.  Actualindividualreceiptcommit=e0d5239e5feb14adafae244ec43b670320924cf6. | Actualbuiltinactor=74064101-c7ea-4fa4-82c9-e2db7f9d8bdd; actualcensus1152s/all32running; sourceclaimretained; cooperativeconclude/requestNOTcancellation; nohelper/canceltool."
+      }
+    ],
+    "acceptedSourceCommit": "e0d5239e5feb14adafae244ec43b670320924cf6",
+    "edited": false,
+    "completedSourceObjectiveRedispatched": false,
+    "deduplication": "Exact Phase6 target-file scan found only this QA row. Accepted audit-page-224 already proposes workspace integration; reuse G220. No new queue writes/duplicate source migration. Other date/source-trust completed roots own different callers."
+  },
+  "confirmedIssues": [
+    {
+      "id": "PE-F01",
+      "file": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.tsx",
+      "line": 159,
+      "source": "isPaused: queryState.climate.isPaused && !climateHasData,",
+      "rule": "MDC-026",
+      "title": "Retained paused evidence receives contradictory loaded/resolved labels",
+      "detail": "Current queryState correctly retains actual paused transport and comparisons remain visible. However sectionState erases paused when data exists, so DataAvailability labels it Resolved and omits retained metadata. SourceCoverage receives actual queryState but has no paused branch: resolved paused sources get Loaded/success. This is residual trust-label inconsistency, not the historical claim of erased paused state everywhere or dropped data.",
+      "fix": "Separate passive availability gating from actual transport/retention state at existing SectionBody; preserve paused flags for downstream labels and metadata. Add paused source coverage/availability branches while retaining every value and shell.",
+      "owner": "page/domain integration",
+      "severity": "medium",
+      "confidence": "high-source",
+      "evidenceKind": "CONFIRMED source mechanism; negative/native case NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.tsx",
+          "line": 159,
+          "source": "isPaused: queryState.climate.isPaused && !climateHasData,"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningSourceCoverage.tsx",
+          "line": 61,
+          "source": "return result(t('preconditioningEffectiveness.coverage.loaded', 'Loaded'), 'success');"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningDataAvailability.tsx",
+          "line": 60,
+          "source": "return result(t('preconditioningEffectiveness.availability.resolved', 'Resolved'), 'success');"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningDataAvailability.tsx",
+          "line": 161,
+          "source": "retained={Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError)}"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.tsx",
+          "line": 307,
+          "source": "<PreconditioningDataAvailability summary={summary} state={sectionState} />"
+        }
+      ],
+      "reproduction": {
+        "mode": "exact source-traced synthetic input; not a new executed regression",
+        "steps": [
+          "Use comparisonEvidence with retained payloads and climate fetchStatus=paused,isFetching=false.",
+          "queryState.isPaused=true but sectionState.isPaused=false; follow availability to Resolved and coverage to Loaded/success. Ledger still warns correctly and comparisons remain visible."
+        ]
+      },
+      "coveringTestGap": "Existing three paused-source cases assert notice/comparison retention, not source badges or child retained metadata."
+    },
+    {
+      "id": "PE-F02",
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningQueryStatus.tsx",
+      "line": 38,
+      "source": "if (loading) {",
+      "rule": "MDC-026",
+      "title": "Aggregate priority suppresses independent source failures and retries",
+      "detail": "Loading returns before either fatal error; paused returns before fatal or retained refresh errors. A fatal climate source beside loading/paused drives has no named climate error/retry in this ledger; reverse sources have the same mechanism. Coverage/aggregate page freshness can disclose degradation, but do not replace source-local recovery. Retry refresh uses onRefresh and refetches both, not only the failed source.",
+      "fix": "Compose independent source notices/errors/retries using existing per-source onRetry callbacks. Retain the explicit Refresh evidence action as the deliberate refresh-both action.",
+      "owner": "domain-support",
+      "severity": "medium",
+      "confidence": "high-source",
+      "evidenceKind": "CONFIRMED source mechanism; negative/native case NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningQueryStatus.tsx",
+          "line": 38,
+          "source": "if (loading) {"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningQueryStatus.tsx",
+          "line": 60,
+          "source": "if (paused) {"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningQueryStatus.tsx",
+          "line": 78,
+          "source": "if (state.climate.error || state.drives.error) {"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningQueryStatus.tsx",
+          "line": 130,
+          "source": "<Button type=\"button\" variant=\"ghost\" size=\"sm\" onClick={state.onRefresh}>"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.tsx",
+          "line": 78,
+          "source": "const refreshAll = useCallback(() => {"
+        }
+      ],
+      "reproduction": {
+        "mode": "exact source-traced synthetic input; not a new executed regression",
+        "steps": [
+          "Set climate data undefined,isError=true,error=Error; set drives initial isLoading=true: the loading branch returns before QueryError.",
+          "Replace drives with initial paused: paused returns before QueryError.",
+          "For retained climate refresh failure with resolved drives, Retry refresh invokes both refetch callbacks."
+        ]
+      },
+      "coveringTestGap": "Existing fatal-error test has a successful neighbor. Existing refresh-failure test explicitly expects both callbacks; no mixed paused/loading/failure case."
+    },
+    {
+      "id": "PE-F03",
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningSourceCoverage.tsx",
+      "line": 113,
+      "source": "? formatDateTime(new Date(summary.coverage.climateEarliestMs), { locale })",
+      "rule": "MDC-044",
+      "title": "Coverage and departure dates bypass effective timezone preferences",
+      "detail": "Four coverage timestamps and each departure card use pure formatDateTime with only locale. The helper defaults to browser timezone, while useDateFormat binds saved vehicle/user/UTC mode. Dates can disagree with the selected timezone; locale is passed correctly. No independent 12/24-hour defect is asserted.",
+      "fix": "Use existing preference-aware date hook or resolved formatter/options at these two presentation owners. Preserve raw instants, placeholders, spans, ordering and shared utility. Do not silently rebucket the explicitly browser-local hourly model.",
+      "owner": "domain-support",
+      "severity": "medium",
+      "confidence": "high-source",
+      "evidenceKind": "CONFIRMED source mechanism; negative/native case NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningSourceCoverage.tsx",
+          "line": 113,
+          "source": "? formatDateTime(new Date(summary.coverage.climateEarliestMs), { locale })"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningSourceCoverage.tsx",
+          "line": 116,
+          "source": "? formatDateTime(new Date(summary.coverage.climateLatestMs), { locale })"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningSourceCoverage.tsx",
+          "line": 160,
+          "source": "? formatDateTime(new Date(summary.coverage.driveEarliestMs), { locale })"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningSourceCoverage.tsx",
+          "line": 163,
+          "source": "? formatDateTime(new Date(summary.coverage.driveLatestMs), { locale })"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningDepartureCard.tsx",
+          "line": 57,
+          "source": "{formatDateTime(new Date(item.departureMs), { locale })}"
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 85,
+          "source": "const opts = useMemo<FormatOptions>(() => ({ locale, tz }), [locale, tz])"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 38,
+          "source": "if (opts?.tz) {"
+        }
+      ],
+      "reproduction": {
+        "mode": "exact source-traced synthetic input; not a new executed regression",
+        "steps": [
+          "Save UTC when browser is America/Los_Angeles, using departure 2026-08-08T00:30:00Z.",
+          "No tz reaches these pure helper calls: browser renders the prior local calendar date. Changing saved timezone cannot affect these call sites."
+        ]
+      },
+      "coveringTestGap": "Page mocks en-US and does not vary timezone; no native date/export/table rendering exercised."
+    },
+    {
+      "id": "PE-F04",
+      "file": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.tsx",
+      "line": 59,
+      "source": "const climateQuery = useClimateHistory(vehicleIdStr);",
+      "rule": "MDC-032",
+      "title": "No shared two-bound acquisition for dated analysis",
+      "detail": "The real route is absent from RANGE_ENABLED_PATHS, so header range is disabled today, not an enabled control being ignored. Page reads no useRangeState/startInstant/endInstantExclusive. Both existing history APIs lack caller bounds; climate declares seven-day default and drives cap 1000. This preserves disclosed current behavior but lacks shared dated-analysis scope. Vehicle enablement/keys/cancellation remain intact. Future backend bounds/totals unknown.",
+      "fix": "Reuse accepted G220 integration owner: agree analysis default, register route, extend existing typed hooks/keys for both instants and wire page without a second picker. Verify backend support; preserve intentional caps and source coverage disclosure.",
+      "owner": "shared hook/route/page integration",
+      "severity": "medium",
+      "confidence": "high-source",
+      "evidenceKind": "CONFIRMED source mechanism; negative/native case NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.tsx",
+          "line": 59,
+          "source": "const climateQuery = useClimateHistory(vehicleIdStr);"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.tsx",
+          "line": 60,
+          "source": "const drivesQuery = useDriveHistory(vehicleIdStr || undefined, 1000);"
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleSystems.ts",
+          "line": 37,
+          "source": "export function useClimateHistory(vehicleId: string) {"
+        },
+        {
+          "file": "web/src/api/hooks/useDriving.ts",
+          "line": 143,
+          "source": "export function useDriveHistory(vehicleId?: string, limit = 1000) {"
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 23,
+          "source": "export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set(["
+        }
+      ],
+      "reproduction": {
+        "mode": "exact source-traced synthetic input; not a new executed regression",
+        "steps": [
+          "Logged grep found 0 page matches for useRangeState/startInstant/endInstantExclusive and 0 route matches in workspaceScope.",
+          "Actual requests accept selected vehicle and cap only; no workspace start/end acquisition input. This is unavailable range capability, not a claim of a bad server result."
+        ]
+      },
+      "coveringTestGap": "Existing bounded-hooks case checks vehicle and 1000 only. No start/end query contract."
+    },
+    {
+      "id": "PE-F05",
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningJoinSupport.tsx",
+      "line": 61,
+      "source": "display: { formatter: (raw: number) => ({ value: metricId === 'duration' ? formatDuration(raw) : fmtInt(raw), unit: '' }) },",
+      "rule": "MDC-033",
+      "title": "Number-valued medians are displayed as integer counts",
+      "detail": "Median window rows and median distinct cabin states are number metrics, but all non-duration values use fmtInt, forcing precision 0. The even-length model median can be fractional. Raw SI/model remains unchanged but displayed analytical detail and saved nonzero precision are lost.",
+      "fix": "Use fmtInt only for counts and fmtNumber with effective saved precision for number medians; preserve duration custom formatter and raw metrics.",
+      "owner": "domain-support",
+      "severity": "medium",
+      "confidence": "high-source",
+      "evidenceKind": "CONFIRMED source mechanism; negative/native case NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningJoinSupport.tsx",
+          "line": 61,
+          "source": "display: { formatter: (raw: number) => ({ value: metricId === 'duration' ? formatDuration(raw) : fmtInt(raw), unit: '' }) },"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningJoinSupport.tsx",
+          "line": 36,
+          "source": "[t('preconditioningEffectiveness.join.medianRows', 'Median window rows'), support.medianWindowRows, 'number'],"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningJoinSupport.tsx",
+          "line": 37,
+          "source": "[t('preconditioningEffectiveness.join.medianThermal', 'Median distinct cabin states'), support.medianThermalSamples, 'number'],"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/lib/preconditioningEffectiveness.ts",
+          "line": 301,
+          "source": "function median(values: readonly number[]): number | null {"
+        },
+        {
+          "file": "web/src/hooks/useNumberFormatting.ts",
+          "line": 39,
+          "source": "fmtInt: (value: unknown, locale?: string) => fmtNumber(value, 0, locale),"
+        },
+        {
+          "file": "web/src/lib/numberFormat.ts",
+          "line": 97,
+          "source": "maximumFractionDigits: d,"
+        }
+      ],
+      "reproduction": {
+        "mode": "exact source-traced synthetic input; not a new executed regression",
+        "steps": [
+          "Take support sizes [2,3]; existing median formula returns 2.5.",
+          "At saved precision 1 or 2 the custom number formatter still calls fmtInt(2.5), forcing zero fractional digits and rendering 3 instead of 2.5/2.50. This trace is not a newly executed fixture."
+        ]
+      },
+      "coveringTestGap": "Existing support/reuse cases do not assert fractional median rendering or preference reactivity."
+    },
+    {
+      "id": "PE-F06",
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningThresholdConfidence.tsx",
+      "line": 77,
+      "source": "{ count: affected },",
+      "rule": "MDC-044",
+      "title": "Five numeric caption inputs bypass locale-aware formatting",
+      "detail": "Across four supports, active-caption count, threshold affected count, reused-row count, and two hourly caption group counts are substituted as raw numbers with no formatting specifier. Adjacent metrics use fmtInt. English text is already translated: this is number-locale inconsistency, NOT missing-i18n English-string violation. Five inputs are grouped as one mechanism.",
+      "fix": "Format these caption interpolation inputs with existing fmtInt while preserving raw metrics/denominators and all labels. No global formatter changes.",
+      "owner": "domain-support",
+      "severity": "medium",
+      "confidence": "high-source",
+      "evidenceKind": "CONFIRMED source mechanism; negative/native case NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningThresholdConfidence.tsx",
+          "line": 77,
+          "source": "{ count: affected },"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningEvidenceLedger.tsx",
+          "line": 85,
+          "source": "count: summary.conditionedDepartures,"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningJoinSupport.tsx",
+          "line": 74,
+          "source": "{ count: support.climateRowsReused },"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningHourlyProfile.tsx",
+          "line": 129,
+          "source": "active: bucket.conditionedDepartures,"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningHourlyProfile.tsx",
+          "line": 130,
+          "source": "control: bucket.unconditionedDepartures,"
+        }
+      ],
+      "reproduction": {
+        "mode": "exact source-traced synthetic input; not a new executed regression",
+        "steps": [
+          "Use a saved non-US number locale with count 1000 (or non-Latin digits with 123).",
+          "These five t interpolation inputs pass raw numbers, unlike adjacent fmtInt-rendered metrics. No production locale/native reproduction executed."
+        ]
+      },
+      "coveringTestGap": "Mocks use English and String(value), with no numeric caption locale assertions."
+    }
+  ],
+  "confirmedIssueCount": 6,
+  "summary": {
+    "confirmedByRule": {
+      "MDC-026": 2,
+      "MDC-044": 2,
+      "MDC-032": 1,
+      "MDC-033": 1
+    },
+    "countMethod": "Six root mechanisms, not failing tests; median two fields and caption five values grouped.",
+    "totalConfirmed": 6,
+    "candidateCount": 4,
+    "deduplicatedNeeds": 4,
+    "priority": [
+      "N01 independent truth/recovery",
+      "N03 acquisition scope",
+      "N02 dates",
+      "N04 precision/locale"
+    ],
+    "filesMostIssues": [
+      {
+        "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningSourceCoverage.tsx",
+        "findingCount": 2
+      },
+      {
+        "file": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.tsx",
+        "findingCount": 2
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningJoinSupport.tsx",
+        "findingCount": 2
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningDataAvailability.tsx",
+        "findingCount": 1
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningQueryStatus.tsx",
+        "findingCount": 1
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningDepartureCard.tsx",
+        "findingCount": 1
+      }
+    ]
+  },
+  "sourcePins": [
+    {
+      "file": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.tsx",
+      "beforeSha256": "B550C2DF9D1FF064F528401978069BF5238F2E918550AB6C50D210E7034D12C5",
+      "afterSha256": "B550C2DF9D1FF064F528401978069BF5238F2E918550AB6C50D210E7034D12C5",
+      "match": true,
+      "lineCount": 314
+    },
+    {
+      "file": "web/src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx",
+      "beforeSha256": "6534D52F1512E085BB4147FD14C6D688B4CC06A0352152F03C2B6BD5F15C4F66",
+      "afterSha256": "6534D52F1512E085BB4147FD14C6D688B4CC06A0352152F03C2B6BD5F15C4F66",
+      "match": true,
+      "lineCount": 574
+    },
+    {
+      "file": "web/src/features/vehicle-systems/lib/preconditioningEffectiveness.ts",
+      "beforeSha256": "7024F566571252B3FC75CC3C63E2AC3B6BEE34DBD6A8E86D7054F4CEF61B5BC3",
+      "afterSha256": "7024F566571252B3FC75CC3C63E2AC3B6BEE34DBD6A8E86D7054F4CEF61B5BC3",
+      "match": true,
+      "lineCount": 1067
+    },
+    {
+      "file": "web/src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts",
+      "beforeSha256": "F696FAAA365465F650E7E6C5D8F42165AC4A3959077E7B078708FE7B227BD8F0",
+      "afterSha256": "F696FAAA365465F650E7E6C5D8F42165AC4A3959077E7B078708FE7B227BD8F0",
+      "match": true,
+      "lineCount": 598
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "beforeSha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "afterSha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "match": true,
+      "lineCount": 454
+    },
+    {
+      "file": "web/src/api/hooks/useVehicleSystems.ts",
+      "beforeSha256": "06474D1DC7E0B1D63BE82589D14ABBB39AC33A29E5319A888A1236A295881C8D",
+      "afterSha256": "06474D1DC7E0B1D63BE82589D14ABBB39AC33A29E5319A888A1236A295881C8D",
+      "match": true,
+      "lineCount": 176
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "match": true,
+      "lineCount": 434
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "beforeSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "afterSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "match": true,
+      "lineCount": 174
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "beforeSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "afterSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "match": true,
+      "lineCount": 194
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "beforeSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "afterSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "match": true,
+      "lineCount": 47
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "beforeSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "afterSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "match": true,
+      "lineCount": 462
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "beforeSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "afterSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "match": true,
+      "lineCount": 500
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "match": true,
+      "lineCount": 168
+    },
+    {
+      "file": "web/src/hooks/useRangeState.ts",
+      "beforeSha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "afterSha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "match": true,
+      "lineCount": 694
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "match": true,
+      "lineCount": 17
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "beforeSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "afterSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "match": true,
+      "lineCount": 259
+    },
+    {
+      "file": "web/package.json",
+      "beforeSha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "afterSha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "match": true,
+      "lineCount": 189
+    },
+    {
+      "file": "web/vite.config.ts",
+      "beforeSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "afterSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "match": true,
+      "lineCount": 434
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/index.ts",
+      "beforeSha256": "D284191527A098D4E32C28D25A94EFCF2F0D26BA1BF0B21635D84D56FE6A9B23",
+      "afterSha256": "D284191527A098D4E32C28D25A94EFCF2F0D26BA1BF0B21635D84D56FE6A9B23",
+      "match": true,
+      "lineCount": 20
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/labels.ts",
+      "beforeSha256": "C8114799008DF899101B31F0316323714514456CC318232809F2506A4E261FD9",
+      "afterSha256": "C8114799008DF899101B31F0316323714514456CC318232809F2506A4E261FD9",
+      "match": true,
+      "lineCount": 124
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningClimateDisposition.tsx",
+      "beforeSha256": "075FF3CA0C598CD1C7DF127B8765B806ACD3DB98358775CE8DD16AD24A8CAF83",
+      "afterSha256": "075FF3CA0C598CD1C7DF127B8765B806ACD3DB98358775CE8DD16AD24A8CAF83",
+      "match": true,
+      "lineCount": 75
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningComparisonCards.tsx",
+      "beforeSha256": "94242F7F771EEA4A3FAED95191C517C059C171778DB69210A14EDC433294126C",
+      "afterSha256": "94242F7F771EEA4A3FAED95191C517C059C171778DB69210A14EDC433294126C",
+      "match": true,
+      "lineCount": 131
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningDataAvailability.tsx",
+      "beforeSha256": "737C63CEF17270F2C99B4C549A0CE00858625405B89377828FB7E8E066810059",
+      "afterSha256": "737C63CEF17270F2C99B4C549A0CE00858625405B89377828FB7E8E066810059",
+      "match": true,
+      "lineCount": 187
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningDepartureCard.tsx",
+      "beforeSha256": "355BC3F3DC247D1917E3DA1A7F40D28C48B4D187F8F52ED7878359F0C7C7AC90",
+      "afterSha256": "355BC3F3DC247D1917E3DA1A7F40D28C48B4D187F8F52ED7878359F0C7C7AC90",
+      "match": true,
+      "lineCount": 139
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningDepartureDirectory.tsx",
+      "beforeSha256": "E1CD63758927943D84B362BBF32368276820C16C9B15B59C089CBFC23D204962",
+      "afterSha256": "E1CD63758927943D84B362BBF32368276820C16C9B15B59C089CBFC23D204962",
+      "match": true,
+      "lineCount": 76
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningDepartureDisposition.tsx",
+      "beforeSha256": "A2F09EC607B285B8D9B4A1705615EB9035484E4ED993EDCA7459B48A8D095097",
+      "afterSha256": "A2F09EC607B285B8D9B4A1705615EB9035484E4ED993EDCA7459B48A8D095097",
+      "match": true,
+      "lineCount": 113
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningEvidenceLedger.tsx",
+      "beforeSha256": "EB01FA57A2F8CEAC00BFA1ABE33423E75853FC87239428420FC7A403BA9CA400",
+      "afterSha256": "EB01FA57A2F8CEAC00BFA1ABE33423E75853FC87239428420FC7A403BA9CA400",
+      "match": true,
+      "lineCount": 146
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningExactAccounting.tsx",
+      "beforeSha256": "64D64E6E35F1F644B77AACBA55C82DDB1BC66D70DB7FA6DBF5DB718421A95E25",
+      "afterSha256": "64D64E6E35F1F644B77AACBA55C82DDB1BC66D70DB7FA6DBF5DB718421A95E25",
+      "match": true,
+      "lineCount": 175
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningHourlyProfile.tsx",
+      "beforeSha256": "593D4A3F2A2E8F549C25F57092EC751766B56FCF26C7116AF1C3F4C4B0516839",
+      "afterSha256": "593D4A3F2A2E8F549C25F57092EC751766B56FCF26C7116AF1C3F4C4B0516839",
+      "match": true,
+      "lineCount": 151
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningImprovementComparison.tsx",
+      "beforeSha256": "3F10FD28491B1919C818EEC46AE7FAFFDC790649FE9AD68D9E8C3EEBE32CB5B4",
+      "afterSha256": "3F10FD28491B1919C818EEC46AE7FAFFDC790649FE9AD68D9E8C3EEBE32CB5B4",
+      "match": true,
+      "lineCount": 123
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningImprovementDistribution.tsx",
+      "beforeSha256": "07663296F7D1100D27241CF5DF048035FF2C3854804FD8CAB3ECECF9F5E0915E",
+      "afterSha256": "07663296F7D1100D27241CF5DF048035FF2C3854804FD8CAB3ECECF9F5E0915E",
+      "match": true,
+      "lineCount": 127
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningJoinSupport.tsx",
+      "beforeSha256": "E2B51692B4F97AC1F45595C09E437921357F6C27B7596A0E8D08BEAEEB1DC629",
+      "afterSha256": "E2B51692B4F97AC1F45595C09E437921357F6C27B7596A0E8D08BEAEEB1DC629",
+      "match": true,
+      "lineCount": 86
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningMethodology.tsx",
+      "beforeSha256": "E220DD906B031EC1C89A53D30C2658438116E6B3AB4580998238DE27C65B8702",
+      "afterSha256": "E220DD906B031EC1C89A53D30C2658438116E6B3AB4580998238DE27C65B8702",
+      "match": true,
+      "lineCount": 134
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningQueryStatus.tsx",
+      "beforeSha256": "0A2102914173C4221DB7955F31982690D05375DA9C62FBF949851827F89C7CBA",
+      "afterSha256": "0A2102914173C4221DB7955F31982690D05375DA9C62FBF949851827F89C7CBA",
+      "match": true,
+      "lineCount": 200
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningReadinessComparison.tsx",
+      "beforeSha256": "00898F59C7BCF6FADCC302B4B5DADAC6E1300A0E8B4042BDE640B482F17B1661",
+      "afterSha256": "00898F59C7BCF6FADCC302B4B5DADAC6E1300A0E8B4042BDE640B482F17B1661",
+      "match": true,
+      "lineCount": 123
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningSectionBody.tsx",
+      "beforeSha256": "C1FBA5F7E114170C08B384986FC78D39A0585636FE36D97495BF2216418E2E0E",
+      "afterSha256": "C1FBA5F7E114170C08B384986FC78D39A0585636FE36D97495BF2216418E2E0E",
+      "match": true,
+      "lineCount": 158
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningSourceCoverage.tsx",
+      "beforeSha256": "3955DA9DD3C7E9C8FF5563F20B31A91400A5491D68B7231FC2A6D6D749660BCD",
+      "afterSha256": "3955DA9DD3C7E9C8FF5563F20B31A91400A5491D68B7231FC2A6D6D749660BCD",
+      "match": true,
+      "lineCount": 182
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningStrata.tsx",
+      "beforeSha256": "8C3CA0B013CBF7E8878BF311AF9D55E08AE467D9FEFA4E3818C1502C92CF6CB0",
+      "afterSha256": "8C3CA0B013CBF7E8878BF311AF9D55E08AE467D9FEFA4E3818C1502C92CF6CB0",
+      "match": true,
+      "lineCount": 119
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningThresholdConfidence.tsx",
+      "beforeSha256": "8B6A23C2D616A5A4397E653C8FFCF6BCDF0486DB3D4661D854AB3D92EB8EE765",
+      "afterSha256": "8B6A23C2D616A5A4397E653C8FFCF6BCDF0486DB3D4661D854AB3D92EB8EE765",
+      "match": true,
+      "lineCount": 116
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/types.ts",
+      "beforeSha256": "79D634319A3CA7F14A4109BAD11AD51FC0275B6EE90FBE95E20D9940455F48AD",
+      "afterSha256": "79D634319A3CA7F14A4109BAD11AD51FC0275B6EE90FBE95E20D9940455F48AD",
+      "match": true,
+      "lineCount": 38
+    },
+    {
+      "file": "web/src/features/vehicle-systems/lib/hvacCycling.ts",
+      "beforeSha256": "E12C1EB30AC06A0A8689C2A2D9843BA3DFD6E7D2D9A82D6549CA67715EF9FDF8",
+      "afterSha256": "E12C1EB30AC06A0A8689C2A2D9843BA3DFD6E7D2D9A82D6549CA67715EF9FDF8",
+      "match": true,
+      "lineCount": 857
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "beforeSha256": "E0B859E45485E60C9CCE07BBF523817C6971C9C95C3D4DDDB254294A19F2B173",
+      "afterSha256": "E0B859E45485E60C9CCE07BBF523817C6971C9C95C3D4DDDB254294A19F2B173",
+      "match": true,
+      "lineCount": 73
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "beforeSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "afterSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "match": true,
+      "lineCount": 148
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "beforeSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "afterSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "match": true,
+      "lineCount": 93
+    },
+    {
+      "file": "web/src/components/feedback/QueryError.tsx",
+      "beforeSha256": "5DC7D6A24694C2F34411D8B042864C94A630BE9FC0A516586C2596172F19E48A",
+      "afterSha256": "5DC7D6A24694C2F34411D8B042864C94A630BE9FC0A516586C2596172F19E48A",
+      "match": true,
+      "lineCount": 16
+    },
+    {
+      "file": "web/src/test-setup.ts",
+      "beforeSha256": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "afterSha256": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "match": true,
+      "lineCount": 233
+    },
+    {
+      "file": "web/src/types/vehicle-systems.ts",
+      "beforeSha256": "85B58A61A9A5D8824B77A9FFCBB29C97AE2AE3AEC3237C3B3395624A06C9A0F8",
+      "afterSha256": "85B58A61A9A5D8824B77A9FFCBB29C97AE2AE3AEC3237C3B3395624A06C9A0F8",
+      "match": true,
+      "lineCount": 154
+    },
+    {
+      "file": "web/src/types/driving.ts",
+      "beforeSha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "afterSha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "match": true,
+      "lineCount": 411
+    },
+    {
+      "file": "web/src/lib/climateState.ts",
+      "beforeSha256": "09E5C29B473279A17B6D14742BAC7D02469BDE4F3580736AA7F758389578FE6F",
+      "afterSha256": "09E5C29B473279A17B6D14742BAC7D02469BDE4F3580736AA7F758389578FE6F",
+      "match": true,
+      "lineCount": 8
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "beforeSha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "afterSha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "match": true,
+      "lineCount": 172
+    }
+  ],
+  "pinCheck": {
+    "files": 50,
+    "matched": 50,
+    "changed": [],
+    "status": "PASS",
+    "finalPostWriteRequired": false,
+    "finalPostWriteUtc": "2026-10-14T01:44:46.649725Z"
+  },
+  "tests": {
+    "command": "node node_modules/vitest/vitest.mjs run src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts --pool=forks --maxWorkers=2 --reporter=verbose --no-cache",
+    "runtime": "Node v26.8.1; Vitest v4.1.11",
+    "exitCode": 0,
+    "files": 2,
+    "discovered": 40,
+    "executed": 40,
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "pageCases": 17,
+    "modelCases": 23,
+    "duration": "8.74s native test summary; guard startup is additional",
+    "testNames": [
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness source accounting > assigns every returned climate row to one exact outcome",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness source accounting > accounts for malformed, missing, duplicate, and valid drives",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness source accounting > retains the first climate row and drive at duplicate identities",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness join and classification gates > joins only the configured pre-drive window",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness join and classification gates > uses observed HVAC activity even when the active row lacks thermal fields",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness join and classification gates > does not let an incomplete unknown row disappear from the control gate",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness join and classification gates > withholds stale departure-readiness evidence",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness join and classification gates > does not count repeated forward-folded cabin state as fresh thermal evidence",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness join and classification gates > separates insufficient samples from insufficient observation span",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness join and classification gates > withholds material target shifts and initially in-band departures",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness join and classification gates > distinguishes no temporal overlap from an empty window inside coverage",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness comparisons and profiles > averages front-row setpoints and computes observed improvement",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness comparisons and profiles > stratifies hot and cold departures and compares group medians",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness comparisons and profiles > requires both groups before publishing comparative effects",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness comparisons and profiles > withholds headline effects when groups exist only in different strata",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness comparisons and profiles > reports balanced evidence strength without claiming causality",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness comparisons and profiles > publishes hourly and improvement distributions with exact support",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness support and resilience > discloses climate-row reuse across overlapping departure windows",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness support and resilience > caps a deterministic newest-first departure directory",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness support and resilience > validates every option and bounds the directory cap",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness support and resilience > does not mutate source arrays or source rows",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness support and resilience > survives hostile rows and keeps all identities exact",
+      "src/features/vehicle-systems/lib/preconditioningEffectiveness.test.ts > summarizePreconditioningEffectiveness support and resilience > keeps empty evidence explicit and balanced",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > renders all fifteen persistent evidence sections and the bounded hooks",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > retains every shell without a selected vehicle or redundant control",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > retains every shell while both sources are loading",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > does not infer an empty response while initial queries are paused offline",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > shows a one-source failure with one retry and all shells retained",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > refreshes both sources from the page action",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > retains cached comparisons and discloses a refresh failure",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > renders valid empty responses with exact zero accounting",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > keeps stale, target-shift, and unknown-HVAC exclusions distinct",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > publishes comparison values only when active and explicit-off groups exist",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > formats temperature deltas in the selected Fahrenheit unit",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > retains comparisons and discloses a paused climate refresh",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > retains comparisons and discloses a paused drives refresh",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > retains comparisons and discloses a paused both refresh",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > retains exact zero accounting when empty evidence has a paused refresh",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > clears the paused notice after sources resume without losing sections",
+      "src/features/vehicle-systems/pages/PreconditioningEffectivenessPage.test.tsx > PreconditioningEffectivenessPage > preserves negative observational temperature differences in Fahrenheit"
+    ],
+    "limits": "Only existing covering tests. Hooks/i18n/units/charts mocked in page tests; no new negative fixtures or native acceptance."
+  },
+  "candidates": [
+    {
+      "id": "PE-C01",
+      "rule": "target-stability-policy",
+      "file": "web/src/features/vehicle-systems/lib/preconditioningEffectiveness.ts",
+      "line": 878,
+      "source": "const targets = thermalRows.map((row) => row.targetC);",
+      "detail": "Target range includes only cabin-change thermal rows; intermediate target excursion on unchanged cabin value can be omitted.",
+      "limit": "Intent of target stability gate needs domain agreement; new negative model case NOTRUN. Preserve original classifier until contract settled."
+    },
+    {
+      "id": "PE-C02",
+      "rule": "hour-timezone-policy",
+      "file": "web/src/features/vehicle-systems/lib/preconditioningEffectiveness.ts",
+      "line": 669,
+      "source": "const bucket = buckets[new Date(departure.departureMs).getHours()]!;",
+      "detail": "Browser-local hourly buckets and ASCII 00:00 labels differ from possible saved timezone/clock expectations. Browser-local semantics are explicitly disclosed, so do not silently rebucket.",
+      "limit": "Domain timezone/DST policy and native evidence NOTRUN."
+    },
+    {
+      "id": "PE-C03",
+      "rule": "MDC-040/MDC-043",
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningThresholdConfidence.tsx",
+      "line": 65,
+      "source": "<Grid cols={{ default: 2, md: 4, xl: 7 }} gap={3}>",
+      "detail": "Base two-column threshold/diagnostic grids, xl seven columns, nested directory scroll without explicit label/focus affordance, and Retry refresh size sm without page min-h-11 need mounted long-label/keyboard/target review. Button sm declares h-9; no measured target failure claimed.",
+      "citations": [
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningDepartureDirectory.tsx",
+          "line": 61,
+          "source": "<ol className=\"max-h-[52rem] space-y-3 overflow-y-auto pr-1\">"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningQueryStatus.tsx",
+          "line": 130,
+          "source": "<Button type=\"button\" variant=\"ghost\" size=\"sm\" onClick={state.onRefresh}>"
+        }
+      ],
+      "limit": "All ten widths/narrow allocated panels/200% text/RTL/keyboard/scroll/44px target and spacing exceptions native NOTRUN."
+    },
+    {
+      "id": "PE-C04",
+      "rule": "MDC-010/040/041/042",
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/PreconditioningEvidenceLedger.tsx",
+      "line": 73,
+      "source": "context: <><Activity aria-hidden=\"true\" className=\"h-5 w-5 text-indigo-300\" />{resolved",
+      "detail": "Adjacent KPI/source icons have several fixed hues; loading spins; Recharts ticks use fontSize 11. Tick props are an acceptable library API exception.",
+      "limit": "Color rationale/composed contrast, dark/light/custom modes, OS forced colors, reduced-motion/low bandwidth, chart/table/export open states NOTRUN; no visual violation promoted from source alone."
+    }
+  ],
+  "candidateCount": 4,
+  "requiredSharedChanges": [
+    {
+      "id": "PE-N01",
+      "findings": [
+        "PE-F01",
+        "PE-F02"
+      ],
+      "objective": "One existing domain source-trust/status integration, not separate paused/error/retry fixes or page remigration",
+      "owners": [
+        "PreconditioningEffectivenessPage",
+        "PreconditioningSectionBody",
+        "PreconditioningQueryStatus",
+        "PreconditioningSourceCoverage",
+        "PreconditioningDataAvailability"
+      ],
+      "needs": "Parent exact claims and additive mixed fatal/loading/paused/retained regression coverage."
+    },
+    {
+      "id": "PE-N02",
+      "findings": [
+        "PE-F03"
+      ],
+      "objective": "Preference-aware timestamps in SourceCoverage/DepartureCard",
+      "needs": "Serialize with N01 on actual SourceCoverage file overlap; completed advanced-evidence-date-preferences owns different callers, relative-future-dates owns different behavior. Neither redispatched."
+    },
+    {
+      "id": "PE-N03",
+      "findings": [
+        "PE-F04"
+      ],
+      "objective": "Existing accepted G220 history/workspace integration requirement",
+      "owners": [
+        "useVehicleSystems.ts",
+        "useDriving.ts",
+        "workspaceScope.ts",
+        "PreconditioningEffectivenessPage.tsx"
+      ],
+      "needs": "Parent validate both backend instants/default/cap/totals first; preserve 1000 cap and climate qualification context. Completed drivetrain range item is not this objective."
+    },
+    {
+      "id": "PE-N04",
+      "findings": [
+        "PE-F05",
+        "PE-F06"
+      ],
+      "objective": "One domain numeric presentation repair; no global formatter changes",
+      "owners": [
+        "PreconditioningJoinSupport",
+        "PreconditioningThresholdConfidence",
+        "PreconditioningEvidenceLedger",
+        "PreconditioningHourlyProfile"
+      ],
+      "needs": "Fractional median/saved precision and numeric caption locale/reaction coverage; preserve raw values."
+    }
+  ],
+  "guidanceRead": [
+    "FULL sole docs/orchestrator-loop.md; initially discovered legacy root loops superseded, not executed",
+    "Design contract core authority/foundations/layout/scope/states/SI/a11y/evidence lines1-281,282-336,419-654; addendum heading index, no claim of full unrelated overlay/material appendices",
+    "Mission principles/architecture/responsive/mobile/states/date/chart/error/extreme data and sections43-45",
+    "Inventory target/audit224 and G220; relevant queue/dependency/dedup rows",
+    "Latest handoff recovery lines1-130 and historical tail context",
+    "FULL worker conventions and react/frontend-SI/unit-conversion instructions; applicable copilot integrity/SI/frontend sections",
+    "Historical audit-page-224 selected scope/state/architecture/mobile/a11y context only"
+  ],
+  "preservation": {
+    "pageLineCount": 314,
+    "sourceSha256": "B550C2DF9D1FF064F528401978069BF5238F2E918550AB6C50D210E7034D12C5",
+    "sectionCount": 15,
+    "sections": [
+      "KPI/evidence ledger",
+      "Source/temporal coverage",
+      "Climate disposition",
+      "Departure disposition",
+      "Join support/overlap",
+      "Hourly profile",
+      "Readiness comparison",
+      "Improvement comparison",
+      "Hot/cold strata",
+      "Improvement distribution",
+      "Threshold/confidence",
+      "Departure directory",
+      "Exact identities",
+      "Data availability",
+      "Methodology"
+    ],
+    "actions": [
+      "Refresh both only with selected vehicle; loading disables repeat",
+      "Per-source fatal retries",
+      "Retry refresh currently retries both, F02",
+      "Four shared chart toolbars/export/table/fullscreen/legend identities, mocked in page tests"
+    ],
+    "model": "45-minute lower-inclusive/upper-exclusive pre-drive window; 2 thermal state transitions, 5-minute span, <=15-minute final lead, <=2 C target shift, >=1 C initial gap; directory80/max200. Temperatures C, durations SI seconds, timestamps epoch ms. No wire/cache conversion/mutation. Fahrenheit DELTA subtracts converted zero: no +32 offset; positive/negative/zero effects retained.",
+    "meaning": "HVAC active is observed row state, not command intent or watts. Controls require every window row known/off. Readiness control-active gap and improvement active-control are observational medians, not causal efficacy/energy savings. Only common-support hot/cold strata enter pooled comparisons. Confidence min(balance/6,1)*min(volume/16,1), descriptive not significance/CI.",
+    "denominators": "Unique valid climate timestamps differ from returned rows; conditioned share uses all classified departures, not raw drives/common-support pool. Every returned row and valid departure receives one terminal outcome; 7 identities. Directory total/omitted/cap disclosed, upstream recent drives capped1000; no lifetime/full coverage claim."
+  },
+  "dataSources": [
+    {
+      "hook": "useClimateHistory",
+      "request": "/climate?vehicle_id=selected",
+      "key": "climate/history/vehicle",
+      "signal": true,
+      "enabled": "!!vehicleId",
+      "bounds": "No caller start/end; seven-day default is declared by page, backend not inspected"
+    },
+    {
+      "hook": "useDriveHistory",
+      "request": "/drives?vehicle_id=encoded-selected&limit=1000",
+      "key": "drives/vehicle/history/limit",
+      "signal": true,
+      "enabled": "!!vehicleId",
+      "bounds": "One capped request, no total/pagination/bounds for this caller"
+    }
+  ],
+  "states": {
+    "initial/noVehicle": "All15 shells retained; disabled hooks/refresh; unavailable values null",
+    "loading": "Relevant SectionBody skeleton; no fabricated readings",
+    "initialPaused": "Explicit pending offline, not authoritative empty",
+    "initialFatal": "Source mapped through deriveDataState; successful coverage retained; mixed recovery F02",
+    "retainedError": "Data/comparisons kept; nonblocking warning; retry-both F02",
+    "retainedPaused": "Current accepted retention preserved; misleading source/child metadata F01",
+    "empty": "Resolved [] produces legitimate zero row accounting, all7 balanced identities and withheld comparison",
+    "unknown": "Missing/nonfinite temp/targets/HVAC/durations stay unknown; not zero/off/offline; valid negative improvement kept",
+    "freshness": "Local query state omits dataState updatedAt/age; page aggregate freshness is not proof of each source age/live provenance"
+  },
+  "components": "PageLayout directly wraps PageContainer; query prop is metadata, no whole-page loading/error/empty replacement. Existing VehicleOperationalBrief/metrics and category charts/ui/layout/feedback/motion reused. Four charts have ariaLabel/dataColumns, 15 persistent section shells.",
+  "responsive": {
+    "declarations": "@container/min-w-0, wrapping page refresh min-h-11 below md, stacking coverage/availability, method1/2/3columns, semantic list diagnostics; ResponsiveContainer 300px chart plots",
+    "native": "NOTRUN",
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ]
+  },
+  "accessibility": {
+    "declarations": "Localized page/refresh names; decorative aria-hidden icons; ledger accessible name; status/alert notices, textual dispositions; chart alternatives declared",
+    "native": "NOTRUN keyboard/focus/reachability/contrast/OS forced colors/screen readers/touch/reduced-motion/RTL/zoom; no browser grant"
+  },
+  "engineeringRuleScan": {
+    "sourceFiles": 25,
+    "testsExcluded": true,
+    "rules": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 0,
+      "missing-page-container": 0,
+      "fetch-useeffect": 0
+    },
+    "limits": "Bounded logged regex screens plus manual source inspection, not global absence proof. PageLayout->PageContainer verified; Recharts props/dynamic styles/building-block exceptions accepted. Backend rules N/A. SIX contract issues remain, not zero total violations."
+  },
+  "commands": {
+    "rawOutputLog": "web\\logs\\phase6-qa-vehicle-systems-preconditioning-effectiveness.log",
+    "testExit": 0,
+    "failures": [
+      {
+        "shell": "1357",
+        "exit": 1,
+        "detail": "Nested here-string scan did not run; corrected1371"
+      },
+      {
+        "shell": "1414",
+        "exit": 1,
+        "detail": "cp1252 Unicode source-print failure; corrected1430"
+      },
+      {
+        "shell": "1482",
+        "exit": 1,
+        "detail": "Windows command-line too long os206; no report process; split1509"
+      },
+      {
+        "shell": "1509",
+        "exit": 1,
+        "detail": "ANSI/native checkmark test-name parsing assertion; pins50 matched, names0; diagnostic1513exit0 and recovery1523exit0 extracted all40, no test rerun"
+      }
+    ],
+    "instrumentation": "22 initial component MISSING paths caused by slicing mistake, outer exit0; corrected1226 before support review. Optional timezone.tsx absent probe does not imply missing timezone support. Initial discovery shells1077/1102/1103/1128/1129 exit0 raw output retained in caller transcript, recording began after discovery. Diagnostic1513 raw pins50/names0/reportfalse exit0; now retained here.",
+    "notRun": [
+      "global compiler npx tsc --noEmit",
+      "full lint/build/suites/global helper tools",
+      "browser/API/device/climate commands,servers,installs,subagents,Git writes,catalog/source/test writes"
+    ]
+  },
+  "evidenceLimits": [
+    "Source QA only, not native/application/Phase6/7 completion",
+    "Backend date bounds/default/totals/authorization not independently inspected, no API request issued",
+    "All new negative repros are source traces, NOTRUN new regression fixtures",
+    "Covering tests pass40 but mocked charts/hooks/i18n/units do not clear confirmed findings",
+    "Read-only inherited dirty worktree; no authored writes beyond these two artifacts. Relevant no-change-test convention was read after bounded existing covering run; no further tests launched.",
+    "Unrelated design appendices/global inventory/source not audited"
+  ],
+  "release": {
+    "report": "RELEASED after this final parse/pin check",
+    "log": "RELEASED after command receipt appended",
+    "sourceTests": "Never write-owned; read-only released",
+    "commands": "Covering test ended0; no owned server/service; all bounded commands finished before receipt"
+  }
+}

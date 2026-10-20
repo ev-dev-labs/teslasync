@@ -1,0 +1,487 @@
+{
+  "item": "phase6-qa-admin-tesla-region",
+  "phase": 6,
+  "status": "READ_ONLY_SOURCE_QA_COMPLETED_WITH_CONFIRMED_FINDINGS",
+  "native": "NOTRUN",
+  "fullPageAcceptance": "NOTRUN",
+  "page": "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx",
+  "routes": ["/tesla-region"],
+  "purpose": "Review the accepted Tesla region page, its mounted presentation dependencies and request/router contracts without mounting or making requests.",
+  "primaryGoal": "Inspect account region and Fleet API endpoint, copy the retained URL and explicitly refresh the account snapshot.",
+  "authority": {
+    "queue": "migration-queue.md:143-155,192,1546",
+    "predecessor": "phase5-page-admin-tesla-region",
+    "predecessorSourceCommitFromQueue": "eb98ecf0c4b989f48fc3393919414fb09f6630b8",
+    "historicalInventory": "docs\\frontend-audits\\audit-page-026.json",
+    "historicalAcceptance": "SOURCE ONLY. Historical pair lint/style exits0 and original10 plus6 authored regressions do not establish fresh tests. Phase5 page test startup exited1 with zero cases; four-width captures failed for429/501/503/404 and are not native acceptance.",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-qa-admin-tesla-region.json",
+      "web\\logs\\phase6-qa-admin-tesla-region.log"
+    ],
+    "logLocationReason": "The current rolling QA contract explicitly names web\\logs\\<item>.log and the assigned cwd is web. This supersedes the older root-log convention; logs/ is ignored at .gitignore:80.",
+    "applicationFiles": "READ ONLY",
+    "sourceTestConfigCatalogEdits": 0,
+    "browserApiPaidConfigurationCalls": 0,
+    "realIdentitiesReadOrCaptured": false,
+    "gitCommandsSubagentsInstallsHelpersExtensionsServersDocker": 0,
+    "queueHandoffInventoryEdits": 0
+  },
+  "timebox": {
+    "creation": "2026-10-13T09:33:28.262-07:00",
+    "firstActualClock": "2026-10-13T09:33:45.6295491-07:00",
+    "returnDeadline": "2026-10-13T09:53:28.262-07:00",
+    "hardDeadline": "2026-10-13T09:58:28.262-07:00",
+    "lastRecordedReviewClock": "2026-10-13T09:45:57.0619679-07:00",
+    "finalizationClock": "See final synchronous validation/RELEASE lines in the ignored log.",
+    "commands": "All own shell commands completed synchronously within their30-second initial waits; no eight-minute command limit reached and no ongoing command remains.",
+    "stopPolicy": "STOP means immediate return and explicit ALL source/report/log/command claim release; no post-return writes."
+  },
+  "statusDefinitions": {
+    "PASS": "Only the named source property or actually executed bounded source/document check is established.",
+    "FAIL": "A source-proven mechanism violates the stated contract. Synthetic reproduction specifications are not executed browser/API reproductions.",
+    "NOTRUN": "No authorized runtime/gate execution or sufficient evidence. Missing evidence never becomes a pass."
+  },
+  "instructionsRead": [
+    "migration-queue.md:135-215,1546",
+    "docs\\orchestrator-loop.md:1-400",
+    "docs\\frontend-design-contract.md:1-750",
+    "docs\\frontend-mission.md:1-250,507-582,700-880,1416-1525",
+    "docs\\session-handoff.md:1-180,1226-1254",
+    "docs\\frontend-worker-conventions.md:1-180",
+    ".github\\instructions\\react-frontend.instructions.md:1-700",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh"
+  ],
+  "dataSources": [
+    {
+      "hook": "useTeslaUserRegion",
+      "endpoint": "GET /api/v1/tesla/user/region",
+      "evidence": ["web\\src\\api\\hooks\\useUser.ts:14,94-97,118-128", "internal\\api\\router.go:3210,3642-3645"],
+      "ownership": "Account-wide snapshot; no selected vehicle, date range or query parameters.",
+      "behavior": "Stable query key, STATIC stale time and forwarded AbortSignal. Snake-case region/fleet_api_base_url/fetched_at are consumed without conversion.",
+      "payloadAgreement": "NOTRUN: router establishes method/path only. Handler/Go payload schema, account authorization, persistence age and upstream guarantees were deliberately not traced."
+    },
+    {
+      "hook": "useRefreshTeslaRegion",
+      "endpoint": "POST /api/v1/tesla/user/region/refresh",
+      "evidence": ["web\\src\\api\\hooks\\useUser.ts:131-142", "internal\\api\\router.go:3646"],
+      "behavior": "Explicit mutation invalidates the region query on success and owns success/error toast. Router applies five requests/minute/IP. No mutation executed."
+    },
+    {
+      "hook": "parseEndpoint / deriveDataState / useAccountSnapshotPeriod",
+      "endpoint": null,
+      "evidence": ["web\\src\\features\\admin\\components\\tesla-region\\helpers.ts:17-59", "web\\src\\api\\dataState.ts:176-275", "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts:5-16"],
+      "behavior": "Existing pure display/trust adapters. Bounded production-helper imports used only synthetic literals, with no React mount, fixture interception or network access."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-16", "detail": "Shared shell adapter, query freshness, source notices and route-focus heading."},
+    {"name": "RegionOperationalBrief", "owner": "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx:16-48", "detail": "Four stable metrics, snapshot period and shared review-details drawer."},
+    {"name": "RegionEndpointDetails", "owner": "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:9-42", "detail": "LayoutCard, contextual skeleton/error/empty states, raw URL copy and five KVList fields."},
+    {"name": "RegionAboutPanel", "owner": "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx:15-62", "detail": "Always-present explanation and three named reference zones."},
+    {"name": "Button / CopyButton / EmptyState / QueryError / TimeStamp / FadeIn", "owner": "Existing shared category owners", "detail": "No replacement primitive, formatter, query store or motion system introduced."}
+  ],
+  "checks": [
+    {
+      "id": "P01", "status": "PASS", "name": "Existing report-only queue item and accepted source predecessor",
+      "evidence": ["migration-queue.md:143-155,192,1546"],
+      "detail": "No page implementation redispatch, source edits or queue mutation."
+    },
+    {
+      "id": "P02", "status": "PASS", "name": "Actual lazy route and preserved title",
+      "evidence": ["web\\src\\App.tsx:262,725", "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:28-30", "web\\src\\hooks\\usePageTitle.ts:23-29"],
+      "detail": "/tesla-region mounts through SafeRoute and lazy import; title remains translated and title-store managed. Native routing/authentication NOTRUN."
+    },
+    {
+      "id": "P03", "status": "PASS", "name": "Consumed hook method/path agreement",
+      "evidence": ["web\\src\\api\\hooks\\useUser.ts:126,136", "internal\\api\\router.go:3210,3642-3646", "web\\src\\api\\client.ts:73-94"],
+      "detail": "GET and POST match exact registered routes, omit /api/v1 and have no camelCase query parameters. No handler/payload guarantee inferred."
+    },
+    {
+      "id": "P04", "status": "PASS", "name": "Query cancellation and cache/source ownership",
+      "evidence": ["web\\src\\api\\hooks\\useUser.ts:14,123-128,138", "web\\src\\api\\client.ts:412-424"],
+      "detail": "Query forwards signal, preserves stable account key and existing stale policy; request short-circuits caller AbortError. Refresh invalidates the same key."
+    },
+    {
+      "id": "P05", "status": "PASS", "name": "All three page sections remain mounted",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:76-123", "web\\src\\components\\layout\\PageContainer.tsx:262-280"],
+      "detail": "Page does not pass global loading/error/empty gates. Brief, endpoint shell and independent reference remain mounted; source notices do not replace children."
+    },
+    {
+      "id": "P06", "status": "PASS", "name": "Ordinary fetching first load uses source-shaped skeletons",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:93,109", "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:15", "web\\src\\components\\data-display\\OperationalBrief.tsx:190-200,275-280"],
+      "detail": "Fresh cold-fetching helper result is initial/hasData=false/endpointIsLoading=true. The brief suppresses metric values both in summary and drawer. Cold-paused is separately FAIL TR001."
+    },
+    {
+      "id": "P07", "status": "PASS", "name": "Fatal-only endpoint replacement and GET recovery",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:110-112", "web\\src\\api\\dataState.ts:197-222", "web\\src\\components\\feedback\\_StatusAwareError.tsx:46-73,143-214"],
+      "detail": "Synthetic first-read failure becomes initialFailure/fatal=true. Only fatalError enters endpoint QueryError; retry calls regionQuery.refetch, not the Tesla POST. Shared classifier distinguishes auth/permission/unsupported/server/timeouts."
+    },
+    {
+      "id": "P08", "status": "PASS", "name": "Retained failed/paused payload is preserved",
+      "evidence": ["web\\src\\api\\dataState.ts:224-256", "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:38-48,110", "web\\src\\components\\feedback\\DataSourceNotice.tsx:79-112,163-173,266-280"],
+      "detail": "Actual pure helper outputs retained-failure: stale/hasData=true/fatal=false/refreshError=true; retained-paused: stale/hasData=true/fatal=false/refreshError=false/blocked=true. DataSourceNotice supplies nonblocking warning and individual GET retry."
+    },
+    {
+      "id": "P09", "status": "PASS", "name": "Authoritative empty differs from partial fields",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:44-47", "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:17-39"],
+      "detail": "Pure empty payload becomes unavailable; region-only/malformed URL become partial. Endpoint keeps all available fields and placeholders rather than replacing partial content. Paused unresolved emptiness remains TR001."
+    },
+    {
+      "id": "P10", "status": "PASS", "name": "Unknown zone does not fabricate a known code",
+      "evidence": ["web\\src\\features\\admin\\components\\tesla-region\\helpers.ts:39-59", "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:50-57", "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:22-36"],
+      "detail": "Synthetic zz Tesla-shaped host produces regionKey=null; raw region and URL remain in endpoint details with code placeholder. Top-level source remains ok when fields parse; whether recognition must downgrade it is C01, not a proven acceptance requirement."
+    },
+    {
+      "id": "P11", "status": "PASS", "name": "Header refresh pending guard and hook-owned feedback",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:35-37,60-72", "web\\src\\api\\hooks\\useUser.ts:138-141", "web\\src\\api\\hooks\\_toastHelpers.ts:90-113"],
+      "detail": "Header guards isPending, spinner/aria-busy and disabled state; page adds no duplicate toast. Empty CTA lacks the same guard, TR002; toast key names fail TR008."
+    },
+    {
+      "id": "P12", "status": "PASS", "name": "Source responsive wrapping and data preservation",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:64,99-118", "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:20-32", "web\\src\\components\\data-display\\KVList.tsx:52,81-119"],
+      "detail": "Header wraps and applies mobile min-h/min-w44 below md. Grid stacks before xl; URL breaks without truncating copied string; KVList responds to allocated width with wrapping. No viewport/overflow acceptance inferred."
+    },
+    {
+      "id": "P13", "status": "PASS", "name": "Semantic labels and clipboard success announcement",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:84,100,116", "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx:48-59", "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:29", "web\\src\\components\\ui\\CopyButton.tsx:127-151"],
+      "detail": "Sections have translated accessible names, reference uses labelled ul/li and URL copy has explicit localized name. CURRENT CopyButton supports a separate polite success announcement for that fixed name; historical concern about no success announcement is not repeated. Failure feedback remains TR003."
+    },
+    {
+      "id": "P14", "status": "PASS", "name": "Snapshot age, invalid time and preference-aware date formatting",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts:5-16", "web\\src\\components\\data-display\\TimeStamp.tsx:43-70", "web\\src\\hooks\\useDateFormat.ts:74-87"],
+      "detail": "fetched_at is validated before brief relative date, missing/invalid times use not-synced/placeholder, snapshot provenance says not a date-range total. TimeStamp respects existing locale/timezone/time-format preferences."
+    },
+    {
+      "id": "P15", "status": "PASS", "name": "SI/no-legacy and page observability boundaries",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx:21-38", "web\\src\\hooks\\useOperationalMetrics.tsx:11-23"],
+      "detail": "These are text/status/date fields, not physical-unit measurements; raw payload unchanged. Executed scoped scan finds no deprecated converter calls. No page-local RUM bootstrap, source logging of account identities or new telemetry architecture introduced."
+    },
+    {
+      "id": "P16", "status": "PASS", "name": "Page/domain translation literals and canonical reference zones",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:28-29,50-57", "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx:22-28", "web\\src\\i18n\\en.json:22819-22875", "web\\src\\i18n\\index.ts:134-135"],
+      "detail": "Executed exact-key scan verifies44 unique page/domain/adaptor literal keys plus3 dynamic zone expansions exist canonically. settings-bound hooks use the existing flat/deferred catalogue and translation fallback. Hook mutation keys are separately FAIL TR008; cold-locale/RTL runtime NOTRUN."
+    },
+    {
+      "id": "P17", "status": "PASS", "name": "Reduced-motion and source review-details composition retained",
+      "evidence": ["web\\src\\components\\motion\\FadeIn.tsx:23-34", "web\\src\\components\\data-display\\OperationalBrief.tsx:159-168,246-280"],
+      "detail": "FadeIn disables initial motion/delay with existing preference. Review-details action has mobile min-h44 and localized label; drawer reuses metrics and loading suppression. Focus/forced-colors/open drawer behavior NOTRUN."
+    },
+    {
+      "id": "P18", "status": "PASS", "name": "Executed bounded forbidden-pattern and preservation scans",
+      "evidence": ["web\\logs\\phase6-qa-admin-tesla-region.log", "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:1-123"],
+      "detail": "Ten case-sensitive pattern categories each returned0 matching lines over exact page/mounted domain helpers/useUser. Page123 plus mounted children42+48+62=275, historical275:100%; three page sections, one direct GlassPanel, one LayoutCard, one OperationalBrief, zero charts. This is lexical/source evidence, not whole-repository clean or rendered panel counting."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "TR001", "status": "FAIL", "priority": "medium", "owner": "page/domain",
+      "file": "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx", "line": 109,
+      "rule": "MDC-026 / mission25: unresolved paused source is not authoritative empty",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:38-48,109-111", "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:11,15-19", "web\\src\\api\\dataState.ts:197-219"],
+      "mechanism": "Cold paused query has undefined data, isPending=true, isLoading=false and no error. deriveDataState correctly returns initial/isRefreshBlocked=true, but endpoint receives neither pending nor blocked status, only isLoading=false. Its false configured flag selects No region on record although no response established absence. Global Paused offline notice does not correct that contradictory local claim.",
+      "reproduction": "Synthetic source specification: supply that cold-paused query without cached data. Executed pure helper output confirms initial/hasData=false/blocked=true/endpointIsLoading=false; source branch then selects EmptyState. No browser or network offline simulation ran.",
+      "expected": "Keep unresolved/paused endpoint content distinct from a successful empty result, with appropriate paused/loading explanation and safe recovery.",
+      "fixNeed": "Pass the existing source initial/blocked distinction to the mounted endpoint adapter; preserve reference and retained fields. Add covering tests only in a separately claimed fix."
+    },
+    {
+      "id": "TR002", "status": "FAIL", "priority": "medium", "owner": "page/domain",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx", "line": 19,
+      "rule": "MDC-046 / mutation pending-state preservation",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:37,66-69,113", "web\\src\\features\\admin\\components\\tesla-region\\RegionEndpointPanel.tsx:17-30", "web\\src\\components\\feedback\\EmptyState.tsx:14,103-106", "internal\\api\\router.go:3646"],
+      "mechanism": "Empty-state Refresh calls the same bare mutate callback as the header but never receives isPending. Shared EmptyState action has no loading/disabled props in its action contract. Header alone disables, while empty CTA remains clickable and can initiate another POST during an outstanding refresh, against the five/minute limit.",
+      "reproduction": "Synthetic source-derived specification: resolve an empty envelope, start refresh and leave it pending, then activate empty CTA again. Source permits a second callback. No POST or page interaction was executed.",
+      "expected": "All entry points for one region-refresh mutation show pending and reject repeated activation.",
+      "fixNeed": "Claim page and endpoint prop/adapter ownership together; guard the common callback and compose existing pending-aware Button feedback without weakening shared EmptyState or inventing another mutation."
+    },
+    {
+      "id": "TR003", "status": "FAIL", "priority": "medium", "owner": "domain composition",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx", "line": 29,
+      "rule": "MDC-026 / MDC-040: user-facing action failure feedback",
+      "evidence": ["web\\src\\components\\ui\\CopyButton.tsx:59-65,100-108,127-151"],
+      "mechanism": "Caller supplies neither withToast nor onCopyError. Clipboard rejection is caught, copied resets false, only console.error executes and the success-only live region stays empty. Users receive no failure or manual-copy guidance.",
+      "reproduction": "Synthetic source specification: render a nonempty URL and make clipboard.writeText reject, then activate Copy. Source catch has no user-feedback path in this composition. No clipboard/browser operation ran.",
+      "expected": "Localized visible/assistive failure feedback while retaining full selectable URL; success remains announced once.",
+      "fixNeed": "Use existing CopyButton withToast or onCopyError capability at this caller; do not change the shared clipboard controller unnecessarily."
+    },
+    {
+      "id": "TR004", "status": "FAIL", "priority": "medium", "owner": "domain composition",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx", "line": 29,
+      "rule": "MDC-040 / MDC-043: mobile44 target source contract",
+      "evidence": ["web\\src\\components\\ui\\CopyButton.tsx:59,133-145", "web\\src\\components\\ui\\Button.tsx:36,67-73"],
+      "mechanism": "Icon-only copy keeps default sm/h-9 and no mobile min-h/min-w44 override, unlike the corrected page Refresh. Required mobile target sizing/exception is absent from this composition.",
+      "reproduction": "Source-level sizing specification below768px: CopyButton uses sm/h-9 classes, not the page header's44px minimum. Effective browser dimensions, CSS overrides and spacing exception remain NOTRUN.",
+      "expected": "Below md a documented44x44 reachable target; retain compact desktop density.",
+      "fixNeed": "Use existing CopyButton className sizing at the endpoint caller and later validate native geometry. Shared defaults should not be changed globally."
+    },
+    {
+      "id": "TR005", "status": "FAIL", "priority": "medium", "owner": "domain validation/display",
+      "file": "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx", "line": 32,
+      "rule": "MDC-026: protocol facts must not imply unsupported secure transport",
+      "evidence": ["web\\src\\features\\admin\\components\\tesla-region\\helpers.ts:52-55", "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:43-47", "web\\src\\i18n\\en.json:22844-22847"],
+      "mechanism": "URL parser accepts http and page completeness checks only non-null scheme/host. Brief pairs raw HTTP with unconditional Secure transport and source status ok, despite HTTP not being secure.",
+      "reproduction": "Executed local production-helper evaluation of synthetic http://fleet-api.prd.eu.vn.cloud.tesla.com yields scheme=http/regionKey=eu/configured=true/sourceStatus=ok. Brief's unconditional localized context is source-proven. No URL visited; backend reachability of such data is UNKNOWN.",
+      "expected": "Neutral transport wording or explicitly validated HTTPS-specific explanation; retain raw unsupported protocol instead of silently changing it.",
+      "fixNeed": "Narrow domain protocol validation/presentation fix with existing unknown/partial semantics; no regional configuration write."
+    },
+    {
+      "id": "TR006", "status": "FAIL", "priority": "medium", "owner": "feature helper",
+      "file": "web\\src\\features\\admin\\components\\tesla-region\\helpers.ts", "line": 41,
+      "rule": "MDC-026: regional identity inference must stay source-bounded",
+      "evidence": ["web\\src\\features\\admin\\components\\tesla-region\\helpers.ts:39-59", "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:50-57", "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:22-23"],
+      "mechanism": "Dotted na/eu/cn regex recognizes any hostname or even malformed raw string, not the documented Fleet API datacenter structure. An unrelated .eu. host is therefore assigned the official Europe zone and the inferred label takes precedence over raw region.",
+      "reproduction": "Executed parseEndpoint('https://service.eu.example.invalid') returns host=service.eu.example.invalid/scheme=https/regionKey=eu; page completeness is ok. This is a local synthetic semantic misclassification, not a real Tesla endpoint, request, exploit or production incident.",
+      "expected": "Unknown host retains raw fields and neutral/unknown inference rather than a false Fleet API zone.",
+      "fixNeed": "Narrow existing helper inference to documented supported endpoint structure while preserving genuinely supported hosts and raw unknown/malformed values. Server contract/alternate-host support remains an integration prerequisite."
+    },
+    {
+      "id": "TR007", "status": "FAIL", "priority": "medium", "owner": "workspace integration",
+      "file": "web\\src\\lib\\workspaceScope.ts", "line": 109,
+      "rule": "MDC-002 / workspace scope: account-wide snapshot must not imply selected-vehicle filtering",
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:95-135,156-167", "web\\src\\App.tsx:725", "web\\src\\api\\hooks\\useUser.ts:123-128"],
+      "mechanism": "/tesla-region is not a disabled path or prefix; shared scope returns vehicle=true even though region GET/key never uses selected vehicle. Range correctly returns false.",
+      "reproduction": "Executed production getWorkspaceRouteScope('/tesla-region') returns {range:false,vehicle:true}. No shell/browser selector operated.",
+      "expected": "Account-wide alias disables the header vehicle picker rather than advertising a scope it does not consume.",
+      "fixNeed": "Parent integration owner adds exact /tesla-region to existing disabled-path authority, with separately claimed route-scope coverage; no page-local picker workaround."
+    },
+    {
+      "id": "TR008", "status": "FAIL", "priority": "medium", "owner": "API-hook localization",
+      "file": "web\\src\\api\\hooks\\useUser.ts", "line": 139,
+      "rule": "MDC-044 / frontend SI cutover i18n canonical keys",
+      "evidence": ["web\\src\\api\\hooks\\useUser.ts:139,141", "web\\src\\api\\hooks\\_toastHelpers.ts:90-113", "web\\src\\i18n\\en.json:8275-8276", "web\\src\\i18n\\en\\locale-detail-toast.json:502-503"],
+      "mechanism": "Hook asks for toast.user.region.success/error; canonical toast has no user node and neither direct dotted key exists. Existing translated regionRefreshed/regionFailed keys are present at toast root instead. Fallback strings mask the wrong keys.",
+      "reproduction": "Executed canonical JSON traversal returns false for both consumed keys and TOAST_USER_NODE_PRESENT=false; source translation helper falls back to English. This proves key mismatch, not runtime locale rendering. Actual mutation toasts were not triggered.",
+      "expected": "Hook reuses authoritative existing translated toast.regionRefreshed/toast.regionFailed keys or a separately authorized canonical integration; no scattered catalogue patch.",
+      "fixNeed": "Narrow hook key correction reusing existing catalogue entries; catalog/generated files remain untouched by this audit."
+    },
+    {
+      "id": "TR009", "status": "FAIL", "priority": "medium", "owner": "API-hook operational guard",
+      "file": "web\\src\\api\\hooks\\useUser.ts", "line": 136,
+      "rule": "MDC-046: mutations remain live-only in historical read-only mode",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:37,66-69", "web\\src\\api\\client.ts:369-392", "web\\src\\lib\\operationalMode.ts:25-36,66-76", "web\\src\\api\\offlineCache.ts:50-74,144-153"],
+      "mechanism": "Region refresh POST omits requiresLiveMode; client defaults false and operational guard returns before reading read-only mode. Page disables only pending. The offline unsafe-path list also does not cover this account-refresh path. Thus an online /tesla-region?as_of=2026-10-01T00:00:00Z can invoke the refresh despite the shared historical read-only badge.",
+      "reproduction": "Source-derived historical-mode specification: visit that synthetic URL online and activate Refresh. Source call path reaches the request transport without live-mode refusal. No visit, mutation or outbound request executed; no offline-queue behavior claimed.",
+      "expected": "Explicit live-only request interlock and informative read-only action state, while GET retries/copy/reference remain usable.",
+      "fixNeed": "Claim hook guard and page action-state composition separately from this audit. Reuse existing operational-mode APIs; do not invent queues or alter global configuration."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01", "status": "NOTRUN",
+      "name": "Unknown recognized-region policy and conflicting raw/inferred region",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:43-57", "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:22,33-34"],
+      "detail": "Unknown-zone result preserves raw fields but top-level status remains ok. Region/host disagreement favors inferred label. Backend guarantees and required downgrade policy were not established; do not turn this into a production defect claim."
+    },
+    {
+      "id": "C02", "status": "NOTRUN",
+      "name": "Runtime envelope types, whitespace and query-success null payloads",
+      "evidence": ["web\\src\\api\\hooks\\useUser.ts:94-97,118-126", "web\\src\\api\\client.ts:283-287", "web\\src\\features\\admin\\components\\tesla-region\\helpers.ts:39-59"],
+      "detail": "Types promise strings; request casts decoded JSON rather than validating this envelope. Wrong-type URLs, whitespace-only values or null success could expose inconsistent completeness/throwing paths. Router-only review cannot establish backend possibility; no malformed API response was injected."
+    },
+    {
+      "id": "C03", "status": "NOTRUN",
+      "name": "Loaded outcome announcement and freshness-versus-pause wording",
+      "evidence": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:76-82", "web\\src\\components\\layout\\PageContainer.tsx:136-142", "web\\src\\components\\data-display\\DataFreshness.tsx:150-156,282-285,332-336"],
+      "detail": "Page sends query but not loading/error to the centralized load announcer; header freshness does not consume paused state while independent notice does. End-to-end announcement/focus and combined wording require native/screen-reader evidence; no blanket a11y pass."
+    },
+    {
+      "id": "C04", "status": "NOTRUN",
+      "name": "Direct domain glyph composition and alternate renderer drift",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:17", "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx:35-36", "web\\src\\features\\admin\\components\\tesla-region\\index.ts:1-3"],
+      "detail": "Mounted domain components retain direct decorative Lucide glyphs instead of shared Icon and the barrel still exports alternate old renderers. Exact current scanner/other-consumer integration ownership was not inspected; no unused-renderer cleanup or source rewrite authorized."
+    }
+  ],
+  "notRunChecks": [
+    {"id": "N01", "status": "NOTRUN", "name": "Native page/API/authentication acceptance", "reason": "No browser/API grant; no real identities or outbound calls."},
+    {"id": "N02", "status": "NOTRUN", "name": "All10 viewport widths/narrow allocated containers", "reason": "Source reflow only; no native geometry, clipping or overflow measurement."},
+    {"id": "N03", "status": "NOTRUN", "name": "Dark/light/custom theme and composed contrast", "reason": "No screenshots or contrast measurement."},
+    {"id": "N04", "status": "NOTRUN", "name": "Tab/ShiftTab, focus visibility/restoration, copy and drawer keyboard", "reason": "No browser interaction."},
+    {"id": "N05", "status": "NOTRUN", "name": "Screen reader, forced colors, RTL,200% text and long labels", "reason": "Static names/wrapping are not native acceptance."},
+    {"id": "N06", "status": "NOTRUN", "name": "Real loading/error/empty/retained/offline/paused scenarios", "reason": "Only pure production-source adapter evaluation with synthetic literals; no React mount or network manipulation."},
+    {"id": "N07", "status": "NOTRUN", "name": "POST success/failure/rate-limit lifecycle and clipboard permissions", "reason": "No mutating or clipboard operation authorized."},
+    {"id": "N08", "status": "NOTRUN", "name": "Scoped page/component tests", "reason": "No application/test changes and unchanged passing tests must not rerun. Historical startup failure is not a new passing receipt."},
+    {"id": "N09", "status": "NOTRUN", "name": "npx tsc --noEmit", "reason": "Full worker gate prohibited; parent already ran requested gate per docs\\session-handoff.md:66-69. No fresh compile claim or passing rerun."},
+    {"id": "N10", "status": "NOTRUN", "name": "Build/full lint/full suites/Docker", "reason": "Parent-owned/prohibited for this source-only report."},
+    {"id": "N11", "status": "NOTRUN", "name": "Full audit.sh / verify.sh", "reason": "audit.sh unconditionally typechecks full web; verify.sh traverses mounted backend modules outside router-only review. Exact bounded pattern/method scans substitute only their named source checks, not script exit0."},
+    {"id": "N12", "status": "NOTRUN", "name": "Go handler payload schema/upstream endpoint invariants", "reason": "Explicit scope is direct imports/hooks/router; no handler/query/config inspection or API request."}
+  ],
+  "states": {
+    "loading": "PASS P06 for ordinary fetching, FAIL TR001 for cold paused endpoint",
+    "error": "PASS P07 fatal-only localized endpoint recovery; independent reference retained",
+    "empty": "PASS P09 successful empty explanation; FAIL TR002 pending refresh CTA",
+    "retained": "PASS P08 source payload and nonblocking recovery preservation",
+    "paused": "PASS shared notice and retained-state adapter; FAIL cold endpoint classification TR001; native NOTRUN",
+    "partial": "PASS region-only/malformed URL completeness and field retention",
+    "unknown": "PASS raw unknown zone retention; FAIL unbounded zone inference TR006; backend policy C01 unknown",
+    "mutation": "Header pending guard preserved; FAIL alternate pending entry TR002, missing toast keys TR008 and live-only opt-in TR009",
+    "copy": "Localized fixed name and success announcement preserved; FAIL silent failure TR003/mobile sizing TR004",
+    "requestValidation": "Method/path PASS P03, semantic URL claims FAIL TR005/TR006, payload/upstream schema NOTRUN",
+    "nativeAcceptance": "NOTRUN"
+  },
+  "responsive": {
+    "sourceStrategy": "Stacked before xl, endpoint/reference2:1 at xl; full raw URL breaks, responsive definition list, wrapping header.",
+    "viewports": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "native": "NOTRUN",
+    "mobileFollowup": "TR004 copy sizing; header and current shared EmptyState CTAs already carry min-h44. Do not repeat historical already-fixed EmptyState sizing issue."
+  },
+  "accessibility": {
+    "sourceProperties": ["Named sections", "Labelled reference list", "Semantic definition list", "Localized Copy name", "Success-only clipboard live region", "Shared route-focus heading", "Reduced-motion owner", "Review-details action"],
+    "confirmedGaps": ["TR003 action failure feedback", "TR004 mobile source target"],
+    "native": "NOTRUN",
+    "pending": ["Keyboard", "Focus", "Forced colors", "Contrast", "Screen reader", "RTL", "200% text", "Drawer open states"]
+  },
+  "preservation": {
+    "pageSha256": "8F86367A9F6FC60C9A7B46608CBB3A72C3B3AEA4E768DABF10F69885216F35DB",
+    "pageLines": 123,
+    "mountedChildLines": {
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx": 48,
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx": 42,
+      "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx": 62
+    },
+    "mountedTotal": 275,
+    "historicalPhase5MountedTotal": 275,
+    "ratioPercent": 100,
+    "historicalBaselineAuthority": "logs\\phase5-page-admin-tesla-region.log and migration-queue.md:1546; no baseline regeneration or Git-history command.",
+    "pageSectionCount": 3,
+    "sectionNames": ["Region overview", "Fleet API endpoint", "About your region"],
+    "mountedDirectTags": {"GlassPanel":1,"LayoutCard":1,"OperationalBrief":1,"ChartContainer":0},
+    "countLimit": "Lexical JSX counts over page plus3 direct mounted child files, not rendered shared-internal panel counts.",
+    "metricIds": ["region-zone","region-endpoint","region-protocol","region-synced"],
+    "endpointMetadataRows": ["region","code","protocol","host","synced"],
+    "referenceZones": ["na","eu","cn"],
+    "actions": ["Header POST Refresh","Empty POST Refresh","GET source/endpoint/freshness retries","Copy full URL","OperationalBrief review-details drawer"],
+    "sourceIntegrity": "Before/after hash comparison for7 protected page/domain/helper/hook/trust files is recorded in final validation log. No audit source write. Other concurrent owners are not claimed or reverted."
+  },
+  "verification": {
+    "log": "web\\logs\\phase6-qa-admin-tesla-region.log",
+    "supportedNodeActual": "v26.11.1",
+    "scope": [
+      "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx",
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx",
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountBriefStatus.ts",
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts",
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx",
+      "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx",
+      "web\\src\\features\\admin\\components\\tesla-region\\helpers.ts",
+      "web\\src\\api\\hooks\\useUser.ts"
+    ],
+    "scanMatchingLines": {"staticInline":0,"rawControls":0,"directVendor":0,"oldApi":0,"doublePrefix":0,"camelParams":0,"unsafeAny":0,"neonBody":0,"deprecatedConverters":0,"adHocFetch":0},
+    "rawOutputExcerpt": [
+      "SCAN staticInline MATCHING_LINES=0",
+      "SCAN rawControls MATCHING_LINES=0",
+      "SCAN directVendor MATCHING_LINES=0",
+      "SCAN oldApi MATCHING_LINES=0",
+      "SCAN doublePrefix MATCHING_LINES=0",
+      "SCAN camelParams MATCHING_LINES=0",
+      "SCAN unsafeAny MATCHING_LINES=0",
+      "SCAN neonBody MATCHING_LINES=0",
+      "SCAN deprecatedConverters MATCHING_LINES=0",
+      "SCAN adHocFetch MATCHING_LINES=0",
+      "SCAN_COMMAND_EXIT=0",
+      "MOUNTED_TOTAL=275; historical Phase5 total=275; ratio=100%; SOURCE_EVIDENCE_EXIT=0",
+      "I18N_KEY toast.user.region.success CANONICAL_PRESENT=False",
+      "I18N_KEY toast.user.region.error CANONICAL_PRESENT=False",
+      "CANONICAL_DIRECT_DOTTED_SUCCESS=False; CANONICAL_DIRECT_DOTTED_ERROR=False; TOAST_USER_NODE_PRESENT=False"
+    ],
+    "commandsAndResults": [
+      {"command":"Read-only contract/file discovery using Get-ChildItem and scoped glob/rg/view","exit":0,"result":"Found exact page, existing queue/historical receipt and required contracts; no server/Git/API work."},
+      {"command":"Case-sensitive Select-String prohibited patterns over8 exact source files","exit":0,"result":"Ten categories0 matching lines; lexical evidence only."},
+      {"command":"Select-String exact GET/POST hook/router registrations","exit":0,"result":"GET /tesla/user/region and POST /tesla/user/region/refresh agree at router3645-3646."},
+      {"command":"Get-Content numbered source, mounted line/tag counts and Get-FileHash","exit":0,"result":"Page123/mounted275/three page sections; raw source evidence and protected7 hashes retained."},
+      {"command":"Supported Node26 --version and --experimental-strip-types --input-type=module imports of existing helpers/dataState/workspaceScope","exit":0,"result":"Actual pure adapter evaluation:7 synthetic endpoint cases,5 query-state cases and1 route scope. No test runner or page mount; raw JSON outputs retained."},
+      {"command":"First exact i18n mixed-quote PowerShell regex attempt","exit":1,"result":"ParserError Missing ) in method call; no scan executed. Failure preserved, not a test failure or pass."},
+      {"command":"Corrected read-only single-quoted literal key extraction plus canonical JSON traversal","exit":0,"result":"44 literal keys plus3 reference expansions present; two hook toast keys absent. No generator/guard/baseline edit."},
+      {"command":"Exact source/canonical direct-key citations","exit":0,"result":"Toast mismatch and live-only/pending/copy/zone source mechanisms retained at exact lines."}
+    ],
+    "pageTests": {"status":"NOTRUN","runs":0,"discovered":null,"executed":null,"passed":null,"failed":null,"skipped":null},
+    "typecheck": {"status":"NOTRUN","command":"npx tsc --noEmit","freshExit":null},
+    "wholeRepositoryClean": "NOT CLAIMED",
+    "reportValidation": "Final synchronous JSON/evidence/integrity validation result is recorded in the ignored log; no runtime acceptance inferred."
+  },
+  "requiredSharedChanges": [
+    {"name":"Cold-paused endpoint and shared refresh pending composition","existingOwners":["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx","web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx","web\\src\\features\\admin\\components\\tesla-region\\RegionEndpointPanel.tsx"],"issues":["TR001","TR002"],"usedBy":["/tesla-region"],"dependsOn":"Separate explicit source/test claims; retain existing source trust and actions."},
+    {"name":"Endpoint clipboard composition","existingOwners":["web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx"],"issues":["TR003","TR004"],"usedBy":["/tesla-region"],"dependsOn":"Existing CopyButton feedback/className APIs; native geometry verification later."},
+    {"name":"Endpoint inference/protocol semantics","existingOwners":["web\\src\\features\\admin\\components\\tesla-region\\helpers.ts","web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx"],"issues":["TR005","TR006"],"usedBy":["/tesla-region"],"dependsOn":"Verify supported server endpoint invariants before narrowing; retain raw unknown values."},
+    {"name":"Account workspace alias","existingOwners":["web\\src\\lib\\workspaceScope.ts"],"issues":["TR007"],"usedBy":["/tesla-region shared header/mobile scope"],"dependsOn":"Parent-only integration claim, not a page-local scope bypass."},
+    {"name":"Region hook localization/live-mode guard","existingOwners":["web\\src\\api\\hooks\\useUser.ts","web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx"],"issues":["TR008","TR009"],"usedBy":["/tesla-region"],"dependsOn":"Separate narrow hook/action claims; reuse existing toast catalogue and operational guard APIs, no config/catalog rewrite."}
+  ],
+  "evidenceLimits": [
+    "This is completed read-only source QA, not page/native/application acceptance.",
+    "Conditional synthetic URL findings prove local adapter mechanisms only; no claim the backend currently emits those URLs.",
+    "Pure local function evaluation is neither a React test nor a browser/API reproduction.",
+    "Actual current CopyButton success live region and EmptyState mobile44 sizing are preserved; historical fixed concerns are not reported as fresh defects.",
+    "No handler/persistence/upstream contract, real regional configuration, paid calls or identity data inspected.",
+    "No Git status/history/commit command; do not infer repository-wide cleanliness or attribute other writers' changes.",
+    "No passing test/gate rerun, guard bypass, helper creation, fixture injection, extension, install, server or Docker work."
+  ],
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-audits\\audit-page-026.json",
+    "docs\\frontend-audits\\phase6-qa-admin-feedback-queue.json:1-200 (report convention only)",
+    "logs\\phase5-page-admin-tesla-region.log:1-180",
+    ".gitignore",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx",
+    "web\\src\\features\\admin\\components\\tesla-region\\index.ts",
+    "web\\src\\features\\admin\\components\\tesla-region\\helpers.ts",
+    "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx",
+    "web\\src\\features\\admin\\components\\tesla-region\\RegionEndpointPanel.tsx:1-35 (type contract only)",
+    "web\\src\\features\\admin\\components\\tesla-region\\RegionKpiBand.tsx:1-26 (type contract only)",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountBriefStatus.ts",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts",
+    "web\\src\\api\\hooks\\useUser.ts",
+    "web\\src\\api\\hooks\\_toastHelpers.ts",
+    "web\\src\\api\\dataState.ts:1-320 and isolated production evaluation",
+    "web\\src\\api\\client.ts:1-460",
+    "web\\src\\api\\offlineCache.ts:40-165",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\feedback\\EmptyState.tsx",
+    "web\\src\\components\\feedback\\QueryError.tsx",
+    "web\\src\\components\\feedback\\_StatusAwareError.tsx:1-220",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\data-display\\TimeStamp.tsx",
+    "web\\src\\components\\data-display\\KVList.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx (focused rg ranges)",
+    "web\\src\\components\\data-display\\DataFreshness.tsx:140-275 and focused rg",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\usePageTitle.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx:1-65",
+    "web\\src\\hooks\\useDateFormat.ts:1-130",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\operationalMode.ts",
+    "web\\src\\App.tsx:262,725 (exact route rg)",
+    "web\\src\\lib\\routeLoaders.ts (exact TeslaRegion rg returned no matches)",
+    "web\\src\\i18n\\index.ts:1-145",
+    "web\\src\\i18n\\en.json (exact consumed key lookup and relevant ranges only)",
+    "web\\src\\i18n\\en\\locale-detail-toast.json:490-510",
+    "web\\src\\i18n\\en\\runtime-manifest.json (exact region toast-key rg; no matches)",
+    "internal\\api\\router.go:3210,3642-3646 (exact route rg)"
+  ],
+  "release": {
+    "ALLClaimsReleased": true,
+    "sourceAndTests": "READ ONLY; no application write claim retained.",
+    "reportAndLog": "Released on terminal return after final synchronous validation.",
+    "commands": "All own commands completed; no process/server/browser/lock outstanding.",
+    "noPostReturnWrites": true,
+    "nativeAcceptance": "NOTRUN"
+  }
+}

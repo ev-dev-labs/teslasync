@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Timeline } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { Badge, GlassPanel, PanelTitle } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ReachedMilestonesProps {
   summary: OdometerMilestoneResult;
@@ -21,6 +23,7 @@ export function ReachedMilestones({
   state,
   className,
 }: ReachedMilestonesProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateMs, formatDistanceKm } =
     useOdometerMilestoneDisplay();
@@ -48,11 +51,7 @@ export function ReachedMilestones({
       )}
       data-testid="milestone-reached"
     >
-      <GlassPanel className="h-full p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Flag className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-          {t('milestones.reached.title', 'Milestones reached')}
-        </PanelTitle>
+      <LayoutCard title={t('milestones.reached.title', 'Milestones reached')}>
         <MilestoneSectionBody state={state}>
           {items.length === 0 ? (
             <EmptyState
@@ -77,7 +76,7 @@ export function ReachedMilestones({
             />
           )}
         </MilestoneSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

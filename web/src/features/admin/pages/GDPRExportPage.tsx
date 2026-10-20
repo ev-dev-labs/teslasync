@@ -1,12 +1,12 @@
 /**
  * GDPR Export Page — admin observability surface.
  *
- * Polls a specific export artifact by id and exposes a Download
- * button that hits the binary streaming endpoint. The id can be
+ * Looks up a persisted manifest by id with explicit refresh and exposes a
+ * browser-owned download for supported, unexpired artifacts. The id can be
  * supplied via `?id=<uuid>` so links to specific exports work.
  *
  * Backed by:
- *   GET  admin/gdpr/exports/{id}           (artifact status)
+ *   GET  admin/gdpr/exports/{id}           (persisted manifest)
  *   GET  admin/gdpr/exports/{id}/download  (binary stream)
  *
  * See internal/handler/v1/gdpr_export_handler.go.
@@ -14,20 +14,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import {
-  HardDriveDownload,
-  RefreshCw,
-  FileText,
-  HardDrive,
-  Database,
-  CalendarPlus,
-  CalendarClock,
-} from 'lucide-react';
+import { HardDriveDownload, RefreshCw } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Card, Badge } from '@/components/ui';
-import { MetricLabel, MetricValue } from '@/components/ui/Typography';
-import { StatCard } from '@/components/data-display';
+import { PageLayout } from '@/components/layout';
+import { GlassPanel, Button, Icon } from '@/components/ui';
+import type { StatMetric } from '@/components/data-display';
+import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary';
 import { FadeIn } from '@/components/motion';
 import {
   EmptyState,
@@ -35,28 +27,28 @@ import {
   DataStateNotice,
   QueryError,
   SectionErrorBoundary,
-  Skeleton,
 } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useGDPRExport } from '@/api/hooks/useOperatorConfidence';
 import { apiUrl } from '@/api/client';
 import { isApiError } from '@/lib/resilience';
-import { cn } from '@/lib/cn';
-import { formatBytes } from '@/lib/numberFormat';
-import { formatRelative } from '@/lib/dateFormat';
+
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import {
   GDPRLookupPanel,
   GDPRArtifactDetails,
   GDPRDownloadPanel,
   GDPRLifecyclePanel,
-  STATUS_VARIANT,
-  STATUS_ICON,
 } from '../components/gdpr-export';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { deriveDataState } from '@/api/dataState';
 
 export default function GDPRExportPage() {
+  const { formatBytes } = useNumberFormatting();
+  const { formatRelative } = useDateFormat();
   const { t } = useTranslation();
-  usePageTitle(t('admin.gdprExport.pageTitle', 'GDPR Export'));
+  usePageTitle(t('admin.gdprExport.pageTitle', 'GDPR export'));
 
   const [searchParams, setSearchParams] = useSearchParams();
   // The URL `?id=` param is the single source of truth for which artifact is
@@ -74,10 +66,39 @@ export default function GDPRExportPage() {
   }, [activeId]);
 
   const query = useGDPRExport(activeId);
-  const subsystemMissing = isApiError(query.error) && query.error.status === 503;
-  const notFound = isApiError(query.error) && query.error.status === 404;
-  const otherError = query.isError && !subsystemMissing && !notFound;
+  const artifactState = deriveDataState(query);
+  const subsystemMissing = isApiError(artifactState.fatalError) && artifactState.fatalError.status === 503;
+  const notFound = isApiError(artifactState.fatalError) && artifactState.fatalError.status === 404;
+  const otherError = artifactState.fatalError && !subsystemMissing && !notFound;
   const artifact = query.data;
+  const [now, setNow] = useState(Date.now);
+  const expiry = artifact?.expires_at;
+  const expiryParts = typeof expiry === 'string'
+    ? /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.exec(expiry)
+    : null;
+  const parsedExpiryMs = typeof expiry === 'string' ? Date.parse(expiry) : NaN;
+  const expiryMs = expiryParts
+    && Number(expiryParts[2]) >= 1 && Number(expiryParts[2]) <= 12
+    && Number(expiryParts[3]) >= 1
+    && Number(expiryParts[3]) <= new Date(Date.UTC(Number(expiryParts[1]), Number(expiryParts[2]), 0)).getUTCDate()
+    && Number.isFinite(parsedExpiryMs)
+    ? parsedExpiryMs
+    : null;
+
+  useEffect(() => {
+    setNow(Date.now());
+    if (!artifact) return;
+    const tick = () => setNow(Date.now());
+    const interval = window.setInterval(tick, 1_000);
+    const remaining = expiryMs == null ? 0 : expiryMs - Date.now();
+    const boundary = remaining > 0 && remaining <= 2_147_483_647
+      ? window.setTimeout(tick, remaining)
+      : undefined;
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(boundary);
+    };
+  }, [artifact, expiryMs]);
 
   const { refetch } = query;
   const handleRefresh = useCallback(() => refetch(), [refetch]);
@@ -87,43 +108,64 @@ export default function GDPRExportPage() {
     setSearchParams(next ? { id: next } : {}, { replace: true });
   }, [idInput, setSearchParams]);
 
-  // Direct browser-owned download URL — apiUrl() adds the fully qualified
-  // origin + version prefix (the `request()` client does that for XHR, but a
-  // raw anchor href must carry the whole path itself).
-  const downloadUrl =
-    artifact && artifact.status === 'complete'
-      ? apiUrl(`/admin/gdpr/exports/${encodeURIComponent(artifact.id)}/download`)
-      : null;
+  const expired = expiryMs != null && now >= expiryMs;
+  const identityMatches = typeof artifact?.id === 'string' && artifact.id === activeId && activeId !== '';
+  const availability = !artifact ? undefined
+    : !identityMatches || expiryMs == null || !artifact.storage_kind
+      ? t('admin.gdprExport.availability.unknown', 'Download eligibility unknown')
+      : expired
+        ? t('admin.gdprExport.availability.expired', 'Expired')
+        : artifact.storage_kind !== 'local_fs'
+          ? t('admin.gdprExport.availability.unsupported', 'Storage download not supported')
+          : t('admin.gdprExport.availability.eligible', 'Eligible to request download');
+  // A manifest cannot prove that the stored file still exists or will stream.
+  const downloadUrl = artifact && identityMatches && artifact.storage_kind === 'local_fs'
+    && expiryMs != null && !expired
+    ? apiUrl(`/admin/gdpr/exports/${encodeURIComponent(artifact.id)}/download`)
+    : null;
 
   // KPI band summary state. `kpiLoading` keeps the tiles visible with
   // skeletons while the first fetch resolves, then shows real values.
-  const kpiLoading = query.isLoading && !artifact;
-  const status = artifact?.status;
-  const StatusIcon = status ? STATUS_ICON[status] : null;
+  const kpiLoading = artifactState.status === 'initial';
+  const summaryMetrics: StatMetric[] = [
+    { metricId: 'text', occurrenceId: 'availability', label: t('admin.gdprExport.availabilityLabel', 'Download eligibility'),
+      rawValue: availability },
+    { metricId: 'text', occurrenceId: 'export-job', label: t('admin.gdprExport.exportJobLabel', 'Export job ID'), rawValue: artifact?.export_job_id },
+    { metricId: 'bytes', occurrenceId: 'bytes', label: t('admin.gdprExport.bytesLabel', 'Size'), rawValue: artifact?.byte_count,
+      display: { formatter: raw => ({ value: formatBytes(raw), unit: '' }) } },
+    { metricId: 'text', occurrenceId: 'storage', label: t('admin.gdprExport.storageLabel', 'Storage'), rawValue: artifact?.storage_kind },
+    { metricId: 'text', occurrenceId: 'created', label: t('admin.gdprExport.createdLabel', 'Created'),
+      rawValue: artifact?.created_at ? formatRelative(artifact.created_at) : undefined, context: artifact?.created_at },
+    { metricId: 'text', occurrenceId: 'expires', label: t('admin.gdprExport.expiresLabel', 'Expires'),
+      rawValue: artifact?.expires_at ? formatRelative(artifact.expires_at) : undefined, context: artifact?.expires_at },
+  ];
 
   const actions = (
     <Button
       variant="ghost"
       onClick={handleRefresh}
       disabled={!activeId}
-      aria-label={t('admin.gdprExport.refresh', 'Refresh artifact status')}
-      className="min-h-11"
+      aria-label={t('admin.gdprExport.manifestRefresh', 'Refresh artifact manifest')}
+      className="min-h-11 min-w-11 shrink-0"
     >
-      <RefreshCw className="h-4 w-4" aria-hidden="true" />
+      <Icon icon={RefreshCw} />
     </Button>
   );
 
   return (
-    <PageContainer
-      title={t('admin.gdprExport.pageTitle', 'GDPR Export')}
+    <PageLayout
+      title={t('admin.gdprExport.pageTitle', 'GDPR export')}
       subtitle={t(
-        'admin.gdprExport.subtitle',
-        'Look up the status of a GDPR data export by artifact id and download the bundle when it completes. Bundles expire after the configured retention window.',
+        'admin.gdprExport.manifestSubtitle',
+        'Look up a persisted GDPR export manifest by artifact ID. Refresh explicitly to check metadata; download requests require supported storage and a valid future expiry.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={activeId ? query : undefined}
+      dataSources={activeId && artifactState.hasData
+        ? [{ id: 'gdpr-artifact', label: t('admin.gdprExport.resourceName', 'Export artifact'), query }]
+        : undefined}
     >
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <FadeIn>
           <GDPRLookupPanel idInput={idInput} onIdChange={setIdInput} onLookup={handleLookup} />
         </FadeIn>
@@ -145,11 +187,11 @@ export default function GDPRExportPage() {
             <GlassPanel className="p-4 sm:p-5">
               {/* no-action: the artifact-ID lookup input is immediately above; this empty state only renders before submission */}
               <EmptyState
-                icon={<HardDriveDownload className="h-8 w-8" />}
+                icon={<Icon icon={HardDriveDownload} size="xl" />}
                 title={t('admin.gdprExport.emptyTitle', 'No artifact selected')}
                 message={t(
-                  'admin.gdprExport.emptyMessage',
-                  'Enter an artifact ID above to look up its status. The page will keep refreshing until the export completes.',
+                  'admin.gdprExport.manifestEmptyMessage',
+                  'Enter an artifact ID above to look up its manifest. Use Refresh to check for updated metadata.',
                 )}
               />
             </GlassPanel>
@@ -167,100 +209,54 @@ export default function GDPRExportPage() {
         ) : otherError ? (
           <GlassPanel className="p-4 sm:p-5">
             <QueryError
-              error={query.error}
+              error={artifactState.fatalError}
               onRetry={handleRefresh}
               resourceName={t('admin.gdprExport.resourceName', 'Export artifact')}
             />
           </GlassPanel>
         ) : subsystemMissing ? null : (
           <SectionErrorBoundary name="gdpr-export-artifact">
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
+              {artifactState.isRefreshBlocked && !artifactState.hasData && (
+                <DataStateNotice state="partial"
+                  title={t('admin.gdprExport.lookupPausedTitle', 'Artifact lookup paused')}>
+                  {t('admin.gdprExport.lookupPausedMessage', 'The lookup is paused. No artifact result has been received; this is not an export failure or an empty result. Retry when the request can resume.')}
+                  <Button variant="ghost" onClick={handleRefresh}>{t('common.retry', 'Retry')}</Button>
+                </DataStateNotice>
+              )}
               {/* KPI band — full-width responsive summary, more columns on wide screens */}
               <FadeIn delay={0.05}>
-                <section
-                  aria-label={t('admin.gdprExport.kpis', 'Artifact summary')}
-                  className="grid grid-cols-2 gap-4 md:grid-cols-3 3xl:grid-cols-6"
-                >
-                  <Card className="flex flex-col gap-1">
-                    <MetricLabel>{t('admin.gdprExport.statusLabel', 'Status')}</MetricLabel>
-                    {kpiLoading ? (
-                      <Skeleton width="60%" height={28} className="mt-1" />
-                    ) : status && StatusIcon ? (
-                      <div className="mt-1">
-                        <Badge
-                          variant={STATUS_VARIANT[status] ?? 'neutral'}
-                          size="lg"
-                          className="capitalize"
-                        >
-                          <StatusIcon
-                            className={cn('h-3.5 w-3.5', status === 'running' && 'animate-spin')}
-                            aria-hidden="true"
-                          />
-                          {t(`admin.gdprExport.status.${status}`, status)}
-                        </Badge>
-                      </div>
-                    ) : (
-                      <MetricValue>—</MetricValue>
-                    )}
-                  </Card>
-
-                  <StatCard
-                    label={t('admin.gdprExport.formatLabel', 'Format')}
-                    value={artifact?.format || '—'}
-                    icon={<FileText className="h-5 w-5" />}
-                    loading={kpiLoading}
-                  />
-                  <StatCard
-                    label={t('admin.gdprExport.bytesLabel', 'Size')}
-                    value={artifact?.bytes != null ? formatBytes(artifact.bytes) : '—'}
-                    icon={<HardDrive className="h-5 w-5" />}
-                    loading={kpiLoading}
-                  />
-                  <StatCard
-                    label={t('admin.gdprExport.storageLabel', 'Storage')}
-                    value={artifact?.storage || '—'}
-                    icon={<Database className="h-5 w-5" />}
-                    loading={kpiLoading}
-                  />
-                  <StatCard
-                    label={t('admin.gdprExport.createdLabel', 'Created')}
-                    value={artifact?.created_at ? formatRelative(artifact.created_at) : '—'}
-                    icon={<CalendarPlus className="h-5 w-5" />}
-                    loading={kpiLoading}
-                  />
-                  <StatCard
-                    label={t('admin.gdprExport.expiresLabel', 'Expires')}
-                    value={artifact?.expires_at ? formatRelative(artifact.expires_at) : '—'}
-                    icon={<CalendarClock className="h-5 w-5" />}
-                    loading={kpiLoading}
-                  />
-                </section>
+                <AdminSummary metrics={summaryMetrics} testId="gdpr-export-summary"
+                  eyebrow={t('admin.gdprExport.pageTitle', 'GDPR export')}
+                  title={t('admin.gdprExport.kpis', 'Artifact summary')}
+                  description={t('admin.gdprExport.summary.manifestSource', 'Persisted manifest metadata describes only the selected export artifact, not export-job progress or file availability.')}
+                  scope={t('admin.gdprExport.summary.manifestScope', 'Selected artifact snapshot; creation, download and expiry timestamps are manifest events, not a shared analysis range.')}
+                  sourceStatus={artifactState.status === 'stale' ? 'stale' : artifactState.isRefreshing ? 'refreshing' : artifactState.status}
+                  loading={kpiLoading} />
               </FadeIn>
 
-              {artifact?.error && (
-                <AlertBanner
-                  variant="danger"
-                  title={t('admin.gdprExport.errorTitle', 'Export failed')}
-                >
-                  {artifact.error}
+              {artifact && (
+                <AlertBanner variant={downloadUrl ? 'info' : 'warning'} title={availability}>
+                  {t('admin.gdprExport.availabilityHint', 'Only local filesystem downloads are supported. Expired artifacts or unknown identity, storage or expiry do not offer a download. An eligible request can still fail if the stored bundle is missing.')}
                 </AlertBanner>
               )}
 
               {/* Detail bento — hero details span two columns, supporting panels fill the third */}
               <FadeIn delay={0.1}>
-                <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                <section className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
                   <GDPRArtifactDetails
                     artifact={artifact}
-                    loading={query.isLoading}
-                    className="xl:col-span-2"
+                    loading={kpiLoading}
+                    className="min-w-0 xl:col-span-2"
                   />
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                  <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1">
                     <GDPRDownloadPanel
                       artifact={artifact}
                       downloadUrl={downloadUrl}
-                      loading={query.isLoading}
+                      loading={kpiLoading}
+                      className="min-w-0"
                     />
-                    <GDPRLifecyclePanel artifact={artifact} loading={query.isLoading} />
+                    <GDPRLifecyclePanel artifact={artifact} loading={kpiLoading} now={now} className="min-w-0" />
                   </div>
                 </section>
               </FadeIn>
@@ -268,6 +264,6 @@ export default function GDPRExportPage() {
           </SectionErrorBoundary>
         )}
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

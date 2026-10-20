@@ -1,0 +1,626 @@
+{
+  "item": "phase6-qa-system-not-found",
+  "attempt": 1,
+  "status": "PARTIAL",
+  "reservationUtc": "2026-10-14T02:29:12.925Z",
+  "returnDeadlineUtc": "2026-10-14T02:49:12.925Z",
+  "hardDeadlineUtc": "2026-10-14T02:54:12.925Z",
+  "inputHashes": [
+    {
+      "path": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "sha256Before": "98ECC8EDA7D3B54DFD24B1347B808112CFC2F6E5D7CE5C0249CEEB0DF877B42D",
+      "bytesBefore": 4848,
+      "capturedAtUtc": "2026-10-14T02:44:47.5731839Z",
+      "sha256After": "98ECC8EDA7D3B54DFD24B1347B808112CFC2F6E5D7CE5C0249CEEB0DF877B42D",
+      "bytesAfter": 4848,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9507327Z"
+    },
+    {
+      "path": "web\\src\\features\\system\\pages\\NotFoundPage.test.tsx",
+      "sha256Before": "2F435276EC1438471D35D7CCF4B100E22664F4E3E041008B9D1631087FBD7F01",
+      "bytesBefore": 10942,
+      "capturedAtUtc": "2026-10-14T02:44:47.5745632Z",
+      "sha256After": "2F435276EC1438471D35D7CCF4B100E22664F4E3E041008B9D1631087FBD7F01",
+      "bytesAfter": 10942,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.956894Z"
+    },
+    {
+      "path": "web\\src\\App.tsx",
+      "sha256Before": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "bytesBefore": 68125,
+      "capturedAtUtc": "2026-10-14T02:44:47.5750881Z",
+      "sha256After": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "bytesAfter": 68125,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9574199Z"
+    },
+    {
+      "path": "web\\src\\components\\layout\\Layout.tsx",
+      "sha256Before": "2164103032C3971BE0485F8EF0CF43B07E266EF283E80ABB319601DA554A46E1",
+      "bytesBefore": 92115,
+      "capturedAtUtc": "2026-10-14T02:44:47.5755626Z",
+      "sha256After": "2164103032C3971BE0485F8EF0CF43B07E266EF283E80ABB319601DA554A46E1",
+      "bytesAfter": 92115,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9578883Z"
+    },
+    {
+      "path": "web\\src\\components\\layout\\index.ts",
+      "sha256Before": "16105443F3F6C85FC73AE940F65F8B61F751A1FB30E77369B229D24EC7DFC642",
+      "bytesBefore": 1523,
+      "capturedAtUtc": "2026-10-14T02:44:47.5758739Z",
+      "sha256After": "16105443F3F6C85FC73AE940F65F8B61F751A1FB30E77369B229D24EC7DFC642",
+      "bytesAfter": 1523,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9582269Z"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256Before": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "bytesBefore": 658,
+      "capturedAtUtc": "2026-10-14T02:44:47.576155Z",
+      "sha256After": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "bytesAfter": 658,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9585595Z"
+    },
+    {
+      "path": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256Before": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "bytesBefore": 10783,
+      "capturedAtUtc": "2026-10-14T02:44:47.5764263Z",
+      "sha256After": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "bytesAfter": 10783,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9590471Z"
+    },
+    {
+      "path": "web\\src\\components\\layout\\CommandPaletteHost.tsx",
+      "sha256Before": "B74102BB110057237B1C504BE5BE8BFDD30587C1DF4E5FEEDBE334FCB86E8B1C",
+      "bytesBefore": 1220,
+      "capturedAtUtc": "2026-10-14T02:44:47.576739Z",
+      "sha256After": "B74102BB110057237B1C504BE5BE8BFDD30587C1DF4E5FEEDBE334FCB86E8B1C",
+      "bytesAfter": 1220,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9595616Z"
+    },
+    {
+      "path": "web\\src\\components\\ui\\Button.tsx",
+      "sha256Before": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "bytesBefore": 5174,
+      "capturedAtUtc": "2026-10-14T02:44:47.5770211Z",
+      "sha256After": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "bytesAfter": 5174,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.959908Z"
+    },
+    {
+      "path": "web\\src\\components\\ui\\Typography.tsx",
+      "sha256Before": "B5D52022D7CA523369BC56C2ABB153F8FA1EDC0E3E94320905C53A24D94B4B9A",
+      "bytesBefore": 4325,
+      "capturedAtUtc": "2026-10-14T02:44:47.5772727Z",
+      "sha256After": "B5D52022D7CA523369BC56C2ABB153F8FA1EDC0E3E94320905C53A24D94B4B9A",
+      "bytesAfter": 4325,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9601986Z"
+    },
+    {
+      "path": "web\\src\\lib\\closestRoute.ts",
+      "sha256Before": "54C775F14319130D7A4A4FE72E809F0B36BDD8E7C5220F1FF3F1B029D256BB91",
+      "bytesBefore": 2412,
+      "capturedAtUtc": "2026-10-14T02:44:47.5775375Z",
+      "sha256After": "54C775F14319130D7A4A4FE72E809F0B36BDD8E7C5220F1FF3F1B029D256BB91",
+      "bytesAfter": 2412,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9604938Z"
+    },
+    {
+      "path": "web\\src\\lib\\__tests__\\closestRoute.test.ts",
+      "sha256Before": "E90A920A3EEB21CA405144B84FDC62C4C9738BCA48CEDFAFDE41E172135E9E36",
+      "bytesBefore": 2589,
+      "capturedAtUtc": "2026-10-14T02:44:47.5778098Z",
+      "sha256After": "E90A920A3EEB21CA405144B84FDC62C4C9738BCA48CEDFAFDE41E172135E9E36",
+      "bytesAfter": 2589,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9608215Z"
+    },
+    {
+      "path": "web\\src\\lib\\routeRegistry.ts",
+      "sha256Before": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "bytesBefore": 31836,
+      "capturedAtUtc": "2026-10-14T02:44:47.5780942Z",
+      "sha256After": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "bytesAfter": 31836,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9611669Z"
+    },
+    {
+      "path": "web\\scripts\\generate-route-registry.mjs",
+      "sha256Before": "4B2C1DA5436AE7506553476C406456D6C867CCE1A7276B1CC52093CA2454B519",
+      "bytesBefore": 7664,
+      "capturedAtUtc": "2026-10-14T02:44:47.5783366Z",
+      "sha256After": "4B2C1DA5436AE7506553476C406456D6C867CCE1A7276B1CC52093CA2454B519",
+      "bytesAfter": 7664,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9615036Z"
+    },
+    {
+      "path": "web\\src\\hooks\\usePageTitle.ts",
+      "sha256Before": "D04D8C90812C380005924CD4F004BE273F2E89B64D57AA1DF880B15BB49E9A9B",
+      "bytesBefore": 1280,
+      "capturedAtUtc": "2026-10-14T02:44:47.5785869Z",
+      "sha256After": "D04D8C90812C380005924CD4F004BE273F2E89B64D57AA1DF880B15BB49E9A9B",
+      "bytesAfter": 1280,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.961817Z"
+    },
+    {
+      "path": "web\\src\\i18n\\en.json",
+      "sha256Before": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "bytesBefore": 1843667,
+      "capturedAtUtc": "2026-10-14T02:44:47.5809244Z",
+      "sha256After": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "bytesAfter": 1846735,
+      "matches": false,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9642309Z"
+    },
+    {
+      "path": "web\\src\\components\\feedback\\ErrorBoundary.tsx",
+      "sha256Before": "2A62F34BB504FAE9286DF589B379958C8180F280451A2FC20665E58DCA2734BC",
+      "bytesBefore": 9399,
+      "capturedAtUtc": "2026-10-14T02:44:47.5813677Z",
+      "sha256After": "2A62F34BB504FAE9286DF589B379958C8180F280451A2FC20665E58DCA2734BC",
+      "bytesAfter": 9399,
+      "matches": true,
+      "afterCapturedAtUtc": "2026-10-14T02:48:29.9654754Z"
+    }
+  ],
+  "qaMode": "read-only source declarations",
+  "generatedAtUtc": "2026-10-14T02:47:14.2048668Z",
+  "objectiveCheck": {
+    "alreadyMet": false,
+    "pageMigrationAlreadyComplete": true,
+    "dependency": "phase5-page-system-not-found",
+    "dependencyStatus": "[x]",
+    "queueLine": 2247,
+    "historicalCommit": "56b4721dd99dcc25cea67a02edaafe3a340b3ec6",
+    "exactQaQueueLine": 237,
+    "qaReservationStatus": "[~]",
+    "dedicatedReceiptExistedBefore": false,
+    "sourceChangeNeeded": false,
+    "conclusion": "Existing dedicated QA objective was not already met. Complete source-only receipt; no remigration or source fix justified by this inspection. Historical 17-pass queue receipt is not a fresh execution."
+  },
+  "readScope": {
+    "root": "D:\\repos\\teslasync",
+    "writable": [
+      "docs\\frontend-audits\\phase6-qa-system-not-found.json",
+      "web\\logs\\phase6-qa-system-not-found.log"
+    ],
+    "readonly": "NotFoundPage, direct route/layout/navigation supports, declared covering tests, English catalog, design/mission/inventory/handoff/queue/instructions",
+    "rootPlaybookFullyRead": true,
+    "contractRanges": [
+      "1-654 relevant base design, interaction/layout, states/privacy, responsive/a11y and evidence rules"
+    ],
+    "missionRanges": [
+      "1-236",
+      "1420-1525"
+    ],
+    "inventory": "frontend-inventory.md:242,543 and existing audit-page-191.json; historical observations not automatically promoted",
+    "handoff": "session-handoff.md:1-180 and relevant NOTRUN/source-receipt conventions",
+    "instructions": [
+      ".github/copilot-instructions.md:1-440",
+      ".github/instructions/react-frontend.instructions.md:1-250",
+      "docs/I18N_GUIDELINES.md:1-150"
+    ],
+    "agentsMdFound": 0,
+    "noGitUsed": true
+  },
+  "clockLimit": {
+    "clockReset": false,
+    "earlierActualCreationUtc": null,
+    "limitation": "Actor actual creation time is not exposed. First observed command is not a replacement reservation. Original reservation return/hard deadlines retained."
+  },
+  "evidence": [
+    {
+      "id": "E01",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "lineStart": 24,
+      "lineEnd": 40,
+      "mechanism": "Localized title; development-only pathname+search diagnostic; memoized closest-route suggestions capped at five."
+    },
+    {
+      "id": "E02",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "lineStart": 43,
+      "lineEnd": 59,
+      "mechanism": "History length >1 invokes history.back; otherwise navigate root; dashboard navigates root; search dispatches existing toggle event."
+    },
+    {
+      "id": "E03",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "lineStart": 62,
+      "lineEnd": 76,
+      "mechanism": "Always-rendered shared page/panel/explanation; pathname interpolation only, query not rendered; break-all contains long path; decorative Compass hidden."
+    },
+    {
+      "id": "E04",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "lineStart": 78,
+      "lineEnd": 101,
+      "mechanism": "Optional supplemental suggestions nav; localized name, ul/li/Link navigation, path metadata, BUTTON_BASE focus and forced-colors, min-h-11."
+    },
+    {
+      "id": "E05",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "lineStart": 104,
+      "lineEnd": 133,
+      "mechanism": "All three recovery actions always present, shared Buttons with wrapLabel, min-h-11 and full mobile width; localized labels, decorative icons hidden."
+    },
+    {
+      "id": "E06",
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "lineStart": 1,
+      "lineEnd": 17,
+      "mechanism": "PageLayout directly delegates to PageContainer; no missing-page-container violation."
+    },
+    {
+      "id": "E07",
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "lineStart": 158,
+      "lineEnd": 203,
+      "mechanism": "Shared page container header and route-focus heading target."
+    },
+    {
+      "id": "E08",
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "lineStart": 243,
+      "lineEnd": 257,
+      "mechanism": "Loading/error/empty APIs and PageErrorBoundary children; synchronous recovery page supplies no fake query state."
+    },
+    {
+      "id": "E09",
+      "file": "web\\src\\App.tsx",
+      "lineStart": 368,
+      "lineEnd": 377,
+      "mechanism": "SafeRoute isolates crashes by pathname and wraps lazy content with SuspenseProgressBoundary/PageLoadSkeleton."
+    },
+    {
+      "id": "E10",
+      "file": "web\\src\\App.tsx",
+      "lineStart": 905,
+      "lineEnd": 916,
+      "mechanism": "Inner Layout catch-all wins normally; defensive outer catch-all also renders NotFound."
+    },
+    {
+      "id": "E11",
+      "file": "web\\src\\components\\layout\\Layout.tsx",
+      "lineStart": 1531,
+      "lineEnd": 1568,
+      "mechanism": "Scrollable main, bottom shell chrome clearance, safe-area/page gutters, Outlet rendering."
+    },
+    {
+      "id": "E12",
+      "file": "web\\src\\components\\layout\\Layout.tsx",
+      "lineStart": 1600,
+      "lineEnd": 1600,
+      "mechanism": "Layout mounts command palette host."
+    },
+    {
+      "id": "E13",
+      "file": "web\\src\\components\\layout\\CommandPaletteHost.tsx",
+      "lineStart": 19,
+      "lineEnd": 35,
+      "mechanism": "Existing toggle event activates lazy palette with initialOpen; subsequent events owned by mounted palette."
+    },
+    {
+      "id": "E14",
+      "file": "web\\src\\components\\ui\\Button.tsx",
+      "lineStart": 27,
+      "lineEnd": 31,
+      "mechanism": "Shared neutral focus outline, forced-colors and reduced-motion CSS."
+    },
+    {
+      "id": "E15",
+      "file": "web\\src\\components\\ui\\Button.tsx",
+      "lineStart": 60,
+      "lineEnd": 88,
+      "mechanism": "Native button attributes/ref preserved; preference-aware motion; wrapping labels and disabled/busy behavior."
+    },
+    {
+      "id": "E16",
+      "file": "web\\src\\lib\\closestRoute.ts",
+      "lineStart": 22,
+      "lineEnd": 40,
+      "mechanism": "Empty normalized query yields no suggestions; hidden routes excluded; path/English label edit distance cap six, deterministic sort and limit."
+    },
+    {
+      "id": "E17",
+      "file": "web\\scripts\\generate-route-registry.mjs",
+      "lineStart": 82,
+      "lineEnd": 91,
+      "mechanism": "Wildcard excluded; parameterized/NotFound routes hidden in declarations. Generator NOT executed."
+    },
+    {
+      "id": "E18",
+      "file": "web\\src\\i18n\\en.json",
+      "lineStart": 27131,
+      "lineEnd": 27140,
+      "mechanism": "All eight literal notFound keys exist with interpolation and English defaults."
+    },
+    {
+      "id": "E19",
+      "file": "web\\src\\hooks\\usePageTitle.ts",
+      "lineStart": 24,
+      "lineEnd": 30,
+      "mechanism": "Sets canonical title via titleStore and restores previous title on cleanup."
+    },
+    {
+      "id": "E20",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.test.tsx",
+      "lineStart": 111,
+      "lineEnd": 305,
+      "mechanism": "Seventeen authored page cases: eight original singles, three literal each variants, six additive singles. Mocked navigation/i18n; no mounted App proof."
+    },
+    {
+      "id": "E21",
+      "file": "web\\src\\lib\\__tests__\\closestRoute.test.ts",
+      "lineStart": 15,
+      "lineEnd": 64,
+      "mechanism": "Nine authored engine cases; declarations only."
+    }
+  ],
+  "sourceQa": [
+    {
+      "area": "content/sections",
+      "result": "source-supported",
+      "evidence": [
+        "E03",
+        "E04",
+        "E05"
+      ],
+      "detail": "Heading, unmatched path, optional recommendations, all three escape actions retained; no fake application data."
+    },
+    {
+      "area": "actions/routing",
+      "result": "source-supported, execution NOTRUN",
+      "evidence": [
+        "E02",
+        "E09",
+        "E10",
+        "E12",
+        "E13"
+      ],
+      "detail": "Link destinations use registry; default five suggestions, hidden parameterized entries excluded; normal Layout event consumer present."
+    },
+    {
+      "area": "unknown/empty",
+      "result": "source-supported",
+      "evidence": [
+        "E03",
+        "E04",
+        "E16"
+      ],
+      "detail": "Unknown pathname remains literal user data, not translated or coerced; no-match only suppresses supplemental nav, never recovery panel."
+    },
+    {
+      "area": "loading/error/offline/retained",
+      "result": "source-supported declarations only",
+      "evidence": [
+        "E08",
+        "E09"
+      ],
+      "detail": "Page has no own API/data source, refresh or numeric state. Chunk loading/crash handled by existing route boundary. Offline/retained payload state N/A to synchronous local recovery; chunk failure behavior not exercised."
+    },
+    {
+      "area": "preferences/SI",
+      "result": "source-supported, native unverified",
+      "evidence": [
+        "E14",
+        "E15",
+        "E18",
+        "E19"
+      ],
+      "detail": "No settings writes, source units, currency, dates or conversions. Existing theme token/button motion preferences and localization consumed without resets; title restored."
+    },
+    {
+      "area": "mobile",
+      "result": "source-supported, geometry NOTRUN",
+      "evidence": [
+        "E03",
+        "E04",
+        "E05",
+        "E11",
+        "E15"
+      ],
+      "detail": "min-w-0/bounded panel, long-path break-all, wrapping full-width base buttons, 44px minimum targets and shell safe-area. Actual allocated widths/zoom/long locale geometry not measured."
+    },
+    {
+      "area": "accessibility",
+      "result": "source-supported, native NOTRUN",
+      "evidence": [
+        "E03",
+        "E04",
+        "E05",
+        "E07",
+        "E14",
+        "E15"
+      ],
+      "detail": "Semantic shared heading, named suggestions nav and links, visible focus declarations, hidden decorative icons, native controls. Contrast/keyboard/focus transfer/screen reader not certified."
+    },
+    {
+      "area": "i18n",
+      "result": "eight keys source-checked",
+      "evidence": [
+        "E03",
+        "E04",
+        "E05",
+        "E18"
+      ],
+      "detail": "All visible prose and action labels use t with fallbacks; path interpolated. Route suggestions use dynamic i18nKey+label fallback. English registry/catalog keys statically checked, no guard/generator executed."
+    }
+  ],
+  "confirmedIssues": [],
+  "confirmedIssueCount": 0,
+  "ruleCounts": {
+    "static-inline-style": 0,
+    "raw-html": 0,
+    "direct-library-import": 0,
+    "old-api-import": 0,
+    "double-prefix": 0,
+    "camelcase-param": 0,
+    "hidden-section": 0,
+    "hardcoded-string": 0,
+    "missing-page-container": 0,
+    "fetch-useeffect": 0
+  },
+  "ruleExceptions": [
+    "Initial raw-html grep was case-insensitive and matched three shared <Button> tags; corrected case-sensitive grep found zero native raw controls.",
+    "useEffect diagnostic is not data loading.",
+    "Conditional suggestions nav is optional supplemental recovery, not a hidden data section.",
+    "PageLayout delegates directly to PageContainer.",
+    "English fallbacks and raw route identifiers are not untranslated UI literals.",
+    "Shared Button contains expected native HTML; components are building-block exceptions."
+  ],
+  "unexecutedReproductions": [],
+  "candidates": [
+    {
+      "id": "C01",
+      "kind": "conditional source candidate",
+      "title": "Development diagnostic includes unredacted query",
+      "evidence": [
+        "E01"
+      ],
+      "condition": "Only DEV and only if a supplied unknown URL contains sensitive data. No real sensitive URL inspected or generated.",
+      "unexecutedRepro": "In authorized synthetic DEV scope, visit an unknown path with a harmless synthetic query and inspect console; compare production suppression. NOTRUN.",
+      "owner": "NotFoundPage privacy diagnostic; completed phase5-page-system-not-found is not reopened",
+      "decision": "Not promoted: source proves DEV diagnostic and production guard, not an actual sensitive-data incident or new production regression."
+    },
+    {
+      "id": "C02",
+      "kind": "conditional source candidate",
+      "title": "Defensive outer catch-all lacks Layout-owned palette host",
+      "evidence": [
+        "E02",
+        "E10",
+        "E12",
+        "E13"
+      ],
+      "condition": "Only if the outer fallback becomes the active route. Current inner wildcard normally wins; no reachable current failing route established.",
+      "unexecutedRepro": "Future authorized routing fixture could force outer-only recovery and check palette invocation; not executed and no fixture edited.",
+      "owner": "App route integration/CommandPaletteHost; phase3-command-palette-host is already [x]",
+      "decision": "Not a confirmed present defect; do not dispatch a duplicate fix."
+    },
+    {
+      "id": "C03",
+      "kind": "native acceptance candidate",
+      "title": "Mobile, long translation/RTL, scaled text and theme/focus matrix",
+      "evidence": [
+        "E03",
+        "E04",
+        "E05",
+        "E07",
+        "E11",
+        "E14",
+        "E15"
+      ],
+      "condition": "Actual DOM/CSS composition under mission widths, narrow containers, dark/light/custom/forced-colors, 200% text and long labels.",
+      "unexecutedRepro": "Authorized existing native QA: 320/375/390/430/768/1024/1280/1440/1920/2560 widths, keyboard and screen reader, RTL and long unbroken labels. NOTRUN.",
+      "owner": "Existing combined Phase6 acceptance sweep, not a new source repair",
+      "decision": "Source declarations do not prove measured contrast, clipping, wrapping or focus acceptance."
+    },
+    {
+      "id": "C04",
+      "kind": "native acceptance candidate",
+      "title": "Real browser history and cold palette loading/recovery",
+      "evidence": [
+        "E02",
+        "E09",
+        "E10",
+        "E13",
+        "E20"
+      ],
+      "condition": "Real session history/back-forward, reload/direct-hit and lazy chunk availability.",
+      "unexecutedRepro": "In approved synthetic native scope check single-entry fallback, multi-entry Back, Dashboard, first palette activation, query-only change and lazy chunk failure recovery. NOTRUN.",
+      "owner": "Existing combined Phase6 functional acceptance; no failing runtime case established",
+      "decision": "Mocked page test declarations do not establish App routing/history or lazy palette success."
+    }
+  ],
+  "candidateCount": 4,
+  "queueDeduplication": {
+    "checked": true,
+    "exactItem": "phase6-qa-system-not-found",
+    "pageOwner": "phase5-page-system-not-found [x]",
+    "directHostOwner": "phase3-command-palette-host [x]",
+    "otherPaletteOwners": "frame/footer-hints/header-focus/result-presentation/scoping/source-trust/search-trust all [x] in narrow owner scan",
+    "nativeShellHistorical": "phase3-native-mounted-shell-qa and observed-findings [-], not proof of fresh acceptance",
+    "newNarrowFixItemsNeeded": 0,
+    "newFixItemsCreated": 0,
+    "decision": "No confirmed source defect requiring repair. Do not reopen completed owners or manufacture queue items for conditional/native candidates. Queue untouched."
+  },
+  "tests": {
+    "status": "NOTRUN",
+    "pageAuthoredCaseCount": 17,
+    "engineAuthoredCaseCount": 9,
+    "totalAuthoredCaseCount": 26,
+    "discovered": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": null,
+    "coverageLimit": "Read declarations only; originals unchanged; not runner discovery. Historical queue pass retained as historical."
+  },
+  "native": {
+    "status": "NOTRUN",
+    "approved": false,
+    "browser": false,
+    "network": false,
+    "sourceAuditIsAcceptance": false
+  },
+  "catalogCheck": {
+    "status": "static parse/key inspection only",
+    "notFoundKeys": 8,
+    "registryEntries": 266,
+    "registryHidden": 10,
+    "missingEnglishRegistryKeys": 0,
+    "visibleParameterizedEntries": 0,
+    "normalGuard": "NOTRUN",
+    "generator": "NOTRUN"
+  },
+  "failuresAndLimits": [
+    "Early command output exceeded tool display limits; relevant source/doc ranges reread. Raw saved inspection outputs copied to log; not every early operation has a verbatim command reconstruction in log, but caller tool transcript retains it.",
+    "Guessed lib/closestRoute.test.ts read failed nonterminating within process exit0; failed view too. Correct path lib/__tests__/closestRoute.test.ts subsequently fully read.",
+    "Catalog ConvertFrom-Json without -AsHashtable exited1 due case-distinct subFSMs/subFsms keys. Corrected native -AsHashtable parsing succeeded; catalog source unchanged.",
+    "Initial case-insensitive raw-control scan yielded shared Button false positives; corrected case-sensitive scan succeeded.",
+    "No compiler/tests/lint/build/browser/native/server/network/Git/agents/installs/helper programs permitted or executed. No global cleanliness/branch/clock-creation proof claimed.",
+    "Final validation command shell3197 exited1: one input SHA256 mismatch. Before hashes preserved, not renewed. Drift is not attributed to this actor or any unidentified writer.",
+    "Final citation range check verifies line bounds only; citations on changed input require parent re-pin/review, not a manufactured stable-source pass.",
+    "Final source bounds validation found two authored overlong ranges (usePageTitle 31 vs30; engine test69 vs64). Corrected citation endpoints only; source untouched. All21 ranges rechecked. English notFound keys rechecked at current location after catalog drift; original baseline hash not renewed."
+  ],
+  "result": "PARTIAL source-only QA receipt: inspection completed, but final input hash check detected concurrent read-only input drift. No source change needed established for inspected primary page; no stable all-input acceptance or native approval.",
+  "release": {
+    "artifactsReleased": true,
+    "commandsReleased": true,
+    "sourceWriteLease": "none requested or held",
+    "atUtc": "2026-10-14T02:48:57.9499236Z",
+    "statement": "RELEASE both permitted artifacts and all commands after this bounded final command returns. No background commands started/retained; no source/test/catalog/queue/Git writes."
+  },
+  "inputDrift": [
+    "web\\src\\i18n\\en.json"
+  ],
+  "ruleCountScope": "Primary NotFoundPage.tsx pattern scan only; not a repository-wide claim.",
+  "finalValidation": {
+    "jsonParse": "PASS",
+    "citationCount": 21,
+    "invalidCitationRanges": 0,
+    "missingEvidenceReferences": 0,
+    "countChecksPassed": true,
+    "inputHashCount": 17,
+    "inputMismatches": 1,
+    "sourceInputsUnchanged": false,
+    "pinCheck": "FAIL - concurrent readonly input drift",
+    "validatedAtUtc": "2026-10-14T02:48:57.9484336Z",
+    "scope": "No global working-tree/Git verification; changed input citations require parent review."
+  }
+}

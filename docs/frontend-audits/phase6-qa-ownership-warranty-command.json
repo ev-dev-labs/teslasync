@@ -1,0 +1,1943 @@
+{
+  "item": "phase6-qa-ownership-warranty-command",
+  "attempt": 1,
+  "status": "DONE_SOURCE_AUDIT_ONLY",
+  "startedAt": "2026-10-14T02:12:47.0896620Z",
+  "baselineAt": "2026-10-14T02:14:45.755657+00:00",
+  "sourcePinsBefore": [
+    {
+      "file": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lines": 458,
+      "bytes": 17825
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434,
+      "bytes": 15482
+    },
+    {
+      "file": "web/src/api/hooks/_toastHelpers.ts",
+      "sha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "lines": 123,
+      "bytes": 5112
+    },
+    {
+      "file": "web/src/api/hooks/useOwnership.ts",
+      "sha256": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "lines": 801,
+      "bytes": 28971
+    },
+    {
+      "file": "web/src/api/offlineCache.ts",
+      "sha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "lines": 185,
+      "bytes": 6961
+    },
+    {
+      "file": "web/src/api/queryPolicy.ts",
+      "sha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "lines": 294,
+      "bytes": 11340
+    },
+    {
+      "file": "web/src/components/data-display/MetricBar.tsx",
+      "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+      "lines": 93,
+      "bytes": 4359
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "lines": 321,
+      "bytes": 11591
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259,
+      "bytes": 10783
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17,
+      "bytes": 658
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines": 74,
+      "bytes": 3322
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lines": 39,
+      "bytes": 1493
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lines": 93,
+      "bytes": 5174
+    },
+    {
+      "file": "web/src/components/ui/ConfirmDialog.tsx",
+      "sha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "lines": 219,
+      "bytes": 8134
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines": 1707,
+      "bytes": 77157
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "sha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "lines": 116,
+      "bytes": 4738
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "lines": 165,
+      "bytes": 9039
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lines": 119,
+      "bytes": 4432
+    },
+    {
+      "file": "web/src/components/ui/Textarea.tsx",
+      "sha256": "6de5efa5b3f0077c97712be4fc7c3b436df47a4c803012cae8cb0756bad2db75",
+      "lines": 115,
+      "bytes": 4609
+    },
+    {
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "sha256": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "lines": 194,
+      "bytes": 7754
+    },
+    {
+      "file": "web/src/features/ownership/components/GhostDrivesPanel.test.tsx",
+      "sha256": "2afcba233b19f8f7bfe7b7c99c00ffeefa536a0423438a080cb81416cf06eff0",
+      "lines": 106,
+      "bytes": 3809
+    },
+    {
+      "file": "web/src/features/ownership/components/MoneyInput.tsx",
+      "sha256": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+      "lines": 52,
+      "bytes": 1440
+    },
+    {
+      "file": "web/src/features/ownership/components/MutationError.tsx",
+      "sha256": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "lines": 22,
+      "bytes": 644
+    },
+    {
+      "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+      "sha256": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "lines": 193,
+      "bytes": 10990
+    },
+    {
+      "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "sha256": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "lines": 88,
+      "bytes": 3318
+    },
+    {
+      "file": "web/src/features/ownership/components/SiNumberInput.tsx",
+      "sha256": "9e5942357afd0cba06ccb529f5090f4c66ae87d47d4c0f171cb5b0fd87221bee",
+      "lines": 52,
+      "bytes": 1190
+    },
+    {
+      "file": "web/src/features/ownership/components/StatGrid.test.tsx",
+      "sha256": "158ab9486d2478b48d3cd8e92fe5a72010a3504e71afd6c368eeefa822f9bff2",
+      "lines": 24,
+      "bytes": 1452
+    },
+    {
+      "file": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+      "sha256": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "lines": 141,
+      "bytes": 6662
+    },
+    {
+      "file": "web/src/features/ownership/components/VerdictBadge.tsx",
+      "sha256": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "lines": 130,
+      "bytes": 4122
+    },
+    {
+      "file": "web/src/features/ownership/components/index.ts",
+      "sha256": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "lines": 8,
+      "bytes": 402
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+      "sha256": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+      "lines": 112,
+      "bytes": 6646
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "sha256": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "lines": 81,
+      "bytes": 3450
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+      "sha256": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "lines": 9,
+      "bytes": 249
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/testAssertions.ts",
+      "sha256": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+      "lines": 16,
+      "bytes": 836
+    },
+    {
+      "file": "web/src/features/ownership/formatters.ts",
+      "sha256": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "lines": 148,
+      "bytes": 6076
+    },
+    {
+      "file": "web/src/features/ownership/pages/WarrantyCommandPage.test.tsx",
+      "sha256": "d61b45b8371f9abb0886c2d4679321a3fc8252c57776bc6aea0fc7ad7d211c05",
+      "lines": 397,
+      "bytes": 17517
+    },
+    {
+      "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+      "sha256": "15c3d2e5bb4000b266a39c63532058842f2baa654f9735b42245fae2b3805aff",
+      "lines": 918,
+      "bytes": 33855
+    },
+    {
+      "file": "web/src/hooks/useConfirm.ts",
+      "sha256": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "lines": 118,
+      "bytes": 3898
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65,
+      "bytes": 2035
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines": 47,
+      "bytes": 2095
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lines": 24,
+      "bytes": 1161
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines": 174,
+      "bytes": 6593
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines": 194,
+      "bytes": 6545
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "lines": 39002,
+      "bytes": 1843667
+    },
+    {
+      "file": "web/src/i18n/en/locale-ownership.json",
+      "sha256": "58536e091cb61393df19920a9a7d60f84235553d61d8630343fe58a7da803cba",
+      "lines": 2006,
+      "bytes": 73794
+    },
+    {
+      "file": "web/src/lib/currencyFormat.ts",
+      "sha256": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+      "lines": 271,
+      "bytes": 8924
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462,
+      "bytes": 18863
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "lines": 172,
+      "bytes": 6443
+    },
+    {
+      "file": "web/src/lib/operationalMode.ts",
+      "sha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "lines": 89,
+      "bytes": 2495
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "lines": 439,
+      "bytes": 20093
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168,
+      "bytes": 4411
+    },
+    {
+      "file": "web/src/types/ownership.ts",
+      "sha256": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "lines": 1106,
+      "bytes": 27171
+    }
+  ],
+  "findings": [
+    {
+      "id": "WC-01",
+      "rule": "scope-draft-binding",
+      "priority": "P1",
+      "title": "Editor drafts/claim targets are not bound to vehicle/warranty scope",
+      "owner": "warranty-page",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 109,
+          "endLine": 137,
+          "source": "  const { vehicleId } = useSelectedVehicle();"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 184,
+          "endLine": 218,
+          "source": "  );"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 398,
+          "endLine": 398,
+          "source": "            icon={<Icon icon={FilePlus2} />}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 860,
+          "endLine": 860,
+          "source": "                <Button type=\"button\" variant=\"ghost\" onClick={() => setClaimFor(null)}>"
+        },
+        {
+          "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+          "line": 41,
+          "endLine": 55,
+          "source": "  const independentEditor = editing && !dataState.hasData;"
+        }
+      ],
+      "mechanism": "Local draft/formOpen/claimFor/claimDraft state survives header vehicle changes. Coverage submit uses current vehicleId, whereas claim submit uses retained claimFor with no current-vehicle check. Cancel claim retains claimDraft; reopening a different warranty reuses it. Independent editor support deliberately preserves children.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "A: enter a synthetic coverage draft, switch header to B: submit binds that draft to B. Open claim for A1, cancel, open A2: prior claim text/status/amount remains. Open claim A1 then switch vehicle B: target stays A1. No action executed."
+      },
+      "fix": "Bind drafts and targets to stable vehicle/warranty IDs; visibly retain-and-block or explicitly discard with existing confirmation; validate scope at submit and protect late success callbacks from closing newer edits.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-02",
+      "rule": "missing-live-mode-guard",
+      "priority": "P1",
+      "title": "Three warranty writes omit existing client live-mode guard",
+      "owner": "ownership-hooks",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 442,
+          "endLine": 450,
+          "source": "    mutationFn: (body: CreateWarrantyRequest) =>"
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 460,
+          "endLine": 460,
+          "source": "    mutationFn: (id: number) => request<void>(`${WARRANTY}/warranties/${id}`, { method: 'DELETE' }),"
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 474,
+          "endLine": 478,
+          "source": "    mutationFn: (body: CreateClaimRequest) =>"
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 348,
+          "endLine": 358,
+          "source": "export async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {"
+        },
+        {
+          "file": "web/src/lib/operationalMode.ts",
+          "line": 66,
+          "endLine": 76,
+          "source": "export function assertOperationalWriteAllowed("
+        }
+      ],
+      "mechanism": "All three request options omit requiresLiveMode. request defaults it false; assertOperationalWriteAllowed returns before checking historical/offline mode when false. PageContainer only displays its mode badge; page has no action gate. This proves this guard omission, not successful writes, permissions or an offline replay queue.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Trace POST/DELETE options to request false default and operationalMode:71 early return. Future separately authorized synthetic as_of-mode test should reject locally; no mode/request changed here."
+      },
+      "fix": "Use existing requiresLiveMode:true and operational-mode disabled explanations for create/delete/claim; preserve fail-fast feedback, no replay queue.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-03",
+      "rule": "mobile-data-action-loss",
+      "priority": "P1",
+      "title": "Mobile table allow-lists remove fields and Claim/Remove actions",
+      "owner": "warranty-page",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 641,
+          "endLine": 645,
+          "source": "          source={warrantiesQuery}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 788,
+          "endLine": 796,
+          "source": "            mobileColumns={['label', 'start', 'term']}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 870,
+          "endLine": 879,
+          "source": "          <DataTable"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 733,
+          "endLine": 744,
+          "source": "  const effectiveMobileColumns = useMemo(() => {"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1404,
+          "endLine": 1416,
+          "source": "      {mobileActive && mobilePresentation ? ("
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1180,
+          "endLine": 1185,
+          "source": "              colHiddenClass(col.key),"
+        }
+      ],
+      "mechanism": "All tables supply mobileColumns without mobilePresentation, expansion, detail links or alternative actions. DataTable marks excluded cells hidden md:table-cell; complete-details adapter is conditional on mobilePresentation. Excluded: readiness detail; warranty floor/deductible/actions; claim amount/evidence note. Column layout preferences do not override the mobile exclusion class.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Below declared md=768px inspect mobile allow-list versus columns: Claim and Remove actions are excluded, as are the listed fields. Source CSS path confirmed; viewport/browser behavior NOTRUN."
+      },
+      "fix": "Adopt existing typed DataTable.mobilePresentation with all details and reachable actions, or preserve complete fields/actions in explicit contained scroll. Keep IDs, filters, preferences, export scope and order.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-04",
+      "rule": "hidden-section",
+      "priority": "P2",
+      "title": "Unknown battery retention hides the warranty-floor subsection",
+      "owner": "warranty-page",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 490,
+          "endLine": 514,
+          "source": "      {coverage.capacity_retention_pct != null ? ("
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 588,
+          "endLine": 593,
+          "source": "  binding_limit: string;"
+        }
+      ],
+      "mechanism": "Entire battery retention Card is conditional on non-null retention, even for recorded battery warranty with known floor. Unknown facts remove the section instead of explicit unknown content.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Trace battery warranty with capacity_floor_pct=70 and capacity_retention_pct=null: section condition selects null."
+      },
+      "fix": "Keep relevant battery subsection shell and explicit unknown retention/headroom; non-battery not-applicable metadata may remain conditional.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-05",
+      "rule": "business-date-fallback",
+      "priority": "P2",
+      "title": "Missing/invalid coverage start becomes the current instant",
+      "owner": "ownership-formatters",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/formatters.ts",
+          "line": 144,
+          "endLine": 147,
+          "source": "export function fromDateInput(value: string): string {"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 689,
+          "endLine": 700,
+          "source": "                value={toDateInput(draft.start_at)}"
+        }
+      ],
+      "mechanism": "fromDateInput returns current ISO time for empty/invalid input; controlled draft stores it and renders a valid current date. Missing business fact bypasses empty required-field validation.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Trace Coverage start onChange with empty string: fromDateInput selects now, toDateInput renders nonempty current date. No native control exercised."
+      },
+      "fix": "Preserve empty/invalid input and block submission through existing validation; retain valid wire date semantics, never fabricate today.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-06",
+      "rule": "misleading-empty-state",
+      "priority": "P2",
+      "title": "No readiness returned is described as no coverage recorded",
+      "owner": "warranty-page",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 164,
+          "endLine": 172,
+          "source": "  const allChecks = useMemo("
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 621,
+          "endLine": 626,
+          "source": "          )}"
+        }
+      ],
+      "mechanism": "allChecks flattens readiness??[]; empty checks can coexist with recorded coverages. Empty message says no coverage recorded regardless of that distinction.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Trace one valid coverage with readiness=null or []: checklist says no coverage while burn-down/register shows it."
+      },
+      "fix": "Distinguish no coverage from unavailable/not-evaluated readiness; preserve shell and truthful next step.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-07",
+      "rule": "unstable-row-identity",
+      "priority": "P2",
+      "title": "Readiness keys rely on nonunique editable warranty labels",
+      "owner": "warranty-page",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 164,
+          "endLine": 172,
+          "source": "  const allChecks = useMemo("
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 644,
+          "endLine": 644,
+          "source": "          empty={warranties.length === 0 && !formOpen}"
+        }
+      ],
+      "mechanism": "Flattened checks retain warrantyLabel but not warranty ID; key label-code collides for distinct warranties with identical labels and the same check code. Native reconciliation consequence not observed.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Two different warranty IDs with label Shield and code recorded produce the same Shield-recorded key; frontend has no label uniqueness declaration."
+      },
+      "fix": "Carry warranty.id and key checks by ID+code, keeping human labels only for display.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-08",
+      "rule": "hardcoded-string",
+      "priority": "P2",
+      "title": "Known severity/kind/binding labels bypass i18n at five sites",
+      "owner": "warranty-page",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 259,
+          "endLine": 259,
+          "source": "      render: (row) => <Badge variant={severityTone(row.severity)}>{row.severity}</Badge>,"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 333,
+          "endLine": 333,
+          "source": "            {row.provider} · {row.kind}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 425,
+          "endLine": 425,
+          "source": "            </Text>"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 472,
+          "endLine": 472,
+          "source": "              {coverage.binding_limit}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 664,
+          "endLine": 664,
+          "source": "                options={KINDS.map((kind) => ({ value: kind, label: kind }))}"
+        }
+      ],
+      "mechanism": "Raw machine enums appear in severity badge, both kind displays, binding badge and kind options. These are known UI labels, not user/provider free text.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Trace non-English locale with battery/critical/distance: five sites emit raw tokens while surrounding text translates."
+      },
+      "fix": "Reuse canonical enum mappings; parent owns only genuinely missing catalog labels; preserve wire values and unknown future-token fallback.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-09",
+      "rule": "hardcoded-string",
+      "priority": "P2",
+      "title": "Claim ledger omits existing translated status labels",
+      "owner": "warranty-page",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 67,
+          "endLine": 73,
+          "source": "const CLAIM_STATUS_LABELS: Record<ClaimStatus, (t: TFunction) => string> = {"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 284,
+          "endLine": 284,
+          "source": "      render: (row) => <VerdictBadge value={row.status} />,"
+        },
+        {
+          "file": "web/src/features/ownership/components/VerdictBadge.tsx",
+          "line": 118,
+          "endLine": 124,
+          "source": "export function VerdictBadge({ value, label, dot = true }: VerdictBadgeProps) {"
+        }
+      ],
+      "mechanism": "Form translates all five claim statuses. Ledger supplies only VerdictBadge.value; draft/submitted/approved/denied/closed are absent from its known map, so fallback is untranslated. Neutral tone is not counted as an error or verified approval.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Trace submitted in non-English locale: form maps through t, ledger outputs submitted."
+      },
+      "fix": "Pass existing CLAIM_STATUS_LABELS[row.status](t) through label prop; do not remigrate completed41-verdict map or imply provider verification.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-10",
+      "rule": "hardcoded-string",
+      "priority": "P2",
+      "title": "Evidence quality badge emits raw known status",
+      "owner": "ownership-evidence",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 69,
+          "endLine": 73,
+          "source": "          {quality ? ("
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 12,
+          "endLine": 12,
+          "source": "export type QualityStatus = 'sufficient' | 'limited' | 'insufficient';"
+        }
+      ],
+      "mechanism": "Closed sufficient/limited/insufficient enum is rendered directly despite existing canonical ownership.verdict translations.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Trace sufficient with non-English locale: badge child remains raw token."
+      },
+      "fix": "Reuse existing VerdictBadge/quality labels once at EvidencePanel owner; preserve tones, reasons, source states and evidence arrays.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-11",
+      "rule": "hardcoded-string",
+      "priority": "P2",
+      "title": "Delete confirmation Cancel uses English shared default",
+      "owner": "confirm-dialog",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 143,
+          "endLine": 154,
+          "source": "    const ok = await confirm({"
+        },
+        {
+          "file": "web/src/hooks/useConfirm.ts",
+          "line": 99,
+          "endLine": 105,
+          "source": "  }, []);"
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 78,
+          "endLine": 78,
+          "source": "  cancelLabel = 'Cancel',"
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 171,
+          "endLine": 172,
+          "source": "          <Button type=\"button\" variant=\"secondary\" wrapLabel className=\"min-h-11 md:min-h-10\" onClick={onCancel} disabled={loading}>"
+        }
+      ],
+      "mechanism": "Page omits cancelLabel; useConfirm forwards undefined; ConfirmDialog defaults to literal Cancel and renders it directly. Mandatory danger confirmation remains intact.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Trace handleRemove options in non-English locale to default Cancel."
+      },
+      "fix": "Localize undefined shared default with common.cancel, or supply translated caller cancelLabel; preserve explicit overrides, danger, typed and silence policies.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "id": "WC-12",
+      "rule": "preference-bypass",
+      "priority": "P2",
+      "title": "Eight date displays ignore saved locale",
+      "owner": "warranty-page",
+      "confidence": "confirmed-source",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 289,
+          "endLine": 289,
+          "source": "      filterValueLabel: (_value, row) => formatDateTime(row.opened_at),"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 293,
+          "endLine": 293,
+          "source": "          {formatDateTime(row.opened_at)}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 341,
+          "endLine": 341,
+          "source": "      filterValueLabel: (_value, row) => formatDateTime(row.start_at),"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 346,
+          "endLine": 346,
+          "source": "            {formatDateTime(row.start_at)}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 456,
+          "endLine": 456,
+          "source": "            when: formatDateTime(coverage.time_expiry_at),"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 477,
+          "endLine": 477,
+          "source": "              when: formatDateTime(coverage.projected_expiry_at),"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 509,
+          "endLine": 509,
+          "source": "                when: formatDateTime(coverage.capacity_floor_breach_at),"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 578,
+          "endLine": 578,
+          "source": "                rawValue: overview?.next_expiry_at ? formatDateTime(overview.next_expiry_at) : null,"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 43,
+          "endLine": 61,
+          "source": ""
+        },
+        {
+          "file": "web/src/hooks/useUnits.ts",
+          "line": 127,
+          "endLine": 143,
+          "source": ""
+        }
+      ],
+      "mechanism": "Page formatDateTime calls omit options. dateFormat intlLocale(undefined) returns undefined and uses browser locale, unlike units/money consuming saved settings.locale. No timezone/12h setting claim.",
+      "repro": {
+        "execution": "NOTRUN; source trace/synthetic description only",
+        "steps": "Trace saved locale fr-FR with browser en-US: eight page date outputs use browser formatting while amount/distance use saved locale."
+      },
+      "fix": "Pass existing effective locale/preference options to shared date formatter; preserve instants and independent business dates, no new formatter.",
+      "nativeAcceptance": "NOTRUN"
+    }
+  ],
+  "commandsPreLog": [
+    {
+      "time": "2026-10-14T02:12:47.0896620Z",
+      "command": "Get-Date -AsUTC -Format o; root/docs governance listings; AGENTS.md ancestor checks",
+      "exit": 0
+    },
+    {
+      "command": "git -C D:\\repos\\teslasync --no-pager status --short; audit/ownership file listings",
+      "exit": 0,
+      "raw_output_path": "C:\\Users\\AtulM\\AppData\\Local\\Temp\\1791943967268-copilot-tool-output-8156-934a827f-c1f6-469e-a557-54ba06fe55e2.txt"
+    },
+    {
+      "command": "Get-Item required governance paths; rg --files --hidden -g AGENTS.md -g *instructions* -g !node_modules -g !.git D:\\repos\\teslasync",
+      "exit": 1,
+      "raw_output": "rg: The term rg is not recognized as a name of a cmdlet, function, script file, or executable program. instruction_discovery_exit was not printed."
+    },
+    {
+      "command": "Python instruction discovery and bounded relevant governance search (inline, source-only)",
+      "exit": 0,
+      "raw_output_path": "C:\\Users\\AtulM\\AppData\\Local\\Temp\\1791944000426-copilot-tool-output-8156-f59d5a83-8fdb-4c15-811f-a088f257b961.txt"
+    },
+    {
+      "command": "Python exact queue/handoff/mission ranges and direct support/test discovery (inline, source-only)",
+      "exit": 0,
+      "raw_output_path": "C:\\Users\\AtulM\\AppData\\Local\\Temp\\1791944018833-copilot-tool-output-8156-9b166d17-42e2-4b87-8d47-f54f59de1462.txt"
+    },
+    {
+      "command": "Get-Content ownership/components/index.ts; Get-ChildItem operationalbrief-all; Get-Item page/test/hooks/types; Select-String design-contract ownership/policy/verified/business date/initial-paused",
+      "exit": 0,
+      "raw_output": "Ownership component barrel exports EvidencePanel, GhostDrivesPanel, MoneyInput, MutationError, OwnershipPanel, SiNumberInput, StatGrid, VerdictBadge; raw Select-String output was formatting-obscured by preceding tabular output; relevant contract search must be rerun separately, not counted clean."
+    }
+  ],
+  "evidenceLimits": [
+    "Source-only confirmed mechanism, NOT executed reproduction or backend consequence.",
+    "Only exact JSON/log writable; no real data/actions.",
+    "No tests/compiler/visual/native/runtime pass claimed.",
+    "Shared supports read only in relevant ranges, not whole recursive app audit.",
+    "Inherited dirty worktree preserved; no Git writes.",
+    "Future synthetic repro descriptions need separate authorization.",
+    "Two discovery failures and oversized-command exit1 honestly retained; historical test log absent."
+  ],
+  "literalCatalogCheck": {
+    "presentCallSites": 131,
+    "missing": [],
+    "uniqueKeys": 123,
+    "method": "Read-only Python literal-key lookup against existing canonical English and ownership split; not catalog helper execution or real i18n runtime."
+  },
+  "summary": {
+    "confirmedFindingCount": 12,
+    "confirmedByRule": {
+      "scope-draft-binding": 1,
+      "missing-live-mode-guard": 1,
+      "mobile-data-action-loss": 1,
+      "hidden-section": 1,
+      "business-date-fallback": 1,
+      "misleading-empty-state": 1,
+      "unstable-row-identity": 1,
+      "hardcoded-string": 4,
+      "preference-bypass": 1
+    },
+    "confirmedByPriority": {
+      "P1": 3,
+      "P2": 9
+    },
+    "hardcodedStringDistinctRenderSites": 8,
+    "countMethod": "One confirmed root mechanism each; WC08 aggregates five distinct sites; support citations are not extra violations. Candidates excluded.",
+    "conditionalCandidateCount": 6,
+    "nativeCandidateCount": 2,
+    "deduplicatedOwnerNeeds": 6,
+    "priorityFixes": [
+      "WC-01 scope binding",
+      "WC-02 live-mode guard",
+      "WC-03 complete mobile fields/actions"
+    ]
+  },
+  "commandFailures": [
+    {
+      "command": "rg instruction discovery",
+      "exit": 1,
+      "raw": "The term rg is not recognized as a name of a cmdlet, function, script file, or executable program."
+    },
+    {
+      "command": "Python governance excerpt with default console encoding",
+      "exit": 1,
+      "raw": "UnicodeEncodeError: cp1252 cannot encode Unicode arrow. Partial output logged; remaining reads continued with python -X utf8."
+    },
+    {
+      "command": "Oversized inline PowerShell report-writing invocation (tool shell2578)",
+      "exit": 1,
+      "raw": "The filename or extension is too long. (os error 206)",
+      "effects": "Invocation did not execute; no report/script/helper file created. This smaller exact artifact-only command continues document generation; no tests rerun."
+    }
+  ],
+  "page": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+  "routes": [
+    "/ownership/warranty-command"
+  ],
+  "log": "web/logs/phase6-qa-ownership-warranty-command.log",
+  "authorizedWritableFiles": [
+    "docs/frontend-audits/phase6-qa-ownership-warranty-command.json",
+    "web/logs/phase6-qa-ownership-warranty-command.log"
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C-01",
+      "rule": "currency-contract",
+      "owner": "G156-integration",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 162,
+          "source": "  const currency = overview?.currency ?? draft.currency;"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 176,
+          "source": "    () =>"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 305,
+          "source": "        <span className=\"tabular-nums\">"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 841,
+          "source": "                value={claimDraft.amount_minor}"
+        }
+      ],
+      "detail": "Claims are flattened without parent currency; editor and ledger use overview.currency or unsaved coverage draft currency. Existing inventory G156/P297 already owns parent-currency/aggregate ambiguity. Backend normalization not inspected; no real total calculated or financial defect claimed. Synthetic mixed-currency verification needs that existing owner, not invented conversion."
+    },
+    {
+      "id": "C-02",
+      "rule": "business-date-civil-policy",
+      "owner": "ownership-formatters",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/formatters.ts",
+          "line": 140,
+          "source": "  return parsed.toISOString().slice(0, 10);"
+        },
+        {
+          "file": "web/src/features/ownership/formatters.ts",
+          "line": 146,
+          "source": "  const parsed = new Date(`${value}T00:00:00.000Z`);"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 57,
+          "source": "  if (isNaN(d.getTime())) return '—'"
+        }
+      ],
+      "detail": "UTC-midnight yyyy-mm-dd can display the prior local calendar day in negative-offset zones. Backend civil-date versus instant policy not inspected; no confirmed contract/date error from this ambiguity. Valid business-date contract must be preserved."
+    },
+    {
+      "id": "C-03",
+      "rule": "inactive-sort-declaration",
+      "owner": "warranty-page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 296,
+          "source": "      sortable: true,"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 870,
+          "source": "          <DataTable"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1571,
+          "source": "                      {col.sortable && onSort ? ("
+        }
+      ],
+      "detail": "Opened declares sortable:true but page supplies no onSort. DataTable exposes sort button only with onSort and does not sort incoming data. Inert source declaration confirmed, but required sorting feature intent/native action not established."
+    },
+    {
+      "id": "C-04",
+      "rule": "policy-versus-verified-copy",
+      "owner": "warranty-page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 535,
+          "source": "      subtitle={t("
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 549,
+          "source": "      </AlertBanner>"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 620,
+          "source": "            'Each requirement is evaluated against data already on this server, so you know what a reviewer would find.',"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 906,
+          "source": "              'Interpreting contract exclusions — readiness is factual, not legal advice',"
+        }
+      ],
+      "detail": "Readiness/evidence-surviving-review copy is stronger than returned recorded-term assessment. Explicit contract-documents/not-legal-advice/no-provider-filing notices mitigate it. Editorial/domain review needed, not an actual policy/provider/claim acceptance judgment."
+    },
+    {
+      "id": "C-05",
+      "rule": "invalid-readiness-score",
+      "owner": "warranty-page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 437,
+          "source": "            className={`tabular-nums text-lg font-semibold ${"
+        },
+        {
+          "file": "web/src/lib/numberFormat.ts",
+          "line": 60,
+          "source": "/** Safe number extraction from unknown values, returns 0 for nullish/NaN */"
+        }
+      ],
+      "detail": "Direct fmtNumber score can coerce malformed nonfinite/nullish data to zero. Type contract requires number; no malformed API value observed. Future synthetic robustness/unknown test, not measured backend defect."
+    },
+    {
+      "id": "C-06",
+      "rule": "duration-calendar-copy-localization",
+      "owner": "ownership-formatters",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/formatters.ts",
+          "line": 117,
+          "source": "  if (abs < 3600) return `${sign}${fmtNumber(abs / 60)} min`;"
+        },
+        {
+          "file": "web/src/features/ownership/formatters.ts",
+          "line": 120,
+          "source": "  return `${sign}${fmtNumber(abs / 31557600)} y`;"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 119,
+          "source": "    term_days: 1460,"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 719,
+          "source": "              <SiNumberInput"
+        }
+      ],
+      "detail": "Coarse fixed seconds and min/h/d/y glyphs, default1460days versus hint1461days need notation/calendar-copy review. min/h/d conventional symbols not blindly counted as English prose. No real contractual term inferred."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "N-01",
+      "owner": "existing-native-QA-owners",
+      "evidence": [
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 36,
+          "source": "  sm: 'h-9 px-3 text-sm',"
+        },
+        {
+          "file": "web/src/components/ui/Input.tsx",
+          "line": 32,
+          "source": "  lg: 'min-h-12 px-4 py-2.5 text-base',"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 400,
+          "source": "          >"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 769,
+          "source": "                  value={draft.notes}"
+        }
+      ],
+      "detail": "sm h-9/md h-10 and Input min-h-10 are declared; composed sizes/spacing exceptions unmeasured. Verify44px hit regions, all mission widths/narrow containers, long RTL,200%text, keyboard/focus/overlays, safe areas, contrast, forced colors/reduced motion. No browser/native acceptance."
+    },
+    {
+      "id": "N-02",
+      "owner": "warranty-page",
+      "evidence": [
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 645,
+          "source": "          emptyMessage={t('ownership.warranty.list.empty', 'No warranties recorded yet.')}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 795,
+          "source": "        </OwnershipPanel>"
+        },
+        {
+          "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+          "line": 877,
+          "source": "            emptyMessage={t('ownership.warranty.claims.empty', 'No claims recorded yet.')}"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 947,
+          "source": "  const accessibleTableName ="
+        }
+      ],
+      "detail": "Tables have native semantics/captions, but default accessible names derive from machine tableIds because localized caption/name absent. Not anonymous; human-readable screen-reader context needs native verification."
+    }
+  ],
+  "needs": [
+    {
+      "owner": "warranty-page",
+      "files": [
+        "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+        "web/src/features/ownership/pages/WarrantyCommandPage.test.tsx"
+      ],
+      "findingIds": [
+        "WC-01",
+        "WC-03",
+        "WC-04",
+        "WC-06",
+        "WC-07",
+        "WC-08",
+        "WC-09",
+        "WC-12"
+      ],
+      "need": "One narrow explicit page claim; reuse mobilePresentation, enum label mappings and date formatter. Parent owns genuinely missing catalog labels. Not original-page remigration/third attempt."
+    },
+    {
+      "owner": "ownership-hooks",
+      "files": [
+        "web/src/api/hooks/useOwnership.ts"
+      ],
+      "findingIds": [
+        "WC-02"
+      ],
+      "need": "Existing requiresLiveMode option and bounded covering tests under parent claim."
+    },
+    {
+      "owner": "ownership-formatters",
+      "files": [
+        "web/src/features/ownership/formatters.ts"
+      ],
+      "findingIds": [
+        "WC-05"
+      ],
+      "need": "Preserve missing/invalid date; clarify civil/calendar/notation policy without real contract interpretation."
+    },
+    {
+      "owner": "ownership-evidence",
+      "files": [
+        "web/src/features/ownership/components/EvidencePanel.tsx"
+      ],
+      "findingIds": [
+        "WC-10"
+      ],
+      "inventory": "G149",
+      "need": "Localize known quality labels once at existing shared-domain owner."
+    },
+    {
+      "owner": "confirm-dialog",
+      "files": [
+        "web/src/components/ui/ConfirmDialog.tsx"
+      ],
+      "findingIds": [
+        "WC-11"
+      ],
+      "need": "Localize undefined default or provide explicit translated caller label; preserve completed primitive and danger/typed/silence semantics."
+    },
+    {
+      "owner": "G156-integration",
+      "files": [
+        "internal/app/ownershipintelsvc/warranty.go",
+        "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+        "web/src/types/ownership.ts",
+        "web/src/api/hooks/useOwnership.ts"
+      ],
+      "candidateIds": [
+        "C-01"
+      ],
+      "need": "Existing G156/P297 durable currency owner; backend file only an inventory owner citation, NOT inspected/edited. No new financial conversion."
+    }
+  ],
+  "sections": [
+    {
+      "name": "Coverage posture",
+      "source": "overview",
+      "behavior": "five raw validated metrics; source as_of and client-loaded metadata; preserved unknown summary"
+    },
+    {
+      "name": "Coverage burn-down",
+      "source": "overview",
+      "behavior": "coverage/status/readiness; bounded time/distance usage; binding/projected date/pace; battery retention/headroom; narrative/window"
+    },
+    {
+      "name": "Claim readiness checklist",
+      "source": "overview",
+      "behavior": "state/requirement/detail/severity; Yes/No accessible outcomes; empty/key/mobile issues listed"
+    },
+    {
+      "name": "Recorded coverages",
+      "source": "register",
+      "behavior": "seven columns; add/cancel/save raw SI editor; claim/remove; source-local loading/fatal/retained/retry"
+    },
+    {
+      "name": "Claim ledger",
+      "source": "overview",
+      "behavior": "five columns; record/cancel claim editor; overview owns history independent of register"
+    },
+    {
+      "name": "Evidence bundle",
+      "source": "overview",
+      "behavior": "stable digest/dash/break-all; no bundle-specific clipboard/export action declared"
+    },
+    {
+      "name": "Evidence, quality, and limitations",
+      "source": "overview",
+      "behavior": "quality/samples/coverage/window/reasons; evidence/timestamps; limitations and two not-computed legal/provider statements"
+    }
+  ],
+  "actions": [
+    {
+      "name": "Add/cancel coverage",
+      "lines": [
+        657,
+        661
+      ],
+      "mechanism": "toggle formOpen; retained draft"
+    },
+    {
+      "name": "Save coverage",
+      "lines": [
+        184,
+        187,
+        769,
+        772
+      ],
+      "mechanism": "native required inputs; raw vehicle_id,m,s,minor units; pending; success-only closes; inline error+hook toast"
+    },
+    {
+      "name": "Claim/Record/Cancel",
+      "lines": [
+        398,
+        209,
+        212,
+        857,
+        860
+      ],
+      "mechanism": "retained warranty_id; confirmed:true record acknowledgment, not provider filing; pending/success-only reset/error"
+    },
+    {
+      "name": "Remove/Delete/Cancel",
+      "lines": [
+        143,
+        145,
+        155,
+        410,
+        914
+      ],
+      "mechanism": "await named danger confirmation; permanent claims impact; mutate only true; row-specific pending; error/toast; mandatory danger not silenced"
+    },
+    {
+      "name": "Source retry",
+      "lines": [
+        553,
+        603,
+        617,
+        652,
+        807,
+        884,
+        898
+      ],
+      "mechanism": "OwnershipPanel forwards each source refetch; fatal/retained/paused isolated"
+    },
+    {
+      "name": "Review details",
+      "lines": [
+        555
+      ],
+      "mechanism": "existing OperationalBrief drawer, no fresh focus proof"
+    },
+    {
+      "name": "Table controls",
+      "lines": [
+        788,
+        870
+      ],
+      "mechanism": "existing search/value filters/density/export/layout pipeline; stable three IDs; no controls executed"
+    },
+    {
+      "name": "Header vehicle/business date",
+      "lines": [
+        109,
+        689
+      ],
+      "mechanism": "global vehicle owner; route range=false,vehicle=true; date is independent business field"
+    }
+  ],
+  "states": {
+    "loading": "Source-shaped skeletons; unknown validated summary preserved; no page loading gate passed",
+    "fatal": "Only source fatalError without retained data replaces its own body; individual retry; successful neighbor stays",
+    "retained": "Refresh failure retains payload and warning/last-success metadata; source-local retry",
+    "refreshPaused": "Explicit cached-pause wording with retained data",
+    "initialPaused": "Explicit no-empty-inference wording; opted-in unknown summary preserved",
+    "empty": "Seven shells declared; truthful warranty/claim empties; readiness message WC06",
+    "unknown": "Summary validated raw values; usage noReading/no aria-valuenow for nonfinite; nullable helpers dash. Battery subsection/date issues WC04/WC05",
+    "selection": "GET enabled positive vehicle; Save disabled null; claim target scope WC01",
+    "editing": "Independent unsaved editors intentionally survive first-read loading/failure/pause; page owns scope/live-only gates",
+    "feedback": "Declared pending/inline failure/localized success/error toasts and success-only lifecycle; NOT exercised"
+  },
+  "policyFactBoundary": {
+    "terms": "Warning says TeslaSync does not know contract; entered paperwork terms authoritative",
+    "facts": "Recorded-drive odometer and measured pace are source assertions, not independently verified",
+    "models": "Explicit projected expiry/floor breach and returned readiness; C04 copy review remains",
+    "claims": "User-recorded statuses and confirmed:true are not demonstrated provider approval/submission",
+    "evidence": "Digest/quality/source timestamps and unsupported statements displayed, not validated/downloaded/copied/submitted",
+    "unsupported": "Exclusions/legal interpretation and provider filing explicitly not computed",
+    "realDataActions": 0
+  },
+  "preferences": {
+    "SI": "Raw m/s/minor units preserved; SI inputs suffix m with preferred display hints; MoneyInput minor units plus major-equivalent hint",
+    "numbers": "useUnits/useNumberFormatting locale/precision subscriptions; date locale bypass WC12",
+    "currency": "Per-warranty currency honored for deductible; claims/aggregate ambiguity C01/G156",
+    "tables": "Three IDs preserve saved density/visibility/filters/exports; mobile exclusions WC03",
+    "dates": "Coverage start independent of workspace range; valid civil-date policy unverified C02",
+    "themeMotion": "Semantic tokens/shared reduced-motion/forced-color declarations only; no theme/preferences changed"
+  },
+  "preservation": {
+    "pageLines": 918,
+    "testLines": 397,
+    "topLevelSections": 7,
+    "ownershipPanels": 6,
+    "evidencePanels": 1,
+    "dataTables": 3,
+    "forms": 2,
+    "usageBarInvocationsPerCoverage": 2,
+    "metricBarDeclaration": 1,
+    "mutationCallSites": 3,
+    "summaryMetrics": 5,
+    "pageLayoutWrapper": 1,
+    "tableIds": [
+      "ownership-warranty-readiness",
+      "ownership-warranty-list",
+      "ownership-warranty-claims"
+    ],
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "historicalComparison": "Queue records918-line page; no Git history/baseline regeneration run."
+  },
+  "existingTestCoverage": {
+    "executed": 0,
+    "runnerDiscovered": null,
+    "passed": null,
+    "failed": null,
+    "pagePlainDeclarations": 15,
+    "supportDeclarations": [
+      {
+        "file": "OwnershipPanel.test.tsx",
+        "plain": 18
+      },
+      {
+        "file": "OwnershipBrief.test.tsx",
+        "plain": 5
+      },
+      {
+        "file": "VerdictBadge.test.tsx",
+        "plain": 3,
+        "parameterizedDeclarations": 5,
+        "executedExpansion": "NOTRUN"
+      }
+    ],
+    "coveredBySourceDeclarations": [
+      "five brief metrics/provenance",
+      "overview/register independence",
+      "fatal/retained source retry",
+      "delete confirmation/cancel/pending",
+      "seven authoritative-empty headings",
+      "bounded/nonfinite usage/signed headroom",
+      "Yes/No readiness naming",
+      "initial loading/retained pause",
+      "raw SI/confirmed record payload"
+    ],
+    "gaps": [
+      "scope rebinding/late callbacks",
+      "live-mode refusal",
+      "mobile all-fields/actions",
+      "empty-date validation",
+      "duplicate labels/keys",
+      "real non-English/date preferences/mixed currency",
+      "native a11y/mobile/contrast/RTL"
+    ],
+    "history": "Accepted queue receipt records15/15 Phase5 cases at2451c0cec3; historical only. Expected historical log absent; no current pass inferred or passing rerun."
+  },
+  "checks": {
+    "method": "Read-only regex-grep and literal catalog lookup/manual tracing, no helper runner",
+    "rawCandidateCounts": {
+      "static-inline-style": 0,
+      "raw-html": 1,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 1,
+      "hardcoded-string-candidate": 16,
+      "fetch-useeffect": 0
+    },
+    "wrapper": "0 literal PageContainer;1 PageLayout resolves to PageContainer: acceptable",
+    "exceptions": [
+      "raw-html match formatters:135 is comment",
+      "Tailwind CSS variables are not inline styles",
+      "dynamic MetricBar background allowed",
+      "shared FadeIn vendor import is expected boundary",
+      "user/provider/source narratives/reasons are not literal UI copy",
+      "optional pace/window metadata can be conditional",
+      "min/h/d unit symbols need notation context",
+      "hook request<void> regex false positives are not UI strings"
+    ],
+    "literalCatalogCheck": {
+      "presentCallSites": 131,
+      "missing": [],
+      "uniqueKeys": 123,
+      "method": "Read-only Python literal-key lookup against existing canonical English and ownership split; not catalog helper execution or real i18n runtime."
+    },
+    "backendRules": "NOT_APPLICABLE frontend scope",
+    "NOTRUN": [
+      "npx tsc --noEmit",
+      "tests/Vitest",
+      "lint/build",
+      "global/helper/preservation/style gates",
+      "browser/Playwright/screenshots/overflow/performance/native accessibility",
+      "API/provider/network/policy/claim/identity/financial/legal actions",
+      "Git writes/install/server/subagents"
+    ]
+  },
+  "authority": {
+    "orchestrator": "docs/orchestrator-loop.md fully read1-284; sole operating playbook",
+    "design": "Core1-284,400-635 plus bounded whole-file ownership/state/date searches; unrelated later followups not expanded",
+    "mission": "Relevant principles/mobile/forms/table/a11y/state and QA43-45 passages",
+    "inventory": "Warranty route and G147/G149/G156/P297/mobile integration; historical audit-page162 not current proof",
+    "handoff": "Current recovery/conventions and relevant source-only passages",
+    "queue": "Exact phase6-qa-ownership-warranty-command attempt1 plus accepted Phase5 dependency; line positions shifted concurrently by parent",
+    "instructions": [
+      ".github/copilot-instructions.md relevant frontend/integrity",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      "docs/frontend-worker-conventions.md"
+    ],
+    "returnDeadline": "2026-10-14T02:30:36.129Z",
+    "hardDeadline": "2026-10-14T02:35:36.129Z"
+  },
+  "filesRead": [
+    "web/src/api/client.ts",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/_toastHelpers.ts",
+    "web/src/api/hooks/useOwnership.ts",
+    "web/src/api/offlineCache.ts",
+    "web/src/api/queryPolicy.ts",
+    "web/src/components/data-display/MetricBar.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/SourceContent.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/ConfirmDialog.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/ui/Input.tsx",
+    "web/src/components/ui/MobileDataTableAdapter.tsx",
+    "web/src/components/ui/Select.tsx",
+    "web/src/components/ui/Textarea.tsx",
+    "web/src/features/ownership/components/EvidencePanel.tsx",
+    "web/src/features/ownership/components/MoneyInput.tsx",
+    "web/src/features/ownership/components/MutationError.tsx",
+    "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+    "web/src/features/ownership/components/OwnershipPanel.tsx",
+    "web/src/features/ownership/components/SiNumberInput.tsx",
+    "web/src/features/ownership/components/VerdictBadge.test.tsx",
+    "web/src/features/ownership/components/VerdictBadge.tsx",
+    "web/src/features/ownership/components/index.ts",
+    "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+    "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+    "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+    "web/src/features/ownership/components/operationalbrief-all/testAssertions.ts",
+    "web/src/features/ownership/formatters.ts",
+    "web/src/features/ownership/pages/WarrantyCommandPage.test.tsx",
+    "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+    "web/src/hooks/useConfirm.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-ownership.json",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/numberFormat.ts",
+    "web/src/lib/operationalMode.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/types/ownership.ts",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "docs/frontend-worker-conventions.md",
+    "migration-queue.md",
+    "docs/frontend-audits/audit-page-162.json"
+  ],
+  "hashOnlyInputs": [
+    "web/src/features/ownership/components/GhostDrivesPanel.test.tsx",
+    "web/src/features/ownership/components/StatGrid.test.tsx",
+    "web/src/lib/currencyFormat.ts",
+    "web/src/lib/tokens.ts"
+  ],
+  "responsiveAccessibility": {
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "declared": "Forms md2/xl3, metrics md3,evidence lg3; min-w-0/wrapping; localized field IDs/hints; named readiness icons/progressbars; native table headers/captions; danger confirm and source statuses.",
+    "measured": false,
+    "NOTRUN": "Composed contrast/targets/overflow/focus/keyboard/screen-reader/RTL/forced-colors/200%text/reduced-motion/narrow containers."
+  },
+  "completedAt": "2026-10-14T02:30:04.936156+00:00",
+  "sourcePinsAfter": [
+    {
+      "file": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lines": 458,
+      "bytes": 17825,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434,
+      "bytes": 15482,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/api/hooks/_toastHelpers.ts",
+      "sha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "lines": 123,
+      "bytes": 5112,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/api/hooks/useOwnership.ts",
+      "sha256": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "lines": 801,
+      "bytes": 28971,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/api/offlineCache.ts",
+      "sha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "lines": 185,
+      "bytes": 6961,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/api/queryPolicy.ts",
+      "sha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "lines": 294,
+      "bytes": 11340,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/data-display/MetricBar.tsx",
+      "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+      "lines": 93,
+      "bytes": 4359,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "lines": 321,
+      "bytes": 11591,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259,
+      "bytes": 10783,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17,
+      "bytes": 658,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines": 74,
+      "bytes": 3322,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lines": 39,
+      "bytes": 1493,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lines": 93,
+      "bytes": 5174,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/ConfirmDialog.tsx",
+      "sha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "lines": 219,
+      "bytes": 8134,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines": 1707,
+      "bytes": 77157,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "sha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "lines": 116,
+      "bytes": 4738,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "lines": 165,
+      "bytes": 9039,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lines": 119,
+      "bytes": 4432,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/Textarea.tsx",
+      "sha256": "6de5efa5b3f0077c97712be4fc7c3b436df47a4c803012cae8cb0756bad2db75",
+      "lines": 115,
+      "bytes": 4609,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "sha256": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "lines": 194,
+      "bytes": 7754,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/GhostDrivesPanel.test.tsx",
+      "sha256": "2afcba233b19f8f7bfe7b7c99c00ffeefa536a0423438a080cb81416cf06eff0",
+      "lines": 106,
+      "bytes": 3809,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/MoneyInput.tsx",
+      "sha256": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+      "lines": 52,
+      "bytes": 1440,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/MutationError.tsx",
+      "sha256": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "lines": 22,
+      "bytes": 644,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+      "sha256": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "lines": 193,
+      "bytes": 10990,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "sha256": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "lines": 88,
+      "bytes": 3318,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/SiNumberInput.tsx",
+      "sha256": "9e5942357afd0cba06ccb529f5090f4c66ae87d47d4c0f171cb5b0fd87221bee",
+      "lines": 52,
+      "bytes": 1190,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/StatGrid.test.tsx",
+      "sha256": "158ab9486d2478b48d3cd8e92fe5a72010a3504e71afd6c368eeefa822f9bff2",
+      "lines": 24,
+      "bytes": 1452,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+      "sha256": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "lines": 141,
+      "bytes": 6662,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/VerdictBadge.tsx",
+      "sha256": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "lines": 130,
+      "bytes": 4122,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/index.ts",
+      "sha256": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "lines": 8,
+      "bytes": 402,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+      "sha256": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+      "lines": 112,
+      "bytes": 6646,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "sha256": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "lines": 81,
+      "bytes": 3450,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+      "sha256": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "lines": 9,
+      "bytes": 249,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/testAssertions.ts",
+      "sha256": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+      "lines": 16,
+      "bytes": 836,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/formatters.ts",
+      "sha256": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "lines": 148,
+      "bytes": 6076,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/pages/WarrantyCommandPage.test.tsx",
+      "sha256": "d61b45b8371f9abb0886c2d4679321a3fc8252c57776bc6aea0fc7ad7d211c05",
+      "lines": 397,
+      "bytes": 17517,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/ownership/pages/WarrantyCommandPage.tsx",
+      "sha256": "15c3d2e5bb4000b266a39c63532058842f2baa654f9735b42245fae2b3805aff",
+      "lines": 918,
+      "bytes": 33855,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useConfirm.ts",
+      "sha256": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "lines": 118,
+      "bytes": 3898,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65,
+      "bytes": 2035,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines": 47,
+      "bytes": 2095,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lines": 24,
+      "bytes": 1161,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines": 174,
+      "bytes": 6593,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines": 194,
+      "bytes": 6545,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "lines": 39002,
+      "bytes": 1843667,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/i18n/en/locale-ownership.json",
+      "sha256": "58536e091cb61393df19920a9a7d60f84235553d61d8630343fe58a7da803cba",
+      "lines": 2006,
+      "bytes": 73794,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/currencyFormat.ts",
+      "sha256": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+      "lines": 271,
+      "bytes": 8924,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462,
+      "bytes": 18863,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "lines": 172,
+      "bytes": 6443,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/operationalMode.ts",
+      "sha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "lines": 89,
+      "bytes": 2495,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "lines": 439,
+      "bytes": 20093,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168,
+      "bytes": 4411,
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/types/ownership.ts",
+      "sha256": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "lines": 1106,
+      "bytes": 27171,
+      "matchesBefore": true
+    }
+  ],
+  "pinCheck": {
+    "checkedAt": "2026-10-14T02:30:35.604478+00:00",
+    "protectedInputs": 52,
+    "matches": 52,
+    "driftCount": 0,
+    "drifts": [],
+    "sourceTestCatalogWritesByAuditor": 0,
+    "baselineTiming": "Page baseline after initial reads but before substantive support review; added inputs pinned before substantive read; no baseline reset."
+  },
+  "documentValidation": {
+    "jsonParse": "PASS",
+    "counts": "PASS",
+    "exactCitationLineChecks": 76,
+    "citationDrifts": [],
+    "sourcePinCheck": "PASS",
+    "nativeOrTests": "NOTRUN"
+  },
+  "queueFinalRead": [
+    {
+      "line": 113,
+      "raw": "| [~] | 6 | phase6-qa-ownership-warranty-command | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-ownership-warranty-command.json; web\\logs\\phase6-qa-ownership-warranty-command.log | phase5-page-ownership-warranty-command | 1 | reserved02:10:36.129Z; actor pending | - | WarrantyCommandPage/direct supports; source-only, no actual policies/claims/identity/financial/provider/API actions. |"
+    }
+  ],
+  "release": {
+    "at": "2026-10-14T02:30:35.604478+00:00",
+    "artifacts": "RELEASED exact JSON and matching log after this final command completes",
+    "sourceClaims": "NONE; never acquired; no source/test/catalog/Git writes",
+    "commands": "RELEASED: all own bounded inspection/writing commands complete; no agent/helper/server/background session started",
+    "futureWrites": "NONE",
+    "returnDeadlineMetAtValidation": true
+  }
+}

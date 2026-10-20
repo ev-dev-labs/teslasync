@@ -1,0 +1,334 @@
+{
+  "item": "audit-page-034",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+  "routes": ["/intelligence/federated-learning"],
+  "purpose": "Subject-scoped local aggregate model-card inspection and explicitly confirmed privacy-budget spending.",
+  "primaryGoal": "Inspect local model history, quality and epsilon accounting; prepare and review a privacy-gated local round for the workspace-selected vehicle.",
+  "dataSources": [
+    {
+      "hook": "useFederatedModelCards",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 142,
+      "endpoint": "GET /api/v1/advanced-intelligence/federated-learning/model-cards?vehicle_id=<id>&limit=12&offset=<offset>",
+      "ownership": "Advanced-intelligence handler and service; request-authenticated subject plus selected vehicle.",
+      "routeEvidence": ["internal\\api\\router.go:3917", "internal\\handler\\v1\\advancedintelligence\\handler.go:69-81,237-255"],
+      "behavior": "Shared list helper uses vehicle/limit/offset query keys, positive-vehicle enablement and AbortSignal; raw typed payload remains in cache. Privacy totals are distinct from the paginated cards.",
+      "runtime": "unverified"
+    },
+    {
+      "hook": "useStartFederatedRound",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 204,
+      "endpoint": "POST /api/v1/advanced-intelligence/federated-learning/rounds",
+      "ownership": "Authenticated-subject advanced-intelligence service; handler validates request before service invocation.",
+      "routeEvidence": ["internal\\api\\router.go:3917", "internal\\handler\\v1\\advancedintelligence\\handler.go:81,258-278"],
+      "behavior": "requiresLiveMode=true; confirmed=true only from confirmation callback; invalidates federated list keys on success and uses mutation toasts. No mutation was invoked.",
+      "runtime": "unverified"
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "Underlying useVehicles dependency; its endpoint was not separately inspected.",
+      "ownership": "Existing workspace URL/store/fleet selection owner.",
+      "behavior": "Selected vehicle scopes reads and round payloads. workspaceScope permits vehicle selection on this route and does not enable workspace date range. Do not add a local competing selector or invent date filtering."
+    },
+    {
+      "hook": "useUnits and useNumberFormatting",
+      "file": "web\\src\\features\\advanced-intelligence\\formatters.ts",
+      "line": 10,
+      "endpoint": null,
+      "ownership": "Existing display preference and formatting owners.",
+      "behavior": "Canonical latest_metric_wh_per_m is converted only at display boundary. Epsilon is dimensionless, not percentage. Missing/nonfinite efficiency becomes an em dash."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "@/components/layout", "usage": "Existing page composition; implementation not separately inspected."},
+    {"name": "AnalysisBrief", "owner": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx", "usage": "OperationalBrief plus useOperationalMetrics; three raw epsilon metrics, scope, freshness, quality, retained-data recovery and evidence narrative."},
+    {"name": "InsightPanel", "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "usage": "LayoutCard/SourceContent/useDataState; card list and always-present training form."},
+    {"name": "EvidencePanel", "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "usage": "Quality, evidence sources, limitations and unsupported capabilities using KVList/Text/Badge/EmptyState."},
+    {"name": "MutationError", "owner": "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx", "usage": "Danger AlertBanner after the form."},
+    {"name": "Table", "owner": "web\\src\\components\\ui\\Table.tsx", "usage": "Semantic four-row model metadata matrix with owned horizontal scrolling; no export/sort/selection pipeline is currently present."},
+    {"name": "Input, Select, Button, Badge, Pagination, Text", "owner": "@/components/ui", "usage": "Five inputs, one task select, round-review action, per-card prefill, statuses, pagination and role typography."},
+    {"name": "ConfirmDialog", "owner": "web\\src\\components\\ui\\ConfirmDialog.tsx", "usage": "Existing Modal owner, localized confirmation, loading guard, no silenceKey. Has existing details and confirmDisabled props."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "usage": "Four source sections; existing reduced-motion branch, no page-direct motion import."},
+    {"name": "AlertBanner", "owner": "@/components/feedback", "usage": "Privacy policy statement; icon is decorative and aria-hidden."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+      "line": 130,
+      "rule": "MDC-015 existing surfaces",
+      "detail": "Model cards hand-compose a fixed-white surface; EvidencePanel uses a similar fixed-white evidence surface at line 81. Existing shared panel/table variants should be reused rather than inventing a new model-card design system.",
+      "fix": "Reuse existing surface tokens/primitives and Table embedded variant while preserving article semantics and all metadata.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "observedSource": [
+      "Page:128 card grid is one column until lg, then two.",
+      "Page:200 form reflows to two columns at md and three at xl.",
+      "EvidencePanel:42 has one column until lg, then three.",
+      "Table:21-25 owns horizontal scrolling rather than leaving the table unconstrained."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+        "line": 131,
+        "rule": "MDC-043 long-content containment",
+        "detail": "Card heading and version/task flex child lack explicit min-w-0 or long-token wrapping. Model names may be 120 characters, so unbroken names and long translations are a concrete narrow-container test obligation, not proven runtime overflow.",
+        "fix": "Retain all names/version/task/status content; apply shared wrapping/min-width conventions if narrow-container testing confirms overflow.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportTesting": "unverified at 320/375/390/430/768/1024/1280/1440/1920/2560; RTL, 200% text and long content not exercised"
+  },
+  "accessibility": {
+    "observedSource": [
+      "Inputs/Select use localized labels and native required/range constraints.",
+      "Card metadata uses semantic Table and th scope=row.",
+      "Existing ConfirmDialog delegates overlay behavior to Modal and disables actions during loading.",
+      "FadeIn has source-confirmed reduced-motion behavior.",
+      "Page copy is localized using existing t keys/fallbacks; server model/status/source strings remain source data."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+        "line": 140,
+        "rule": "MDC-040 contextual accessible names",
+        "detail": "Every model metadata table has the same page-title aria-label, and every prefill button at line 181 has the same name without model context.",
+        "fix": "Add localized model-specific table/button context through existing aria-label/labelledby composition, preserving visible source identity and button behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+        "line": 253,
+        "rule": "MDC-024/MDC-026 accessible mutation recovery",
+        "detail": "MutationError is outside ConfirmDialog. Failure does not close the dialog (only onSuccess at line 75 does), so request error details remain behind the modal rather than beside its retry confirmation action.",
+        "fix": "Render the existing error presentation inside ConfirmDialog details while it is open, with explicit retry/review guidance; retain the outside form error and do not bypass confirmation.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "keyboardFocusScreenReader": "unverified",
+    "contrastForcedColorsTouchTargets": "unverified; no contrast failure inferred from token names"
+  },
+  "states": {
+    "initialLoading": "AnalysisBrief derives loading; query-aware InsightPanel delegates source loading. Form and evidence section remain present.",
+    "empty": "Resolved empty model cards use localized EmptyState. No-vehicle budget has a select-vehicle message; card-list no-vehicle message instead says no model cards.",
+    "error": "AnalysisBrief has fatal ErrorDisplay and retry; InsightPanel passes fatal error/retry to SourceContent; mutation errors use MutationError.",
+    "retainedStale": "AnalysisBrief preserves metrics and shows retained notice/retry. InsightPanel maps stale data to retained but does not pass refresh error or a retained explanation; underlying SourceContent implementation was not inspected.",
+    "offlinePaused": "AnalysisBrief/InsightPanel have explicit paused-initial-query text. General offline visuals and mutation offline handling were not exercised.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+        "line": 259,
+        "rule": "MDC-032/MDC-046 workspace-bound mutation provenance",
+        "detail": "Evidence prefers persistent mutation.data over current query data. Vehicle changes do not reset mutation, form or confirmation. A previous vehicle's round evidence can therefore remain beside a new vehicle's cards; confirmRound reads the current vehicleId rather than the vehicle captured when review opened.",
+        "fix": "Bind draft, confirmation and mutation evidence to their originating vehicle/request snapshot. On workspace change, close/invalidate unsubmitted review and prevent cross-scope evidence presentation; do not erase an in-flight result or submit anything automatically.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedLines": [37, 39, 40, 41, 66, 71, 74, 171, 260]
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+        "line": 39,
+        "rule": "MDC-032 scoped pagination",
+        "detail": "Page index persists when workspace vehicle changes, while the query offset at line 49 follows that index. Selecting a vehicle with fewer cards from a later page can yield an empty list with pagination hidden by total <= 12.",
+        "fix": "Reset or scope page index on vehicle change, preserving PAGE_SIZE and server pagination.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "line": 39,
+        "rule": "MDC-026 retained-data trust",
+        "detail": "The retained state is forwarded, but refresh errors and explicit source freshness/retry notice are not forwarded or rendered; only fatalError is supplied at line 63. The budget brief already provides explicit retained recovery; model cards lack equivalent caller-visible provenance.",
+        "fix": "Extend this existing domain owner to compose retained-source notice/retry and refresh-error metadata without replacing retained cards or independent form content. Inspect SourceContent first to avoid duplicate notices.",
+        "owner": "shared",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "line": 68,
+        "rule": "MDC-026 unresolved versus unsupported",
+        "detail": "EvidencePanel has no query/scope state. Missing quality says unsupported; missing evidence says none returned even during initial pending reads or no selected vehicle. Those are stronger conclusions than unresolved availability.",
+        "fix": "Pass source/scope trust state through the existing EvidencePanel and preserve its three subsections; distinguish unresolved, absent metadata, resolved empty and retained evidence.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+      "line": 130,
+      "rule": "MDC-010/MDC-015 theme-aware restrained surfaces",
+      "detail": "Fixed border-white/[0.08] and bg-white/[0.025] compose the model-card surface independently of semantic surface/border tokens. EvidencePanel:81 repeats this approach. No page neon/glow/gradient was found.",
+      "fix": "Use existing semantic surface/border conventions with calm neutral hierarchy; retain explicit user theme choices, model identity and all rows. Consider Table variant=embedded to avoid duplicate framed surfaces.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+      "line": 136,
+      "rule": "MDC-025 meaningful status semantics",
+      "detail": "Every non-completed or missing latest_status gets warning tone; 'No round' is presented as warning. This conflates absence with warning and cannot communicate any actual failure distinct from other source states.",
+      "fix": "Preserve raw status text; derive neutral for unknown/no-round and existing semantic Badge tones for explicitly known backend statuses only. Do not invent status capabilities.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+      "line": 52,
+      "rule": "MDC-045 preserve specialist source accounting",
+      "detail": "The page currently keeps raw privacy totals separate from pagination and converts efficiency only at render. Modernization must not substitute card-count-derived budgets, epsilon percentages, invented global-model output or source-unit cache values.",
+      "fix": "Retain existing dimensionless accounting, SI helper, source query ownership, invalidation and live-only confirmed mutation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "order": [
+      "Workspace-bound review and mutation provenance",
+      "Pagination scope reset and visible dialog mutation recovery",
+      "Unresolved/retained evidence trust",
+      "Neutral semantic surfaces/statuses and contextual names",
+      "Centralized responsive/accessibility acceptance"
+    ],
+    "scope": "Read-only findings, not implementation or runtime acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing InsightPanel retained-source recovery",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "propsVariantsStates": "Keep query DataStateSource, empty, retry and sourceState API; compose existing retained warning/retry and refresh-error metadata without hiding retained children.",
+      "usedBy": ["FederatedLearningStudioPage model-card section", "EvidencePanel composition"],
+      "dependsOn": ["Existing useDataState/DataStateSource", "Existing SourceContent behavior inspection", "Existing AlertBanner/Button"],
+      "implementation": "not performed"
+    },
+    {
+      "name": "Existing EvidencePanel source/scope-aware presentation",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Add optional source/scope state using existing trust contract; support initial pending/paused, resolved missing metadata, resolved empty, retained and failed while keeping quality/evidence/limitations/unsupported sections.",
+      "usedBy": ["FederatedLearningStudioPage evidence section"],
+      "dependsOn": ["Existing InsightPanel", "Scope-bound page evidence selection", "Existing source-state presentation and canonical localization"],
+      "implementation": "not performed; only this page's use was semantically audited, not all domain consumers"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+      "line": 130,
+      "rule": "MDC-002 one surface system",
+      "detail": "Local article surface competes with the existing panel/surface system. No competing query, selector, date picker, formatting engine or overlay library was observed in this page.",
+      "fix": "Reuse existing tokens and primitives, not a new FederatedCard library.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "31B96A1592F471E662D293C276263D80860EFD4B2BB094B4D707EDA45023F27F",
+    "hashAlgorithm": "SHA256",
+    "sourceHashPath": "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+    "currentLineCount": 286,
+    "sections": [
+      {"name": "Privacy policy statement", "line": 87, "count": 1},
+      {"name": "Subject privacy budget OperationalBrief", "line": 99, "count": 1, "metrics": ["total epsilon budget", "epsilon spent", "epsilon remaining, floored at zero"]},
+      {"name": "Subject-scoped model cards and pagination", "line": 119, "count": 1, "rowsPerCard": ["epsilon spent/budget", "round count", "latest local sample count", "local aggregate efficiency"]},
+      {"name": "Privacy-gated local training form", "line": 192, "count": 1, "fields": ["model_name", "model_version", "task", "epsilon", "epsilon_budget", "expected_version"]},
+      {"name": "Evidence, quality and limitations", "line": 258, "count": 1, "subsections": ["Data quality", "Evidence sources", "Limitations and explicitly unsupported capabilities"]},
+      {"name": "Explicit local privacy-spend confirmation", "line": 269, "count": 1}
+    ],
+    "sectionCount": 5,
+    "overlayCount": 1,
+    "openingElementCounts": {"AnalysisBrief": 1, "InsightPanel": 2, "EvidencePanel": 1, "AlertBanner": 1, "ConfirmDialog": 1, "FadeIn": 4, "GlassPanel": 0, "ChartContainer": 0},
+    "actions": [
+      "Select workspace vehicle through existing shell owner",
+      "Change server-paginated model-card page",
+      "Use model card to prefill all round fields and expected version",
+      "Edit five inputs and task select with existing native validation",
+      "Review privacy spend without submission",
+      "Cancel confirmation",
+      "Explicitly confirm a live-only local round",
+      "Retry read source through existing trust components",
+      "Receive mutation error/success feedback and invalidate federated queries"
+    ],
+    "dataBehavior": [
+      "PAGE_SIZE=12 and offset=(page-1)*12",
+      "Initial version v1, task efficiency, epsilon 0.1, budget 2, expected version 0",
+      "Prefill epsilon clamps to min(0.1,max(0.01,budget-spent)); preserve pending explicit product review of this behavior rather than silently changing calculations",
+      "Requested epsilon 0.01..5 step 0.01; budget min=requested epsilon, max 20 step 0.01; expected version min 0",
+      "Unknown aggregate/sample values remain em dash, not zero",
+      "Privacy statement uses returned text with existing fallback policy",
+      "No raw-data/gradient upload and no centralized fleet model/cross-subject access are explicitly presented as unsupported",
+      "Evidence currently prefers mutation metadata over read metadata; scope correction must retain both sources with truthful provenance",
+      "No existing page export, chart, history drilldown or date-range capability was observed; do not invent one"
+    ],
+    "workspace": {"vehicle": true, "dateRange": false, "evidence": "web\\src\\lib\\workspaceScope.ts:23-78,97-140,156-167"},
+    "sourceChanged": false
+  },
+  "evidenceLimits": {
+    "method": "Bounded static source inspection only; page-specific dependencies and route registration trace.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Route and handler contract source-confirmed only; service/database execution, actual privacy behavior and server unit payloads not exercised.",
+    "validation": "No model-training submission, app invocation, Git, queue edit, source edit, full build, lint or TypeScript run. Mandatory audit skill script was inspected but not executed because it includes package-wide TypeScript; targeted case-sensitive source checks were used instead.",
+    "targetedSourceChecks": {
+      "command": "PowerShell Get-Content of assigned page with Select-String -CaseSensitive for style=, prohibited lowercase controls/table, direct chart/map/motion imports, neon/glow/gradient and fixed-white surfaces; section opening counts",
+      "exitCode": 0,
+      "output": [
+        "style= => 0 matching lines (case sensitive)",
+        "<(button|input|textarea|select|table)\\b => 0 matching lines (case sensitive)",
+        "from .(recharts|react-leaflet|framer-motion). => 0 matching lines (case sensitive)",
+        "text-neon-|shadow-glow|bg-gradient => 0 matching lines (case sensitive)",
+        "border-white|bg-white => 1 matching lines (case sensitive)",
+        "<AnalysisBrief\\b => 1",
+        "<InsightPanel\\b => 2",
+        "<EvidencePanel\\b => 1",
+        "<AlertBanner\\b => 1",
+        "<ConfirmDialog\\b => 1",
+        "<GlassPanel\\b => 0",
+        "<ChartContainer\\b => 0"
+      ],
+      "limitations": "These are matching-line counts for the named patterns, not a zero-violations or compile certificate. An earlier PowerShell quoting attempt failed before execution; corrected command succeeded. An earlier case-insensitive check counted uppercase shared controls and was superseded."
+    },
+    "scopeLimits": "Shared components were inspected only as dependencies of this assigned route; other advanced-intelligence pages and application foundations were not audited.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-034.json", ".agent-status\\audit-page-034.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\FederatedLearningStudioPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+    "web\\src\\features\\advanced-intelligence\\formatters.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\api\\webvitals\\routetemplates_gen.go"
+  ]
+}

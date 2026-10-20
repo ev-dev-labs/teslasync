@@ -9,9 +9,9 @@
  *     and the caller-supplied children (composition slot);
  *   - icon: the passed component is rendered and the `h-5 w-5` sizing class is
  *     forwarded to it (mirrors how lucide icons receive className);
- *   - colour mapping: every ICON_COLOR_MAP entry resolves to its own chip
- *     classes, and the `?? ICON_COLOR_MAP.cyan` fallback covers both an unknown
- *     colour token and an empty string;
+ *   - colour mapping: every ICON_COLOR_MAP entry resolves to the shared
+ *     neutral chip classes, and the `?? ICON_COLOR_MAP.cyan` fallback covers
+ *     both an unknown colour token and an empty string;
  *   - a11y: the decorative icon chip is `aria-hidden` so the accessible name of
  *     the card comes purely from the heading text, not the glyph.
  *
@@ -98,7 +98,10 @@ describe('ToolCard', () => {
   it('falls back to the cyan chip for an empty colour string', () => {
     renderCard({ color: '' })
 
-    expect(getIconChip()).toHaveClass('bg-neon-cyan/10')
+    const chip = getIconChip()
+    for (const token of ICON_COLOR_MAP.cyan.split(' ')) {
+      expect(chip).toHaveClass(token)
+    }
   })
 
   it('marks the decorative icon chip aria-hidden so the name comes from the heading', () => {

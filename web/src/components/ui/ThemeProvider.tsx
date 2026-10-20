@@ -83,7 +83,9 @@ function readableForeground(hex: string): string {
   const darkForeground = '#0b0d12'
   if (contrastRatio(darkForeground, hex) >= 4.5) return darkForeground
   if (contrastRatio('#ffffff', hex) >= 4.5) return '#ffffff'
-  return '#000000'
+  // Mid-tones may meet neither threshold: take the stronger of the two rather
+  // than ever altering the accent itself.
+  return contrastRatio(darkForeground, hex) >= contrastRatio('#ffffff', hex) ? darkForeground : '#ffffff'
 }
 
 function mixHex(from: string, to: string, amount: number): string {
@@ -114,10 +116,33 @@ function accessibleMutedForeground(mode: ModeTheme): string {
   return target
 }
 
+/** Saved palettes remain raw; only CSS presentation is restrained. */
+function presentationMode(mode: ModeTheme): ModeTheme {
+  const base = builtinModes[mode.colorScheme]
+  const highContrast = mode.id === 'hc-dark' || mode.id === 'hc-light'
+  const surface = (raw: string, neutral: string) =>
+    highContrast || ['dark', 'light', 'auto', 'oled'].includes(mode.id) ? raw : mixHex(raw, neutral, 0.85)
+  return {
+    ...mode,
+    bg: surface(mode.bg, base.bg),
+    surface1: mode.id === 'light' ? '#fafbfc' : surface(mode.surface1, base.surface1),
+    surface2: surface(mode.surface2, base.surface2),
+    surface3: surface(mode.surface3, base.surface3),
+    textPrimary: highContrast ? mode.textPrimary : base.textPrimary,
+    textSecondary: highContrast ? mode.textSecondary : base.textSecondary,
+    textMuted: highContrast ? mode.textMuted : mode.colorScheme === 'dark' ? '#8490a2' : '#64748b',
+  }
+}
+
 const defaultCustomPrimary = '#00b4d8'
 const defaultCustomAccent = '#e63946'
 
 function loadCustomColors(): { primary: string; accent: string } {
+  // Module scope runs in Node during Playwright collection (and SSR): fall
+  // back to defaults when there is no DOM storage.
+  if (typeof localStorage === 'undefined') {
+    return { primary: defaultCustomPrimary, accent: defaultCustomAccent }
+  }
   const p = localStorage.getItem('teslasync-custom-primary') || defaultCustomPrimary
   const a = localStorage.getItem('teslasync-custom-accent') || defaultCustomAccent
   return { primary: p, accent: a }
@@ -312,23 +337,32 @@ export function useTheme() {
   return ctx
 }
 
-function applyThemeCSS(theme: ColorTheme, mode: ModeTheme) {
+/**
+ * The primary/accent tokens are exactly the hex the user selected (preset or
+ * custom): never darkened, lightened, snapped to a palette or contrast-shifted.
+ * Contrast is handled only by choosing the text/icon colour drawn on top
+ * (`--theme-on-primary` / `--theme-on-accent`).
+ */
+function applyThemeCSS(theme: ColorTheme, savedMode: ModeTheme) {
+  const mode = presentationMode(savedMode)
+  const primary = theme.primary.toLowerCase()
+  const accent = theme.accent.toLowerCase()
   const root = document.documentElement
-  root.style.setProperty('--theme-primary', theme.primary)
-  root.style.setProperty('--theme-primary-rgb', theme.primaryRGB)
-  root.style.setProperty('--theme-accent', theme.accent)
-  root.style.setProperty('--theme-accent-rgb', theme.accentRGB)
+  root.style.setProperty('--theme-primary', primary)
+  root.style.setProperty('--theme-primary-rgb', hexToRGB(primary))
+  root.style.setProperty('--theme-accent', accent)
+  root.style.setProperty('--theme-accent-rgb', hexToRGB(accent))
   // Contrasting foreground for solid accent fills (primary buttons, FAB, etc.)
   // so text/icons stay legible whichever accent the user picks.
-  root.style.setProperty('--theme-on-primary', readableForeground(theme.primary))
-  root.style.setProperty('--theme-on-accent', readableForeground(theme.accent))
+  root.style.setProperty('--theme-on-primary', readableForeground(primary))
+  root.style.setProperty('--theme-on-accent', readableForeground(accent))
   root.style.setProperty('--bg', mode.bg)
   root.style.setProperty('--bg-app', mode.bg)
   root.style.setProperty('--surface-1', mode.surface1)
   root.style.setProperty('--surface-2', mode.surface2)
   root.style.setProperty('--surface-3', mode.surface3)
-  root.style.setProperty('--glass-bg', mode.glassBg)
-  root.style.setProperty('--glass-border', mode.glassBorder)
+  root.style.setProperty('--glass-bg', mode.surface1)
+  root.style.setProperty('--glass-border', 'var(--border-default)')
   root.style.setProperty('--text-primary', mode.textPrimary)
   root.style.setProperty('--text-secondary', mode.textSecondary)
   root.style.setProperty('--text-muted', accessibleMutedForeground(mode))

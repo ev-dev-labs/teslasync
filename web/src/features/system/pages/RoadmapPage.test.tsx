@@ -36,9 +36,13 @@
  * that removes animation-frame nondeterminism from jsdom.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 // ── i18n stub: return the fallback string, interpolating {{var}} options ──
 vi.mock('react-i18next', async () => {
@@ -48,6 +52,7 @@ vi.mock('react-i18next', async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, fallbackOrOpts?: unknown, opts?: unknown) => {
+        translationKeys.push(key);
         if (typeof fallbackOrOpts === 'string') {
           if (opts && typeof opts === 'object') {
             const o = opts as Record<string, unknown>;
@@ -70,14 +75,19 @@ vi.mock('react-i18next', async () => {
 });
 
 // ── motion: render children inline (no animation frames in jsdom) ──
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/motion')>(),
   FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</>,
   StaggerContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
   StaggerItem: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
+// Record translation identities without changing the original fallback assertions.
+const { translationKeys } = vi.hoisted(() => ({ translationKeys: [] as string[] }));
+
 import RoadmapPage from './RoadmapPage';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
 function renderPage() {
   return render(
@@ -98,7 +108,7 @@ function kpi() {
 // by a sibling `<p>{value}</p>`; read the value by hopping the label→value pair.
 function metricValue(label: string): string {
   const labelEl = kpi().getByText(label);
-  return labelEl.closest('p')?.nextElementSibling?.textContent ?? '';
+  return labelEl.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 // Each phase band is a labelled <section> → role="region" named after the phase.
@@ -116,6 +126,7 @@ function cardByTitle(title: string): HTMLElement {
 }
 
 beforeEach(() => {
+  translationKeys.length = 0;
   __resetTitleStoreForTests();
 });
 afterEach(() => {
@@ -129,7 +140,12 @@ describe('RoadmapPage — scaffolding & a11y', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Roadmap' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.')).toBeInTheDocument();
+    // The direction-of-travel note is the brief description: face shows live
+    // values only, so it is disclosed via the Review details drawer.
+    assertOperationalBriefDisclosure(
+      screen.getByRole('region', { name: 'Roadmap overview' }),
+      'This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.',
+    );
     expect(
       screen.getByText(
         "What's been built, what's in progress, and what's coming next",
@@ -142,9 +158,9 @@ describe('RoadmapPage — scaffolding & a11y', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Completed' })).toBeInTheDocument();
     expect(
-      screen.getByRole('region', { name: 'Active Focus' }),
+      screen.getByRole('region', { name: 'Active focus' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Up Next' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Up next' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Future' })).toBeInTheDocument();
 
     // usePageTitle wired the document title through the title store.
@@ -157,19 +173,19 @@ describe('RoadmapPage — KPI band', () => {
     renderPage();
 
     expect(metricValue('Completed')).toBe('10');
-    expect(metricValue('Active Focus')).toBe('1');
-    expect(metricValue('Up Next')).toBe('2');
+    expect(metricValue('Active focus')).toBe('1');
+    expect(metricValue('Up next')).toBe('2');
     expect(metricValue('Future')).toBe('4');
-    expect(metricValue('Total Initiatives')).toBe('17');
-    expect(metricValue('Features Shipped')).toBe('70');
+    expect(metricValue('Total initiatives')).toBe('17');
+    expect(metricValue('Features shipped')).toBe('70');
 
     // Invariant: the four phase counts reconcile with the total.
     const phaseSum =
       Number(metricValue('Completed')) +
-      Number(metricValue('Active Focus')) +
-      Number(metricValue('Up Next')) +
+      Number(metricValue('Active focus')) +
+      Number(metricValue('Up next')) +
       Number(metricValue('Future'));
-    expect(phaseSum).toBe(Number(metricValue('Total Initiatives')));
+    expect(phaseSum).toBe(Number(metricValue('Total initiatives')));
   });
 
   it('counts Features Shipped as the total feature bullets in the completed phase, not the initiative count', () => {
@@ -180,11 +196,11 @@ describe('RoadmapPage — KPI band', () => {
     expect(shippedFeatureBullets).toHaveLength(70);
 
     // The KPI reflects the summed bullets (guards the reduce()) …
-    expect(Number(metricValue('Features Shipped'))).toBe(
+    expect(Number(metricValue('Features shipped'))).toBe(
       shippedFeatureBullets.length,
     );
     // … and is emphatically not the initiative count.
-    expect(Number(metricValue('Features Shipped'))).toBeGreaterThan(
+    expect(Number(metricValue('Features shipped'))).toBeGreaterThan(
       Number(metricValue('Completed')),
     );
   });
@@ -195,7 +211,7 @@ describe('RoadmapPage — delivery progress', () => {
     renderPage();
 
     const panel = screen
-      .getByRole('heading', { level: 2, name: 'Delivery Progress' })
+      .getByRole('heading', { level: 2, name: 'Delivery progress' })
       .closest('[data-print-card]');
     expect(panel).not.toBeNull();
     const scope = within(panel as HTMLElement);
@@ -209,6 +225,12 @@ describe('RoadmapPage — delivery progress', () => {
 
     // Legend carries exactly one entry per phase with its count.
     expect(scope.getAllByRole('listitem')).toHaveLength(4);
+    expect(scope.getAllByRole('listitem').map((entry) => entry.textContent)).toEqual([
+      'Completed10',
+      'Active focus1',
+      'Up next2',
+      'Future4',
+    ]);
     expect(scope.getByText('Future')).toBeInTheDocument();
     expect(scope.getByText('4')).toBeInTheDocument();
     expect(scope.getByText('1')).toBeInTheDocument();
@@ -224,7 +246,7 @@ describe('RoadmapPage — phase bands', () => {
       done.getByRole('heading', { level: 2, name: 'Completed' }),
     ).toBeInTheDocument();
     expect(
-      done.getByText('Shipped and available in your deployment today.'),
+      done.getByText('Marked completed in the bundled roadmap; availability in this deployment is not verified.'),
     ).toBeInTheDocument();
     expect(done.getByText('10')).toBeInTheDocument();
     // Every completed initiative surfaces as a card heading.
@@ -234,23 +256,23 @@ describe('RoadmapPage — phase bands', () => {
       'Intelligence & Observability',
       'Fleet Telemetry',
       'Premium UI & Design System',
-      'Vehicle History & Physics',
-      'Charging & Energy Intelligence',
-      'Journeys & Ownership',
-      'Helix & Alert Studio',
-      'Operator Experience',
+      'Vehicle history & physics',
+      'Charging & energy intelligence',
+      'Journeys & ownership',
+      'Helix & alert studio',
+      'Operator experience',
     ].forEach((title) =>
       expect(
         done.getByRole('heading', { level: 3, name: title }),
       ).toBeInTheDocument(),
     );
 
-    const current = phase('Active Focus');
+    const current = phase('Active focus');
     expect(
       current.getByText('Areas receiving attention; priorities may change.'),
     ).toBeInTheDocument();
     expect(
-      current.getByRole('heading', { level: 3, name: 'Reliability & Data Trust' }),
+      current.getByRole('heading', { level: 3, name: 'Reliability & data trust' }),
     ).toBeInTheDocument();
   });
 });
@@ -284,13 +306,13 @@ describe('RoadmapPage — card contents', () => {
       within(cardByTitle('Core Platform')).getByText('Completed'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('Reliability & Data Trust')).getByText('Active Focus'),
+      within(cardByTitle('Reliability & data trust')).getByText('Active focus'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('Helix Quality & Cost Controls')).getByText('Up Next'),
+      within(cardByTitle('Helix quality & cost controls')).getByText('Up next'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('Energy Ecosystem')).getByText('Future'),
+      within(cardByTitle('Energy ecosystem')).getByText('Future'),
     ).toBeInTheDocument();
   });
 
@@ -306,16 +328,100 @@ describe('RoadmapPage — data integrity', () => {
   it('renders every initiative as a non-empty card and reconciles with the total KPI', () => {
     renderPage();
 
-    const cardHeadings = screen.getAllByRole('heading', { level: 3 });
+    const cardHeadings = ['Completed', 'Active focus', 'Up next', 'Future'].flatMap(
+      (name) => phase(name).getAllByRole('heading', { level: 3 }),
+    );
     // One card heading per initiative …
     expect(cardHeadings).toHaveLength(17);
+    expect(cardHeadings.map((heading) => heading.textContent)).toEqual([
+      'Core Platform',
+      'Smart Notifications',
+      'Intelligence & Observability',
+      'Fleet Telemetry',
+      'Premium UI & Design System',
+      'Vehicle history & physics',
+      'Charging & energy intelligence',
+      'Journeys & ownership',
+      'Helix & alert studio',
+      'Operator experience',
+      'Reliability & data trust',
+      'Helix quality & cost controls',
+      'Recovery & Documentation',
+      'Energy ecosystem',
+      'Privacy-preserving fleet insights',
+      'Interoperability',
+      'Accessible operator workflows',
+    ]);
     // … reconciling with the Total Initiatives KPI.
-    expect(cardHeadings).toHaveLength(Number(metricValue('Total Initiatives')));
+    expect(cardHeadings).toHaveLength(Number(metricValue('Total initiatives')));
 
     // No card is a blank panel — each owns at least one feature bullet.
     cardHeadings.forEach((heading) => {
       const card = heading.closest('[data-print-card]') as HTMLElement;
       expect(within(card).getAllByRole('listitem').length).toBeGreaterThan(0);
     });
+  });
+});
+
+
+describe('RoadmapPage — restrained adoption and preserved evidence', () => {
+  it('uses semantic status badges without decorative card glows or warning-colored future promises', () => {
+    renderPage();
+
+    for (const [title, tone] of [
+      ['Core Platform', 'success'],
+      ['Reliability & data trust', 'info'],
+      ['Helix quality & cost controls', 'neutral'],
+      ['Energy ecosystem', 'neutral'],
+    ]) {
+      const card = cardByTitle(title);
+      const label = within(card).getByText(tone === 'success' ? 'Completed' : tone === 'info' ? 'Active focus' : title === 'Energy ecosystem' ? 'Future' : 'Up next');
+      expect(label).toHaveClass('forced-colors:border');
+      expect(label).toHaveClass(tone === 'neutral' ? 'text-[var(--text-secondary)]' : `text-[var(--semantic-${tone})]`);
+      expect(card.querySelector('[class*="blur-"]')).toBeNull();
+      expect(label.parentElement).toHaveClass('flex-wrap');
+    }
+  });
+
+  it('retains all 98 feature bullets and independent phase sections with bundled-source provenance', () => {
+    renderPage();
+
+    const counts = ['Completed', 'Active focus', 'Up next', 'Future'].map(name =>
+      phase(name).getAllByRole('listitem').length,
+    );
+    expect(counts).toEqual([70, 4, 8, 16]);
+    expect(counts.reduce((total, count) => total + count, 0)).toBe(98);
+    expect(phase('Completed').getByText('Bundled roadmap entries, not live deployment or release telemetry.')).toBeInTheDocument();
+    // Freshness moved off the brief face into the Review details drawer header.
+    assertOperationalBriefDisclosure(
+      screen.getByRole('region', { name: 'Roadmap overview' }),
+      'Source observation time not supplied',
+    );
+  });
+
+  it('routes all original first-five entry strings through stable localization identities', () => {
+    renderPage();
+
+    for (const [id, featureCount] of [
+      ['corePlatform', 11], ['smartNotifications', 9],
+      ['intelligenceObservability', 8], ['fleetTelemetry', 7], ['designSystem', 8],
+    ] as const) {
+      expect(translationKeys).toContain(`roadmap.entries.${id}.title`);
+      expect(translationKeys).toContain(`roadmap.entries.${id}.description`);
+      for (let index = 0; index < featureCount; index += 1) {
+        expect(translationKeys).toContain(`roadmap.entries.${id}.features.${index}`);
+      }
+    }
+  });
+
+  it('keeps the existing review-details action and roadmap sections reachable while the drawer is open', () => {
+    renderPage();
+
+    fireEvent.click(kpi().getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Roadmap overview details' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Completed' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Future' })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Roadmap overview details' })).getAllByRole('button', { name: 'Close' })[0]);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

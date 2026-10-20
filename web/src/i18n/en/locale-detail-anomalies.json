@@ -1,0 +1,49 @@
+{
+  "anomalies": {
+    "mph": "mph",
+    "kmh": "km/h",
+    "whPerMi": "Wh/mi",
+    "whPerKm": "Wh/km",
+    "col": {
+      "speed": "Speed",
+      "consumption": "Consumption",
+      "predicted": "Baseline",
+      "z": "z-score"
+    },
+    "baseline": "Baseline",
+    "title": "Anomaly Detective",
+    "analyzed": "Drives Analyzed",
+    "brief": {
+      "analyzed": "Returned drives with usable speed and energy data in this window.",
+      "description": "Speed-adjusted consumption outliers against your returned drive cohort; candidate explanations are not verified causes.",
+      "source": "Returned drive history; quadratic fit and ±2σ residual band."
+    },
+    "outlierCount": "Outliers",
+    "beyond2": "beyond ±2σ of your baseline",
+    "sigma": "Your Spread (σ)",
+    "sigmaHint": "residual scatter around the fit",
+    "bestSurprise": "Best Surprise",
+    "bestSurpriseHint": "most efficient outlier",
+    "subtitle": "Drives that break your own consumption law, explained",
+    "kpis": "Anomaly summary metrics",
+    "chartHint": "Quadratic fit of consumption vs speed with a ±2σ band; red points break the law",
+    "noFit": "Not enough drives (8+ with speed and energy data) to fit your personal baseline yet.",
+    "upperBand": "+2σ",
+    "lowerBand": "−2σ",
+    "normal": "Within band",
+    "outlier": "Outlier",
+    "cases": "Case Files",
+    "noOutliers": "No drives beyond ±2σ — everything fits your usual pattern.",
+    "expected": "expected {{v}}",
+    "chart": {
+      "title": "Your Consumption Law",
+      "aria": "Scatter of drive consumption against speed with fitted curve and two-sigma band; outliers highlighted"
+    },
+    "reasonUnknown": "no obvious cause in the data",
+    "reasonCold": "much colder than usual",
+    "reasonHot": "much hotter than usual",
+    "reasonLowRegen": "unusually little regen",
+    "reasonCrawl": "stop-and-go crawling",
+    "reasonEfficient": "exceptionally efficient run"
+  }
+}

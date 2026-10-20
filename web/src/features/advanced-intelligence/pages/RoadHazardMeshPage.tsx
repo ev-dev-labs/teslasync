@@ -1,47 +1,60 @@
-import { useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Clock3, MapPinned, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useRoadHazards } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Pagination, Text } from '@/components/ui';
+import { Table, Badge, Card, Icon, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatRelative } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { typography } from '@/lib/tokens';
+
 import { EvidencePanel, InsightPanel } from '../components';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 18;
 
 function severityVariant(severity: string) {
   if (severity === 'critical' || severity === 'high') return 'danger' as const;
   if (severity === 'medium' || severity === 'warning') return 'warning' as const;
-  return 'info' as const;
+  if (severity === 'low' || severity === 'info') return 'info' as const;
+  return 'neutral' as const;
 }
 
 export default function RoadHazardMeshPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
-  const [page, setPage] = useState(1);
+  const headingId = useId();
+  const [pagination, setPagination] = useState({ vehicleId, page: 1 });
+  const page = pagination.vehicleId === vehicleId ? pagination.page : 1;
+  const setPage = (nextPage: number) => setPagination({ vehicleId, page: nextPage });
   const query = useRoadHazards(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
-  usePageTitle(t('advancedIntelligence.hazards.title', 'Road Hazard Mesh'));
+  useEffect(() => {
+    setPagination({ vehicleId, page: 1 });
+  }, [vehicleId]);
+  useEffect(() => {
+    if (!query.data || query.error || query.isFetching || query.data.offset !== (page - 1) * PAGE_SIZE) return;
+    const lastPage = Math.max(1, Math.ceil(query.data.total / PAGE_SIZE));
+    if (page > lastPage) setPagination({ vehicleId, page: lastPage });
+  }, [page, query.data, query.error, query.isFetching, vehicleId]);
+  usePageTitle(t('advancedIntelligence.hazards.title', 'Road hazard mesh'));
 
   return (
-    <PageContainer
-      title={t('advancedIntelligence.hazards.title', 'Road Hazard Mesh')}
+    <PageLayout
+      title={t('advancedIntelligence.hazards.title', 'Road hazard mesh')}
       subtitle={t(
         'advancedIntelligence.hazards.subtitle',
         'Privacy-preserving hazard clusters shown only at coarse-cell resolution.',
       )}
-      loading={vehicleId != null && query.isLoading}
-      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="info"
-        icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+        icon={<Icon icon={ShieldCheck} size="lg" />}
         title={t('advancedIntelligence.hazards.privacy.title', 'Coarse cells protect location privacy')}
       >
         {t(
@@ -52,6 +65,7 @@ export default function RoadHazardMeshPage() {
 
       <FadeIn>
         <InsightPanel
+          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.hazards.clusters.title', 'Hazard clusters')}
           description={t(
             'advancedIntelligence.hazards.clusters.subtitle',
@@ -65,59 +79,69 @@ export default function RoadHazardMeshPage() {
               'No coarse-cell hazard clusters meet the privacy and evidence thresholds.',
             )}
         >
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="@container">
+            <Grid gap={4} className="@2xl:grid-cols-2 @5xl:grid-cols-3">
             {items.map((cluster, index) => (
-              <article key={`${cluster.coarse_cell}-${cluster.hazard_type}-${index}`} className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <MapPinned className="h-5 w-5 text-cyan-300" aria-hidden="true" />
-                    <Text as="h3" variant="subhead">{cluster.hazard_type}</Text>
+              <article key={`${cluster.coarse_cell}-${cluster.hazard_type}-${index}`} className="min-w-0">
+                <Card className="h-full bg-[var(--surface-2)] shadow-none">
+                <div className="mb-3 flex min-w-0 flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <Icon icon={MapPinned} size="lg" className={typography.color.secondary} />
+                    <Text id={`${headingId}-${index}-hazard`} as="h3" variant="subhead" className="min-w-0 break-all">{cluster.hazard_type}</Text>
                   </div>
-                  <Badge variant={severityVariant(cluster.severity)}>{cluster.severity}</Badge>
+                  <Badge variant={severityVariant(cluster.severity)} className="max-w-full break-all">
+                    {cluster.severity.trim() && cluster.severity !== 'unknown'
+                      ? cluster.severity : t('common.unknown', 'Unknown')}
+                  </Badge>
                 </div>
-                <dl className="mt-4 space-y-3 text-sm">
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">
+                <Table variant="embedded" aria-label={t('advancedIntelligence.hazards.title', 'Road hazard mesh')}
+                  aria-describedby={`${headingId}-${index}-hazard ${headingId}-${index}-cell`}><tbody>
+                  <tr>
+                    <th scope="row" className={typography.color.secondary}>
                       {t('advancedIntelligence.hazards.cell', 'Coarse cell')}
-                    </dt>
-                    <dd className="font-mono">{cluster.coarse_cell}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">
+                    </th>
+                    <td id={`${headingId}-${index}-cell`} className="font-mono break-all">{cluster.coarse_cell}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className={typography.color.secondary}>
                       {t('advancedIntelligence.hazards.confidence', 'Confidence')}
-                    </dt>
-                    <dd>{fmtNumber(cluster.confidence_pct, 1)}%</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">
+                    </th>
+                    <td className="text-right">{fmtNumber(cluster.confidence_pct)}%</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className={typography.color.secondary}>
                       {t('advancedIntelligence.hazards.coverage', 'Observations')}
-                    </dt>
-                    <dd>{fmtNumber(cluster.observation_count, 0)}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="flex items-center gap-1 text-[var(--text-muted)]">
-                      <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+                    </th>
+                    <td className="text-right">{fmtInt(cluster.observation_count)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className={typography.color.secondary}>
+                      <Icon icon={Clock3} size="sm" className="me-1 inline-block" />
                       {t('advancedIntelligence.hazards.recency', 'Last seen')}
-                    </dt>
-                    <dd>{formatRelative(cluster.last_seen)}</dd>
-                  </div>
-                </dl>
+                    </th>
+                    <td>{formatRelative(cluster.last_seen)}</td>
+                  </tr>
+                </tbody></Table>
+                </Card>
               </article>
             ))}
+            </Grid>
           </div>
-          {(query.data?.total ?? 0) > PAGE_SIZE ? (
+        </InsightPanel>
+          {((query.data?.total ?? 0) > PAGE_SIZE || page > 1) ? (
             <Pagination
               page={page}
               pageSize={PAGE_SIZE}
               total={query.data?.total ?? 0}
+              totalKind={query.data == null ? 'unknown' : 'exact'}
               onPageChange={setPage}
             />
           ) : null}
-        </InsightPanel>
       </FadeIn>
 
       <FadeIn delay={0.05}>
         <EvidencePanel
+          query={query}
           quality={query.data?.data_quality}
           evidence={items.flatMap((item) => item.evidence ?? [])}
           limitations={query.data?.limitations}
@@ -127,6 +151,6 @@ export default function RoadHazardMeshPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

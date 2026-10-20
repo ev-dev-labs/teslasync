@@ -1,7 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Breadcrumbs, type BreadcrumbItem } from '../Breadcrumbs';
+import { prefetchRoute } from '@/lib/routePrefetch';
+
+vi.mock('@/lib/routePrefetch', () => ({
+  prefetchRoute: vi.fn<(path: string) => void>(),
+  schedulePrefetch: vi.fn<(path: string) => () => void>(() => () => {}),
+}));
 
 const renderItems = (items: BreadcrumbItem[], homeHref?: string) =>
   render(
@@ -92,5 +98,68 @@ describe('Breadcrumbs', () => {
     ]);
     const nav = container.querySelector('nav');
     expect(nav).toHaveAttribute('aria-label', 'Breadcrumb');
+  });
+
+  it('preserves explicit home labels, including an empty override', () => {
+    const { rerender } = render(
+      <MemoryRouter>
+        <Breadcrumbs items={[{ label: 'Current' }]} homeAriaLabel="Fleet home" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: 'Fleet home' })).toHaveAttribute('href', '/');
+    rerender(
+      <MemoryRouter>
+        <Breadcrumbs items={[{ label: 'Current' }]} homeAriaLabel="" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link')).toHaveAttribute('aria-label', '');
+  });
+
+  it('marks only the current page and hides decorative glyphs from assistive tech', () => {
+    const { container } = renderItems([
+      { label: 'Parent', href: '/parent' },
+      { label: 'Unlinked middle' },
+      { label: 'Current', href: '/ignored-current-destination' },
+    ]);
+    expect(screen.getByText('Current')).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByText('Current').closest('a')).toBeNull();
+    expect(screen.getByText('Unlinked middle')).not.toHaveAttribute('aria-current');
+    expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    container.querySelectorAll('svg').forEach((glyph) => {
+      expect(glyph).toHaveAttribute('aria-hidden', 'true');
+      expect(glyph).toHaveAttribute('focusable', 'false');
+    });
+  });
+
+  it('keeps long labels, mobile collapse, caller classes and keyboard prefetch intent', () => {
+    const longLabel = 'A very long breadcrumb destination '.repeat(12).trim();
+    const items: BreadcrumbItem[] = [
+      { label: 'Parent', href: '/parent' },
+      { label: longLabel, href: '/middle' },
+      { label: 'Current' },
+    ];
+    const { container } = render(
+      <MemoryRouter>
+        <Breadcrumbs items={items} className="gap-2" homeHref="/fleet" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('navigation')).toHaveClass('gap-2', 'overflow-x-auto');
+    const middle = screen.getByRole('link', { name: longLabel });
+    expect(middle).toHaveAttribute('title', longLabel);
+    expect(middle).toHaveClass('hidden', 'sm:inline', 'truncate', 'max-w-breadcrumb-label');
+    expect(screen.getByText('Current')).toHaveClass('truncate', 'max-w-breadcrumb-label');
+    expect(screen.getByText('Current')).toHaveAttribute('title', 'Current');
+    container.querySelectorAll('svg.lucide-chevron-right').forEach((chevron) => {
+      expect(chevron).toHaveClass('rtl:rotate-180');
+    });
+    expect(container.querySelector('span[aria-hidden="true"]')).toHaveTextContent('…');
+    const parent = screen.getByRole('link', { name: 'Parent' });
+    expect(parent).toHaveAttribute('href', '/parent');
+    parent.focus();
+    expect(parent).toHaveFocus();
+    expect(prefetchRoute).toHaveBeenCalledWith('/parent');
+    expect(parent).toHaveClass('focus-visible:outline-2', 'motion-reduce:transition-none');
+    fireEvent.mouseEnter(screen.getByRole('link', { name: 'Dashboard' }));
+    expect(prefetchRoute).toHaveBeenCalledWith('/fleet');
   });
 });

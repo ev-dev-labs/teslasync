@@ -91,8 +91,9 @@ func (f *fakeSearcher) SearchTrips(_ context.Context, _ string, _ int64, _ int) 
 
 // decodeSearchResp pulls {hits, query} out of a JSON response.
 type searchResp struct {
-	Hits  []SearchHit `json:"hits"`
-	Query string      `json:"query"`
+	Hits         []SearchHit        `json:"hits"`
+	Query        string             `json:"query"`
+	Completeness SearchCompleteness `json:"completeness"`
 }
 
 func decodeSearchResp(t *testing.T, body []byte) searchResp {
@@ -126,7 +127,7 @@ func netURLEscape(s string) string {
 }
 
 func TestSearchHandler_ShortQueryReturnsEmptyHits(t *testing.T) {
-	cases := []string{"", " ", "a", " a "}
+	cases := []string{"", " ", "a", " a ", "\u00e9", " \U0001f697 "}
 	for _, q := range cases {
 		t.Run(fmt.Sprintf("q=%q", q), func(t *testing.T) {
 			fake := newFakeSearcher()
@@ -146,6 +147,31 @@ func TestSearchHandler_ShortQueryReturnsEmptyHits(t *testing.T) {
 			// Sub-searches must NOT have fired for too-short queries.
 			if len(fake.callLog) != 0 {
 				t.Errorf("expected no sub-search calls, got %v", fake.callLog)
+			}
+		})
+	}
+}
+
+func TestSearchHandler_UnicodeCodePointFloor(t *testing.T) {
+	for _, q := range []string{"ab", "\u00e9a", " \U0001f697a ", "\U0001f697\U0001f697", "e\u0301"} {
+		t.Run(fmt.Sprintf("q=%q", q), func(t *testing.T) {
+			fake := newFakeSearcher()
+			fake.hits["vehicle"] = []SearchHit{{Type: "vehicle", ID: 1, Title: "match"}}
+			rec := httptest.NewRecorder()
+			NewHandlerWithSearcher(fake).Search(rec, newSearchTestRequest(q, "vehicle"))
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d", rec.Code)
+			}
+			resp := decodeSearchResp(t, rec.Body.Bytes())
+			if resp.Query != strings.TrimSpace(q) {
+				t.Errorf("query = %q, want %q", resp.Query, strings.TrimSpace(q))
+			}
+			if len(resp.Hits) != 1 || resp.Hits[0].ID != 1 {
+				t.Fatalf("expected populated hits, got %v", resp.Hits)
+			}
+			if fake.callLog["vehicle"] != 1 || len(fake.callLog) != 1 {
+				t.Errorf("expected only vehicle search, got %v", fake.callLog)
 			}
 		})
 	}
@@ -234,6 +260,67 @@ func TestSearchHandler_PartialFailureStillReturnsResults(t *testing.T) {
 	resp := decodeSearchResp(t, rec.Body.Bytes())
 	if len(resp.Hits) != 2 {
 		t.Errorf("expected 2 surviving hits, got %d: %v", len(resp.Hits), resp.Hits)
+	}
+	if strings.Join(resp.Completeness.FailedTypes, ",") != "drive" {
+		t.Errorf("expected failed drive metadata, got %+v", resp.Completeness)
+	}
+	if resp.Hits[0].ID != 1 || resp.Hits[1].ID != 7 {
+		t.Errorf("surviving hit ranking changed: %v", resp.Hits)
+	}
+}
+
+func TestSearchHandler_Completeness(t *testing.T) {
+	tests := []struct {
+		name           string
+		count          int
+		err            error
+		wantFailed     bool
+		wantLimit      bool
+		wantTotalLimit bool
+	}{
+		{name: "complete empty"},
+		{name: "complete populated", count: 2},
+		{name: "per type limit reached", count: defaultPerTypeLimit, wantLimit: true},
+		{name: "global cap preserved", count: maxTotalHits + 1, wantLimit: true, wantTotalLimit: true},
+		{name: "failed empty", err: errors.New("source failed"), wantFailed: true},
+		{name: "timeout", err: context.DeadlineExceeded, wantFailed: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := newFakeSearcher()
+			for i := 0; i < tt.count; i++ {
+				fake.hits["vehicle"] = append(fake.hits["vehicle"], SearchHit{
+					Type: "vehicle", ID: int64(i + 1), Title: "match", Score: float64(i),
+				})
+			}
+			if tt.err != nil {
+				fake.errs["vehicle"] = tt.err
+			}
+			rec := httptest.NewRecorder()
+			NewHandlerWithSearcher(fake).Search(rec, newSearchTestRequest("match", "vehicle"))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d", rec.Code)
+			}
+			resp := decodeSearchResp(t, rec.Body.Bytes())
+			if (len(resp.Completeness.FailedTypes) > 0) != tt.wantFailed ||
+				(len(resp.Completeness.LimitReachedTypes) > 0) != tt.wantLimit ||
+				resp.Completeness.TotalLimitReached != tt.wantTotalLimit {
+				t.Fatalf("unexpected completeness: %+v", resp.Completeness)
+			}
+			wantCount := tt.count
+			if wantCount > maxTotalHits {
+				wantCount = maxTotalHits
+			}
+			if len(resp.Hits) != wantCount {
+				t.Fatalf("hits = %d, want %d", len(resp.Hits), wantCount)
+			}
+			if wantCount > 0 && resp.Hits[0].ID != int64(tt.count) {
+				t.Fatalf("highest score hit lost: %v", resp.Hits[0])
+			}
+			if resp.Completeness.FailedTypes == nil || resp.Completeness.LimitReachedTypes == nil {
+				t.Fatal("metadata lists must encode as arrays, not null")
+			}
+		})
 	}
 }
 

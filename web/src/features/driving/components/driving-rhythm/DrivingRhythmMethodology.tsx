@@ -52,7 +52,7 @@ export function DrivingRhythmMethodology({
           )
         : t(
             'rhythm.method.timeSemantics',
-            'The API applies the selected date-only bounds in UTC. Returned instants are then grouped consistently by weekday, hour, day, and month in {{timezone}}.',
+            'The selected local dates are requested as exact instants in {{timezone}} (start inclusive, end exclusive). Returned instants are then grouped consistently by weekday, hour, day, and month in {{timezone}}.',
             { timezone: summary.timeZone },
           ),
     },
@@ -129,7 +129,7 @@ export function DrivingRhythmMethodology({
 
       <DrivingRhythmSectionBody state={state} className="mt-4 min-h-72">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
-          <RhythmCoverageSummary summary={summary} />
+          <RhythmCoverageSummary summary={summary} state={state} />
           <ul className="space-y-3">
             {methods.map((method) => (
               <li

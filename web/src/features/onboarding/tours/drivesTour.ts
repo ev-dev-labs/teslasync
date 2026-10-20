@@ -29,7 +29,7 @@ const STEPS: TourStep[] = [
   },
   {
     target: '[data-tour="drives-saved-views"]',
-    title: 'Saved Views',
+    title: 'Saved views',
     description:
       'Any filter/sort combination can be pinned as a Saved View and shared via deep link. Set one as default to land there next time.',
     placement: 'bottom',

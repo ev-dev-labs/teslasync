@@ -1,13 +1,13 @@
 /**
  * LocationsPage contract + hardening tests.
  *
- * LocationsPage reads a page of visited locations via a raw `useQuery` +
- * `request('/locations?…')` and derives a KPI band, two leaderboards, and a
+ * LocationsPage reads a page through the real canonical useVisitedLocations
+ * hook and derives a KPI band, two leaderboards, and a
  * searchable/paginated detail list from them. The network seam (`@/api/client`
  * `request`) and `useSelectedVehicle` are mocked so every branch — loading,
  * error, empty, no-vehicle, and the fully-populated happy path — is exercised
  * deterministically. `useRangeState` is mocked to a fixed wide window so the
- * client-side `last_visited` range filter is clock-independent. The two
+ * server-side request bounds are clock-independent. The two
  * leaderboard panels (recharts) and the AI auto-name affordance are stubbed with
  * prop-capturing markers so the assertions target THE PAGE'S own orchestration
  * (branch selection, derived chart data, ordering, gating) rather than chart or
@@ -25,11 +25,18 @@
  *     a city and used to inflate the unique-city count).
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { act, render, screen, within, waitFor, fireEvent } from '@testing-library/react';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import type { LocationLeaderboardPanelProps } from '../components/LocationLeaderboardPanel';
+import type { AIAutoNameUnnamedLocationsProps } from '@/components/ai/AIAutoNameUnnamedLocations';
+import type { SelectedVehicleResult } from '@/hooks/useSelectedVehicle';
+import type { AppSettings } from '@/api/types';
+import { deriveDataState } from '@/api/dataState';
+import { chartTokens, typography } from '@/lib/tokens';
 
 // i18n stub: echo the fallback string, interpolating {{var}} tokens from the
 // options object so assertions can target the rendered English copy. A bare key
@@ -71,8 +78,7 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   return { ...actual, useSelectedVehicle: vi.fn() };
 });
 
-// Fixed, wide range so the page's client-side `last_visited` filter includes
-// every fixture row regardless of the machine clock.
+// Fixed, wide server-side range independent of the machine clock.
 const rangeState = vi.hoisted(() => ({ start: '2000-01-01', end: '2099-12-31' }));
 vi.mock('@/hooks/useRangeState', async (importActual) => {
   const actual = await importActual<typeof import('@/hooks/useRangeState')>();
@@ -95,14 +101,107 @@ vi.mock('@/hooks/useRangeState', async (importActual) => {
   };
 });
 
+// Cache-backed settings: the global setup mock pins useSettings to fixed
+// defaults, but the saved locale/timezone test drives formatting through
+// the ['settings'] query cache. This file-level mock binds the real
+// normalization to that cache — seeded with identical defaults, reactive
+// to setQueryData, and never fetching (so no '/settings' request can
+// disturb the request-contract assertions or the machine timezone).
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  const { useMemo, useSyncExternalStore } = await import('react');
+  const { useQueryClient } = await import('@tanstack/react-query');
+  const { deriveDataState } = await import('@/api/dataState');
+  const { resolveLocale } = await import('@/lib/locale');
+  const cacheDefaults: AppSettings = {
+    unit_of_length: 'km',
+    unit_of_temp: 'C',
+    unit_of_pressure: 'bar',
+    preferred_range: 'rated',
+    language: 'en',
+    base_cost_per_kwh: 0.12,
+    api_suspended: false,
+    theme: 'neon-cyan',
+    mode: 'dark',
+    custom_primary: '#00b4d8',
+    custom_accent: '#e63946',
+    gas_price_per_unit: 0,
+    gas_unit: 'gallon',
+    gas_efficiency_mpg: 25,
+    decimal_precision: 2,
+    quiet_hours_enabled: false,
+    quiet_hours_start: '22:00',
+    quiet_hours_end: '07:00',
+    alert_digest_mode: 'instant',
+    currency_symbol: '$',
+    locale: 'en-US',
+    tz_display_default: 'vehicle',
+    timezone_user: '',
+    tab_badge_enabled: true,
+    critical_flash_enabled: true,
+    ui_density: 'comfortable',
+    time_format_default: 'relative',
+    chart_palette: 'cb_safe',
+    ai_mode: 'off',
+    ai_features: {},
+    ai_provider_config: {},
+    ai_cost_cap_cents: 0,
+  };
+  return {
+    ...actual,
+    useSettings: () => {
+      // Direct cache subscription (no useQuery observer): the ['settings']
+      // entry is seeded by tests via setQueryData and intentionally never
+      // fetched, so read it straight from the client and re-render only
+      // when its reference changes.
+      const client = useQueryClient();
+      const cached = useSyncExternalStore(
+        (onStoreChange) => client.getQueryCache().subscribe(onStoreChange),
+        () => client.getQueryData(['settings']) ?? cacheDefaults,
+        () => client.getQueryData(['settings']) ?? cacheDefaults,
+      );
+      const s: AppSettings = useMemo(() => {
+        const raw = cached as AppSettings;
+        return raw.locale && raw.locale.trim().length > 0
+          ? raw
+          : { ...raw, locale: cacheDefaults.locale };
+      }, [cached]);
+      const decimals = typeof s.decimal_precision === 'number' && Number.isFinite(s.decimal_precision)
+        ? Math.max(0, Math.min(20, Math.trunc(s.decimal_precision)))
+        : 2;
+      const locale = resolveLocale(s.locale);
+      return useMemo(() => {
+        const density: 'compact' | 'comfortable' | 'spacious' =
+          s.ui_density === 'compact' || s.ui_density === 'spacious' ? s.ui_density : 'comfortable';
+        const rangeType: 'rated' | 'ideal' = s.preferred_range === 'ideal' ? 'ideal' : 'rated';
+        return {
+          settings: s,
+          settingsState: deriveDataState({ data: s, isSuccess: true }),
+          settingsUnavailable: false,
+          refetch: () => client.refetchQueries({ queryKey: ['settings'] }),
+          isMiles: s.unit_of_length === 'mi',
+          isFahrenheit: s.unit_of_temp === 'F',
+          isPSI: (s.unit_of_pressure ?? 'bar') === 'psi',
+          decimals,
+          locale,
+          density,
+          rangeType,
+        };
+      }, [s, decimals, locale, client]);
+    },
+  };
+});
+
 // Prop-capturing stub for the two leaderboard panels — records each panel's
 // props keyed by its (translated) seriesLabel ('Visits' / 'Hours') and renders
 // a state marker so the page's loading/error/empty/data branch selection and
 // the derived chart data are both assertable without mounting recharts.
-const captured = vi.hoisted(() => ({ panels: {} as Record<string, any> }));
+const captured = vi.hoisted(() => ({
+  panels: {} as Record<string, LocationLeaderboardPanelProps>,
+}));
 
 vi.mock('../components/LocationLeaderboardPanel', () => ({
-  LocationLeaderboardPanel: (props: any) => {
+  LocationLeaderboardPanel: (props: LocationLeaderboardPanelProps) => {
     captured.panels[props.seriesLabel] = props;
     const rows = props.data ?? [];
     return (
@@ -125,7 +224,7 @@ vi.mock('../components/LocationLeaderboardPanel', () => ({
 // (proving the gating branch) plus a button that fires `onApplyName` (proving
 // the applied-name hand-off back into the page).
 vi.mock('@/components/ai/AIAutoNameUnnamedLocations', () => ({
-  AIAutoNameUnnamedLocations: (props: any) => (
+  AIAutoNameUnnamedLocations: (props: AIAutoNameUnnamedLocationsProps) => (
     <div data-testid={`ai-autoname-${props.locationId}`} data-current={props.currentName}>
       <button type="button" onClick={() => props.onApplyName(`AI: ${props.locationId}`)}>
         {`apply-${props.locationId}`}
@@ -179,18 +278,27 @@ function makeLocations(): VisitedLocation[] {
   ];
 }
 
-function installVehicles(over: Record<string, unknown> = {}) {
+function installVehicles(over: Partial<SelectedVehicleResult> = {}) {
   const setVehicleId = vi.fn();
+  const vehicleDefaults = {
+    vehicle_id: 0, model: '', trim_badging: '', exterior_color: '', wheel_type: '',
+    state: 'unknown', healthy: false, created_at: '', updated_at: '',
+  };
+  const vehicles = over.vehicles ?? [
+    { ...vehicleDefaults, id: 2, display_name: 'Model 3', vin: 'V3' },
+    { ...vehicleDefaults, id: 5, display_name: '', vin: 'VIN5' },
+  ];
   mockSelectedVehicle.mockReturnValue({
     vehicleId: 2,
     vehicle: null,
-    vehicles: [
-      { id: 2, display_name: 'Model 3', vin: 'V3' },
-      { id: 5, display_name: '', vin: 'VIN5' },
-    ] as any,
+    vehicles,
+    vehiclesState: deriveDataState({ data: vehicles, isSuccess: true }, {
+      provenance: 'cached',
+      unavailable: vehicles.length === 0,
+    }),
     setVehicleId,
     ...over,
-  } as any);
+  });
   return setVehicleId;
 }
 
@@ -198,13 +306,15 @@ function renderPage(entries: string[] = ['/locations']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const page = (
     <MemoryRouter initialEntries={entries}>
       <QueryClientProvider client={client}>
         <LocationsPage />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const view = render(page);
+  return { ...view, client };
 }
 
 function kpiRegion() {
@@ -214,8 +324,8 @@ function kpiRegion() {
 // Read a MetricCard's value by its label so numeric assertions never collide.
 function kpiValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  const card = labelEl.closest('[data-role="metric-card"]') as HTMLElement;
-  return card.querySelector('[data-role="metric-value"]')?.textContent ?? '';
+  const card = labelEl.closest('[data-operational-metric]');
+  return card?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -225,7 +335,11 @@ beforeEach(() => {
   rangeState.start = '2000-01-01';
   rangeState.end = '2099-12-31';
   installVehicles();
-  mockRequest.mockResolvedValue(makeLocations() as any);
+  mockRequest.mockResolvedValue(makeLocations());
+});
+
+afterEach(() => {
+  onlineManager.setOnline(true);
 });
 
 /* ───────────────────────── Pure helper unit tests ───────────────────────── */
@@ -267,21 +381,31 @@ describe('truncateLabel', () => {
 });
 
 describe('rankChipClass', () => {
-  it('tones the badge gold for #1, cyan for the podium, muted otherwise', () => {
-    expect(rankChipClass(0)).toContain('amber');
-    expect(rankChipClass(1)).toContain('cyan');
-    expect(rankChipClass(2)).toContain('cyan');
-    expect(rankChipClass(3)).toContain('var(--text-muted)');
-    expect(rankChipClass(9)).not.toContain('amber');
+  it('keeps the first rank distinct without decorative podium colors', () => {
+    expect(rankChipClass(0)).toContain(typography.color.primary);
+    expect(rankChipClass(1)).toContain(typography.color.secondary);
+    expect(rankChipClass(2)).toContain(typography.color.secondary);
+    expect(rankChipClass(3)).toContain(typography.color.secondary);
+    expect(rankChipClass(9)).not.toMatch(/amber|cyan|glow/);
   });
 });
 
 /* ─────────────────────────── Component tests ─────────────────────────── */
 
 describe('LocationsPage — shell & request contract', () => {
+  it('retains loaded-page scope and opens the original-duration evidence in the real summary drawer', async () => {
+    renderPage();
+    await waitFor(() => expect(kpiValue('Total visits')).toBe('46'));
+    // Face-value disclosure: the loaded-page scope moved to the summary drawer.
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Location summary details' });
+    expect(within(drawer).getAllByText(/not server-wide totals/).length).toBeGreaterThan(0);
+    expect(within(drawer).getByText('Home, Seattle')).toBeInTheDocument();
+    expect(within(drawer).getByText('Loaded-page total duration divided by loaded-page visits; zero when the successful page contains no visits.')).toBeInTheDocument();
+  });
   it('renders the title/subtitle and requests SI locations with snake_case params (no /api/v1)', async () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Visited Locations' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Visited locations' })).toBeInTheDocument();
     expect(screen.getByText("Places you've been — ranked by frequency")).toBeInTheDocument();
     await waitFor(() => expect(mockRequest).toHaveBeenCalled());
     const requestPath = String(mockRequest.mock.calls[0]?.[0]);
@@ -292,36 +416,36 @@ describe('LocationsPage — shell & request contract', () => {
     expect(params.get('offset')).toBe('0');
     expect(params.get('from')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(params.get('to')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(document.title).toContain('Visited Locations');
+    expect(document.title).toContain('Visited locations');
   });
 });
 
 describe('LocationsPage — KPI band', () => {
   it('derives every KPI from the loaded rows', async () => {
     renderPage();
-    await waitFor(() => expect(kpiValue('Total Visits')).toBe('46'));
-    expect(kpiValue('Unique Places')).toBe('4');
+    await waitFor(() => expect(kpiValue('Total visits')).toBe('46'));
+    expect(kpiValue('Unique places')).toBe('4');
     // Regression: the coordinate row (#4) is NOT counted as a city.
-    expect(kpiValue('Unique Cities')).toBe('3');
-    expect(kpiValue('Most Visited')).toBe('Home, Seattle');
+    expect(kpiValue('Unique cities')).toBe('3');
+    expect(kpiValue('Most visited')).toBe('Home, Seattle');
     // formatDuration renders SI seconds in the user's (hour) preference.
-    expect(kpiValue('Total Time')).toMatch(/\bh\b/);
+    expect(kpiValue('Total time')).toMatch(/\bh\b/);
   });
 
   it('renders only the server-side range-filtered aggregates', async () => {
     mockRequest.mockResolvedValue([
       { id: 1, address_name: 'Home, Seattle', visit_count: 10, total_duration_s: 500, last_visited: '2025-03-10T08:00:00Z' },
-    ] as any);
+    ]);
     renderPage();
-    await waitFor(() => expect(kpiValue('Unique Places')).toBe('1'));
-    expect(kpiValue('Total Visits')).toBe('10');
+    await waitFor(() => expect(kpiValue('Unique places')).toBe('1'));
+    expect(kpiValue('Total visits')).toBe('10');
   });
 
   it('shows a "—" placeholder for Most Visited when there is no data', async () => {
-    mockRequest.mockResolvedValue([] as any);
+    mockRequest.mockResolvedValue([]);
     renderPage();
-    await waitFor(() => expect(kpiValue('Total Visits')).toBe('0'));
-    expect(kpiValue('Most Visited')).toBe('—');
+    await waitFor(() => expect(kpiValue('Total visits')).toBe('0'));
+    assertOperationalMetricUnavailable(kpiRegion(), 'Most visited');
   });
 });
 
@@ -341,18 +465,35 @@ describe('LocationsPage — leaderboards', () => {
     // "By time" is re-sorted by hours DESC — Office (few visits, most time)
     // must lead, NOT Home (most visits, little time). Without the fix the
     // first bar would be Home @ 1h.
-    expect(captured.panels['Hours'].data.map((d: any) => d.name)).toEqual([
+    expect(captured.panels['Hours'].data?.map((d) => d.name)).toEqual([
       'Office, Bellevue',
       'Home, Seattle',
       'Cafe, Tacoma',
       '47.6062,-122.3321',
     ]);
-    expect(captured.panels['Hours'].data[0]).toEqual({ name: 'Office, Bellevue', value: 20 });
+    expect(captured.panels['Hours'].data?.[0]).toEqual({ name: 'Office, Bellevue', value: 20 });
 
     // Panel wiring (titles, colours, empty copy) is passed through intact.
-    expect(captured.panels['Visits'].title).toBe('Top Locations by Visits');
-    expect(captured.panels['Visits'].color).toBe('#10b981');
+    expect(captured.panels['Visits'].title).toBe('Top locations by visits');
+    expect(captured.panels['Visits'].color).toBe(chartTokens.series[0]);
+    expect(captured.panels['Hours'].color).toBe(chartTokens.series[4]);
     expect(captured.panels['Hours'].emptyMessage).toBe('No time-spent data available');
+  });
+
+  it('preserves full source addresses and unrounded numeric hours independently of locale formatting', async () => {
+    const address = 'Synthetic place with a shared long prefix, Detailed district';
+    mockRequest.mockResolvedValue([
+      { id: 71, address_name: address, visit_count: 1, total_duration_s: 1000, last_visited: null },
+      { id: 72, address_name: 'Synthetic large duration', visit_count: 1, total_duration_s: 7200000, last_visited: null },
+    ]);
+    renderPage();
+    await waitFor(() => expect(captured.panels['Hours'].data).toHaveLength(2));
+    expect(captured.panels['Visits'].data?.[0]).toEqual({ name: address, value: 1 });
+    expect(captured.panels['Hours'].data).toEqual([
+      { name: 'Synthetic large duration', value: 2000 },
+      { name: address, value: 1000 / 3600 },
+    ]);
+    expect(screen.getByRole('button', { name: `Inspect ${address}` })).toBeInTheDocument();
   });
 });
 
@@ -367,6 +508,40 @@ describe('LocationsPage — detail list', () => {
     expect(within(card).getByText('Home, Seattle')).toBeInTheDocument();
     // All four ranks render, in order.
     ['#1', '#2', '#3', '#4'].forEach((r) => expect(screen.getByText(r)).toBeInTheDocument());
+  });
+
+  it('retains every row field while giving inspect a mobile target and a wrapping layout', async () => {
+    renderPage();
+    const inspect = await screen.findByRole('button', { name: 'Inspect Home, Seattle' });
+    expect(inspect).toHaveClass('h-11', 'w-11', 'min-h-11', 'min-w-11', 'md:h-9', 'md:w-9');
+    const row = inspect.closest('li');
+    expect(row).not.toBeNull();
+    expect(inspect.parentElement).toHaveClass('flex-wrap');
+    expect(within(row as HTMLElement).getByText('Home, Seattle').parentElement)
+      .toHaveClass('order-last', 'w-full', 'sm:order-none');
+    expect(within(row as HTMLElement).getByText(/20 visits/)).toHaveTextContent(/total.*avg.*Last/);
+  });
+
+  it('does not mix an inspected location or applied draft with a different vehicle scope', async () => {
+    const view = renderPage();
+    fireEvent.click(await screen.findByText('apply-4'));
+    expect(screen.getByText('AI: 4')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Home, Seattle' }));
+    expect(screen.getByRole('dialog', { name: 'Home, Seattle' })).toBeInTheDocument();
+    installVehicles({ vehicleId: 5 });
+    // Rerender the same mounted providers so the original local state is retained.
+    view.rerender(
+      <MemoryRouter initialEntries={['/locations']}>
+        <QueryClientProvider client={view.client}>
+          <LocationsPage />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(mockRequest).toHaveBeenCalledWith(
+      expect.stringContaining('vehicle_id=5'), { signal: expect.any(AbortSignal) },
+    ));
+    expect(screen.queryByRole('dialog', { name: 'Home, Seattle' })).not.toBeInTheDocument();
+    expect(screen.queryByText('AI: 4')).not.toBeInTheDocument();
   });
 
   it('opens location evidence with vehicle, activity, service, and telemetry links', async () => {
@@ -417,7 +592,7 @@ describe('LocationsPage — detail list', () => {
   });
 
   it('shows the empty state (with a drives CTA) when there are no locations', async () => {
-    mockRequest.mockResolvedValue([] as any);
+    mockRequest.mockResolvedValue([]);
     renderPage();
     expect(await screen.findByText('No visited locations recorded yet')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View drives' })).toHaveAttribute('href', '/drives');
@@ -444,7 +619,9 @@ describe('LocationsPage — header vehicle scope', () => {
     installVehicles({ vehicleId: 5 });
     renderPage();
 
-    await waitFor(() => expect(mockRequest).toHaveBeenCalledWith(expect.stringContaining('vehicle_id=5')));
+    await waitFor(() => expect(mockRequest).toHaveBeenCalledWith(
+      expect.stringContaining('vehicle_id=5'), { signal: expect.any(AbortSignal) },
+    ));
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
   });
 
@@ -452,7 +629,13 @@ describe('LocationsPage — header vehicle scope', () => {
     installVehicles({ vehicleId: null, vehicles: [] });
     renderPage();
 
-    expect(await screen.findByText('No visited locations recorded yet')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'No vehicle selected' })).toBeInTheDocument();
+    expect(screen.getByText('Add a vehicle to your fleet to see data on this page.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Set up TeslaSync' })).toHaveAttribute('href', '/onboarding');
+    expect(screen.getByTestId('lb-empty-Visits')).toHaveTextContent('No vehicle selected');
+    expect(screen.getByTestId('lb-empty-Hours')).toHaveTextContent('No vehicle selected');
+    expect(screen.queryByText('No visited locations recorded yet')).not.toBeInTheDocument();
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total visits');
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
     expect(mockRequest).not.toHaveBeenCalled();
   });
@@ -460,14 +643,30 @@ describe('LocationsPage — header vehicle scope', () => {
 
 describe('LocationsPage — loading & error states', () => {
   it('shows skeletons + leaderboard loaders and no KPI cards while fetching', () => {
-    mockRequest.mockReturnValue(new Promise(() => {}) as any); // never resolves
+    mockRequest.mockReturnValue(new Promise(() => {})); // never resolves
     const { container } = renderPage();
 
     expect(screen.getByTestId('lb-loading-Visits')).toBeInTheDocument();
     expect(screen.getByTestId('lb-loading-Hours')).toBeInTheDocument();
-    // KPI cards are replaced by skeletons — no metric labels yet.
-    expect(within(kpiRegion()).queryByText('Unique Places')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(within(kpiRegion()).getByText('Unique places')).toBeInTheDocument();
+    expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
+    expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0);
+  });
+
+  it('keeps loaded locations and both leaderboards visible after a background refresh failure', async () => {
+    const { client } = renderPage();
+    expect(await screen.findByRole('button', { name: 'Inspect Home, Seattle' })).toBeInTheDocument();
+    mockRequest.mockRejectedValue(new Error('synthetic refresh failure'));
+    await client.invalidateQueries({ queryKey: ['visited-locations'] });
+    await waitFor(() => expect(
+      client.getQueryState(['visited-locations', 2, 1, 50, '2000-01-01T00:00:00Z', '2099-12-31T00:00:00Z'])?.status,
+    ).toBe('error'));
+    expect(screen.getByRole('button', { name: 'Inspect Home, Seattle' })).toBeInTheDocument();
+    expect(screen.getByTestId('lb-data-Visits')).toHaveTextContent('4');
+    expect(screen.getByTestId('lb-data-Hours')).toHaveTextContent('4');
+    expect(screen.queryByTestId('lb-error-Visits')).not.toBeInTheDocument();
+    expect(kpiValue('Total visits')).toBe('46');
   });
 
   it('surfaces a retry-able error and re-fetches when Retry is clicked', async () => {
@@ -481,5 +680,197 @@ describe('LocationsPage — loading & error states', () => {
     const callsBefore = mockRequest.mock.calls.length;
     fireEvent.click(retries[0]);
     await waitFor(() => expect(mockRequest.mock.calls.length).toBeGreaterThan(callsBefore));
+  });
+});
+
+const locationsKey = [
+  'visited-locations', 2, 1, 50, '2000-01-01T00:00:00Z', '2099-12-31T00:00:00Z',
+] as const;
+
+function makeFullPage(): VisitedLocation[] {
+  return Array.from({ length: 50 }, (_, index) => ({
+    id: index + 100,
+    address_name: `Synthetic place ${index + 1}`,
+    visit_count: 50 - index,
+    total_duration_s: (index + 1) * 60,
+    last_visited: null,
+  }));
+}
+
+function rerenderPage(view: ReturnType<typeof renderPage>) {
+  view.rerender(
+    <MemoryRouter initialEntries={['/locations']}>
+      <QueryClientProvider client={view.client}>
+        <LocationsPage />
+      </QueryClientProvider>
+    </MemoryRouter>,
+  );
+}
+
+describe('LocationsPage — unresolved trust and honest paging', () => {
+  it('keeps a first paused request unknown, not resolved-empty or zero, and resumes normally', async () => {
+    onlineManager.setOnline(false);
+    renderPage();
+    expect(screen.getByRole('heading', { name: 'Location loading paused' })).toBeInTheDocument();
+    expect(screen.getByTestId('lb-empty-Visits')).toHaveTextContent('Location counts and remaining pages are unknown');
+    expect(screen.getByTestId('lb-empty-Hours')).toHaveTextContent('The request is paused');
+    expect(captured.panels['Visits'].emptyActionLabel).toBeUndefined();
+    expect(captured.panels['Hours'].onResetFilters).toBeUndefined();
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total visits');
+    expect(screen.queryByText('No visited locations recorded yet')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(screen.getByText('Page 1 of Unknown')).toBeInTheDocument();
+    expect(mockRequest).not.toHaveBeenCalled();
+    act(() => onlineManager.setOnline(true));
+    expect(await screen.findByRole('button', { name: 'Inspect Home, Seattle' })).toBeInTheDocument();
+    expect(kpiValue('Total visits')).toBe('46');
+  });
+
+  it('uses loaded-page counts and exploratory Next without asserting an exact total or Last page', async () => {
+    mockRequest.mockResolvedValue(makeFullPage());
+    renderPage();
+    await screen.findByRole('button', { name: 'Inspect Synthetic place 1' });
+    const pager = screen.getByRole('navigation', { name: 'Pagination' });
+    expect(within(pager).getByText('50 matching / 50 loaded rows')).toBeInTheDocument();
+    expect(within(pager).getByText('Page 1 of Unknown')).toBeInTheDocument();
+    expect(within(pager).queryByText(/Showing/)).not.toBeInTheDocument();
+    expect(within(pager).queryByRole('button', { name: 'Last page' })).not.toBeInTheDocument();
+    expect(within(pager).getByRole('button', { name: 'Next page' })).toBeEnabled();
+    expect(screen.getByText(/Next checks another page/)).toBeInTheDocument();
+  });
+
+  it('retains Previous and First page recovery after an exploratory next page is empty', async () => {
+    mockRequest.mockResolvedValue(makeFullPage());
+    renderPage();
+    await screen.findByRole('button', { name: 'Inspect Synthetic place 1' });
+    mockRequest.mockResolvedValue([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(await screen.findByText(/No locations returned on this page/)).toBeInTheDocument();
+    expect(screen.getByText('Page 2 of Unknown')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'First page' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(mockRequest).toHaveBeenCalledWith(expect.stringContaining('offset=50'), { signal: expect.any(AbortSignal) });
+    mockRequest.mockResolvedValue(makeFullPage());
+    fireEvent.click(screen.getByRole('button', { name: 'Previous page' }));
+    await screen.findByRole('button', { name: 'Inspect Synthetic place 1' });
+    mockRequest.mockResolvedValue([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    await screen.findByText(/No locations returned on this page/);
+    mockRequest.mockResolvedValue(makeFullPage());
+    fireEvent.click(screen.getByRole('button', { name: 'First page' }));
+    expect(await screen.findByRole('button', { name: 'Inspect Synthetic place 1' })).toBeInTheDocument();
+    expect(screen.getByText('Page 1 of Unknown')).toBeInTheDocument();
+  });
+
+  it('keeps page recovery available when search matches nothing on a loaded later page', async () => {
+    mockRequest.mockResolvedValue(makeFullPage());
+    renderPage(['/locations?page=2']);
+    await screen.findByRole('button', { name: 'Inspect Synthetic place 1' });
+    fireEvent.change(screen.getByPlaceholderText(/Search by address/), { target: { value: 'absent place' } });
+    await screen.findByText('No locations match your search');
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'First page' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
+    expect(screen.getByText('Page 2 of Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('50 matching / 50 loaded rows')).not.toBeInTheDocument();
+  });
+
+  it('retains recovery for a later page that has never loaded and is paused', () => {
+    onlineManager.setOnline(false);
+    renderPage(['/locations?page=3']);
+    expect(screen.getByRole('heading', { name: 'Location loading paused' })).toBeInTheDocument();
+    expect(screen.getByText('Page 3 of Unknown')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'First page' })).toBeEnabled();
+    assertOperationalMetricUnavailable(kpiRegion(), 'Unique places');
+  });
+});
+
+describe('LocationsPage — current preview identity and saved dates', () => {
+  it('updates an open preview from the same-key current rows and receipt, closing if its identity disappears', async () => {
+    const view = renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Inspect Home, Seattle' }));
+    const updated = makeLocations().map((location) => location.id === 1
+      ? { ...location, address_name: 'Updated home', visit_count: 99, total_duration_s: 7200 }
+      : location);
+    act(() => view.client.setQueryData(locationsKey, updated, { updatedAt: Date.parse('2026-01-01T00:30:00Z') }));
+    const drawer = await screen.findByRole('dialog', { name: 'Updated home' });
+    expect(within(drawer).getByText('99')).toBeInTheDocument();
+    expect(within(drawer).getByText('Page loaded at')).toBeInTheDocument();
+    expect(within(drawer).getByRole('link', { name: 'Drive history' })).toHaveAttribute(
+      'href', '/drives?q=Updated+home&from=2000-01-01&to=2099-12-31',
+    );
+    act(() => view.client.setQueryData(locationsKey, updated.filter((location) => location.id !== 1)));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Updated home' })).not.toBeInTheDocument());
+    act(() => view.client.setQueryData(locationsKey, updated));
+    expect(screen.queryByRole('dialog', { name: 'Updated home' })).not.toBeInTheDocument();
+  });
+
+  it('does not resurrect a preview or naming receipt after vehicle scope changes away and back', async () => {
+    const view = renderPage();
+    fireEvent.click(await screen.findByText('apply-4'));
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Home, Seattle' }));
+    installVehicles({ vehicleId: 5 });
+    rerenderPage(view);
+    await waitFor(() => expect(mockRequest).toHaveBeenCalledWith(
+      expect.stringContaining('vehicle_id=5'), { signal: expect.any(AbortSignal) },
+    ));
+    installVehicles({ vehicleId: 2 });
+    rerenderPage(view);
+    await screen.findByRole('button', { name: 'Inspect Home, Seattle' });
+    expect(screen.queryByRole('dialog', { name: 'Home, Seattle' })).not.toBeInTheDocument();
+    expect(screen.queryByText('AI: 4')).not.toBeInTheDocument();
+  });
+
+  it('resets paging and invalidates preview identity when the shared range changes', async () => {
+    const view = renderPage(['/locations?page=2']);
+    fireEvent.click(await screen.findByRole('button', { name: 'Inspect Home, Seattle' }));
+    rangeState.start = '2026-01-01';
+    rangeState.end = '2026-01-31';
+    rerenderPage(view);
+    await waitFor(() => expect(mockRequest).toHaveBeenCalledWith(
+      expect.stringMatching(/offset=0&from=2026-01-01T00%3A00%3A00Z&to=2026-01-31T00%3A00%3A00Z/),
+      { signal: expect.any(AbortSignal) },
+    ));
+    expect(screen.queryByRole('dialog', { name: 'Home, Seattle' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument();
+  });
+
+  it('formats last visits and the current page receipt through saved locale and timezone preferences', async () => {
+    const timestamp = '2026-01-01T00:30:00Z';
+    mockRequest.mockResolvedValue([{ ...makeLocations()[0], last_visited: timestamp }]);
+    const view = renderPage();
+    await screen.findByRole('button', { name: 'Inspect Home, Seattle' });
+    act(() => {
+      view.client.setQueryData(['settings'], {
+        locale: 'de-DE', tz_display_default: 'utc', timezone_user: 'America/Los_Angeles',
+        decimal_precision: 2, unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar',
+      });
+      view.client.setQueryData(locationsKey, [{ ...makeLocations()[0], last_visited: timestamp }], { updatedAt: Date.parse(timestamp) });
+    });
+    const utcDate = new Intl.DateTimeFormat('de-DE', {
+      timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric',
+    }).format(new Date(timestamp));
+    expect(screen.getByText(/20 visits/)).toHaveTextContent(`Last: ${utcDate}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Home, Seattle' }));
+    const drawer = screen.getByRole('dialog', { name: 'Home, Seattle' });
+    expect(within(drawer).getByText(`Last visited ${utcDate}`)).toBeInTheDocument();
+    const utcReceipt = new Date(timestamp).toLocaleString('de-DE', {
+      timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+    expect(within(drawer).getByText(utcReceipt)).toBeInTheDocument();
+    act(() => view.client.setQueryData(['settings'], {
+      locale: 'de-DE', tz_display_default: 'user', timezone_user: 'America/Los_Angeles',
+      decimal_precision: 2, unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar',
+    }));
+    const localDate = new Intl.DateTimeFormat('de-DE', {
+      timeZone: 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+    }).format(new Date(timestamp));
+    expect(localDate).not.toBe(utcDate);
+    expect(screen.getByText(/20 visits/)).toHaveTextContent(`Last: ${localDate}`);
+    expect(within(drawer).getByText(`Last visited ${localDate}`)).toBeInTheDocument();
+    expect(view.client.getQueryData<VisitedLocation[]>(locationsKey)?.[0].last_visited).toBe(timestamp);
+    expect(view.client.getQueryData<VisitedLocation[]>(locationsKey)?.[0].total_duration_s).toBe(3600);
   });
 });

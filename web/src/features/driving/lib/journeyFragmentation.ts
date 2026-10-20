@@ -1,4 +1,5 @@
 import type { Drive } from '@/types/driving';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 /**
  * Journey fragmentation is deliberately a descriptive analysis of the
@@ -74,9 +75,21 @@ export interface Journey {
   drivingSeconds: number;
   observedParkingSeconds: number;
   distanceM: number;
+  distanceAssessment: JourneyDistanceAssessment;
   energyUsedWh: number | null;
   completeEnergy: boolean;
   isCompactObservedChain: boolean;
+}
+
+/** Existing aggregates remain positive-distance subtotals, not complete-history totals. */
+export interface JourneyDistanceAssessment {
+  measuredRows: number;
+  missingRows: number;
+  invalidRows: number;
+  /** Known nonnegative distance subtotal; null when no operands are measured. */
+  measuredDistanceM: number | null;
+  /** Complete distance total; null for empty, partial, invalid or overflowing operands. */
+  totalDistanceM: number | null;
 }
 
 export interface DistributionSummary {
@@ -104,6 +117,7 @@ export interface EnergyGroupSummary {
   completeEnergyDistanceM: number;
   distanceCoverage: number | null;
   energyIntensityWhPerM: number | null;
+  distanceAssessment: JourneyDistanceAssessment;
 }
 
 export interface EnergyComparison {
@@ -154,10 +168,11 @@ export interface JourneyFragmentationResult {
   observedParkingSeconds: number;
   shortFragmentCount: number;
   shortFragmentDenominator: number;
-  shortFragmentDistanceM: number;
+  shortFragmentDistanceM: number | null;
   shortFragmentDistanceShare: number | null;
   compactObservedChainCount: number;
   totalDistanceM: number;
+  distanceAssessment: JourneyDistanceAssessment;
   energyComparison: EnergyComparison;
   startHourProfile: TemporalProfilePoint[];
   startTwoHourProfile: TemporalProfilePoint[];
@@ -220,6 +235,13 @@ interface BuiltChains {
 
 function finiteOr(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+export function formatJourneyFragmentDistance(
+  value: unknown,
+  formatter: (distanceM: number) => string,
+): string {
+  return isFiniteNumber(value) ? formatter(value) : '—';
 }
 
 function positiveOption(value: unknown, fallback: number): number {
@@ -324,6 +346,31 @@ function distanceM(drive: Drive): number {
   return typeof drive.distanceM === 'number' && Number.isFinite(drive.distanceM) && drive.distanceM > 0
     ? drive.distanceM
     : 0;
+}
+
+function assessDistance(values: readonly unknown[]): JourneyDistanceAssessment {
+  let measuredRows = 0;
+  let missingRows = 0;
+  let invalidRows = 0;
+  let sum = 0;
+  for (const value of values) {
+    if (value == null) {
+      missingRows += 1;
+    } else if (!isFiniteNumber(value) || value < 0) {
+      invalidRows += 1;
+    } else {
+      measuredRows += 1;
+      sum += value;
+    }
+  }
+  const measuredDistanceM = measuredRows > 0 && Number.isFinite(sum) ? sum : null;
+  return {
+    measuredRows,
+    missingRows,
+    invalidRows,
+    measuredDistanceM,
+    totalDistanceM: missingRows === 0 && invalidRows === 0 ? measuredDistanceM : null,
+  };
 }
 
 function energyWh(drive: Drive): number | null {
@@ -474,6 +521,7 @@ function journeyFromChain(
     ),
     observedParkingSeconds: gapsMin.reduce((sum, gap) => sum + gap * 60, 0),
     distanceM: totalDistanceM,
+    distanceAssessment: assessDistance(chain.map((row) => row.drive.distanceM)),
     energyUsedWh,
     completeEnergy,
     isCompactObservedChain:
@@ -564,12 +612,24 @@ function buildGapHistogram(gaps: readonly number[]): GapHistogramPoint[] {
   });
 }
 
-function groupEnergy(journeys: readonly Journey[], multiDrive: boolean): EnergyGroupSummary {
+function groupEnergy(
+  journeys: readonly Journey[],
+  multiDrive: boolean,
+): EnergyGroupSummary {
   const group = journeys.filter((journey) => multiDrive ? journey.fragments > 1 : journey.fragments === 1);
   const complete = group.filter((journey) => journey.completeEnergy && journey.energyUsedWh != null);
   const totalDistanceM = group.reduce((sum, journey) => sum + journey.distanceM, 0);
   const completeEnergyDistanceM = complete.reduce((sum, journey) => sum + journey.distanceM, 0);
   const totalEnergyWh = complete.reduce((sum, journey) => sum + (journey.energyUsedWh as number), 0);
+  const assessments = group.map((journey) => journey.distanceAssessment);
+  const measuredRows = assessments.reduce((sum, value) => sum + value.measuredRows, 0);
+  const missingRows = assessments.reduce((sum, value) => sum + value.missingRows, 0);
+  const invalidRows = assessments.reduce((sum, value) => sum + value.invalidRows, 0);
+  const measuredSum = assessments.reduce((sum, value) => sum + (value.measuredDistanceM ?? 0), 0);
+  const measuredDistanceM = measuredRows > 0 && Number.isFinite(measuredSum)
+    && assessments.every((value) => value.measuredRows === 0 || value.measuredDistanceM != null)
+    ? measuredSum
+    : null;
   return {
     journeys: group.length,
     completeEnergyJourneys: complete.length,
@@ -578,6 +638,13 @@ function groupEnergy(journeys: readonly Journey[], multiDrive: boolean): EnergyG
     distanceCoverage: totalDistanceM > 0 ? completeEnergyDistanceM / totalDistanceM : null,
     energyIntensityWhPerM:
       completeEnergyDistanceM > 0 ? totalEnergyWh / completeEnergyDistanceM : null,
+    distanceAssessment: {
+      measuredRows,
+      missingRows,
+      invalidRows,
+      measuredDistanceM,
+      totalDistanceM: missingRows === 0 && invalidRows === 0 ? measuredDistanceM : null,
+    },
   };
 }
 
@@ -734,6 +801,9 @@ export function analyzeJourneyFragmentation(
     const distance = distanceM(row.drive);
     return distance > 0 && distance <= options.shortFragmentDistanceM;
   });
+  const hasMeasuredDistance = includedRows.some((row) =>
+    isFiniteNumber(row.drive.distanceM) && row.drive.distanceM >= 0,
+  );
   const singleEnergy = groupEnergy(journeys, false);
   const multiEnergy = groupEnergy(journeys, true);
   const energySupport =
@@ -798,13 +868,16 @@ export function analyzeJourneyFragmentation(
     observedParkingSeconds: journeys.reduce((sum, journey) => sum + journey.observedParkingSeconds, 0),
     shortFragmentCount: shortRows.length,
     shortFragmentDenominator: includedRows.length,
-    shortFragmentDistanceM: shortRows.reduce((sum, row) => sum + distanceM(row.drive), 0),
+    shortFragmentDistanceM: hasMeasuredDistance
+      ? shortRows.reduce((sum, row) => sum + distanceM(row.drive), 0)
+      : null,
     shortFragmentDistanceShare:
       totalDistanceM > 0
         ? shortRows.reduce((sum, row) => sum + distanceM(row.drive), 0) / totalDistanceM
         : null,
     compactObservedChainCount: journeys.filter((journey) => journey.isCompactObservedChain).length,
     totalDistanceM,
+    distanceAssessment: assessDistance(includedRows.map((row) => row.drive.distanceM)),
     energyComparison: {
       singleDrive: singleEnergy,
       multiDrive: multiEnergy,

@@ -3,10 +3,51 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryKey,
 } from '@tanstack/react-query';
+import { useRef } from 'react';
 import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+
+/** Retention is renderable, but only matching source scope authorizes row actions. */
+export function useRepairScopedQuery<T>(
+  queryKey: QueryKey,
+  queryFn: (context: { signal: AbortSignal }) => Promise<T>,
+  currentScope: string,
+  scopeFromKey: (key: QueryKey) => string,
+) {
+  const retained = useRef<{ scope: string; updatedAt: number } | null>(null);
+  const query = useQuery({
+    queryKey,
+    queryFn,
+    placeholderData: (previousData, previousQuery) => {
+      if (previousData !== undefined && previousQuery) {
+        retained.current = {
+          scope: scopeFromKey(previousQuery.queryKey),
+          updatedAt: previousQuery.state.dataUpdatedAt,
+        };
+      }
+      return keepPreviousData(previousData);
+    },
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+  const sourceScope = query.data === undefined
+    ? null
+    : query.isPlaceholderData ? retained.current?.scope ?? null : currentScope;
+  const isPreviousScope = sourceScope !== null && sourceScope !== currentScope;
+  return {
+    ...query,
+    dataUpdatedAt: query.isPlaceholderData
+      ? retained.current?.updatedAt ?? 0
+      : query.dataUpdatedAt,
+    sourceScope,
+    currentScope,
+    isPreviousScope,
+    canWriteCurrentScope: query.data !== undefined && sourceScope === currentScope,
+  };
+}
 
 /**
  * Data-repair hooks — the ONE data layer for the /data-repair page.
@@ -363,7 +404,8 @@ export function useUpdateCharging() {
       }),
     networkMode: 'always',
     onSuccess: () => {
-      invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
+      invalidateRepairViews(qc);
+      invalidateRepairCases(qc);
       success('toast.dataRepair.charging.update.success', 'Charging session updated');
     },
     onError: (e) =>
@@ -383,7 +425,8 @@ export function useCloseCharging() {
       }),
     networkMode: 'always',
     onSuccess: () => {
-      invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
+      invalidateRepairViews(qc);
+      invalidateRepairCases(qc);
       success('toast.dataRepair.charging.close.success', 'Charging session closed');
     },
     onError: (e) =>
@@ -426,7 +469,8 @@ export function useUpdateDrive() {
       }),
     networkMode: 'always',
     onSuccess: () => {
-      invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
+      invalidateRepairViews(qc);
+      invalidateRepairCases(qc);
       invalidateDriveDerivedViews(qc);
       success('toast.dataRepair.drive.update.success', 'Drive updated');
     },
@@ -445,7 +489,8 @@ export function useCloseDrive() {
     }),
     networkMode: 'always',
     onSuccess: () => {
-      invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
+      invalidateRepairViews(qc);
+      invalidateRepairCases(qc);
       invalidateDriveDerivedViews(qc);
       success('toast.dataRepair.drive.close.success', 'Drive closed');
     },
@@ -605,14 +650,21 @@ function caseParams(filters?: RepairCaseFilters): string {
 
 export function useRepairCases(filters?: RepairCaseFilters) {
   const qs = caseParams(filters);
-  return useQuery({
-    queryKey: dataRepairKeys.cases(filters),
-    queryFn: ({ signal }) =>
+  return useRepairScopedQuery(
+    dataRepairKeys.cases(filters),
+    ({ signal }) =>
       request<RepairCaseListResponse>(`/data-repair/cases${qs ? `?${qs}` : ''}`, { signal }),
-    placeholderData: keepPreviousData,
-    refetchInterval: 30_000,
-    staleTime: 15_000,
-  });
+    repairCaseScope(filters),
+    (key) => repairCaseScope(key[2] as RepairCaseFilters | undefined),
+  );
+}
+
+function repairCaseScope(filters?: RepairCaseFilters): string {
+  return `/data-repair/cases?${caseParams({
+    ...filters,
+    cursor_last_seen_at: undefined,
+    cursor_id: undefined,
+  })}`;
 }
 
 export function useRepairCase(caseId: number | null) {
@@ -645,10 +697,27 @@ export function useTransitionRepairCase() {
       request<RepairCase>(`/data-repair/cases/${case_id}/transition`, {
         method: 'POST',
         requiresLiveMode: true,
+        // An optimistic-concurrency transition must surface conflicts, not replay them.
+        skipAuthRefresh: true,
         body: JSON.stringify(body),
       }),
     networkMode: 'always',
-    onSuccess: () => {
+    retry: false,
+    onSuccess: (updated: RepairCase) => {
+      qc.setQueryData<RepairCaseDetailResponse>(dataRepairKeys.case(updated.id), previous =>
+        previous ? { ...previous, case: updated } : previous);
+      for (const [key, previous] of qc.getQueriesData<RepairCaseListResponse>({
+        queryKey: ['data-repair', 'cases'],
+        predicate: query => typeof query.queryKey[2] === 'object',
+      })) {
+        if (!previous) continue;
+        const filters = key[2] as RepairCaseFilters;
+        qc.setQueryData(key, {
+          ...previous,
+          cases: previous.cases.flatMap(item => item.id !== updated.id ? [item]
+            : filters.status && filters.status !== updated.status ? [] : [updated]),
+        });
+      }
       invalidateRepairCases(qc);
       success('toast.dataRepair.case.transition.success', 'Repair case updated');
     },
@@ -745,12 +814,22 @@ export function useAddRepairCaseComment() {
   });
 }
 
+/** Raw bounded scan outcome; counts describe this run, not the entire queue. */
+export interface RepairScanResponse {
+  run_id: number;
+  status: 'running' | 'completed' | 'failed' | 'skipped';
+  discovered: number;
+  refreshed: number;
+  truncated: boolean;
+}
+
+/** Explicit discovery only. Mounting this hook never scans or applies repairs. */
 export function useRunRepairScan() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  const { success, warning, error } = useMutationToast();
   return useMutation({
     mutationFn: (input?: { vehicle_id?: number }) =>
-      request<{ discovered: number; refreshed: number; truncated: boolean }>(
+      request<RepairScanResponse>(
         '/data-repair/cases/scan',
         {
           method: 'POST',
@@ -759,8 +838,15 @@ export function useRunRepairScan() {
         },
       ),
     networkMode: 'always',
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateRepairCases(qc);
+      if (result.truncated) {
+        warning(
+          'dataRepair.truncated',
+          'The scan hit its per-request limit, so more sessions may need repair than are listed here. Apply what is shown and refresh.',
+        );
+        return;
+      }
       success('toast.dataRepair.scan.success', 'Data integrity scan completed');
     },
     onError: (e) =>
@@ -783,17 +869,24 @@ function quarantineParams(filters?: RepairQuarantineFilters): string {
 
 export function useRepairQuarantines(filters?: RepairQuarantineFilters) {
   const qs = quarantineParams(filters);
-  return useQuery({
-    queryKey: dataRepairKeys.quarantines(filters),
-    queryFn: ({ signal }) =>
+  return useRepairScopedQuery(
+    dataRepairKeys.quarantines(filters),
+    ({ signal }) =>
       request<RepairQuarantineListResponse>(
         `/data-repair/quarantine${qs ? `?${qs}` : ''}`,
         { signal },
       ),
-    placeholderData: keepPreviousData,
-    refetchInterval: 30_000,
-    staleTime: 15_000,
-  });
+    repairQuarantineScope(filters),
+    (key) => repairQuarantineScope(key[2] as RepairQuarantineFilters | undefined),
+  );
+}
+
+function repairQuarantineScope(filters?: RepairQuarantineFilters): string {
+  return `/data-repair/quarantine?${quarantineParams({
+    ...filters,
+    cursor_quarantined_at: undefined,
+    cursor_id: undefined,
+  })}`;
 }
 
 export function useQuarantineRepairCase() {

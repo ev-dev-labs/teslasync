@@ -28,22 +28,85 @@
 export const SHELL_FOCUSABLE_SELECTOR =
   'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
 
+interface ShellPortal {
+  root: HTMLElement
+  anchor: HTMLElement
+  onClose: () => void
+  originalMarker: string | null
+}
+
+const shellPortals = new WeakMap<HTMLElement, ShellPortal>()
+
+export function registerShellPortal(
+  root: HTMLElement | null,
+  anchor: HTMLElement | null,
+  onClose: () => void,
+): () => void {
+  if (!root?.isConnected || !anchor?.isConnected) return () => {}
+  const previous = shellPortals.get(root)
+  const originalMarker = previous ? previous.originalMarker : root.getAttribute('data-shell-portal')
+  const portal = { root, anchor, onClose, originalMarker }
+  shellPortals.set(root, portal)
+  root.setAttribute('data-shell-portal', '')
+  return () => {
+    if (shellPortals.get(root) !== portal) return
+    shellPortals.delete(root)
+    if (originalMarker == null) root.removeAttribute('data-shell-portal')
+    else root.setAttribute('data-shell-portal', originalMarker)
+  }
+}
+
+function ownedShellPortals(container: HTMLElement | null): ShellPortal[] {
+  if (!container) return []
+  const candidates = Array.from(
+    container.ownerDocument.querySelectorAll<HTMLElement>('[data-shell-portal]'),
+    root => shellPortals.get(root),
+  ).filter((portal): portal is ShellPortal => Boolean(portal?.anchor.isConnected))
+  const owned: ShellPortal[] = []
+  let added: boolean
+  do {
+    added = false
+    for (const portal of candidates) {
+      if (owned.includes(portal)) continue
+      if (container.contains(portal.anchor) || owned.some(parent => parent.root.contains(portal.anchor))) {
+        owned.push(portal)
+        added = true
+      }
+    }
+  } while (added)
+  return owned
+}
+
+export function isShellPortalActive(container: HTMLElement | null, active: Element | null): boolean {
+  return ownedShellPortals(container).some(
+    portal => portal.root.contains(active) || portal.anchor.contains(active),
+  )
+}
+
+function nextAfterPortal(container: HTMLElement, portal: ShellPortal, portals: ShellPortal[]): HTMLElement {
+  let anchor = portal.anchor
+  const visited = new Set<HTMLElement>()
+  while (!visited.has(anchor)) {
+    visited.add(anchor)
+    const parents = portals.filter(candidate => candidate.root.contains(anchor))
+    const parent = parents[parents.length - 1]
+    const scope = parent?.root ?? container
+    const focusables = getShellFocusableElements(scope)
+    const index = focusables.findIndex(element => element === anchor || anchor.contains(element))
+    if (index >= 0 && focusables[index + 1]) return focusables[index + 1]
+    if (!parent) return focusables[0] ?? container
+    anchor = parent.anchor
+  }
+  return getShellFocusableElements(container)[0] ?? container
+}
+
 /** Visible, focusable descendants of `container`, in DOM order. */
 export function getShellFocusableElements(container: HTMLElement | null): HTMLElement[] {
   if (!container) return []
   return Array.from(
     container.querySelectorAll<HTMLElement>(SHELL_FOCUSABLE_SELECTOR),
   )
-    .filter(
-      (element) =>
-        element.getAttribute('aria-hidden') !== 'true' &&
-        // The shared selector matches `button`/`input`/`[href]` unconditionally,
-        // so an element that opted OUT of the tab order with `tabindex="-1"`
-        // would still be returned. Listbox options do exactly that (they are
-        // driven by `aria-activedescendant`), so filter them out here rather
-        // than letting Tab walk through dozens of rows.
-        element.tabIndex >= 0,
-    )
+    .filter(element => isShellFocusTarget(element) && element.tabIndex >= 0)
     // A selector LIST is not guaranteed to come back in document order on
     // every engine (jsdom/nwsapi groups by branch), and "first"/"last" are
     // only meaningful in tab order. Sort explicitly so the wrap-around is
@@ -54,6 +117,86 @@ export function getShellFocusableElements(container: HTMLElement | null): HTMLEl
       if (relation & Node.DOCUMENT_POSITION_PRECEDING) return 1
       return 0
     })
+}
+
+function isShellElementVisible(element: HTMLElement): boolean {
+  if (!element.isConnected || element.closest('[aria-hidden="true"], [inert], [hidden]')) return false
+  if (typeof element.checkVisibility === 'function') {
+    return element.checkVisibility({ checkVisibilityCSS: true })
+  }
+  const view = element.ownerDocument.defaultView
+  if (!view) return false
+  const visibility = view.getComputedStyle(element).visibility
+  if (visibility === 'hidden' || visibility === 'collapse') return false
+  for (let ancestor: HTMLElement | null = element; ancestor; ancestor = ancestor.parentElement) {
+    if (view.getComputedStyle(ancestor).display === 'none') return false
+  }
+  return true
+}
+
+/** Programmatic focus may return to a tabindex="-1" invoker, but never a hidden control. */
+export function isShellFocusTarget(element: HTMLElement | null): element is HTMLElement {
+  return Boolean(element &&
+    !element.matches(':disabled') &&
+    element.matches(`${SHELL_FOCUSABLE_SELECTOR}, [tabindex]`) &&
+    isShellElementVisible(element))
+}
+
+function hasOtherShellModal(container: HTMLElement | null, doc: Document): boolean {
+  const ownModal = container?.matches('[aria-modal="true"]')
+    ? container
+    : container?.querySelector('[aria-modal="true"]')
+  return Array.from(doc.querySelectorAll<HTMLElement>(
+    '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]',
+  )).some(modal => modal !== ownModal && !modal.contains(container) && isShellElementVisible(modal))
+}
+
+/**
+ * A drawer replaces its focused header while revealing an already mounted nav.
+ * If native focus rejects the commit-time entry, retry once at the next layout
+ * frame, not on a timer or visibility polling loop. Cleanup and new focus win.
+ */
+export function focusShellOverlayEntry(
+  container: HTMLElement | null,
+  target: () => HTMLElement | null,
+): () => void {
+  if (!container?.isConnected) return () => {}
+  const doc = container.ownerDocument
+  const view = doc.defaultView
+  if (!view) return () => {}
+  const initialActive = doc.activeElement
+  let activeEntry = true
+  const enter = () => {
+    const active = doc.activeElement
+    if (!activeEntry || !container.isConnected || hasOtherShellModal(container, doc) ||
+      (active !== doc.body && active !== initialActive && !container.contains(active))) return
+    // Do not reset an intentional interior focus move either.
+    if (container.contains(active)) return
+    const next = target()
+    if (isShellFocusTarget(next)) next.focus({ preventScroll: true })
+  }
+  enter()
+  if (container.contains(doc.activeElement)) return () => {}
+  const frame = view.requestAnimationFrame(enter)
+  return () => {
+    activeEntry = false
+    view.cancelAnimationFrame(frame)
+  }
+}
+
+/** Call only after releasing this overlay's background claims. */
+export function restoreShellFocus(
+  container: HTMLElement | null,
+  target: HTMLElement | null,
+  fallback: HTMLElement | null = null,
+): void {
+  if (!target) return // Navigation explicitly relinquishes the return intent.
+  const doc = target.ownerDocument
+  const active = doc.activeElement
+  if (hasOtherShellModal(container, doc) ||
+    (active !== doc.body && active !== target && !container?.contains(active))) return
+  const next = isShellFocusTarget(target) ? target : fallback
+  if (isShellFocusTarget(next)) next.focus({ preventScroll: true })
 }
 
 /**
@@ -91,7 +234,39 @@ export function trapFocusWithin(container: HTMLElement | null): () => void {
       disarm()
       return
     }
-    if (event.key !== 'Tab') return
+    if (event.key !== 'Tab' || event.defaultPrevented) return
+    // Portaled child dialogs own their focus; an outer shell guard must not
+    // intercept their interior Tab moves before the dialog receives them.
+    const activeModal = doc.activeElement?.closest(
+      '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]',
+    )
+    const ownModal = container.matches('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')
+      ? container
+      : container.querySelector('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')
+    if (activeModal && activeModal !== ownModal && !activeModal.contains(container)) return
+    const active = doc.activeElement
+    const portals = ownedShellPortals(container)
+    const activePortals = portals.filter(portal => portal.root.contains(active))
+    const activePortal = activePortals[activePortals.length - 1]
+    if (activePortal) {
+      const focusables = getShellFocusableElements(activePortal.root)
+      const boundary = event.shiftKey ? focusables[0] : focusables[focusables.length - 1]
+      if (focusables.length > 0 && active !== boundary) return
+      event.preventDefault()
+      const target = event.shiftKey ? activePortal.anchor : nextAfterPortal(container, activePortal, portals)
+      target.focus()
+      activePortal.onClose()
+      return
+    }
+    if (!event.shiftKey) {
+      const anchoredPortal = portals.find(portal => portal.anchor.contains(active))
+      const first = anchoredPortal && getShellFocusableElements(anchoredPortal.root)[0]
+      if (first) {
+        event.preventDefault()
+        first.focus()
+        return
+      }
+    }
     const focusables = getShellFocusableElements(container)
     if (focusables.length === 0) {
       // Nothing to tab to — keep focus pinned on the container itself.
@@ -101,7 +276,6 @@ export function trapFocusWithin(container: HTMLElement | null): () => void {
     }
     const first = focusables[0]
     const last = focusables[focusables.length - 1]
-    const active = doc.activeElement
 
     if (event.shiftKey) {
       if (active === first || !container.contains(active)) {
@@ -247,13 +421,17 @@ export function activateShellOverlayGuard(
   const releaseFocus = trapFocusWithin(options.focusContainer)
   const restoreBackground = hideBackgroundFrom(
     options.backgroundAnchor ?? options.focusContainer,
-    { isOwnRoot: options.isOwnRoot },
+    {
+      isOwnRoot: element => Boolean(options.isOwnRoot?.(element)) ||
+        ownedShellPortals(options.focusContainer).some(portal => portal.root === element),
+    },
   )
   let released = false
   return () => {
     if (released) return
     released = true
     releaseFocus()
+    for (const portal of ownedShellPortals(options.focusContainer).reverse()) portal.onClose()
     restoreBackground()
   }
 }

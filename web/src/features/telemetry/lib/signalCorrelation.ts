@@ -24,37 +24,16 @@
  *     no matter what they are. First differences are offered so the user can
  *     ask about co-movement rather than shared drift.
  *  3. **Effective sample size.** Resampled series are heavily autocorrelated,
- *     so the naive n wildly overstates significance. The reported significance
- *     uses an autocorrelation-adjusted n, which is why a correlogram peak here
- *     is far harder to reach than in a naive implementation.
+ *     so the naive n wildly overstates significance. The screening threshold
+ *     uses an approximate autocorrelation-adjusted n; it is not a calibrated
+ *     significance guarantee and does not correct for searching across lags.
  *
  * Pure and React-free.
  */
 
-import type { SignalObservation } from '@/types/signals';
+import { toSignalHistoryMeasurements, type SignalHistorySample } from './signalHistorySamples';
 
-/**
- * The two signal shapes this app actually serves.
- *
- * `signal_log` rows arrive as `SignalObservation` (snake_case, `ts`), while
- * `/signals/{id}/{name}/history` returns `SignalPoint` (camelCase,
- * `timestamp`). Rather than force every caller through an adapter — and risk
- * one of them silently mapping the wrong key and correlating an empty series —
- * the module reads whichever pair is present.
- */
-export interface CorrelatableSample {
-  ts?: string;
-  timestamp?: string;
-  value_numeric?: number | null;
-  valueNum?: number | null;
-  value_bool?: boolean | null;
-  valueBool?: boolean | null;
-}
-
-/** Structural check that `SignalObservation` remains assignable to the input. */
-export type SignalObservationIsCorrelatable = SignalObservation extends CorrelatableSample
-  ? true
-  : never;
+export type CorrelatableSample = SignalHistorySample;
 
 export interface ResampledSeries {
   /** Grid timestamps, ms. */
@@ -63,7 +42,7 @@ export interface ResampledSeries {
   v: Array<number | null>;
   /** Grid step, ms. */
   stepMs: number;
-  /** Samples actually filled, vs. gaps. */
+  /** This signal's filled grid slots vs. stale gaps, before differencing or lag pairing. */
   filled: number;
   gaps: number;
 }
@@ -72,28 +51,38 @@ export interface LagPoint {
   /** Positive = signal B lags behind signal A. */
   lagS: number;
   r: number;
-  /** Overlapping samples used at this lag. */
+  /** Overlapping resampled pairs used at this lag, after optional differencing. */
   n: number;
 }
 
 export interface CorrelationResult {
   /** Full correlogram, ascending by lag. */
   correlogram: LagPoint[];
-  /** Correlation at zero lag — what a naive overlay chart shows. */
-  zeroLagR: number;
+  /** Correlation at zero lag, or null when that lag has no usable estimate. */
+  zeroLagR: number | null;
+  zeroLagReason?: 'insufficient' | 'invalid' | null;
   /** The lag with the largest |r|. */
   bestLagS: number;
   bestR: number;
-  /** Samples contributing at the best lag. */
+  /** Overlapping resampled pairs at the best lag, not original source records. */
   bestN: number;
-  /** Autocorrelation-adjusted sample size at the best lag. */
+  /** Returned history record counts, before validation, deduplication or resampling. */
+  sourceCountA?: number;
+  sourceCountB?: number;
+  /** Valid timestamp-deduplicated measurements before overlap clipping or resampling. */
+  validCountA?: number;
+  validCountB?: number;
+  /** Approximate lag-1 autocorrelation-adjusted sample size at the best lag. */
   effectiveN: number;
-  /** |r| needed to clear 95 % significance at `effectiveN`. */
+  /** Approximate screening cutoff for |r|; not a calibrated 95 % guarantee. */
   significanceThreshold: number;
+  /** Whether the peak clears the screening cutoff, not proof of a relationship. */
   significant: boolean;
   /** Which signal moves first. */
   lead: 'a' | 'b' | 'simultaneous' | 'none';
+  /** Independent A coverage on the shared overlap grid; not a paired sample count. */
   seriesA: ResampledSeries;
+  /** Independent B coverage on the same grid; never inferred from A coverage. */
   seriesB: ResampledSeries;
   overlapStartMs: number | null;
   overlapEndMs: number | null;
@@ -112,6 +101,10 @@ export interface CorrelationOptions {
   minOverlap?: number;
 }
 
+export type CorrelationEvidence =
+  | { result: CorrelationResult; reason: null }
+  | { result: null; reason: 'empty' | 'nonnumeric' | 'insufficient' | 'disjoint' };
+
 const DEFAULTS = {
   stepS: 60,
   maxLagS: 1800,
@@ -120,39 +113,11 @@ const DEFAULTS = {
   minOverlap: 10,
 } as const;
 
-/** Numeric observations only, ascending, de-duplicated by timestamp. */
+/** Numeric and boolean history measurements, ascending and timestamp-deduplicated. */
 export function toNumericSeries(
   observations: readonly CorrelatableSample[],
 ): Array<{ ms: number; value: number }> {
-  const points: Array<{ ms: number; value: number }> = [];
-  for (const o of observations) {
-    const iso = o.ts ?? o.timestamp;
-    if (iso == null) continue;
-    const ms = new Date(iso).getTime();
-    if (!Number.isFinite(ms)) continue;
-
-    const numeric = o.value_numeric ?? o.valueNum;
-    const bool = o.value_bool ?? o.valueBool;
-    let value: number | null = null;
-    if (typeof numeric === 'number' && Number.isFinite(numeric)) {
-      value = numeric;
-    } else if (typeof bool === 'boolean') {
-      // Booleans are genuinely correlatable (HVAC on/off vs. cabin temp), so
-      // they are promoted rather than discarded.
-      value = bool ? 1 : 0;
-    }
-    if (value == null) continue;
-    points.push({ ms, value });
-  }
-  points.sort((a, b) => a.ms - b.ms);
-
-  const deduped: Array<{ ms: number; value: number }> = [];
-  for (const p of points) {
-    const last = deduped[deduped.length - 1];
-    if (last != null && last.ms === p.ms) last.value = p.value;
-    else deduped.push(p);
-  }
-  return deduped;
+  return toSignalHistoryMeasurements(observations, true);
 }
 
 /**
@@ -253,6 +218,7 @@ function lag1Autocorrelation(series: ReadonlyArray<number | null>): number {
  * Resampling a 10-minute signal onto a 60-second grid multiplies the apparent
  * sample size tenfold without adding a single new observation; without this
  * correction every correlogram peak would look overwhelmingly significant.
+ * This lag-1 approximation does not model all temporal dependence or gaps.
  */
 export function effectiveSampleSize(n: number, rhoA: number, rhoB: number): number {
   const product = rhoA * rhoB;
@@ -271,23 +237,27 @@ function firstDifference(v: ReadonlyArray<number | null>): Array<number | null> 
   return out;
 }
 
-export function crossCorrelate(
+/** A missing calculation is not evidence that the reporting windows are disjoint. */
+export function analyzeCorrelation(
   a: readonly CorrelatableSample[],
   b: readonly CorrelatableSample[],
   options: CorrelationOptions = {},
-): CorrelationResult | null {
+): CorrelationEvidence {
   const opts = { ...DEFAULTS, ...options };
   const stepMs = opts.stepS * 1000;
   const maxStaleMs = opts.maxStaleS * 1000;
 
   const pa = toNumericSeries(a);
   const pb = toNumericSeries(b);
-  if (pa.length < 2 || pb.length < 2) return null;
+  if (a.length === 0 || b.length === 0) return { result: null, reason: 'empty' };
+  if (pa.length === 0 || pb.length === 0) return { result: null, reason: 'nonnumeric' };
+  if (pa.length < 2 || pb.length < 2) return { result: null, reason: 'insufficient' };
 
   // Only the window where both signals were actually reporting can be used.
   const startMs = Math.max(pa[0]!.ms, pb[0]!.ms);
   const endMs = Math.min(pa[pa.length - 1]!.ms, pb[pb.length - 1]!.ms);
-  if (endMs <= startMs) return null;
+  if (endMs < startMs) return { result: null, reason: 'disjoint' };
+  if (endMs === startMs) return { result: null, reason: 'insufficient' };
 
   const seriesA = resample(pa, startMs, endMs, stepMs, maxStaleMs);
   const seriesB = resample(pb, startMs, endMs, stepMs, maxStaleMs);
@@ -296,15 +266,19 @@ export function crossCorrelate(
   const vb = opts.detrend ? firstDifference(seriesB.v) : seriesB.v;
 
   const maxOffset = Math.min(Math.floor(opts.maxLagS / opts.stepS), va.length - 1);
-  if (maxOffset < 0) return null;
+  if (maxOffset < 0) return { result: null, reason: 'insufficient' };
 
   const correlogram: LagPoint[] = [];
   for (let offset = -maxOffset; offset <= maxOffset; offset++) {
     const { r, n } = pearson(va, vb, offset);
-    if (n < opts.minOverlap) continue;
-    correlogram.push({ lagS: offset * opts.stepS, r: Math.round(r * 10000) / 10000, n });
+    if (n < opts.minOverlap || !Number.isFinite(r)) continue;
+    // When maxLagS < stepS the sweep starts at -maxOffset === -0, so the
+    // zero-lag product is -0. Normalize to canonical +0: downstream identity
+    // checks (and the bestLagS contract) distinguish the two.
+    const lagS = offset * opts.stepS;
+    correlogram.push({ lagS: lagS === 0 ? 0 : lagS, r: Math.round(r * 10000) / 10000, n });
   }
-  if (correlogram.length === 0) return null;
+  if (correlogram.length === 0) return { result: null, reason: 'insufficient' };
 
   const best = correlogram.reduce((acc, p) => {
     const delta = Math.abs(p.r) - Math.abs(acc.r);
@@ -317,13 +291,16 @@ export function crossCorrelate(
     return acc;
   });
   const zero = correlogram.find((p) => p.lagS === 0);
+  const zeroLagReason = zero != null ? null
+    : pearson(va, vb, 0).n < opts.minOverlap ? 'insufficient' : 'invalid';
 
   const rhoA = lag1Autocorrelation(va);
   const rhoB = lag1Autocorrelation(vb);
   const effectiveN = Math.round(effectiveSampleSize(best.n, rhoA, rhoB));
 
-  // 95 % critical |r| for n−2 degrees of freedom, via the t↔r identity with
-  // t ≈ 1.96 (adequate once the effective n clears ~30, conservative below).
+  // Approximate screening cutoff via the t↔r identity with fixed t ≈ 1.96.
+  // This is not a finite-sample Student-t critical value (and is not
+  // conservative at small effective n), nor a correction for the lag search.
   const df = Math.max(1, effectiveN - 2);
   const tCrit = 1.96;
   const significanceThreshold = Math.round(
@@ -338,12 +315,17 @@ export function crossCorrelate(
     else lead = 'simultaneous';
   }
 
-  return {
+  const result: CorrelationResult = {
     correlogram,
-    zeroLagR: zero?.r ?? 0,
+    zeroLagR: zero?.r ?? null,
+    zeroLagReason,
     bestLagS: best.lagS,
     bestR: best.r,
     bestN: best.n,
+    sourceCountA: a.length,
+    sourceCountB: b.length,
+    validCountA: pa.length,
+    validCountB: pb.length,
     effectiveN,
     significanceThreshold,
     significant,
@@ -353,4 +335,13 @@ export function crossCorrelate(
     overlapStartMs: startMs,
     overlapEndMs: endMs,
   };
+  return { result, reason: null };
+}
+
+export function crossCorrelate(
+  a: readonly CorrelatableSample[],
+  b: readonly CorrelatableSample[],
+  options: CorrelationOptions = {},
+): CorrelationResult | null {
+  return analyzeCorrelation(a, b, options).result;
 }

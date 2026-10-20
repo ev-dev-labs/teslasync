@@ -72,20 +72,18 @@ describe('buildTimeline', () => {
     expect(buildTimeline(track(4, 1000))).toEqual([0, 1000, 2000, 3000]);
   });
 
-  it('uses the first parseable timestamp as the origin and zeroes bad rows', () => {
+  it('uses the first parseable timestamp as the origin and preserves unknown rows', () => {
     const positions = [
       pos('not-a-date'),
       pos(new Date(BASE).toISOString()),
       pos('also-garbage'),
       pos(new Date(BASE + 5000).toISOString()),
     ];
-    // Origin is index 1 (first finite). Bad rows collapse to 0 so a single
-    // unparseable row can't turn totalTime into NaN.
-    expect(buildTimeline(positions)).toEqual([0, 0, 0, 5000]);
+    expect(buildTimeline(positions)).toEqual([null, 0, null, 5000]);
   });
 
-  it('returns an empty timeline when every timestamp is unparseable', () => {
-    expect(buildTimeline([pos('x'), pos('y')])).toEqual([]);
+  it('retains every sample when every timestamp is unparseable', () => {
+    expect(buildTimeline([pos('x'), pos('y')])).toEqual([null, null]);
   });
 });
 
@@ -137,6 +135,8 @@ describe('useTripReplay', () => {
     // Regression: totalTime used to be 0 on the first render (ref set in an
     // effect). It must reflect the timeline immediately.
     expect(state.totalTime).toBe(4000);
+    expect(state.canPlay).toBe(true);
+    expect(state.timeline).toEqual([0, 1000, 2000, 3000, 4000]);
     expect(state.isPlaying).toBe(false);
     expect(state.speed).toBe(1);
     expect(state.currentIndex).toBe(0);
@@ -159,6 +159,95 @@ describe('useTripReplay', () => {
     expect(getState().elapsedTime).toBe(0);
     expect(getState().progress).toBe(0);
     expect(getState().currentPosition).toBeNull();
+    expect(getState().isPlaying).toBe(false);
+    expect(getState().canPlay).toBe(false);
+  });
+
+  it.each([
+    ['unknown first timestamp', ['unknown', 0, 2000]],
+    ['unknown middle timestamp', [0, 'unknown', 2000]],
+    ['unknown last timestamp', [0, 1000, 'unknown']],
+    ['all unknown timestamps', ['unknown', 'unknown', 'unknown']],
+    ['descending timestamps', [2000, 1000, 0]],
+    ['interior ordering reversal', [0, 2000, 1000, 3000]],
+    ['zero-duration timestamps', [0, 0, 0]],
+    ['single timestamp', [0]],
+  ])('disables time replay but retains sample navigation for %s', (_name, timestamps) => {
+    const positions = timestamps.map((timestamp, index) =>
+      pos(typeof timestamp === 'number' ? new Date(BASE + timestamp).toISOString() : timestamp, {
+        latitude: index,
+      }),
+    );
+    const { result } = renderHook(() => useTripReplay(positions));
+    expect(result.current[0].timeline).toEqual(buildTimeline(positions));
+    expect(result.current[0].timeline).toHaveLength(positions.length);
+    expect(result.current[0].canPlay).toBe(false);
+    expect(result.current[0].totalTime).toBe(0);
+
+    act(() => result.current[1].play());
+    act(() => vi.advanceTimersByTime(1000));
+    expect(result.current[0].isPlaying).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+
+    act(() => result.current[1].seekTo(positions.length - 1));
+    expect(result.current[0].currentPosition).toBe(positions.at(-1));
+    expect(result.current[0].elapsedTime).toBe(0);
+    act(() => result.current[1].seekToProgress(0.5));
+    act(() => result.current[1].seekBy(1));
+    expect(result.current[0].currentIndex).toBe(positions.length - 1);
+    act(() => result.current[1].stepFrame(-1));
+    expect(result.current[0].currentPosition).toBe(positions[Math.max(0, positions.length - 2)]);
+  });
+
+  it('allows duplicate timestamps within an ordered positive-duration domain', () => {
+    const positions = [track(3)[0], track(3)[0], track(3)[2]];
+    const { result } = renderHook(() => useTripReplay(positions));
+    expect(result.current[0].canPlay).toBe(true);
+    expect(result.current[0].timeline).toEqual([0, 0, 2000]);
+    act(() => result.current[1].play());
+    act(() => vi.advanceTimersByTime(2000));
+    expect(result.current[0].currentPosition).toBe(positions[2]);
+    expect(result.current[0].progress).toBe(1);
+    expect(result.current[0].isPlaying).toBe(false);
+  });
+
+  it('rewinds and stops when only an interior timestamp changes', () => {
+    const positions = track(4);
+    const { result, rerender } = renderHook(({ p }) => useTripReplay(p), {
+      initialProps: { p: positions },
+    });
+    act(() => result.current[1].play());
+    act(() => vi.advanceTimersByTime(1000));
+    rerender({ p: positions.map((position, index) => index === 1 ? { ...position, timestamp: 'unknown' } : position) });
+    expect(result.current[0].canPlay).toBe(false);
+    expect(result.current[0].isPlaying).toBe(false);
+    expect(result.current[0].currentIndex).toBe(0);
+    expect(result.current[0].elapsedTime).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('preserves the playhead for equal timestamp content with a new array identity', () => {
+    const positions = track(4);
+    const { result, rerender } = renderHook(({ p }) => useTripReplay(p), {
+      initialProps: { p: positions },
+    });
+    act(() => result.current[1].seekTo(2));
+    rerender({ p: positions.map((position) => ({ ...position })) });
+    expect(result.current[0].currentIndex).toBe(2);
+    expect(result.current[0].elapsedTime).toBe(2000);
+  });
+
+  it('ignores non-finite seeks without poisoning the playhead', () => {
+    const { result } = renderHook(() => useTripReplay(track(4)));
+    act(() => result.current[1].seekTo(1));
+    act(() => {
+      result.current[1].seekTo(NaN);
+      result.current[1].seekToProgress(Infinity);
+      result.current[1].seekBy(NaN);
+      result.current[1].stepFrame(Infinity);
+    });
+    expect(result.current[0].currentIndex).toBe(1);
+    expect(result.current[0].elapsedTime).toBe(1000);
   });
 
   it('advances the playhead over time while playing', () => {

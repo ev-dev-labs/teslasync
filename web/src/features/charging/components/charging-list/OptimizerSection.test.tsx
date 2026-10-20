@@ -6,7 +6,7 @@
  * `ChargingOptimizerData` bag and it lays out five things —
  *
  *   1. a conditional "savings" AlertBanner (only when the estimated monthly
- *      saving strictly exceeds $5);
+ *      saving strictly exceeds 5 in the source's unspecified denomination);
  *   2. a "Charging Habits" panel (sessions/week, home %, avg target, common
  *      start hour + day);
  *   3. a "Battery-Friendly Score" LinearGauge whose colour + caption switch on
@@ -24,7 +24,7 @@
  *   - every habits row's formatted value, and the null-safety added here —
  *     a nullish `most_common_start_hour` / `most_common_day` renders "—",
  *     never "undefined:00", while hour `0` (midnight) is preserved as "0:00";
- *   - the three battery-score bands: caption text + the gauge's hex stroke
+ *   - the three battery-score bands: caption text + the gauge's semantic
  *     colour, plus the hardening that `NaN`/`undefined` collapses to 0 (poor,
  *     red) and never leaks "NaN" into the DOM / an SVG offset;
  *   - the cost-analysis rows: 3-dp rates, the peak-session %'s red/emerald
@@ -40,15 +40,16 @@
  *
  * `react-i18next` is stubbed so `t(key, fallback)` resolves to its English
  * fallback deterministically (mirrors the sibling CostHeatmap / charging-curve
- * tests). Note the stub does NOT interpolate `{{amount}}`, so banner assertions
- * key off the interpolation-free copy rather than the templated title.
+ * tests). Savings retain the source's unspecified denomination, without an
+ * inferred currency or exchange conversion.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 
 import { OptimizerSection } from './OptimizerSection';
 import { gaugeColor } from '@/test/gaugeTestUtils';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import type {
   ChargingOptimizerData,
   OptimizerCostAnalysis,
@@ -62,7 +63,12 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+        const template = typeof fallback === 'string' ? fallback : key;
+        return options
+          ? template.replace(/{{(\w+)}}/g, (_m, name: string) => String(options[name] ?? ''))
+          : template;
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -137,23 +143,37 @@ function makeOptimizer(o: OptimizerOverrides = {}): ChargingOptimizerData {
 const renderSection = (o?: OptimizerOverrides) =>
   render(<OptimizerSection optimizer={makeOptimizer(o)} />);
 
+// The redesigned face shows live values only; unknown readings are omitted
+// and counted in each brief's Review-details drawer (habits first, cost second).
+function openDetails(index: number): HTMLElement {
+  const buttons = screen.getAllByRole('button', { name: 'Review details' });
+  fireEvent.click(buttons[index]!);
+  return screen.getByRole('dialog');
+}
+
 /** The section renders a single LinearGauge; this is its fill colour. */
 const gaugeStroke = (container: HTMLElement) => gaugeColor(container);
 
 const SAVINGS_DETAIL =
   'Based on your charging patterns, shifting to off-peak hours could reduce your monthly costs.';
 
+afterEach(() => {
+  act(() => {
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+  });
+});
+
 describe('OptimizerSection — savings banner', () => {
-  it('shows the banner (with its detail copy) only when savings strictly exceed $5', () => {
+  it('shows the banner (with its detail copy) only when savings strictly exceed 5', () => {
     renderSection({ cost: { potential_monthly_savings: 18 } });
 
     // The interpolation-free detail line is the stable proof the banner mounted.
     expect(screen.getByText(SAVINGS_DETAIL)).toBeInTheDocument();
-    // The templated title still renders (the mock leaves {{amount}} un-substituted).
-    expect(screen.getByText(/adjusting your charging schedule/)).toBeInTheDocument();
+    expect(screen.getByText('Monthly savings: ~18.00')).toBeInTheDocument();
   });
 
-  it('hides the banner at the $5 boundary and below (strict >, not >=)', () => {
+  it('hides the banner at the 5 boundary and below (strict >, not >=)', () => {
     renderSection({ cost: { potential_monthly_savings: 5 } });
     expect(screen.queryByText(SAVINGS_DETAIL)).toBeNull();
 
@@ -168,9 +188,11 @@ describe('OptimizerSection — charging habits', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Charging Habits' })).toBeInTheDocument();
-    expect(screen.getByText('4.5')).toBeInTheDocument(); // sessions/week (1 dp)
-    expect(screen.getByText('85%')).toBeInTheDocument(); // home charging
-    expect(screen.getByText('80%')).toBeInTheDocument(); // avg charge target
+    expect(screen.getByText('4.50')).toBeInTheDocument(); // sessions/week (1 dp)
+    expect(screen.getByText('85.00%')).toBeInTheDocument(); // most-used recorded location
+    expect(screen.getByText('Most-used recorded location')).toBeInTheDocument();
+    expect(screen.queryByText('Home charging')).not.toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument(); // avg charge target
     expect(screen.getByText('22:00')).toBeInTheDocument(); // common start hour
     expect(screen.getByText('Wednesday')).toBeInTheDocument(); // common day
   });
@@ -187,8 +209,9 @@ describe('OptimizerSection — charging habits', () => {
     };
     const { container } = render(<OptimizerSection optimizer={dirty} />);
 
-    // Both nullish rows collapse to the em-dash placeholder — and nothing else does.
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    // Both nullish rows are omitted from the face and counted in the drawer.
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    expect(within(openDetails(0)).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     expect(container.textContent).not.toContain('undefined:00');
     expect(container.textContent).not.toContain('undefined');
   });
@@ -198,6 +221,21 @@ describe('OptimizerSection — charging habits', () => {
     // `!= null` guard keeps the falsy-but-valid 0 — it must not become "—".
     expect(screen.getByText('0:00')).toBeInTheDocument();
   });
+
+  it.each([0, -1, NaN, Infinity, 101])('shows unknown instead of a location share for %s', (value) => {
+    const { container } = renderSection({ schedule: { home_charging_pct: value } });
+    expect(screen.queryByText('Most-used recorded location')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(9);
+    const dialog = openDetails(0);
+    expect(within(dialog).getByText('1 empty fields are hidden.')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Location clusters do not confirm home charging. Missing location evidence is shown as unknown.').length).toBeGreaterThan(0);
+  });
+
+  it('preserves a fully recorded location share without claiming it is home', () => {
+    renderSection({ schedule: { home_charging_pct: 100 } });
+    expect(screen.getByText('Most-used recorded location').closest('[data-operational-metric]')).toHaveTextContent('100.00%');
+    expect(screen.queryByText('Home charging')).not.toBeInTheDocument();
+  });
 });
 
 describe('OptimizerSection — battery-friendly score', () => {
@@ -205,7 +243,7 @@ describe('OptimizerSection — battery-friendly score', () => {
     const { container } = renderSection({ battery_health_score: 82 });
 
     expect(screen.getByText('Your habits are battery-friendly')).toBeInTheDocument();
-    expect(gaugeStroke(container)).toBe('#22c55e');
+    expect(gaugeStroke(container)).toBe('var(--semantic-success)');
     expect(screen.getByText('82')).toBeInTheDocument(); // gauge value
   });
 
@@ -213,14 +251,14 @@ describe('OptimizerSection — battery-friendly score', () => {
     const { container } = renderSection({ battery_health_score: 60 });
 
     expect(screen.getByText('Room for improvement')).toBeInTheDocument();
-    expect(gaugeStroke(container)).toBe('#f59e0b');
+    expect(gaugeStroke(container)).toBe('var(--semantic-warning)');
   });
 
   it('paints red + "consider adjusting" for a low score', () => {
     const { container } = renderSection({ battery_health_score: 30 });
 
     expect(screen.getByText('Consider adjusting your habits')).toBeInTheDocument();
-    expect(gaugeStroke(container)).toBe('#ef4444');
+    expect(gaugeStroke(container)).toBe('var(--semantic-danger)');
   });
 
   it('collapses a NaN/undefined score to 0 (poor, red) without leaking "NaN"', () => {
@@ -232,7 +270,7 @@ describe('OptimizerSection — battery-friendly score', () => {
     const { container } = render(<OptimizerSection optimizer={dirty} />);
 
     expect(screen.getByText('Consider adjusting your habits')).toBeInTheDocument();
-    expect(gaugeStroke(container)).toBe('#ef4444');
+    expect(gaugeStroke(container)).toBe('var(--semantic-danger)');
     // safeNumber neutralises NaN → 0, so neither the caption nor the SVG offset
     // (stroke-dashoffset) leaks "NaN" anywhere in the tree.
     expect(container.textContent).not.toContain('NaN');
@@ -241,28 +279,58 @@ describe('OptimizerSection — battery-friendly score', () => {
 });
 
 describe('OptimizerSection — cost analysis', () => {
-  it('renders 3-dp peak/off-peak rates and the joined hour lists', () => {
+  it('renders peak/off-peak rates and the joined hour lists', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Cost Analysis' })).toBeInTheDocument();
-    expect(screen.getByText('$0.420/kWh')).toBeInTheDocument();
-    expect(screen.getByText('$0.110/kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.42/kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.11/kWh')).toBeInTheDocument();
     expect(screen.getByText('17:00, 18:00, 19:00')).toBeInTheDocument();
     expect(screen.getByText('1:00, 2:00, 3:00')).toBeInTheDocument();
+    expect(within(openDetails(1)).getAllByText('Hourly costs combine recorded charging locations, not a confirmed tariff. Savings are illustrative, not guaranteed.').length).toBeGreaterThan(0);
   });
 
   it('flags a high peak-session share red and a low share emerald', () => {
     renderSection({ cost: { sessions_during_peak_pct: 45 } });
-    expect(screen.getByText('45%').className).toContain('text-red-400');
+    expect(screen.getByText('45.00%').className).toContain('text-[var(--semantic-danger)]');
 
     renderSection({ cost: { sessions_during_peak_pct: 10 } });
-    expect(screen.getByText('10%').className).toContain('text-emerald-300');
+    expect(screen.getByText('10.00%').className).toContain('text-[var(--semantic-success)]');
   });
 
   it('shows "—" for empty peak / off-peak hour lists (never a blank cell)', () => {
-    renderSection({ cost: { peak_hours: [], offpeak_hours: [] } });
-    // Exactly the two hour rows fall back to the em-dash (habits day/hour are set).
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    const { container } = renderSection({ cost: { peak_hours: [], offpeak_hours: [] } });
+    // Exactly the two hour rows are omitted from the face (habits day/hour are set).
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    expect(within(openDetails(1)).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+  });
+});
+
+describe('OptimizerSection — source denomination', () => {
+  it.each([NaN, Infinity])('does not present a non-finite savings estimate (%s) as money', value => {
+    renderSection({
+      cost: { potential_monthly_savings: value },
+      recommendations: [{ ...baseRecs[0], estimated_savings: value }],
+    });
+    expect(screen.queryByText(SAVINGS_DETAIL)).toBeNull();
+    expect(screen.queryByText(/Monthly savings:/)).toBeNull();
+    expect(screen.getByText(baseRecs[0].title)).toBeInTheDocument();
+  });
+
+  it('keeps undenominated aggregates and savings unchanged instead of inventing dollars or FX', () => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(3);
+    const optimizer = makeOptimizer({ cost: { peak_cost_per_kwh: -0.42, offpeak_cost_per_kwh: 0 } });
+    const original = structuredClone(optimizer);
+    const { container } = render(<OptimizerSection optimizer={optimizer} />);
+
+    expect(screen.getByText('-0,420/kWh')).toBeInTheDocument();
+    expect(screen.getByText('0,000/kWh')).toBeInTheDocument();
+    expect(screen.getByText('Monthly savings: ~18,000')).toBeInTheDocument();
+    expect(screen.getByText('Monthly savings: ~24,000')).toHaveAttribute('title',
+      'Recorded cost; the source does not supply a currency denomination. No currency conversion is applied.');
+    expect(container.textContent).not.toMatch(/[$€£]|USD|EUR/);
+    expect(optimizer).toEqual(original);
   });
 });
 
@@ -314,10 +382,9 @@ describe('OptimizerSection — recommendations', () => {
     expect(screen.getByText('medium')).toBeInTheDocument();
     expect(screen.getByText('low')).toBeInTheDocument();
 
-    // Savings chip only appears for the > 0 estimate (the high rec's $24) —
-    // the medium rec's $0 and the low rec's missing estimate render no chip.
-    expect(screen.getByText('~$24/mo')).toBeInTheDocument();
-    expect(screen.queryByText('~$0/mo')).toBeNull();
+    // Only the positive source estimate receives a savings chip.
+    expect(screen.getByText('Monthly savings: ~24.00')).toBeInTheDocument();
+    expect(screen.queryByText('Monthly savings: ~0.00')).toBeNull();
   });
 
   it('renders the labelled empty state (never a blank panel) when there are none', () => {

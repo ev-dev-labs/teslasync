@@ -57,13 +57,16 @@ describe('StaleRefreshWarning — never replaces retained content', () => {
     ).toBeInTheDocument();
   });
 
-  it('explains the offline case differently from the failure case', () => {
+  it('explains a paused refresh without claiming the device is offline or failed', () => {
     const state = deriveDataState(
       { data: [1], fetchStatus: 'paused', dataUpdatedAt: NOW - 20_000 },
       { now },
     );
     render(<StaleRefreshWarning state={state} />);
-    expect(screen.getByText(/device is offline/i)).toBeInTheDocument();
+    expect(screen.getByText(/latest values are temporarily unavailable/i)).toBeInTheDocument();
+    expect(screen.queryByText(/offline|failed/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(state.refreshError).toBeNull();
   });
 
   it('surfaces partial state without claiming the data is stale', () => {
@@ -122,5 +125,56 @@ describe('StaleRefreshWarning — never replaces retained content', () => {
     );
     render(<StaleRefreshWarning state={state} message="Drive list is 2 minutes behind." />);
     expect(screen.getByText('Drive list is 2 minutes behind.')).toBeInTheDocument();
+  });
+
+  it('keeps retained zero, actual age and refresh error untouched beside the notice', () => {
+    const rows = [0];
+    const error = new Error('502');
+    const state = deriveDataState(
+      { data: rows, error, dataUpdatedAt: NOW - 20_000 },
+      { now },
+    );
+    render(<><StaleRefreshWarning state={state} /><output>{state.data?.[0]}</output></>);
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(state.data).toBe(rows);
+    expect(state.updatedAt).toBe(NOW - 20_000);
+    expect(state.ageMs).toBe(20_000);
+    expect(state.refreshError).toBe(error);
+    expect(state.fatalError).toBeNull();
+  });
+
+  it('renders nothing for an initial paused load with no retained data', () => {
+    const state = deriveDataState({ fetchStatus: 'paused' }, { now });
+    const { container } = render(<StaleRefreshWarning state={state} />);
+    expect(container).toBeEmptyDOMElement();
+    expect(state.fatalError).toBeNull();
+  });
+
+  it('preserves unavailable state and caller title, attributes and long content', () => {
+    const state = deriveDataState(
+      { data: [], isSuccess: true, dataUpdatedAt: NOW },
+      { unavailable: true, now },
+    );
+    const message = 'Retained source explanation '.repeat(30);
+    render(<StaleRefreshWarning state={state} title="Source notice" message={message} dir="rtl" id="source-notice" />);
+    expect(screen.getByText('Source notice')).toBeInTheDocument();
+    expect(screen.getByText(message.trim())).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-data-state', 'unavailable');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('dir', 'rtl');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('id', 'source-notice');
+  });
+
+  it('keeps the retry focusable and wrapping with a mobile recovery target', () => {
+    const state = deriveDataState(
+      { data: [1], error: new Error('502'), refetch: vi.fn(), dataUpdatedAt: NOW },
+      { now },
+    );
+    render(<StaleRefreshWarning state={state} />);
+    const retry = screen.getByRole('button', { name: /refresh/i });
+    retry.focus();
+    expect(retry).toHaveFocus();
+    expect(retry).toHaveClass('min-h-11', 'md:min-h-9', 'whitespace-normal', 'max-w-full');
+    expect(retry.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 });

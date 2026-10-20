@@ -29,8 +29,9 @@
  *   - out-of-range clamping (bug fix): extreme temps land in the nearest EDGE
  *     bucket, not the middle one.
  */
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent, type RenderResult } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, type RenderResult } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -41,6 +42,41 @@ import {
   type UnitPref,
 } from '@/lib/unitConversion';
 import type { TemperatureImpactResponse, TemperatureImpactPoint } from '@/api/hooks/useAnalytics';
+import type { ChartDataColumn, ChartDataRow, EmbeddedChartProps } from '@/components/charts';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+
+const chartFrames = vi.hoisted(() => [] as {
+  title: string;
+  data?: ReadonlyArray<ChartDataRow>;
+  columns?: ReadonlyArray<ChartDataColumn>;
+}[]);
+const scatterSeries = vi.hoisted(() => [] as ReadonlyArray<ChartDataRow>[]);
+const savedDates = vi.hoisted(() => ({
+  locale: 'en-US',
+  mode: 'utc' as 'utc' | 'user' | 'vehicle',
+  timezone: 'UTC',
+}));
+
+vi.mock('@/hooks/useSettings', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({
+    settings: {
+      tz_display_default: savedDates.mode,
+      timezone_user: savedDates.timezone,
+      locale: savedDates.locale,
+      decimal_precision: 2,
+      currency_symbol: '$',
+      base_cost_per_kwh: 0.12,
+    },
+    locale: savedDates.locale,
+    decimals: 2,
+    settingsUnavailable: false,
+  }),
+}));
+
+vi.mock('@/lib/timezone', async (importOriginal) =>
+  await importOriginal<typeof import('@/lib/timezone')>(),
+);
 
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ────────
@@ -72,7 +108,8 @@ vi.mock('react-i18next', () => {
 });
 
 // ── motion primitives: render children verbatim (strip animation). ──
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/components/motion')>(),
   FadeIn: ({ children, className }: { children?: ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
   ),
@@ -82,11 +119,8 @@ vi.mock('@/components/motion', () => ({
   StaggerItem: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 
-// ── charts barrel: recharts primitives are inert. ResponsiveContainer renders
-//    nothing so chart internals don't need a layout engine; everything the page
-//    draws OUTSIDE the chart (the bucket-colour legend, KPI band, badges, table)
-//    still renders and stays assertable. The two data constants the page indexes
-//    into (`CHART_COLORS[n]`) / spreads (`AREA_DEFAULTS`) are real-shaped. ──────
+// ── charts barrel: preserve scatter inputs without a chart layout engine;
+//    the legend, KPI band, badges, table and data alternatives remain assertable.
 vi.mock('@/components/charts', async () => {
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Null = () => null;
@@ -95,9 +129,12 @@ vi.mock('@/components/charts', async () => {
     ChartTooltip: Null,
     CHART_COLORS: ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'],
     AREA_DEFAULTS: {},
-    ResponsiveContainer: Null,
-    ScatterChart: Null,
-    Scatter: Null,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    ScatterChart: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    Scatter: ({ data, children }: { data: ReadonlyArray<ChartDataRow>; children?: ReactNode }) => {
+      scatterSeries.push(data);
+      return <>{children}</>;
+    },
     Cell: Null,
     XAxis: Null,
     YAxis: Null,
@@ -110,7 +147,10 @@ vi.mock('@/components/charts', async () => {
     ComposedChart: Null,
     Bar: Null,
     ChartLegend: Null,
-    EmbeddedChart: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    EmbeddedChart: ({ children, title, data, dataColumns }: EmbeddedChartProps) => {
+      chartFrames.push({ title, data, columns: dataColumns });
+      return <>{typeof children === 'function' ? children({ annotations: [], hidden: false, hiddenSeries: null }) : children}</>;
+    },
   };
 });
 
@@ -136,6 +176,9 @@ vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/api/hooks/useAnalytics', () => ({ useTemperatureImpact: vi.fn() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
+vi.mock('@/hooks/useChartPalette', () => ({
+  useChartPalette: () => ['var(--series-cold)', 'var(--series-cool)', 'var(--series-mild)', 'var(--series-warm)', 'var(--series-hot)'],
+}));
 
 import { useTemperatureImpact } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -153,14 +196,14 @@ const B_COLD = '< 0°C';
 const B0to10 = `0${NDASH}10°C`;
 const B10to20 = `10${NDASH}20°C`;
 const B20to30 = `20${NDASH}30°C`;
-const B_HOT = '> 30°C';
+const B_HOT = '≥ 30°C';
 
 // 1 mile in km — matches the KM_PER_MILE constant the page uses, so the mi
 // boundary assertions read on concrete numbers rather than re-deriving maths.
 const KM_PER_MILE = 1.609344;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -206,7 +249,7 @@ function fullData(over: Partial<TemperatureImpactResponse> = {}): TemperatureImp
 }
 
  
-function selected(vehicleId: number | null): any {
+function selected(vehicleId: number | null) {
   return {
     vehicleId,
     vehicle: null,
@@ -215,7 +258,7 @@ function selected(vehicleId: number | null): any {
   };
 }
 
-function makePrefs(distance: 'km' | 'mi', temperature: '°C' | '°F'): UnitPref {
+function makePrefs(distance: 'km' | 'mi', temperature: '°C' | '°F', precision = 2): UnitPref {
   return {
     distance,
     speed: distance === 'mi' ? 'mph' : 'km/h',
@@ -225,7 +268,7 @@ function makePrefs(distance: 'km' | 'mi', temperature: '°C' | '°F'): UnitPref 
     duration: 'h',
     power: 'kW',
     locale: 'en-US',
-    precision: 2,
+    precision,
   };
 }
 
@@ -233,8 +276,8 @@ function makePrefs(distance: 'km' | 'mi', temperature: '°C' | '°F'): UnitPref 
  * `useUnits` double that keeps the SI→display formatters REAL (delegating to
  * `@/lib/unitConversion`) while letting each test pin the user's unit prefs.
  */
-function units(distance: 'km' | 'mi' = 'km', temperature: '°C' | '°F' = '°C') {
-  const prefs = makePrefs(distance, temperature);
+function units(distance: 'km' | 'mi' = 'km', temperature: '°C' | '°F' = '°C', precision = 2) {
+  const prefs = makePrefs(distance, temperature, precision);
   const passthrough = (v: number | null | undefined) => (v == null ? '—' : String(v));
   return {
     unitPrefs: prefs,
@@ -261,13 +304,25 @@ function renderPage(): RenderResult {
 
 const kpiRegion = () => screen.getByRole('region', { name: 'Summary metrics' });
 
+function latestChart(title: string) {
+  const frames = chartFrames.filter((frame) => frame.title === title);
+  return frames[frames.length - 1];
+}
+
 /** Read a KPI MetricCard's value <p> given its label, scoped to the KPI band. */
 function kpiValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  return labelEl.closest('p')?.nextElementSibling?.textContent ?? '';
+  return labelEl.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
+  chartFrames.length = 0;
+  scatterSeries.length = 0;
+  savedDates.locale = 'en-US';
+  savedDates.mode = 'utc';
+  savedDates.timezone = 'UTC';
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   mockTempImpact.mockReset();
   mockSelected.mockReset();
   mockUnits.mockReset();
@@ -275,6 +330,119 @@ beforeEach(() => {
   mockSelected.mockReturnValue(selected(7));
   mockUnits.mockReturnValue(units('km', '°C'));
   mockTempImpact.mockReturnValue(makeQuery({ data: fullData() }));
+});
+
+describe('TemperatureImpactPage — measured values and preserved alternatives', () => {
+  it('retains incomplete drive rows without inventing zero measurements or diluting valid averages', () => {
+    const missing = point();
+    Object.assign(missing, {
+      outside_temp: null, efficiency_wh_km: null, distance_km: null,
+      drive_date: '2026-01-02T12:00:00Z',
+    });
+    mockTempImpact.mockReturnValue(makeQuery({
+      data: fullData({ points: [
+        point({ outside_temp: 0, efficiency_wh_km: 0, distance_km: 0, drive_date: '2026-01-01T12:00:00Z' }),
+        missing,
+        point({ outside_temp: 25, efficiency_wh_km: 200, drive_date: '2026-01-03T12:00:00Z' }),
+      ] }),
+    }));
+    renderPage();
+
+    expect(kpiValue('Avg efficiency')).toBe('100.00 Wh/km');
+    expect(kpiValue('Total data points')).toBe('3');
+    expect(kpiValue('Best temp range')).toBe(B0to10);
+    const rows = within(screen.getByRole('table')).getAllByRole('row');
+    expect(rows).toHaveLength(4);
+    expect(within(rows[1]).getByText('0.00°C')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('0.00 Wh/km')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('0.00 km')).toBeInTheDocument();
+    expect(within(rows[2]).getAllByText('—')).toHaveLength(3);
+    assertOperationalBriefDisclosure(document.body, 'Independent sources incomplete');
+    expect(missing.efficiency_wh_km).toBeNull();
+  });
+
+  it('keeps empty temperature buckets as gaps with cohort counts and unit-aware chart alternatives', () => {
+    mockTempImpact.mockReturnValue(makeQuery({
+      data: fullData({ points: [point({ outside_temp: -5, efficiency_wh_km: 210 }), point({ outside_temp: 35, efficiency_wh_km: 220 })] }),
+    }));
+    renderPage();
+    const buckets = chartFrames.find((frame) => frame.title === 'Efficiency by temperature range');
+    expect(buckets?.data?.map((row) => row.avg)).toEqual([210, null, null, null, 220]);
+    expect(buckets?.data?.map((row) => row.count)).toEqual([1, 0, 0, 0, 1]);
+    expect(buckets?.data?.map((row) => row.label)).toEqual([B_COLD, B0to10, B10to20, B20to30, B_HOT]);
+    const efficiency = buckets?.columns?.find((column) => column.key === 'avg');
+    expect(efficiency?.format?.(null)).toBe('—');
+    expect(efficiency?.format?.(0)).toBe('0.00 Wh/km');
+    expect(chartFrames.find((frame) => frame.title === 'Temperature vs efficiency')?.columns?.map((column) => column.key))
+      .toEqual(['drive_date', 'outside_temp', 'efficiency_wh_km', 'distance_km']);
+  });
+
+  it('preserves independent monthly series and measured zero without manufacturing missing temperature or counts', () => {
+    mockUnits.mockReturnValue(units('mi', '°F'));
+    const missingMonth = { ...MONTHLY[0] };
+    Object.assign(missingMonth, { avg_temp: null, drive_count: null });
+    mockTempImpact.mockReturnValue(makeQuery({
+      data: fullData({ monthly_trend: [
+        missingMonth,
+        { ...MONTHLY[0], month: '2026-02', avg_temp: 0, drive_count: 0 },
+      ] }),
+    }));
+    renderPage();
+    const monthly = chartFrames.find((frame) => frame.title === 'Monthly seasonal trend');
+    expect(monthly?.data).toEqual([
+      { month: '2026-01', drives: null, temp: null },
+      { month: '2026-02', drives: 0, temp: 32 },
+    ]);
+    expect(monthly?.columns?.map((column) => column.key)).toEqual(['month', 'drives', 'temp']);
+    const temperature = monthly?.columns?.find((column) => column.key === 'temp');
+    expect(temperature?.format?.(32)).toBe('32.00°F');
+    expect(temperature?.format?.(null)).toBe('—');
+    expect(kpiValue('Total data points')).toBe('5');
+  });
+
+  it('keeps distance reachable in mobile rows and recommendations as readable prose', () => {
+    const { container } = renderPage();
+    const distance = within(screen.getByRole('table')).getByText('30.00 km');
+    expect(distance.closest('td')).not.toHaveClass('hidden');
+    const recommendation = screen.getByText(`Best efficiency observed in the ${B10to20} range`);
+    expect(recommendation.tagName).toBe('P');
+    expect(recommendation).toHaveClass('break-words');
+    const legendDot = Array.from(container.querySelectorAll('[aria-hidden="true"]'))
+      .find((element) => element instanceof HTMLElement && element.style.backgroundColor === 'var(--series-cold)');
+    expect(legendDot).toBeDefined();
+  });
+
+  it('distinguishes authoritative empty points from an absent point series and retains paused source data', () => {
+    const query = makeQuery({ data: fullData({ points: [], monthly_trend: [] }) });
+    mockTempImpact.mockReturnValue(query);
+    const view = renderPage();
+    expect(kpiValue('Total data points')).toBe('0');
+    assertOperationalBriefDisclosure(document.body, 'Source data unavailable');
+    expect(screen.getAllByText('No drive data available yet')).toHaveLength(6);
+
+    mockTempImpact.mockReturnValue(makeQuery({ data: Object.assign(fullData(), { points: null }) }));
+    view.rerender(
+      <MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <TemperatureImpactPage />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total data points');
+    expect(screen.getByText('Monthly seasonal trend')).toBeInTheDocument();
+
+    mockTempImpact.mockReturnValue(makeQuery({ data: fullData(), fetchStatus: 'paused' }));
+    view.rerender(
+      <MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <TemperatureImpactPage />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(kpiValue('Avg efficiency')).toBe('192.00 Wh/km');
+    assertOperationalBriefDisclosure(document.body, 'Retained source data');
+    expect(within(screen.getByRole('table')).getByText('30.00 km')).toBeInTheDocument();
+  });
 });
 
 describe('TemperatureImpactPage — no vehicle selected', () => {
@@ -287,7 +455,7 @@ describe('TemperatureImpactPage — no vehicle selected', () => {
     // Every point-based section plus the seasonal panel prompt for a vehicle.
     expect(empties.length).toBeGreaterThanOrEqual(5);
     // KPIs degrade to placeholders, not stale numbers.
-    expect(kpiValue('Avg Efficiency')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Avg efficiency');
     // The AI narrator is handed no id when the fleet is unselected.
     expect(screen.getByTestId('ai-narrative')).toHaveAttribute('data-vehicle-id', '');
     // The query hook is scoped to the empty vehicle (disabled upstream).
@@ -300,11 +468,12 @@ describe('TemperatureImpactPage — loading', () => {
     mockTempImpact.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = renderPage();
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     // Aggregates are withheld while the first load is in flight.
-    expect(kpiValue('Avg Efficiency')).toBe('—');
+    expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
+    expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
   });
 });
 
@@ -325,12 +494,21 @@ describe('TemperatureImpactPage — error with no data', () => {
 
     // The error takes precedence over the empty copy (never both).
     expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
-    // KPIs still render as placeholders rather than crashing.
-    expect(kpiValue('Total Data Points')).toBe('0');
+    // An unavailable source cannot claim a measured zero sample count.
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total data points');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Avg efficiency');
   });
 });
 
 describe('TemperatureImpactPage — error with retained data', () => {
+  it('opens source-window and bucket captions in the actual Review details drawer', () => {
+    renderPage();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Summary metrics details' });
+    expect(within(drawer).getAllByText(/source window unspecified/).length).toBeGreaterThan(0);
+    expect(within(drawer).getAllByText('Lowest average consumption among populated temperature buckets.').length).toBeGreaterThan(0);
+    expect(within(drawer).getByText(`${AVG_WH_KM.toFixed(2)} Wh/km`)).toBeInTheDocument();
+  });
   it('keeps the last good analysis on screen when a background refetch errors', () => {
     // TanStack Query retains `data` from the last success even when a later
     // refetch fails, so a transient error must NOT collapse the page into
@@ -341,7 +519,7 @@ describe('TemperatureImpactPage — error with retained data', () => {
     );
     renderPage();
 
-    expect(kpiValue('Total Data Points')).toBe('5');
+    expect(kpiValue('Total data points')).toBe('5');
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText(/most efficient temperature range/i)).toBeInTheDocument();
     // No section degrades into the retry-only error panel while data exists.
@@ -353,11 +531,11 @@ describe('TemperatureImpactPage — populated (km)', () => {
   it('renders honest KPI tiles derived from the point aggregates', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Temperature Impact', level: 1 })).toBeInTheDocument();
-    expect(kpiValue('Avg Efficiency')).toBe(`${AVG_WH_KM.toFixed(2)} Wh/km`); // 192.00 Wh/km
-    expect(kpiValue('Best Temp Range')).toBe(B10to20);
-    expect(kpiValue('Worst Temp Range')).toBe(B_HOT);
-    expect(kpiValue('Total Data Points')).toBe('5');
+    expect(screen.getByRole('heading', { name: 'Temperature impact', level: 1 })).toBeInTheDocument();
+    expect(kpiValue('Avg efficiency')).toBe(`${AVG_WH_KM.toFixed(2)} Wh/km`); // 192.00 Wh/km
+    expect(kpiValue('Best temp range')).toBe(B10to20);
+    expect(kpiValue('Worst temp range')).toBe(B_HOT);
+    expect(kpiValue('Total data points')).toBe('5');
     // The AI narrator receives the selected vehicle id as a string.
     expect(screen.getByTestId('ai-narrative')).toHaveAttribute('data-vehicle-id', '7');
   });
@@ -377,11 +555,140 @@ describe('TemperatureImpactPage — populated (km)', () => {
     const optimal = screen.getByText(/most efficient temperature range/i);
     expect(optimal).toHaveTextContent(B10to20);
     expect(optimal).toHaveTextContent('150.00 Wh/km');
-    expect(optimal).toHaveTextContent('across 1 drives');
+    expect(optimal).toHaveTextContent('across 1 drive.');
 
     const delta = screen.getByText(/Compared to the worst range/i);
     expect(delta).toHaveTextContent(B_HOT);
     expect(delta).toHaveTextContent('70.00 Wh/km'); // 220 - 150
+  });
+
+  describe('TemperatureImpactPage — scoped trust, date and precision corrections', () => {
+    it('keeps all six sections unresolved with explicit paused context and retry before the first response', () => {
+      const refetch = vi.fn();
+      mockTempImpact.mockReturnValue(makeQuery({
+        data: undefined, isPending: true, status: 'pending', fetchStatus: 'paused', refetch,
+      }));
+      const { container } = renderPage();
+      const blocked = container.querySelectorAll('[data-refresh-blocked]');
+      expect(blocked).toHaveLength(6);
+      for (const panel of blocked) {
+        expect(panel).toHaveAttribute('role', 'status');
+        expect(panel).toHaveTextContent('Refresh paused');
+        expect(panel).toHaveTextContent('No requested source has returned usable data yet.');
+      }
+      expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('Select a vehicle to view temperature impact')).not.toBeInTheDocument();
+      expect(screen.queryByText(/device is offline/i)).not.toBeInTheDocument();
+      assertOperationalMetricUnavailable(kpiRegion(), 'Total data points');
+      const retry = within(blocked[0] as HTMLElement).getByRole('button', { name: 'Retry' });
+      fireEvent.click(retry);
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('retains the unselected-vehicle prerequisite even when the disabled query is paused', () => {
+      mockSelected.mockReturnValue(selected(null));
+      mockTempImpact.mockReturnValue(makeQuery({
+        data: undefined, isPending: true, status: 'pending', fetchStatus: 'paused',
+      }));
+      const { container } = renderPage();
+      expect(container.querySelector('[data-refresh-blocked]')).toBeNull();
+      expect(screen.getAllByText('Select a vehicle to view temperature impact')).toHaveLength(6);
+      expect(mockTempImpact).toHaveBeenCalledWith('');
+      expect(screen.getAllByRole('link', { name: 'Manage vehicles' })).toHaveLength(6);
+    });
+
+    it('does not turn an initial failure into a paused or empty result', () => {
+      mockTempImpact.mockReturnValue(makeQuery({
+        data: undefined, isPending: false, isError: true, error: new Error('failed'),
+        fetchStatus: 'paused',
+      }));
+      const { container } = renderPage();
+      expect(container.querySelector('[data-refresh-blocked]')).toBeNull();
+      expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThanOrEqual(6);
+      expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
+    });
+
+    it('uses saved date context in cells and chart alternatives and refreshes memoized columns on preference changes', () => {
+      const data = fullData({ points: [
+        point({ drive_date: '2026-01-01T00:30:00Z' }),
+        point({ drive_date: 'invalid-date' }),
+      ] });
+      const original = JSON.stringify(data);
+      mockTempImpact.mockReturnValue(makeQuery({ data }));
+      savedDates.mode = 'user';
+      savedDates.timezone = 'America/Los_Angeles';
+      savedDates.locale = 'de-DE';
+      const view = renderPage();
+      expect(within(screen.getByRole('table')).getByText('31. Dez. 2025')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('—')).toBeInTheDocument();
+      const dateColumn = () => latestChart('Temperature vs efficiency')?.columns?.find((column) => column.key === 'drive_date');
+      expect(dateColumn()?.format?.('2026-01-01T00:30:00Z')).toBe('31. Dez. 2025');
+      expect(dateColumn()?.format?.('invalid-date')).toBe('—');
+
+      savedDates.mode = 'utc';
+      savedDates.locale = 'en-US';
+      view.rerender(
+        <MemoryRouter>
+          <QueryClientProvider client={new QueryClient()}>
+            <TemperatureImpactPage />
+          </QueryClientProvider>
+        </MemoryRouter>,
+      );
+      expect(within(screen.getByRole('table')).getByText('Jan 1, 2026')).toBeInTheDocument();
+      expect(screen.queryByText('31. Dez. 2025')).not.toBeInTheDocument();
+      expect(dateColumn()?.format?.('2026-01-01T00:30:00Z')).toBe('Jan 1, 2026');
+      expect(JSON.stringify(data)).toBe(original);
+    });
+
+    it.each([
+      ['°C', 12.345, '12.345°C', '12.3°C'],
+      ['°F', 54.221, '54.221°F', '54.2°F'],
+    ] as const)('keeps unrounded %s chart numbers while formatting only the saved-precision output', (temperature, expected, precise, rounded) => {
+      const data = fullData({ monthly_trend: [
+        { ...MONTHLY[0], avg_temp: 12.345 },
+        { ...MONTHLY[0], month: '2026-02', avg_temp: -12.345 },
+      ] });
+      const original = JSON.stringify(data);
+      mockTempImpact.mockReturnValue(makeQuery({ data }));
+      mockUnits.mockReturnValue(units('km', temperature, 3));
+      setGlobalPrecision(3);
+      renderPage();
+      const monthly = () => latestChart('Monthly seasonal trend');
+      const column = () => monthly()?.columns?.find((item) => item.key === 'temp');
+      expect(monthly()?.data?.[0].temp).toBeCloseTo(expected, 12);
+      expect(monthly()?.data?.[1].temp).toBeCloseTo(temperature === '°C' ? -12.345 : 9.779, 12);
+      expect(column()?.format?.(monthly()?.data?.[0].temp)).toBe(precise);
+      act(() => setGlobalPrecision(1));
+      expect(column()?.format?.(monthly()?.data?.[0].temp)).toBe(rounded);
+      expect(monthly()?.data?.[0].temp).toBeCloseTo(expected, 12);
+      expect(JSON.stringify(data)).toBe(original);
+    });
+
+    it.each(['°C', '°F'] as const)('describes the existing inclusive hot membership in %s without changing thresholds or signs', (temperature) => {
+      const readings = [-80, -0.01, 0, 9.999, 10, 19.999, 20, 29.999, 30, 60, 70];
+      const data = fullData({ points: readings.map((outside_temp) => point({ outside_temp })) });
+      const original = JSON.stringify(data);
+      mockTempImpact.mockReturnValue(makeQuery({ data }));
+      mockUnits.mockReturnValue(units('km', temperature));
+      renderPage();
+      const buckets = chartFrames.find((frame) => frame.title === 'Efficiency by temperature range');
+      expect(buckets?.data?.map((row) => row.count)).toEqual([2, 2, 2, 2, 3]);
+      expect(buckets?.data?.[4].label).toBe(temperature === '°C' ? '≥ 30°C' : '≥ 86°F');
+      expect(buckets?.data?.map((row) => row.avg)).toEqual([150, 150, 150, 150, 150]);
+      const plotted = scatterSeries[scatterSeries.length - 1];
+      expect(plotted?.map((row) => row.outside_temp)).toEqual(
+        temperature === '°C' ? readings : readings.map((celsius) => celsius * 9 / 5 + 32),
+      );
+      expect(plotted?.[0].fill).toBe('var(--series-cold)');
+      expect(plotted?.[readings.length - 1].fill).toBe('var(--series-hot)');
+      expect(JSON.stringify(data)).toBe(original);
+    });
+
+    it('keeps plural fallback copy for a best bucket with multiple drives', () => {
+      mockTempImpact.mockReturnValue(makeQuery({ data: fullData({ points: [point(), point()] }) }));
+      renderPage();
+      expect(screen.getByText(/most efficient temperature range/i)).toHaveTextContent('across 2 drives.');
+    });
   });
 
   it('renders the three contextual recommendations', () => {
@@ -412,9 +719,9 @@ describe('TemperatureImpactPage — unit boundary (mi/°F)', () => {
     renderPage();
 
     // Avg 192 Wh/km → 192 * 1.609344 → 309.09 Wh/mi.
-    expect(kpiValue('Avg Efficiency')).toBe(`${(AVG_WH_KM * KM_PER_MILE).toFixed(2)} Wh/mi`);
+    expect(kpiValue('Avg efficiency')).toBe(`${(AVG_WH_KM * KM_PER_MILE).toFixed(2)} Wh/mi`);
     // Best bucket 10–20°C → 50–68°F.
-    expect(kpiValue('Best Temp Range')).toBe(`50${NDASH}68°F`);
+    expect(kpiValue('Best temp range')).toBe(`50${NDASH}68°F`);
     expect(within(kpiRegion()).queryByText(B10to20)).not.toBeInTheDocument();
 
     const table = screen.getByRole('table');
@@ -433,8 +740,8 @@ describe('TemperatureImpactPage — partial data (seasonal only)', () => {
     // the monthly panel keeps its (inert) chart and is NOT one of them.
     const empties = screen.getAllByText('No drive data available yet');
     expect(empties).toHaveLength(5);
-    expect(screen.getByText('Monthly Seasonal Trend')).toBeInTheDocument();
-    expect(kpiValue('Total Data Points')).toBe('0');
+    expect(screen.getByText('Monthly seasonal trend')).toBeInTheDocument();
+    expect(kpiValue('Total data points')).toBe('0');
   });
 });
 
@@ -456,10 +763,10 @@ describe('TemperatureImpactPage — out-of-range temperature clamping', () => {
     renderPage();
 
     // Best = coldest edge (250 Wh/km), Worst = hottest edge (350 Wh/km).
-    expect(kpiValue('Best Temp Range')).toBe(B_COLD);
-    expect(kpiValue('Worst Temp Range')).toBe(B_HOT);
+    expect(kpiValue('Best temp range')).toBe(B_COLD);
+    expect(kpiValue('Worst temp range')).toBe(B_HOT);
     // The middle bucket must NOT capture the extremes.
     expect(within(kpiRegion()).queryByText(B10to20)).not.toBeInTheDocument();
-    expect(kpiValue('Avg Efficiency')).toBe('300.00 Wh/km'); // (250 + 350) / 2
+    expect(kpiValue('Avg efficiency')).toBe('300.00 Wh/km'); // (250 + 350) / 2
   });
 });

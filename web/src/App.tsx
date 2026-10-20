@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
+import * as routeLoaders from './lib/routeLoaders'
 import { Navigate, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
@@ -28,49 +29,54 @@ const TaskOnboardingHost = lazy(async () => {
 })
 
 // Dashboard
-const Dashboard = lazy(() => import('./features/dashboard/pages/DashboardPage'))
-const QuickStats = lazy(() => import('./features/dashboard/pages/QuickStatsPage'))
-const GlancePage = lazy(() => import('./features/dashboard/pages/GlancePage'))
+const Dashboard = lazy(routeLoaders.Dashboard)
+const QuickStats = lazy(routeLoaders.QuickStats)
+const GlancePage = lazy(routeLoaders.GlancePage)
+
+const MobileGridReference = import.meta.env.DEV ? lazy(routeLoaders.MobileGridReference) : null
+const LayoutReference = import.meta.env.DEV ? lazy(routeLoaders.LayoutReference) : null
+const StatReference = import.meta.env.DEV ? lazy(routeLoaders.StatReference) : null
+const SharedLibraryReference = import.meta.env.DEV ? lazy(() => import('./features/developer-reference/shared-library/SharedLibraryCompletionPage')) : null
 
 // Vehicles
-const Vehicles = lazy(() => import('./features/vehicles/pages/VehicleListPage'))
-const VehicleDetail = lazy(() => import('./features/vehicles/pages/VehicleDetailPage'))
-const VehicleAccess = lazy(() => import('./features/vehicles/pages/VehicleAccessPage'))
+const Vehicles = lazy(routeLoaders.Vehicles)
+const VehicleDetail = lazy(routeLoaders.VehicleDetail)
+const VehicleAccess = lazy(routeLoaders.VehicleAccess)
 const VehicleManagement = lazy(() => import('./features/vehicles/pages/VehicleManagementPage'))
-const DigitalTwin = lazy(() => import('./features/vehicles/pages/DigitalTwinPage'))
+const DigitalTwin = lazy(routeLoaders.DigitalTwin)
 const TimeMachine = lazy(() => import('./features/vehicles/pages/TimeMachinePage'))
 const PhysicsCockpit = lazy(() => import('./features/vehicles/pages/PhysicsCockpitPage'))
-const TeslaPhysics = lazy(() => import('./features/vehicles/pages/TeslaPhysicsPage'))
-const PhysicsLedger = lazy(() => import('./features/vehicles/pages/PhysicsLedgerPage'))
+const TeslaPhysics = lazy(routeLoaders.TeslaPhysics)
+const PhysicsLedger = lazy(routeLoaders.PhysicsLedger)
 const ScienceLab = lazy(() => import('./features/science/pages/ScienceLabPage'))
 
 // Charging
-const Charging = lazy(() => import('./features/charging/pages/ChargingListPage'))
-const ChargeDetail = lazy(() => import('./features/charging/pages/ChargingDetailPage'))
-const ChargingCurve = lazy(() => import('./features/charging/pages/ChargingCurvePage'))
-const ChargingHeatmap = lazy(() => import('./features/charging/pages/ChargingHeatmapPage'))
-const CostAnalysis = lazy(() => import('./features/charging/pages/CostAnalysisPage'))
-const TeslaChargingHistory = lazy(() => import('./features/charging/pages/TeslaChargingHistoryPage'))
-const TeslaChargingSessions = lazy(() => import('./features/charging/pages/TeslaChargingSessionsPage'))
-const SmartCharge = lazy(() => import('./features/charging/pages/SmartChargePage'))
-const Powershare = lazy(() => import('./features/charging/pages/PowersharePage'))
+const Charging = lazy(routeLoaders.Charging)
+const ChargeDetail = lazy(routeLoaders.ChargeDetail)
+const ChargingCurve = lazy(routeLoaders.ChargingCurve)
+const ChargingHeatmap = lazy(routeLoaders.ChargingHeatmap)
+const CostAnalysis = lazy(routeLoaders.CostAnalysis)
+const TeslaChargingHistory = lazy(routeLoaders.TeslaChargingHistory)
+const TeslaChargingSessions = lazy(routeLoaders.TeslaChargingSessions)
+const SmartCharge = lazy(routeLoaders.SmartCharge)
+const Powershare = lazy(routeLoaders.Powershare)
 
 // Trips
-const Trips = lazy(() => import('./features/trips/pages/TripListPage'))
-const TripDetail = lazy(() => import('./features/trips/pages/TripDetailPage'))
+const Trips = lazy(routeLoaders.Trips)
+const TripDetail = lazy(routeLoaders.TripDetail)
 const Journeys = lazy(() => import('./features/trips/pages/JourneysPage'))
 
 // Battery & Energy
-const Energy = lazy(() => import('./features/battery/pages/EnergyPage'))
-const BatteryHealth = lazy(() => import('./features/battery/pages/BatteryHealthPage'))
-const BatteryCells = lazy(() => import('./features/battery/pages/BatteryCellsPage'))
-const BatteryDegradation = lazy(() => import('./features/battery/pages/BatteryDegradationPage'))
-const EnergyFlow = lazy(() => import('./features/battery/pages/EnergyFlowPage'))
-const PowerFlowDashboard = lazy(() => import('./features/battery/pages/PowerFlowDashboardPage'))
-const EnergyProducts = lazy(() => import('./features/battery/pages/EnergyProductsPage'))
-const VampireDrain = lazy(() => import('./features/battery/pages/VampireDrainPage'))
-const ProjectedRange = lazy(() => import('./features/battery/pages/ProjectedRangePage'))
-const SleepEfficiency = lazy(() => import('./features/battery/pages/SleepEfficiencyPage'))
+const Energy = lazy(routeLoaders.Energy)
+const BatteryHealth = lazy(routeLoaders.BatteryHealth)
+const BatteryCells = lazy(routeLoaders.BatteryCells)
+const BatteryDegradation = lazy(routeLoaders.BatteryDegradation)
+const EnergyFlow = lazy(routeLoaders.EnergyFlow)
+const PowerFlowDashboard = lazy(routeLoaders.PowerFlowDashboard)
+const EnergyProducts = lazy(routeLoaders.EnergyProducts)
+const VampireDrain = lazy(routeLoaders.VampireDrain)
+const ProjectedRange = lazy(routeLoaders.ProjectedRange)
+const SleepEfficiency = lazy(routeLoaders.SleepEfficiency)
 const BatteryPassport = lazy(() => import('./features/battery/pages/BatteryPassportPage'))
 
 // Phase-51 — advanced analytics family. Each of these is backed by a pure,
@@ -79,11 +85,11 @@ const BatteryPassport = lazy(() => import('./features/battery/pages/BatteryPassp
 const PackCapacity = lazy(() => import('./features/battery/pages/PackCapacityPage'))
 const EnergyLedger = lazy(() => import('./features/battery/pages/EnergyLedgerPage'))
 const DepartureForecast = lazy(() => import('./features/driving/pages/DepartureForecastPage'))
-const DriveArchetypes = lazy(() => import('./features/analytics/pages/DriveArchetypesPage'))
+const DriveArchetypes = lazy(routeLoaders.DriveArchetypes)
 const FirmwareImpact = lazy(() => import('./features/analytics/pages/FirmwareImpactPage'))
 const CabinThermal = lazy(() => import('./features/vehicle-systems/pages/CabinThermalPage'))
 const ChargerHealth = lazy(() => import('./features/charging/pages/ChargerHealthPage'))
-const NotificationHealth = lazy(() => import('./features/notifications/pages/NotificationHealthPage'))
+const NotificationHealth = lazy(routeLoaders.NotificationHealth)
 const CommandReliability = lazy(() => import('./features/system/pages/CommandReliabilityPage'))
 const SignalCorrelation = lazy(() => import('./features/telemetry/pages/SignalCorrelationPage'))
 
@@ -110,17 +116,17 @@ const SignalDeadband = lazy(() => import('./features/telemetry/pages/SignalDeadb
 const SignalMutualInformation = lazy(() => import('./features/telemetry/pages/SignalMutualInformationPage'))
 
 // Driving & Performance
-const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
-const DriveDetail = lazy(() => import('./features/driving/pages/DriveDetailPage'))
-const TripReplay = lazy(() => import('./features/trips/pages/TripReplayPage'))
-const DriveScore = lazy(() => import('./features/driving/pages/DriveScorePage'))
-const DrivingDynamics = lazy(() => import('./features/driving/pages/DrivingDynamicsPage'))
-const DrivetrainHealth = lazy(() => import('./features/driving/pages/DrivetrainHealthPage'))
-const Efficiency = lazy(() => import('./features/driving/pages/EfficiencyPage'))
-const SpeedProfile = lazy(() => import('./features/driving/pages/SpeedProfilePage'))
-const RegenEfficiency = lazy(() => import('./features/driving/pages/RegenEfficiencyPage'))
-const RouteEfficiency = lazy(() => import('./features/driving/pages/RouteEfficiencyPage'))
-const TripPlanner = lazy(() => import('./features/driving/pages/TripPlannerPage'))
+const Drives = lazy(routeLoaders.Drives)
+const DriveDetail = lazy(routeLoaders.DriveDetail)
+const TripReplay = lazy(routeLoaders.TripReplay)
+const DriveScore = lazy(routeLoaders.DriveScore)
+const DrivingDynamics = lazy(routeLoaders.DrivingDynamics)
+const DrivetrainHealth = lazy(routeLoaders.DrivetrainHealth)
+const Efficiency = lazy(routeLoaders.Efficiency)
+const SpeedProfile = lazy(routeLoaders.SpeedProfile)
+const RegenEfficiency = lazy(routeLoaders.RegenEfficiency)
+const RouteEfficiency = lazy(routeLoaders.RouteEfficiency)
+const TripPlanner = lazy(routeLoaders.TripPlanner)
 const DriveDNA = lazy(() => import('./features/driving/pages/DriveDNAPage'))
 const WhatIf = lazy(() => import('./features/driving/pages/WhatIfPage'))
 const TripLogbook = lazy(() => import('./features/driving/pages/TripLogbookPage'))
@@ -128,7 +134,7 @@ const RangeBuffer = lazy(() => import('./features/driving/pages/RangeBufferPage'
 const DrivingRhythm = lazy(() => import('./features/driving/pages/DrivingRhythmPage'))
 // FSD Insights — supervised self-driving distance telemetry
 // (SelfDrivingMilesSinceReset). Code-split like every other route page.
-const FSDInsights = lazy(() => import('./features/driving/pages/FSDInsightsPage'))
+const FSDInsights = lazy(routeLoaders.FSDInsights)
 const SpeedSweetSpot = lazy(() => import('./features/driving/pages/SpeedSweetSpotPage'))
 const ParkingAnalytics = lazy(() => import('./features/vehicles/pages/ParkingAnalyticsPage'))
 const MileageBudget = lazy(() => import('./features/analytics/pages/MileageBudgetPage'))
@@ -140,74 +146,74 @@ const DriveCompare = lazy(() => import('./features/driving/pages/DriveComparePag
 const EfficiencyTarget = lazy(() => import('./features/driving/pages/EfficiencyTargetPage'))
 const Milestones = lazy(() => import('./features/analytics/pages/MilestonesPage'))
 const ColdStart = lazy(() => import('./features/driving/pages/ColdStartPage'))
-const ShareCard = lazy(() => import('./features/sharing/pages/ShareCardPage'))
+const ShareCard = lazy(routeLoaders.ShareCard)
 const Utilization = lazy(() => import('./features/vehicles/pages/UtilizationPage'))
 const DayLog = lazy(() => import('./features/vehicles/pages/DayLogPage'))
 const Segments = lazy(() => import('./features/driving/pages/SegmentsPage'))
 
 // Analytics & Statistics
-const Analytics = lazy(() => import('./features/analytics/pages/AnalyticsPage'))
-const Statistics = lazy(() => import('./features/analytics/pages/StatisticsPage'))
-const PeriodCompare = lazy(() => import('./features/analytics/pages/PeriodComparePage'))
-const Mileage = lazy(() => import('./features/analytics/pages/MileagePage'))
-const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCostPage'))
-const CarbonIntelligence = lazy(() => import('./features/analytics/pages/CarbonIntelligencePage'))
-const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
-const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
+const Analytics = lazy(routeLoaders.Analytics)
+const Statistics = lazy(routeLoaders.Statistics)
+const PeriodCompare = lazy(routeLoaders.PeriodCompare)
+const Mileage = lazy(routeLoaders.Mileage)
+const TrueCostOwnership = lazy(routeLoaders.TrueCostOwnership)
+const CarbonIntelligence = lazy(routeLoaders.CarbonIntelligence)
+const WeeklyDigest = lazy(routeLoaders.WeeklyDigest)
+const Timeline = lazy(routeLoaders.Timeline)
 // Phase: unified vehicle operations-intelligence activity timeline
 // (drives + charging + alerts + software updates + annotations). Distinct
 // from `Timeline` above (FSM state transitions) and `MyActivity` (per-user
 // audit log) below.
-const ActivityTimeline = lazy(() => import('./features/system/pages/ActivityTimelinePage'))
-const FleetCompare = lazy(() => import('./features/analytics/pages/FleetComparePage'))
-const LifetimeStats = lazy(() => import('./features/analytics/pages/LifetimeStatsPage'))
-const YearReview = lazy(() => import('./features/analytics/pages/YearReviewPage'))
+const ActivityTimeline = lazy(routeLoaders.ActivityTimeline)
+const FleetCompare = lazy(routeLoaders.FleetCompare)
+const LifetimeStats = lazy(routeLoaders.LifetimeStats)
+const YearReview = lazy(routeLoaders.YearReview)
 
 // Maps & Location
-const LiveMap = lazy(() => import('./features/maps/pages/MapOverviewPage'))
-const Locations = lazy(() => import('./features/maps/pages/LocationsPage'))
-const Geofences = lazy(() => import('./features/maps/pages/GeofencesPage'))
-const NavigationRoute = lazy(() => import('./features/maps/pages/NavigationRoutePage'))
-const TemperatureImpact = lazy(() => import('./features/maps/pages/TemperatureImpactPage'))
+const LiveMap = lazy(routeLoaders.LiveMap)
+const Locations = lazy(routeLoaders.Locations)
+const Geofences = lazy(routeLoaders.Geofences)
+const NavigationRoute = lazy(routeLoaders.NavigationRoute)
+const TemperatureImpact = lazy(routeLoaders.TemperatureImpact)
 
 // Vehicle Systems
-const ClimateControl = lazy(() => import('./features/vehicle-systems/pages/ClimateControlPage'))
-const TirePressure = lazy(() => import('./features/vehicle-systems/pages/TirePressurePage'))
-const Maintenance = lazy(() => import('./features/vehicle-systems/pages/MaintenancePage'))
-const SoftwareUpdates = lazy(() => import('./features/vehicle-systems/pages/SoftwareUpdatesPage'))
-const SafetySettings = lazy(() => import('./features/vehicle-systems/pages/SafetySettingsPage'))
-const GuardMode = lazy(() => import('./features/vehicle-systems/pages/GuardModePage'))
-const MediaPlayer = lazy(() => import('./features/vehicle-systems/pages/MediaPlayerPage'))
+const ClimateControl = lazy(routeLoaders.ClimateControl)
+const TirePressure = lazy(routeLoaders.TirePressure)
+const Maintenance = lazy(routeLoaders.Maintenance)
+const SoftwareUpdates = lazy(routeLoaders.SoftwareUpdates)
+const SafetySettings = lazy(routeLoaders.SafetySettings)
+const GuardMode = lazy(routeLoaders.GuardMode)
+const MediaPlayer = lazy(routeLoaders.MediaPlayer)
 
 // Automations
-const AutomationsListPage = lazy(() => import('./features/automations/pages/AutomationsListPage'))
-const AutomationListPage = lazy(() => import('./features/automations/pages/AutomationListPage'))
-const AutomationHistoryPage = lazy(() => import('./features/automations/pages/AutomationHistoryPage'))
-const AutomationBuilderPage = lazy(() => import('./features/automations/pages/AutomationBuilderPage'))
+const AutomationsListPage = lazy(routeLoaders.AutomationsListPage)
+const AutomationListPage = lazy(routeLoaders.AutomationListPage)
+const AutomationHistoryPage = lazy(routeLoaders.AutomationHistoryPage)
+const AutomationBuilderPage = lazy(routeLoaders.AutomationBuilderPage)
 
 // Notifications & Alerts
-const AlertStudio = lazy(() => import('./features/notifications/pages/AlertStudioPage'))
-const AlertRulesPage = lazy(() => import('./features/notifications/pages/AlertRulesPage'))
-const AlertPacksPage = lazy(() => import('./features/notifications/pages/AlertPacksPage'))
-const InboxPage = lazy(() => import('./features/notifications/pages/InboxPage'))
-const ArchivedPage = lazy(() => import('./features/notifications/pages/ArchivedPage'))
-const ChannelsPage = lazy(() => import('./features/notifications/pages/ChannelsPage'))
-const BrowserNotificationsPage = lazy(() => import('./features/notifications/pages/BrowserNotificationsPage'))
-const QuietHoursPage = lazy(() => import('./features/notifications/pages/QuietHoursPage'))
-const LegacyAlertRulesRedirect = lazy(() => import('./features/notifications/components/LegacyAlertRulesRedirect'))
-const LegacyAlertStudioRedirect = lazy(() => import('./features/notifications/components/LegacyAlertStudioRedirect'))
+const AlertStudio = lazy(routeLoaders.AlertStudio)
+const AlertRulesPage = lazy(routeLoaders.AlertRulesPage)
+const AlertPacksPage = lazy(routeLoaders.AlertPacksPage)
+const InboxPage = lazy(routeLoaders.InboxPage)
+const ArchivedPage = lazy(routeLoaders.ArchivedPage)
+const ChannelsPage = lazy(routeLoaders.ChannelsPage)
+const BrowserNotificationsPage = lazy(routeLoaders.BrowserNotificationsPage)
+const QuietHoursPage = lazy(routeLoaders.QuietHoursPage)
+const LegacyAlertRulesRedirect = lazy(routeLoaders.LegacyAlertRulesRedirect)
+const LegacyAlertStudioRedirect = lazy(routeLoaders.LegacyAlertStudioRedirect)
 
 // Telemetry & Signals
-const SignalExplorer = lazy(() => import('./features/telemetry/pages/SignalExplorerPage'))
-const SignalLogViewer = lazy(() => import('./features/telemetry/pages/SignalLogViewerPage'))
-const SignalDiff = lazy(() => import('./features/telemetry/pages/SignalDiffPage'))
-const SignalGapDetector = lazy(() => import('./features/telemetry/pages/SignalGapDetectorPage'))
-const LiveSignalMonitor = lazy(() => import('./features/telemetry/pages/LiveSignalMonitorPage'))
+const SignalExplorer = lazy(routeLoaders.SignalExplorer)
+const SignalLogViewer = lazy(routeLoaders.SignalLogViewer)
+const SignalDiff = lazy(routeLoaders.SignalDiff)
+const SignalGapDetector = lazy(routeLoaders.SignalGapDetector)
+const LiveSignalMonitor = lazy(routeLoaders.LiveSignalMonitor)
 const SignalsWorkspace = lazy(() => import('./features/telemetry/pages/SignalsWorkspacePage'))
-const MQTTInspector = lazy(() => import('./features/telemetry/pages/MQTTInspectorPage'))
+const MQTTInspector = lazy(routeLoaders.MQTTInspector)
 
 // Diagnostics
-const AnomalyDashboard = lazy(() => import('./features/diagnostics/pages/AnomalyDashboardPage'))
+const AnomalyDashboard = lazy(routeLoaders.AnomalyDashboard)
 const RemainingUsefulLife = lazy(() => import('./features/diagnostics/pages/RemainingUsefulLifePage'))
 const RootCauseIntelligence = lazy(() => import('./features/diagnostics/pages/RootCauseIntelligencePage'))
 const ServiceEvidencePack = lazy(() => import('./features/diagnostics/pages/ServiceEvidencePackPage'))
@@ -216,7 +222,7 @@ const ServiceEvidencePack = lazy(() => import('./features/diagnostics/pages/Serv
 const DashcamIntelligence = lazy(() => import('./features/dashcam/pages/DashcamIntelligencePage'))
 const WholeHomeEnergy = lazy(() => import('./features/home-energy/pages/WholeHomeEnergyPage'))
 const ServiceIntelligence = lazy(() => import('./features/service-intelligence/pages/ServiceIntelligencePage'))
-const PrivacyBenchmarks = lazy(() => import('./features/benchmarks/pages/PrivacyBenchmarksPage'))
+const PrivacyBenchmarks = lazy(routeLoaders.PrivacyBenchmarks)
 const IntelligencePackMarketplace = lazy(() => import('./features/intelligence-packs/pages/IntelligencePackMarketplacePage'))
 const WarrantyResaleVault = lazy(() => import('./features/resale-vault/pages/WarrantyResaleVaultPage'))
 const FleetOperations = lazy(() => import('./features/fleet-ops/pages/FleetOperationsPage'))
@@ -247,21 +253,21 @@ const ConsumablesLifecycle = lazy(() => import('./features/ownership/pages/Consu
 const SubscriptionROI = lazy(() => import('./features/ownership/pages/SubscriptionROIPage'))
 
 // Admin & DevTools
-const NotificationsAudit = lazy(() => import('./features/notifications/pages/AuditLogPage'))
-const DevTools = lazy(() => import('./features/admin/pages/DevToolsPage'))
-const APIKeysPage = lazy(() => import('./features/admin/pages/APIKeysPage'))
-const ApiLogs = lazy(() => import('./features/admin/pages/ApiLogsPage'))
-const FleetAPI = lazy(() => import('./features/admin/pages/FleetAPIPage'))
+const NotificationsAudit = lazy(routeLoaders.NotificationsAudit)
+const DevTools = lazy(routeLoaders.DevTools)
+const APIKeysPage = lazy(routeLoaders.APIKeysPage)
+const ApiLogs = lazy(routeLoaders.ApiLogs)
+const FleetAPI = lazy(routeLoaders.FleetAPI)
 const TeslaFeatureFlags = lazy(() => import('./features/admin/pages/TeslaFeatureFlagsPage'))
 const TeslaRegion = lazy(() => import('./features/admin/pages/TeslaRegionPage'))
 const TeslaOrders = lazy(() => import('./features/admin/pages/TeslaOrdersPage'))
 const GasPriceAutoPoll = lazy(() => import('./features/admin/pages/GasPriceAutoPollPage'))
-const SecurityAccess = lazy(() => import('./features/admin/pages/SecurityAccessPage'))
-const BackupRestore = lazy(() => import('./features/admin/pages/BackupRestorePage'))
-const ApiPlayground = lazy(() => import('./features/admin/pages/ApiPlaygroundPage'))
-const RedisSignalViewer = lazy(() => import('./features/admin/pages/RedisSignalViewerPage'))
-const FeedbackQueue = lazy(() => import('./features/admin/pages/FeedbackQueuePage'))
-const FleetTelemetryCoverage = lazy(() => import('./features/admin/pages/FleetTelemetryCoveragePage'))
+const SecurityAccess = lazy(routeLoaders.SecurityAccess)
+const BackupRestore = lazy(routeLoaders.BackupRestore)
+const ApiPlayground = lazy(routeLoaders.ApiPlayground)
+const RedisSignalViewer = lazy(routeLoaders.RedisSignalViewer)
+const FeedbackQueue = lazy(routeLoaders.FeedbackQueue)
+const FleetTelemetryCoverage = lazy(routeLoaders.FleetTelemetryCoverage)
 // Phase-tracing diagnostic surfaces — DLQ / Flags / Ingest-XRay / Live Signals.
 // Each pages a Go handler under /api/v1/system/* added in this branch.
 const DLQInspector = lazy(() => import('./features/admin/pages/DLQInspectorPage'))
@@ -285,36 +291,36 @@ const PowerGrafanaPanel = lazy(() => import('./features/power-user/pages/Grafana
 const PowerDashboards = lazy(() => import('./features/power-user/pages/DashboardsPage'))
 
 // System & Ops
-const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
-const TeslaApiUsage = lazy(() => import('./features/system/pages/TeslaApiUsagePage'))
+const SystemStatus = lazy(routeLoaders.SystemStatus)
+const TeslaApiUsage = lazy(routeLoaders.TeslaApiUsage)
 const OutageAutobiography = lazy(() => import('./features/system/pages/OutageAutobiographyPage'))
 const IncidentTimeline = lazy(() => import('./features/system/pages/IncidentTimelinePage'))
 const StatusApiDocs = lazy(() => import('./features/system/pages/StatusApiDocsPage'))
 const Help = lazy(() => import('./features/system/pages/HelpPage'))
-const DataExport = lazy(() => import('./features/system/pages/DataExportPage'))
-const ExportsPage = lazy(() => import('./features/exports/pages/ExportsPage'))
-const DataRepair = lazy(() => import('./features/system/pages/DataRepairPage'))
-const DBHealthDashboard = lazy(() => import('./features/system/pages/DBHealthPage'))
-const StateMachineDebugger = lazy(() => import('./features/system/pages/StateMachineDebuggerPage'))
-const Commands = lazy(() => import('./features/system/pages/CommandsPage'))
-const CommandHistory = lazy(() => import('./features/system/pages/CommandHistoryPage'))
-const Chatbot = lazy(() => import('./features/system/pages/ChatbotPage'))
-const Roadmap = lazy(() => import('./features/system/pages/RoadmapPage'))
-const TeslaAccount = lazy(() => import('./features/system/pages/TeslaAccountPage'))
+const DataExport = lazy(routeLoaders.DataExport)
+const ExportsPage = lazy(routeLoaders.ExportsPage)
+const DataRepair = lazy(routeLoaders.DataRepair)
+const DBHealthDashboard = lazy(routeLoaders.DBHealthDashboard)
+const StateMachineDebugger = lazy(routeLoaders.StateMachineDebugger)
+const Commands = lazy(routeLoaders.Commands)
+const CommandHistory = lazy(routeLoaders.CommandHistory)
+const Chatbot = lazy(routeLoaders.Chatbot)
+const Roadmap = lazy(routeLoaders.Roadmap)
+const TeslaAccount = lazy(routeLoaders.TeslaAccount)
 
 // Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability)
-const MyActivity = lazy(() => import('./features/system/pages/MyActivityPage'))
+const MyActivity = lazy(routeLoaders.MyActivity)
 
 // Settings
-const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
+const Settings = lazy(routeLoaders.Settings)
 // Phase-50 / 0054 — P3 safety setting explainer host page. Distinct
 // from /safety-settings (vehicle telemetry) — this page hosts the
 // safety-RELATED APPLICATION settings (notification quiet hours,
 // alert digest mode, critical-flash, tab-badge, api_suspended) plus
 // the opt-in Helix narrator. Routed at /settings/safety to live
 // under the /settings family.
-const SafetySettingsPage = lazy(() => import('./features/settings/pages/SafetyPage'))
-const FleetSetupPage = lazy(() => import('./features/settings/pages/FleetSetupPage'))
+const SafetySettingsPage = lazy(routeLoaders.SafetySettingsPage)
+const FleetSetupPage = lazy(routeLoaders.FleetSetupPage)
 // Account-level security pages promoted out of Settings (Phase-50 split):
 //   /account/2fa       — Two-factor authentication enrollment / disable
 //   /account/sessions  — Active browser/device sessions + revoke
@@ -328,7 +334,7 @@ const Privacy = lazy(() => import('./features/settings/pages/PrivacyPage'))
 const Helix = lazy(() => import('./features/settings/pages/HelixPage'))
 
 // Onboarding (Phase 40 / Prompt 18 — first-run experience)
-const Onboarding = lazy(() => import('./features/onboarding/pages/OnboardingPage'))
+const Onboarding = lazy(routeLoaders.Onboarding)
 
 // Feature Hub — discoverable browse-and-search front door to every page.
 const Explore = lazy(() => import('./features/explore/pages/ExplorePage'))
@@ -337,17 +343,17 @@ const Explore = lazy(() => import('./features/explore/pages/ExplorePage'))
 const NotFound = lazy(() => import('./features/system/pages/NotFoundPage'))
 
 // Global app-wide search (Phase 40 / Prompt 41)
-const Search = lazy(() => import('./features/system/pages/SearchPage'))
+const Search = lazy(routeLoaders.Search)
 
 // Sharing (public)
-const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'))
+const SharedDrive = lazy(routeLoaders.SharedDrive)
 // Sharing (authenticated, in Layout) — Phase-50 / 0060 GEN1 trip postcard.
 const SharingTrips = lazy(() => import('./features/sharing/pages/SharingTripsPage'))
 
 // Watch (standalone — no Layout, API key auth)
-const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
+const WatchFace = lazy(routeLoaders.WatchFace)
 // Server picker (standalone — no Layout, pre-auth)
-const ConnectPage = lazy(() => import('./features/server/ConnectPage'))
+const ConnectPage = lazy(routeLoaders.ConnectPage)
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation.
  *  Uses PageLoadSkeleton (layout-shaped) instead of a plain spinner so the page
@@ -553,15 +559,23 @@ export default function App() {
           adopter can open a menu without prop drilling. */}
       <ContextMenuRoot />
       <Routes>
-      <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
       <Route path="year-review/:year" element={<SafeRoute name="YearReview"><YearReview /></SafeRoute>} />
       <Route path="s/:token" element={<SafeRoute name="SharedDrive"><SharedDrive /></SafeRoute>} />
       <Route path="watch" element={<SafeRoute name="WatchFace"><WatchFace /></SafeRoute>} />
       <Route path="onboarding" element={<SafeRoute name="Onboarding"><Onboarding /></SafeRoute>} />
       <Route path="connect" element={<SafeRoute name="Connect"><ConnectPage /></SafeRoute>} />
+      {SharedLibraryReference && <Route path="dev/shared-library" element={
+        <main className="mx-auto min-w-0 max-w-6xl p-4">
+          <SafeRoute name="SharedLibraryReference"><SharedLibraryReference /></SafeRoute>
+        </main>
+      } />}
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
+        <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
+        {MobileGridReference && <Route path="dev/grid-states" element={<SafeRoute name="MobileGridReference"><MobileGridReference /></SafeRoute>} />}
+        {LayoutReference && <Route path="dev/layout" element={<SafeRoute name="LayoutReference"><LayoutReference /></SafeRoute>} />}
+        {StatReference && <Route path="dev/stats" element={<SafeRoute name="StatReference"><StatReference /></SafeRoute>} />}
         <Route path="explore" element={<SafeRoute name="Explore"><Explore /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />
         <Route path="vehicles" element={<SafeRoute name="Vehicles"><Vehicles /></SafeRoute>} />

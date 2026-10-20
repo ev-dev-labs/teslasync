@@ -1,4 +1,4 @@
-import { Wifi, WifiOff, Loader2 } from 'lucide-react'
+import { Radio, CloudOff, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useLiveConnection } from '@/hooks/useLiveConnection'
 import { useConnectionAnnouncement } from '@/hooks/useConnectionAnnouncement'
@@ -19,7 +19,7 @@ interface LiveIndicatorProps {
 }
 
 interface VariantConfig {
-  icon: typeof Wifi
+  icon: typeof Radio
   /** Tailwind text utility, e.g. `text-emerald-300`. */
   text: string
   /** Tailwind background utility, e.g. `bg-emerald-500/10`. */
@@ -33,10 +33,10 @@ interface VariantConfig {
 /**
  * `<LiveIndicator>` — at-a-glance health of the live-data pipeline.
  * Renders the four states surfaced by `useLiveConnection`:
- *   - `connected`    → emerald `Wifi`, "Live · Xs ago"
+ *   - `connected`    → emerald `Radio`, "Live · Xs ago"
  *   - `reconnecting` → amber spinning `Loader2`, "Reconnecting…"
- *   - `disconnected` → rose `WifiOff`, "Offline"
- *   - `unknown`      → muted `WifiOff`, "Unknown"
+ *   - `disconnected` → rose `CloudOff`, "Offline"
+ *   - `unknown`      → muted `CloudOff`, "Unknown"
  * NOT to be confused with `<FreshnessIndicator>` — that component reflects
  * the AGE of a single data point, this one reflects the HEALTH OF THE WIRE.
  * Use `variant="dot"` in compact navigation headers and the app shell;
@@ -53,7 +53,7 @@ export function LiveIndicator({ variant = 'pill', className }: LiveIndicatorProp
 
   const cfg: Record<typeof status, VariantConfig> = {
     connected: {
-      icon: Wifi,
+      icon: Radio,
       text: 'text-emerald-300',
       bg: 'bg-emerald-500/10',
       dot: 'bg-emerald-400',
@@ -68,14 +68,14 @@ export function LiveIndicator({ variant = 'pill', className }: LiveIndicatorProp
       spin: true,
     },
     disconnected: {
-      icon: WifiOff,
+      icon: CloudOff,
       text: 'text-rose-300',
       bg: 'bg-rose-500/10',
       dot: 'bg-rose-400',
       label: t('live.disconnected', 'Offline'),
     },
     unknown: {
-      icon: WifiOff,
+      icon: CloudOff,
       text: 'text-[var(--text-muted)]',
       bg: 'bg-white/[0.03]',
       dot: 'bg-[var(--surface-2)]',
@@ -96,10 +96,16 @@ export function LiveIndicator({ variant = 'pill', className }: LiveIndicatorProp
     )
   }
 
+  const age = variant === 'pill' && status === 'connected' && lastMessageAt
+    ? formatRelativeTime(lastMessageAt)
+    : null
+
   return (
     <span
       role="status"
-      aria-label={v.label}
+      aria-label={age ? `${v.label} · ${age}` : v.label}
+      // The last-message age lives in the tooltip, not as visible text.
+      title={age ?? undefined}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border border-white/[0.05] px-2 py-0.5 text-xs',
         v.bg,
@@ -109,9 +115,6 @@ export function LiveIndicator({ variant = 'pill', className }: LiveIndicatorProp
     >
       <Icon className={cn('h-3 w-3 shrink-0', v.spin && 'animate-spin')} aria-hidden />
       <span>{v.label}</span>
-      {variant === 'pill' && status === 'connected' && lastMessageAt && (
-        <span className="text-[var(--text-muted)]">· {formatRelativeTime(lastMessageAt)}</span>
-      )}
     </span>
   )
 }

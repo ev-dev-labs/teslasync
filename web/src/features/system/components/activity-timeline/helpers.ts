@@ -13,7 +13,7 @@ export interface ActivityDayGroup {
  * buckets. `tz` should be the vehicle's IANA timezone when known so a
  * late-night drive groups under the day the driver experienced it, not UTC.
  */
-export function groupActivityByDay(items: readonly ActivityItem[], tz?: string): ActivityDayGroup[] {
+export function groupActivityByDay(items: readonly ActivityItem[], tz?: string, locale?: string): ActivityDayGroup[] {
   const order: string[] = [];
   const buckets = new Map<string, ActivityItem[]>();
 
@@ -31,7 +31,7 @@ export function groupActivityByDay(items: readonly ActivityItem[], tz?: string):
 
   return order.map((dayKey) => ({
     dayKey,
-    label: dayKey === 'unknown' ? '—' : formatDayKey(dayKey, { style: 'long' }),
+    label: dayKey === 'unknown' ? '—' : formatDayKey(dayKey, { style: 'long', locale }),
     items: buckets.get(dayKey) ?? [],
   }));
 }

@@ -1,0 +1,765 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-vehicles-physics-ledger",
+  "attempt": 1,
+  "actor": "e7ec422f-feb2-453f-aca3-0171a822d8c5",
+  "status": "DONE_SOURCE_AUDIT_REPORT",
+  "page": "web/src/features/vehicles/pages/PhysicsLedgerPage.tsx",
+  "acceptedSourceCommit": "8f2474f1c18f61c1224c8d3b489bf51da3ad0415",
+  "acceptance": "SOURCE ONLY, NOT native/application/backend/visual/a11y acceptance",
+  "deadline": {
+    "reservationUTC": "2026-10-14T01:24:50.678Z",
+    "releaseByUTC": "2026-10-14T01:44:50.678Z",
+    "hardByUTC": "2026-10-14T01:49:50.678Z",
+    "firstProbeUTC": "2026-10-14T01:27:56.2776487Z"
+  },
+  "scope": {
+    "sourceWrites": 0,
+    "catalogWrites": 0,
+    "queueWrites": 0,
+    "gitWrites": 0,
+    "writable": [
+      "docs/frontend-audits/phase6-qa-vehicles-physics-ledger.json",
+      "web/logs/phase6-qa-vehicles-physics-ledger.log"
+    ],
+    "note": "Initial read-only git status probe; no Git mutations; concurrent work not attributed. Report missing so create only; no remigration/repair.",
+    "testWrites": 0
+  },
+  "authorityRead": {
+    "mission": "docs/frontend-mission.md:1-270,1416-1517",
+    "instructions": [
+      ".github/copilot-instructions.md:1-480 applicable frontend/integrity/SI",
+      ".github/instructions/react-frontend.instructions.md:1-629",
+      ".github/instructions/frontend-si-cutover.instructions.md entire",
+      ".github/instructions/unit-conversion.instructions.md entire"
+    ],
+    "handoff": "docs/session-handoff.md:1-47,504-564,2219-2270",
+    "design": "docs/frontend-design-contract.md:1-654 entire base/full heading map; unrelated geometry/annotation addenda not reread",
+    "reconciliation": "Current rawSI/unknown-not-zero/neutral roles govern legacy unit/null-to-zero/neon examples. PageLayout->PageContainer; shared primitive/vendor implementations expected exceptions.",
+    "inventory": "docs/frontend-inventory.md:284,582,588,1071-1073,1423; audit-page-233.json:1-340; reuse P461/P462/P463",
+    "orchestrator": "docs/orchestrator-loop.md ENTIRE"
+  },
+  "queue": {
+    "reservation": "actor=e7ec422f-feb2-453f-aca3-0171a822d8c5;reserved01:24:50.678Z;LastConsumed=-1",
+    "dedup": "Entire queue read targeted objectives/files all phases. Existing audit-page-233,completed phase3-suite939-file-100,accepted Phase5,this QA; no exact corrective row found. P461/P462/P463 inventory reused; no queue writes/redispatch. Similar advanced date fix/battery-ledger rescue different scopes.",
+    "history": "Old external catalog startup zeroexecuted/native blocked/resourceFAIL not rerun or converted to pass.",
+    "acceptedPhase5LineFirstRead": 2017,
+    "firstLine": 72,
+    "lastLine": 73
+  },
+  "counts": {
+    "testFilesRead": 5,
+    "termRowCalls": 13,
+    "ledgerRelevantDeclarations": 36,
+    "limit": "Static definitions not mounted/runner counts;3 mixed test cases unrelated parking/utilization; one finding per root.",
+    "dataTables": 2,
+    "domainRawMetrics": 19,
+    "domainCalls": 11,
+    "nativeCandidates": 4,
+    "conditionalCandidates": 3,
+    "plotInstancesIfTwoSampleDomains": 5,
+    "pagePlusPhysicsDirectoryLines": 914,
+    "deduplicatedNeeds": 5,
+    "pageDeclarations": 17,
+    "briefs": 5,
+    "primaryLines": 1067,
+    "accountingRows": 17,
+    "pageExpectSourceLines": 57,
+    "accountingTables": 3,
+    "primaryFiles": 20,
+    "executedTests": 0,
+    "testDeclarationsRead": 39,
+    "motionChartSites": 2,
+    "payloadSections": 12,
+    "confirmedFindings": 8,
+    "pageLines": 191,
+    "unresolvedIds": 12
+  },
+  "findings": [
+    {
+      "id": "PL-F01",
+      "rule": "false-coverage-assurance",
+      "contract": "MDC-026/045",
+      "severity": "high",
+      "file": "web/src/features/vehicles/components/physics-ledger/UnknownPanel.tsx",
+      "lines": [
+        15,
+        31,
+        40,
+        42,
+        51
+      ],
+      "mechanism": "asList(null/undefined)=>[]; empty intervals announce Full coverage: no gaps in this window even when truncated. Success chip depends only on unknown_hours>0, not requested-window completeness.",
+      "related": "helpers20-22;PhysicsLedgerPage.test353-374",
+      "repro": "Static supplied shape unknown_intervals=null or[],unknown_hours=0,truncated=true reaches Full coverage alongside oldest-prefix badge. No runtime data accessed.",
+      "fix": "Keep null/empty/completeness distinct; coverage-neutral wording absent explicit completeness. Retain hours, intervals, truncation, tableId and shells; parent canonical-copy integration if needed.",
+      "need": "PL-N01"
+    },
+    {
+      "id": "PL-F02",
+      "rule": "mobile-evidence-loss",
+      "contract": "MDC-023/043",
+      "severity": "high",
+      "file": "web/src/features/vehicles/components/physics-ledger/EpochsPanel.tsx",
+      "lines": [
+        24,
+        36,
+        53,
+        56
+      ],
+      "mechanism": "mobileColumns omits predicted/samples; UnknownPanel48 omits end. No mobilePresentation/expanded detail. DataTable736-744 applies hidden md:table-cell; column menu/scroll cannot restore fixed mobile allow-list.",
+      "related": "UnknownPanel17-25,45-52;DataTable1180,1535",
+      "repro": "Nonempty rows below768px lose3 fields: predictedWh/sampleCount/intervalEnd. CSS/markup source proof, not measured mobile render.",
+      "fix": "Existing complete mobile details adapter or nonlossy contained scrolling; keep all5/4 columns,IDs,order,pagination,timestamps.",
+      "need": "PL-N02"
+    },
+    {
+      "id": "PL-F03",
+      "rule": "raw-si-export-loss",
+      "contract": "MDC-023/045/046",
+      "severity": "high",
+      "file": "web/src/features/vehicles/components/physics-ledger/EpochsPanel.tsx",
+      "lines": [
+        18,
+        24,
+        30,
+        36,
+        53,
+        60
+      ],
+      "mechanism": "Aliases measured/predicted/unexplained/samples differ from raw *_wh/sample_count. Unknown start/end/duration differ from started_at/ended_at/duration_s. No exportValue/exportRow/onExport. DataTable890-934 enables matchingLoaded export;907-910 alias misses fall back to rendered strings even JSON, losing SI numbers,ISO timestamps,precision and unlisted provenance.",
+      "related": "UnknownPanel17-25,45-53;unitConversion457-486",
+      "repro": "Static -25 unexplained_wh => undefined row['unexplained'] => formatted rounded kWh string, not numeric-25. Interval300s => display hours; UTC start=>browser-local text. No serializer/download/export-data access.",
+      "fix": "Existing explicit caller serialization/onExport for canonical rawJSON and clearly labeled CSV semantics. Preserve SI/null/sign/ISO and evidence scope/provenance; matchingLoaded not fullHistory. Preserve intended visible-column export distinction.",
+      "need": "PL-N02"
+    },
+    {
+      "id": "PL-F04",
+      "rule": "workspace-range-bypass",
+      "contract": "MDC-032",
+      "severity": "high",
+      "file": "web/src/features/vehicles/pages/PhysicsLedgerPage.tsx",
+      "lines": [
+        37,
+        57,
+        63,
+        109,
+        122
+      ],
+      "mechanism": "Local hours/start/end rather than useRangeState workspace from/to. Route absent RANGE_ENABLED_PATHS22-77;range=false,vehicle=true. useAnalysisWindow15 replaces valid absolute>24h with anchored preset; hours/default selected state not necessarily actual absolute span.",
+      "related": "useAnalysisWindow6-18,20-29;workspaceScope155-166;App604;P461/G227",
+      "repro": "Valid72h start/end bookmark fails24h cap and sends fallback24h; workspace from/to never read. No header/API run; NOT two visible pickers.",
+      "fix": "Coordinate P461 route/shared-range integration preserving6h/24h actions,legacy bookmarks,copyLink and solver limits. Verify inclusive/half-open/full-range semantics before changes; no broad shared-hook rewrite/guessed backend support.",
+      "need": "PL-N03"
+    },
+    {
+      "id": "PL-F05",
+      "rule": "date-preference-bypass",
+      "contract": "MDC-044/045",
+      "severity": "medium",
+      "file": "web/src/features/vehicles/pages/PhysicsLedgerPage.tsx",
+      "lines": [
+        17,
+        122,
+        138
+      ],
+      "mechanism": "Pure formatDateTime with no locale/tz options uses browser defaults (dateFormat41-64), not saved locale/tz_display_default/timezone_user. Same in chart axis,intervals,markers,domain scopes.",
+      "related": "MotionCharts5,35;UnknownPanel6,17-18;MarkersPanel5,22;LedgerEvidenceBrief5,23;useDateFormat75-104",
+      "repro": "Saved preferences differing from browser cannot affect these missing options. Source confirmed, no preference/date data access.",
+      "fix": "Existing useDateFormat/effective options reactively; preserve rawUTC,scope/cells/tooltip. Explicit12/24h preference enforcement not established; do not invent capability.",
+      "need": "PL-N04"
+    },
+    {
+      "id": "PL-F06",
+      "rule": "missing-canonical-chart-frame",
+      "contract": "MDC-034",
+      "severity": "medium",
+      "file": "web/src/features/vehicles/components/physics-ledger/MotionCharts.tsx",
+      "lines": [
+        21,
+        29,
+        38
+      ],
+      "mechanism": "Five conditional plots mount AreaChartWrapper in div/GlassPanel with no ChartContainer/ChartCard/EmbeddedChart ancestor; scopedgrep0 and parent trace confirm. Shared renderer alone is not canonical frame.",
+      "related": "DynamicsPanel33-40;BlackBoxPanel17-23;ChartContainer80-89,132-169;EmbeddedChart19-40",
+      "repro": "page->domain panel->MotionCharts->AreaChartWrapper, no common frame. No historical export/fullscreen removed claim; absence is existing source contract debt.",
+      "fix": "Reuse embedded frame around actual children; preserve series,states,identity,height,signs,null gaps. No unrequested exports/annotations or duplicate chrome.",
+      "need": "PL-N05"
+    },
+    {
+      "id": "PL-F07",
+      "rule": "missing-numeric-chart-alternative",
+      "contract": "MDC-034/040",
+      "severity": "high",
+      "file": "web/src/features/vehicles/components/physics-ledger/MotionCharts.tsx",
+      "lines": [
+        14,
+        23,
+        29,
+        37
+      ],
+      "mechanism": "Names/role=img and graphical tooltip not numeric timestamp/power/speed/force equivalent; no point table/text alternative. First speed caption and unrelated epoch/unknown tables are not trace evidence.",
+      "related": "AreaChartWrapper93-179;DynamicsPanel42-44;ChartContainer859-950;P462/G233",
+      "repro": "Static tree labels+traces only. Recharts keyboard/screen-reader runtime NOTRUN; no broader native failure inferred.",
+      "fix": "Reuse existing frame data-table/text API with complete returned rawpoint fields/null gaps; label plotted sampling separately; P462 caller adoption before any shared extension.",
+      "need": "PL-N05"
+    },
+    {
+      "id": "PL-F08",
+      "rule": "chart-palette-preference-bypass",
+      "contract": "MDC-010/034",
+      "severity": "medium",
+      "file": "web/src/features/vehicles/components/physics-ledger/helpers.ts",
+      "lines": [
+        3,
+        5,
+        7
+      ],
+      "mechanism": "3 fixed hex constants feed power/speed/force regardless of chart_palette/theme/mode. No preference hook at caller. Not a proven neon/contrast failure.",
+      "related": "MotionCharts7,16-18;useChartPalette20-27,45-48",
+      "repro": "Series always same3 constants at any preference; no dependency/lookup. No saved preferences accessed.",
+      "fix": "Existing palette owner at display boundary; preserve order/identity/savedIDs, no warning/success inference or new registry.",
+      "need": "PL-N05"
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "PL-C01",
+      "source": "MotionCharts14;helpers24-30",
+      "mechanism": "Existing500 index sampling drops arbitrary events/gaps/finalpoint; safe index-only501->500 repro keeps499/omits500.",
+      "limit": "Preserved baseline budget,not new authorized sampling repair or observed realdata loss. Complete nonvisual/raw export scope independent;no payload mutation."
+    },
+    {
+      "id": "PL-C02",
+      "source": "Dynamics20-33;Thermal19-33,39-42;Range17-32;Tires21-32,38-41;OperationalBrief125-149",
+      "mechanism": "4 briefs repeat outer surfaces/titles/honesty;correlation/imbalance repeated.",
+      "limit": "Reuse existingP463 designreview;native noise not measured,no deletion/newcomponent mandate."
+    },
+    {
+      "id": "PL-C03",
+      "source": "usePhysicsLedger43-52;scope39-41;ledger bounds/truncated",
+      "mechanism": "Bothbounds passed;scope comments inclusive vs workspace exclusive contract;actual prefix/full coverage/solver closure unverified.",
+      "limit": "Backend/API/DB NOTRUN;no guessed end adjustment/completeness/unit/solver repair. P461 integration proof required."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "PL-V01",
+      "source": "page96-123;MotionCharts22;Table16-24;DataTable736-744",
+      "required": "Authorized mounted320/375/390/430/768/1024/1280/1440/1920/2560,narrowcontainers,RTL,longlabels,200%text;overflow/completefields/touch;source44px declarations not measured compliance."
+    },
+    {
+      "id": "PL-V02",
+      "source": "page99-116;OperationalBrief151-162;Table/QueryError",
+      "required": "Keyboard/unclippedfocus,drawertrap/restore/Escape,containedscroll names/reachability,chart alternatives/screenreader. SourceARIA/headings/rowheaders/pressed states not runtime pass."
+    },
+    {
+      "id": "PL-V03",
+      "source": "AreaChartWrapper71,171;FadeIn;helpers3-7",
+      "required": "dark/light/savedcustom/forcedcolors,composedtext4.5:UI3 contrast,reducedmotion/lowbandwidth,font/density/seriesdistinction NOTRUN."
+    },
+    {
+      "id": "PL-V04",
+      "source": "page126-187;test387-456;DataTable890-934",
+      "required": "Authorized synthetic loading/fatal/retained/paused/truncated/preferences/export acceptance after source fixes. No browser/API/device/download/clipboard/exportdata access."
+    }
+  ],
+  "narrowNeeds": [
+    {
+      "id": "PL-N01",
+      "findings": [
+        "PL-F01"
+      ],
+      "priority": 1,
+      "scope": "UnknownPanel + parent-leased direct tests;canonicalcopy owner separately",
+      "need": "Coverage-neutral null/empty/truncated semantics;retain rawhours/intervals;no exact corrective queue row found."
+    },
+    {
+      "id": "PL-N02",
+      "findings": [
+        "PL-F02",
+        "PL-F03"
+      ],
+      "priority": 1,
+      "scope": "EpochsPanel/UnknownPanel + parent-leased direct covering tests",
+      "need": "One tablefidelity leaf complete mobile fields/rawserialization usingexistingDataTable APIs,IDs/order/paging/matchingLoaded;not sharedTable campaign."
+    },
+    {
+      "id": "PL-N03",
+      "findings": [
+        "PL-F04"
+      ],
+      "priority": 2,
+      "scope": "Page/test plus orchestrator-owned workspaceScope route/directcontract integration",
+      "need": "ReuseP461/G227 sharedbounds/bookmarks/6h24h compatibility with verifiedsolverlimits;not wholepage remigration/sharedAnalysisWindow rewrite."
+    },
+    {
+      "id": "PL-N04",
+      "findings": [
+        "PL-F05"
+      ],
+      "priority": 2,
+      "scope": "Page/MotionCharts/UnknownPanel/MarkersPanel/LedgerEvidenceBrief datecallers/directtests",
+      "need": "ExistinguseDateFormat adoption,rawinstants/reactivity;advanceddatefix coversdifferentfiles,no shareddate rewrite."
+    },
+    {
+      "id": "PL-N05",
+      "findings": [
+        "PL-F06",
+        "PL-F07",
+        "PL-F08"
+      ],
+      "priority": 2,
+      "scope": "MotionCharts/helpers/directtests;existingframe/palette APIs readonly reuse",
+      "need": "One caller leaf canonicalembeddedframe,complete numeric alternative,savedpalette;P462/G233 reuse;500plotbudget retained unless authorized;no speculative sharedextension."
+    }
+  ],
+  "pins": {
+    "algorithm": "SHA256",
+    "status": "PASS",
+    "unchangedCount": 56,
+    "count": 56,
+    "driftFiles": [],
+    "files": [
+      {
+        "beforeSHA256": "C340A1A7A2DC73EF1F02905DD423F804F17D17C3FE45F01EDB407F5B41EC1AC4",
+        "afterSHA256": "C340A1A7A2DC73EF1F02905DD423F804F17D17C3FE45F01EDB407F5B41EC1AC4",
+        "file": "web/src/features/vehicles/pages/PhysicsLedgerPage.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "22B86328CE0EE33B7FCCA1C8EF5D2828C171257D2AFB03F21604ED25EE231656",
+        "afterSHA256": "22B86328CE0EE33B7FCCA1C8EF5D2828C171257D2AFB03F21604ED25EE231656",
+        "file": "web/src/features/vehicles/pages/PhysicsLedgerPage.test.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75",
+        "afterSHA256": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75",
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "65EFD96BA0C6DA2E3AEB0EF14FC9B63B7E7242CE7C986A0A2ADAE3EF19990C68",
+        "afterSHA256": "65EFD96BA0C6DA2E3AEB0EF14FC9B63B7E7242CE7C986A0A2ADAE3EF19990C68",
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.test.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "E7D3A3B729F121CA4626BE3E9E87E184D0649379345880E676955BABF21EA711",
+        "afterSHA256": "E7D3A3B729F121CA4626BE3E9E87E184D0649379345880E676955BABF21EA711",
+        "file": "web/src/api/hooks/usePhysicsLedger.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "E881D66CDBB3DC5494449222DB241EAFDF4DFC9CE045223B89CCD3E259BC699E",
+        "afterSHA256": "E881D66CDBB3DC5494449222DB241EAFDF4DFC9CE045223B89CCD3E259BC699E",
+        "file": "web/src/api/hooks/usePhysicsLedger.test.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+        "afterSHA256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+        "file": "web/src/api/types.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+        "afterSHA256": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+        "file": "web/src/api/scope.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524",
+        "afterSHA256": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524",
+        "file": "web/src/api/queryPolicy.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "afterSHA256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "file": "web/src/api/dataState.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "afterSHA256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "file": "web/src/hooks/useDataState.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "7F5E299097E4B88D41D52B7F653D80A230F7A3E32D63F858E0A2B92845ABFFA2",
+        "afterSHA256": "7F5E299097E4B88D41D52B7F653D80A230F7A3E32D63F858E0A2B92845ABFFA2",
+        "file": "web/src/hooks/useAnalysisWindow.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "FAA02C4F6058FDEF015153075E574AFC86DFB939A79ABEA53780A5A4C4339EB6",
+        "afterSHA256": "FAA02C4F6058FDEF015153075E574AFC86DFB939A79ABEA53780A5A4C4339EB6",
+        "file": "web/src/hooks/useAnalysisWindow.test.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "afterSHA256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+        "afterSHA256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+        "file": "web/src/hooks/useUnits.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "afterSHA256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "afterSHA256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "file": "web/src/hooks/useOperationalMetrics.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "afterSHA256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "file": "web/src/lib/dateFormat.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+        "afterSHA256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+        "file": "web/src/lib/numberFormat.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+        "afterSHA256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+        "file": "web/src/lib/unitConversion.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "afterSHA256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "file": "web/src/lib/workspaceScope.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+        "afterSHA256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+        "file": "web/src/lib/metric-reference/formatMetric.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "3B9EBC9538365FE381EF8969132361F28DA5501914A058A5D4EAC8E3AFC1B832",
+        "afterSHA256": "3B9EBC9538365FE381EF8969132361F28DA5501914A058A5D4EAC8E3AFC1B832",
+        "file": "web/src/lib/metric-reference/types.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+        "afterSHA256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+        "file": "web/src/components/charts/ChartContainer.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+        "afterSHA256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+        "file": "web/src/components/charts/EmbeddedChart.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "afterSHA256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "afterSHA256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+        "afterSHA256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "804547BCB6E9BE1D6210DC459EFEE9ED7A8CB76999322F98C5CF7D80EA242057",
+        "afterSHA256": "804547BCB6E9BE1D6210DC459EFEE9ED7A8CB76999322F98C5CF7D80EA242057",
+        "file": "web/src/components/data-display/DataProvenanceBadge.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "B61E99F1AEDD878BC422456906B3C04071C3416C53E2B9A517D67A0204310026",
+        "afterSHA256": "B61E99F1AEDD878BC422456906B3C04071C3416C53E2B9A517D67A0204310026",
+        "file": "web/src/components/ui/Table.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "afterSHA256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "file": "web/src/App.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "C348CA8D742519308ED99155E0F6D12B4E0C5159C51A3EBB87EBEB3B334F5E30",
+        "afterSHA256": "C348CA8D742519308ED99155E0F6D12B4E0C5159C51A3EBB87EBEB3B334F5E30",
+        "file": "web/src/features/vehicles/components/physics-ledger/BlackBoxPanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "BE41E249810EA1282EB1B2DCF1BC7F2EE9D4738D0A850E6CCEC8529081F2BFD9",
+        "afterSHA256": "BE41E249810EA1282EB1B2DCF1BC7F2EE9D4738D0A850E6CCEC8529081F2BFD9",
+        "file": "web/src/features/vehicles/components/physics-ledger/ChargeLedgerPanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "C811C00F49004138CDA3CBB4DBA6FC69F436BEEC78DEB5E1F36832AD728090DB",
+        "afterSHA256": "C811C00F49004138CDA3CBB4DBA6FC69F436BEEC78DEB5E1F36832AD728090DB",
+        "file": "web/src/features/vehicles/components/physics-ledger/DriveLedgerPanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "71DEF9A9876A75CD5FD9D2A18AC4829D07D52CE5548324AD50C5A91F8F34F0E5",
+        "afterSHA256": "71DEF9A9876A75CD5FD9D2A18AC4829D07D52CE5548324AD50C5A91F8F34F0E5",
+        "file": "web/src/features/vehicles/components/physics-ledger/DynamicsPanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "947A8E16D5376699C44BDA1B501BCC16753A1C923340C29D7DFD2EA3F570C6DD",
+        "afterSHA256": "947A8E16D5376699C44BDA1B501BCC16753A1C923340C29D7DFD2EA3F570C6DD",
+        "file": "web/src/features/vehicles/components/physics-ledger/EpochsPanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "F177A0C4FC6F63F32AAFE34ABB8A90C5D42A3FF8C99FB0A15ADDF0D31CFD2144",
+        "afterSHA256": "F177A0C4FC6F63F32AAFE34ABB8A90C5D42A3FF8C99FB0A15ADDF0D31CFD2144",
+        "file": "web/src/features/vehicles/components/physics-ledger/helpers.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "D411A25618BA826BA9676BAA760EA29BF587D97F4A9147B0B55EDCCDB3DEBEB7",
+        "afterSHA256": "D411A25618BA826BA9676BAA760EA29BF587D97F4A9147B0B55EDCCDB3DEBEB7",
+        "file": "web/src/features/vehicles/components/physics-ledger/LedgerPanels.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "F0993ABFC659E08E61E213BEA405F47D4F7F7C1208F1556DAB946F5781D2CCD0",
+        "afterSHA256": "F0993ABFC659E08E61E213BEA405F47D4F7F7C1208F1556DAB946F5781D2CCD0",
+        "file": "web/src/features/vehicles/components/physics-ledger/MarkersPanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "4A147D4D65DC9CE15961DC5A525B01E1F982E2E743855BD26BD216D4CB676E94",
+        "afterSHA256": "4A147D4D65DC9CE15961DC5A525B01E1F982E2E743855BD26BD216D4CB676E94",
+        "file": "web/src/features/vehicles/components/physics-ledger/MotionCharts.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "FE6CB9EFE3BA6A0689BB386F0F5282B2EE9BABD01240007BD851AF942041BF78",
+        "afterSHA256": "FE6CB9EFE3BA6A0689BB386F0F5282B2EE9BABD01240007BD851AF942041BF78",
+        "file": "web/src/features/vehicles/components/physics-ledger/ParkLedgerPanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "4375C49FC99B8A6B246B4096E982E504F4F91D4426349169765DB191D9205AC0",
+        "afterSHA256": "4375C49FC99B8A6B246B4096E982E504F4F91D4426349169765DB191D9205AC0",
+        "file": "web/src/features/vehicles/components/physics-ledger/PendingPanels.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "10DABC95EE6D7C3A5A222603A01E1E66D30F217D43E2051C89278F7F0AEF1A4B",
+        "afterSHA256": "10DABC95EE6D7C3A5A222603A01E1E66D30F217D43E2051C89278F7F0AEF1A4B",
+        "file": "web/src/features/vehicles/components/physics-ledger/RangePanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "DB42E5F3C2B634F393D7662A5C973A9E746E3F4D4AA1486EB24DA0530E7F3FE3",
+        "afterSHA256": "DB42E5F3C2B634F393D7662A5C973A9E746E3F4D4AA1486EB24DA0530E7F3FE3",
+        "file": "web/src/features/vehicles/components/physics-ledger/TermRow.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "BC4833CEFD5441FA065721BC8DBD7EEF4937E4FD154EB3BDC0F5AA2BE5E79AFB",
+        "afterSHA256": "BC4833CEFD5441FA065721BC8DBD7EEF4937E4FD154EB3BDC0F5AA2BE5E79AFB",
+        "file": "web/src/features/vehicles/components/physics-ledger/ThermalPanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "5ADC79957569049EC042F04254F160BEEB3C28796603A53388205534E743E41C",
+        "afterSHA256": "5ADC79957569049EC042F04254F160BEEB3C28796603A53388205534E743E41C",
+        "file": "web/src/features/vehicles/components/physics-ledger/TiresPanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "D6EC9777E4CB9BF898E85EFDD69BB11A6D69A5FC3148E4134771C9124BB13B3D",
+        "afterSHA256": "D6EC9777E4CB9BF898E85EFDD69BB11A6D69A5FC3148E4134771C9124BB13B3D",
+        "file": "web/src/features/vehicles/components/physics-ledger/UnknownPanel.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "BD736465F0EAA49D61A3EE7A75695FF03903405CA8CC62F14BFC8428AE26793D",
+        "afterSHA256": "BD736465F0EAA49D61A3EE7A75695FF03903405CA8CC62F14BFC8428AE26793D",
+        "file": "web/src/components/charts/AreaChartWrapper.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+        "afterSHA256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+        "file": "web/src/components/ui/DataTable.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "61C05CC904D006475C68EB6362A0E828863CCDA5A4CAF66A4C0FCDF21693E83C",
+        "afterSHA256": "61C05CC904D006475C68EB6362A0E828863CCDA5A4CAF66A4C0FCDF21693E83C",
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/LedgerEvidenceBrief.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "24448E183787BAB0B8124C5C0D9697E2CE5C81C6C07E9A2463CC7D3C24A8C77B",
+        "afterSHA256": "24448E183787BAB0B8124C5C0D9697E2CE5C81C6C07E9A2463CC7D3C24A8C77B",
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/LedgerAndCoverageBriefs.test.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+        "afterSHA256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "afterSHA256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "file": "web/src/hooks/useDateFormat.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+        "afterSHA256": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+        "file": "web/src/hooks/useSettings.ts",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+        "afterSHA256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+        "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+        "unchanged": true
+      },
+      {
+        "beforeSHA256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+        "afterSHA256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+        "file": "web/src/lib/operationalMetrics.tsx",
+        "unchanged": true
+      }
+    ]
+  },
+  "preservation": {
+    "sections": [
+      "Returned evidence:page132-162 kind,honesty,contradictions,missing,truncation,freshness",
+      "DynamicsPanel17-45 mass/source,regen,friction,power/speed",
+      "DriveLedgerPanel9-64 measured,aero,rolling,grade,inertial,accessory,model-loss,predicted,residual,session,reconcile,methods/missing",
+      "ChargeLedgerPanel15-66 added,session,wall,precondition,efficiency-known,dwell,unplugged/unknown",
+      "ParkLedgerPanel12-74 duration,signed drain/energy,trust,plugged-limit,4 terms",
+      "ThermalPanel16-44 packmin/max,cabin/ambient,signed correlation",
+      "RangePanel14-34 rated/typical/ideal,energy,spread/disagree,Wh/m implied,no true-range guess",
+      "TiresPanel13-43 four nullable kPa corners/imbalance",
+      "EpochsPanel14-60 five columns,correlation not proof,stabletableID",
+      "UnknownPanel15-53 hours,interval4fields,truncation,pagination",
+      "BlackBoxPanel9-24 last90s signal_log force/power/speed or fewer2 samples",
+      "MarkersPanel10-33 ordered list at/kind/id/edge"
+    ],
+    "actions": "page75 copyLink;97-105 hubLink;109-123 URL6h/24h pressed controls;126-127 fatalRetry;StaleRefreshWarning91-112 retainedRefresh;5 real Review details drawers via OperationalBrief151-162;2 DataTable search/density/columns/export pipelines;unknown10/25/50 paging;PendingPanels28 hubCTA;NoVehicleSelected53-70 onboardingCTA. None activated.",
+    "states": "page67-68 prerequisite PageContainer;initial page186-187 12 busy skeletons;fatal126-127 retry plus174-185 12 unresolved shells;initialpaused174 unresolved,no busy/offline claim;retained deriveDataState228-251 preservesdata/stale/retry;truncated page64 partial and88-94 warning,domains retained;null nested domains keep shells,real0 not unknown.",
+    "physics": "usePhysicsLedger44-52 preserves rawSI root/envelope identity13-28,vehicle-gated scoped keys,AbortSignal,historical policy;scope125-140 snake_case bounds. Terms knownness gates TermRow36,residual Drive48 unexplained_known; no abs/clamp/recompute/unknown-grade0. Predicted/session/reconcile separate56-62. Methods/missing26-27,model drivetrain label,mass_source/honesty retained. Backend numerical closure/integration not proved; rounded display not raw closure. Raw Wh/W/m/mps/C/kPa/s/N/kg;Wh/m formatEnergyPerDistance430-439. Formatter24-63 validates missing/nonfinite. useUnits121-170 display only;useNumberFormatting21-48 reactive precision/locale;date gapF05. No arbitrary pressure preference promoted to defect.",
+    "historicalReconciliation": "Old fatal-empty/initialpaused/top-truncation-ok issues now source-addressed,additive declarations387-435 NOTRUN. Null-array test353-374 still expects Full coverage,not safety evidence. PageLayout9-15 and NoVehicleSelected53 usePageContainer. Current section parity,no historical Git body comparison. Shared AreaChartWrapper now useMotionPreference71,171,not old missing-motion claim."
+  },
+  "engineeringRuleScan": {
+    "files": 20,
+    "rawMatches": {
+      "staticInlineStyle": 0,
+      "rawHTMLcaseSensitive": 0,
+      "directLibraryImport": 0,
+      "oldAPIImport": 0,
+      "doublePrefix": 0,
+      "camelParam": 0,
+      "hiddenSectionCandidate": 1,
+      "hardcodedStringCandidate": 0,
+      "fetchUseEffect": 0,
+      "pageWrapperCandidate": 2
+    },
+    "classification": "ledger ternary129 acceptable all12boundaries in payload/unresolved/pending;wrapper72/NoVehicle68 resolvePageContainer. Case-insensitive raw scan matched3 sharedTable names;correctedcasegrep0. Sharedvendor import/testmocks expected;unit symbols/backend source text not UIEnglish. All10basic-pattern violations0 after contextualreads,but8design/data findings remain;not AST/catalog/fullrepo certificate. Go rulesN/A,internalnotaudited."
+  },
+  "validationLimits": {
+    "testFiles": {
+      "PhysicsLedgerPage.test.tsx": 17,
+      "usePhysicsLedger.test.ts": 9,
+      "useAnalysisWindow.test.tsx": 2,
+      "VehicleEvidenceBrief.test.tsx": 4,
+      "LedgerAndCoverageBriefs.test.tsx": 7
+    },
+    "declarations": 39,
+    "ledgerRelevant": 36,
+    "runtimeDiscovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "testStatus": "NOTRUN report-only/read-only assignment,no sourcechanges;no runner/cache/catalog writes authorized. Historical startupfailures not freshpasses/failures.",
+    "NOTRUN": [
+      "npx tsc --noEmit",
+      "build/lint/scoped/fulltestexecution",
+      "preservation/helperCLIs",
+      "browser/native/a11y/visual captures",
+      "API/DB/solver/device reads",
+      "downloads/clipboard/exportdata",
+      "installs/servers/subagents/Gitmutations"
+    ],
+    "failures": [
+      "shell1292 exit1 invalid.NETregex;corrected1311 exit0",
+      "shell1343 exit0 WITH nonterminating missingoperationalMetrics.ts hasherror,emptyhashignored;correcttsxpin/read",
+      "shell1416 exit1 parser;corrected1434 exit0",
+      "view missingoperationalMetrics.ts+2formatMetric outofrange;corrected reads,no process exits",
+      "shell1483 exit1 toollaunch os206oversizecommand,no script/reportwrite",
+      "shell1497 exit1 invalid-Depth60,no reportwrite;corrected1506 exit0"
+    ],
+    "discoveryMisses": "TimeSeriesChart.tsx/metric-reference/definitions.ts missing guesses,not productdefects or pins",
+    "rawLog": "web/logs/phase6-qa-vehicles-physics-ledger.log"
+  },
+  "summary": {
+    "confirmed": 8,
+    "conditional": 3,
+    "native": 4,
+    "needs": 5,
+    "byRule": {
+      "false-coverage-assurance": 1,
+      "mobile-evidence-loss": 1,
+      "raw-si-export-loss": 1,
+      "workspace-range-bypass": 1,
+      "date-preference-bypass": 1,
+      "missing-canonical-chart-frame": 1,
+      "missing-numeric-chart-alternative": 1,
+      "chart-palette-preference-bypass": 1
+    },
+    "mostAffected": {
+      "UnknownPanel.tsx": 4,
+      "MotionCharts.tsx": 4,
+      "EpochsPanel.tsx": 2,
+      "PhysicsLedgerPage.tsx": 2
+    },
+    "priority": "Coverage/mobile/rawexport first;then range/date/chart integration. Candidate sampling/chrome/backend/native not confirmed runtime defects.",
+    "coordination": "Parent authorizes/queues5 narrow needs and serializes overlapping caller/testfiles;no queue/catalog/source writes. P463 remainsdesignreview only."
+  },
+  "completedUTC": "2026-10-14T01:44:19.6520116Z",
+  "release": {
+    "commands": "No bounded commands/services/subagents running;final fresh parse/pin command follows",
+    "artifacts": "Only exact report/log written",
+    "sourceTests": "No source/test writes;56 before/after pins unchanged",
+    "byDeadline": true
+  }
+}

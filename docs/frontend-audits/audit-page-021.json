@@ -1,0 +1,319 @@
+{
+  "item": "audit-page-021",
+  "page": "web\\src\\features\\admin\\pages\\SecretRotationPage.tsx",
+  "routes": ["/admin/secret-rotation"],
+  "purpose": "Read-only credential rotation observability: inspect server-classified age thresholds, expiry and per-kind/per-target status. This page does not rotate credentials.",
+  "primaryGoal": "Identify overdue or soon-expiring tracked credentials and inspect their identity, last rotation, age, expiry and thresholds without mistaking absent or retained measurements for current healthy values.",
+  "dataSources": [
+    {
+      "hook": "useSecretRotationPage -> useSecretRotation",
+      "file": "web\\src\\features\\admin\\hooks\\useSecretRotationPage.ts",
+      "line": 16,
+      "endpoint": "GET /api/v1/admin/observability/secret-rotation",
+      "requestPath": "/admin/observability/secret-rotation",
+      "sourceOwnership": {
+        "query": "web\\src\\api\\hooks\\useOperatorConfidence.ts:194-206",
+        "queryKey": ["admin", "observability", "secret-rotation"],
+        "registration": "internal\\api\\router.go:4563-4584 delegates to internal\\handler\\v1\\admin_observability_handler.go:33-38",
+        "handler": "internal\\handler\\v1\\admin_observability_handler.go:111-123",
+        "service": "h.svc.SecretRotation; service implementation not inspected",
+        "type": "web\\src\\types\\admin-operator-confidence.ts:121-138"
+      },
+      "behavior": [
+        "Hook forwards AbortSignal, unwraps an envelope, uses STALE_TIMES.STANDARD, INTERVALS.SLOW, background polling false and retry 1.",
+        "Handler returns items from the service; ErrNotConfigured maps to 503/SUBSYSTEM_NOT_CONFIGURED, other failures to 500/SECRET_ROTATION_FAILED.",
+        "Rows retain kind, optional target_id, last_rotated, age_days, optional expires_at, optional signed days_to_expiry, warn_days, critical_days, severity and optional message.",
+        "Snapshot is not date-range or vehicle scoped. No local workspace selector or mutation exists.",
+        "Severity is returned by the server; page does not recompute severity from client thresholds."
+      ],
+      "unknowns": [
+        "Actual deployment configuration, secret tracking completeness, service/database implementation, server clock and snapshot freshness are unverified.",
+        "Existing API fields explicitly carry days; do not rename or change their wire/cache values during a presentation audit. Summary currently adapts days to seconds for shared duration display."
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "category": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "usedBy": "SecretRotationPage.tsx:28-60",
+      "role": "Full-width min-w-0 content adapter; inherited shell, title, query freshness and DataSourceNotice. No alternative page-width engine needed."
+    },
+    {
+      "name": "SecretRotationOperationalBrief / OperationalBrief / useOperationalMetrics",
+      "category": "feature / data-display",
+      "owner": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\SecretRotationOperationalBrief.tsx",
+      "line": 68,
+      "sharedOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "role": "Six source-backed metrics, status, provenance, freshness and existing review drawer. Reuse current metric formatting and drawer rather than restoring the older summary grid."
+    },
+    {
+      "name": "SecretRotationCharts / ChartCard",
+      "category": "feature / chart layout",
+      "owner": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationCharts.tsx",
+      "line": 11,
+      "sharedOwner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "role": "Two canonical chart frames; incoming children, source data and dataColumns are forwarded to EmbeddedChart. Existing shared chart controls/alternatives remain the owner."
+    },
+    {
+      "name": "SecretRotationOutlook / LayoutCard / MetricBar",
+      "category": "feature / layout / data-display",
+      "owner": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationOutlook.tsx",
+      "line": 14,
+      "sharedOwner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "role": "Two outlook cards; threshold-relative urgency and full filtered expiry list. MetricBar already supports solid fill and unknown readings."
+    },
+    {
+      "name": "SecretRotationDetails / DataTable",
+      "category": "feature / ui",
+      "owner": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationDetails.tsx",
+      "line": 14,
+      "sharedOwner": "web\\src\\components\\ui\\DataTable.tsx",
+      "role": "Six-column table with stable admin:secret-rotation identity, row key, local value filters, pagination and shared search/export/density/column pipeline. Existing mobilePresentation and expansion APIs should be reused."
+    },
+    {
+      "name": "DataSourceNotice / DataStateNotice / QueryError / Skeleton / EmptyState / SectionErrorBoundary",
+      "category": "feedback",
+      "owner": "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+      "line": 124,
+      "role": "Source-aware nonfatal recovery and existing per-section states; source notice classifies paused, failed and retained refresh-failed data."
+    },
+    {
+      "name": "Text / Caption / Badge / FadeIn / existing date and number formatters",
+      "category": "ui / motion / formatting",
+      "owner": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationDetails.tsx",
+      "line": 4,
+      "role": "Current category-barrel presentation primitives and localized formatters. Shared primitive internals were not fully audited."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\hooks\\useSecretRotationPage.ts",
+      "line": 54,
+      "rule": "mission-33 / MDC-002 single derivation owner",
+      "detail": "Controller derives distinctKinds, okPct, oldest and soonestExpiry at lines 54-75, while the mounted operational brief independently derives these at lines 16-35. Older SecretRotationSummary consumes the controller values but is not imported by the mounted page.",
+      "fix": "Consolidate feature-level summary derivations only after proving null/nonfinite handling, signed expiry, identity and rounding parity. Do not restore the old summary or create another generic KPI component.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\SecretRotationOperationalBrief.tsx",
+      "line": 89,
+      "rule": "mission-43 restrained information hierarchy",
+      "detail": "Identical provenance is supplied inside OperationalBrief at line 89 and repeated as a caption immediately afterwards at line 90.",
+      "fix": "Use one visible provenance placement while retaining the complete explanation in the existing review-details surface; confirm accessible and drawer coverage before removing repetition.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verification": "unverified",
+    "sourceBehavior": [
+      "Age/severity section stacks by default and uses a 2:1 xl grid; age chart host is min-w-0 (SecretRotationCharts.tsx:16-20).",
+      "Outlook remains one column until 2xl, then two columns; expiry items wrap and credential text breaks words (SecretRotationOutlook.tsx:21,65-69).",
+      "Shared PageLayout preserves a full-width container; no competing workspace selector is mounted.",
+      "Both charts use compact fluid sizing; age Y axis reserves 148px and truncates labels to 22 characters. Actual narrow-chart readability is not established.",
+      "Table suppresses last rotation, expiry and threshold columns below md."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationDetails.tsx",
+        "line": 118,
+        "rule": "MDC-023 / MDC-043 / mission-15 no lossy mobile simplification",
+        "detail": "mobileColumns contains only kind, age and severity. Shared DataTable.tsx:716-725 applies hidden md:table-cell to other columns. This caller supplies neither mobilePresentation nor renderExpanded, leaving per-row last-rotated timestamps and warn/critical thresholds without a source-confirmed mobile inspection path; expiry watch only covers rows with known expiry.",
+        "fix": "Reuse DataTable mobilePresentation or its existing expandable/renderExpanded contract to expose all six column values for every row, with stable row identity, retained filters/pagination and loaded export scope. Validate also 640-767px, where the legacy md hiding still applies.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "additionalChecks": ["Allocated container width", "640-767px table branch", "Long target identifiers", "RTL", "200% text", "Open review drawer"]
+  },
+  "accessibility": {
+    "verification": "keyboard, focus, screen-reader, contrast and touch-target behavior unverified",
+    "sourceStrengths": [
+      "Named section regions and localized chart ariaLabel text.",
+      "Both chart frames receive data and dataColumns for canonical alternatives.",
+      "Severity is encoded by textual labels and badges, not only chart color.",
+      "Legend dots are aria-hidden.",
+      "MetricBar.tsx:58-65 exposes a named progressbar and distinguishes unknown readings.",
+      "OperationalBrief uses the existing Drawer at lines 234-300 rather than a page-specific overlay."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationCharts.tsx",
+        "line": 40,
+        "rule": "MDC-013 / MDC-040 / mission-43 typography",
+        "detail": "Both axes hardcode fontSize 10 at lines 40 and 47 rather than following the shared typography preference. A fixed 148px category axis and label truncation are also present. Source indicates a readability risk, not a measured contrast or viewport failure.",
+        "fix": "Use existing chart typography/token policy; preserve full target labels in tooltip and accessible data alternative and test narrow widths, long labels and enlarged text.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "verification": "source-only; no runtime states exercised",
+    "initialLoading": "Controller derives isLoading only without retained data; summary suppresses values, chart frames own loading, outlook and table use Skeleton.",
+    "empty": "Each chart and outlook card stays mounted with an empty message. Table shows explanatory no-tracked-secrets EmptyState except for unsupported configuration. Summary distinguishes unavailable source from an actual empty items array.",
+    "fatalError": "Non-503 fatal error gets retries in chart/outlook/table and summary QueryError. Multiple independent section retry affordances target the same query.",
+    "unsupported": "Fatal HTTP 503 maps to an unsupported DataStateNotice with enable-tracker explanation; no fabricated credential metrics. Handler confirms configured-subsystem error can return 503, but the client classifies all fatal 503 responses this way.",
+    "retainedRefreshError": "Controller reads retained query data. Summary displays retained text and error; shared DataSourceNotice supplies stale warning and retry without replacing children. Existing page test source covers retained chart/table/outlook content but was not executed.",
+    "offline": "Shared DataSourceNotice uses useOnlineStatus, paused status and retryable source classification; no browser/network simulation performed.",
+    "partialUnknown": "Unknown severity remains a fourth slice/table badge and summary unknown-count caption. Optional expiry excludes a row from expiry watch without inventing an expiry. Missing/nonfinite summary ages are excluded.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\hooks\\useSecretRotationPage.ts",
+        "line": 92,
+        "rule": "MDC-026 unknown is not measured zero",
+        "detail": "Urgency computes ratio 0 when critical_days is absent/nonpositive. Outlook.tsx:41 then replaces an unusable threshold with age or 1, potentially showing a full urgency bar despite an unknown critical threshold. Wire type declares thresholds required, so actual malformed/partial deployment behavior is unverified.",
+        "fix": "Keep raw thresholds and age values unchanged; visibly distinguish unavailable threshold-relative urgency from a measured ratio using existing unknown-reading presentation. Preserve row identity, sublabels and known-value ordering.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\helpers.ts",
+      "line": 12,
+      "rule": "MDC-010 / MDC-034 restrained shared semantic palette",
+      "detail": "Local SEVERITY_HEX hardcodes four colors used by charts, legend and urgency, separate from Badge semantic variants. These are meaningful severity colors, not evidence of a rainbow/neon page, but they bypass current shared palette/theme ownership.",
+      "fix": "Map the existing four severity meanings to approved semantic chart colors without changing order, server tiers, user chart preferences or the unknown category. Do not introduce another palette registry.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationOutlook.tsx",
+      "line": 36,
+      "rule": "mission-0 / mission-43 restrained decoration",
+      "detail": "Urgency uses MetricBar's default gradient fill. The existing shared owner already provides fill='solid' (MetricBar.tsx:26,46,95), so a new progress renderer or shared variant is unnecessary.",
+      "fix": "Select existing solid fill with approved severity colors and retain all progress semantics, threshold labels and motion preferences.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\SecretRotationOperationalBrief.tsx",
+      "line": 79,
+      "rule": "MDC-044 localized actionable errors / MDC-026 canonical recovery",
+      "detail": "The summary displays error.message directly before OperationalBrief and also mounts QueryError for fatal errors at line 94. Shared DataSourceNotice and per-section recovery already own source failure messaging. Raw exception wording is not localized by this caller and can duplicate failure noise.",
+      "fix": "Prefer the existing source-aware localized error presentation and preserve technical error/retry context without repeating the same fatal failure across summary chrome. Keep retained measurements visible and do not suppress section-specific recovery.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Mobile access to per-credential timestamps and thresholds is the strongest source-confirmed preservation gap. Remaining work is bounded presentation/state consistency; the page already uses canonical layouts and data ownership.",
+    "order": ["Restore complete mobile detail reachability", "Preserve unknown threshold semantics", "Subdue existing palette/gradient and repeated captions", "Validate axis readability and all source states"]
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": [
+    {
+      "name": "Older SecretRotationSummary versus mounted OperationalBrief",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationSummary.tsx",
+      "line": 9,
+      "rule": "MDC-002 / MDC-033 one summary owner",
+      "detail": "An older six-MetricCard summary exists, but SecretRotationPage imports and mounts only SecretRotationOperationalBrief. Presence is not evidence of a second mounted summary.",
+      "fix": "Retain OperationalBrief as the mounted owner; resolve redundant derivations without activating or copying the old renderer. Any removal requires separate reference verification.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "1046CF7EF0A9F254000C0D6F75459C7011F59220AF4EA87975BEB43D60C308C8",
+    "currentLineCount": 62,
+    "lineCounts": {
+      "page": 62,
+      "mountedFeatureComponents": {
+        "SecretRotationOperationalBrief.tsx": 96,
+        "SecretRotationCharts.tsx": 124,
+        "SecretRotationOutlook.tsx": 91,
+        "SecretRotationDetails.tsx": 131
+      },
+      "pagePlusMountedFeatureComponents": 504,
+      "controller": 120,
+      "pageComponentsAndController": 624,
+      "comparison": "Current-source baseline only; no implementation or historical reduction comparison performed."
+    },
+    "sections": [
+      {"name": "Rotation summary", "file": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\SecretRotationOperationalBrief.tsx", "line": 77, "contents": ["Tracked secrets and distinct kind count", "Healthy count and percentage", "Rotate soon count", "Overdue count", "Oldest known secret and identity", "Soonest signed expiry and identity", "Source status", "Snapshot scope", "Fetch freshness", "Provenance", "Unknown severity count", "Review details drawer"]},
+      {"name": "Secret age and severity", "file": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationCharts.tsx", "line": 16, "contents": ["Oldest ten horizontal age bars", "Full-label accessible data columns", "Severity donut", "All four tier legend counts including zero counts"]},
+      {"name": "Rotation urgency and expiry outlook", "file": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationOutlook.tsx", "line": 19, "contents": ["Top eight age/critical threshold ratios", "Age and critical threshold sublabels", "All rows with known hard expiry and days-to-expiry", "Expiry timestamp and server severity"]},
+      {"name": "Rotation status", "file": "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationDetails.tsx", "line": 97, "contents": ["Kind and target", "Last rotated absolute and relative time", "Age days", "Expires and days remaining", "Warn/critical thresholds", "Severity badge", "Complete items table"]},
+      {"name": "Unsupported tracker notice", "file": "web\\src\\features\\admin\\pages\\SecretRotationPage.tsx", "line": 37, "conditional": true},
+      {"name": "Overdue rotations alert", "file": "web\\src\\features\\admin\\pages\\SecretRotationPage.tsx", "line": 46, "conditional": true}
+    ],
+    "sectionCounts": {"alwaysMountedFeatureRegions": 4, "summary": 1, "summaryMetrics": 6, "chartCards": 2, "outlookLayoutCards": 2, "detailLayoutCards": 1, "conditionalPageNotices": 2, "glassPanelCallsInMountedFeatureSources": 0, "chartContainerCallsInMountedFeatureSources": 0},
+    "actions": [
+      "Retry/refetch one source from canonical failure notices and section QueryError/chart callbacks.",
+      "Open and close shared OperationalBrief Review details drawer, retaining credential identities, metric descriptions, signed expiry explanation, narrative and provenance.",
+      "Use DataTable pagination, loaded-row value filters, default search/density/export controls and persisted column sizing/layout under tableId admin:secret-rotation; inherited controls are source-confirmed, not runtime exercised.",
+      "Inspect canonical chart accessible-data alternatives; data and dataColumns must remain attached to both frames.",
+      "No source-confirmed credential rotation mutation, manual seed action, date selector or vehicle selector exists; do not invent one."
+    ],
+    "dataBehavior": [
+      "Preserve query key, cancellation, retry, stale time, poll interval and background-polling policy.",
+      "Keep full returned items and raw fields in query/cache. Keep optional message in payload although current presentation does not render it; this audit does not claim it is displayed.",
+      "Keep rowKey kind:target identity and localized known-kind labels with raw fallback for unknown kinds.",
+      "Keep four severity tiers, critical warning count, oldest-ten and urgency-eight caps and complete expiry/table lists.",
+      "Keep signed expiry, valid zero ages/counts, null expiry and unknown severity distinct.",
+      "Duration metrics adapt days to seconds only at presentation; preserve display day preference/precision and all specialist explanations.",
+      "Keep initial, empty, unsupported, fatal, retained-refresh-error and offline source semantics with independent visible sections.",
+      "Maintain local table filter/export scope and stable persisted table identity; do not replace full result data with only visible chart subsets."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "Not run. Existing test source is context only, not acceptance.",
+    "lintBuildTypeScript": "Not run per Phase0 assignment and concurrent-worker conventions. Skill audit.sh was inspected but not executed because it includes whole-project TypeScript.",
+    "security": "Not an exploit or security audit; no auth prompts bypassed or production mutations attempted.",
+    "routeEvidence": "App.tsx:283 and 718 confirm lazy SecretRotation route under SafeRoute; only matched route lines inspected, not the complete routing/auth tree.",
+    "sourceChecks": {
+      "command": "PowerShell scoped Get-Content and regex counts over page plus four mounted components",
+      "exitCode": 0,
+      "output": ["raw prohibited controls=0", "direct chart/map/motion imports=0", "static CSS-variable inline styles=0", "neon/fixed-white/fixed-gray classes=0", "ChartCard=2", "LayoutCard=3", "OperationalBrief=1"],
+      "meaning": "Narrow textual source scan only; not a full engineering audit or browser quality certificate."
+    },
+    "scope": "Only assigned page, page-specific dependencies and bounded shared-owner/API excerpts inspected. No source edits, Git, full lint or build.",
+    "sharedOwnerAnalysis": "No missing shared API proved. Reuse existing DataTable mobilePresentation/expansion, MetricBar solid fill, OperationalBrief drawer, canonical ChartCard and source notices. Existing primitive/runtime coverage remains centralized validation.",
+    "missionRead": ["0", "1", "15", "33", "43", "44"],
+    "assumptions": ["This is a deployment-wide read-only snapshot, based on existing hook parameters and mounted provenance, not a workspace-range aggregate.", "Do not interpret the presence of a historical summary component or test file as mounted/runtime coverage."]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\SecretRotationPage.tsx",
+    "web\\src\\features\\admin\\hooks\\useSecretRotationPage.ts",
+    "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\SecretRotationOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts",
+    "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationCharts.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationOutlook.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationDetails.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationSummary.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\helpers.ts",
+    "web\\src\\features\\admin\\pages\\SecretRotationPage.test.tsx",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\admin_observability_handler.go"
+  ]
+}

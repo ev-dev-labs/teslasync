@@ -27,8 +27,9 @@ import type { ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const { successToast, errorToast } = vi.hoisted(() => ({
+const { successToast, warningToast, errorToast } = vi.hoisted(() => ({
   successToast: vi.fn(),
+  warningToast: vi.fn(),
   errorToast: vi.fn(),
 }));
 
@@ -40,7 +41,7 @@ vi.mock('@/api/client', async () => {
 // Replace the toast bridge with spies so onSuccess/onError assertions are exact
 // and no ToastProvider / i18n instance is required.
 vi.mock('./_toastHelpers', () => ({
-  useMutationToast: () => ({ success: successToast, error: errorToast }),
+  useMutationToast: () => ({ success: successToast, warning: warningToast, error: errorToast }),
 }));
 
 import { request } from '@/api/client';
@@ -158,6 +159,7 @@ function makeGeofenceRate(overrides: Partial<GeofenceRate> = {}): GeofenceRate {
 beforeEach(() => {
   mockedRequest.mockReset();
   successToast.mockReset();
+  warningToast.mockReset();
   errorToast.mockReset();
 });
 
@@ -314,9 +316,11 @@ describe('useGeofences', () => {
 
 describe('useBulkGeofencesDelete', () => {
   it('POSTs {ids, op:"delete"} to /geofences/bulk, invalidates the list, and toasts success', async () => {
+    // A complete outcome (every requested id deleted, none failed) is the
+    // only shape that toasts success; partial outcomes warn instead.
     const bulkResult: GeofenceBulkResult = {
-      deleted: 2,
-      failed: [{ id: 9, reason: 'not found' }],
+      deleted: 3,
+      failed: [],
     };
     mockedRequest.mockResolvedValueOnce(bulkResult);
 
@@ -328,8 +332,8 @@ describe('useBulkGeofencesDelete', () => {
 
     // The typed GeofenceBulkResult contract passes through untouched.
     expect(resolved).toEqual(bulkResult);
-    expect(resolved.deleted).toBe(2);
-    expect(resolved.failed).toEqual([{ id: 9, reason: 'not found' }]);
+    expect(resolved.deleted).toBe(3);
+    expect(resolved.failed).toEqual([]);
 
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/geofences/bulk');
@@ -342,6 +346,7 @@ describe('useBulkGeofencesDelete', () => {
       'toast.geofence.bulkDelete.success',
       'Geofences deleted',
     );
+    expect(warningToast).not.toHaveBeenCalled();
     expect(errorToast).not.toHaveBeenCalled();
   });
 

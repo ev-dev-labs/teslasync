@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { typography } from '@/lib/tokens';
+import { typography, neonColorMap } from '@/lib/tokens';
 import {
   Lock,
   Unlock,
@@ -11,7 +11,9 @@ import {
 } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, DataStateNotice } from '@/components/feedback';
+import type { DataState } from '@/api/dataState';
+import type { SecurityEvent } from '@/types/admin';
 import type { TimelineEvent } from './helpers';
 
 /* ------------------------------------------------------------------ */
@@ -19,9 +21,9 @@ import type { TimelineEvent } from './helpers';
 /* ------------------------------------------------------------------ */
 
 const variantChip: Record<TimelineEvent['variant'], string> = {
-  positive: 'bg-neon-green/10 text-emerald-300',
-  negative: 'bg-neon-red/10 text-rose-300',
-  neutral: 'bg-white/[0.04] text-[var(--text-muted)]',
+  positive: cn(neonColorMap.green.bg, neonColorMap.green.text),
+  negative: cn(neonColorMap.red.bg, neonColorMap.red.text),
+  neutral: cn(neonColorMap.neutral.bg, neonColorMap.neutral.text),
 };
 
 function timelineIcon(ev: TimelineEvent) {
@@ -52,8 +54,8 @@ function useTimelineLabels() {
       case 'lock':
         return {
           title: ev.variant === 'positive'
-            ? t('admin.security.timeline.lock.positive', 'Vehicle Locked')
-            : t('admin.security.timeline.lock.negative', 'Vehicle Unlocked'),
+            ? t('admin.security.timeline.lock.positive', 'Vehicle locked')
+            : t('admin.security.timeline.lock.negative', 'Vehicle unlocked'),
           subtitle: ev.variant === 'positive'
             ? t('admin.security.timeline.lock.positiveDesc', 'Doors secured')
             : t('admin.security.timeline.lock.negativeDesc', 'Doors accessible'),
@@ -61,8 +63,8 @@ function useTimelineLabels() {
       case 'sentry':
         return {
           title: ev.variant === 'positive'
-            ? t('admin.security.timeline.sentry.positive', 'Sentry Mode Activated')
-            : t('admin.security.timeline.sentry.negative', 'Sentry Mode Deactivated'),
+            ? t('admin.security.timeline.sentry.positive', "Sentry Mode activated")
+            : t('admin.security.timeline.sentry.negative', "Sentry Mode deactivated"),
           subtitle: ev.variant === 'positive'
             ? t('admin.security.timeline.sentry.positiveDesc', 'Camera surveillance enabled')
             : t('admin.security.timeline.sentry.negativeDesc', 'Camera surveillance disabled'),
@@ -70,8 +72,8 @@ function useTimelineLabels() {
       case 'door':
         return {
           title: ev.variant === 'positive'
-            ? t('admin.security.timeline.door.positive', 'Doors Closed')
-            : t('admin.security.timeline.door.negative', 'Door Opened'),
+            ? t('admin.security.timeline.door.positive', 'Doors closed')
+            : t('admin.security.timeline.door.negative', 'Door opened'),
           subtitle: ev.detail || (ev.variant === 'positive'
             ? t('admin.security.closed', 'Closed')
             : t('admin.security.open', 'Open')),
@@ -82,7 +84,7 @@ function useTimelineLabels() {
         // `undefined` and crashing the whole panel when the caller
         // destructures `{ title, subtitle }`.
         return {
-          title: t('admin.security.timeline.unknown', 'State Change'),
+          title: t('admin.security.timeline.unknown', 'State change'),
           subtitle: t('admin.security.timeline.unknownDesc', 'Vehicle state updated'),
         };
     }
@@ -94,6 +96,7 @@ function useTimelineLabels() {
 /* ------------------------------------------------------------------ */
 
 interface EventTimelineProps {
+  sourceState?: DataState<SecurityEvent[]>;
   timelineEvents: TimelineEvent[];
   isLoading: boolean;
   error: unknown;
@@ -101,25 +104,28 @@ interface EventTimelineProps {
   className?: string;
 }
 
-export function EventTimeline({ timelineEvents, isLoading, error, onRetry, className }: EventTimelineProps) {
+export function EventTimeline({ timelineEvents, sourceState, isLoading, error, onRetry, className }: EventTimelineProps) {
   const { t } = useTranslation();
   const getLabels = useTimelineLabels();
   const events = timelineEvents ?? [];
-  const panelTitle = t('admin.security.timeline.title', 'Security Event Timeline');
+  const panelTitle = t('admin.security.timeline.title', 'Security event timeline');
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <PanelTitle className="mb-3">{panelTitle}</PanelTitle>
+      {sourceState?.status === 'stale' && <DataStateNotice state="stale" />}
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : isLoading ? (
+      ) : sourceState && !sourceState.hasData && sourceState.isRefreshBlocked ? (
+        <DataStateNotice state="partial" title={t('dataSources.status.paused', 'Refresh paused')} />
+      ) : isLoading || sourceState?.status === 'initial' ? (
         <Skeleton lines={8} />
       ) : events.length > 0 ? (
         <ul aria-label={panelTitle} className="max-h-96 space-y-3 overflow-y-auto pr-1">
           {events.map((ev) => {
             const { title, subtitle } = getLabels(ev);
             return (
-              <li key={ev.id} className="flex items-start gap-3 rounded-lg bg-white/[0.02] p-3">
+              <li key={ev.id} className="flex items-start gap-3 rounded-lg bg-[var(--surface-2)] p-3">
                 <span
                   aria-hidden="true"
                   className={cn(

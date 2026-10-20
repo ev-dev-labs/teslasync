@@ -1,18 +1,25 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
+import { createInstance } from 'i18next'
+import { I18nextProvider } from 'react-i18next'
 import { MemoryRouter } from 'react-router-dom'
 import '@/i18n'
+import englishCatalog from '@/i18n/en.json'
 
 import { DashboardPresetPanel, resolvePresetCardState } from '../DashboardPresetPanel'
 import {
   DASHBOARD_PRESET_APPLIED_KEY,
   DASHBOARD_PRESET_PREFERENCE_KEY,
+  DASHBOARD_ROLE_PRESETS,
   getDashboardPresetPreference,
   hasPendingDashboardPreset,
   peekPendingDashboardPreset,
   requestDashboardPresetApplication,
   setAppliedDashboardPresetRole,
 } from '@/lib/dashboardPresets'
+
+// Locale-provider regressions require the real context-aware hook.
+vi.unmock('react-i18next');
 
 /**
  * HELP-11 picker honesty (correction round).
@@ -369,5 +376,141 @@ describe('DashboardPresetPanel — combined selected/applied/pending states', ()
     expect(card('maintainer')).toHaveAttribute('data-card-state', 'queued')
     expect(screen.getByTestId('choose-preset-maintainer')).toHaveAttribute('aria-pressed', 'true')
     expect(card('owner')).toHaveAttribute('data-card-state', 'activeUnchosen')
+  })
+})
+
+describe('DashboardPresetPanel — canonical widget labels and local targets', () => {
+  const canonicalKeys: Readonly<Record<string, string>> = {
+    'vehicle-hero': 'glance.overviewAria',
+    'battery-gauge': 'widget.battery',
+    'charge-status': 'widget.chargeStatusLive',
+    'climate-status': 'widget.climate',
+    'security-status': 'widget.security',
+    'location-map': 'widget.locationMap.title',
+    'recent-drives': 'widget.recentDrives',
+    'quick-nav': 'nav.quickNav',
+    'fleet-stats': 'widget.fleetStatsBar.title',
+    'alert-feed': 'widget.alertFeed',
+    'vehicle-hero-card': 'widget.vehicleHeroCard',
+    'recent-drives-list': 'widget.recentDrivesList',
+    'charge-history': 'widget.chargeHistory.title',
+    'geofence-status': 'widget.geofence.title',
+    'command-quick-actions': 'widget.quickActions.title',
+    'uptime-monitor': 'widget.uptime.title',
+    'energy-flow': 'widget.energyFlow',
+    'drive-efficiency-chart': 'widget.driveEfficiencyChart.title',
+    'charge-cost-tracker': 'widget.chargeCost.title',
+    'charge-session-chart': 'widget.chargeSessionChart.title',
+    'cost-breakdown': 'widget.costBreakdown.title',
+    'battery-degradation-trend': 'widget.batteryDegradation',
+    'regen-efficiency': 'widget.regenEfficiency.title',
+    'monthly-mileage': 'widget.monthlyMileage.title',
+    'system-health': 'widget.systemHealth.title',
+    'signal-health': 'widget.signalHealth.title',
+    'telemetry-errors': 'widget.telemetryErrors.title',
+    'mqtt-status': 'widget.mqtt.title',
+    'export-status': 'widget.exportStatus',
+    'backup-monitor': 'widget.backupMonitor.title',
+    'api-usage': 'widget.apiUsage.title',
+  }
+  const widgets = DASHBOARD_ROLE_PRESETS.flatMap((preset) => preset.widgets)
+
+  it('uses existing canonical catalog leaves for every distinct preset widget', () => {
+    expect(widgets).toHaveLength(32)
+    expect(new Set(widgets.map((widget) => widget.labelFallback)).size).toBe(31)
+    expect(Object.keys(canonicalKeys)).toHaveLength(31)
+    expect(new Set(widgets.map((widget) => widget.widgetId))).toEqual(
+      new Set(Object.keys(canonicalKeys)),
+    )
+    for (const key of Object.values(canonicalKeys)) {
+      const value = key.split('.').reduce<unknown>((node, segment) => {
+        if (!node || typeof node !== 'object') return undefined
+        return (node as Record<string, unknown>)[segment]
+      }, englishCatalog)
+      expect(value, key).toEqual(expect.any(String))
+      expect(value, key).not.toBe('')
+    }
+  })
+
+  it('translates all 32 occurrences and updates labels without changing composition or preference', async () => {
+    const instance = createInstance()
+    const labels = (prefix: string) => Object.fromEntries(
+      Object.entries(canonicalKeys).map(([id, key]) => [key, `${prefix}: ${id}`]),
+    )
+    await instance.init({
+      lng: 'de',
+      fallbackLng: false,
+      keySeparator: false,
+      resources: {
+        de: { translation: labels('Beschriftung') },
+        fr: { translation: labels('Étiquette') },
+      },
+      interpolation: { escapeValue: false },
+    })
+    const { container } = render(
+      <I18nextProvider i18n={instance}>
+        <MemoryRouter>
+          <DashboardPresetPanel />
+        </MemoryRouter>
+      </I18nextProvider>,
+    )
+    const assertLabels = (prefix: string) => {
+      const items = Array.from(container.querySelectorAll('[data-preset-widget]'))
+      expect(items).toHaveLength(32)
+      expect(items.map((item) => item.getAttribute('data-preset-widget'))).toEqual(
+        widgets.map((widget) => widget.widgetId),
+      )
+      expect(new Set(items.map((item) => item.textContent)).size).toBe(31)
+      items.forEach((item, index) => {
+        expect(item).toHaveTextContent(`${prefix}: ${widgets[index].widgetId}`)
+        expect(item).not.toHaveTextContent(widgets[index].labelFallback)
+      })
+    }
+    assertLabels('Beschriftung')
+    fireEvent.click(screen.getByTestId('choose-preset-owner'))
+    const request = peekPendingDashboardPreset()
+    await act(async () => { await instance.changeLanguage('fr') })
+    assertLabels('Étiquette')
+    expect(getDashboardPresetPreference()).toBe('owner')
+    expect(peekPendingDashboardPreset()).toEqual(request)
+    expect(screen.getByTestId('choose-preset-owner')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('retains every original English fallback when a locale has no widget translation', async () => {
+    const instance = createInstance()
+    await instance.init({ lng: 'en', fallbackLng: false, resources: {} })
+    const { container } = render(
+      <I18nextProvider i18n={instance}>
+        <MemoryRouter>
+          <DashboardPresetPanel />
+        </MemoryRouter>
+      </I18nextProvider>,
+    )
+    const items = Array.from(container.querySelectorAll('[data-preset-widget]'))
+    expect(items.map((item) => item.textContent)).toEqual(
+      widgets.map((widget) => widget.labelFallback),
+    )
+    expect(items).toHaveLength(32)
+    expect(new Set(items.map((item) => item.textContent)).size).toBe(31)
+  })
+
+  it('declares mobile44 minima and compact desktop restoration on choose and re-apply actions', () => {
+    window.localStorage.setItem(DASHBOARD_PRESET_PREFERENCE_KEY, 'owner')
+    renderPanel()
+    const actions = [
+      ...DASHBOARD_ROLE_PRESETS.map((preset) => screen.getByTestId(`choose-preset-${preset.role}`)),
+      screen.getByTestId('reapply-preset-owner'),
+    ]
+    expect(actions).toHaveLength(5)
+    for (const action of actions) {
+      expect(action).toHaveClass('h-9', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0')
+      expect(action).toHaveAttribute('type', 'button')
+    }
+    fireEvent.click(screen.getByTestId('reapply-preset-owner'))
+    expect(peekPendingDashboardPreset()?.role).toBe('owner')
+    expect(screen.queryByTestId('reapply-preset-owner')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('choose-preset-owner'))
+    expect(getDashboardPresetPreference()).toBeNull()
+    expect(hasPendingDashboardPreset()).toBe(false)
   })
 })

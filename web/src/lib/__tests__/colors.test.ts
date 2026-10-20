@@ -90,20 +90,20 @@ function setTheme(theme: ColorTheme, mode: ModeTheme) {
 /* ── Static palettes ─────────────────────────────────────────────────────── */
 
 describe('static chart palettes', () => {
-  it('CHART_COLORS defaults to the color-blind-safe Okabe-Ito palette', () => {
+  it('CHART_COLORS defaults to the saved CB-safe palette', () => {
     expect(CHART_COLORS).toBe(CHART_COLORS_CB_SAFE)
   })
 
-  it('CB-safe palette has 8 distinct valid hex colors starting with Okabe-Ito blue', () => {
+  it('CB-safe palette has 8 distinct restrained hex colors starting with blue', () => {
     expect(CHART_COLORS_CB_SAFE).toHaveLength(8)
-    expect(CHART_COLORS_CB_SAFE[0]).toBe('#0072B2')
+    expect(CHART_COLORS_CB_SAFE[0]).toBe('#91b4d2')
     CHART_COLORS_CB_SAFE.forEach((c) => expect(c).toMatch(HEX6))
     expect(new Set(CHART_COLORS_CB_SAFE).size).toBe(8)
   })
 
-  it('neon palette has 8 distinct valid hex colors led by neon cyan', () => {
+  it('neon preference retains 8 distinct restrained hex colors led by cyan', () => {
     expect(CHART_COLORS_NEON).toHaveLength(8)
-    expect(CHART_COLORS_NEON[0]).toBe('#00f0ff')
+    expect(CHART_COLORS_NEON[0]).toBe('#91bbc0')
     CHART_COLORS_NEON.forEach((c) => expect(c).toMatch(HEX6))
     expect(new Set(CHART_COLORS_NEON).size).toBe(8)
   })
@@ -367,10 +367,12 @@ describe('statusHexColor', () => {
 /* ── buildChartPalette (pure) ────────────────────────────────────────────── */
 
 describe('buildChartPalette', () => {
-  it('echoes the theme primary/accent and yields an 8-color valid hex series', () => {
+  it('derives restrained primary/accent and yields an 8-color valid hex series', () => {
     const p = buildChartPalette(neonCyan, darkMode)
-    expect(p.primary).toBe('#00f0ff')
-    expect(p.accent).toBe('#4f46e5')
+    expect(p.primary).toBe(p.series[0])
+    expect(p.accent).toBe(p.series[7])
+    expect(p.primary).not.toBe(neonCyan.primary)
+    expect(p.accent).not.toBe(neonCyan.accent)
     expect(p.series).toHaveLength(8)
     p.series.forEach((c) => expect(c).toMatch(HEX6))
   })
@@ -413,6 +415,25 @@ describe('buildChartPalette', () => {
     expect(p.series).toHaveLength(8)
     p.series.forEach((c) => expect(c).toMatch(HEX6))
   })
+
+  it('preserves saved series order independently of the active theme', () => {
+    for (const source of [CHART_COLORS_CB_SAFE, CHART_COLORS_NEON]) {
+      const palette = buildChartPalette(neonCyan, lightMode, source)
+      expect(palette.series).toHaveLength(source.length)
+      expect(palette.series).toEqual(source.map(color =>
+        buildChartPalette({ ...neonCyan, primary: color, accent: color }, lightMode).primary,
+      ))
+      expect(buildChartPalette(teslaRed, lightMode, source).series).toEqual(palette.series)
+      expect(new Set(palette.series).size).toBe(8)
+    }
+  })
+
+  it('does not mutate saved theme or palette values during mode changes', () => {
+    const before = JSON.stringify({ neonCyan, teslaRed, CHART_COLORS_CB_SAFE, CHART_COLORS_NEON })
+    buildChartPalette(neonCyan, lightMode, CHART_COLORS_NEON)
+    buildChartPalette(teslaRed, darkMode, CHART_COLORS_CB_SAFE)
+    expect(JSON.stringify({ neonCyan, teslaRed, CHART_COLORS_CB_SAFE, CHART_COLORS_NEON })).toBe(before)
+  })
 })
 
 /* ── useThemeChartPalette (hook) ─────────────────────────────────────────── */
@@ -451,6 +472,6 @@ describe('useThemeChartPalette', () => {
     setTheme(teslaRed, darkMode)
     rerender()
     expect(result.current).not.toBe(first)
-    expect(result.current.primary).toBe('#e31937')
+    expect(result.current.primary).toBe(buildChartPalette(teslaRed, darkMode).primary)
   })
 })

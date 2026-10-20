@@ -183,7 +183,7 @@ describe('ThresholdBar — bands', () => {
 
   it('carries an explicit statusLabel into the accessible value text', () => {
     renderBar({ value: 47, bands: BANDS, statusLabel: 'Within spec' });
-    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuetext', '47psi — Within spec');
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuetext', '47.00psi — Within spec');
   });
 
   it('names the state even with no bands when statusLabel is given', () => {
@@ -226,24 +226,24 @@ describe('ThresholdBar — accessibility', () => {
 
   it('includes the active band name in the value text', () => {
     renderBar({ value: 47, bands: BANDS });
-    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuetext', '47psi — Normal');
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuetext', '47.00psi — Normal');
   });
 
   it('falls back to the bare reading when no band matches', () => {
     renderBar({ value: 47, bands: [] });
-    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuetext', '47psi');
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuetext', '47.00psi');
   });
 
   it('renders the reading and the domain end captions', () => {
     renderBar({ value: 47 });
-    expect(screen.getByText('47')).toBeInTheDocument();
-    expect(screen.getByText('20psi')).toBeInTheDocument();
-    expect(screen.getByText('65psi')).toBeInTheDocument();
+    expect(screen.getByText('47.00')).toBeInTheDocument();
+    expect(screen.getByText('20.00psi')).toBeInTheDocument();
+    expect(screen.getByText('65.00psi')).toBeInTheDocument();
   });
 
   it('suppresses the end captions when hideScale is set', () => {
     renderBar({ value: 47, hideScale: true });
-    expect(screen.queryByText('20psi')).toBeNull();
-    expect(screen.queryByText('65psi')).toBeNull();
+    expect(screen.queryByText('20.00psi')).toBeNull();
+    expect(screen.queryByText('65.00psi')).toBeNull();
   });
 });

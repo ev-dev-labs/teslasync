@@ -3,8 +3,9 @@ import { EmptyState } from '@/components/feedback';
 import { useTranslation } from 'react-i18next';
 
 import { JourneyFragmentationSectionProps } from './_types';
+import { PendingEvidence } from './PendingEvidence';
 
-export function WeekdayProfileChart({ result, loading = false }: JourneyFragmentationSectionProps) {
+export function WeekdayProfileChart({ result, state, loading = false }: JourneyFragmentationSectionProps) {
   const { t } = useTranslation();
   const weekdayLabels = [
     t('journeyFragmentation.weekday.sunday', 'Sunday'),
@@ -25,15 +26,15 @@ export function WeekdayProfileChart({ result, loading = false }: JourneyFragment
       subtitle={t('journeyFragmentation.weekday.subtitle', 'Local weekday counts use the normalized vehicle timezone.')}
       ariaLabel={t('journeyFragmentation.weekday.aria', 'Bar chart of observed journey starts by local weekday')}
       loading={loading}
-      empty={!loading && data.length === 0}
-      data={data}
+      empty={(!state || state.hasData) && !loading && result.journeyCount === 0}
+      data={state && !state.hasData ? undefined : data}
       dataColumns={[
         { key: 'weekday', label: t('journeyFragmentation.weekday.day', 'Weekday') },
         { key: 'journeys', label: t('journeyFragmentation.weekday.journeys', 'Journeys') },
       ]}
       height={280}
     >
-      {data.length === 0 ? (
+      {state && !state.hasData ? <PendingEvidence state={state} loading={loading} /> : result.journeyCount === 0 ? (
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('journeyFragmentation.profile.empty', 'No local journey-start profile is available yet.')} />
       ) : (
         <ResponsiveContainer width="100%" height="100%">

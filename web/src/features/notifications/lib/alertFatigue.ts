@@ -45,6 +45,7 @@ export interface AlertGroup {
   trackable: number;
   firstMs: number;
   lastMs: number;
+  /** Recorded firing span in days, with the existing one-day minimum. */
   spanDays: number;
   perDay: number;
   /** Share of firings that arrived inside the burst window of a previous one. */
@@ -70,10 +71,11 @@ export interface AlertFatigueSummary {
   fatiguingCount: number;
   /** Overall share of trackable notifications never read. */
   overallIgnoredRate: number | null;
-  /** Notifications per day across all rules. */
-  overallPerDay: number;
-  /** Share of all firings that were part of a burst. */
-  overallBurstRate: number;
+  /** Notifications per day across all rules; `null` without an analyzed span. */
+  overallPerDay: number | null;
+  /** Share of all firings that were part of a burst; `null` without adjacency. */
+  overallBurstRate: number | null;
+  /** Unrounded recorded firing span, clamped to one day; zero without usable events. */
   analyzedDays: number;
 }
 
@@ -285,7 +287,7 @@ export function analyzeAlertFatigue(
       trackable,
       firstMs,
       lastMs,
-      spanDays: Math.round(spanDays * 10) / 10,
+      spanDays,
       perDay,
       burstRate: Math.round(burstRate * 1000) / 1000,
       maxBurst,
@@ -304,7 +306,7 @@ export function analyzeAlertFatigue(
   groups.sort((a, b) => b.noiseScore - a.noiseScore || b.total - a.total);
 
   const analyzedDays =
-    groups.length === 0 ? 0 : Math.max(1, Math.round((globalMax - globalMin) / MS_PER_DAY));
+    groups.length === 0 ? 0 : Math.max(1, (globalMax - globalMin) / MS_PER_DAY);
 
   return {
     groups,
@@ -314,9 +316,9 @@ export function analyzeAlertFatigue(
       globalTrackable > 0
         ? Math.round(((globalTrackable - globalRead) / globalTrackable) * 1000) / 1000
         : null,
-    overallPerDay: analyzedDays > 0 ? Math.round((globalFirings / analyzedDays) * 100) / 100 : 0,
+    overallPerDay: analyzedDays > 0 ? Math.round((globalFirings / analyzedDays) * 100) / 100 : null,
     overallBurstRate:
-      globalFirings > 1 ? Math.round((globalBursts / (globalFirings - 1)) * 1000) / 1000 : 0,
+      globalFirings > 1 ? Math.round((globalBursts / (globalFirings - 1)) * 1000) / 1000 : null,
     analyzedDays,
   };
 }

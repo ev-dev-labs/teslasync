@@ -21,6 +21,15 @@ export type RULStatus = 'healthy' | 'watch' | 'replace_soon' | 'overdue';
 /** Stable machine keys for the tracked components (Go componentSpecs order). */
 export type RULComponent = 'hv_battery' | 'lv_battery' | 'tires' | 'brakes' | 'cabin_filter';
 
+export type RULBasisKind =
+  | 'soh_trend'
+  | 'no_measurable_decline'
+  | 'missing_history'
+  | 'invalid_input'
+  | 'missing_configuration'
+  | 'whole_life_odometer'
+  | 'enrollment_age';
+
 /** One component's prognosis, returned by both endpoints. */
 export interface ComponentRUL {
   /** Stable machine key (e.g. `hv_battery`). */
@@ -43,6 +52,12 @@ export interface ComponentRUL {
   status: RULStatus;
   /** Human-readable sentence explaining how the estimate was derived. */
   basis: string;
+  /** Valid model inputs exist; zero confidence/health does not imply missingness. */
+  observation_available: boolean;
+  /** Remaining days is an estimate (including zero), not a fallback sentinel. */
+  projection_available: boolean;
+  /** Machine-readable model/fallback; never derive availability from basis prose. */
+  basis_kind: RULBasisKind;
 }
 
 /** The single most-urgent upcoming replacement. */

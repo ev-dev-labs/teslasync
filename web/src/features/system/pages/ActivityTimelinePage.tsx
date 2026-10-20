@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { Button, Text } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { Button, Icon, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 
-import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
-import { useTimezone } from '@/lib/timezone';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useActivity } from '@/api/hooks/useActivity';
 import { ListExportMenu } from '@/components/forms';
@@ -69,12 +71,12 @@ export function resolveActivityWindow(
  */
 export default function ActivityTimelinePage() {
   const { t } = useTranslation();
-  usePageTitle(t('activity.timeline.title', 'Activity Timeline'));
+  const { fmtInt } = useNumberFormatting();
+  usePageTitle(t('activity.timeline.title', 'Activity timeline'));
 
-  const { vehicleId, vehicles } = useSelectedVehicle();
+  const { vehicleId, vehicles, vehiclesState } = useSelectedVehicle();
   const operationalMode = useOperationalMode();
-  const tz = useTimezone('vehicle');
-  const { start, end, startInstant, endInstantExclusive } = useRangeState({
+  const { startInstant, endInstantExclusive, timezone: tz } = useRangeState({
     persistKey: 'activity.timeline.range',
   });
   const [kinds, setKinds] = useState<ActivityKind[]>([]);
@@ -88,7 +90,7 @@ export default function ActivityTimelinePage() {
   // Any scope change invalidates the current page position.
   useEffect(() => {
     setOffset(0);
-  }, [vehicleId, activityWindow.start, activityWindow.end, kinds]);
+  }, [vehicleId, activityWindow.start, activityWindow.end, tz, kinds]);
 
   const query = useActivity({
     vehicle_id: vehicleId ?? undefined,
@@ -97,27 +99,32 @@ export default function ActivityTimelinePage() {
     kind: kinds.length > 0 ? kinds : undefined,
     limit: PAGE_LIMIT,
     offset,
-    enabled: vehicles.length > 0,
+    enabled: vehiclesState.hasData && vehicles.length > 0,
   });
-  const { data, isLoading, isError, error, refetch } = query;
+  const { data, refetch } = query;
+  const activityState = useDataState(query, { provenance: 'historical' });
+  const state = vehiclesState.hasData ? activityState : vehiclesState;
+  const isLoading = state.status === 'initial';
+  const error = state.fatalError;
+  const isError = !!error;
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
-  if (vehicles.length === 0) {
+  if (vehiclesState.status === 'unavailable' && vehicles.length === 0) {
     return (
       <NoVehicleSelected
-        pageTitle={t('activity.timeline.title', 'Activity Timeline')}
+        pageTitle={t('activity.timeline.title', 'Activity timeline')}
       />
     );
   }
 
   const hasOlder = offset + items.length < total;
   const hasNewer = offset > 0;
-  const exportName = `activity-${start}-${end}-page-${Math.floor(offset / PAGE_LIMIT) + 1}`;
+  const exportName = `activity-${activityWindow.start.replace(/:/g, '-')}-${activityWindow.end.replace(/:/g, '-')}-page-${Math.floor(offset / PAGE_LIMIT) + 1}`;
 
   return (
-    <PageContainer
-      title={t('activity.timeline.title', 'Activity Timeline')}
+    <PageLayout
+      title={t('activity.timeline.title', 'Activity timeline')}
       subtitle={t(
         'activity.timeline.subtitle',
         'A unified timeline of drives, charging, alerts, software updates, and your annotations.',
@@ -146,13 +153,21 @@ export default function ActivityTimelinePage() {
         />
       }
     >
+      <StaleRefreshWarning
+        state={vehiclesState}
+        label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')}
+      />
+      <StaleRefreshWarning state={activityState} />
       <FadeIn>
         <ActivityOverview
           items={items}
           total={total}
           offset={offset}
-          loading={isLoading}
+          loading={isLoading && !state.hasData}
           error={isError}
+          available={state.hasData}
+          retained={state.hasData && state.status === 'stale'}
+          scope={`${activityWindow.start} – ${activityWindow.end}`}
           timezone={tz}
         />
       </FadeIn>
@@ -166,7 +181,10 @@ export default function ActivityTimelinePage() {
           isLoading={isLoading}
           isError={isError}
           error={error}
-          onRetry={() => void refetch()}
+          onRetry={() => {
+            if (!vehiclesState.hasData) vehiclesState.retry?.();
+            else void refetch();
+          }}
           timezone={tz}
         />
       </FadeIn>
@@ -175,9 +193,9 @@ export default function ActivityTimelinePage() {
         {!isLoading && !isError && (
           <Text as="p" variant="caption">
             {t('activity.timeline.pagePosition', 'Showing {{start}}–{{end}} of {{total}} events in the selected range', {
-              start: items.length ? offset + 1 : 0,
-              end: items.length ? offset + items.length : 0,
-              total,
+              start: fmtInt(items.length ? offset + 1 : 0),
+              end: fmtInt(items.length ? offset + items.length : 0),
+              total: fmtInt(total),
             })}
           </Text>
         )}
@@ -188,7 +206,9 @@ export default function ActivityTimelinePage() {
               type="button"
               variant="secondary"
               size="sm"
-              icon={<Icons.previous className="h-4 w-4" aria-hidden="true" />}
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+              icon={<Icon icon={ChevronLeft} className="rtl:rotate-180" />}
               onClick={() => setOffset((o) => Math.max(0, o - PAGE_LIMIT))}
             >
               {t('activity.timeline.loadNewer', 'Newer')}
@@ -199,10 +219,12 @@ export default function ActivityTimelinePage() {
               type="button"
               variant="secondary"
               size="sm"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
               onClick={() => setOffset((o) => o + PAGE_LIMIT)}
             >
               {t('activity.timeline.loadMore', 'Older')}
-              <Icons.next className="ml-1 h-4 w-4" aria-hidden="true" />
+              <Icon icon={ChevronRight} className="ms-1 rtl:rotate-180" />
             </Button>
           )}
           </>
@@ -218,6 +240,6 @@ export default function ActivityTimelinePage() {
           'Dated service records will join this timeline when a verified service-history source is available.',
         )}
       </Text>
-    </PageContainer>
+    </PageLayout>
   );
 }

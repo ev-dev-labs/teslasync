@@ -1,7 +1,11 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ConfirmDialog, GlassPanel } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { Text } from '@/components/ui/Typography';
 import { useConfirm } from '@/hooks/useConfirm';
+import { cn } from '@/lib/cn';
 
 /**
  * Shared bulk-action toolbar.
@@ -17,7 +21,7 @@ import { useConfirm } from '@/hooks/useConfirm';
  * returns a `Promise` from `onClick`.
  *
  * Keyboard:
- *   `Escape` clears the selection (handled by the consumer).
+ *   `Escape` within the toolbar clears selection; open dialogs take precedence.
  *
  * The toolbar renders nothing when `selectedIds.length === 0` so consumers
  * can always mount it unconditionally.
@@ -46,14 +50,28 @@ export interface BulkAction {
   onClick: (selectedIds: Array<string | number>) => Promise<void>;
   /** Disable the action regardless of selection (e.g., feature gate). */
   disabled?: boolean;
+  /** Already-localized, visible explanation associated with a disabled action. */
+  disabledReason?: string;
 }
 
 export interface BulkActionsToolbarProps {
   /** Currently selected row identifiers. */
   selectedIds: Array<string | number>;
-  /** Total visible rows — used by the count label, e.g. "3 selected of 27". */
-  total?: number;
-  /** Clears the selection. Wired to the "Clear" button + Escape key. */
+  /** Caller-known total visible rows. Omit or pass null when unknown; never inferred. */
+  total?: number | null;
+  /**
+   * Already-localized summary replacing the default count/noun/total display.
+   * Caller owns scope wording and known denominators (e.g. selected loaded
+   * rows vs filtered results); this never changes the IDs passed to actions.
+   */
+  selectionSummary?: ReactNode;
+  /**
+   * Caller-described presentation metadata only, not a select-all operation.
+   * `all-matching` requires caller-owned selection/mutation semantics; the
+   * toolbar neither discovers matching IDs nor infers a result count.
+   */
+  selectionScope?: 'selected' | 'loaded' | 'filtered' | 'all-matching';
+  /** Clears selection via the Clear button or Escape while toolbar controls have focus. */
   onClear: () => void;
   /** Per-page action definitions, rendered in array order. */
   actions: BulkAction[];
@@ -72,6 +90,8 @@ const EMPTY_ACTIONS: BulkAction[] = [];
 export function BulkActionsToolbar({
   selectedIds,
   total,
+  selectionSummary,
+  selectionScope,
   onClear,
   actions,
   itemNoun,
@@ -79,7 +99,10 @@ export function BulkActionsToolbar({
 }: BulkActionsToolbarProps) {
   const { t } = useTranslation();
   const { confirm, dialogProps } = useConfirm();
+  const toolbarId = useId();
   const [pending, setPending] = useState<Record<string, boolean>>({});
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [canStick, setCanStick] = useState(true);
 
   // Null-safety: these are typed as required, but defend against an
   // `undefined` selection / action list at runtime so a stray value never
@@ -88,6 +111,22 @@ export function BulkActionsToolbar({
   const items = actions ?? EMPTY_ACTIONS;
 
   const count = ids.length;
+  const hasSelection = count > 0;
+
+  // Oversized sticky bars obscure their results and cannot expose all actions.
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const measure = () => setCanStick(panel.getBoundingClientRect().height < window.innerHeight);
+    measure();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    observer?.observe(panel);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [hasSelection]);
 
   const noun = itemNoun
     ? count === 1
@@ -139,52 +178,82 @@ export function BulkActionsToolbar({
   return (
     <>
       <GlassPanel
-        className={`sticky top-0 z-30 mb-3 flex flex-wrap items-center gap-3 px-4 py-3 ${className ?? ''}`}
+        ref={panelRef}
+        className={cn('z-30 mb-3 flex flex-wrap items-center gap-3 px-4 py-3', canStick && 'sticky top-0', className)}
         role="region"
         aria-label={t('bulk.toolbarLabel', 'Bulk actions for selected items')}
+        data-selection-scope={selectionScope}
+        onKeyDown={(event) => {
+          if (
+            event.key !== 'Escape'
+            || event.defaultPrevented
+            || dialogProps
+            || document.querySelector('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')
+          ) return;
+          event.preventDefault();
+          event.stopPropagation();
+          onClear();
+        }}
       >
-        <div className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
-          <span
-            className="inline-flex items-center justify-center rounded-full bg-[var(--surface-3)] px-2 py-0.5 font-semibold text-[var(--text-primary)]"
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+          <Text
+            as="span"
+            variant="bodySm"
+            className="min-w-0 max-w-full break-words rounded-shape-sm bg-[var(--surface-2)] px-2 py-1 font-medium"
             aria-live="polite"
           >
-            {countLabel}
-          </span>
-          {itemNoun && (
-            <span className="text-[var(--text-secondary)]">
+            {selectionSummary ?? countLabel}
+          </Text>
+          {selectionSummary == null && itemNoun && (
+            <Text as="span" variant="bodySm" color="secondary" className="min-w-0 break-words">
               {noun}
               {typeof total === 'number' && (
                 <>
                   {' '}
-                  <span className="text-[var(--text-muted)]">
+                  <Text as="span" variant="caption">
                     {t('bulk.ofTotal', { total, defaultValue: 'of {{total}}' })}
-                  </span>
+                  </Text>
                 </>
               )}
-            </span>
+            </Text>
           )}
         </div>
 
-        <div className="ms-auto flex flex-wrap items-center gap-2">
-          {items.map((action) => (
-            <Button
-              key={action.id}
-              variant={action.variant === 'danger' ? 'danger' : 'secondary'}
-              size="sm"
-              icon={action.icon}
-              loading={Boolean(pending[action.id])}
-              disabled={action.disabled || Boolean(pending[action.id])}
-              onClick={() => {
-                void runAction(action);
-              }}
-              data-bulk-action={action.id}
-            >
-              {action.label}
-            </Button>
-          ))}
+        <div className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 md:ms-auto md:w-auto">
+          {items.map((action) => {
+            const reason = action.disabled ? action.disabledReason : undefined;
+            const reasonId = `${toolbarId}-${encodeURIComponent(action.id)}-disabled-reason`;
+            return (
+              <div key={action.id} className="flex w-full min-w-0 max-w-full flex-col gap-1 md:w-auto">
+                <Button
+                  variant={action.variant === 'danger' ? 'danger' : 'secondary'}
+                  size="sm"
+                  wrapLabel
+                  className="min-h-11 md:min-h-9"
+                  icon={action.icon}
+                  loading={Boolean(pending[action.id])}
+                  disabled={action.disabled || Boolean(pending[action.id])}
+                  aria-describedby={reason ? reasonId : undefined}
+                  onClick={() => {
+                    void runAction(action);
+                  }}
+                  data-bulk-action={action.id}
+                >
+                  {action.label}
+                </Button>
+                {reason && (
+                  <Text id={reasonId} variant="bodySm" color="secondary" className="max-w-xs break-words">
+                    {reason}
+                  </Text>
+                )}
+              </div>
+            );
+          })}
           <Button
             variant="ghost"
             size="sm"
+            wrapLabel
+            className="w-full min-h-11 md:w-auto md:min-h-9"
             onClick={onClear}
             data-bulk-action="clear"
           >

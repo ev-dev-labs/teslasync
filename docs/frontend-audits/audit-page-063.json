@@ -1,0 +1,441 @@
+{
+  "item": "audit-page-063",
+  "page": "web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx",
+  "routes": ["/battery", "/battery/health"],
+  "purpose": "Vehicle-scoped battery health, capacity/range history, bounded degradation prediction, charging exposure and independent latest BMS thermal readings.",
+  "primaryGoal": "Assess pack condition and evidence confidence, understand charging/thermal wear, inspect supporting charts, and choose monitoring or service follow-up without confusing unavailable measurements with healthy or zero values.",
+  "dataSources": [
+    {
+      "hook": "useBatteryHealthAnalytics",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 76,
+      "endpoint": "GET /api/v1/analytics/battery-health?vehicle_id={selectedVehicleId}",
+      "routeEvidence": "internal\\api\\router.go:3877",
+      "owner": "batteryDegradationHandler.Health",
+      "behavior": "Vehicle-keyed inferred analytics, ANALYTICS stale time, retry:false, AbortSignal forwarded. No workspace range argument; the page explicitly describes a lifetime model. Capacity/energy Wh and history range/odometer m remain raw in hook/cache.",
+      "verification": "Source path registration only; backend calculations, completeness, ordering and actual response units not exercised."
+    },
+    {
+      "hook": "useChargingTelemetryLatest",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 473,
+      "endpoint": "GET /api/v1/charging-telemetry/latest?vehicle_id={selectedVehicleId}",
+      "routeEvidence": "internal\\api\\router.go:4128-4130",
+      "owner": "chargingTelemetryHandler.Latest",
+      "behavior": "Enabled only for positive vehicle IDs; separate live DataState; AbortSignal forwarded; page does not supply refetchInterval. Independent model failure does not hide the thermal panel.",
+      "verification": "Source only; no assertion that latest telemetry is continuously streamed or fresh."
+    },
+    {
+      "hook": "useChartAnnotationsAsData / useCreateAnnotation / useDeleteAnnotation (via ChartContainer)",
+      "file": "web\\src\\api\\hooks\\useAnnotations.ts",
+      "line": 82,
+      "endpoint": "GET/POST /api/v1/annotations; DELETE /api/v1/annotations/{id}",
+      "routeEvidence": "internal\\api\\router.go:3707",
+      "owner": "Shared ChartContainer annotation flow and annotation hooks",
+      "behavior": "Range chart opts into vehicleId, scope:battery and chartId:battery-health-range-trend. Annotation reads and user-triggered add/delete/hide are capabilities to preserve.",
+      "verification": "Hook source and router registration inspected; no annotation request or mutation executed."
+    },
+    {
+      "hook": "useAiStream (via AIBatteryHealthForecastNarrative)",
+      "file": "web\\src\\components\\ai\\AIBatteryHealthForecastNarrative.tsx",
+      "line": 69,
+      "endpoint": "POST /api/v1/ai/battery/health/narrate (component contract; exact nested route registration not independently traced)",
+      "routeEvidence": "internal\\api\\router.go:1622,5072 wires the battery health AI handler",
+      "owner": "Existing AI feature gate, stream and AIFeatureCard owners",
+      "behavior": "Optional narrated explanation, not a replacement model. Selected vehicle passed as vehicle_id; scopeKey aborts/clears prior-vehicle output. Mode/feature gates and double-submit protection remain existing owner responsibilities.",
+      "verification": "Source only; no generation, authenticated settings reads or production mutations exercised."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Stack / Grid",
+      "ownerFile": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "PageContainer-compatible props; w-full/min-w-0 container adapter; existing shell owns header scope and navigation.",
+      "usedBy": ["BatteryHealthPage measured branch", "BatteryHealthPage no-model branch"],
+      "dependsOn": ["Existing PageContainer and workspace shell"],
+      "decision": "reuse"
+    },
+    {
+      "name": "BatteryPanelGrid",
+      "ownerFile": "web\\src\\features\\battery\\components\\modernization\\BatteryPanelGrid.tsx",
+      "contract": "label, stable ids, optional sizes, children; CardGrid packs measured allocated width and useCardPlacement supplies spans.",
+      "usedBy": ["Health overview", "Thermal/comparison", "Links/recommendations", "HealthUnavailableOutline"],
+      "dependsOn": ["Existing CardGrid / useCardPlacement"],
+      "decision": "reuse; review direct layout-reference import against category-barrel policy without creating another grid"
+    },
+    {
+      "name": "OperationalBrief / BatteryEvidenceBrief / BatterySpecialistSummary / HealthSummary",
+      "ownerFile": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "contract": "compact, loading, statusLabel/statusTone, rawValue/valueState metrics, attention, narrative, freshness, scope and existing Review details drawer; typed StatMetric bridge keeps source displays and missing validation.",
+      "usedBy": ["Pack posture", "Seven summary metrics", "Four new-vs-now comparisons"],
+      "dependsOn": ["useOperationalMetrics", "Existing metric-reference formatter", "Existing Drawer"],
+      "decision": "reuse; retain every metric and explanatory drawer while reducing repeated chrome"
+    },
+    {
+      "name": "ChartContainer",
+      "ownerFile": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "contract": "ariaLabel, data/dataColumns accessible alternative, independent exportData, exportFilename, chartKey for legend persistence, annotations for existing add/delete/hide; export menu supports PNG/SVG/copy-image and CSV when rows supplied.",
+      "usedBy": ["Capacity/prediction", "Range", "Charge level distribution", "AC/DC energy", "Unavailable outline frames"],
+      "dependsOn": ["Existing chart barrels, chart export/legend/annotation owners"],
+      "decision": "reuse; no new chart/export/annotation implementation"
+    },
+    {
+      "name": "HealthThermalPanel / HealthUnavailableOutline / HealthQuickLinksPanel",
+      "ownerFile": "web\\src\\features\\battery\\components\\modernization\\HealthThermalPanel.tsx",
+      "contract": "Independent DataState, loading, retry, locale number formatter and display temperature converter; unavailable outline retains all analytical section identities and six navigation destinations.",
+      "usedBy": ["Both model branches"],
+      "dependsOn": ["Existing feedback primitives", "MetricCard", "BatteryPanelGrid", "Existing navigation primitives"],
+      "decision": "reuse with page-specific corrections"
+    },
+    {
+      "name": "Button link chrome",
+      "ownerFile": "web\\src\\components\\ui\\Button.tsx",
+      "contract": "Button renders a native button; BUTTON_BASE and BUTTON_VARIANTS supply existing link-compatible chrome. wrapLabel exists for real buttons; navigation should retain one native link rather than nest a button.",
+      "usedBy": ["HealthQuickLinksPanel"],
+      "dependsOn": ["Existing UI category exports and React Router Link"],
+      "decision": "reuse existing chrome; no speculative polymorphic Button redesign"
+    },
+    {
+      "name": "DataState / StaleRefreshWarning / DataFreshnessAuto / DataProvenanceBadge",
+      "ownerFile": "web\\src\\api\\dataState.ts",
+      "contract": "Retain data on refresh failure/paused refresh; fatalError only without retained data; explicit unavailable/partial options, per-source updatedAt/retry. Null payload is distinct from undefined and requires appropriate unavailable handling.",
+      "usedBy": ["Health model", "Independent charging telemetry"],
+      "dependsOn": ["useDataState and existing TanStack Query policies"],
+      "decision": "reuse; propagate per-source trust into mixed summary rather than invent a new trust state"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx",
+      "line": 429,
+      "rule": "MDC-033 / mission 7",
+      "detail": "Pack health, degradation and cycles recur in operational posture, seven-metric summary, overview gauges and wear bars. This is repeated presentation, not permission to delete distinct context.",
+      "fix": "Keep all values and specialist explanations; make the posture the primary summary and subordinate detailed gauges/bars with neutral surfaces, normal-weight secondary labels and less repeated status chrome.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceObserved": [
+      "PageLayout and main Stack preserve full allocated width and min-w-0.",
+      "BatteryPanelGrid delegates measured placement to CardGrid.",
+      "Trend charts stack then become xl three columns; charging analysis stacks then becomes lg two columns.",
+      "Unavailable model branch preserves outline and independent thermal/navigation content rather than hiding the page."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\modernization\\HealthQuickLinksPanel.tsx",
+        "line": 24,
+        "rule": "MDC-043 / MDC-040",
+        "detail": "Navigation is forced into two columns even at 320px, with nested fixed-height md Buttons and no label-wrapping strategy. Long localized destinations may require more height/width; overflow and target collisions are not runtime proven.",
+        "fix": "Use one focusable Link per destination with existing button chrome, min-w-0, wrapping labels and at least 44px target height; consider one column at the narrowest allocated width, retaining all six links.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\battery-health\\BatteryChargingCharts.tsx",
+        "line": 67,
+        "rule": "MDC-043 / mission 37",
+        "detail": "Charging statistic values are shrink-0 beside wrapping labels; large counts/energy values and 200% text can exceed narrow available width.",
+        "fix": "Allow a compact stacked row at narrow allocated widths and break/wrap long values without hiding labels or units.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "All ten requested widths, mobile open states, RTL, density and 200% text unverified; no browser session exercised."
+  },
+  "accessibility": {
+    "sourceObserved": [
+      "Measured charts supply ariaLabel and corresponding data/dataColumns.",
+      "Decorative page/domain icons generally use aria-hidden.",
+      "Localized section names, glossary terms and existing shared Review details drawers are retained.",
+      "No-model chart frames explicitly justify absence of invented data tables."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\modernization\\HealthQuickLinksPanel.tsx",
+        "line": 26,
+        "rule": "MDC-040 / MDC-020",
+        "detail": "Link wraps Button, which unconditionally renders a native button at web\\src\\components\\ui\\Button.tsx:66. This is nested interactive content and gives each destination competing link/button semantics.",
+        "fix": "Render a single native React Router Link using canonical button/link chrome and the localized destination name; retain icon and focus treatment without an inner button.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Keyboard navigation, drawer trapping/restoration, screen-reader output, 44px composed targets, effective text/UI contrast, forced colors and reduced-motion behavior unverified."
+  },
+  "states": {
+    "initialLoading": "HealthUnavailableOutline receives loading and displays contextual skeletons; main no-model PageLayout sets busy. Independent thermal panel has its own skeleton.",
+    "empty": "No health payload retains summary placeholders, overview/wear, four chart frames, thermal, comparison, insights, statistics, links and recommendations. Health measurement guard rejects the known zero-without-capacity/history sentinel without masking measured zero.",
+    "fatalError": "Main model shows QueryError with refetch; thermal has independent QueryError/retry. Selected-vehicle absence uses NoVehicleSelected.",
+    "retainedRefreshError": "Model StaleRefreshWarning and healthDataState keep source content; summary/comparison mark retained. Thermal independently keeps its own retained payload.",
+    "offline": "LiveStaleDataBanner exists and DataState tracks paused refresh; actual offline behavior was not exercised.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx",
+        "line": 588,
+        "rule": "MDC-026 / MDC-033",
+        "detail": "HealthSummary mixes modeled metrics with chargingLive.bms_fullcharge_complete but receives only healthDataState.status for retained. Charging telemetry's own loading/error/freshness is not passed into that mixed summary; latest BMS flag can appear available without its independent trust context.",
+        "fix": "Pass or compose chargingLiveState-derived trust for the full-charge metric, retaining good model neighbors and the BMS value on refresh failure. Keep independent model and BMS freshness labels rather than declaring the whole strip one period.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx",
+        "line": 137,
+        "rule": "MDC-026",
+        "detail": "useDataState receives no unavailable option for a successful null chargingLive payload. DataState.hasData is data !== undefined (web\\src\\api\\dataState.ts:191), so a resolved null can be classified ok/live even though thermal values are unavailable.",
+        "fix": "Mark a successfully resolved null telemetry source unavailable using the existing DataState option, preserving unknown versus false/zero and not confusing pending or failed reads with resolved absence.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\modernization\\HealthThermalPanel.tsx",
+        "line": 62,
+        "rule": "MDC-025 / MDC-026",
+        "detail": "Missing battery_heater_on correctly displays a dash but takes the green branch of the color ternary, visually implying the same state as a measured false.",
+        "fix": "Use neutral unknown presentation for null/absent heater readings; only measured on/off may choose a semantic color, and heater-off should not automatically claim battery health success.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx",
+      "line": 780,
+      "rule": "MDC-010 / MDC-015 / mission 5-8",
+      "detail": "Every insight panel receives severity background and border plus colored icon, even positive advice; broad tinted surfaces compete with the primary pack posture and chart evidence.",
+      "fix": "Keep all insight text/severity identities, but default informational/success cards to neutral shared surfaces. Reserve stronger semantic emphasis for actual warning/critical signals and a small icon or status cue.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-health\\BatteryChargingCharts.tsx",
+      "line": 139,
+      "rule": "MDC-010 / MDC-034 / mission 27",
+      "detail": "Start/end count bars hardcode red/green hex fills; secondary habit readings use fixed emerald/amber/cyan classes at lines 171-181. Session counts are colored like severity despite being descriptive quantities.",
+      "fix": "Reuse current chart palette/preference contracts for distinct series; render ordinary counts with primary/secondary text tokens and reserve warning colors for documented wear thresholds. Do not change series values, labels, legend persistence or user chart preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx",
+      "line": 612,
+      "rule": "MDC-012 / MDC-016 / mission 7",
+      "detail": "Multiple headings use fixed cyan/rose/purple decorative accents; thermal cards assign amber/cyan/purple to routine readings without threshold evidence. Tokens and labels already provide hierarchy.",
+      "fix": "Use muted/secondary icon tokens for decorative section identity and neutral thermal cards by default; keep semantic color only for a real documented state. Measure composed contrast later rather than assuming these fixed accents are inaccessible.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-health\\BatteryTrendCharts.tsx",
+      "line": 192,
+      "rule": "MDC-034 / mission 27",
+      "detail": "Range gradient uses opacity 0.3 and two warning/critical reference lines compete with actual/predicted evidence in the adjacent chart (lines 125-126).",
+      "fix": "Reduce decorative fill/reference-line visual weight using existing chart primitives; retain both thresholds, dashed prediction distinction, actual series visibility and saved palette choices.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx",
+      "line": 749,
+      "rule": "MDC-033 / MDC-045",
+      "detail": "First/latest historical range is labeled Range When New / Range Now although the attached scope explicitly says first/latest available snapshots are not a controlled capacity test. Loss context at line 755 prefixes '-' to an already signed difference, producing '--' for increases.",
+      "fix": "Keep raw first/latest range and provenance; describe first/latest observed snapshots rather than asserting factory-new/current measurements, and present the signed change with correct increased/decreased wording using display-only SI conversion.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-health\\BatteryTrendCharts.tsx",
+      "line": 202,
+      "rule": "MDC-034 / MDC-046",
+      "detail": "Range XAxis uses formatted date labels generated at line 77, but annotation mapper returns timestamp unchanged. Annotation identity and plotted category domain are not normalized the same way; markers risk missing their intended category.",
+      "fix": "Retain durable annotation timestamps/IDs and actions; map to the actual chart category using the same date representation or an explicit timestamp domain, without rewriting stored annotations. Verify same-day and timezone cases later.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-health\\BatteryTrendCharts.tsx",
+      "line": 122,
+      "rule": "MDC-034 / mission 28",
+      "detail": "Health YAxis is fixed to [60,100] although the main page can represent measured health below 60 and preserve critical service warnings. Actual low-health chart visibility is not exercised.",
+      "fix": "Verify axis behavior with measured low values and preserve all actual/predicted points; use a source-aware domain that includes retained evidence and both 70/80 thresholds, with an honest scale rather than clipping severe degradation.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\modernization\\BatteryPanelGrid.tsx",
+      "line": 5,
+      "rule": "MDC-002",
+      "detail": "Feature code imports useCardPlacement directly from the layout-reference implementation path while importing CardGrid from the category barrel.",
+      "fix": "Use the canonical layout-category export if available. If the hook is not exported, report a narrowly evidenced category-export need to the layout owner; do not create a second placement implementation or edit shared exports in this page item.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": ["Fix nested navigation semantics", "Preserve per-source trust in mixed summary and null telemetry", "Correct observed-range claims and signed change", "Align annotation domain mapping"],
+    "next": ["Reduce repeated colored chrome without deleting metrics", "Exercise narrow/long-label layouts", "Verify low-health axis behavior"],
+    "notAnImplementationReceipt": true
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\battery\\components\\modernization\\BatterySpecialistSummary.tsx",
+      "line": 29,
+      "rule": "MDC-002 / MDC-033",
+      "detail": "BatterySpecialistSummary and BatteryEvidenceBrief are typed feature adapters over existing useOperationalMetrics and OperationalBrief, not proven competing formatters or replacement libraries.",
+      "fix": "Reuse these adapters and their specialist displays; no new BatteryMetric/Card/Brief framework.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-health\\helpers.tsx",
+      "line": 189,
+      "rule": "MDC-045",
+      "detail": "computeEnergyBreakdown converts raw Wh to kWh for local presentation/export rows using convertEnergyFromSI. This is source-inspected display conversion, not evidence of a hook/cache SI violation.",
+      "fix": "Preserve raw SI upstream and current kWh export/display semantics unless an explicitly verified display-preference adoption retains units and all exported values.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "DF28482575651D254C9A437513725E165EEEF3EAB5CB2573B155B972D6E1DEAE",
+    "sourceHashAlgorithm": "SHA256",
+    "sourcePath": "web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx",
+    "currentLineCount": 855,
+    "sectionCount": 13,
+    "sections": [
+      "Battery posture operational brief and narrative/evidence drawer",
+      "Optional gated AI forecast explanation",
+      "Seven summary metrics and contextual glossary",
+      "Health Overview gauges and years-to-80 estimate",
+      "Capacity & Wear bars",
+      "Capacity Trend & Prediction chart",
+      "Estimated Range Over Time chart",
+      "Thermal Monitoring",
+      "Capacity & Range: New vs Now evidence",
+      "Smart Insights",
+      "Charge Level Distribution and four habit readings",
+      "AC/DC Energy Breakdown and Charging Statistics",
+      "Explore More and Recommendations"
+    ],
+    "sectionCountingMethod": "13 logical groups enumerated above; paired statistics and paired navigation/recommendations remain explicit subpanels, not dropped capabilities.",
+    "sourceElementCounts": {
+      "pageGlassPanelOpeningSites": 6,
+      "pageChartContainerOpeningSites": 0,
+      "measuredChartContainerSitesInTwoLazyChartFiles": 4,
+      "unavailableOutlineChartContainerSites": 4,
+      "note": "JSX source occurrences are not runtime mounted counts. Insights map can instantiate multiple panels; OperationalBrief and thermal/navigation adapters add their own surfaces."
+    },
+    "actions": [
+      "Existing workspace header vehicle selection; no duplicate local picker",
+      "Model retry and independent thermal retry",
+      "OperationalBrief Review details / Review all attention and narrative",
+      "Summary and comparison evidence Review details",
+      "Optional Narrate forecast with feature/mode gates and streaming guards",
+      "Chart image/vector/copy-image export and CSV for all four measured charts",
+      "Capacity actual/predicted and charge-start/end legend persistence",
+      "Range chart annotation add/delete/hide",
+      "Existing alert-context time markers",
+      "Contextual glossary/help preference",
+      "Links to /battery-cells, /battery-degradation, /energy-flow, /projected-range, /vampire-drain, /sleep-efficiency"
+    ],
+    "data": [
+      "Selected vehicle identity and positive-ID enablement; both route aliases mount the same lazy page (App.tsx:608-609).",
+      "No date-range ownership is registered for either route in workspaceScope.ts; retain lifetime model semantics rather than adding a second picker or pretending current hooks honor arbitrary bounds.",
+      "AbortSignal forwarding, existing query keys/stale time/retry defaults and separate analytics versus latest-telemetry sources.",
+      "Health-measurement sentinel handling and measured zero; finite positive capacity checks; history null fallback.",
+      "Projection withholding unless enough data, finite absolute slope <=50 and finite positive years-to-80; no fabricated trend.",
+      "Health, capacity Wh, range m, degradation percent/year, cycles, age, fast/full charge proportions, depth, stress and thermal exposure.",
+      "Four thermal values, module IDs, full-charge flag and independent retained readings.",
+      "Actual versus predicted history, range snapshots, four charge-distribution/habit readings, AC/DC energy/session counts, total energy/cycles.",
+      "All generated insights/recommendations, narrative confidence basis/provenance/limitations and last-five-snapshot evidence.",
+      "Locale/precision/distance/temperature/energy display settings, current kWh charging export meaning and all persistent chart/annotation identities.",
+      "Every unavailable outline section, actionable fatal error and retained-data refresh warning."
+    ],
+    "dependencyLineCounts": {
+      "BatteryTrendCharts.tsx": 219,
+      "BatteryChargingCharts.tsx": 278,
+      "helpers.tsx": 221,
+      "HealthSummary.tsx": 87,
+      "HealthThermalPanel.tsx": 77,
+      "HealthUnavailableOutline.tsx": 163,
+      "HealthQuickLinksPanel.tsx": 36
+    }
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source audit; only assigned report and heartbeat written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendBehavior": "No handler/database execution; response freshness, ordering, completeness and backend units not inferred beyond inspected frontend types/contracts.",
+    "sharedChangeAssessment": "No new shared implementation is justified by this scoped read. Existing link chrome, DataState, OperationalBrief and chart contracts should support page-specific fixes; layout hook barrel availability remains an integration check, not authorization to edit shared files.",
+    "validation": [
+      {
+        "command": "Get-FileHash -Algorithm SHA256 -LiteralPath 'web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx'; (Get-Content -LiteralPath 'web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx').Count",
+        "exitCode": 0,
+        "output": "SHA256 DF28482575651D254C9A437513725E165EEEF3EAB5CB2573B155B972D6E1DEAE; 855"
+      },
+      {
+        "command": "Scoped PowerShell Select-String pattern counts over page, two charts, helpers and HealthSummary/HealthThermalPanel/HealthUnavailableOutline/HealthQuickLinksPanel (eight files)",
+        "exitCode": 0,
+        "output": "inline style: 0; raw controls: 1; direct chart map motion imports: 0; legacy API imports: 0; fixed accent classes: 11; GlassPanel opens: 15; ChartContainer opens: 8",
+        "qualification": "PowerShell matching is case-insensitive: raw-controls count is a false positive for shared <Button> at HealthQuickLinksPanel.tsx:27, confirmed by exact match readback. Counts are scoped pattern evidence, not a complete semantic audit or mounted section count."
+      },
+      {
+        "command": "bash .github\\skills\\audit-violations\\audit.sh <assigned page>",
+        "exitCode": null,
+        "output": "NOT RUN: inspected script unconditionally executes project TypeScript; assignment prohibits full validation. Used scoped read-only pattern inspection instead."
+      },
+      {
+        "command": "npx tsc --noEmit / full lint / full build / tests",
+        "exitCode": null,
+        "output": "NOT RUN: Phase0 source-audit scope; no runtime, typecheck, lint or test acceptance claimed."
+      }
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\BatteryHealthPage.tsx",
+    "web\\src\\features\\battery\\components\\battery-health\\BatteryTrendCharts.tsx",
+    "web\\src\\features\\battery\\components\\battery-health\\BatteryChargingCharts.tsx",
+    "web\\src\\features\\battery\\components\\battery-health\\DeferredBatterySection.tsx",
+    "web\\src\\features\\battery\\components\\battery-health\\helpers.tsx",
+    "web\\src\\features\\battery\\components\\battery-health\\layout.ts",
+    "web\\src\\features\\battery\\components\\modernization\\BatteryPanelGrid.tsx",
+    "web\\src\\features\\battery\\components\\modernization\\BatterySpecialistSummary.tsx",
+    "web\\src\\features\\battery\\components\\modernization\\HealthSummary.tsx",
+    "web\\src\\features\\battery\\components\\modernization\\HealthThermalPanel.tsx",
+    "web\\src\\features\\battery\\components\\modernization\\HealthUnavailableOutline.tsx",
+    "web\\src\\features\\battery\\components\\modernization\\HealthQuickLinksPanel.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\components\\ai\\AIBatteryHealthForecastNarrative.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\hooks\\useEnergy.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useAnnotations.ts",
+    "web\\src\\types\\energy.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-063.json",
+    ".agent-status\\audit-page-063.txt"
+  ]
+}

@@ -22,8 +22,8 @@
  *     a manual refetch.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -99,12 +99,21 @@ const vehicleHook = vi.hoisted(() => ({
   data: [
     { id: 1, display_name: 'Falcon', vin: 'TESLA0000000001' },
     { id: 2, display_name: 'Hawk', vin: 'TESLA0000000002' },
-  ],
+  ] as { id: number; display_name: string; vin: string }[] | undefined,
+  error: null as Error | null,
+  fetchStatus: 'idle' as 'fetching' | 'paused' | 'idle',
+  refetch: vi.fn(),
 }));
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => ({
     data: vehicleHook.data,
-    isLoading: false,
+    error: vehicleHook.error,
+    isError: vehicleHook.error !== null,
+    isSuccess: vehicleHook.data !== undefined && vehicleHook.error === null,
+    isPending: vehicleHook.data === undefined && vehicleHook.error === null,
+    isLoading: vehicleHook.data === undefined && vehicleHook.fetchStatus === 'fetching',
+    fetchStatus: vehicleHook.fetchStatus,
+    refetch: vehicleHook.refetch,
   }),
 }));
 
@@ -133,8 +142,6 @@ import { ToastProvider } from '@/components/feedback/Toast';
 import IngestXRayPage from './IngestXRayPage';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
-
-const DASH = '—';
 
 function makeXRay(
   overrides: Partial<IngestXRayResponse> = {},
@@ -195,6 +202,9 @@ beforeEach(() => {
   // reset the xray behaviour so each test starts from a clean slate.
   mockedRequest.mockClear();
   xrayFn.mockReset();
+  vehicleHook.error = null;
+  vehicleHook.fetchStatus = 'idle';
+  vehicleHook.refetch.mockReset();
   vehicleHook.data = [
     { id: 1, display_name: 'Falcon', vin: 'TESLA0000000001' },
     { id: 2, display_name: 'Hawk', vin: 'TESLA0000000002' },
@@ -202,6 +212,185 @@ beforeEach(() => {
 });
 
 describe('IngestXRayPage', () => {
+  it.each(['fetching', 'paused'] as const)(
+    'distinguishes a %s vehicle prerequisite from a successfully empty fleet',
+    (fetchStatus) => {
+      vehicleHook.data = undefined;
+      vehicleHook.fetchStatus = fetchStatus;
+      renderPage();
+      expect(screen.queryByText('Select a vehicle')).not.toBeInTheDocument();
+      expect(screen.getAllByText(fetchStatus === 'paused' ? 'Refresh paused' : 'Loading...').length)
+        .toBeGreaterThan(0);
+      expect(screen.getByText('Field statistics')).toBeInTheDocument();
+      expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
+      expect(screen.getByText('Top fields by volume')).toBeInTheDocument();
+      expect(xrayFn).not.toHaveBeenCalled();
+    },
+  );
+
+  it('offers the vehicle prerequisite retry without claiming no selection or hiding sections', () => {
+    vehicleHook.data = undefined;
+    vehicleHook.error = new Error('fleet lookup failed');
+    renderPage();
+    expect(screen.queryByText('Select a vehicle')).not.toBeInTheDocument();
+    expect(screen.getByText('Vehicle registry')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
+    expect(vehicleHook.refetch).toHaveBeenCalledTimes(1);
+    expect(xrayFn).not.toHaveBeenCalled();
+    expect(screen.getByText('Field statistics')).toBeInTheDocument();
+    expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
+  });
+
+  it('retains selected-vehicle ingest data and controls when the fleet refresh fails', async () => {
+    vehicleHook.error = new Error('fleet refresh failed');
+    xrayFn.mockResolvedValue(makeXRay());
+    renderPage();
+    await screen.findByText('4,096');
+    expect(screen.getByLabelText('Vehicle')).toHaveValue('1');
+    expect(screen.getAllByText('VehicleSpeed').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Window')).toHaveValue('1h');
+    expect(screen.getByLabelText('Bucket')).toHaveValue('1m');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
+    expect(vehicleHook.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Kind details, sorting and filtering reachable through the shared mobile adapter', async () => {
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 375, 200));
+    xrayFn.mockResolvedValue(makeXRay());
+    const page = renderPage();
+    try {
+      await screen.findByText('4,096');
+      const mobile = page.container.querySelector<HTMLElement>('[data-mobile-table]');
+      expect(mobile).not.toBeNull();
+      const controls = within(mobile!);
+      const kindSort = controls.getByRole('button', { name: 'Kind' });
+      expect(kindSort).toBeInTheDocument();
+      fireEvent.click(kindSort);
+      fireEvent.click(controls.getByRole('button', { name: 'Kind filter' }));
+      const filter = screen.getByRole('dialog', { name: 'Kind filter' });
+      expect(within(filter).getByText('float64')).toBeInTheDocument();
+      fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+      fireEvent.click(controls.getAllByRole('button', { name: 'Quick view' })[0]);
+      const details = screen.getByRole('dialog');
+      expect(within(details).getByText('Kind')).toBeInTheDocument();
+      expect(within(details).getByText('float64')).toBeInTheDocument();
+      expect(screen.getByLabelText('Window')).toHaveValue('1h');
+      expect(screen.getByLabelText('Bucket')).toHaveValue('1m');
+    } finally {
+      page.unmount();
+      rect.mockRestore();
+    }
+  });
+
+  it('keeps the named refresh action mobile-sized with a decorative shared icon', () => {
+    vehicleHook.data = [];
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh ingest x-ray' });
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-10');
+    expect(refresh).toBeDisabled();
+    const icon = refresh.querySelector('svg');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveAttribute('focusable', 'false');
+    expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0');
+    expect(xrayFn).not.toHaveBeenCalled();
+  });
+
+  it('marks a paused refresh as retained without erasing readings or claiming a read failure', async () => {
+    xrayFn.mockResolvedValue(makeXRay());
+    const page = renderPage();
+    const wasOnline = onlineManager.isOnline();
+
+    try {
+      pickVehicle('1');
+      await screen.findByText('4,096');
+      const callsBefore = xrayFn.mock.calls.length;
+      onlineManager.setOnline(false);
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh ingest x-ray' }));
+
+      // The summary band remounts when retained flips, so re-query it inside
+      // the wait instead of polling a detached node.
+      await waitFor(() => expect(screen.getByTestId('ingest-xray-summary')).toHaveAttribute('data-retained', 'true'));
+      const summary = screen.getByTestId('ingest-xray-summary');
+      expect(summary).toHaveTextContent('Showing retained measurements');
+      expect(summary).not.toHaveTextContent('Source loaded');
+      expect(summary).not.toHaveTextContent('Read failed');
+      // The source status badge moved from the face to the Review-details drawer.
+      fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
+      expect(drawer).toHaveTextContent('Retained measurements');
+      expect(drawer).not.toHaveTextContent('Source loaded');
+      expect(drawer).not.toHaveTextContent('Read failed');
+      // Close the drawer so the retained-value assertions below match the face only.
+      const close = within(drawer).getAllByRole('button', { name: 'Close' });
+      fireEvent.click(close[close.length - 1]);
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Ingest summary metrics details' })).toBeNull());
+      expect(screen.getByText('4,096')).toBeInTheDocument();
+      expect(screen.getAllByText('VehicleSpeed').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Field statistics')).toBeInTheDocument();
+      expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
+      expect(xrayFn).toHaveBeenCalledTimes(callsBefore);
+    } finally {
+      page.unmount();
+      onlineManager.setOnline(wasOnline);
+    }
+  });
+
+  it('renders the shared OperationalBrief with numeric fractional mean, full captions and intact bucket action', async () => {
+    xrayFn.mockResolvedValue(makeXRay({
+      buckets: [{ bucket_start: '2026-07-03T21:58:00Z', count: 2 },
+        { bucket_start: '2026-07-03T21:59:00Z', count: 9 }],
+    }));
+    renderPage();
+    pickVehicle('1');
+    await screen.findByText('4,096');
+    const strip = screen.getByTestId('ingest-xray-operational-brief');
+    expect(strip).toHaveAttribute('data-operational-brief');
+    // Bounds and per-metric captions moved from the face to the Review-details drawer.
+    expect(strip).not.toHaveTextContent('Exact query bounds are not supplied');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    const mean = strip.querySelector('[data-operational-metric="mean"]');
+    expect(mean).toHaveAttribute('data-value-state', 'value');
+    expect(mean?.querySelector('[data-operational-value]')?.textContent).toMatch(/^5[.,]5/);
+    fireEvent.change(screen.getByLabelText('Bucket'), { target: { value: '30s' } });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith(
+      expect.stringContaining('bucket=30s'), expect.anything()));
+    fireEvent.click(within(screen.getByTestId('ingest-xray-operational-brief'))
+      .getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
+    expect(drawer).toHaveTextContent('Exact query bounds are not supplied');
+    for (const caption of ['within selected window', 'unique signal names', 'busiest interval',
+      'mean per interval', 'observation horizon', 'aggregation interval']) {
+      expect(drawer).toHaveTextContent(caption);
+    }
+    expect(screen.getByText('Field statistics')).toBeInTheDocument();
+    expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
+  });
+
+  it('opens actual brief details without changing vehicle, window, bucket or ingest controls', async () => {
+    xrayFn.mockResolvedValue(makeXRay());
+    renderPage();
+    pickVehicle('1');
+    await screen.findByText('4,096');
+    fireEvent.click(within(screen.getByTestId('ingest-xray-operational-brief'))
+      .getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
+    expect(within(drawer).getByText('within selected window')).toBeInTheDocument();
+    expect(within(drawer).getByText('mean per interval')).toBeInTheDocument();
+    expect(within(within(drawer).getByRole('region', { name: 'How this was calculated' })).getByText('Exact query bounds are not supplied')).toBeInTheDocument();
+    expect(within(drawer).getByText('4,096')).toBeInTheDocument();
+    expect(screen.getByLabelText('Vehicle')).toHaveValue('1');
+    // The open drawer also exposes "Window"/"Bucket" detail groups, so pin the
+    // toolbar selects by their combobox role (the drawer groups are not comboboxes).
+    expect(screen.getByRole('combobox', { name: 'Window' })).toHaveValue('1h');
+    expect(screen.getByRole('combobox', { name: 'Bucket' })).toHaveValue('1m');
+    const close = within(drawer).getAllByRole('button', { name: 'Close' });
+    fireEvent.click(close[close.length - 1]);
+    expect(screen.getByText('Field statistics')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh ingest x-ray' })).toBeEnabled();
+  });
+
   it('keeps the query disabled and shows dashes (not a fake 0) for an empty fleet', () => {
     vehicleHook.data = [];
     renderPage();
@@ -215,12 +404,23 @@ describe('IngestXRayPage', () => {
     // The toolbar renders the vehicle picker + a disabled refresh control.
     expect(screen.getByLabelText('Vehicle')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Refresh ingest X-Ray' }),
+      screen.getByRole('button', { name: 'Refresh ingest x-ray' }),
     ).toBeDisabled();
 
-    // The four numeric KPIs (samples / fields / peak / avg) read em-dash so a
-    // "no vehicle" state never renders as a real 0.
-    expect(screen.getAllByText(DASH).length).toBeGreaterThanOrEqual(4);
+    // The four numeric KPIs (samples / fields / peak / avg) are omitted as
+    // unknown so a "no vehicle" state never renders as a real 0, while the
+    // selector-derived window/bucket captions stay visible.
+    const strip = screen.getByTestId('ingest-xray-operational-brief');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    expect(strip.querySelector('[data-operational-metric="samples"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="fields"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="peak"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="mean"]')).toBeNull();
+    expect(within(strip).queryByText('0')).toBeNull();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
+    expect(drawer).toHaveTextContent('4 empty fields are hidden.');
+    expect(drawer).toHaveTextContent('No vehicle selected');
   });
 
   it('fires the X-Ray query at the exact backend path and renders KPIs, chart, table + top-fields', async () => {
@@ -265,8 +465,19 @@ describe('IngestXRayPage', () => {
       screen.getAllByRole('button', { name: 'Retry' }).length,
     ).toBeGreaterThanOrEqual(1);
 
-    // No data ever landed → KPI band must still read dashes, not "0".
-    expect(screen.getAllByText(DASH).length).toBeGreaterThanOrEqual(4);
+    // No data ever landed → the four numeric KPIs stay omitted (unknown),
+    // never rendered as "0"; window/bucket captions stay visible.
+    const strip = screen.getByTestId('ingest-xray-operational-brief');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    expect(strip.querySelector('[data-operational-metric="samples"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="fields"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="peak"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="mean"]')).toBeNull();
+    expect(within(strip).queryByText('0')).toBeNull();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
+    expect(drawer).toHaveTextContent('4 empty fields are hidden.');
+    expect(drawer).toHaveTextContent('Read failed');
   });
 
   it('does NOT blank populated panels when a later poll fails (keeps last-good data)', async () => {
@@ -285,7 +496,7 @@ describe('IngestXRayPage', () => {
 
     const callsBefore = xrayFn.mock.calls.length;
     fireEvent.click(
-      screen.getByRole('button', { name: 'Refresh ingest X-Ray' }),
+      screen.getByRole('button', { name: 'Refresh ingest x-ray' }),
     );
 
     // The refresh triggered at least one more X-Ray request (attempt + retry).
@@ -294,11 +505,12 @@ describe('IngestXRayPage', () => {
     );
 
     // The failed poll must not blank the table nor swap it for the error panel:
-    // last-good data stays and no error copy appears.
+    // Last-good data stays and no section-level retry replaces it.
     expect(screen.getAllByText('VehicleSpeed').length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText("Can't reach server")).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     // KPI band still shows the last-good total, not a dash.
     expect(screen.getByText('4,096')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('ingest-xray-summary')).toHaveAttribute('data-retained', 'true'));
   });
 
   it('refetches with the new window when the window selector changes', async () => {
@@ -326,17 +538,14 @@ describe('IngestXRayPage', () => {
     );
   });
 
-  it('enables the refresh control once a vehicle is picked and triggers a manual refetch', async () => {
+  it('enables refresh for the canonical selected vehicle and triggers a manual refetch', async () => {
     xrayFn.mockResolvedValue(makeXRay());
 
     renderPage();
 
     const refreshBtn = screen.getByRole('button', {
-      name: 'Refresh ingest X-Ray',
+      name: 'Refresh ingest x-ray',
     });
-    expect(refreshBtn).toBeDisabled();
-
-    pickVehicle('1');
     await waitFor(() => expect(xrayFn).toHaveBeenCalled());
     await waitFor(() => expect(refreshBtn).not.toBeDisabled());
 
@@ -346,5 +555,30 @@ describe('IngestXRayPage', () => {
     await waitFor(() =>
       expect(xrayFn.mock.calls.length).toBeGreaterThan(callsBefore),
     );
+  });
+
+  it('retains a known empty ingest snapshot and all section shells after refresh failure', async () => {
+    xrayFn.mockResolvedValueOnce(makeXRay({
+      total_samples: 0,
+      unique_fields: 0,
+      fields: [],
+      buckets: [],
+    }));
+    xrayFn.mockRejectedValue(new Error('refresh failed'));
+    renderPage();
+    pickVehicle('1');
+    await waitFor(() => expect(screen.getAllByText('0').length).toBeGreaterThan(0));
+    // A bare '0' can match pre-settle chrome while the first fetch is still
+    // in flight, so also wait for the refresh control to enable (fetch
+    // settled) — clicking while it is disabled would be a silent no-op.
+    const refreshBtn = screen.getByRole('button', { name: 'Refresh ingest x-ray' });
+    await waitFor(() => expect(refreshBtn).toBeEnabled());
+    fireEvent.click(refreshBtn);
+    await waitFor(() => expect(screen.getByText('Data may be stale')).toBeInTheDocument());
+
+    expect(screen.getByText('Field statistics')).toBeInTheDocument();
+    expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Sample volume' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 });

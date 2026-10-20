@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ExternalLink, RadioTower } from 'lucide-react';
-import { Badge, Caption, Heading, Text } from '@/components/ui';
+import { Badge, Button, BUTTON_BASE, BUTTON_VARIANTS, Caption, Heading, Text, Tooltip } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { DateTime } from '@/components/data-display';
 import type {
   ServiceIntelligenceApplicability,
@@ -43,7 +45,7 @@ export function RecallFindingCard({ finding }: RecallFindingCardProps) {
           <Badge variant={applicabilityVariant(finding.applicability)}>
             {applicability}
           </Badge>
-          <Badge variant={finding.confidence_label === 'high' ? 'success' : 'info'}>
+          <Badge variant="neutral">
             {t('serviceIntelligence.confidence.value', '{{value}}% confidence', {
               value: Math.round(finding.confidence * 100),
             })}
@@ -55,19 +57,25 @@ export function RecallFindingCard({ finding }: RecallFindingCardProps) {
       </div>
 
       {(finding.park_it || finding.park_outside) && (
-        <div className="mt-3 flex items-center gap-2 text-rose-300">
-          <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-          <Text size="sm" weight="semibold" className="text-rose-300">
-            {finding.park_it
-              ? t('serviceIntelligence.recall.parkIt', 'NHTSA park-it warning')
-              : t('serviceIntelligence.recall.parkOutside', 'NHTSA park-outside warning')}
-          </Text>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {finding.park_it && (
+            <Badge variant="danger">
+              <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {t('serviceIntelligence.recall.parkIt', 'NHTSA park-it warning')}
+            </Badge>
+          )}
+          {finding.park_outside && (
+            <Badge variant="danger">
+              <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {t('serviceIntelligence.recall.parkOutside', 'NHTSA park-outside warning')}
+            </Badge>
+          )}
         </div>
       )}
 
       <div className="mt-3 space-y-3">
         <Text as="p" variant="bodySm">{finding.summary}</Text>
-        <div className="rounded-lg border border-cyan-400/15 bg-cyan-400/5 p-3">
+        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Caption className="mb-1 block">{t('serviceIntelligence.recall.hypothesis', 'Applicability hypothesis')}</Caption>
           <Text as="p" variant="bodySm">{finding.hypothesis}</Text>
         </div>
@@ -83,21 +91,21 @@ export function RecallFindingCard({ finding }: RecallFindingCardProps) {
         </div>
         <div className="flex flex-wrap gap-2">
           {finding.match_factors.map((factor) => (
-            <Badge
-              key={factor.dimension}
-              variant={factor.status === 'matched' ? 'success' : 'neutral'}
-              title={factor.detail}
-            >
-              {t(
-                `serviceIntelligence.matchFactors.dimension.${factor.dimension}`,
-                humanize(factor.dimension),
-              )}
-              {': '}
-              {t(
-                `serviceIntelligence.matchFactors.status.${factor.status}`,
-                humanize(factor.status),
-              )}
-            </Badge>
+            <Tooltip key={factor.dimension} content={factor.detail} multiline>
+              <Button type="button" variant="ghost" size="sm" wrapLabel className="min-h-11 px-1">
+                <Badge variant="neutral">
+                  {t(
+                    `serviceIntelligence.matchFactors.dimension.${factor.dimension}`,
+                    humanize(factor.dimension),
+                  )}
+                  {': '}
+                  {t(
+                    `serviceIntelligence.matchFactors.status.${factor.status}`,
+                    humanize(factor.status),
+                  )}
+                </Badge>
+              </Button>
+            </Tooltip>
           ))}
           {finding.over_the_air_update && (
             <Badge variant="info">
@@ -111,13 +119,13 @@ export function RecallFindingCard({ finding }: RecallFindingCardProps) {
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
         <Caption>
           {t('serviceIntelligence.recall.reported', 'Reported')}{' '}
-          <DateTime value={finding.report_received_at} variant="date" />
+          <DateTime value={finding.report_received_at} variant="day" />
         </Caption>
         <a
           href={finding.source_document_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center gap-1 rounded text-sm font-medium text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
+          className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, typography.size.sm, 'min-h-11 max-w-full justify-start whitespace-normal px-2 hover:underline')}
         >
           {t('serviceIntelligence.recall.source', 'Open NHTSA campaign')}
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />

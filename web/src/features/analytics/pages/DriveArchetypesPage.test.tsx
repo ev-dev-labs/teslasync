@@ -109,6 +109,11 @@ vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select">Vehicle picker</div>,
 }));
 
+vi.mock('@/components/layout', async () => ({
+  ...(await vi.importActual<typeof import('@/components/layout')>('@/components/layout')),
+  ChartCard: (await import('@/components/charts')).ChartContainer,
+}));
+
 vi.mock('@/components/charts', () => {
   const Wrapper = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const hiddenSeries = {
@@ -304,9 +309,22 @@ const sectionIds = [
   'drive-archetypes-methodology',
 ] as const;
 
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
+
 function expectEverySection(): void {
   for (const id of sectionIds) {
-    expect(screen.getByTestId(id)).toBeInTheDocument();
+    const section = screen.getByTestId(id);
+    expect(section).toBeInTheDocument();
+    if (![
+      'drive-archetypes-candidates', 'drive-archetypes-centroid-map',
+      'drive-archetypes-composition', 'drive-archetypes-confidence',
+      'drive-archetypes-hourly', 'drive-archetypes-monthly',
+    ].includes(id)) {
+      expect(section.querySelector(['drive-archetypes-kpis', 'drive-archetypes-source', 'drive-archetypes-coverage'].includes(id)
+        ? '[data-operational-brief]' : '[data-card]')).toBeInTheDocument();
+    }
   }
 }
 
@@ -321,15 +339,76 @@ beforeEach(() => {
 });
 
 describe('DriveArchetypesPage', () => {
+  it('gives the wrapping refresh action a mobile target and a decorative shared icon', () => {
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh evidence' });
+    expect(refresh).toHaveClass('h-9', 'w-9');
+    const icon = refresh.querySelector('svg');
+    expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveAttribute('focusable', 'false');
+    expect(within(refresh).queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('keeps evidence mounted and prevents duplicate refresh while fetching', () => {
+    h.query = query<Drive[]>({
+      data: clusteredDrives(),
+      isFetching: true,
+      fetchStatus: 'fetching',
+    });
+    renderPage();
+
+    expectEverySection();
+    const refresh = screen.getByRole('button', { name: 'Refresh evidence' });
+    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-busy', 'true');
+    expect(refresh).toHaveClass('h-9', 'w-9');
+    expect(within(screen.getByTestId('drive-archetypes-candidates'))
+      .getAllByText('Selected')).toHaveLength(1);
+    fireEvent.click(refresh);
+    expect(h.refetch).not.toHaveBeenCalled();
+  });
+
+  it('preserves scientific axes and numeric alignment in shared evidence tables', () => {
+    renderPage();
+
+    const featureTable = within(screen.getByTestId('drive-archetypes-feature-ranges'))
+      .getByRole('table');
+    expect(within(featureTable).getAllByRole('columnheader').map((header) => header.textContent))
+      .toEqual(['Feature', 'Minimum', 'Median', 'Maximum']);
+    expect(within(featureTable).getAllByRole('rowheader')).toHaveLength(4);
+    expect(within(featureTable).getAllByRole('cell').every((cell) => cell.classList.contains('text-right')))
+      .toBe(true);
+
+    const candidateTable = within(screen.getByTestId('drive-archetypes-candidates'))
+      .getByRole('table');
+    expect(within(candidateTable).getAllByRole('columnheader').map((header) => header.textContent))
+      .toEqual([
+        'Candidate',
+        'Silhouette',
+        'Restart agreement',
+        'Inertia',
+        'Realized clusters',
+        'Smallest / largest',
+        'Decision',
+      ]);
+    expect(within(candidateTable).getAllByRole('rowheader').length).toBeGreaterThan(0);
+    expectEverySection();
+  });
+
   it('renders all fifteen shells, requests 1,000 rows, and refreshes evidence', () => {
     renderPage();
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Drive Archetypes',
+      name: 'Drive archetypes',
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.hook).toHaveBeenLastCalledWith('7', 1000);
+    expect(screen.getByTestId('drive-archetypes-kpis').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(screen.getByTestId('drive-archetypes-source').querySelectorAll('[data-operational-metric]')).toHaveLength(13);
+    expect(screen.getByTestId('drive-archetypes-coverage').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh evidence' }));
     expect(h.refetch).toHaveBeenCalledTimes(1);
@@ -358,6 +437,19 @@ describe('DriveArchetypesPage', () => {
     expect(screen.getByRole('status', {
       name: 'Loading drive-archetype evidence',
     })).toBeInTheDocument();
+    for (const id of ['drive-archetypes-source', 'drive-archetypes-feature-ranges', 'drive-archetypes-directory']) {
+      const sectionEl = screen.getByTestId(id);
+      const section = within(sectionEl);
+      if (id === 'drive-archetypes-source') {
+        fireEvent.click(section.getByRole('button', { name: 'Review details' }));
+        const awaitingDialog = screen.getByRole('dialog');
+        expect(within(awaitingDialog).getByText('Awaiting drive evidence')).toBeInTheDocument();
+        fireEvent.keyDown(awaitingDialog, { key: 'Escape' });
+      } else {
+        expect(section.getByText('Awaiting drive evidence')).toBeInTheDocument();
+      }
+      expect(section.queryByText(/^0 (returned|of 6 active|of 0 shown)$/)).not.toBeInTheDocument();
+    }
   });
 
   it('shows one initial failure retry while every shell remains mounted', () => {
@@ -432,8 +524,10 @@ describe('DriveArchetypesPage', () => {
     expect(within(screen.getByTestId('drive-archetypes-kpis')).getByText(
       '12 eligible drives are available; 20 are required for clustering.',
     )).toBeInTheDocument();
-    expect(within(screen.getByTestId('drive-archetypes-source'))
-      .getAllByText('Eligible').length).toBeGreaterThan(0);
+    fireEvent.click(within(screen.getByTestId('drive-archetypes-source')).getByRole('button', { name: 'Review details' }));
+    const eligibleDialog = screen.getByRole('dialog');
+    expect(within(eligibleDialog).getAllByText('Eligible').length).toBeGreaterThan(0);
+    fireEvent.keyDown(eligibleDialog, { key: 'Escape' });
   });
 
   it('withholds clustering when eligible features have no variation', () => {

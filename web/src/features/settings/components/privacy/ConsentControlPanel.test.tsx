@@ -141,7 +141,7 @@ describe('ConsentControlPanel — policy copy across version-fetch states', () =
   it('shows a skeleton and no policy/error copy while the version query loads', () => {
     const { container } = renderPanel({ isLoading: true })
     // Skeleton is a decorative animated placeholder, not real copy.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull()
     expect(screen.queryByText(BODY_ON)).not.toBeInTheDocument()
     expect(screen.queryByText(BODY_OFF)).not.toBeInTheDocument()
     expect(screen.queryByText(POLICY_ERROR)).not.toBeInTheDocument()
@@ -179,7 +179,7 @@ describe('ConsentControlPanel — policy copy across version-fetch states', () =
 
   it('gives loading precedence over error when both flags are set', () => {
     const { container } = renderPanel({ isLoading: true, isError: true })
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull()
     expect(screen.queryByText(POLICY_ERROR)).not.toBeInTheDocument()
   })
 })
@@ -205,7 +205,7 @@ describe('ConsentControlPanel — live status region', () => {
   })
 
   it('describes the "declined" state with an amber dot and full detail line', () => {
-    renderPanel({ consent: 'declined' })
+    renderPanel({ consent: 'declined', requireConsent: true })
     const region = stateRegion()
     expect(region).toHaveAttribute('data-consent-state', 'declined')
 
@@ -217,7 +217,7 @@ describe('ConsentControlPanel — live status region', () => {
   })
 
   it('describes the "unknown" state with a slate dot and the not-decided copy', () => {
-    renderPanel({ consent: 'unknown' })
+    renderPanel({ consent: 'unknown', requireConsent: true })
     const region = stateRegion()
     expect(region).toHaveAttribute('data-consent-state', 'unknown')
 
@@ -226,6 +226,31 @@ describe('ConsentControlPanel — live status region', () => {
     expect(
       within(region).getByText('Not decided — banner will appear on next visit'),
     ).toBeInTheDocument()
+  })
+
+  it('shows policy-aware preview details when no consent gate is enforced', () => {
+    // Without a gate the stored choice is a preview: reporting stays on, so
+    // the gated "essential-only / banner" claims would be false here.
+    const declined = renderPanel({ consent: 'declined', requireConsent: false })
+    expect(
+      within(stateRegion()).getByText(
+        'Declined — preview only; reporting stays on without a consent gate',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(stateRegion()).queryByText('Declined — only essential storage in use'),
+    ).not.toBeInTheDocument()
+    declined.unmount()
+
+    renderPanel({ consent: 'unknown', requireConsent: false })
+    expect(
+      within(stateRegion()).getByText(
+        'Not decided — no consent gate on this deployment; reporting stays on',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(stateRegion()).queryByText('Not decided — banner will appear on next visit'),
+    ).not.toBeInTheDocument()
   })
 })
 
@@ -280,6 +305,21 @@ describe('ConsentControlPanel — action buttons & disabled logic', () => {
 })
 
 describe('ConsentControlPanel — a11y & form-safety hardening', () => {
+  it('gives every action a mobile touch target and wrapping label while restoring desktop sizing', () => {
+    renderPanel({ consent: 'accepted', isError: true })
+
+    for (const button of [acceptBtn(), declineBtn(), resetBtn()]) {
+      expect(button).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'whitespace-normal', 'max-w-full')
+      expect(button.querySelector('span')).toHaveClass('min-w-0', 'break-words')
+      expect(button).not.toHaveClass('h-10')
+    }
+
+    const retry = screen.getByRole('button', { name: /Retry/i })
+    expect(retry).toHaveClass('h-auto', 'min-h-11', 'md:min-h-9', 'whitespace-normal', 'max-w-full')
+    expect(within(retry).getByText('Retry')).toHaveClass('min-w-0', 'break-words')
+    expect(retry).not.toHaveClass('h-9')
+  })
+
   it('marks every control as type="button" so it can never submit a form', () => {
     renderPanel({ isError: true, withRetry: true })
     expect(acceptBtn()).toHaveAttribute('type', 'button')

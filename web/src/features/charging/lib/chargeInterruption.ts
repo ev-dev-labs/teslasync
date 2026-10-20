@@ -33,6 +33,10 @@
 
 import type { ChargingSession } from '@/types/charging';
 
+export type ChargeInterruptionSession = Omit<ChargingSession, 'total_energy_added_wh'> & {
+  total_energy_added_wh?: number | null;
+};
+
 export type InterruptionCause =
   | 'no_end_timestamp'
   | 'no_end_soc'
@@ -48,7 +52,8 @@ export interface SessionSignal {
   causes: InterruptionCause[];
   socGainPct: number | null;
   durationS: number | null;
-  energyWh: number;
+  /** Recorded energy in Wh, or null when unavailable/non-finite. */
+  energyWh: number | null;
   avgPowerW: number | null;
   peakPowerW: number | null;
 }
@@ -93,8 +98,6 @@ export interface ChargeInterruptionSummary {
 export interface ChargeInterruptionOptions {
   /** SoC at/above which a low gain-rate is expected (DC taper), pct. */
   taperSocPct?: number;
-  /** Clean sessions required at a site before its baseline rate is trusted. */
-  minBaselineSessions?: number;
   /** Minimum duration for the gain-rate check to be meaningful, seconds. */
   minDurationForRateCheckS?: number;
   /** Observed rate below this fraction of the site baseline flags `stalled_soc_gain`. */
@@ -115,7 +118,6 @@ export interface ChargeInterruptionOptions {
 
 const DEFAULTS = {
   taperSocPct: 80,
-  minBaselineSessions: 4,
   minDurationForRateCheckS: 300,
   rateShortfallRatio: 0.5,
   powerCollapseRatio: 0.35,
@@ -135,7 +137,7 @@ function num(v: number | null | undefined): number | null {
  * Exported for tests; sessions with neither are excluded from site scoring
  * (there is nothing to compare them against).
  */
-export function groupSiteKey(session: ChargingSession): { key: string; label: string } | null {
+export function groupSiteKey(session: ChargeInterruptionSession): { key: string; label: string } | null {
   const place = session.start_place?.trim();
   if (place != null && place.length > 0) {
     return { key: `place:${place.toLowerCase()}`, label: place };
@@ -148,17 +150,17 @@ export function groupSiteKey(session: ChargingSession): { key: string; label: st
   return { key: `geo:${rLat.toFixed(2)},${rLng.toFixed(2)}`, label: `${rLat.toFixed(2)}, ${rLng.toFixed(2)}` };
 }
 
-function startedMsOf(session: ChargingSession): number {
+function startedMsOf(session: ChargeInterruptionSession): number {
   return new Date(session.started_at ?? session.start_ts).getTime();
 }
 
-function endedMsOf(session: ChargingSession): number | null {
+function endedMsOf(session: ChargeInterruptionSession): number | null {
   if (session.ended_at == null) return null;
   const ms = new Date(session.ended_at).getTime();
   return Number.isFinite(ms) ? ms : null;
 }
 
-function durationSOf(session: ChargingSession): number | null {
+function durationSOf(session: ChargeInterruptionSession): number | null {
   const startedMs = startedMsOf(session);
   const endedMs = endedMsOf(session);
   if (Number.isFinite(startedMs) && endedMs != null && endedMs > startedMs) {
@@ -273,12 +275,14 @@ export function betaPosterior(successes: number, trials: number): BetaPosterior 
 }
 
 /**
- * Score one session against its site's own baseline. `baselineRatePctPerMin`
- * and `hasBaseline` come from the site's OTHER clean sessions — a session
- * never scores itself against its own value.
+ * Score one session against its site's own baseline. The analyzer supplies
+ * the median of all qualifying sessions at the site, including this session
+ * if eligible. One qualifying session is enough; no separate history-count
+ * threshold is enforced. With none, the rate check is skipped, but independent
+ * missing-field, power-collapse and early-abort checks still apply.
  */
 export function evaluateSessionSignal(
-  session: ChargingSession,
+  session: ChargeInterruptionSession,
   siteKey: string,
   baselineRatePctPerMin: number | null,
   isLatestOverall: boolean,
@@ -286,7 +290,8 @@ export function evaluateSessionSignal(
 ): SessionSignal {
   const startedMs = startedMsOf(session);
   const durationS = durationSOf(session);
-  const energyWh = Math.max(0, num(session.total_energy_added_wh) ?? 0);
+  const recordedEnergyWh = num(session.total_energy_added_wh);
+  const energyWh = recordedEnergyWh != null ? Math.max(0, recordedEnergyWh) : null;
   const avgPowerW = num(session.avg_power_w);
   const peakPowerW = num(session.peak_power_w);
   const startSoc = num(session.start_soc_pct);
@@ -304,7 +309,7 @@ export function evaluateSessionSignal(
   }
 
   // Stalled gain: only meaningful once the session ran long enough for a
-  // rate estimate to be stable, the site has an established baseline, and
+  // rate estimate to be stable, the site has a qualifying baseline, and
   // the session didn't start already deep in the DC taper band (where a
   // slow rate is simply physics, not a stall).
   if (
@@ -342,6 +347,7 @@ export function evaluateSessionSignal(
   if (
     durationS != null &&
     durationS < opts.minMeaningfulDurationS &&
+    energyWh != null &&
     energyWh < opts.minMeaningfulEnergyWh &&
     peakPowerW != null &&
     peakPowerW > 1000
@@ -357,7 +363,7 @@ export function evaluateSessionSignal(
     causes,
     socGainPct,
     durationS,
-    energyWh: Math.round(energyWh),
+    energyWh: energyWh != null ? Math.round(energyWh) : null,
     avgPowerW,
     peakPowerW,
   };
@@ -365,10 +371,12 @@ export function evaluateSessionSignal(
 
 /**
  * Robust "typical" SoC-gain rate for a site, in pct/minute, from its own
- * clean sessions (untapered, long enough, both SoCs known). Uses the median
- * so one anomalous session can't set the baseline.
+ * qualifying sessions (untapered, long enough, both SoCs known, positive gain).
+ * Returns null with none; otherwise uses their median, even for a single
+ * qualifying session. The session being scored is not excluded, and other
+ * interruption causes do not disqualify a session from this baseline.
  */
-function baselineRateOf(session: readonly ChargingSession[], taperSocPct: number, minDurationS: number): number | null {
+function baselineRateOf(session: readonly ChargeInterruptionSession[], taperSocPct: number, minDurationS: number): number | null {
   const rates: number[] = [];
   for (const s of session) {
     const startSoc = num(s.start_soc_pct);
@@ -418,7 +426,7 @@ function topCausesOf(history: readonly SessionSignal[]): InterruptionCause[] {
 }
 
 export function analyzeChargeInterruptions(
-  sessions: readonly ChargingSession[],
+  sessions: readonly ChargeInterruptionSession[],
   options: ChargeInterruptionOptions = {},
 ): ChargeInterruptionSummary {
   const opts = { ...DEFAULTS, ...options };
@@ -435,7 +443,7 @@ export function analyzeChargeInterruptions(
     }
   }
 
-  const groups = new Map<string, { label: string; raw: ChargingSession[] }>();
+  const groups = new Map<string, { label: string; raw: ChargeInterruptionSession[] }>();
   for (const s of sessions) {
     const site = groupSiteKey(s);
     if (site == null) continue;

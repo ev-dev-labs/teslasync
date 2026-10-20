@@ -1,0 +1,257 @@
+{
+  "item": "audit-page-073",
+  "page": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx",
+  "routes": ["/projected-range", "/analytics/range"],
+  "purpose": "Present the selected vehicle's personalized range estimates, learned efficiency evidence, scenario projections and interactive what-if calculation.",
+  "primaryGoal": "Understand likely driving range and how speed, temperature, battery capacity and driving conditions affect it, without confusing estimates with measurements.",
+  "dataSources": [
+    {
+      "name": "Range projection snapshot",
+      "hook": "useRangeProjection(activeId)",
+      "owner": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 427,
+      "endpoint": "GET /api/v1/analytics/range-projection?vehicle_id=<encoded selected ID>",
+      "routeEvidence": "internal\\api\\router.go:3892",
+      "queryKey": ["analytics", "range-projection", "<vehicle ID string>"],
+      "behavior": "Enabled only for a nonempty vehicle ID; forwards the query AbortSignal. One shared payload feeds seven projection-data sections; tips are static localized advice and AI is independent. No selected date bounds are sent.",
+      "unitsEvidence": "useAnalytics.ts:385-400 documents distances in kilometres, speed in km/h, efficiency in Wh/km and temperature in Celsius; RangeSummary.tsx:12-15 and RangeCurve.tsx:26-27 convert distance to metres before display helpers. This audit preserves the current wire shape and does not certify backend units.",
+      "scopeEvidence": "RangeSummary.tsx:34-38 explicitly describes a current-state/driving-history snapshot rather than a selected date window.",
+      "backendLimits": "Router registration and frontend contract inspected; handler calculations, database filtering, payload examples and cache behavior were not inspected or exercised."
+    },
+    {
+      "name": "Workspace vehicle selection",
+      "hook": "useSelectedVehicle() -> useVehicles()",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 47,
+      "endpoint": "GET /api/v1/vehicles",
+      "endpointEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-76",
+      "behavior": "URL vehicle scope, persisted selection and first known vehicle resolve through the existing owner; page adds no second selector. The hook returns no loading/error state to this caller.",
+      "backendLimits": "The vehicles endpoint request was inspected; its backend route and response were not independently validated in this bounded audit."
+    },
+    {
+      "name": "Optional AI range-model narrative",
+      "hook": "useAiStream",
+      "owner": "web\\src\\components\\ai\\AIRangePrediction.tsx",
+      "file": "web\\src\\components\\ai\\AIRangePrediction.tsx",
+      "line": 81,
+      "endpoint": "POST /api/v1/ai/ml/range/train",
+      "body": {"vehicle_id": "<positive selected ID>", "days": 14},
+      "behavior": "Explicit user-started stream; canPredictRange requires a finite positive ID; scopeKey changes with the vehicle. withAiFeature('range-prediction-model') prevents mounting the inner stream while disabled. AIFeatureCard disables duplicate starts while streaming and forwards text/error/activity/usage to the output owner.",
+      "sourceEvidence": ["web\\src\\components\\ai\\AIRangePrediction.tsx:39-40,76-87,109-112", "web\\src\\components\\ai\\withAiFeature.tsx:46-48", "web\\src\\hooks\\useAiStream.ts:335-349"],
+      "backendLimits": "router.go:5086 passes RangePrediction into another router; the exact POST route registration was not resolved. A scoped search of internal\\api\\ai failed because that directory does not exist; no endpoint reachability or training/persistence behavior is claimed."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "kind": "shared layout", "props": ["title", "subtitle", "query", "children"], "evidence": "ProjectedRangePage.tsx:34-37,52; PageLayout.tsx:9-15; PageContainer.tsx:155-166,274-289"},
+    {"name": "CardGrid / LayoutCard", "owner": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx", "relatedOwner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "kind": "shared layout and surface", "props": ["items:{id,size,content}", "label", "title", "children"], "evidence": "ProjectedRangePage.tsx:56-59,66-71; CardGrid.tsx:27-39; LayoutCard.tsx:17-36"},
+    {"name": "RangeSummary / BatteryEvidenceBrief / OperationalBrief", "owner": "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeSummary.tsx", "relatedOwner": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx", "kind": "feature summary adapting existing shared metric pipeline", "props": ["source", "loading", "metrics", "period", "retained"], "evidence": "RangeSummary.tsx:18-24,32-38; BatteryEvidenceBrief.tsx:24-52"},
+    {"name": "RangeEfficiency / LinearGauge", "owner": "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeEfficiency.tsx", "kind": "feature gauge using chart barrel", "props": ["source", "loading", "value", "max", "unit", "color"], "evidence": "RangeEfficiency.tsx:10-21"},
+    {"name": "RangeCurve / ChartCard", "owner": "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeCurve.tsx", "relatedOwner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx", "kind": "feature chart using canonical EmbeddedChart frame", "props": ["source", "loading", "chartKey", "data", "dataColumns", "ariaLabel", "hiddenSeries"], "evidence": "RangeCurve.tsx:34-65; ChartCard.tsx:28-44"},
+    {"name": "RangeScenarios / RangeMatrix / RangeCalculator / RangeFactors / RangeTips", "owner": "web\\src\\features\\battery\\components\\projected-range-modernization", "kind": "page-specific domain presentation", "props": ["source", "loading", "speed", "temperature", "onSpeedChange", "onTemperatureChange"], "evidence": "ProjectedRangePage.tsx:64-74"},
+    {"name": "RangeSourceSlot / SourceTrustNotice", "owner": "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeSourceSlot.tsx", "relatedOwner": "web\\src\\features\\battery\\components\\projected-range-modernization\\SourceTrustNotice.tsx", "kind": "feature adapters to existing data-trust feedback", "props": ["source", "loading", "empty", "message", "height", "children", "label"], "evidence": "RangeSourceSlot.tsx:11-18; SourceTrustNotice.tsx:6-21"},
+    {"name": "Slider", "owner": "web\\src\\components\\ui\\Slider.tsx", "kind": "shared native range input", "props": ["label", "min", "max", "step", "value", "formatValue", "onChange"], "evidence": "RangeCalculator.tsx:36-46; Slider.tsx:70-120"},
+    {"name": "AIRangePrediction / AIFeatureCard / withAiFeature", "owner": "web\\src\\components\\ai\\AIRangePrediction.tsx", "relatedOwner": "web\\src\\components\\ai\\AIFeatureCard.tsx", "kind": "shared domain AI surface and gating", "props": ["vehicleId", "title", "description", "buttonLabel", "badgeLabel", "canStart", "stream"], "evidence": "ProjectedRangePage.tsx:61-63; AIRangePrediction.tsx:94-105"},
+    {"name": "FadeIn; typography, Badge, feedback and formatting category APIs", "owner": "existing @/components/motion, @/components/ui, @/components/feedback, @/components/charts category owners", "kind": "existing reused primitives", "props": ["delay", "variant", "source-aware labels and display formatting"], "evidence": "ProjectedRangePage.tsx:54-74; RangeScenarios.tsx:4-7; RangeMatrix.tsx:6-9", "limit": "Category implementations other than the specifically listed dependencies were not read; no foundation-wide approval is implied."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeSourceSlot.tsx", "line": 11, "rule": "MDC-002 reuse", "detail": "Repeated loading/fatal-error/empty handling is already consolidated in RangeSourceSlot and source trust in SourceTrustNotice.", "fix": "Keep these domain adapters and reuse existing feedback; do not create another page-wide state engine.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeScenarios.tsx", "line": 31, "rule": "MDC-002 component ownership", "detail": "Scenario, factor and tip entries use similar neutral card-like divs, but their content and semantics differ; no second independent production consumer was audited to justify a new shared composite.", "fix": "Retain local domain rendering and existing LayoutCard owner; consolidate only if concrete independent consumer evidence warrants it.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "sourceEvidence": ["ProjectedRangePage.tsx:56-59,66-71 uses allocated-width CardGrid placements.", "CardGrid.tsx:27-39 uses measured container width and existing layoutPolicy.", "RangeScenarios.tsx:22 and RangeFactors.tsx:25 stack then reflow with container breakpoints.", "RangeCalculator.tsx:33 stacks controls/results and reflows at @2xl.", "RangeMatrix.tsx:38,50 retains three speed columns with min-w-0 and break-words.", "RangeTips.tsx:16 reflows from one to two/four columns."],
+    "issues": [
+      {"file": "web\\src\\components\\ui\\Slider.tsx", "line": 104, "rule": "MDC-040 mobile target reachability", "detail": "Slider has a h-9 (36px) wrapper and h-2 input. The source does not demonstrate a 44px effective touch target or a documented spacing exception.", "fix": "Shared Slider owner should provide a non-overlapping 44px mobile hit area without changing numeric bounds, labels, keyboard semantics or density preferences; verify actual target geometry.", "owner": "shared", "confidence": "medium"}
+    ],
+    "verifiedViewports": [],
+    "unverifiedViewports": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "limits": "Reflow classes are source evidence only. Overflow, long translations, chart/table open states, zoom and actual mobile/desktop geometry were not rendered."
+  },
+  "accessibility": {
+    "sourceEvidence": ["PageContainer.tsx:194-212 retains a programmatic route-focus heading.", "LayoutCard.tsx:29,39-42 links its title; CardGrid.tsx:32 provides a named group.", "Slider.tsx:70-75,89-93,107-120 supplies stable ID, label association, native range semantics, aria-valuetext and focus classes.", "RangeCurve.tsx:35-41 supplies localized chart ariaLabel and table data columns.", "RangeTips.tsx:16-22 uses a list and hides decorative icons; RangeFactors.tsx:30 and helpers.tsx:22-25 hide decorative icons.", "AIFeatureCard.tsx:297-301 supplies disabled, aria-disabled, aria-busy and contextual action name."],
+    "issues": [
+      {"file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 52, "rule": "MDC-040 / MDC-026 asynchronous announcements", "detail": "Page passes query but not loading or busy to PageLayout. PageContainer's aria-busy and useLoadAnnouncement read explicit loading/busy/error props, not query, so the inspected call does not connect projection loading to that page-level announcement path.", "fix": "Use the existing busy/announcement contract without setting full-page loading that would replace all children. Preserve progressive sections and optional AI independence; verify actual live-region behavior before claiming a11y acceptance.", "owner": "page", "confidence": "high"}
+    ],
+    "limits": "Keyboard navigation, actual focus restoration, accessible matrix reading order, chart data-view reachability, touch operation, contrast, forced colors, screen readers and reduced-motion behavior were not exercised."
+  },
+  "states": {
+    "noVehicle": "ProjectedRangePage.tsx:39-49 renders a localized selection notice; header owns the action. useSelectedVehicle does not expose vehicle-list loading/failure here, so unresolved/failed fleet loading can share this presentation with no selection.",
+    "initialLoading": "RangeSourceSlot.tsx:14 preserves section skeleton geometry; RangeSummary.tsx:33 suppresses readings during initial loading. Page does not replace all content with a single loading gate.",
+    "emptyUnavailable": "Each section uses its own missing predicate and localized explanation; summary metrics use null rather than fabricated zero. Tips remain available for a selected vehicle independent of projection success.",
+    "fatalError": "RangeSourceSlot.tsx:15 and RangeSummary.tsx:27-30 render QueryError with source.retry; neighboring AI and tips remain mounted.",
+    "retainedRefreshFailure": "useDataState.ts:37-52 forwards query data/error/fetch status. dataState.ts:166-172 documents retained-data failure/paused handling; SourceTrustNotice.tsx:8 delegates retained warnings.",
+    "offlineInitial": "SourceTrustNotice.tsx:9-18 renders a paused request notice and retry action rather than claiming loaded measurements.",
+    "partialMissing": "knownNumber and safeArray distinguish missing numeric inputs and lists. Calculator only runs with known battery/capacity, but its existing efficiency fallback still produces a modeled estimate when a matrix bucket is missing.",
+    "ai": "withAiFeature.tsx:46-48 hides the inner feature when disabled; AIRangePrediction.tsx:39-40 gates invalid vehicle IDs; AIFeatureCard.tsx:259-260,297-299 prevents another start during streaming. Output lifecycle rendering is delegated to AiOutputPanel and was not separately audited.",
+    "issues": [
+      {"file": "web\\src\\features\\battery\\components\\projected-range-modernization\\helpers.tsx", "line": 35, "rule": "MDC-026 / MDC-045 inferred data provenance", "detail": "interpolateRange uses a deterministic efficiency formula for a missing bucket and 170 Wh/km for invalid/nonpositive efficiency, but its return value carries no indication of learned versus fallback provenance. RangeCalculator presents both results through the same numeric display.", "fix": "Preserve the formula, clamping, rounding and all existing output values. Add explicit local provenance/reason metadata and localized fallback context so users can distinguish an estimate from learned evidence; do not remove the calculator or invent measured data.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 39, "rule": "MDC-026 unresolved scope states", "detail": "The no-active-ID branch cannot distinguish unresolved vehicle loading, failed fleet lookup and genuinely empty fleet because it receives only the selected ID.", "fix": "If integration requires distinct feedback, extend/reuse the existing selected-vehicle source contract rather than adding a duplicate fleet fetch or local vehicle picker; keep the current prompt and shared header ownership.", "owner": "integration", "confidence": "medium"}
+    ],
+    "limits": "No states were mounted or network responses simulated. Source handling is not proof of runtime recovery, cancellation or retained-data correctness."
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\battery\\components\\projected-range-modernization\\helpers.tsx", "line": 8, "rule": "MDC-010 / mission 43 neon and saturated decoration", "detail": "Retained exported effColor returns bg-neon-green, bg-neon-amber, bg-emerald-500 and bg-red-500 at lines 8-11. Production matrix cells use matrixTone instead, so visible neon in the mounted matrix is not established. Page still publicly re-exports effColor at line 22.", "fix": "Preserve exported helper compatibility and thresholds while adopting existing semantic severity tones through an explicitly coordinated consumer review; do not assert an active visual defect or delete the export.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\components\\ai\\AIFeatureCard.tsx", "line": 296, "rule": "MDC-010 / MDC-012 accent and fixed hue noise", "detail": "Shared AI action hardcodes cyan border, background, text and focus colors; badge at line 214 also hardcodes cyan styling. These bypass neutral/semantic theme variables. No rendered saturation or contrast failure was measured.", "fix": "Shared AI owner should use restrained existing semantic tokens for badge/action states while preserving Helix identity, labels, streaming/disabled behavior and current props; do not patch this page independently.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\components\\ui\\Slider.tsx", "line": 119, "rule": "MDC-010 semantic accent ownership", "detail": "Slider uses fixed accent-cyan-500 and ring-cyan-500 at lines 119-120 rather than the existing theme accent. This is a shared source-level color consistency risk, not measured fluorescent UI.", "fix": "Shared Slider owner should reuse the existing semantic accent/focus tokens and retain a visible focus indicator, native semantics and forced-color behavior.", "owner": "shared", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeCurve.tsx", "line": 3, "rule": "MDC-002 category barrel imports", "detail": "Eight domain components import LayoutCard/ChartCard from @/components/layout/layout-reference rather than @/components/layout; RangeSummary additionally imports StatMetric from the stat-reference subpath. Page itself already uses the layout category barrel.", "fix": "Switch only feature callers to established layout/data-display category exports while retaining the existing implementations and props; do not create replacements or change shared internal import policy.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeTips.tsx", "line": 9, "rule": "MDC-044 / MDC-045 display-only preference conversion", "detail": "Localized speed tip embeds '110 km/h' rather than using the same selected speed formatter as calculator/scenarios. The message's numerical advice is preserved but its unit display ignores the user's speed preference.", "fix": "Keep the 110 km/h-equivalent advice, format 110/3.6 m/s with existing useUnits and interpolate a localized placeholder using the canonical catalog owner. Do not change the recommendation or wire/cache values.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\components\\ai\\AIRangePrediction.tsx", "line": 11, "rule": "mission 33 source contract accuracy", "detail": "Header comment cites GET /vehicles/{id}/range/projection, while this page calls /analytics/range-projection and router.go:3343 exposes a different vehicle-scoped path (/battery/projected-range). The comment is not reliable endpoint evidence.", "fix": "AI owner should correct the comment to the actual inspected page endpoint without changing routing or trainer behavior.", "owner": "shared", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "The page is already decomposed with source-trust adapters, existing layouts, restrained local surfaces and unit-aware displays. Prioritize estimate provenance, page loading announcement wiring and shared Slider target/color treatment; then finish category import and localized tip consistency. No runtime breakage or visual acceptance is asserted."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Slider semantic accent and mobile hit-area review",
+      "owner": "web\\src\\components\\ui\\Slider.tsx",
+      "props": ["value", "min", "max", "step", "onChange", "label", "formatValue", "disabled", "id", "className"],
+      "variants": ["existing native single-thumb slider; no new slider implementation"],
+      "states": ["default", "focus-visible", "disabled", "mobile touch", "forced colors"],
+      "usedBy": ["ProjectedRangePage > RangeCalculator speed", "ProjectedRangePage > RangeCalculator temperature"],
+      "dependsOn": ["existing theme accent/focus tokens", "measured 44px effective hit area or documented WCAG spacing exception"],
+      "preserve": ["native keyboard behavior", "label association", "aria-valuetext", "saved display preferences", "numeric bounds and step values"],
+      "evidence": ["web\\src\\components\\ui\\Slider.tsx:104-120"]
+    },
+    {
+      "name": "Existing AI feature card token alignment and range comment correction",
+      "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "relatedOwner": "web\\src\\components\\ai\\AIRangePrediction.tsx",
+      "props": ["title", "description", "buttonLabel", "badgeLabel", "canStart", "stream", "buttonPlacement", "inputSlot", "children"],
+      "variants": ["existing inline/below placement", "existing Helix badge"],
+      "states": ["idle", "streaming", "disabled", "focus-visible", "hover", "light/dark theme"],
+      "usedBy": ["ProjectedRangePage > AIRangePrediction"],
+      "dependsOn": ["existing semantic theme tokens", "centralized shared-owner consumer review"],
+      "preserve": ["AI-off visibility gate", "contextual accessible action name", "Ask Helix visible action", "stream output/error/activity/usage", "positive-ID and double-start guards"],
+      "evidence": ["web\\src\\components\\ai\\AIFeatureCard.tsx:214,296-301", "web\\src\\components\\ai\\AIRangePrediction.tsx:11"]
+    },
+    {
+      "name": "Canonical localized speed-tip placeholder",
+      "owner": "canonical range.tip.speed catalog owner; exact catalog file not inspected",
+      "props": ["range.tip.speed with formatted speed interpolation"],
+      "variants": ["existing locale and speed-unit preferences"],
+      "states": ["all selected display speed units"],
+      "usedBy": ["ProjectedRangePage > RangeTips"],
+      "dependsOn": ["existing useUnits.formatSpeed", "centralized canonical catalog ownership"],
+      "preserve": ["110 km/h-equivalent numerical advice", "all four tips", "existing translation key identity"],
+      "evidence": ["web\\src\\features\\battery\\components\\projected-range-modernization\\RangeTips.tsx:9"]
+    }
+  ],
+  "competingImplementations": [
+    {"name": "effColor versus matrixTone", "file": "web\\src\\features\\battery\\components\\projected-range-modernization\\helpers.tsx", "line": 7, "detail": "Two color mappings retain the same efficiency thresholds; matrixTone is used by current matrix cells, effColor remains a public compatibility export. Other effColor consumers were not searched because they are outside this page dependency scope.", "decision": "Reuse semantic matrixTone; preserve exported API until its owner coordinates compatibility. No replacement universal palette is needed."},
+    {"name": "Range model fallback versus optional AI learned-envelope narrative", "file": "web\\src\\components\\ai\\AIRangePrediction.tsx", "line": 98, "detail": "AI description explicitly compares learned buckets with the static heuristic projection. These are distinct existing capabilities, not permission to replace projection calculations with AI.", "decision": "Keep both capabilities and their separate query/user-action lifecycles; make estimate provenance clear."}
+  ],
+  "preservation": {
+    "sourceHash": "EA3BDF968559AE787DB94B24C7F078EBEC116B090A644229E3344CED84DBC1DE",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 77,
+    "pageSpecificDependencyLineCount": 494,
+    "pagePlusProjectedRangeDependencyLineCount": 571,
+    "countMethod": "PowerShell Get-Content count for the page and all eleven directly scoped projected-range-modernization files; BatteryEvidenceBrief and shared dependencies are excluded from this subtotal.",
+    "sectionCount": 9,
+    "sections": [
+      {"name": "Range summary metrics", "file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 54, "count": 1, "content": ["Your Estimate", "Tesla Estimate", "Battery", "Usable Capacity", "Health Factor", "source snapshot provenance and freshness", "existing OperationalBrief metric detail pipeline"]},
+      {"name": "Efficiency", "file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 57, "count": 1, "content": ["efficiency gauge", "accuracy_note"]},
+      {"name": "Range Projection Curve", "file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 58, "count": 1, "content": ["rated and projected series", "battery-percent axis", "display-distance axis", "current battery reference", "legend hidden-series state", "canonical chart data columns"]},
+      {"name": "Optional AI range prediction", "file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 62, "count": 1, "content": ["AI gate", "learned-envelope description", "user-started stream", "Helix output lifecycle"]},
+      {"name": "Range Scenarios", "file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 64, "count": 1, "content": ["all scenario names", "range", "speed", "temperature", "efficiency", "positive sample counts", "extras", "current marker", "scenario icons"]},
+      {"name": "Personal Efficiency Matrix", "file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 67, "count": 1, "content": ["four temperature rows", "three speed columns", "12 bucket cells", "efficiency values", "sample counts", "missing cell markers", "semantic tones"]},
+      {"name": "What If Calculator", "file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 68, "count": 1, "content": ["speed and temperature controls", "range and efficiency output", "formatted conditions", "missing-input explanation"]},
+      {"name": "Range Factors", "file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 73, "count": 1, "content": ["all factor names", "signed percent impacts", "descriptions", "semantic badges", "icons"]},
+      {"name": "Tips to Maximize Range", "file": "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx", "line": 74, "count": 1, "content": ["speed advice", "plugged-in preconditioning", "seat heaters", "elevation planning"]}
+    ],
+    "additionalSurfaces": ["Localized no-vehicle notice at page:39-49", "SourceTrustNotice at page:53", "Page title/subtitle/help and query freshness through existing PageLayout/PageContainer"],
+    "actions": [
+      "Existing header-owned vehicle selection, URL/persisted vehicle scope and first-vehicle fallback; no new local selector.",
+      "Speed slider default 80 km/h, min 30, max 150, step 5; display-only conversion.",
+      "Temperature slider default 20 Celsius, min -20, max 40, step 1.",
+      "Retry fatal projection failures and paused requests through existing source.retry.",
+      "Existing rated/projected legend visibility via chartKey projected-range-curve.",
+      "Keep canonical chart data-table and metric detail-review capabilities; exact open-state affordances were not rendered.",
+      "Explicit Ask Helix / Train range model action; disabled while invalid scope or streaming; vehicle-scoped stream reset.",
+      "Retain public effColor, scenarioIcon and interpolateRange exports."
+    ],
+    "dataBehavior": [
+      "Keep one encoded vehicle_id projection query, its exact key, inherited cache/retry policy and cancellation forwarding.",
+      "Keep snapshot semantics rather than attaching workspace date bounds without a backend contract.",
+      "Do not change kilometre/kmh/Whkm response fields, raw cache data or analytics calculations in a presentation change; current frontend unit conversion is preserved and backend units remain unverified.",
+      "Unknown numeric data remains null/dash; absent arrays remain empty; no fabricated source readings.",
+      "Keep known zero distinct from absent data and preserve accuracy note, extras and samples.",
+      "Keep learned efficiency lookup and deterministic calculator fallback, bucket boundaries, battery clamping and rounding; clarify provenance rather than deleting inferred estimates.",
+      "Keep fatal versus retained-refresh handling, paused notice, local empty messages and independently mounted tips/AI.",
+      "Keep localization, display-unit/number preferences, theme and legend persistence; no persistence IDs or route aliases are changed."
+    ],
+    "sourceEdits": false
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 source-only audit",
+    "routeStatus": "The exact assigned routes are recorded; route mounting, aliases and navigation were not exercised or independently scanned.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "reducedMotion": "UNVERIFIED",
+    "tests": "NOT RUN",
+    "typescript": "NOT RUN: contract centralizes project validation; no TypeScript acceptance claimed.",
+    "lintBuild": "NOT RUN: no full-repository lint/build or Git operations permitted.",
+    "skillScript": "Read audit.sh but did not execute because it unconditionally runs project-wide TypeScript and transitive request-contract discovery; used bounded source pattern searches instead.",
+    "scopedPatternResults": {
+      "scope": "ProjectedRangePage.tsx, eleven projected-range-modernization files and BatteryEvidenceBrief.tsx",
+      "staticInlineStyles": 0,
+      "rawButtonInputTextareaSelectTable": 0,
+      "directRechartsLeafletFramerMotionImports": 0,
+      "oldRelativeApiImports": 0,
+      "explicitPureWhiteTextClasses": 0,
+      "explicitGlowClasses": 0,
+      "neonClassOccurrences": 2,
+      "limits": "Counts refer only to inspected source text, not theme resolution, rendered colors, shared primitives or runtime behavior."
+    },
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx -Algorithm SHA256", "exitCode": 0, "output": "EA3BDF968559AE787DB94B24C7F078EBEC116B090A644229E3344CED84DBC1DE"},
+      {"command": "Scoped rg searches on page, direct presentation dependencies and useAnalytics.ts/router.go endpoint strings", "result": "Source citations recorded throughout; no fabricated runtime evidence."},
+      {"command": "rg range/train|RangePrediction internal\\api\\ai --glob *router*.go", "result": "Search paths do not exist: internal\\api\\ai; exact AI endpoint router registration unresolved."},
+      {"command": "Inline Python source-only validation via PowerShell: parse owned JSON, assert all 20 schema fields, exact page/routes, current SHA256/line count, issue field/line bounds and scoped source pattern counts", "exitCode": 0, "output": "JSON schema fields: PASS (20/20)\nExact page/routes: PASS\nCurrent source SHA256: EA3BDF968559AE787DB94B24C7F078EBEC116B090A644229E3344CED84DBC1DE\nPage line count: 77\nScoped source counts: {\"staticInlineStyles\": 0, \"rawButtonInputTextareaSelectTable\": 0, \"directRechartsLeafletFramerMotionImports\": 0, \"oldRelativeApiImports\": 0, \"explicitPureWhiteTextClasses\": 0, \"explicitGlowClasses\": 0, \"neonClassOccurrences\": 2}\nIssue required fields and source-line bounds: PASS"}
+    ],
+    "ownership": ["docs\\frontend-audits\\audit-page-073.json", ".agent-status\\audit-page-073.txt"],
+    "limitations": "No source edits, production actions, screenshots, browser interaction, full-repository checks, backend query investigation or broader consumer graph audit. Shared APIs are cited only as used by this page; delegated output owners not inspected are explicitly unknown."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\ProjectedRangePage.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeSummary.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeEfficiency.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeCurve.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeScenarios.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeMatrix.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeCalculator.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeFactors.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeTips.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeSourceSlot.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\SourceTrustNotice.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\helpers.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\components\\ai\\AIRangePrediction.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ui\\Slider.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "internal\\api\\router.go"
+  ]
+}

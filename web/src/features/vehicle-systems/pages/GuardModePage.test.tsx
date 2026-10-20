@@ -34,34 +34,6 @@ import type { ReactNode } from 'react';
 import type { GuardConfig, GuardEvent } from '@/api/hooks/useGuard';
 import type { Geofence } from '@/types/location';
 
-/* ── react-i18next: deterministic English-fallback rendering ─────────────── */
-vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  return {
-    ...actual,
-    useTranslation: () => ({
-      t: (key: string, fallbackOrOpts?: unknown, maybeOpts?: unknown) => {
-        const fallback = typeof fallbackOrOpts === 'string' ? fallbackOrOpts : undefined;
-        const opts =
-          typeof fallbackOrOpts === 'object' && fallbackOrOpts !== null
-            ? (fallbackOrOpts as Record<string, unknown>)
-            : (maybeOpts as Record<string, unknown> | undefined);
-        const interpolate = (s: string) =>
-          opts
-            ? Object.keys(opts).reduce(
-                (acc, k) => acc.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(opts[k])),
-                s,
-              )
-            : s;
-        if (opts && typeof opts.defaultValue === 'string') return interpolate(opts.defaultValue);
-        if (fallback != null) return interpolate(fallback);
-        return key;
-      },
-      i18n: { language: 'en', changeLanguage: vi.fn() },
-    }),
-    Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  };
-});
 
 /* ── Hoisted mutable state shared with the (hoisted) vi.mock factories ────── */
 const H = vi.hoisted(() => ({
@@ -109,7 +81,8 @@ vi.mock('@/api/hooks/useLocations', () => ({
 }));
 
 /* Header action wiring (store/query-backed) is out of scope. */
-vi.mock('@/components/forms', () => ({
+vi.mock('@/components/forms', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/forms')>(),
   VehicleSelect: () => <div data-testid="vehicle-select" />,
 }));
 
@@ -246,6 +219,28 @@ function renderPage() {
 
 const kpi = () => within(screen.getByRole('region', { name: 'Guard status overview' }));
 
+function expectMissingMetric(label: string) {
+  const overview = screen.getByRole('region', { name: 'Guard status overview' });
+  expect(within(overview).queryByText(label, { selector: '[data-operational-metric] > :first-child' })).not.toBeInTheDocument();
+}
+function expectPendingMetric(label: string) {
+  const tile = metric(label);
+  expect(tile.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+  expect(tile.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+}
+
+function section(name: string) {
+  const element = document.querySelector(`[data-guard-section="${name}"]`);
+  if (!(element instanceof HTMLElement)) throw new Error(`Missing guard ${name} section`);
+  return within(element);
+}
+
+function metric(label: string) {
+  const element = kpi().getByText(label, { selector: '[data-operational-metric] > :first-child' }).closest('[data-operational-metric]');
+  if (!(element instanceof HTMLElement)) throw new Error(`Missing guard ${label} metric`);
+  return element;
+}
+
 beforeEach(() => {
   H.vehicle.vehicleId = 42;
   H.vehicle.vehicle = { display_name: 'Model Y Test' };
@@ -274,11 +269,11 @@ describe('GuardModePage — status surfaces', () => {
     renderPage();
 
     // Triggered banner (latest event is unacknowledged + not a test alert).
-    expect(screen.getByText('Guard Alert Triggered!')).toBeInTheDocument();
+    expect(screen.getByText('Guard alert triggered!')).toBeInTheDocument();
 
     // Six KPI tiles, scoped to the overview region to avoid label collisions.
     const band = kpi();
-    expect(band.getByText('Guard State')).toBeInTheDocument();
+    expect(band.getByText('Guard state')).toBeInTheDocument();
     expect(band.getByText('Triggered')).toBeInTheDocument();
     expect(band.getByText('On')).toBeInTheDocument(); // sentry
     expect(band.getByText('Locked')).toBeInTheDocument(); // lock
@@ -302,7 +297,7 @@ describe('GuardModePage — status surfaces', () => {
     });
     renderPage();
 
-    expect(screen.queryByText('Guard Alert Triggered!')).not.toBeInTheDocument();
+    expect(screen.queryByText('Guard alert triggered!')).not.toBeInTheDocument();
     const band = kpi();
     expect(band.getByText('Disarmed')).toBeInTheDocument();
     expect(band.getByText('Unlocked')).toBeInTheDocument();
@@ -322,24 +317,34 @@ describe('GuardModePage — status surfaces', () => {
     install({ state: makeQuery({ data: unverified }) });
     renderPage();
 
-    expect(screen.getByText('Lock state unavailable')).toBeInTheDocument();
-    expect(screen.getByText('Sentry status unavailable')).toBeInTheDocument();
+    expect(section('status').getByText('Lock state unavailable')).toBeInTheDocument();
+    expect(section('status').getByText('Sentry status unavailable')).toBeInTheDocument();
+    expectMissingMetric('Lock state');
+    expectMissingMetric('Sentry mode');
     expect(screen.queryByText('Vehicle unlocked')).not.toBeInTheDocument();
     expect(screen.queryByText('Sentry mode off')).not.toBeInTheDocument();
     expect(screen.getByText('Current vehicle location unavailable')).toBeInTheDocument();
     expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
   });
 
-  it('renders KPI skeletons (no metric labels) while the config is loading', () => {
+  it('renders labelled KPI skeletons while config loads without masking returned sources', () => {
     install({ config: makeQuery<GuardConfig>({ isLoading: true, data: undefined }) });
     renderPage();
 
-    // The <section aria-label="Guard status overview"> is replaced by a
-    // skeleton grid while loading, so the metric labels are absent.
-    expect(screen.queryByRole('region', { name: 'Guard status overview' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Guard State')).not.toBeInTheDocument();
+    // Shared stats retain their labelled shell. A loading policy cannot erase
+    // the independently resolved live readings or event counts.
+    expect(screen.getByRole('region', { name: 'Guard status overview' })).toBeInTheDocument();
+    expectPendingMetric('Guard state');
+    expect(metric('Guard state')).not.toHaveTextContent('Armed');
+    expectPendingMetric('Sensitivity');
+    expect(metric('Lock state')).toHaveTextContent('Locked');
+    expect(metric('Total events')).toHaveTextContent('0');
+    expect(document.querySelector('[data-guard-section="settings"] [class*="--skeleton-bg"]')).toBeInTheDocument();
+    expect(section('settings').getByRole('button', { name: 'Save settings' })).toBeDisabled();
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
     // The page shell (title) still renders.
-    expect(screen.getByRole('heading', { level: 1, name: 'Guard Mode' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Guard mode' })).toBeInTheDocument();
   });
 });
 
@@ -353,7 +358,7 @@ describe('GuardModePage — arm/disarm + settings', () => {
     });
     renderPage();
 
-    const guardSwitch = screen.getByRole('switch', { name: 'Guard Mode' });
+    const guardSwitch = screen.getByRole('switch', { name: 'Guard mode' });
     expect(guardSwitch).toHaveAttribute('aria-checked', 'false');
 
     fireEvent.click(guardSwitch);
@@ -378,7 +383,7 @@ describe('GuardModePage — arm/disarm + settings', () => {
     });
     renderPage();
 
-    const autoPanicSwitch = screen.getByRole('switch', { name: 'Auto-Panic on Trigger' });
+    const autoPanicSwitch = screen.getByRole('switch', { name: 'Auto-panic on trigger' });
     // Reflects persisted state.
     expect(autoPanicSwitch).toHaveAttribute('aria-checked', 'true');
 
@@ -388,7 +393,7 @@ describe('GuardModePage — arm/disarm + settings', () => {
 
     // Also change sensitivity, then Save — both draft edits must be persisted.
     fireEvent.change(screen.getByLabelText('Sensitivity'), { target: { value: 'low' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Settings' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
 
     expect(H.setConfig.mutate).toHaveBeenCalledWith(
       expect.objectContaining({ vehicleId: 42, enabled: true, sensitivity: 'low', auto_panic: false }),
@@ -402,8 +407,8 @@ describe('GuardModePage — arm/disarm + settings', () => {
     });
     renderPage();
 
-    fireEvent.change(screen.getByLabelText('Home Geofence'), { target: { value: '7' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Settings' }));
+    fireEvent.change(screen.getByLabelText('Home geofence'), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
 
     expect(H.setConfig.mutate).toHaveBeenCalledWith(
       expect.objectContaining({ home_geofence_id: 7 }),
@@ -418,18 +423,18 @@ describe('GuardModePage — emergency panic', () => {
 
     // No dialog until the Emergency button is pressed.
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Activate Panic/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Activate panic/i }));
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('Activate Panic Mode?')).toBeInTheDocument();
+    expect(within(dialog).getByText('Activate panic mode?')).toBeInTheDocument();
 
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Activate Panic' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Activate panic' }));
     expect(H.panic.mutate).toHaveBeenCalledWith(42);
   });
 
   it('does not trigger panic when the dialog is cancelled', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /Activate Panic/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Activate panic/i }));
 
     const dialog = screen.getByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
@@ -444,11 +449,15 @@ describe('GuardModePage — emergency panic', () => {
     install({ config: makeQuery<GuardConfig>({ data: undefined }) });
     renderPage();
 
-    expect(screen.getByRole('button', { name: /Activate Panic/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Save Settings' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Activate panic/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save settings' })).toBeDisabled();
 
     // Guard toggle is a no-op with no vehicle (guarded by activeVehicleId <= 0).
-    fireEvent.click(screen.getByRole('switch', { name: 'Guard Mode' }));
+    const guardSwitch = screen.getByRole('switch', { name: 'Guard mode' });
+    expect(guardSwitch).toBeDisabled();
+    expect(section('arming').getByText('Saved policy unavailable')).toBeInTheDocument();
+    expect(section('arming').getByText('Source unavailable; no security conclusion can be drawn.')).toBeInTheDocument();
+    fireEvent.click(guardSwitch);
     expect(H.setConfig.mutate).not.toHaveBeenCalled();
   });
 });
@@ -494,8 +503,11 @@ describe('GuardModePage — event timeline', () => {
     install({ events: errored });
     const { rerender } = renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(section('events').getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(section('events').getByRole('button', { name: 'Retry' }));
     expect(errored.refetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(metric('Lock state')).toHaveTextContent('Locked');
 
     // Now flip to an empty (but successful) feed → honest empty state, no error.
     install({ events: makeQuery<GuardEvent[]>({ data: [] }) });
@@ -528,7 +540,12 @@ describe('GuardModePage — live map', () => {
 
   it('shows the no-location empty state, and the map error branch offers Retry', () => {
     // (a) location absent → empty state.
-    install({ state: makeQuery({ data: makeState({ latitude: 0, longitude: 0 }) }) });
+    // A fresh *verified* 0,0 is a valid coordinate, not missing data. Here the
+    // default zero coordinates were never reported by the vehicle.
+    install({ state: makeQuery({ data: {
+      ...makeState({ latitude: 0, longitude: 0 }),
+      verifiedFields: ['is_locked', 'sentry_mode'],
+    } }) });
     const { unmount } = renderPage();
     expect(screen.getByText('Current vehicle location unavailable')).toBeInTheDocument();
     expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
@@ -538,7 +555,122 @@ describe('GuardModePage — live map', () => {
     const errored = makeQuery({ isError: true, error: new Error('state boom'), data: undefined });
     install({ state: errored, events: makeQuery<GuardEvent[]>({ data: [] }) });
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    fireEvent.click(section('map').getByRole('button', { name: 'Retry' }));
     expect(errored.refetch).toHaveBeenCalledTimes(1);
+    expect(section('events').getByText('No guard events yet')).toBeInTheDocument();
+  });
+});
+
+describe('GuardModePage vehicle identity', () => {
+  function mountWorkspace() {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const tree = () => (
+      <MemoryRouter initialEntries={['/guard-mode']}>
+        <QueryClientProvider client={client}>
+          <GuardModePage />
+        </QueryClientProvider>
+      </MemoryRouter>
+    );
+    const view = render(tree());
+    return { refresh: () => view.rerender(tree()) };
+  }
+
+  it('discards previous vehicle drafts and requires a new panic confirmation after selection changes', () => {
+    const view = mountWorkspace();
+    fireEvent.change(screen.getByLabelText('Sensitivity'), { target: { value: 'low' } });
+    fireEvent.change(screen.getByLabelText('Home geofence'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-panic on trigger' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Activate panic' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    H.vehicle.vehicleId = 84;
+    H.vehicle.vehicle = { display_name: 'Second test vehicle' };
+    install({
+      config: makeQuery<GuardConfig>({
+        data: makeConfig({
+          vehicle_id: 84, enabled: false, sensitivity: 'medium',
+          home_geofence_id: 7, auto_panic: true,
+        }),
+      }),
+      state: makeQuery({ data: makeState({ vehicle_id: 84 }) }),
+      geofences: [makeGeofence({ id: '7', name: 'Test office' })],
+      events: makeQuery<GuardEvent[]>({
+        data: [makeEvent({ id: 84, vehicle_id: 84, event_type: 'test_alert' })],
+      }),
+    });
+    view.refresh();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Sensitivity')).toHaveValue('medium');
+    expect(screen.getByLabelText('Home geofence')).toHaveValue('7');
+    expect(screen.getByRole('switch', { name: 'Auto-panic on trigger' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenCalledWith({
+      vehicleId: 84, enabled: false, sensitivity: 'medium',
+      home_geofence_id: 7, auto_panic: true,
+    });
+    fireEvent.click(screen.getByRole('switch', { name: 'Guard mode' }));
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 84, enabled: true, sensitivity: 'medium',
+      home_geofence_id: 7, auto_panic: true,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Acknowledge event' }));
+    expect(H.ackEvent.mutate).toHaveBeenCalledWith({ vehicleId: 84, eventId: 84 });
+    fireEvent.click(screen.getByRole('button', { name: 'Activate panic' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Activate panic' }));
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+    expect(H.panic.mutate).toHaveBeenCalledWith(84);
+  });
+
+  it('retains explicit false, no geofence, and confirmation through same-vehicle refreshes', () => {
+    const view = mountWorkspace();
+    fireEvent.change(screen.getByLabelText('Sensitivity'), { target: { value: 'low' } });
+    fireEvent.change(screen.getByLabelText('Home geofence'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-panic on trigger' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Activate panic' }));
+    install({ config: makeQuery<GuardConfig>({ data: makeConfig({ sensitivity: 'medium' }) }) });
+    view.refresh();
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByLabelText('Sensitivity')).toHaveValue('low');
+    expect(screen.getByLabelText('Home geofence')).toHaveValue('');
+    expect(screen.getByRole('switch', { name: 'Auto-panic on trigger' })).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenCalledWith({
+      vehicleId: 42, enabled: true, sensitivity: 'low',
+      home_geofence_id: null, auto_panic: false,
+    });
+  });
+
+  it('revokes the confirmation on vehicle deselection without removing independent sections', () => {
+    const view = mountWorkspace();
+    fireEvent.click(screen.getByRole('button', { name: 'Activate panic' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    H.vehicle.vehicleId = 0;
+    H.vehicle.vehicle = null;
+    install({
+      config: makeQuery<GuardConfig>(),
+      events: makeQuery<GuardEvent[]>(),
+      state: makeQuery<ReturnType<typeof makeState>>(),
+    });
+    view.refresh();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Activate panic' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save settings' })).toBeDisabled();
+    expect(screen.getByRole('switch', { name: 'Guard mode' })).toBeDisabled();
+    expect(screen.getByRole('region', { name: 'Guard status overview' })).toBeInTheDocument();
+    for (const name of ['map', 'arming', 'panic', 'settings', 'status', 'events']) {
+      expect(document.querySelector(`[data-guard-section="${name}"]`)).toBeInTheDocument();
+    }
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.ackEvent.mutate).not.toHaveBeenCalled();
   });
 });

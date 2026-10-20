@@ -1,17 +1,28 @@
-import { type ReactNode, useState, useEffect, useRef } from 'react';
+import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Skeleton, QueryError } from '@/components/feedback';
+import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { HelpTooltip, PinButton } from '@/components/ui';
+import type { DataState } from '@/api/dataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 import {
-  DataFreshness,
-  DataFreshnessAuto,
+  FreshnessDot,
+  FreshnessDotAuto,
   type FreshnessQuery,
 } from '@/components/data-display';
 import type { WidgetHelp } from './types';
+import { WidgetTitleContext } from './WidgetTitleContext';
 
-interface WidgetShellProps {
+export interface WidgetShellProps {
   title?: string;
+  description?: string;
+  /** Localized status text/badge; source trust is represented separately by dataState. */
+  status?: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+  loadingContent?: ReactNode;
+  /** Reuse useDataState(query); retained data is never replaced on refresh failure. */
+  dataState?: DataState<unknown>;
   icon?: ReactNode;
   loading?: boolean;
   error?: string | null;
@@ -20,7 +31,7 @@ interface WidgetShellProps {
   actions?: ReactNode;
   /**
    * Convenience: pass an entire TanStack Query result and the shell will
-   * render `<DataFreshnessAuto query={query} />` in the header. Mutually
+   * render `<FreshnessDotAuto query={query} />` in the header. Mutually
    * exclusive with the granular `updatedAt`/`isFetching`/`isStale`/`isError`/
    * `onRefresh` props (those win when supplied for backward compatibility).
    */
@@ -35,6 +46,8 @@ interface WidgetShellProps {
   isError?: boolean;
   /** Callback to manually refetch the widget data */
   onRefresh?: () => void;
+  /** Automatic polling cadence for the widget query. Omit for manual 15-minute freshness. */
+  refreshIntervalMs?: number;
   /**
    * Optional help metadata. When provided AND the widget has a visible
    * `title`, a small "?" tooltip is rendered next to the title with the
@@ -52,67 +65,39 @@ interface WidgetShellProps {
 }
 
 export function WidgetShell({
-  title, icon, loading, error, children, noPadding, actions,
+  title, description, status, footer, className, loadingContent,
+  dataState, icon, loading, error, children, noPadding, actions,
   query,
-  updatedAt, isFetching, isStale, isError, onRefresh, help,
+  updatedAt, isFetching, isStale, isError, onRefresh, refreshIntervalMs, help,
   widgetId, dashboardId,
 }: WidgetShellProps) {
   const { t } = useTranslation();
-  // Pulse animation on data change
-  const [justUpdated, setJustUpdated] = useState(false);
-  const prevUpdatedAt = useRef<number | undefined>(undefined);
-
-  // Resolve the effective updatedAt for the pulse-on-change effect: the
-  // explicit prop wins, otherwise we fall back to the query's value.
-  const effectiveUpdatedAt = updatedAt ?? query?.dataUpdatedAt;
-
-  useEffect(() => {
-    if (
-      effectiveUpdatedAt &&
-      effectiveUpdatedAt > 0 &&
-      prevUpdatedAt.current !== undefined &&
-      prevUpdatedAt.current !== effectiveUpdatedAt
-    ) {
-      setJustUpdated(true);
-      const timer = setTimeout(() => setJustUpdated(false), 1500);
-      prevUpdatedAt.current = effectiveUpdatedAt;
-      return () => clearTimeout(timer);
-    }
-    prevUpdatedAt.current = effectiveUpdatedAt;
-    // Clear any lingering pulse when the effective timestamp is reset or left
-    // unchanged (e.g. a refetch regresses dataUpdatedAt back to 0). The pending
-    // timer from a prior pulse is cancelled by this effect's cleanup, so
-    // without this reset the green glow would stay stuck on.
-    setJustUpdated(false);
-  }, [effectiveUpdatedAt]);
-
-  if (loading) return <Skeleton className="h-full rounded-xl" />;
-  if (error) return (
-    <div className="h-full flex items-center justify-center p-4">
-      <QueryError error={new Error(error)} />
-    </div>
-  );
+  const initialLoading = dataState ? dataState.status === 'initial' : loading;
+  const fatalError = dataState ? dataState.fatalError : error ? new Error(error) : null;
+  const retry = onRefresh ?? dataState?.retry ?? (query ? () => { void query.refetch(); } : undefined);
 
   const showFreshness = updatedAt !== undefined || query !== undefined;
-  // Compact (dot-only) when widget has no title (typically 1×1 widgets)
-  const freshnessCompact = !title;
-
+  const degradedContent = Boolean(
+    isStale || isError || query?.isStale || query?.isError || dataState?.status === 'stale',
+  );
   let freshnessEl: ReactNode = null;
   if (showFreshness) {
     if (updatedAt !== undefined) {
       freshnessEl = (
-        <DataFreshness
+        <FreshnessDot
           updatedAt={updatedAt > 0 ? updatedAt : null}
           isFetching={isFetching ?? false}
           isStale={isStale ?? false}
           isError={isError ?? false}
-          onRefresh={onRefresh}
-          compact={freshnessCompact}
+          onRefresh={retry}
+          refreshIntervalMs={refreshIntervalMs}
+          manual={refreshIntervalMs == null}
+          compact={!title}
         />
       );
     } else if (query) {
-      freshnessEl = (
-        <DataFreshnessAuto query={query} compact={freshnessCompact} />
+        freshnessEl = (
+        <FreshnessDotAuto query={query} refreshIntervalMs={refreshIntervalMs} manual={refreshIntervalMs == null} compact={!title} />
       );
     }
   }
@@ -120,29 +105,35 @@ export function WidgetShell({
   return (
     <div
       className={cn(
-        'relative h-full flex flex-col transition-shadow duration-slow',
-        justUpdated && 'shadow-[0_0_12px_rgba(34,197,94,0.15)]',
+        dashboardTokens.shell,
+        'min-h-0 flex-1',
+        className,
       )}
+      aria-busy={Boolean(initialLoading || dataState?.isRefreshing)}
+      data-data-state={dataState?.status}
     >
       {title ? (
-        <div className="flex-shrink-0 flex items-center justify-between px-4 pt-3 pb-1">
-          <div className="flex items-center gap-1.5">
-            {icon}
-            <h3 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">{title}</h3>
-            {help && (
-              <HelpTooltip
-                size="xs"
-                placement="top"
-                text={help.text}
-                i18nKey={help.i18nKey}
-                defaultValue={help.defaultValue}
-                learnMore={help.learnMore}
-                ariaLabel={t('widget.moreInfoAbout', 'More info about {{title}}', { title })}
-              />
-            )}
+        <div className={dashboardTokens.header} data-role="widget-shell-header">
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-start gap-2">
+              {icon && <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--text-secondary)] [&>svg]:size-4">{icon}</span>}
+              <h3 className={cn(dashboardTokens.title, 'min-w-0 truncate')} title={title}>{title}</h3>
+              {help && (
+                <HelpTooltip
+                  size="xs"
+                  placement="top"
+                  text={help.text}
+                  i18nKey={help.i18nKey}
+                  defaultValue={help.defaultValue}
+                  learnMore={help.learnMore}
+                  ariaLabel={t('widget.moreInfoAbout', 'More info about {{title}}', { title })}
+                />
+              )}
+            </div>
+            {description && <p className={dashboardTokens.description}>{description}</p>}
           </div>
-          <div className="flex items-center gap-2">
-            {freshnessEl}
+          <div className="ms-auto flex shrink-0 items-center gap-1.5">
+            {status}
             {widgetId && dashboardId && (
               <PinButton
                 itemType="widget"
@@ -152,26 +143,50 @@ export function WidgetShell({
               />
             )}
             {actions}
+            {freshnessEl}
           </div>
         </div>
       ) : (
         <>
           {/* Overlay freshness indicator for title-less widgets */}
           {freshnessEl && (
-            <div className="absolute top-1.5 right-1.5 z-[5]">
+            <div className="absolute top-1.5 right-4 z-[5]">
               {freshnessEl}
             </div>
           )}
-          {actions && (
-            <div className="flex-shrink-0 flex justify-end px-4 pt-3 pb-1">
+          {(actions || status || description) && (
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pl-4 pr-4 pb-2 pt-3">
+              {description && <p className={cn(dashboardTokens.description, 'mr-auto')}>{description}</p>}
+              {status}
               {actions}
             </div>
           )}
         </>
       )}
-      <div className={cn('@container flex-1 min-h-0', !noPadding ? 'px-4 pb-3 overflow-auto' : 'overflow-hidden')}>
-        {children}
+      <div
+        data-testid="widget-body"
+        className={cn(
+          dashboardTokens.body,
+          !noPadding ? 'px-4 pb-3' : 'flex flex-col',
+          degradedContent && 'opacity-[0.45] transition-opacity duration-fast motion-reduce:transition-none',
+        )}
+        data-content-degraded={degradedContent || undefined}
+      >
+        {initialLoading ? (
+          loadingContent ?? <Skeleton className="h-full min-h-24 rounded-xl" />
+        ) : fatalError ? (
+          <div className="flex h-full items-center justify-center p-4">
+            <QueryError error={fatalError} onRetry={retry ?? undefined} />
+          </div>
+        ) : (
+          <>
+            {dataState && <StaleRefreshWarning state={dataState} className="mb-2"
+              hideRetry={showFreshness && Boolean(retry || query?.refetch)} />}
+            <WidgetTitleContext.Provider value={title}>{children}</WidgetTitleContext.Provider>
+          </>
+        )}
       </div>
+      {footer && <div className={dashboardTokens.footer}>{footer}</div>}
     </div>
   );
 }

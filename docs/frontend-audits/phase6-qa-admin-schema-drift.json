@@ -1,0 +1,473 @@
+{
+  "item": "phase6-qa-admin-schema-drift",
+  "phase": 6,
+  "mode": "READ_ONLY_SOURCE_QA",
+  "completion": "Source review delivered with confirmed failures; not native/page/application acceptance.",
+  "page": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx",
+  "routes": ["/admin/schema-drift"],
+  "purpose": "Compare current and seed schema fingerprints, object counts and signed deltas without executing remediation.",
+  "primaryGoal": "Evaluate whether the existing source presents trustworthy schema-comparison evidence and preserves recovery, interpretation and exact-copy actions.",
+  "clock": {
+    "startedAt": "2026-10-13T09:20:10.030-07:00",
+    "returnTarget": "2026-10-13T09:40:10.030-07:00",
+    "hardLimit": "2026-10-13T09:45:10.030-07:00",
+    "maximumCommandSeconds": 480,
+    "reviewMethod": "Bounded synchronous reads, source searches and PowerShell scans. No asynchronous jobs started."
+  },
+  "authority": {
+    "queueRow": "migration-queue.md:207",
+    "rollingContract": "migration-queue.md:162-195",
+    "sourceAcceptance": "migration-queue.md:1535",
+    "instructionsRead": [
+      "docs\\orchestrator-loop.md",
+      "docs\\frontend-design-contract.md:1-280,435-645",
+      "docs\\frontend-mission.md:0/1/2/15/16/30/33/34/36/37/43/44/45",
+      "docs\\session-handoff.md:1-150",
+      "docs\\frontend-worker-conventions.md",
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md"
+    ],
+    "precedence": "Explicit assignment permits only this report and repository-root logs\\phase6-qa-admin-schema-drift.log. No heartbeat, queue or web\\logs file written. Root logs is ignored by .gitignore:80.",
+    "historicalEvidence": "Queue records source-only 17/17 tests and lint/style exits 0. This review does not rerun, refresh timestamps of, or promote that historical evidence to native acceptance.",
+    "historicalInventory": "docs\\frontend-audits\\audit-page-020.json inspected; original sections/actions preserved. Historical unsupported-code and header-size findings were source-corrected; old statements are not repeated as current defects."
+  },
+  "dataSources": [
+    {
+      "hook": "useSchemaDrift",
+      "evidence": "web\\src\\api\\hooks\\useOperatorConfidence.ts:103-114",
+      "method": "GET",
+      "path": "/admin/observability/schema-drift",
+      "browserApiPath": "/api/v1/admin/observability/schema-drift",
+      "queryKey": ["admin", "observability", "schema-drift"],
+      "policy": "AbortSignal forwarded; staleTime STANDARD=60000ms; interval SLOW=60000ms; refetchIntervalInBackground=false; retry=1.",
+      "policyEvidence": ["web\\src\\lib\\constants.ts:38", "web\\src\\lib\\constants.ts:58"],
+      "routeEvidence": [
+        "internal\\api\\router.go:3210",
+        "internal\\api\\router.go:4612",
+        "internal\\api\\router.go:4627",
+        "internal\\handler\\v1\\admin_observability_handler.go:34"
+      ],
+      "successContract": "Handler Respond returns {data:{drift,is_different}}; fetchEnvelope unwraps data after request preserves snake_case keys. Fingerprint and Drift JSON tags agree with frontend types.",
+      "successEvidence": [
+        "internal\\handler\\v1\\admin_observability_handler.go:42-51",
+        "internal\\platform\\httputil\\response.go:8-13,33-37",
+        "internal\\app\\adminobssvc\\service.go:134-160",
+        "internal\\schemacheck\\schemacheck.go:40-56",
+        "web\\src\\api\\hooks\\useOperatorConfidence.ts:49-60",
+        "web\\src\\types\\admin-operator-confidence.ts:29-50",
+        "web\\src\\api\\client.ts:84-87,283-288"
+      ],
+      "errorContractStatus": "FAIL",
+      "errorIssue": "SD-01",
+      "bounds": "No page-specific vehicle/date selector, no chart range and no query parameters. This is a deployment-wide instantaneous comparison, not a dated vehicle analysis.",
+      "timestampLimit": "service.go:155 passes an empty expected_generated_at; no current-schema observation time or analysis bounds on the wire. Summary explicitly discloses the limitation at SchemaKpis.tsx:70.",
+      "execution": "NOTRUN: no HTTP calls, database contents, schema queries or boot/migration execution."
+    }
+  ],
+  "checks": [
+    {
+      "id": "mount-and-lazy-route",
+      "status": "PASS",
+      "kind": "static",
+      "evidence": ["web\\src\\App.tsx:279", "web\\src\\App.tsx:714"],
+      "detail": "Existing lazy page and /admin/schema-drift route found. No mounted/authentication acceptance inferred."
+    },
+    {
+      "id": "shared-architecture",
+      "status": "PASS",
+      "kind": "static",
+      "evidence": ["web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:5-20", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-15"],
+      "detail": "Page orchestrates four existing domain sections, typed hook and shared layout/UI/feedback/motion boundaries. No competing source loader."
+    },
+    {
+      "id": "source-preservation",
+      "status": "PASS",
+      "kind": "static-count",
+      "evidence": ["docs\\frontend-audits\\audit-page-020.json:255-287", "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:61-71", "logs\\phase6-qa-admin-schema-drift.log"],
+      "detail": "382 page-plus-component lines against original 378, above 264.6 required minimum. Utility adds 19 lines. Four source sections, three LayoutCards, one OperationalBrief; direct GlassPanel/ChartContainer counts zero, matching original decomposition."
+    },
+    {
+      "id": "initial-loading",
+      "status": "PASS",
+      "kind": "static-control-flow",
+      "evidence": ["web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:26-36", "web\\src\\api\\dataState.ts:189-215", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx:20-28", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaBreakdown.tsx:18", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaGuidance.tsx:15", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx:65-70"],
+      "detail": "All section shells remain; initial content uses skeletons and no measured verdict. PageLayout is not passed a whole-page loading/empty gate."
+    },
+    {
+      "id": "empty-evidence",
+      "status": "PASS",
+      "kind": "static-control-flow",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx:20-36", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaBreakdown.tsx:18-22", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaGuidance.tsx:15-18", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx:68-69"],
+      "detail": "No drift payload yields unmeasured summary and specific missing fingerprint/comparison/guidance states, with shared refresh and external prerequisites. No fabricated zero or clean verdict."
+    },
+    {
+      "id": "fatal-error-and-retry",
+      "status": "PASS",
+      "kind": "static-control-flow",
+      "evidence": ["web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:35-36", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx:73-74", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx:18", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaBreakdown.tsx:18", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaGuidance.tsx:15"],
+      "detail": "Only fatalError replaces section bodies; each section exposes same read-query retry. This does not certify correctness of actual wire error classification (SD-01)."
+    },
+    {
+      "id": "unsupported-page-branch",
+      "status": "PASS",
+      "kind": "static-control-flow-only",
+      "evidence": ["web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:29-31,51-58", "web\\src\\features\\admin\\pages\\SchemaDriftPage.test.tsx:376-413"],
+      "detail": "A supplied ApiError with BOTH 503 and SUBSYSTEM_NOT_CONFIGURED produces one unsupported notice and suppresses contradictory freshness/source error. Other 503s remain recoverable errors. Actual transport does not preserve the nested code (separate FAIL)."
+    },
+    {
+      "id": "retained-refresh-and-pause",
+      "status": "PASS",
+      "kind": "static-control-flow",
+      "evidence": ["web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:35,61-62", "web\\src\\api\\dataState.ts:218-250", "web\\src\\components\\feedback\\DataSourceNotice.tsx:78-81,112-119,160-161"],
+      "detail": "Retained payload survives refresh error and paused fetch; summary marks retained and shared source notice distinguishes Cached/refresh failed versus Paused offline. No server-failure invention from fetchStatus=paused."
+    },
+    {
+      "id": "missing-vs-measured-counts",
+      "status": "PASS",
+      "kind": "static-control-flow",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx:18,51-58", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx:86-89", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaBreakdown.tsx:49-62", "web\\src\\features\\admin\\components\\continuation-admin-1\\schemaPresentation.ts:11-15"],
+      "detail": "Missing values are dashes; finite zero is explicitly 0/Match; positive and negative deltas remain signed integers. Invalid/extreme runtime payload robustness is not exercised."
+    },
+    {
+      "id": "schema-delta-and-hash-comparison",
+      "status": "PASS",
+      "kind": "static-wire-contract",
+      "evidence": ["internal\\schemacheck\\schemacheck.go:183-193", "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:27-28", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaGuidance.tsx:36-61"],
+      "detail": "Server computes current minus expected and has_drift from SHA inequality. Page prefers is_different, falling back to has_drift. Guidance distinguishes count drift, hash-only drift with known matching counts and unavailable comparisons."
+    },
+    {
+      "id": "exact-hash-and-copy-success",
+      "status": "PASS",
+      "kind": "static",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx:62-70", "web\\src\\components\\ui\\CopyButton.tsx:99,110-118,133-158"],
+      "detail": "Source hash displayed untruncated via break-all; exact hash handed to clipboard primitive. Empty hash disables copy. Successful copies set copied state and emit hidden live feedback even with fixed ariaLabel. Actual clipboard NOTRUN."
+    },
+    {
+      "id": "refresh-action-feedback",
+      "status": "PASS",
+      "kind": "static",
+      "evidence": ["web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:36,44-49", "web\\src\\components\\feedback\\DataSourceNotice.tsx:170-183,199-205"],
+      "detail": "Localized header action refetches read-only query, declares aria-busy and disables spinning with motion-reduce. Source refresh errors have nonblocking recovery; no fake success or schema mutation."
+    },
+    {
+      "id": "api-path-method-success-envelope",
+      "status": "PASS",
+      "kind": "static",
+      "evidence": ["web\\src\\api\\hooks\\useOperatorConfidence.ts:103-114", "internal\\api\\router.go:4627", "internal\\handler\\v1\\admin_observability_handler.go:34,51", "internal\\platform\\httputil\\response.go:33-37"],
+      "detail": "One directly used hook URL matches mounted GET route and success data envelope. No double prefix or camelCase query parameter in that hook."
+    },
+    {
+      "id": "api-error-envelope",
+      "status": "FAIL",
+      "kind": "source-proven",
+      "evidence": ["internal\\platform\\httputil\\response.go:50-55", "web\\src\\api\\client.ts:232-241,472-477", "web\\src\\lib\\resilience.ts:795-798", "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:29-31"],
+      "issue": "SD-01"
+    },
+    {
+      "id": "operator-details-guidance-parity",
+      "status": "FAIL",
+      "kind": "source-proven",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx:63-72", "web\\src\\components\\data-display\\OperationalBrief.tsx:93,108-121,292-313"],
+      "issue": "SD-02"
+    },
+    {
+      "id": "copy-failure-feedback",
+      "status": "FAIL",
+      "kind": "source-proven",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx:67-68", "web\\src\\components\\ui\\CopyButton.tsx:60,99-108"],
+      "issue": "SD-03"
+    },
+    {
+      "id": "copy-mobile-target-source-contract",
+      "status": "FAIL",
+      "kind": "source-contract-only",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx:67-68", "web\\src\\components\\ui\\CopyButton.tsx:59,136-142", "web\\src\\components\\ui\\Button.tsx:36", "docs\\frontend-design-contract.md:532-533", "web\\src\\index.css:1997-2018"],
+      "issue": "SD-04",
+      "detail": "Caller inherits h-9 rather than the required mobile 44px minimum. No DOM rectangle/hit-target measurement performed; native remains NOTRUN."
+    },
+    {
+      "id": "i18n-literal-key-presence",
+      "status": "PASS",
+      "kind": "static-catalog",
+      "evidence": ["web\\src\\i18n\\en\\locale-admin.json:957-1005", "logs\\phase6-qa-admin-schema-drift.log"],
+      "detail": "49 unique literal translation keys across page/domain sources present in canonical en.json; zero missing occurrences. One fallback mismatch recorded separately as candidate, not a missing translation."
+    },
+    {
+      "id": "semantic-labels-headings",
+      "status": "PASS",
+      "kind": "static",
+      "evidence": ["web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:47", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx:68", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:32,41", "web\\src\\components\\layout\\PageContainer.tsx:195-202"],
+      "detail": "Localized action names, associated section headings, decorative aria-hidden icons and existing route-focus heading present. Same copy name for Current/Expected remains a usability candidate, not keyboard acceptance."
+    },
+    {
+      "id": "responsive-source-layout",
+      "status": "PASS",
+      "kind": "static-intent-only",
+      "evidence": ["web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:65-67", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx:41,64,70,85-88", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaBreakdown.tsx:51-58"],
+      "detail": "Stacked narrow layout, md fingerprint split, xl main split, min-w-0, wrapping rows and break-all hashes retained. No viewport, overflow or zoom result inferred."
+    },
+    {
+      "id": "raw-SI-and-dimensionless-values",
+      "status": "PASS",
+      "kind": "static",
+      "evidence": ["internal\\schemacheck\\schemacheck.go:40-56", "web\\src\\features\\admin\\components\\continuation-admin-1\\schemaPresentation.ts:11-15", "web\\src\\hooks\\useOperationalMetrics.tsx:14-27"],
+      "detail": "Schema object counts/deltas dimensionless integers; no physical unit conversions, legacy unit converters or SI shape adapters added."
+    },
+    {
+      "id": "scoped-prohibited-pattern-scan",
+      "status": "PASS",
+      "kind": "bounded-text-scan",
+      "evidence": ["logs\\phase6-qa-admin-schema-drift.log", "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:5-20"],
+      "detail": "Six exact source files: static inline var styles 0; raw controls 0 after case-sensitive correction; direct vendor imports 0; old API imports 0; any 0; neon-body 0. Direct useSchemaDrift block: double-prefix 0, camelCase params 0. Ten fixed pale-hue icon occurrences are retained candidates, not contrast acceptance."
+    },
+    {
+      "id": "observability-placement",
+      "status": "PASS",
+      "kind": "static",
+      "evidence": ["web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:5-20"],
+      "detail": "No page-owned RUM bootstrap or tracing dependency. No backend observability rollout or SLO runtime claim made."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "SD-01",
+      "status": "FAIL",
+      "priority": "high",
+      "owner": "integration",
+      "title": "Nested handler error envelope loses code and message before the page classifier.",
+      "file": "web\\src\\api\\client.ts",
+      "line": 240,
+      "related": ["web\\src\\lib\\resilience.ts:797-798", "internal\\platform\\httputil\\response.go:50-55", "internal\\handler\\v1\\admin_observability_handler.go:129-135", "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:29-31"],
+      "mechanism": "RespondError emits {error:{code,message}}. Direct parseError reads body.code and string body.error only; request then falls through to resilientFetch, which also reads err.code and passes the error object as ApiError message. SUBSYSTEM_NOT_CONFIGURED is therefore absent from final ApiError.code and message can become [object Object]. The page's correctly narrowed unsupported branch cannot recognize this normal handler error. SCHEMA_DRIFT_FAILED messages are lost by the same mechanism.",
+      "repro": "Source-only reproducible case for future isolated test: make the existing request transport receive 503 JSON {error:{code:'SUBSYSTEM_NOT_CONFIGURED',message:'schema_drift subsystem not configured on this deployment'}} on each attempt with no cached payload. Inspect rejected ApiError.code and feed that actual rejection through useSchemaDrift/page. Expected unsupported notice; current source gives generic recoverable failure. No request or test executed here.",
+      "fix": "One narrow shared error-normalization correction covering direct and resilient paths, preserving existing flat envelopes, cancellation, retries and status classification; add isolated transport-to-page regression rather than weaken page code checks.",
+      "confidence": "high-source",
+      "runtimeStatus": "NOTRUN",
+      "testEvidenceLimit": "SchemaDriftPage.test.tsx:159-183 and 403-413 inject preconstructed ApiError, bypassing the actual nested-wire decode."
+    },
+    {
+      "id": "SD-02",
+      "status": "FAIL",
+      "priority": "medium",
+      "owner": "page",
+      "title": "Review details contradicts known drift with an empty Attention verdict.",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+      "line": 63,
+      "related": ["web\\src\\components\\data-display\\OperationalBrief.tsx:93,108-121,292-313", "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaGuidance.tsx:19-29,55-70"],
+      "mechanism": "SchemaKpis supplies metrics/provenance but no attention or narrative. OperationalBrief defaults attention=[] and renders 'No current attention items.' in the details drawer even when status reads Drift detected and guidance tells the operator to confirm migrations/investigate DDL. Default narrative also omits the page's concrete response and limitations.",
+      "repro": "Source-only future isolated case: supply a valid drift payload with is_different=true, then open existing Review details. Main summary/guidance report drift; drawer Attention resolves to No current attention items. No render/browser action executed here.",
+      "fix": "Pass existing typed attention/narrative derived from the same schema evidence; retain unknown causes, unscored confidence, all metrics and seed/observation-time limitations. No new shared component.",
+      "confidence": "high-source",
+      "runtimeStatus": "NOTRUN"
+    },
+    {
+      "id": "SD-03",
+      "status": "FAIL",
+      "priority": "medium",
+      "owner": "page",
+      "title": "Fingerprint copy failures have no user-facing outcome.",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx",
+      "line": 67,
+      "related": ["web\\src\\components\\ui\\CopyButton.tsx:60,99-108"],
+      "mechanism": "Both callers omit withToast and onCopyError. Primitive defaults withToast=false; clipboard rejection only logs to console and resets copied=false. No localized visible or assistive failure feedback reaches this page.",
+      "repro": "Source-only future isolated case: reject navigator.clipboard.writeText with NotAllowedError for either nonempty synthetic hash. Current catch path does not notify the user or offer manual recovery. No clipboard/browser execution performed.",
+      "fix": "Use existing clipboard-error feedback capability at the caller, with reachable manual-copy recovery if necessary; preserve exact hash and success live announcement.",
+      "confidence": "high-source",
+      "runtimeStatus": "NOTRUN"
+    },
+    {
+      "id": "SD-04",
+      "status": "FAIL",
+      "priority": "medium",
+      "owner": "page",
+      "title": "Copy actions inherit a mobile size below the explicit 44px contract.",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx",
+      "line": 67,
+      "related": ["web\\src\\components\\ui\\CopyButton.tsx:59,136-142", "web\\src\\components\\ui\\Button.tsx:36", "web\\src\\index.css:1997-2018"],
+      "mechanism": "No size/class override at either fingerprint caller; CopyButton defaults size=sm, forwarded to Button's h-9. Source has no min-h-11/min-w-11 mobile target treatment here, unlike the fixed header refresh. Existing CSS touch-target utilities are opt-in classes, not global button overrides, and neither is applied in this call chain.",
+      "repro": "Static class-chain proof: SchemaFingerprints CopyButton -> size sm -> Button h-9. Future synthetic native check should measure both Copy buttons below md across required widths and verify nonoverlapping hits. Native rectangles, pixel values and WCAG exceptions were not measured here.",
+      "fix": "Use existing caller classes/sizing to enforce the mobile minimum, preserve compact desktop sizing, and separately verify actual composed geometry.",
+      "confidence": "high-source-contract",
+      "runtimeStatus": "NOTRUN"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C-01",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx",
+      "line": 68,
+      "detail": "Both Current/Expected copy actions use identical accessible names. Existing nearby headings provide visual context; whether assistive users can disambiguate efficiently needs keyboard/screen-reader review."
+    },
+    {
+      "id": "C-02",
+      "status": "NOTRUN",
+      "file": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "line": 178,
+      "detail": "Compact grid uses md three/3xl six tracks for four metrics; potential spare-space and narrow allocated-container issues. Layout measurement required; no overflow defect asserted."
+    },
+    {
+      "id": "C-03",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+      "line": 22,
+      "detail": "Ten fixed cyan/emerald/amber-300 icon occurrences across sections are static decorative/semantic-color candidates. Theme-composed contrast, forced-colors and visual intensity not measured."
+    },
+    {
+      "id": "C-04",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx",
+      "line": 77,
+      "related": ["web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaBreakdown.tsx:35", "web\\src\\lib\\dateFormat.ts:54-61,298-307", "web\\src\\hooks\\useDateFormat.ts:75-87", "internal\\app\\adminobssvc\\service.go:155"],
+      "detail": "Optional seed dates call raw browser-default date helpers rather than settings-bound useDateFormat; relative phrases under 24h are English. Current service always omits the seed timestamp, so this is a latent optional-field candidate, not an observed current-deployment locale/timezone failure."
+    },
+    {
+      "id": "C-05",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+      "line": 65,
+      "detail": "Static comparison finds fallback 'Loading' versus canonical common.loading 'Loading...'. Key exists; punctuation mismatch is not proof of a runtime translation failure."
+    },
+    {
+      "id": "C-06",
+      "status": "NOTRUN",
+      "file": "web\\src\\components\\data-display\\DataFreshness.tsx",
+      "line": 262,
+      "detail": "Shared header freshness action uses h-auto/py-1.5; its physical hit target and paused-fresh status interaction require composed native measurement. Paused notice/retained summary are independently source-present."
+    }
+  ],
+  "nativeChecks": [
+    {"id": "mounted-route-auth-network", "status": "NOTRUN", "evidence": "web\\src\\App.tsx:714", "reason": "Browser/API executions explicitly prohibited; no real identities or database contents accessed."},
+    {"id": "functional-loading-error-empty-unsupported", "status": "NOTRUN", "evidence": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:26-36,51-58", "reason": "Control-flow inspected only, not mounted."},
+    {"id": "retained-paused-offline-native", "status": "NOTRUN", "evidence": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:61-62", "reason": "No offline/refresh runtime simulation."},
+    {"id": "keyboard-order-focus-drawer-restoration", "status": "NOTRUN", "evidence": "web\\src\\components\\data-display\\OperationalBrief.tsx:165-170,245-249", "reason": "No browser, key presses or drawer execution."},
+    {"id": "screen-reader-live-outcomes", "status": "NOTRUN", "evidence": "web\\src\\components\\ui\\CopyButton.tsx:155-159", "reason": "No screen reader execution."},
+    {"id": "contrast-light-dark-custom-forced-colors", "status": "NOTRUN", "evidence": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx:22-28", "reason": "No rendered/composed-color measurements."},
+    {"id": "reduced-motion-low-bandwidth", "status": "NOTRUN", "evidence": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:49", "reason": "CSS/source support is not OS/runtime acceptance."},
+    {"id": "mobile-targets-and-hit-tests", "status": "NOTRUN", "evidence": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:45", "reason": "Header source fixed; copy source contract fails separately. No native sizes/hit tests."},
+    {"id": "RTL-200-percent-text-long-labels-hashes", "status": "NOTRUN", "evidence": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx:70,85-88", "reason": "Wrapping intent inspected only."},
+    {"id": "clipboard-permissions-success-failure", "status": "NOTRUN", "evidence": "web\\src\\components\\ui\\CopyButton.tsx:99-108", "reason": "No clipboard/browser writes."},
+    {"id": "namespace-switch-and-locale-formatting", "status": "NOTRUN", "evidence": "web\\src\\i18n\\en\\locale-admin.json:957-1005", "reason": "Literal catalog agreement only, no runtime locale switching."}
+  ],
+  "viewportMatrix": {
+    "320": "NOTRUN", "375": "NOTRUN", "390": "NOTRUN", "430": "NOTRUN",
+    "768": "NOTRUN", "1024": "NOTRUN", "1280": "NOTRUN", "1440": "NOTRUN",
+    "1920": "NOTRUN", "2560": "NOTRUN",
+    "narrowAllocatedContainers": "NOTRUN",
+    "evidence": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx:65-67; source grids are not measured viewport acceptance."
+  },
+  "preservation": {
+    "historicalPagePlusComponents": 378,
+    "currentPagePlusComponents": 382,
+    "currentIncludingUtility": 401,
+    "minimumSeventyPercent": 264.6,
+    "sectionCount": 4,
+    "sections": ["Schema drift summary", "Schema fingerprints", "Drift breakdown", "What this means"],
+    "frameCounts": {"LayoutCard": 3, "OperationalBrief": 1, "GlassPanelDirect": 0, "ChartContainerDirect": 0},
+    "actionsPreserved": ["Header refresh", "Per-section retry", "Empty fingerprint refresh", "Copy current hash", "Copy expected hash", "Review details/close", "Header help", "Shared freshness/source recovery"],
+    "sourceFiles": [
+      {"file": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx", "lines": 74, "sha256": "37FA8270929EB3814F50C80AC1916205B931E9FBFAABC1E7127E4498664A5DB1"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx", "lines": 77, "sha256": "2BCAC692F02EB79034726DA0BD9F8B573AEA8C24364C1A4377D1C69C835AB428"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx", "lines": 91, "sha256": "71307B1DDC764B75239793FD855DE3ADC96C815B1C25261FEDDE2F9AC04D3920"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaBreakdown.tsx", "lines": 68, "sha256": "226E5FD51124A46903BEFA45006C7E186ECC772DE4156C2A21F1251A21A4EFBB"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaGuidance.tsx", "lines": 72, "sha256": "61C7D7BCF9EDAEF3791AC8DEAC5223072A6689F34B7D8047C8F2D72B9AFD9F4C"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\schemaPresentation.ts", "lines": 19, "sha256": "64E6146860D8810B943B9BF3388BE938DC279A0CD0916F626E4BABC23542BFF0"}
+    ]
+  },
+  "validation": {
+    "log": "logs\\phase6-qa-admin-schema-drift.log",
+    "commands": [
+      {"command": "Initial bounded PowerShell source-count/rg scan", "exit": 1, "result": "Parser failure before execution: ordered hashtable method in foreach."},
+      {"command": "Corrected PowerShell Get-Content/Get-FileHash counts followed by rg -n --no-heading", "exit": 1, "result": "Counts/hashes emitted; rg executable absent from shell. Combined command not a pass."},
+      {"command": "Select-String -LiteralPath six exact source files -Pattern printed bounded regexes; hook block query-prefix/parameter scans", "exit": 0, "result": "Scan completed; raw-controls scan had case-insensitive Button false positive, retained and corrected separately."},
+      {"command": "Select-String -CaseSensitive -LiteralPath six exact files -Pattern '<(button|input|textarea|select|table)\\b'", "exit": 0, "result": "0 raw controls. Only erroneous category rerun."},
+      {"command": "Get-Content canonical en.json -Raw | ConvertFrom-Json -AsHashtable; resolve literal t(key,fallback) references in exact page/domain files", "exit": 0, "result": "49 unique keys, 0 missing occurrences, 1 fallback punctuation mismatch."},
+      {"command": "Select-String exact router/handler/error-envelope/action files for numbered citations", "exit": 0, "result": "Printed exact source contract and defect mechanisms to owned log."},
+      {"command": "Built-in rg scoped static-inline/raw-controls/vendor-import/old-API union on six exact files", "exit": null, "result": "Tool returned 'No matches found.' Tool does not expose process numeric exit; not presented as a shell exit."}
+    ],
+    "scripts": {
+      "audit.sh": "NOTRUN: inspected; automatically runs project TypeScript, prohibited unchanged/full-gate rerun.",
+      "verify.sh": "NOTRUN: inspected; invokes helper and broad route extraction, excluded by assignment. Direct used-hook/mounted-route evidence substituted explicitly."
+    },
+    "typeScript": "NOTRUN: no source edits; unchanged passing/full-gate reruns prohibited. No fresh compilation claim.",
+    "lint": "NOTRUN: source-only assignment; no fresh lint claim.",
+    "tests": {"status": "NOTRUN", "discovered": null, "executed": 0, "passed": null, "failed": null, "skipped": null, "reason": "Existing 17/17 source-acceptance receipt not rerun. Page test source inspected only; no test generation/edits."},
+    "build": "NOTRUN",
+    "browser": "NOTRUN",
+    "api": "NOTRUN",
+    "databaseSchemaMigrationsRepairs": "NOTRUN",
+    "docker": "NOTRUN",
+    "acceptance": "Individual static PASS checks do not clear FAIL findings, native matrix or full application acceptance."
+  },
+  "needs": [
+    "One narrow integration fix for SD-01 nested error normalization, preserving flat responses and current retry/cancellation behavior.",
+    "One page-owned SchemaKpis attention/narrative parity fix for SD-02 using existing OperationalBrief props.",
+    "One fingerprint copy caller correction covering SD-03 feedback and SD-04 mobile sizing; do not change exact hashes or success announcements.",
+    "Future separately authorized synthetic native QA for every NOTRUN matrix entry. Candidates require evidence before repair scope; no schema/migration/real-data execution."
+  ],
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-inventory.md",
+    "docs\\frontend-audits\\audit-page-020.json",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    ".gitignore",
+    "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx",
+    "web\\src\\features\\admin\\pages\\SchemaDriftPage.test.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaBreakdown.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaGuidance.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\schemaPresentation.ts",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\lib\\resilience.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\feedback\\QueryError.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\i18n\\en.json",
+    "web\\src\\i18n\\en\\locale-admin.json",
+    "web\\src\\index.css",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\admin_observability_handler.go",
+    "internal\\app\\adminobssvc\\service.go",
+    "internal\\platform\\httputil\\response.go",
+    "internal\\schemacheck\\schemacheck.go"
+  ],
+  "ownershipRelease": {
+    "filesWritten": ["docs\\frontend-audits\\phase6-qa-admin-schema-drift.json", "logs\\phase6-qa-admin-schema-drift.log"],
+    "applicationSourceWriteClaim": "None; all application/source/tests/catalog/config files read-only.",
+    "browserOrDatabaseLease": "None acquired.",
+    "backgroundJobs": "None started.",
+    "atReturn": "All report/log/command ownership released; no post-return writes or follow-up executions.",
+    "scopeLimit": "No Git/repository-wide dirty-state assertion. Unrelated concurrent changes are not attributed to this worker."
+  }
+}

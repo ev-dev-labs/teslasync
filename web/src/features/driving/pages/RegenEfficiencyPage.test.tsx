@@ -6,6 +6,7 @@ import { Button } from '@/components/ui';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { Drive, RegenEfficiencyData } from '@/types/driving';
 
 const h = vi.hoisted(() => ({
@@ -145,7 +146,7 @@ vi.mock('@/components/forms', () => ({
     onChange: (range: { start: string; end: string }) => void;
     triggerTestId?: string;
   }) => (
-    <button
+    <Button
       type="button"
       data-testid={triggerTestId}
       data-start={value.start}
@@ -155,7 +156,7 @@ vi.mock('@/components/forms', () => ({
       }
     >
       change range
-    </button>
+    </Button>
   ),
   VehicleSelect: () => <div data-testid="vehicle-select" />,
 }));
@@ -219,6 +220,7 @@ interface QueryStub {
   error: unknown;
   isFetching: boolean;
   isStale: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   dataUpdatedAt: number;
   refetch: () => void;
 }
@@ -260,7 +262,7 @@ function renderPage() {
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <MemoryRouter initialEntries={['/driving/regen']}>
+        <MemoryRouter initialEntries={['/regen-efficiency']}>
           <RegenEfficiencyPage />
           <HeaderRangeControl />
         </MemoryRouter>
@@ -339,7 +341,34 @@ describe('RegenEfficiencyPage', () => {
 
     const { container } = renderPage();
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const placeholder = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(container.querySelectorAll(placeholder).length).toBeGreaterThan(0);
+    for (const [testId, heights] of [
+      ['regen-overview', [220, 220]],
+      ['regen-temperature', [220]],
+      ['regen-soc', [220]],
+      ['regen-evidence', [280]],
+    ] as const) {
+      expect(Array.from(screen.getByTestId(testId).querySelectorAll<HTMLElement>(placeholder), node => node.style.height))
+        .toEqual(heights.map(height => `${height}px`));
+    }
+    for (const testId of ['regen-monthly', 'regen-distribution']) {
+      const chart = within(screen.getByTestId(testId)).getByTestId('chart-skeleton');
+      expect(chart).toHaveAttribute('aria-busy', 'true');
+      expect(chart.querySelectorAll('[aria-hidden="true"]')).toHaveLength(7);
+    }
+    for (const [testId, count] of [
+      ['regen-selected-window-summary', 6],
+      ['regen-overview-brief', 5],
+      ['regen-coverage-brief', 4],
+    ] as const) {
+      const brief = screen.getByTestId(testId);
+      expect(brief).toHaveAttribute('aria-busy', 'true');
+      expect(brief.querySelectorAll('[data-operational-metric] [aria-hidden="true"].h-5.w-20')).toHaveLength(count);
+      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    }
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.queryByText('Drive #2')).not.toBeInTheDocument();
     for (const testId of [
       'regen-kpis',
       'regen-overview',
@@ -352,7 +381,10 @@ describe('RegenEfficiencyPage', () => {
     ]) {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
     }
-    expect(screen.getAllByText('Loading…').length).toBeGreaterThanOrEqual(6);
+    const loadingBrief = screen.getByTestId('regen-selected-window-summary');
+    expect(loadingBrief).toHaveAttribute('aria-busy', 'true');
+    expect(loadingBrief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(loadingBrief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(
       screen.queryByText('Below the 1,000-row request cap'),
     ).not.toBeInTheDocument();
@@ -362,6 +394,71 @@ describe('RegenEfficiencyPage', () => {
     expect(
       screen.queryByText('No detailed drives were returned for this window.'),
     ).not.toBeInTheDocument();
+  });
+
+  it.each(['aggregate', 'detail'] as const)(
+    'labels paused retained %s evidence without erasing the healthy neighboring source',
+    (source) => {
+      if (source === 'aggregate') {
+        h.aggregate = query({ data: makeAggregate(), fetchStatus: 'paused' });
+      } else {
+        h.drives = query({ data: [makeDrive()], fetchStatus: 'paused' }, drivesRefetch);
+      }
+
+      renderPage();
+
+      const warning = screen.getByTestId('stale-refresh-warning');
+      expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(within(warning).getByText(source === 'aggregate'
+        ? 'Complete aggregate may be out of date'
+        : 'Detailed returned sample may be out of date')).toBeInTheDocument();
+      for (const testId of [
+        'regen-selected-window-summary', 'regen-overview-brief', 'regen-coverage-brief',
+      ]) {
+        assertOperationalBriefDisclosure(screen.getByTestId(testId), 'Retained source');
+      }
+      for (const testId of [
+        'regen-kpis', 'regen-overview', 'regen-monthly', 'regen-distribution',
+        'regen-temperature', 'regen-soc', 'regen-evidence', 'regen-methodology',
+      ]) {
+        expect(screen.getByTestId(testId)).toBeInTheDocument();
+      }
+      expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '25');
+      expect(screen.getByText(source === 'aggregate' ? 'Drive #2' : 'Drive #1')).toBeInTheDocument();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      expect(source === 'aggregate' ? aggregateRefetch : drivesRefetch).toHaveBeenCalledTimes(1);
+      expect(source === 'aggregate' ? drivesRefetch : aggregateRefetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not label a paused initial source as retained or erase available detail', () => {
+    h.aggregate = query({ data: undefined, isSuccess: false, fetchStatus: 'paused' });
+
+    renderPage();
+
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.getByText('Drive #2')).toBeInTheDocument();
+    expect(screen.getByTestId('regen-kpis')).toBeInTheDocument();
+    expect(screen.getByTestId('regen-overview')).toBeInTheDocument();
+  });
+
+  it('keeps ordinary background refresh distinct from degraded retained evidence', () => {
+    h.aggregate = query({ data: makeAggregate(), isFetching: true, fetchStatus: 'fetching' });
+
+    renderPage();
+
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
+    expect(screen.getByText('Drive #2')).toBeInTheDocument();
+    for (const testId of [
+      'regen-selected-window-summary', 'regen-overview-brief', 'regen-coverage-brief',
+    ]) {
+      assertOperationalBriefDisclosure(screen.getByTestId(testId), 'Source available');
+    }
   });
 
   it('isolates an aggregate error while detailed evidence remains available', () => {
@@ -392,7 +489,7 @@ describe('RegenEfficiencyPage', () => {
     renderPage();
 
     expect(screen.getByText('50000 energy')).toBeInTheDocument();
-    expect(screen.getByText('Complete aggregate')).toBeInTheDocument();
+    expect(within(screen.getByTestId('regen-overview')).getByRole('heading', { name: 'Complete aggregate' })).toBeInTheDocument();
     expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '25');
     expect(screen.getAllByText("Can't reach server").length).toBeGreaterThan(0);
     expect(
@@ -504,7 +601,15 @@ describe('RegenEfficiencyPage', () => {
 
     renderPage();
 
-    expect(screen.getByText('1,000-row cap reached')).toBeInTheDocument();
+    const returnedRows = screen.getByText('Detailed rows returned').closest('[data-operational-metric]');
+    expect(returnedRows).not.toBeNull();
+    expect(within(returnedRows as HTMLElement).getByText('1,000', { selector: '[data-operational-value]' })).toBeInTheDocument();
+    expect(returnedRows).toHaveAttribute('data-value-state', 'value');
+    const capBrief = screen.getByText('Detailed rows returned').closest('[data-operational-brief]')!;
+    fireEvent.click(within(capBrief).getByRole('button', { name: 'Review details' }));
+    const capDrawer = screen.getByRole('dialog');
+    expect(within(capDrawer).getByRole('group', { name: 'Detailed rows returned' })).toHaveTextContent('1,000-row cap reached');
+    fireEvent.keyDown(capDrawer, { key: 'Escape' });
     expect(
       screen.getAllByText('Detailed history cap reached').length,
     ).toBeGreaterThanOrEqual(6);
@@ -600,7 +705,7 @@ describe('RegenEfficiencyPage', () => {
       within(monthlySection).getByRole('button', { name: 'Export chart' }),
     );
     fireEvent.click(
-      within(monthlySection).getByRole('menuitem', {
+      screen.getByRole('menuitem', {
         name: 'Download data as CSV',
       }),
     );
@@ -630,11 +735,7 @@ describe('RegenEfficiencyPage', () => {
 
     renderPage();
 
-    const shareCard = screen
-      .getByText('Aggregate recovery share')
-      .closest('[data-role="metric-card"]');
-    expect(shareCard).not.toBeNull();
-    expect(within(shareCard as HTMLElement).getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(screen.getByTestId('regen-selected-window-summary'), 'Aggregate recovery share');
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 

@@ -2,11 +2,14 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PieChart } from 'lucide-react';
 
-import { GlassPanel, Badge, PanelTitle, Subhead, Caption, Text } from '@/components/ui';
+import { GlassPanel, Badge, Button, Icon, PanelTitle, Subhead, Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
-import { fmtPercent } from '@/lib/numberFormat';
+import type { DataState } from '@/api/dataState';
+import { typography } from '@/lib/tokens';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** One invitation-status slice with a resolved display color for its bar. */
 export interface AccessStatusSlice {
@@ -26,10 +29,8 @@ interface AccessOverviewPanelProps {
   roleBreakdown: AccessRoleSlice[];
   totalInvitations: number;
   totalDrivers: number;
-  isLoading: boolean;
-  isError: boolean;
-  error: unknown;
-  onRetry: () => void;
+  driversState: DataState<unknown>;
+  invitationsState: DataState<unknown>;
 }
 
 function titleCase(value: string): string {
@@ -47,12 +48,21 @@ export function AccessOverviewPanel({
   roleBreakdown,
   totalInvitations,
   totalDrivers,
-  isLoading,
-  isError,
-  error,
-  onRetry,
+  driversState,
+  invitationsState,
 }: AccessOverviewPanelProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
+  const statusLabels: Record<string, string> = {
+    "pending": t("vehicleAccess.status.pending", "pending"),
+    "accepted": t("vehicleAccess.status.accepted", "accepted"),
+    "revoked": t("vehicleAccess.status.revoked", "revoked"),
+    "expired": t("vehicleAccess.status.expired", "expired"),
+  };
+  const roleLabels: Record<string, string> = {
+
+  };
+
 
   // Null-safe views of the breakdown arrays — the contract types them as
   // required, but a mid-flight hook (or a future caller) could hand us
@@ -62,40 +72,54 @@ export function AccessOverviewPanel({
 
   const invitations = totalInvitations ?? 0;
   const drivers = totalDrivers ?? 0;
-  const isEmpty = invitations === 0 && drivers === 0;
+  const isEmpty = driversState.status === 'ok' && invitationsState.status === 'ok'
+    && driversState.hasData && invitationsState.hasData
+    && invitations === 0 && drivers === 0;
 
-  // An `isError` flag with no error object would make <QueryError> render
-  // nothing (it early-returns on a falsy error), leaving a blank panel body.
-  // Only branch to the error UI when there is an actual error to describe so
-  // the panel falls through to a placeholder and is never blank.
-  const showError = isError && error != null;
+  const sourcePlaceholder = (state: DataState<unknown>, label: string) => {
+    if (state.fatalError) {
+      return <QueryError error={state.fatalError} onRetry={state.retry ?? undefined} resourceName={label} />;
+    }
+    if (state.isRefreshBlocked) {
+      return (
+        <div role="status" className="space-y-2">
+          <Text color="secondary">{t('dataSources.status.paused', 'Refresh paused')}</Text>
+          {state.retry && (
+            <Button variant="ghost" size="sm" className="min-h-11 md:min-h-9" onClick={state.retry}>
+              {t('common.retry', 'Retry')}
+            </Button>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div aria-busy="true">
+        <VisuallyHidden liveRegion>{t('common.loading', "Loading...")}</VisuallyHidden>
+        <Skeleton height={100} />
+      </div>
+    );
+  };
 
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <PieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('vehicleAccess.overview.title', 'Access Overview')}
+        <Icon icon={PieChart} size="md" className={typography.color.muted} aria-hidden />
+        {t('vehicleAccess.overview.title', 'Access overview')}
       </PanelTitle>
 
-      {isLoading ? (
-        <div aria-busy="true">
-          <VisuallyHidden liveRegion>{t('common.loading', 'Loading…')}</VisuallyHidden>
-          <Skeleton height={220} />
-        </div>
-      ) : showError ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : isEmpty ? (
+      {isEmpty ? (
         <EmptyState /* no-action: transient empty state — surfaces when no drivers or invitations exist yet */
-          icon={<PieChart className="h-8 w-8" />}
+          icon={<Icon icon={PieChart} size="xl" className={typography.color.muted} aria-hidden />}
           message={t('vehicleAccess.overview.empty', 'No access data to summarize yet.')}
         />
       ) : (
         <div className="space-y-5">
-          <div>
+          <section aria-label={t('vehicleAccess.overview.invitationStatus', 'Invitation status')}>
             <Subhead className="mb-2">
-              {t('vehicleAccess.overview.invitationStatus', 'Invitation Status')}
+              {t('vehicleAccess.overview.invitationStatus', 'Invitation status')}
             </Subhead>
-            {statuses.length === 0 ? (
+            <StaleRefreshWarning state={invitationsState} label={t('vehicleAccess.invitations.title', 'Share invitations')} />
+            {!invitationsState.hasData ? sourcePlaceholder(invitationsState, t('vehicleAccess.invitations.resource', 'Invitations')) : statuses.length === 0 ? (
               <Caption>{t('vehicleAccess.overview.noInvitations', 'No invitations yet')}</Caption>
             ) : (
               <div className="space-y-3">
@@ -105,37 +129,39 @@ export function AccessOverviewPanel({
                   return (
                     <MetricBar
                       key={slice.status}
-                      label={t(`vehicleAccess.status.${slice.status}`, titleCase(slice.status))}
+                      label={statusLabels[slice.status] ?? titleCase(slice.status)}
                       value={count}
                       max={invitations || count || 1}
                       color={slice.color}
-                      sublabel={`${count} · ${fmtPercent(pct, 0)}`}
+                      fill="solid"
+                      sublabel={`${fmtInt(count)} · ${fmtPercent(pct)}`}
                     />
                   );
                 })}
               </div>
             )}
-          </div>
+          </section>
 
-          <div>
+          <section aria-label={t('vehicleAccess.overview.driverRoles', 'Driver roles')}>
             <Subhead className="mb-2">
-              {t('vehicleAccess.overview.driverRoles', 'Driver Roles')}
+              {t('vehicleAccess.overview.driverRoles', 'Driver roles')}
             </Subhead>
-            {roles.length === 0 ? (
+            <StaleRefreshWarning state={driversState} label={t('vehicleAccess.drivers.title', 'Drivers')} />
+            {!driversState.hasData ? sourcePlaceholder(driversState, t('vehicleAccess.drivers.resource', 'Drivers')) : roles.length === 0 ? (
               <Caption>{t('vehicleAccess.overview.noDrivers', 'No drivers yet')}</Caption>
             ) : (
               <ul className="flex flex-wrap gap-2">
                 {roles.map((slice) => (
                   <li key={slice.role}>
                     <Badge variant="neutral">
-                      {t(`vehicleAccess.role.${slice.role}`, titleCase(slice.role))}
-                      <Text color="muted" className="ml-1">{slice.count ?? 0}</Text>
+                      {roleLabels[slice.role] ?? titleCase(slice.role)}
+                      <Text color="muted" className="ml-1">{fmtInt(slice.count ?? 0)}</Text>
                     </Badge>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </section>
         </div>
       )}
     </GlassPanel>

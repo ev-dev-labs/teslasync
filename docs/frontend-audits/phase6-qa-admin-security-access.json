@@ -1,0 +1,471 @@
+{
+  "item": "phase6-qa-admin-security-access",
+  "phase": 6,
+  "outcome": "SOURCE_REVIEW_WITH_CONFIRMED_DEFECTS",
+  "page": "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx",
+  "route": "/security-access",
+  "fullNativeAcceptance": "NOTRUN",
+  "wholeApplicationAcceptance": "NOTRUN",
+  "timestamps": {
+    "dispatch": "2026-10-13T09:20:10.395-07:00",
+    "firstObservedClock": "2026-10-13T09:20:25.6628467-07:00",
+    "firstScopedHashCapture": "2026-10-13T09:26:57.7861515-07:00",
+    "returnTarget": "2026-10-13T09:40:10.395-07:00",
+    "hardDeadline": "2026-10-13T09:45:10.395-07:00",
+    "finalEvidenceClock": "2026-10-13T09:33:53.9671682-07:00"
+  },
+  "authority": {
+    "queueRow": "migration-queue.md:190",
+    "rollingQAContract": "migration-queue.md:141-185",
+    "acceptedSourceRow": "migration-queue.md:1537",
+    "acceptedSourceCommitAsRecordedInQueue": "6493041923827f0cfcb589a93e7f0b8cbacb9bf3",
+    "queueObservation": "QA row pending, attempt 0; Phase5 source row done. Queue state is orchestrator-owned and was not edited.",
+    "soleVersionedWrite": "docs\\frontend-audits\\phase6-qa-admin-security-access.json",
+    "soleIgnoredWrite": "web\\logs\\phase6-qa-admin-security-access.log",
+    "logLocationResolution": "The rolling QA contract explicitly names web\\logs; logs\\ in the assignment is resolved relative to the inherited web cwd. Root .gitignore contains logs/.",
+    "applicationSourceWrites": 0,
+    "testWrites": 0,
+    "catalogWrites": 0,
+    "configurationWrites": 0,
+    "queueOrHandoffWrites": 0,
+    "gitCommands": 0,
+    "subagents": 0,
+    "installs": 0,
+    "helperExecutions": 0,
+    "extensionOperations": 0,
+    "serverStarts": 0,
+    "dockerCommands": 0,
+    "browserCalls": 0,
+    "networkRequests": 0,
+    "apiAccessAuthMutations": 0,
+    "realCredentialsOrIdentitiesUsed": false,
+    "scope": "Read-only UX/state/request-contract QA, not an exploit assessment."
+  },
+  "requirementsRead": [
+    "migration-queue.md:141-190,1537",
+    "docs\\orchestrator-loop.md:1-284",
+    "docs\\frontend-design-contract.md:1-260,290-650",
+    "docs\\frontend-mission.md:1-280,1416-1518",
+    "docs\\session-handoff.md:1-210",
+    "docs\\frontend-worker-conventions.md:1-80",
+    ".github\\instructions\\react-frontend.instructions.md:1-320",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    "docs\\frontend-audits\\audit-page-022.json:1-260,295-418"
+  ],
+  "instructionResolution": "Current source-only rolling contract forbids helpers/full gates and unchanged passing reruns. Audit-violations and verify-api-hooks skills were loaded; their scripts were read or their guidance consumed, not executed. Built-in read/search and bounded PowerShell source/document checks were used. TypeScript/tests/build/lint are NOTRUN, not passes. Current SI cutover/design contract overrides older source-unit/neon examples; no measurement or backend schema was changed. No heartbeat outside the two authorized artifacts was created.",
+  "sourceSnapshot": {
+    "pageSha256": "D6AD757CFA86F323C8BA6887288F51991A54D1CC2C7DEF0C7E07E89068368EC6",
+    "pageMatchesOriginalInventoryHash": true,
+    "initialScopedHashes": "web\\logs\\phase6-qa-admin-security-access.log:16-28",
+    "hashedProductionFiles": 13,
+    "finalScopedHashAgreement": "PASS: 13 scoped hashes compared, 0 drift at 2026-10-13T09:33:53.9671682-07:00",
+    "atomicSnapshot": false,
+    "limitation": "Read-only live working-tree evidence. Hash agreement concerns the 13 captured page/domain files only; no assertion about unrelated writers, whole-tree cleanliness or shared-file atomicity."
+  },
+  "preservation": {
+    "status": "PASS",
+    "evidenceKind": "SOURCE_ONLY",
+    "baseline": "docs\\frontend-audits\\audit-page-022.json:295-338",
+    "baselinePageLines": 277,
+    "currentPageLines": 277,
+    "baselinePresentationLines": 1279,
+    "currentPresentationLines": 1279,
+    "ratio": 1,
+    "minimumRequiredRatio": 0.7,
+    "lineScope": "Page, nine mounted domain renderers and StatusTile; excludes helpers, tests, barrels, shared owners and unmounted legacy summary/statistics.",
+    "sectionCount": 5,
+    "mountedDomainRenderers": 9,
+    "structureCounts": {
+      "GlassPanelOpenings": 7,
+      "ChartContainerOpenings": 0,
+      "EmbeddedChartOpenings": 1,
+      "OperationalBriefOpenings": 2
+    },
+    "sections": [
+      {
+        "name": "Summary metrics",
+        "status": "PASS",
+        "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:160-175", "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityOperationalBrief.tsx:22-44"],
+        "contents": "Four metrics, source scope/provenance, observed-at placeholder and canonical details. Numeric correctness exceptions Q001/Q003 remain."
+      },
+      {
+        "name": "Security posture",
+        "status": "PASS",
+        "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:178-199", "web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.tsx:32-59", "web\\src\\features\\admin\\components\\security-access\\SecurityStatusCards.tsx:30-115"],
+        "contents": "Twin and six posture tiles; source-specific skeleton/error/empty content."
+      },
+      {
+        "name": "Live state and window positions",
+        "status": "PASS",
+        "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:203-222", "web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.tsx:65-144", "web\\src\\features\\admin\\components\\security-access\\WindowStatusDetail.tsx:45-61"],
+        "contents": "Ten auxiliary signals and all four individual windows. Q001/Q002 limit trust."
+      },
+      {
+        "name": "Security analytics",
+        "status": "PASS",
+        "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:226-252", "web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx:53-107", "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityStatisticsBrief.tsx:18-47"],
+        "contents": "Two Sentry sample series, legend/frame alternatives and seven statistics; samples explicitly disclaimed as not time-weighted uptime."
+      },
+      {
+        "name": "History and timeline",
+        "status": "PASS",
+        "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:257-273", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:24-83,101-126", "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx:100-153"],
+        "contents": "Five table columns, Time sorting/value filtering/local pagination, semantic timeline with retries and empty recovery. Q004 limits mobile detail retention."
+      }
+    ],
+    "meaning": "PASS means source retention only. No section was mounted, rendered, photographed or measured by this worker."
+  },
+  "apiContracts": [
+    {
+      "hook": "useVehicles",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "method": "GET",
+      "path": "/vehicles",
+      "evidence": ["web\\src\\api\\hooks\\useVehicles.ts:73-80", "internal\\api\\router.go:3362-3363"],
+      "preserved": "vehicleKeys.all, FAST staleTime, safeArray, AbortSignal; selected-vehicle hook reuses the registry.",
+      "httpExecution": "NOTRUN"
+    },
+    {
+      "hook": "useLatestSecurityEvent",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "method": "GET",
+      "path": "/security/latest",
+      "queryParameters": ["vehicle_id"],
+      "evidence": ["web\\src\\api\\hooks\\useAdmin.ts:45,294-301", "web\\src\\api\\scope.ts:128-139", "internal\\api\\router.go:4165-4167", "internal\\api\\security\\handler.go:118-140"],
+      "preserved": "Vehicle-scoped key, enabled only with vehicle, 5000ms polling and AbortSignal.",
+      "limitation": "Matching path is not matching complete payload/freshness semantics: latest projects present fields only, can return {}, and has no created_at envelope. Q001/Q002 apply.",
+      "httpExecution": "NOTRUN"
+    },
+    {
+      "hook": "useSecurityEvents",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "method": "GET",
+      "path": "/security",
+      "queryParameters": ["vehicle_id", "start", "end"],
+      "evidence": ["web\\src\\api\\hooks\\useAdmin.ts:41-44,304-311", "web\\src\\api\\scope.ts:133-135", "internal\\api\\router.go:4165-4166", "internal\\api\\security\\handler.go:81-113", "internal\\api\\apiparams\\params.go:89-104"],
+      "preserved": "Vehicle plus both bounds in key, encoded snake_case query, AbortSignal, safeArray; exact half-open frontend guard at SecurityAccessPage.tsx:96-106.",
+      "limitation": "List is not a paginated server feed; DataTable pagination is client-local. Backend IDs are response-local numbers, whereas SecurityEvent.id is typed string. Timeline output is chronological ascending; Q003 applies.",
+      "httpExecution": "NOTRUN"
+    }
+  ],
+  "checks": [
+    {
+      "id": "route-and-workspace-owner",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\App.tsx:795", "web\\src\\lib\\workspaceScope.ts:59,164-167", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:49-50,63-64", "web\\src\\hooks\\useSelectedVehicle.ts:42-45,65-79", "web\\src\\hooks\\useRangeState.ts:656-672"],
+      "result": "Real route consumes header-owned vehicle and calendar/rolling instants without a duplicate picker. Positive integer parsing and registry reconciliation exist; no preference was changed."
+    },
+    {
+      "id": "shared-architecture-and-prohibited-pattern-scan",
+      "status": "PASS",
+      "evidenceKind": "SCOPED_LEXICAL_SOURCE_CHECK",
+      "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:1-39", "web\\src\\features\\admin\\components\\security-access\\index.ts:1-10", "web\\logs\\phase6-qa-admin-security-access.log:29-41"],
+      "result": "Actual scoped counts: raw controls 0, static CSS-variable inline styles 0, direct vendor imports 0, old API imports 0. Built-in rg returned No matches found. This is not every-guideline acceptance."
+    },
+    {
+      "id": "emitted-request-prefix-and-query-names",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\api\\hooks\\useAdmin.ts:294-311", "web\\src\\api\\scope.ts:123-145,166-174", "web\\src\\api\\client.ts:73-94"],
+      "result": "Hook subset double-prefix matches 0 and camelCase query-string matches 0. vehicleId in a scope object becomes vehicle_id, not a wire camelCase parameter; client adds /api/v1 once."
+    },
+    {
+      "id": "initial-loading-and-independent-panels",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:55-70,141-145,160-273", "web\\src\\components\\layout\\PageContainer.tsx:242-255", "web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.tsx:37-49", "web\\src\\features\\admin\\components\\security-access\\SecurityStatusCards.tsx:32-44"],
+      "result": "No global loading/error/empty gate is passed to PageLayout. Five source panels remain independent; latest/history loading fan out separately; localized status wrappers exist for twin/posture."
+    },
+    {
+      "id": "initial-error-and-read-retry",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:59-61,70-93,184-218,231-246,261-270", "web\\src\\api\\dataState.ts:210-227", "web\\src\\components\\feedback\\DataSourceNotice.tsx:197-204,267-282"],
+      "result": "Only fatalError replaces source content, latest retries do not call history, and history retries do not call latest. Registry failure uses named source notice; retry controls dispatch existing reads."
+    },
+    {
+      "id": "retained-refresh-failure",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\api\\dataState.ts:230-255", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:59-61,70-71,127-130,244-247", "web\\src\\components\\feedback\\DataSourceNotice.tsx:81-99,152-190"],
+      "result": "Retained payload remains; canonical source notice distinguishes cached refresh failure with source retry, briefs say Retained evidence. Separate local Live mislabel Q002 is not waived."
+    },
+    {
+      "id": "paused-and-authoritative-empty",
+      "status": "FAIL",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\api\\dataState.ts:196-224,258-266", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:59,67,70,127-132", "web\\src\\components\\feedback\\DataSourceNotice.tsx:82-93,160-163", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:104-119"],
+      "result": "Global source notice correctly identifies paused without inventing a server failure, but page children do not receive isRefreshBlocked/isSuccess. Cold paused history falls through to authoritative no-events messages; successful {} latest is treated as usable current state. Q001/Q007."
+    },
+    {
+      "id": "unknown-security-facts",
+      "status": "FAIL",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["internal\\api\\security\\handler.go:118-140", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:109-112,120-122,163", "web\\src\\features\\admin\\components\\security-access\\helpers.ts:49-54,77-85,97-109,136-140", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:37-74"],
+      "result": "Missing facts become measured negatives, closed doors or open/venting windows. Q001."
+    },
+    {
+      "id": "numeric-and-history-statistic-contract",
+      "status": "FAIL",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityOperationalBrief.tsx:18-35", "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityStatisticsBrief.tsx:17-35", "web\\src\\features\\admin\\components\\security-access\\helpers.ts:175-183", "internal\\signal\\state_reader_log.go:558-567", "internal\\signal\\pivot.go:149-175,211"],
+      "result": "Sample percentage caveat is present and raw counts reach canonical formatters. Last lock change is wrong for the server's ascending rows: Q003."
+    },
+    {
+      "id": "validation-confirmation-and-action-feedback",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:42-45,65-79", "web\\src\\api\\hooks\\useAdmin.ts:294-311", "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityStatisticsBrief.tsx:41-48", "web\\src\\components\\vehicles\\VehicleTwin.tsx:279-304,1635-1647"],
+      "result": "No security/access mutation, editable credential form or destructive command exists on this page. Confirmation is not applicable to its read retries/informational twin controls. Existing source notices/error recovery supply feedback; no action was clicked and no success was fabricated."
+    },
+    {
+      "id": "literal-catalog-coverage",
+      "status": "PASS",
+      "evidenceKind": "SCOPED_SOURCE_KEY_CHECK",
+      "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:46,133-135,142-143", "web\\src\\features\\admin\\components\\security-access\\WindowStatusDetail.tsx:10-15,57", "web\\src\\i18n\\en.json:10667-10702"],
+      "result": "Actual ConvertFrom-Json key check: 114 unique literal t('...') keys inspected, missing/nonstring keys 0. Four dynamic window-state keys and four position keys exist. This is canonical English coverage, not all-language/fallback-text equality acceptance."
+    },
+    {
+      "id": "complete-i18n-of-direct-rendered-twin",
+      "status": "FAIL",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\components\\vehicles\\VehicleTwin.tsx:1147-1149,1160-1161"],
+      "result": "Localized trigger names coexist with hardcoded visible Sentry/lock tooltips. Q006."
+    },
+    {
+      "id": "accessible-source-semantics",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:161,180,205,228,259", "web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx:44-52", "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx:118-129", "web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx:54-75", "web\\src\\components\\vehicles\\VehicleTwin.tsx:301,1402-1427,1523-1524,1634-1647"],
+      "result": "Localized landmarks, non-color-only text/icons, decorative icon hiding, chart data columns, actual Button hotspots and a full hidden/visible twin inspection alternative are present. Old audit's empty-span hotspot defect is NOT reasserted. Actual keyboard/focus/AT behavior remains NOTRUN."
+    },
+    {
+      "id": "mobile-history-field-reachability",
+      "status": "FAIL",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:63-83,110-125", "web\\src\\components\\ui\\DataTable.tsx:715-725,1128-1158,1162-1183"],
+      "result": "Doors/windows are excluded from mobileColumns, and no row expansion/mobile adapter is supplied. Q004."
+    },
+    {
+      "id": "chart-calendar-and-display-localization",
+      "status": "FAIL",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\helpers.ts:143-162", "web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx:81-85", "web\\src\\lib\\dateFormat.ts:32-52,75-82", "web\\src\\hooks\\useRangeState.ts:656-669"],
+      "result": "Buckets use source date-prefix rather than workspace timezone; date-only axis values are interpreted in browser timezone with no locale/tz override. Q005."
+    },
+    {
+      "id": "SI-and-observability-preservation",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:1-39,116-123", "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityOperationalBrief.tsx:21-35", "web\\src\\api\\hooks\\useAdmin.ts:294-311"],
+      "result": "No deprecated unit converter, page RUM bootstrap or new direct fetch/SSE/pipeline write appears in this inspected surface. Duration is derived in seconds for canonical metrics; raw security facts remain in hooks/cache. No instrumentation or SLO completeness campaign was attempted."
+    },
+    {
+      "id": "typescript",
+      "status": "NOTRUN",
+      "evidence": ["docs\\session-handoff.md:66-68", "migration-queue.md:1537"],
+      "reason": "No source changes, prior technical gate recorded; current worker is forbidden full gates/unchanged passing reruns. No current compiler-health claim."
+    },
+    {
+      "id": "tests-lint-build-and-helper-scripts",
+      "status": "NOTRUN",
+      "evidence": ["migration-queue.md:148-153,1537", "docs\\frontend-worker-conventions.md:24-31", "web\\src\\features\\admin\\pages\\SecurityAccessPage.test.tsx:70-99,170-257"],
+      "reason": "Historical source row reports 14/14 page tests and lint/style 0. Tests mock all nine panels; not composed/native evidence. Unchanged passing files not rerun; no tests/helpers/installs/full suites authorized.",
+      "newRunCounts": {"discovered": 0, "executed": 0, "passed": 0, "failed": 0, "skipped": 0}
+    },
+    {
+      "id": "native-responsive-theme-and-a11y-matrix",
+      "status": "NOTRUN",
+      "evidence": ["migration-queue.md:172-185", "docs\\frontend-design-contract.md:525-537,594-602", "docs\\frontend-mission.md:1440-1463"],
+      "reason": "No browser grant. No screenshots, actual 320/375/390/430/768/1024/1280/1440/1920/2560 measurements, dark/light/custom contrast, native keyboard/focus/AT, 200% text, RTL, forced-colors, reduced-motion or mobile target acceptance."
+    },
+    {
+      "id": "live-api-and-authentication-acceptance",
+      "status": "NOTRUN",
+      "evidence": ["migration-queue.md:148-153,181-185", "internal\\api\\router.go:4165-4168"],
+      "reason": "No HTTP calls, live identities, credentials, access/auth changes or exploit probes. Source path agreement does not establish deployment/auth reachability or real payload correctness."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "Q001",
+      "status": "FAIL",
+      "severity": "high",
+      "title": "Missing security evidence is classified as measured secure/insecure state",
+      "primaryEvidence": {"file": "web\\src\\features\\admin\\components\\security-access\\helpers.ts", "line": 77},
+      "evidence": ["internal\\api\\security\\handler.go:118-140", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:109-112,120-122,163", "web\\src\\features\\admin\\components\\security-access\\SecurityStatusCards.tsx:76-111", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:37-74", "web\\src\\features\\admin\\components\\security-access\\helpers.ts:49-54,77-85,97-109,136-140"],
+      "mechanism": "Latest omits absent signals and can successfully return {}. Truthy {} passes hasData/latest gates: summary becomes Unsecure; missing Sentry/HomeLink/guest becomes Inactive/Away/Disabled; doorClosed(null) returns true; unknown windows count as open/venting. Historical locked=null renders danger/Unlocked despite its unknown filter label. Any nonempty unrecognized window string also falls through to Open.",
+      "sourceReproduction": "Without any network, consider an accepted latest payload {} or a history row with locked:null, doorState:null and null windows. Trace existing branches: posture lock says Unknown, history lock says Unlocked, doors say Closed, aggregate windows say 4 open/venting, summary says Unsecure. Individual windows say Unknown. Expected: distinguish absent facts/partial posture from measured open/closed/on/off. A payload with locked:true and four Closed windows but no doorState can conversely produce Secure with unknown doors.",
+      "reproductionExecution": "NOTRUN; deterministic source-branch proof, not a mounted or live reproduction.",
+      "existingTestConstraint": "helpers.test.ts:19-24 currently pins nullish doors as closed. A narrow owner must explicitly update this policy with additive regression coverage, not merely restyle it.",
+      "needs": "One narrowly claimed tri-state classification/adoption fix across helpers and affected page/domain renderers; preserve raw payloads, valid zero/false and unknowns. No backend capability invention."
+    },
+    {
+      "id": "Q002",
+      "status": "FAIL",
+      "severity": "high",
+      "title": "Live chip asserts freshness for retained, offline or empty latest payloads",
+      "primaryEvidence": {"file": "web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.tsx", "line": 165},
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.tsx:165-170", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:59-61,127-130,171,208-214", "web\\src\\api\\dataState.ts:241-264", "internal\\api\\security\\handler.go:134-140"],
+      "mechanism": "Chip visibility is latest truthiness, not source trust. Page forwards fatalError only, so a cached response remains truthy after refresh failure/paused fetch; chip still pulses Live beside a canonical retained/offline notice. Latest has no created_at field, so the summary observation timestamp is not supplied by this endpoint.",
+      "sourceReproduction": "Keep previously returned latest data and set query error/isError or fetchStatus='paused'. deriveDataState returns stale/cached with fatalError=null; LiveVehicleState still receives the old object and renders Live. A successful {} also activates the chip. Expected: cached/blocked/unknown state, never fabricated signal-observation age.",
+      "reproductionExecution": "NOTRUN; source-proven branches only.",
+      "needs": "Pass existing DataState trust to the live renderer and reuse canonical freshness/status presentation. Observation time remains unknown unless a separately owned backend contract actually supplies it."
+    },
+    {
+      "id": "Q003",
+      "status": "FAIL",
+      "severity": "medium",
+      "title": "Last lock change selects an earlier event from ascending server history",
+      "primaryEvidence": {"file": "web\\src\\features\\admin\\components\\security-access\\helpers.ts", "line": 179},
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\helpers.ts:175-183", "web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:116-117,164", "web\\src\\features\\admin\\components\\operationalbrief-r-z\\SecurityOperationalBrief.tsx:20-29", "internal\\api\\security\\handler.go:98-111", "internal\\signal\\state_reader_log.go:558-567,634-654", "internal\\signal\\pivot.go:149-175,211"],
+      "mechanism": "Server orders events ts ASC, folder appends without reversal, handler preserves order, and page only filters it. findLastLockChange stops at the first differing adjacent pair and returns events[i-1].createdAt. The summary labels that as the latest observed lock transition.",
+      "sourceReproduction": "Ascending rows A@10:00 locked=false, B@11:00 locked=true, C@12:00 locked=false yield A@10:00 from the helper, while the last observed transition is C@12:00. Even descending input would need an explicit ordering policy; current backend output establishes the defect.",
+      "reproductionExecution": "NOTRUN; source-derived trace, not runtime test execution.",
+      "needs": "Narrow helper ordering/timestamp fix with ascending, descending, missing-state and no-transition cases; retain documented fallback behavior and source rows."
+    },
+    {
+      "id": "Q004",
+      "status": "FAIL",
+      "severity": "medium",
+      "title": "Mobile history removes per-row door/window detail with no replacement",
+      "primaryEvidence": {"file": "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx", "line": 114},
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:63-83,110-125", "web\\src\\components\\ui\\DataTable.tsx:715-725,1128-1183"],
+      "mechanism": "mobileColumns lists only time/lock/Sentry. DataTable applies hidden md:table-cell to doors/windows. Caller supplies no expandable/renderExpanded or mobilePresentation; global current-window tiles do not replace each historical row.",
+      "sourceReproduction": "At a CSS width below md, any populated historical row loses its doors/windows cells; no per-row detail action exists in caller props. Expected: all five historical fields reachable through existing mobile detail contract or contained scrolling.",
+      "reproductionExecution": "NOTRUN; CSS/prop mechanism confirmed, actual viewport measurement not claimed.",
+      "needs": "Narrow table-caller mobile detail adoption preserving tableId, filters, row order, pagination and export scope."
+    },
+    {
+      "id": "Q005",
+      "status": "FAIL",
+      "severity": "medium",
+      "title": "Sentry day buckets and axis labels do not honor workspace calendar semantics",
+      "primaryEvidence": {"file": "web\\src\\features\\admin\\components\\security-access\\helpers.ts", "line": 147},
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\helpers.ts:143-162", "web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx:81-85", "web\\src\\lib\\dateFormat.ts:32-52,75-82", "web\\src\\hooks\\useRangeState.ts:656-669"],
+      "mechanism": "Daily grouping slices the source ISO timestamp's first ten characters, ignoring the vehicle/workspace timezone used for range bounds. Axis then parses that YYYY-MM-DD as UTC and formats it in browser timezone with no locale/tz option, allowing a west-of-UTC previous-day label.",
+      "sourceReproduction": "An event at 2026-10-11T01:00:00Z belongs to Oct10 in America/Los_Angeles but is bucketed Oct11. The date-only bucket 2026-10-11 represents UTC midnight to new Date, which the same west-of-UTC browser labels Oct10. Different browser/workspace zones further disagree. Expected: explicit workspace-local bucket day and a date-label formatter that does not shift calendar-only identities.",
+      "reproductionExecution": "NOTRUN; source and ECMAScript date-only semantics, no browser execution.",
+      "needs": "Narrow domain bucket/axis formatting fix using existing timezone/locale helpers; retain all samples and on/off series identities."
+    },
+    {
+      "id": "Q006",
+      "status": "FAIL",
+      "severity": "low",
+      "title": "Security twin still displays untranslated Sentry and lock tooltips",
+      "primaryEvidence": {"file": "web\\src\\components\\vehicles\\VehicleTwin.tsx", "line": 1147},
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\DigitalTwinPanel.tsx:49", "web\\src\\components\\vehicles\\VehicleTwin.tsx:1147-1149,1160-1161,1634-1647"],
+      "mechanism": "The page mounts VehicleTwin interactive. SecurityOverlay uses Tooltip content='Sentry mode active' and locked ? 'Locked' : 'Unlocked', even though their Button aria-labels are localized. These are visible strings, not signal values or DOM identities.",
+      "sourceReproduction": "With Sentry=true or a known lock state and a non-English locale, inspect/focus the overlay control: configured tooltip content remains English while its accessible name/inspection alternatives use t().",
+      "reproductionExecution": "NOTRUN; direct render configuration confirmed.",
+      "needs": "Existing shared VehicleTwin owner localizes the two tooltip payloads with existing keys and scoped coverage. No catalog campaign or page-local duplicate twin."
+    },
+    {
+      "id": "Q007",
+      "status": "FAIL",
+      "severity": "medium",
+      "title": "Cold paused history is locally labeled as no recorded events",
+      "primaryEvidence": {"file": "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx", "line": 119},
+      "evidence": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx:65-71,231-246,261-270", "web\\src\\api\\dataState.ts:210-226", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:104-119", "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx:114-151", "web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx:57-68", "web\\src\\components\\feedback\\DataSourceNotice.tsx:82-93,160-163"],
+      "mechanism": "A no-data query paused before fetching has isLoading=false, no fatalError and isRefreshBlocked=true. Page passes only loading/fatalError plus [] to children; their empty branches say No security events recorded yet or No state changes detected despite no successful response. The global paused notice is correct but does not make these local authoritative claims true.",
+      "sourceReproduction": "Cold history data=undefined, fetchStatus='paused', isPending=true, isLoading=false, isError=false gives history=[] and error=null; table/chart/timeline use no-events empty content. Expected: awaiting/paused/unknown source content until successful authoritative emptiness.",
+      "reproductionExecution": "NOTRUN; source-state branch proof.",
+      "needs": "Narrow history-source trust propagation through existing DataState/feedback APIs; preserve all panels and retained rows without creating a new query-state engine."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C001",
+      "status": "NOTRUN",
+      "title": "Long translated tile/timeline content may clip at narrow widths or 200% text",
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx:51-62", "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx:133-142"],
+      "mechanism": "Label/value/description truncate without a local full-detail affordance; timeline timestamp is nonshrinking.",
+      "neededEvidence": "Granted native long-label/200% text/RTL measurements with exact clipping/focus evidence. CSS occurrence is not a measured viewport failure."
+    },
+    {
+      "id": "C002",
+      "status": "NOTRUN",
+      "title": "Theme noise/contrast and animated-live presentation require native review",
+      "evidence": ["web\\src\\features\\admin\\components\\security-access\\StatusTile.tsx:12-18,40", "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx:21-24,122", "web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.tsx:166-167"],
+      "mechanism": "Actual lexical counts: 16 neon chip class occurrences and 7 fixed-white surface/border occurrences. Values mostly use toned 300-level colors; neon chips are not automatically the prohibited neon-body rule.",
+      "neededEvidence": "Composed light/dark/custom/forced-colors contrast, reduced motion and allocation review. No measured contrast/target failure asserted."
+    },
+    {
+      "id": "C003",
+      "status": "NOTRUN",
+      "title": "Wire typing, observation metadata and unsupported twin cues need bounded integration follow-up",
+      "evidence": ["web\\src\\types\\admin.ts:199-224", "internal\\api\\security\\handler.go:110,134-140", "internal\\signal\\state_reader_log.go:716-737", "web\\src\\lib\\vehicleState.ts:296-316", "web\\src\\components\\vehicles\\VehicleTwin.tsx:1418-1426"],
+      "mechanism": "Historical IDs are numeric, projected enum values may be numeric, latest lacks required createdAt/id, and admin twin explicitly defaults unsupported charging/driving cues false. No runtime type validation or live payload specimen was used.",
+      "neededEvidence": "A narrow owner defines the existing valid wire/domain policy and non-sensitive deterministic fixtures. No blanket TypeScript compatibility, actual payload crash or real vehicle state assertion."
+    },
+    {
+      "id": "C004",
+      "status": "NOTRUN",
+      "title": "Large history windows and exports are source-preserved but unmeasured",
+      "evidence": ["internal\\api\\security\\handler.go:98-113", "internal\\signal\\state_reader_log.go:456-457,567-573", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx:110-125"],
+      "mechanism": "No server pagination/max events requested by handler; Timeline rejects windows above 366 days and table paginates locally.",
+      "neededEvidence": "Safe large-window/performance and complete matching-row export validation by an authorized owner; no performance regression or completeness claim without execution."
+    }
+  ],
+  "priorEvidenceDisposition": {
+    "unchangedPassingReruns": 0,
+    "sourceInventoryReused": "audit-page-022.json; same page SHA256, 277/1279 lines, five sections, seven panels and one embedded chart.",
+    "historicalPageTests": "migration-queue.md:1537 records 14/14. Current test names were read at SecurityAccessPage.test.tsx:394-649; none executed.",
+    "historicalTechnicalGate": "docs\\session-handoff.md:66-68 records Node26.11.1 npm run build EXIT0 and npx tsc --noEmit EXIT0, with existing web\\logs gate receipts. This worker does not refresh or extend that acceptance.",
+    "oldTwinHotspotFinding": "Not carried forward: current VehicleTwin.tsx:301 uses Button, :1523-1524 localized group/description, :1634-1647 hidden full summary plus visible localized inspection buttons. Native acceptance remains NOTRUN.",
+    "oldBackendOrderingUnknown": "Resolved at source level by ascending SQL plus non-reversing folder; exposed confirmed Q003. No live query executed.",
+    "blanketNativeAcceptance": false
+  },
+  "commandEvidence": {
+    "rawLog": "web\\logs\\phase6-qa-admin-security-access.log",
+    "commands": [
+      {"command": "Get-Date -Format o; Get-Location; bounded Get-ChildItem/Select-String authority inspection", "exitCode": 0, "result": "Actual clocks and scopes read; no Git/network."},
+      {"command": "Get-FileHash -Algorithm SHA256; Get-Content line counts; scoped [regex]::Matches counts; attempted PowerShell rg", "exitCode": 1, "result": "13 hashes and counts captured, but native rg was unavailable in PATH. Failed probe is retained, not a passing rg scan."},
+      {"command": "Select-String scoped patterns; Get-Content useAdmin.ts:294-311/router GET block", "exitCode": 0, "result": "Hook prefix/query matches 0. Two lexical candidates were case-insensitive <Button> and prose any, both explicitly classified rather than suppressed."},
+      {"command": "Built-in rg tool: scoped raw HTML/static CSS-variable styles/vendor imports/old API patterns across 11 production renderers", "exitCode": null, "result": "Tool returned exactly No matches found; it does not expose a numeric process exit."},
+      {"command": "ConvertFrom-Json -AsHashtable canonical en.json; enumerate unique literal t keys in scoped page/domain files", "exitCode": 0, "result": "literalKeysInspected=114; missingOrNonStringCanonicalKeys=0; four dynamic window-state keys and localized positions present."},
+      {"command": "Select-String -CaseSensitive exact proven mechanisms in scoped page/domain/handler/StateReader files", "exitCode": 0, "result": "Exact file:line evidence retained in ignored log; source only."},
+      {"command": "npx tsc --noEmit", "exitCode": null, "result": "NOTRUN; explicit no-full-gates/unchanged passing reruns."},
+      {"command": "Vitest/lint/build/audit.sh/verify.sh/browser/live HTTP/native matrix", "exitCode": null, "result": "NOTRUN under current scope."},
+      {"command": "ConvertFrom-Json report; validate identity/status enums/issue primary file-lines; compare current SHA256 against 13 captured scoped files", "exitCode": 0, "result": "JSON identity=PASS; checkStatusEnums=PASS; checks=20; confirmedIssues=7; candidates=4; issuePrimaryFileLineValidation=PASS; scopedHashesCompared=13; scopedHashDrift=0. Documentation/source-integrity validation only."},
+      {"command": "Final ConvertFrom-Json exact citation-range validation, first attempt", "exitCode": 1, "result": "Found out-of-range PageContainer.tsx:260-279 and vehicleState.ts:308-320 references. Corrected to actual source ranges before final validation. Failed attempt retained in raw log, not a passing audit."}
+    ],
+    "rawScopedCounts": {
+      "rawControls": 0,
+      "staticVariableInlineStyles": 0,
+      "directLibraries": 0,
+      "oldApiImports": 0,
+      "hookSubsetDoublePrefix": 0,
+      "hookSubsetCamelQueryMatches": 0,
+      "neonClasses": 16,
+      "fixedWhiteClasses": 7,
+      "GlassPanelOpenings": 7,
+      "ChartContainerOpenings": 0,
+      "EmbeddedChartOpenings": 1,
+      "OperationalBriefOpenings": 2,
+      "sectionOpenings": 5,
+      "presentationLineTotal": 1279
+    },
+    "maximumCommandDuration": "All executed commands were bounded source/document inspections and returned within the tool's 30-second initial wait; no async shell or 8-minute command remained."
+  },
+  "needs": [
+    "Orchestrator triages Q001-Q007 into exact narrow existing-owner fixes, avoiding duplicate objectives already captured in audit-page-022 and Phase5 shared-gap notes.",
+    "Native/mobile/a11y/theme/API acceptance stays NOTRUN until explicit safe browser/resource ownership and synthetic read-only scope are granted.",
+    "Report completion is not page/application completion; TypeScript, full gates and immutable prior passing evidence remain orchestrator-owned."
+  ],
+  "ownershipRelease": {
+    "applicationSource": "READ_ONLY_THROUGHOUT",
+    "testsCatalogConfigQueue": "NO_WRITE_CLAIM",
+    "browserNativeServer": "NEVER_ACQUIRED",
+    "subagents": "NONE",
+    "boundedCommands": "ALL_COMPLETED",
+    "reportAndIgnoredLog": "RELEASED_AT_TERMINAL_RETURN_AFTER_FINAL_DOCUMENT_VALIDATION",
+    "postReturnWrites": "NONE; no schedules, agents, helper processes or background tasks created."
+  }
+}

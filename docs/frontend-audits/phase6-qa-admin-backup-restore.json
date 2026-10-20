@@ -1,0 +1,410 @@
+{
+  "item": "phase6-qa-admin-backup-restore",
+  "phase": 6,
+  "status": "SOURCE_ONLY_REVIEW_COMPLETED_WITH_CONFIRMED_FINDINGS",
+  "fullQA": "NOT ACCEPTED",
+  "page": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+  "route": "/backup",
+  "purpose": "Bounded read-only finished-page QA of backup configuration, returned run history, integrity/manifest inspection and the imported portable settings transfer surface.",
+  "authority": {
+    "queueItemEvidence": "migration-queue.md:193",
+    "rollingContractEvidence": "migration-queue.md:152-183",
+    "acceptedSourceEvidence": "migration-queue.md:1521",
+    "acceptedSourceCommitFromQueue": "0232fe34c21a10d4e684a3e2978faf32d8cf8d39",
+    "acceptedSourceLimit": "Phase5 accepted SOURCE ONLY. Its lint/style/routes receipts and zero-discovery test startup failure are historical, not freshly passing validation or native acceptance.",
+    "instructionsRead": [
+      "docs\\orchestrator-loop.md",
+      "docs\\frontend-design-contract.md:1-660",
+      "docs\\frontend-mission.md:1-807",
+      "docs\\frontend-mission.md:921-1490",
+      "docs\\session-handoff.md:1-70",
+      ".github\\instructions\\react-frontend.instructions.md:1-530",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      "docs\\frontend-audits\\audit-page-006.json"
+    ],
+    "instructionPrecedence": "Current design contract and frontend SI cutover govern raw-SI display boundaries; legacy source-unit examples in older instructions do not authorize compatibility conversions.",
+    "versionedWriteScope": ["docs\\frontend-audits\\phase6-qa-admin-backup-restore.json"],
+    "ignoredLog": "web\\logs\\phase6-qa-admin-backup-restore.log",
+    "ignoredLogEvidence": ".gitignore:80",
+    "applicationSourceWrites": 0,
+    "testWrites": 0,
+    "catalogOrConfigurationWrites": 0,
+    "browserGrant": false,
+    "browserOrNativeRuns": 0,
+    "apiRequestsExecuted": 0,
+    "backupRestoreOrOtherMutationsExecuted": 0,
+    "realIdentitiesAccessed": 0,
+    "gitCommandsExecuted": 0,
+    "subagentsLaunched": 0,
+    "dependencyInstalls": 0,
+    "helpersOrExtensionsCreatedOrExecuted": 0,
+    "serversStarted": 0,
+    "dockerCommandsExecuted": 0
+  },
+  "timebox": {
+    "dispatchAt": "2026-10-13T09:20:08.289-07:00",
+    "firstActualClockReadAt": "2026-10-13T09:20:22.4183166-07:00",
+    "softReturnAt": "2026-10-13T09:40:08.289-07:00",
+    "hardLimitAt": "2026-10-13T09:45:08.289-07:00",
+    "lastEvidenceClockReadAt": "2026-10-13T09:30:28.8916696-07:00",
+    "reportValidationClockReadAt": "2026-10-13T09:35:37.3019848-07:00",
+    "boundedCommands": "All own PowerShell commands synchronous, completed in seconds, below the eight-minute command ceiling; no background command, wrapper, process or browser lease.",
+    "stopContract": "STOP requires immediate terminal return and all ownership release. No post-return writes."
+  },
+  "acceptanceMeaning": {
+    "PASS": "Only the specifically inspected source contract or executed bounded measurement is established; never mounted/native/application acceptance.",
+    "FAIL": "A source-proven contract/behavior gap. Reproduction is deterministic source reasoning with synthetic inputs, NOT an executed browser/API reproduction.",
+    "NOTRUN": "No fresh applicable execution evidence. A prohibited or unexecuted check is not a pass.",
+    "ownershipRelease": "All report/log/source-read/command ownership released with this terminal delivery; no application-source write claim was taken. Queue metadata remains parent-owned."
+  },
+  "sourceSnapshot": {
+    "observedAt": "2026-10-13T09:30:28.8916696-07:00",
+    "hashAlgorithm": "SHA256",
+    "hashes": {
+      "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx": "28D172A0BD73F27DEE4B779A18460FA6C29F346FD93C69E3E42B91574FAF48FF",
+      "web\\src\\features\\settings\\components\\SettingsExportImport.tsx": "4D0D54D60DCC71A970162CC42EAC04FF9ED007ED9D91FDAFA7CDF92B12F19675",
+      "web\\src\\api\\hooks\\useSettingsBackup.ts": "DC812ACEF8014821A4706D85DA52A9001DFA1A12BAFB3EA95958C7F80421D909",
+      "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx": "2FF3C0B0BE0E65EEF11141CC226A4D3237D973BD08E3648B58C1AFDE2E1CD856",
+      "web\\src\\lib\\settingsImportSchema.ts": "238A99DE570B0B7E4545056A7E2B8AB1E76990B726C3B543CFB2BA405362F692",
+      "internal\\api\\router.go": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "internal\\api\\backup\\restore_handler.go": "E44EB178A0213B0D505A07A8475C3AED4353A318BA8CEC21124960FB8FAE5C97",
+      "internal\\backup\\processor.go": "EF7CAE6817CD294DEF4889D92404AD489A65A05270712D7E31C5F41E228FF5D5"
+    },
+    "limit": "Hashes identify the observed source, not a Git baseline, source lock, runtime fixture or proof that concurrent owners cannot later change it."
+  },
+  "checks": [
+    {
+      "id": "P01",
+      "status": "PASS",
+      "name": "Existing item and accepted source predecessor",
+      "evidence": ["migration-queue.md:193", "migration-queue.md:1521"],
+      "detail": "Used the existing report-only objective, preserved the original inventory and did not rerun its unchanged historical passing lint/style/route checks."
+    },
+    {
+      "id": "P02",
+      "status": "PASS",
+      "name": "Actual lazy route and fleet-independent scope",
+      "evidence": ["web\\src\\App.tsx:266", "web\\src\\App.tsx:830", "web\\src\\lib\\routeLoaders.ts:102", "web\\src\\lib\\workspaceScope.ts:109-115"],
+      "detail": "Lazy SafeRoute mounts /backup. Header vehicle scope is intentionally disabled; no duplicate workspace range/vehicle picker appears. Scheduling frequency is an independent business setting."
+    },
+    {
+      "id": "P03",
+      "status": "PASS",
+      "name": "Twelve exact route-method contracts",
+      "evidence": ["internal\\api\\router.go:3210", "internal\\api\\router.go:3723-3724", "internal\\api\\router.go:4937-4950", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:207-215", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:334-449", "web\\src\\api\\hooks\\useSettingsBackup.ts:40-44", "web\\src\\api\\hooks\\useSettingsBackup.ts:91-124"],
+      "detail": "All ten backup path/method combinations plus settings export/import are registered. Dry-run/apply share POST /settings/import. No hook prefix duplication or camelCase query assignments were found. Runtime auth, sudo, payload validation and downloads were not exercised."
+    },
+    {
+      "id": "P04",
+      "status": "PASS",
+      "name": "Read cancellation, polling and canonical download URL",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:207-221", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:437-443", "web\\src\\api\\client.ts:79-96"],
+      "detail": "Both list reads forward TanStack Query signal; existing keys and 5s queued/running versus 30s idle polling remain. Browser download uses apiUrl with an unprefixed path, not a second API base builder."
+    },
+    {
+      "id": "P05",
+      "status": "PASS",
+      "name": "Independent initial/loading/fatal/unknown/authoritative-empty branches",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:238-248", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:788-807", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:839-853", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:942-952", "web\\src\\api\\dataState.ts:195-222"],
+      "detail": "No retained payload plus paused/unobserved fetch renders Unknown, not a fabricated zero or no-records CTA. Loading has source-shaped skeletons; fatal failures have per-source retry. Successful empty arrays have explanatory empty bodies. Independent neighboring panels and settings transfer remain mounted."
+    },
+    {
+      "id": "P06",
+      "status": "PASS",
+      "name": "Retained/paused source trust and individual recovery",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:224-245", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:278-282", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:796-807", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:944-952", "web\\src\\components\\layout\\PageContainer.tsx:243-254", "web\\src\\components\\feedback\\DataSourceNotice.tsx:76-120", "web\\src\\components\\feedback\\DataSourceNotice.tsx:180-199"],
+      "detail": "fatalError alone replaces a source. Retained rows/metrics survive background failure and paused refresh. PageLayout passes independent dataSources to the existing nonblocking notice, which distinguishes paused, initial failure and refresh failure, retaining retry. No global loading/error/empty prop erases all panels."
+    },
+    {
+      "id": "P07",
+      "status": "PASS",
+      "name": "Numeric source semantics and existing display preferences",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:251-276", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:772-777", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx:19-43"],
+      "detail": "Known counts use observed arrays; unknown metrics stay undefined. Empty-run success rate and last backup are unknown, not invented zero/success. Summary explicitly discloses returned-list rather than server-wide metrics. Raw bytes/counts/millisecond duration remain in source; existing preference-aware formatters apply at display. No deprecated distance/energy converter is introduced."
+    },
+    {
+      "id": "P08",
+      "status": "PASS",
+      "name": "Named danger deletion with pending confirmation",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1116-1129", "web\\src\\components\\ui\\ConfirmDialog.tsx:74-142", "internal\\api\\router.go:4943"],
+      "detail": "Deletion names the configuration, uses danger, passes loading and closes only on success. Shared confirmation disables repeat confirmation/cancel and suppresses busy Escape/backdrop; the route remains sudo-gated. Actual focus and authorization are NOTRUN."
+    },
+    {
+      "id": "P09",
+      "status": "PASS",
+      "name": "Preview race/unmount guard and null table manifest",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:195-205", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:444-459", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:699-701", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:723", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1132-1142", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1160-1180"],
+      "detail": "Preview shows per-run busy state and only the latest generation may update modal/error/busy state. Close/unmount invalidate pending generations. tables null defaults to []; table shells/actions are intact. Transport cancellation and a modal-level failed-preview retry are not implemented and not claimed."
+    },
+    {
+      "id": "P10",
+      "status": "PASS",
+      "name": "Preview checksum success actually has processor evidence",
+      "evidence": ["internal\\api\\backup\\restore_handler.go:330-336", "internal\\api\\backup\\restore_handler.go:355-359", "internal\\backup\\processor.go:278-289"],
+      "detail": "Unlike the historical inventory's incomplete trace, RestoreBackup recomputes SHA-256 and returns an error on mismatch before a successful preview response. Therefore successful preview plus a stored checksum does establish a comparison. The old stored-presence-only positive-verification allegation is NOT reissued. Missing checksum is still mislabelled as failure, BR003."
+    },
+    {
+      "id": "P11",
+      "status": "PASS",
+      "name": "Mobile adapter retains fields and actions in source",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:809-831", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:954-976", "web\\src\\components\\ui\\MobileDataTableAdapter.tsx:85-86", "web\\src\\components\\ui\\MobileDataTableAdapter.tsx:122-133", "web\\src\\components\\ui\\MobileDataTableAdapter.tsx:147-165"],
+      "detail": "Both tables now supply mobilePresentation, inline row operations and the existing Quick view full-column details, including retention. Adapter adds 44px minimum button dimensions in its source. This resolves the historical hidden-actions source gap, not native sizing/hit testing/overflow/focus acceptance."
+    },
+    {
+      "id": "P12",
+      "status": "PASS",
+      "name": "Field names, required semantics and shared labelled overlays",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:999-1013", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1054-1082", "web\\src\\components\\ui\\Input.tsx:88-98", "web\\src\\components\\ui\\Modal.tsx:72-74", "web\\src\\components\\ui\\Modal.tsx:113-118"],
+      "detail": "Stable explicit name/provider IDs and required attributes are now present. Shared fields forward associations/native required; modals have labelled dialog semantics and shared focus ownership. Semantic presence is not validation execution or a keyboard/screen-reader pass; BR002 remains."
+    },
+    {
+      "id": "P13",
+      "status": "PASS",
+      "name": "Portable transfer lifecycle and deliberate apply",
+      "evidence": ["web\\src\\features\\settings\\components\\SettingsExportImport.tsx:116-177", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:215-238", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:377-399", "web\\src\\api\\hooks\\useSettingsBackup.ts:115-128"],
+      "detail": "1 MiB limit, file read/JSON/schema rejection, dry-run preview, per-section diff, explicit Apply and success-only applied state remain. Apply uses requiresLiveMode and cancelled sudo keeps preview. No database-restore Apply endpoint/button exists here. Concurrency and localized validator errors are separately failed below."
+    },
+    {
+      "id": "P14",
+      "status": "PASS",
+      "name": "Current line/section preservation against recorded inventory",
+      "evidence": ["docs\\frontend-audits\\audit-page-006.json:345-371", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:771-783", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:839", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:931", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:993-999", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1116-1139"],
+      "detail": "Measured page 1205 versus recorded original 1153, satisfying >=70% even without the reused same-feature AdminSummary's 44 lines. Five top-level sections and three conditional dialogs remain. Current/recorded page GlassPanel=0, ChartContainer=0, LayoutCard=3, DataTable=3; imported settings GlassPanel=1. Original source counts are preserved receipts, not regenerated. All six summary metrics and three reliability subsections remain."
+    },
+    {
+      "id": "P15",
+      "status": "PASS",
+      "name": "Six bounded prohibited-pattern checks",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1-1205", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:1-456", "web\\src\\api\\hooks\\useSettingsBackup.ts:1-130", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx:1-44"],
+      "detail": "Actual case-sensitive Select-String counts across four exact production files: static CSS-variable inline styles 0; raw button/input/textarea/select/table 0; direct recharts/leaflet/framer-motion imports 0; old API imports 0; request/apiUrl double-prefix literals 0; four prohibited camelCase query assignments 0. These narrow regex results are not a full syntax/style/architecture audit."
+    },
+    {
+      "id": "P16",
+      "status": "PASS",
+      "name": "Static canonical English translation-key existence",
+      "evidence": ["web\\src\\i18n\\en.json:12070-12200", "web\\src\\i18n\\index.ts:126-135"],
+      "detail": "Executed positive-discovery lookup: page 94, imported settings 32, AdminSummary 8 unique static keys per file, missing 0. A comment-only backup.field.<key> hit is excluded. This does not cover dynamic family leaves, all locale catalogs or cold namespace loading; BR008 remains."
+    },
+    {"id": "F01", "status": "FAIL", "name": "Backup writes are not guarded live-only", "finding": "BR001", "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:334-391", "web\\src\\lib\\operationalMode.ts:66-76"]},
+    {"id": "F02", "status": "FAIL", "name": "Required config fields and scheduling bounds are not validated before request", "finding": "BR002", "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:429-435", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1040-1049", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1104-1109"]},
+    {"id": "F03", "status": "FAIL", "name": "Missing/unavailable checksum evidence is labelled failure or mismatch", "finding": "BR003", "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:391-396", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1153-1156"]},
+    {"id": "F04", "status": "FAIL", "name": "Failed runs without error text produce a false healthy recent-errors callout", "finding": "BR004", "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:284-287", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:899-906"]},
+    {"id": "F05", "status": "FAIL", "name": "Loaded history cannot navigate beyond the first server page", "finding": "BR005", "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:213-215", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:973-979", "internal\\api\\backup\\restore_handler.go:148-172"]},
+    {"id": "F06", "status": "FAIL", "name": "Old config save completion can close a newer modal session", "finding": "BR006", "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:337-351", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:400-410", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1101-1108"]},
+    {"id": "F07", "status": "FAIL", "name": "Settings file/preview/apply sessions can overlap without result ownership", "finding": "BR007", "evidence": ["web\\src\\features\\settings\\components\\SettingsExportImport.tsx:116-177", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:192-199", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:215-220", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:370-383"]},
+    {"id": "F08", "status": "FAIL", "name": "Dynamic backup labels and schema validation errors are not canonically localized", "finding": "BR008", "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:311", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:590-612", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1057", "web\\src\\lib\\settingsImportSchema.ts:69-110", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:151-155"]},
+    {"id": "F09", "status": "FAIL", "name": "Empty-run Quick backup CTA does not reflect pending mutation", "finding": "BR009", "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:733-738", "web\\src\\components\\feedback\\EmptyState.tsx:95-97"]},
+    {"id": "F10", "status": "FAIL", "name": "Imported dropzone still uses decorative neon drag-active chrome", "evidence": ["web\\src\\features\\settings\\components\\SettingsExportImport.tsx:298-302"], "detail": "Executed neon/glow pattern count 1 at line 300. This is a source design-contract gap, not measured contrast failure or permission for this QA worker to rewrite the dependency."},
+    {"id": "N01", "status": "NOTRUN", "name": "Native/mounted page, browser/network and backup/restore action acceptance", "reason": "Explicitly prohibited; no browser ownership or real/synthetic API requests."},
+    {"id": "N02", "status": "NOTRUN", "name": "Mission width/theme/RTL/200%-text/open-overlay/reduced-motion matrix", "reason": "No captures, target rectangles, hit tests, composed contrast measurements or native host run."},
+    {"id": "N03", "status": "NOTRUN", "name": "Keyboard, screen-reader, focus trap/restore and announcements", "reason": "Source semantics inspected only; no mounted interactions."},
+    {"id": "N04", "status": "NOTRUN", "name": "npx tsc --noEmit, lint, build and tests", "reason": "Report-only read-only item; current unchanged passing parent gate is not rerun. Full suites prohibited. No source/test changes, zero tests executed; not a zero-discovery pass."},
+    {"id": "N05", "status": "NOTRUN", "name": "audit.sh / verify.sh helper scripts and preservation CLI", "reason": "Skills loaded and audit implementation inspected; helper execution prohibited. Direct bounded scans/registration inspection are separately recorded, never a script pass."},
+    {"id": "N06", "status": "NOTRUN", "name": "Provider credentials, persistence, sudo/auth, encryption and actual import merge/secrecy behavior", "reason": "No identities, secrets, imports, downloads, backups or restores executed. No broad security or processor implementation campaign."}
+  ],
+  "confirmedFindings": [
+    {
+      "id": "BR001",
+      "severity": "high",
+      "title": "Backup mutations bypass the existing historical-mode write guard",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:334-391", "web\\src\\api\\client.ts:368-378", "web\\src\\lib\\operationalMode.ts:40-48", "web\\src\\lib\\operationalMode.ts:66-76", "web\\src\\api\\offlineCache.ts:50-73", "web\\src\\api\\hooks\\useSettingsBackup.ts:119-123"],
+      "mechanism": "All six backup mutations omit requiresLiveMode. request defaults that flag false, and assertOperationalWriteAllowed returns without checking as_of/offline for a non-opted-in write. Backup routes are also absent from the immediate offline unsafe-write patterns. Portable settings Apply correctly opts in, but the surrounding backup actions do not.",
+      "sourceDerivedReproduction": "In a future authorized synthetic test, use an online /backup?as_of=2026-01-01T00:00:00Z environment, intercept request without network and activate Quick backup or save/delete/trigger/verify. Inspect that these options do not invoke the live-only gate. Never run an actual backup to demonstrate it.",
+      "runtimeReproduction": "NOTRUN",
+      "needs": "One narrow page action-guard fix: use the existing live-only mutation contract and visible read-only reasons, preserving route methods, cancellation, sudo and payloads; add covering synthetic tests under a separately assigned source/test claim."
+    },
+    {
+      "id": "BR002",
+      "severity": "high",
+      "title": "Required provider inputs and integer/server bounds are bypassed by click-save",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:429-435", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1003-1011", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1040-1082", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1104-1109", "internal\\api\\backup\\restore_handler.go:133-144"],
+      "mechanism": "The modal body is a div, not a validated form submit. Save is disabled only for blank name; handleSave immediately mutates form. required attributes now exist but cannot stop that click callback. Frequency/retention enforce only Math.max(1, Number(value)); there is no finite integer or upper-bound validation, while the server clamps frequency to 30 and retention to 100.",
+      "sourceDerivedReproduction": "Future synthetic seam test: create a named S3 config with all mandatory provider fields blank, click Create and assert no request should occur; current source calls mutate. Enter 1.5 or 31 frequency: source sends it without field feedback, whereas the Go integer decoder rejects a fraction or bounds clamp changes 31 to 30.",
+      "runtimeReproduction": "NOTRUN",
+      "needs": "One validated config-submit fix with localized field errors/summary and server-consistent finite integer bounds; retain stable IDs, native requirements and password/textarea credential types."
+    },
+    {
+      "id": "BR003",
+      "severity": "high",
+      "title": "Integrity UI conflates no checksum and verification service errors with corruption",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:391-396", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1153-1156", "internal\\api\\backup\\restore_handler.go:301-310", "internal\\api\\backup\\restore_handler.go:358", "internal\\backup\\processor.go:249-257", "internal\\backup\\processor.go:282-289"],
+      "mechanism": "Successful preview without a stored checksum returns checksum_verified=false but means no comparison was performed; page prints Checksum verification failed in danger styling. VerifyBackup serializes every processor error as verified=false plus error, including no file/checksum/provider/download errors. The page ignores error and prints Checksum mismatch; an empty 204 body also falls into that same mismatch branch.",
+      "sourceDerivedReproduction": "Use synthetic preview {tables:[],metadata:null,checksum_verified:false} for an absent-checksum run; current render claims failure. Return {verified:false,error:'backup has no file path or checksum'} or undefined to the verify seam; current toast claims mismatch. Actual verified=true preview is NOT falsely accused: RestoreBackup performs the comparison first.",
+      "runtimeReproduction": "NOTRUN",
+      "needs": "One integrity-evidence presentation correction: neutral not-verified/unknown for absent evidence, distinct unavailable/error versus proven mismatch, retain true-success comparison and existing standalone verification."
+    },
+    {
+      "id": "BR004",
+      "severity": "medium",
+      "title": "Recent-errors success message can contradict an observed failed run",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:254-255", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:284-287", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:899-911"],
+      "mechanism": "failedRuns drops status=failed rows whose optional error_message is absent/empty. When all failures lack text, failedCount is positive but failedRuns.length is zero and a success callout says No recent backup failures.",
+      "sourceDerivedReproduction": "Future source-render test with one synthetic failed run and error_message=null yields Failed runs=1 alongside No recent backup failures. No backend fault is needed.",
+      "runtimeReproduction": "NOTRUN",
+      "needs": "One recent-failures truthfulness fix: retain failed rows regardless of message, use localized missing-detail copy and accurate returned-list scope."
+    },
+    {
+      "id": "BR005",
+      "severity": "medium",
+      "title": "Backup history offers only client pagination of the first 50 server rows",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:213-215", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:954-979", "internal\\api\\backup\\restore_handler.go:148-172"],
+      "mechanism": "ListRuns defaults limit=50 offset=0. The query sends no bounds, and the table gets only the returned array with local pagination, so no page action asks for row 51 or older. Summary honestly discloses list coverage, but full history navigation is inaccessible.",
+      "sourceDerivedReproduction": "Future synthetic endpoint fixture containing 51 ordered runs: initial page receives 50; changing local table pages issues no offset request and cannot expose the oldest completed snapshot for download/preview.",
+      "runtimeReproduction": "NOTRUN",
+      "needs": "One bounded history-coverage/paging item using the existing limit/offset contract; retain source order, loaded versus full-result distinctions and unknown server totals. Do not invent an aggregate total."
+    },
+    {
+      "id": "BR006",
+      "severity": "medium",
+      "title": "A prior save can discard a newly opened config form",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:337-351", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:400-410", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:999", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1101-1108", "web\\src\\components\\ui\\Modal.tsx:72", "web\\src\\components\\ui\\Modal.tsx:107"],
+      "mechanism": "Create/update pending disables Save only. Cancel, shared modal dismissal and New config remain available. Both mutation successes call unconditional closeModal, resetting whichever session is now open rather than the submitted one.",
+      "sourceDerivedReproduction": "Future synthetic deferred-request test: submit config A, cancel/dismiss while pending, open New config B and type a draft, then resolve A. A's onSuccess closes/reset B and loses its unsaved draft.",
+      "runtimeReproduction": "NOTRUN",
+      "needs": "One config-modal pending/session-ownership fix: either prevent all pending dismissal/reopen paths through existing contracts or generation-check completion before closing a specific form."
+    },
+    {
+      "id": "BR007",
+      "severity": "high",
+      "title": "Portable import preview can describe a different bundle from the one Apply sends",
+      "evidence": ["web\\src\\features\\settings\\components\\SettingsExportImport.tsx:94-101", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:116-177", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:192-199", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:215-220", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:296-305", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:370-383"],
+      "mechanism": "Drag/drop remains active while stage=parsing, despite the picker button being disabled. Multiple ingestFile/dry-run operations have no generation/cancellation guard. A stale dry-run sets previewResult/stage but does not restore its own pending bundle. Also Change file remains enabled during Apply; an old apply completion can replace a newer import UI with applied state.",
+      "sourceDerivedReproduction": "Future no-network deferred seam test: drop A, let its dry-run wait; drop B and resolve B first, then A. pending remains B but A's counts become the displayed preview; Apply sends B. Separately start Apply A, use Change file to load B, then resolve A and observe the newer session overwritten.",
+      "runtimeReproduction": "NOTRUN",
+      "needs": "One imported-component operation-generation/busy-ownership fix, including drop intake and Change file; preserve dry-run/apply payload, explicit live-only Apply, sudo cancellation and error recovery."
+    },
+    {
+      "id": "BR008",
+      "severity": "medium",
+      "title": "Dynamic labels and validator failures fall back to untranslated English/raw enums",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:311", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:590-612", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1057", "web\\src\\lib\\settingsImportSchema.ts:69-110", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:151-155", "web\\src\\i18n\\en.json:12091-12106", "web\\src\\i18n\\en.json:12164-12200"],
+      "mechanism": "Canonical backup.provider/status/runType are scalar header labels, not dictionaries, and backup.field is absent. Dynamic leaf keys used for provider/status/run-type/credential labels are therefore missing despite static key coverage. The schema utility returns English validation strings and the component displays them directly rather than translating an error code.",
+      "sourceDerivedReproduction": "Future synthetic non-English render: select S3 and inspect credential labels or run status; missing dynamic catalog leaves rely on English/raw fallbacks. Upload a synthetic object with invalid schema_version and the validator's English sentence becomes the visible error.",
+      "runtimeReproduction": "NOTRUN",
+      "needs": "One scoped localization item with serialized canonical catalog ownership: use noncolliding leaf families or existing mappings and localized schema error codes/interpolation. No catalog edit was made by this QA worker."
+    },
+    {
+      "id": "BR009",
+      "severity": "medium",
+      "title": "Empty-history Quick backup allows repeated requests while already pending",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:377-384", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:733-738", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:751-757", "web\\src\\components\\feedback\\EmptyState.tsx:95-97"],
+      "mechanism": "Header Quick backup binds isPending, but runsEmpty supplies only an onClick that always mutates. Shared EmptyState renders that callback without pending/disabled props. Until the successful invalidation populates a run, the empty CTA remains repeatedly actionable.",
+      "sourceDerivedReproduction": "Future no-network test with empty runs and a deferred quick mutation: activate the empty-state Quick backup twice before resolving. Both callbacks invoke mutate, unlike the disabled header button.",
+      "runtimeReproduction": "NOTRUN",
+      "needs": "One pending-safe empty-state backup CTA fix using a guarded page callback or an existing busy-capable composition, preserving explanatory empty content."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "status": "NOTRUN",
+      "title": "Small header/form buttons and long settings text may not meet narrow-screen target/reflow acceptance",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:747-768", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1099-1110", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:257-278", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:347-374", "web\\src\\components\\ui\\Button.tsx:36-40"],
+      "detail": "Default sm/md source heights are 36/40px; header buttons are sm. Settings export and preview header are unwrapped flex rows. Effective CSS/target rectangles, 320px long filenames/translations, 200% text and shell scroll were not measured. Mobile row adapters do explicitly add minimum targets; do not generalize that proof to the entire page."
+    },
+    {
+      "id": "C02",
+      "status": "NOTRUN",
+      "title": "Schema object checks accept arrays and only superficially validate dates",
+      "evidence": ["web\\src\\lib\\settingsImportSchema.ts:69-114"],
+      "detail": "typeof object checks do not exclude arrays for sections/settings; exported_at only checks a nonempty string. Local acceptance is source-observable, but actual backend import rejection/normalization was not traced here. No claim that malformed data is applied."
+    },
+    {
+      "id": "C03",
+      "status": "NOTRUN",
+      "title": "Modal action-footer reachability, focus restoration and repeated row names need mounted QA",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:547-570", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1099-1111", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1184-1196", "web\\src\\components\\ui\\Modal.tsx:19-20"],
+      "detail": "Config/preview actions are in the scrolling body instead of the persistent footer slot; repeated icon actions use generic localized names. Native scroll/keyboard/screen-reader performance is untested, not a confirmed inaccessible control."
+    },
+    {
+      "id": "C04",
+      "status": "NOTRUN",
+      "title": "Provider credentials, encryption capability and export privacy need separate authorized integration evidence",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:159-180", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:1090-1095", "web\\src\\features\\settings\\components\\SettingsExportImport.tsx:263-267"],
+      "detail": "Only field types/payload forwarding and UI privacy claims were inspected. No provider credential correctness, encrypted-backup restoreability, secrecy guarantee or broad security acceptance is inferred."
+    },
+    {
+      "id": "C05",
+      "status": "NOTRUN",
+      "title": "Retained inline page data orchestration is not a domain-hook architecture acceptance",
+      "evidence": ["web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:207-221", "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:334-459"],
+      "detail": "Backup reads/mutations remain page-owned useQuery/useMutation/request calls, whereas portable transfer has domain hooks. This inherited ownership/decomposition debt is visible, but no second typed backup implementation was verified and no extraction or blanket architectural pass is authorized. Preserve existing keys, payloads and behavior if a separate owner later extracts it."
+    }
+  ],
+  "preservation": {
+    "historicalOriginalPageLines": 1153,
+    "currentPageLines": 1205,
+    "reusedSameFeatureSummaryLines": 44,
+    "currentPagePlusSummaryLines": 1249,
+    "pageAloneMeets70Percent": true,
+    "pageLineDelta": 52,
+    "topLevelSections": [
+      {"name": "Backup overview", "evidence": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:771-777", "status": "PASS"},
+      {"name": "Configurations", "evidence": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:786-835", "status": "PASS"},
+      {"name": "Reliability and storage", "evidence": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:837-919", "status": "PASS"},
+      {"name": "Run history", "evidence": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:923-984", "status": "PASS"},
+      {"name": "Portable settings bundle", "evidence": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx:986-994", "status": "PASS"}
+    ],
+    "conditionalDialogs": ["Create/edit configuration", "Named danger deletion", "Read-only restore preview"],
+    "currentPageOpeningCounts": {"GlassPanel": 0, "ChartContainer": 0, "LayoutCard": 3, "Modal": 2, "ConfirmDialog": 1, "DataTable": 3, "SourceContent": 2, "FormSection": 1, "SettingsExportImport": 1, "AdminSummary": 1},
+    "historicalCompatibleCounts": {"GlassPanel": 0, "ChartContainer": 0, "LayoutCard": 3, "DataTable": 3, "topLevelSections": 5, "conditionalDialogs": 3},
+    "importedSettingsGlassPanels": 1,
+    "preservedSourceImprovementsNotReissuedAsBugs": [
+      "List query AbortSignal forwarding",
+      "Unobserved/paused initial Unknown branches",
+      "Required provider-field attributes and stable IDs",
+      "Delete confirmation pending binding",
+      "Mobile full-detail adapters and row actions",
+      "Preview latest-generation busy/unmount protection",
+      "include_tables cloned and preserved through openEdit",
+      "Semantic neutral provider badges and solid/slim metric bars",
+      "Actual preview checksum comparison in the existing processor"
+    ],
+    "limit": "Source section/line preservation is not proof that each section actually rendered in a mounted application. No source was rewritten or original inventory replaced."
+  },
+  "executionEvidence": {
+    "rawOutput": "web\\logs\\phase6-qa-admin-backup-restore.log",
+    "successfulMeasurements": [
+      {"command": "Get-Date -Format o", "exit": 0, "purpose": "Actual local clocks, not invented worker age"},
+      {"command": "Select-String -LiteralPath <four exact scoped production files> -Pattern <recorded case-sensitive patterns> -CaseSensitive; Get-Content line counts and regex tag-opening counts", "exit": 0, "purpose": "Scoped measurements at 09:27:18; exact file list and raw counts retained"},
+      {"command": "Get-Content -LiteralPath web\\src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable; literal t-key traversal for the three named production files", "exit": 0, "purpose": "Valid positive-discovery lookup at 09:29:41; 94/32/8 keys and zero static missing, dynamic families separately classified"},
+      {"command": "Select-String -LiteralPath internal\\api\\router.go -Pattern <12 recorded registration strings> -SimpleMatch -CaseSensitive; Get-FileHash -Algorithm SHA256 <eight exact inspected files>", "exit": 0, "purpose": "12/12 method/registration matches and source provenance at 09:30:28"}
+    ],
+    "failedOrInvalidMeasurementAttempts": [
+      {"exit": 1, "detail": "Initial combined ignore-read probe referenced absent web\\.gitignore; root .gitignore:80 logs/ was observed. Not a source failure."},
+      {"exit": 1, "detail": "First pattern measurement output sink used unsupported Tee-Object -LiteralPath/-Append combination. Corrected to -FilePath; no fabricated counts from the failed sink."},
+      {"exit": 0, "accepted": false, "detail": "First catalog regex matched a comment example backup.field.<key>; not a production missing key."},
+      {"exit": 0, "accepted": false, "detail": "Attempted comment stripping used a Singleline regex that swallowed production source, yielding page 0 keys/settings 2. Zero-discovery measurement INVALID/NOTPASS; corrected targeted example exclusion produced 94/32/8. Only invalid classifiers were repeated, not unchanged passing application checks."},
+      {"exit": 1, "accepted": false, "detail": "First report citation validator also matched timestamp/prose colons as filenames and found one genuine out-of-bounds citation, MobileDataTableAdapter.tsx:147-166 (165 lines). Corrected that citation to 147-165 and narrowed the validator to actual source/document filename extensions; not a passing receipt."}
+    ],
+    "testExecution": {"status": "NOTRUN", "discovered": null, "executed": 0, "passed": null, "failed": null, "skipped": null},
+    "typecheck": "NOTRUN",
+    "native": "NOTRUN",
+    "reportValidation": {
+      "status": "PASS",
+      "clockReadAt": "2026-10-13T09:35:37.3019848-07:00",
+      "exit": 0,
+      "fileLineReferencesChecked": 168,
+      "fileLineBoundsErrors": 0,
+      "scope": "Report JSON, check-status enum and file/line existence only; not correctness of all source conclusions or an application gate."
+    },
+    "noBlanketAcceptance": true
+  },
+  "parentNeeds": [
+    "Create narrowly scoped fix assignments for BR001-BR009 only after source write ownership is explicitly available; do not mutate queue/source from this QA receipt.",
+    "BR007 owns the imported settings component, not just BackupRestorePage; BR008 requires serialized canonical catalog ownership and validator/UI ownership.",
+    "Retain current actual preview checksum success evidence; do not repeat the historical stored-presence-only allegation.",
+    "Record imported drag-active neon chrome as a bounded design debt rather than authorizing a broad cosmetic rewrite.",
+    "Keep native/mobile/a11y/API/action/full-gate acceptance NOTRUN until independently authorized safe synthetic evidence exists."
+  ],
+  "completion": {
+    "reportOnly": true,
+    "applicationAccepted": false,
+    "allOwnershipReleasedAtTerminalDelivery": true,
+    "activeOwnCommands": 0,
+    "activeBrowserLeases": 0,
+    "postReturnWritesAllowed": false
+  }
+}

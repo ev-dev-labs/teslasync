@@ -1,0 +1,421 @@
+{
+  "item": "audit-page-169",
+  "phase": 0,
+  "page": "web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.tsx",
+  "routes": [
+    {
+      "path": "/service-intelligence",
+      "registration": "web\\src\\App.tsx:223,757",
+      "implementation": "Lazy ServiceIntelligencePage inside SafeRoute named ServiceIntelligence.",
+      "mountedAtRuntime": "unverified"
+    }
+  ],
+  "purpose": "Compare selected-vehicle decoded context and observed symptoms against service, recall and official manufacturer-communication records, with explicit source and interpretation limits.",
+  "primaryGoal": "Review potentially relevant service hypotheses and warranty outlook, inspect authoritative evidence and provenance, and prepare a service ticket without treating matches as confirmed faults, eligibility or completed repairs.",
+  "dataSources": [
+    {
+      "hook": "useServiceIntelligence(vehicleId, refresh=false)",
+      "owner": "web\\src\\api\\hooks\\useServiceIntelligence.ts:190-208",
+      "endpoint": "GET /api/v1/service-intelligence/vehicles/{vehicleID}?refresh=false",
+      "routeEvidence": ["internal\\api\\router.go:3928", "internal\\api\\serviceintelligence\\handler.go:38-42"],
+      "sourceOwnership": "Frontend typed hook returns server-assembled vehicle_context, summary, recall_findings, communications, ranked_symptoms, evidence and sources. Backend service/integrations own retrieval, matching and normalized catalog semantics; their algorithms were not audited.",
+      "consumers": ["VehicleMatchPanel", "RecallInventoryPanel", "CommunicationsPanel", "SymptomMatchesPanel", "EvidenceLimitationsPanel", "SourceFreshnessPanel"],
+      "behavior": "Vehicle-scoped query key includes refresh; enabled only for truthy vehicleId; analytics staleTime; AbortSignal forwarded. This page does not request refresh=true. Retry refetches the existing query.",
+      "citation": "web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.tsx:38-63,126-136,155-203",
+      "backendRuntime": "unverified"
+    },
+    {
+      "hook": "useWarrantyOutlook(vehicleId)",
+      "owner": "web\\src\\api\\hooks\\useServiceIntelligence.ts:209-229,263-275",
+      "endpoint": "GET /api/v1/service-intelligence/vehicles/{vehicleID}/warranty",
+      "routeEvidence": ["internal\\api\\router.go:3928", "internal\\api\\serviceintelligence\\handler.go:41"],
+      "sourceOwnership": "Server returns coverage names, expiration, days_remaining, km_limit/km_remaining, status, basis and assumption. No independent verification of coverage or odometer source.",
+      "consumers": ["WarrantyPanel"],
+      "behavior": "Analytics staleTime, vehicle-enabled, cancellation forwarded; optional odometer_km supported by hook but not passed by this page. Coverage assumptions stay visible.",
+      "citation": "web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.tsx:40,139-147",
+      "backendRuntime": "unverified"
+    },
+    {
+      "hook": "useClaimDraft(vehicleId, submittedIssue)",
+      "owner": "web\\src\\api\\hooks\\useServiceIntelligence.ts:237-260",
+      "endpoint": "GET /api/v1/service-intelligence/vehicles/{vehicleID}/claim-draft",
+      "parameters": ["issue", "optional odometer_km"],
+      "routeEvidence": ["internal\\api\\router.go:3928", "internal\\api\\serviceintelligence\\handler.go:42"],
+      "sourceOwnership": "Backend composes subject, vehicle, issue, coverages, communications, symptoms, evidence, ask, body and disclaimer. Frontend submits the issue and copies the exact returned body.",
+      "consumers": ["ClaimDraftPanel"],
+      "behavior": "Historical query policy; key includes vehicle, submitted issue and optional odometer. Query disabled until submitted issue is non-null; empty string is not rejected by frontend enablement. Current edits and submitted text are separate local states. AbortSignal forwarded.",
+      "citation": "web\\src\\features\\service-intelligence\\components\\ClaimDraftPanel.tsx:28-59,64-110",
+      "backendRuntime": "unverified; scopedPath implementation and server issue validation not inspected"
+    },
+    {
+      "hook": "useCommunicationsCatalogStatus()",
+      "owner": "web\\src\\api\\hooks\\useServiceIntelligence.ts:277-288",
+      "endpoint": "GET /api/v1/admin/service-intelligence/communications/status",
+      "routeEvidence": ["internal\\api\\router.go:3929-3932"],
+      "sourceOwnership": "Global normalized catalog, not selected vehicle inventory. Status returns latest attempt, latest success and record count.",
+      "consumers": ["CommunicationsCatalogPanel", "PageLayout header freshness"],
+      "behavior": "Independent of vehicle selection; moderate staleTime; retry=1; cancellation forwarded. Permission guidance remains available on initial catalog error.",
+      "citation": "web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.tsx:41,91,106-121",
+      "backendRuntime": "unverified"
+    },
+    {
+      "hook": "useImportCommunicationsCatalog()",
+      "owner": "web\\src\\api\\hooks\\useServiceIntelligence.ts:165-188,290-339",
+      "endpoint": "POST /api/v1/admin/service-intelligence/communications/import",
+      "body": "{ artifact_url: selected allow-listed official URL }",
+      "routeEvidence": ["internal\\api\\router.go:3933-3939"],
+      "sourceOwnership": "Official static.nhtsa.gov ODI TSB ZIP artifacts for 2005–2009, 2010–2014, 2015–2019, 2020–2024 and 2025–2026. Backend import/normalization and catalog storage own record content.",
+      "consumers": ["CommunicationsCatalogPanel"],
+      "behavior": "Client rejects non-allow-listed URLs; requiresLiveMode=true; successful import invalidates catalog and vehicle query families. Sudo cancellation is suppressed in page error and mutation toast. Router declares RequireSudo and 10/hour IP throttle. These are source declarations, not exercised enforcement.",
+      "citation": "web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.tsx:54-59,113-120",
+      "backendRuntime": "unverified; no import or authentication action performed"
+    },
+    {
+      "hook": "useSelectedVehicle()",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts:31-78,159-185",
+      "endpoint": "Indirect useVehicles dependency; its endpoint was not inspected in this bounded audit.",
+      "sourceOwnership": "Existing URL/store/fleet workspace selection owner.",
+      "behavior": "Effective selection resolves URL, persisted valid selection, then first vehicle; null yields persistent selection prompts. No second selector or date picker in the page.",
+      "citation": "web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.tsx:38,60"
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "layer": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "Existing PageContainer props: title, subtitle, secondaryActions, query. PageLayout supplies w-full/min-w-0 container composition; query affects header freshness, not whole-body fatal replacement.",
+      "usedBy": ["ServiceIntelligencePage"],
+      "dependsOn": ["web\\src\\components\\layout\\PageContainer.tsx"],
+      "citation": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-15; web\\src\\components\\layout\\PageContainer.tsx:90-105,149-160,242-260"
+    },
+    {
+      "name": "LayoutCard",
+      "layer": "composite",
+      "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "contract": "title, optional description/actions/footer/size, children; shared Card shell with labelled heading, min-w-0 body and description help.",
+      "usedBy": ["All nine service-intelligence panels"],
+      "dependsOn": ["Existing Card, Heading, Text, Tooltip and Button primitives"],
+      "citation": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:8-65"
+    },
+    {
+      "name": "PanelState / SourceContent",
+      "layer": "feature adapter over shared composite",
+      "owner": "web\\src\\features\\service-intelligence\\components\\PanelState.tsx",
+      "contract": "selected/loading/error/empty, source-specific messages and icon, onRetry, children. Selection prompt precedes loading; fatal error only replaces its own panel body; persistent shell remains.",
+      "usedBy": ["Eight vehicle-dependent panels"],
+      "dependsOn": ["web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "EmptyState", "Skeleton"],
+      "citation": "web\\src\\features\\service-intelligence\\components\\PanelState.tsx:7-61; web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:9-74"
+    },
+    {
+      "name": "useDataState / StaleRefreshWarning",
+      "layer": "shared asynchronous trust",
+      "owner": "web\\src\\hooks\\useDataState.ts",
+      "contract": "Retained payload and fatalError differ from refreshError. Warning accepts state and localized label, exposes retry and offline/paused copy without hiding retained content.",
+      "usedBy": ["Service query", "Warranty query", "Catalog query", "Claim draft query"],
+      "dependsOn": ["web\\src\\api\\dataState.ts", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx"],
+      "citation": "web\\src\\hooks\\useDataState.ts:31-56; web\\src\\api\\dataState.ts:130-155,190-240; web\\src\\components\\feedback\\StaleRefreshWarning.tsx:57-116"
+    },
+    {
+      "name": "OperationalBrief / useOperationalMetrics",
+      "layer": "shared summary and metric bridge",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "contract": "compact, title/description/eyebrow, source-derived statusLabel/statusTone, scope, freshness, provenance and metrics. Shared Review details action must survive. Count metrics preserve rawValue, occurrenceId and source descriptions.",
+      "usedBy": ["VehicleMatchPanel (four counts)", "CommunicationsCatalogPanel (two counts)"],
+      "dependsOn": ["Existing stat-reference StatMetric type", "useOperationalMetrics import", "Existing Drawer and OperationalNarrativeDetails"],
+      "citation": "web\\src\\components\\data-display\\OperationalBrief.tsx:26-64,145-160; web\\src\\features\\service-intelligence\\components\\VehicleMatchPanel.tsx:46-90,134-150; web\\src\\features\\service-intelligence\\components\\CommunicationsCatalogPanel.tsx:71-84,107-130",
+      "limit": "Metric bridge implementation path was not resolved; failed read of useOperationalMetrics.ts provides no implementation proof. OperationalBrief inspected only through line 170, not full drawer behavior."
+    },
+    {
+      "name": "UI, feedback, motion and date primitives",
+      "layer": "existing primitives/composites",
+      "owner": "Existing @/components/ui, @/components/feedback, @/components/motion and @/components/data-display category owners",
+      "contract": "Reuse Button, Input, CopyButton, Badge, Table, Heading/Text/Caption; AlertBanner, EmptyState, Skeleton, PermissionGuidanceNotice; FadeIn; DateTime. CopyButton takes returned draft.body, withToast and localized label.",
+      "usedBy": ["ServiceIntelligencePage and its feature components"],
+      "dependsOn": ["Existing locale, number preferences, reduced-motion, permission, clipboard and shell focus contracts"],
+      "citation": "web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.tsx:14-21; web\\src\\features\\service-intelligence\\components\\ClaimDraftPanel.tsx:4-11,54-59; web\\src\\components\\ui\\CopyButton.tsx:26-49,98-160",
+      "limit": "Most primitive implementation behavior is an existing dependency, not independently validated here."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\service-intelligence\\components\\CommunicationsPanel.tsx",
+      "line": 156,
+      "rule": "MDC-002/MDC-020/MDC-012",
+      "detail": "Four official-source link implementations repeat fixed cyan text/ring, min-h-11, external-link icon and new-tab security attributes; unavailable-provider link adds an amber version.",
+      "related": ["RecallFindingCard.tsx:115-124", "EvidenceLimitationsPanel.tsx:75-84", "SourceFreshnessPanel.tsx:80-89", "CommunicationsPanel.tsx:64-73"],
+      "fix": "Use existing semantic button/link chrome and tokenized text/focus consistently, retaining native anchor navigation, full localized labels and rel attributes. First verify existing primitive supports this; do not create a competing link library.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\service-intelligence\\components\\PanelState.tsx",
+      "line": 50,
+      "rule": "MDC-002/MDC-026",
+      "detail": "Repeated panel state handling is already consolidated in a feature adapter to SourceContent; vehicle selection is a genuine domain prerequisite, not a new global state system.",
+      "fix": "Retain this adapter and source-local messages; do not duplicate loading/error renderers during modernization.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-only; all viewport behavior unverified",
+    "existingStrategy": [
+      "Page action flex-wrap and full-width below sm: ServiceIntelligencePage.tsx:65.",
+      "Communications/symptoms stack until xl two columns: ServiceIntelligencePage.tsx:164.",
+      "Claim input/action stack below sm: ClaimDraftPanel.tsx:74.",
+      "Recall title/badges stack below sm and consequence/remedy split at md: RecallFindingCard.tsx:37,74.",
+      "Artifact periods split at lg, freshness sources at lg three columns: CommunicationsCatalogPanel.tsx:230; SourceFreshnessPanel.tsx:46.",
+      "Shared compact summary uses one column, sm two, md three, 1920px six: OperationalBrief.tsx:168-169."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\service-intelligence\\components\\CommunicationsCatalogPanel.tsx",
+        "line": 242,
+        "rule": "MDC-043/MDC-031",
+        "detail": "Artifact filenames are long unbroken strings in a flex item without explicit min-w-0/break-words. Similar long source titles, signal IDs and evidence text can pressure narrow cards. Clipping is a risk, not observed runtime failure.",
+        "fix": "Add source-preserving wrap/min-width rules to feature content and test long filenames/IDs at 320px, text zoom and RTL without truncating provenance.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\service-intelligence\\components\\WarrantyPanel.tsx",
+        "line": 67,
+        "rule": "MDC-043",
+        "detail": "Coverage label/details and status share a non-wrapping horizontal flex row; translation and text zoom could squeeze badge and details.",
+        "fix": "Allow responsive row reflow and retain expiration, days, distance, status and assumption at all widths.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredQA": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "allocated container widths", "200% text", "long strings", "RTL"]
+  },
+  "accessibility": {
+    "status": "source-only; keyboard, screen-reader, contrast, focus and touch acceptance unverified",
+    "positiveEvidence": [
+      "Native external anchors have noopener/noreferrer, visible localized labels, minimum 44px height and explicit focus rings.",
+      "Claim input has localized aria-label: ClaimDraftPanel.tsx:79.",
+      "Artifact imports have period-specific accessible names: CommunicationsCatalogPanel.tsx:261-265.",
+      "Vehicle context uses shared Table with aria-label and row-header scope: VehicleMatchPanel.tsx:115-132.",
+      "Semantic ordered lists retain server record order; status/confidence/applicability are text, not color alone.",
+      "Shared SourceContent loading status and retained-data warning live region exist; route focus target is declared in PageContainer.tsx:182-196."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\service-intelligence\\components\\RecallFindingCard.tsx",
+        "line": 89,
+        "rule": "MDC-040; mission 16/30",
+        "detail": "Match factor detail exists only as native title on Badge; no explicit keyboard/touch disclosure is supplied by this caller. Essential matching explanation may be hard to access without hover.",
+        "fix": "Use existing Tooltip/help or visible expandable evidence detail with a named keyboard-accessible trigger; preserve dimension, status, detail and ordering.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Each vehicle panel uses PanelState and four-line Skeleton; catalog supplies five-line Skeleton through SourceContent. Shells remain mounted.",
+    "noVehicle": "Catalog stays independently available; eight vehicle panels retain selection prompts; evidence-pack action disabled. Workspace owner supplies selection, not a local picker.",
+    "empty": "Domain-specific empty states preserve valid zero inventories, missing vehicle context, missing evidence and ungenerated claim distinctions.",
+    "fatalError": "Each source uses useDataState.fatalError and local recovery; page query prop drives header freshness only. Catalog permission guidance is source-local.",
+    "retainedRefreshError": "Catalog/service/warranty/claim warnings appear with retained data; failed import does not replace latest successful import metadata.",
+    "offline": "StaleRefreshWarning contains paused/offline-specific copy when retained data exists. Initial offline/paused behavior needs runtime checking; page passes isLoading rather than an explicit offline source state.",
+    "sourceStale": "TSB source status has independent stale/unavailable text. Catalog freshness threshold is eight days from latest successful completed_at, invalid dates stale, no success unavailable.",
+    "mutating": "All artifact buttons disabled during any import; selected artifact gets loading state. Claim generate disabled without vehicle or while fetching; sudo cancellation is not shown as import failure.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\service-intelligence\\components\\CommunicationsPanel.tsx",
+        "line": 31,
+        "rule": "MDC-026/MDC-045; unknown is not an authoritative negative result",
+        "detail": "If communicationsSource is null, neither unavailable nor stale branch applies; zero records then claim the official normalized index returned no communications. Page explicitly passes null when the expected source ID is absent, so missing provenance can be presented as a verified empty inventory.",
+        "fix": "Distinguish absent source metadata from an available source with a valid empty inventory; retain records if present and explain unknown availability without fabricating a backend result.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\service-intelligence\\components\\ClaimDraftPanel.tsx",
+        "line": 37,
+        "rule": "Null safety and MDC-026",
+        "detail": "DraftBody directly maps coverages and reads communications.length; RecallFindingCard maps match_factors and CommunicationsPanel reads symptom_matches.length. Hook types promise arrays, but no runtime normalization was inspected. JSON null would crash; actual backend null behavior is unknown.",
+        "fix": "Confirm server contract and defensively normalize optional arrays where warranted, preserving valid empty versus unavailable meaning. Do not claim an existing production crash without a response.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\service-intelligence\\components\\CommunicationsPanel.tsx",
+      "line": 156,
+      "rule": "MDC-010/MDC-012/MDC-040; mission 5/6/7",
+      "detail": "Fixed text-cyan-300 and cyan focus-ring chrome are repeated across source links and decorative heading icons; unavailable-source link uses amber-200. These are not neon classes, but are dark-oriented hues without explicit light-theme counterparts or semantic tokens. Actual contrast is unmeasured.",
+      "fix": "Use existing theme-aware semantic link/focus/text tokens; mute decorative heading icons. Retain semantic warning distinction and verify composed light/dark/custom contrast.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\service-intelligence\\components\\RecallFindingCard.tsx",
+      "line": 70,
+      "rule": "MDC-010/MDC-015; mission 7/8/43",
+      "detail": "Hypothesis panels and latest-import block repeat cyan-tinted borders/backgrounds (also CommunicationsPanel.tsx:137 and CommunicationsCatalogPanel.tsx:183). Multiple info/confidence/matching badges compete with important safety warnings. This is a source-level saturation/noise concern, not a screenshot finding.",
+      "fix": "Use neutral semantic surfaces for explanatory material and reserve accent/severity emphasis for safety and action priority; preserve all hypothesis and confidence text.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\service-intelligence\\components\\WarrantyPanel.tsx",
+      "line": 72,
+      "rule": "MDC-044/MDC-045",
+      "detail": "Warranty expiration is interpolated as raw c.expires_at rather than existing DateTime; km_remaining is numerically formatted with a fixed km label rather than selected physical-unit display. Hook explicitly exposes km fields and odometer_km parameters. Those are observed contracts, not inferred SI meters.",
+      "fix": "Reuse existing date formatting and coordinate a typed warranty display/SI contract with integration owner before conversion. Preserve current km wire/query values and coverage assumptions; never silently reinterpret kilometers as meters or rename the API in a presentation-only change.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Already decomposed and using canonical layouts, summaries and retained-source warnings. Highest priority is unknown TSB provenance and accessible match explanations, followed by theme-aware restraint and long-content reflow. Warranty wire/display review needs integration coordination.",
+    "order": ["Unknown-source empty distinction", "Accessible factor explanations", "Theme-aware link and explanatory surfaces", "Long-content/mobile review", "Warranty date/unit contract review"]
+  },
+  "requiredSharedChanges": [],
+  "sharedChangeAssessment": "No evidence-backed new shared component or shared API extension is required by this one-page audit. Reuse existing SourceContent, LayoutCard, Tooltip/help, semantic typography/link chrome, DateTime, OperationalBrief and metric bridge. Warranty wire/display concerns belong to integration review, not unauthorized shared edits. No second independent routed consumer was inspected to justify a new composite.",
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\service-intelligence\\components\\WarrantyPanel.tsx",
+      "line": 72,
+      "rule": "MDC-002/MDC-044",
+      "detail": "Local raw expiration rendering coexists with DateTime in recall, communications, evidence summaries and source timestamps.",
+      "fix": "Adopt existing formatting owner without altering source dates or countdown calculations.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\service-intelligence\\components\\CommunicationsPanel.tsx",
+      "line": 137,
+      "rule": "MDC-002/MDC-015",
+      "detail": "Repeated feature-local tinted explanatory boxes and external-link styling overlap the existing surface and button/link contract; no new theme/layout/query system was observed.",
+      "fix": "Consolidate through existing primitives, not a second global presentation implementation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "96757dfe29e4d153a6e93945a78e05e3f45232c9d818124b4e2e14a31c254bd3",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 207,
+    "productionFeatureTsxLineCount": 1570,
+    "lineCountScope": "Assigned page plus eleven production component TSX files; tests and index.ts excluded.",
+    "sections": [
+      {"name": "Service hypotheses, not findings of fault", "count": 1, "citation": "ServiceIntelligencePage.tsx:93-104", "keep": "NHTSA/Tesla/qualified-technician confirmation, applicability/completion/symptom caveat."},
+      {"name": "Official NHTSA TSB catalog", "count": 1, "citation": "ServiceIntelligencePage.tsx:106-122", "keep": "Global summary, official artifact periods, latest success/attempt, rows read/imported/rejected, hash, idempotency/step-up copy and permission guidance."},
+      {"name": "Vehicle match context", "count": 1, "citation": "ServiceIntelligencePage.tsx:124-137", "keep": "Make/model/year/assembly/firmware/build basis, four raw summary counts, source context and report generation time."},
+      {"name": "Warranty countdown", "count": 1, "citation": "ServiceIntelligencePage.tsx:139-148", "keep": "Every coverage, expiration, remaining-day zero clamp, nullable remaining-distance distinction, status and assumption."},
+      {"name": "Warranty claim draft", "count": 1, "citation": "ServiceIntelligencePage.tsx:150-152", "keep": "Editable versus submitted issue, returned ticket, coverages/communications/ask/disclaimer and exact full copied body, including server symptoms/evidence."},
+      {"name": "Recall inventory", "count": 1, "citation": "ServiceIntelligencePage.tsx:154-162", "keep": "Server order, titles/components, applicability/confidence, completion unknown, safety warning, hypothesis, consequences/remedy, factors/details, OTA, report date and campaign source."},
+      {"name": "Manufacturer communications & TSBs", "count": 1, "citation": "ServiceIntelligencePage.tsx:165-174", "keep": "Unavailable and stale provider explanation, official-document links, type/number/component/date, hypothesis/confidence and symptom overlap; no fabricated records."},
+      {"name": "Ranked observed symptoms", "count": 1, "citation": "ServiceIntelligencePage.tsx:175-183", "keep": "Ranked order, signal/campaign/severity/score/evidence and observation time; overlap is not proof of fault."},
+      {"name": "Evidence & limitations", "count": 1, "citation": "ServiceIntelligencePage.tsx:186-194", "keep": "Evidence inventory/count/source/kind/summary/reference and all limitations/disclaimer."},
+      {"name": "Source freshness", "count": 1, "citation": "ServiceIntelligencePage.tsx:196-204", "keep": "All sources and order, availability/staleness/unavailability, record count, checked/fetched times, cache provenance, detail and source URL."}
+    ],
+    "sectionCount": 10,
+    "panelCount": 9,
+    "nestedOperationalBriefCount": 2,
+    "glassPanelCountInFeatureSource": 0,
+    "chartContainerCountInFeatureSource": 0,
+    "countCaveat": "Shared OperationalBrief internally uses GlassPanel; direct feature tag count is not the rendered card count.",
+    "actions": [
+      {"name": "Open service evidence pack", "citation": "ServiceIntelligencePage.tsx:66-80", "keep": "/diagnostics/service-evidence?vehicle_id={id}; disabled without selection."},
+      {"name": "Retry catalog", "citation": "ServiceIntelligencePage.tsx:51-53,119", "keep": "Independent catalog refetch."},
+      {"name": "Import/refresh each official period", "citation": "CommunicationsCatalogPanel.tsx:231-279", "keep": "Five allow-listed artifacts, period-specific names, loading/disabled state, latest-success badge and step-up cancellation."},
+      {"name": "Retry vehicle service source", "citation": "ServiceIntelligencePage.tsx:48-50,136,160,172,181,192,203", "keep": "Same source refetch exposed across source-dependent panel error recovery."},
+      {"name": "Retry warranty", "citation": "ServiceIntelligencePage.tsx:146", "keep": "Independent warranty source refetch."},
+      {"name": "Edit issue and draft ticket", "citation": "ClaimDraftPanel.tsx:66-90", "keep": "Exact submitted issue, existing empty-string behavior until validation ownership is reviewed."},
+      {"name": "Copy ticket text / retry draft", "citation": "ClaimDraftPanel.tsx:54-59,107", "keep": "Copy exact draft.body with toast, source disclaimer and query refetch."},
+      {"name": "Review details on both summaries", "citation": "OperationalBrief.tsx:145-157", "keep": "Existing shared details action and complete source context; drawer runtime not audited."},
+      {"name": "Open official/source references", "citation": "RecallFindingCard.tsx:115-124; CommunicationsPanel.tsx:64-73,151-160; EvidenceLimitationsPanel.tsx:75-84; SourceFreshnessPanel.tsx:80-89", "keep": "Original URLs, new-tab semantics and security attributes."},
+      {"name": "Refresh retained sources", "citation": "StaleRefreshWarning.tsx:96-116", "keep": "Nonblocking source retry, disabled during refresh."}
+    ],
+    "dataBehavior": [
+      "No fake data or client-side applicability calculations; server summary and rankings remain source-owned.",
+      "Vehicle selection and source-specific windows stay distinct; no local date picker or invented range endpoint.",
+      "Global catalog count and allow-listed artifact count are not vehicle matching counts or proof all periods were imported.",
+      "Latest failed import does not overwrite the presentation of last successful catalog; no success means Not imported.",
+      "Retained data stays visible on refresh failure; source-local fatal errors do not erase independent neighbors.",
+      "Unknown completion is not completed; recall applicability and TSB hypotheses require authoritative confirmation.",
+      "Nullable distance remains absent rather than zero; current km wire fields remain unchanged pending integration contract work.",
+      "Claim draft symptoms/evidence are carried in exact copied body although they are not separate rendered lists.",
+      "Current recall warning chooses park_it before park_outside when both are true: RecallFindingCard.tsx:57-65. Do not silently remove either underlying flag; simultaneous-warning behavior needs deliberate future review."
+    ]
+  },
+  "evidenceLimits": {
+    "basis": "Read-only source audit; only owned JSON and heartbeat written.",
+    "runtime": "NOT EXERCISED: route mounting, API responses, backend retrieval/import/authorization, clipboard, navigation, offline, keyboard, screen reader, focus, browser console and query behavior.",
+    "visual": "NOT EXERCISED: screenshots, actual composed contrast, themes/custom palette, reduced motion, RTL, viewport and allocated-container widths.",
+    "checksNotRun": "No Git, agents, production actions, full-repository lint/build, TypeScript or test runner. Skill audit.sh was inspected but not executed because it unconditionally runs project TypeScript, outside this Phase 0 source-only assignment.",
+    "sourceChecks": [
+      {
+        "command": "Get-FileHash web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.tsx -Algorithm SHA256; (Get-Content same-page-path).Count",
+        "exitCode": 0,
+        "output": "SHA256 96757dfe29e4d153a6e93945a78e05e3f45232c9d818124b4e2e14a31c254bd3; LINES 207"
+      },
+      {
+        "command": "Case-sensitive Select-String over assigned page and eleven non-test production component TSX files, using patterns style=; <(button|input|textarea|select|table)\\b; text-neon|shadow[^\" ]*glow|text-white|bg-white; text-cyan-300; border-cyan-400/15 bg-cyan-400/5; <LayoutCard; <GlassPanel|<ChartContainer",
+        "exitCode": 0,
+        "output": "style= : 0 matching lines; prohibited raw controls/table : 0 matching lines; explicit neon/glow/white patterns : 0 matching lines; text-cyan-300 : 13 matching lines; cyan explanatory surfaces : 3 matching lines; <LayoutCard : 9 matching lines; <GlassPanel|<ChartContainer : 0 matching lines; TOTAL production TSX lines 1570",
+        "limit": "Text-pattern counts, not AST validation or runtime style proof. First case-insensitive page-only raw-element probe matched imported Button; corrected case-sensitive probe found zero. Shared inherited styling is not covered by this zero count."
+      }
+    ],
+    "backend": "Only router registration and delegated handler first 110 lines inspected. No service algorithms, databases, catalog integrity, response-null guarantee or warranty entitlement proof.",
+    "partialReads": "App.tsx, router.go, workspaceScope.ts and client.ts inspected only through targeted searches/ranges. Mission and contract read in relevant ranges. Shared owners inspected selectively, not full application foundations.",
+    "unresolved": "useOperationalMetrics.ts read failed because that concrete .ts path does not exist; imported bridge ownership is known from callers/contract but implementation not resolved. Historical source test matches are not executed acceptance.",
+    "sourceDrift": "This report describes the inspected concurrent-work snapshot; source hash is the assigned page baseline. Other writers may change dependencies after inspection."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.tsx",
+    "web\\src\\features\\service-intelligence\\components\\index.ts",
+    "web\\src\\features\\service-intelligence\\components\\ClaimDraftPanel.tsx",
+    "web\\src\\features\\service-intelligence\\components\\CommunicationsCatalogPanel.tsx",
+    "web\\src\\features\\service-intelligence\\components\\CommunicationsPanel.tsx",
+    "web\\src\\features\\service-intelligence\\components\\EvidenceLimitationsPanel.tsx",
+    "web\\src\\features\\service-intelligence\\components\\PanelState.tsx",
+    "web\\src\\features\\service-intelligence\\components\\RecallFindingCard.tsx",
+    "web\\src\\features\\service-intelligence\\components\\RecallInventoryPanel.tsx",
+    "web\\src\\features\\service-intelligence\\components\\SourceFreshnessPanel.tsx",
+    "web\\src\\features\\service-intelligence\\components\\SymptomMatchesPanel.tsx",
+    "web\\src\\features\\service-intelligence\\components\\VehicleMatchPanel.tsx",
+    "web\\src\\features\\service-intelligence\\components\\WarrantyPanel.tsx",
+    "web\\src\\api\\hooks\\useServiceIntelligence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\serviceintelligence\\handler.go",
+    "web\\src\\features\\service-intelligence\\components\\ClaimDraftPanel.test.tsx",
+    "web\\src\\features\\service-intelligence\\components\\CommunicationsCatalogPanel.test.tsx",
+    "web\\src\\features\\service-intelligence\\components\\CommunicationsPanel.test.tsx",
+    "web\\src\\features\\service-intelligence\\components\\EvidenceLimitationsPanel.test.tsx",
+    "web\\src\\features\\service-intelligence\\components\\SourceFreshnessPanel.test.tsx",
+    "web\\src\\features\\service-intelligence\\components\\VehicleMatchPanel.test.tsx",
+    "web\\src\\features\\service-intelligence\\components\\WarrantyPanel.test.tsx"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-169.json",
+    ".agent-status\\audit-page-169.txt"
+  ]
+}

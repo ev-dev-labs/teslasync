@@ -2,9 +2,10 @@ import { type ElementType, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, IconBox, SectionTitle, PanelTitle, Text } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { PageLayout } from '@/components/layout';
+import { Badge, type BadgeProps, GlassPanel, IconBox, SectionTitle, PanelTitle, Text } from '@/components/ui';
+import { CompositionRail } from '@/components/data-display';
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -16,7 +17,7 @@ const {
   sparkles: Rocket, success: CheckCircle, clock: Clock, star: Star, charging: Zap,
   notifications: Bell, monitor: Smartphone, cpu: Brain, charger: Plug,
   security: Shield, map: Map, analytics: BarChart3, leaf: Leaf,
-  maintenance: Wrench, users: Users, layoutGrid: Layers, lightbulb: Sparkles,
+  maintenance: Wrench, users: Users, layoutGrid: Layers,
 } = Icons;
 
 /* ------------------------------------------------------------------ */
@@ -24,7 +25,7 @@ const {
 /* ------------------------------------------------------------------ */
 
 interface RoadmapEntry {
-  id?: string;
+  id: string;
   title: string;
   description: string;
   icon: ElementType;
@@ -33,8 +34,9 @@ interface RoadmapEntry {
 }
 
 interface PhaseMeta {
-  /** Toned neon accent used for icon boxes, dots, chips and glows. */
+  /** Existing restrained tokens; editorial phases are not deployment health. */
   neon: NeonColor;
+  badgeVariant: NonNullable<BadgeProps['variant']>;
   /** Icon shown in the phase-band header. */
   icon: ElementType;
   /** Icon shown next to each feature in a card list. */
@@ -50,33 +52,37 @@ const PHASE_ORDER: RoadmapPhase[] = ['done', 'current', 'next', 'future'];
 const PHASE_META: Record<RoadmapPhase, PhaseMeta> = {
   done: {
     neon: 'green',
+    badgeVariant: 'success',
     icon: CheckCircle,
     statusIcon: CheckCircle,
     labelKey: 'roadmap.phase.done',
     labelFallback: 'Completed',
     descKey: 'roadmap.phaseDesc.done',
-    descFallback: 'Shipped and available in your deployment today.',
+    descFallback: 'Marked completed in the bundled roadmap; availability in this deployment is not verified.',
   },
   current: {
     neon: 'cyan',
+    badgeVariant: 'info',
     icon: Zap,
     statusIcon: Zap,
     labelKey: 'roadmap.phase.current',
-    labelFallback: 'Active Focus',
+    labelFallback: 'Active focus',
     descKey: 'roadmap.phaseDesc.current',
     descFallback: 'Areas receiving attention; priorities may change.',
   },
   next: {
-    neon: 'purple',
+    neon: 'neutral',
+    badgeVariant: 'neutral',
     icon: Star,
     statusIcon: Star,
     labelKey: 'roadmap.phase.next',
-    labelFallback: 'Up Next',
+    labelFallback: 'Up next',
     descKey: 'roadmap.phaseDesc.next',
     descFallback: 'Potential next priorities, not scheduled commitments.',
   },
   future: {
-    neon: 'amber',
+    neon: 'neutral',
+    badgeVariant: 'neutral',
     icon: Rocket,
     statusIcon: Clock,
     labelKey: 'roadmap.phase.future',
@@ -92,6 +98,7 @@ const PHASE_META: Record<RoadmapPhase, PhaseMeta> = {
 
 const roadmapItems: RoadmapEntry[] = [
   {
+    id: 'corePlatform',
     title: 'Core Platform',
     description: 'Real-time fleet monitoring, analytics, and vehicle control',
     icon: Rocket,
@@ -111,6 +118,7 @@ const roadmapItems: RoadmapEntry[] = [
     ],
   },
   {
+    id: 'smartNotifications',
     title: 'Smart Notifications',
     description: 'Multi-channel alerts, scheduling, and custom automation rules',
     icon: Bell,
@@ -128,6 +136,7 @@ const roadmapItems: RoadmapEntry[] = [
     ],
   },
   {
+    id: 'intelligenceObservability',
     title: 'Intelligence & Observability',
     description: 'Advanced analytics, system health, and background processing',
     icon: Brain,
@@ -144,6 +153,7 @@ const roadmapItems: RoadmapEntry[] = [
     ],
   },
   {
+    id: 'fleetTelemetry',
     title: 'Fleet Telemetry',
     description: 'Real-time streaming from vehicles via Tesla Fleet Telemetry',
     icon: Zap,
@@ -159,6 +169,7 @@ const roadmapItems: RoadmapEntry[] = [
     ],
   },
   {
+    id: 'designSystem',
     title: 'Premium UI & Design System',
     description: 'Shared component library, accessibility, and consistent design language',
     icon: Star,
@@ -176,14 +187,14 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'history',
-    title: 'Vehicle History & Physics',
+    title: "Vehicle history & physics",
     description: 'Evidence-led history and explainable vehicle behavior',
     icon: Map,
     phase: 'done',
     features: [
       'Vehicle day log and full state timeline',
       'Time-machine views of historical signals',
-      'Drive physics energy ledger and Science Lab',
+      "Drive physics energy ledger and science lab",
       'Driving dynamics and efficiency workbench',
       'Signal history, coverage, and diagnostics',
       'Fleet and vehicle history in the same navigation tree',
@@ -191,7 +202,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'charging',
-    title: 'Charging & Energy Intelligence',
+    title: "Charging & energy intelligence",
     description: 'From charge history to costs, thermal behavior, and energy flows',
     icon: Leaf,
     phase: 'done',
@@ -206,7 +217,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'journeys',
-    title: 'Journeys & Ownership',
+    title: "Journeys & ownership",
     description: 'Planning, travel context, and fleet ownership insights',
     icon: Users,
     phase: 'done',
@@ -220,13 +231,13 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'helixStudio',
-    title: 'Helix & Alert Studio',
+    title: "Helix & alert studio",
     description: 'Assisted investigations and configurable notification workflows',
     icon: Brain,
     phase: 'done',
     features: [
       'Helix analysis tools and Azure Foundry provider support',
-      'Alert Studio and editable installed alert rules',
+      "Alert studio and editable installed alert rules",
       'Curated alert packs and custom pack previews',
       'Pack defaults for alert behavior, cooldown, and channels',
       'Notification inbox, delivery channels, and health',
@@ -234,7 +245,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'operator',
-    title: 'Operator Experience',
+    title: "Operator experience",
     description: 'Direct navigation and responsive controls across the application',
     icon: Layers,
     phase: 'done',
@@ -248,7 +259,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'reliability',
-    title: 'Reliability & Data Trust',
+    title: "Reliability & data trust",
     description: 'Active focus on telemetry correctness and operational recovery',
     icon: Shield,
     phase: 'current',
@@ -261,7 +272,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'helixQuality',
-    title: 'Helix Quality & Cost Controls',
+    title: "Helix quality & cost controls",
     description: 'Improve grounded answers without making AI mandatory',
     icon: Brain,
     phase: 'next',
@@ -287,7 +298,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'ecosystem',
-    title: 'Energy Ecosystem',
+    title: "Energy ecosystem",
     description: 'Explore deeper integration with home energy and charging decisions',
     icon: Leaf,
     phase: 'future',
@@ -300,7 +311,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'fleetInsights',
-    title: 'Privacy-preserving Fleet Insights',
+    title: "Privacy-preserving fleet insights",
     description: 'Explore useful comparisons without exposing individual journeys',
     icon: BarChart3,
     phase: 'future',
@@ -318,7 +329,7 @@ const roadmapItems: RoadmapEntry[] = [
     icon: Plug,
     phase: 'future',
     features: [
-      'Assess Home Assistant integration needs',
+      "Assess home assistant integration needs",
       'Explore calendar context for trip planning',
       'Document stable webhook and API extension points',
       'Prioritize integrations based on operator demand',
@@ -326,7 +337,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'accessibleOps',
-    title: 'Accessible Operator Workflows',
+    title: "Accessible operator workflows",
     description: 'Continue refining navigation and dense screens on every display size',
     icon: Smartphone,
     phase: 'future',
@@ -340,16 +351,14 @@ const roadmapItems: RoadmapEntry[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  PhaseChip — token-based status pill (neon bg + ring + toned text)  */
+/*  PhaseChip — existing semantic Badge, retaining the phase label    */
 /* ------------------------------------------------------------------ */
 
 function PhaseChip({ phase, label }: { phase: RoadmapPhase; label: string }) {
-  const c = neonColorMap[PHASE_META[phase].neon];
   return (
-    <span className={cn('inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 ring-1', c.bg, c.ring)}>
-      <span className={cn('h-1.5 w-1.5 rounded-full', c.dot)} aria-hidden="true" />
-      <Text size="xs" weight="medium" className={c.text}>{label}</Text>
-    </span>
+    <Badge variant={PHASE_META[phase].badgeVariant} dot className="self-start">
+      {label}
+    </Badge>
   );
 }
 
@@ -366,20 +375,17 @@ function RoadmapCard({ item }: { item: RoadmapEntry }) {
   const features = item.features ?? [];
 
   return (
-    <GlassPanel className="relative h-full overflow-hidden p-4 sm:p-5">
-      <div
-        className={cn('pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-10 blur-3xl', c.dot)}
-        aria-hidden="true"
-      />
-      <div className="relative flex h-full flex-col">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
+    <GlassPanel className="h-full min-w-0 p-4 sm:p-5">
+      <div className="flex h-full min-w-0 flex-col">
+        {/* Wrap in the allocated card width, not only at a viewport breakpoint. */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 basis-48 items-start gap-3">
             <IconBox color={meta.neon} size="md">
               <Icon className="h-5 w-5" aria-hidden="true" />
             </IconBox>
             <div className="min-w-0">
-              <PanelTitle className="whitespace-normal break-words">{item.id ? t(`roadmap.entries.${item.id}.title`, item.title) : item.title}</PanelTitle>
-              <Text as="p" variant="caption" className="mt-0.5">{item.id ? t(`roadmap.entries.${item.id}.description`, item.description) : item.description}</Text>
+              <PanelTitle className="whitespace-normal break-words">{t(`roadmap.entries.${item.id}.title`, item.title)}</PanelTitle>
+              <Text as="p" variant="caption" className="mt-0.5">{t(`roadmap.entries.${item.id}.description`, item.description)}</Text>
             </div>
           </div>
           <PhaseChip phase={item.phase} label={t(meta.labelKey, meta.labelFallback)} />
@@ -389,7 +395,7 @@ function RoadmapCard({ item }: { item: RoadmapEntry }) {
           {features.map((feature, i) => (
             <li key={i} className="flex items-start gap-2">
               <StatusIcon className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', c.text)} aria-hidden="true" />
-              <Text as="span" variant="bodySm">{item.id ? t(`roadmap.entries.${item.id}.features.${i}`, feature) : feature}</Text>
+              <Text as="span" variant="bodySm">{t(`roadmap.entries.${item.id}.features.${i}`, feature)}</Text>
             </li>
           ))}
         </ul>
@@ -422,7 +428,7 @@ function DeliveryProgress({
     <GlassPanel className="p-4 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
         <div className="shrink-0 lg:w-56">
-          <SectionTitle>{t('roadmap.progress.title', 'Delivery Progress')}</SectionTitle>
+          <SectionTitle>{t('roadmap.progress.title', 'Delivery progress')}</SectionTitle>
           <div className="mt-1 flex items-baseline gap-2">
             <Text as="span" variant="metricValue">{shipped}</Text>
             <Text as="span" variant="caption">
@@ -436,34 +442,18 @@ function DeliveryProgress({
             // no-action: derived from the hardcoded roadmapItems array in this file — never empty without a source-code edit.
             <EmptyState message={t('roadmap.progress.empty', 'No roadmap items to display yet.')} />
           ) : (
-            <>
-              <div
-                className="flex h-3 w-full overflow-hidden rounded-full bg-white/[0.04] ring-1 ring-white/[0.06]"
-                role="img"
-                aria-label={t('roadmap.progress.barLabel', 'Roadmap initiatives by phase')}
-              >
-                {segments.map((s) => {
-                  const pct = total > 0 ? (s.count / total) * 100 : 0;
-                  if (pct <= 0) return null;
-                  return (
-                    <div
-                      key={s.phase}
-                      className={cn('h-full', neonColorMap[s.meta.neon].dot)}
-                      style={{ width: `${pct}%` }}
-                    />
-                  );
-                })}
-              </div>
-              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-                {segments.map((s) => (
-                  <li key={s.phase} className="flex items-center gap-2">
-                    <span className={cn('h-2 w-2 rounded-full', neonColorMap[s.meta.neon].dot)} aria-hidden="true" />
-                    <Text as="span" variant="bodySm">{t(s.meta.labelKey, s.meta.labelFallback)}</Text>
-                    <Text as="span" variant="caption" className="tabular-nums">{s.count}</Text>
-                  </li>
-                ))}
-              </ul>
-            </>
+            <CompositionRail
+              size="md"
+              summary={t('roadmap.progress.barLabel', 'Roadmap initiatives by phase')}
+              segments={segments.map((segment) => ({
+                id: segment.phase,
+                label: t(segment.meta.labelKey, segment.meta.labelFallback),
+                detail: segment.count,
+                widthPercent: (segment.count / total) * 100,
+                hideFromTrack: segment.count <= 0,
+                fillClassName: neonColorMap[segment.meta.neon].dot,
+              }))}
+            />
           )}
         </div>
       </div>
@@ -486,7 +476,6 @@ function PhaseSection({
 }) {
   const { t } = useTranslation();
   const meta = PHASE_META[phase];
-  const c = neonColorMap[meta.neon];
   const PhaseIcon = meta.icon;
   const list = items ?? [];
 
@@ -498,13 +487,19 @@ function PhaseSection({
             <PhaseIcon className="h-4 w-4" aria-hidden="true" />
           </IconBox>
           <SectionTitle>{t(meta.labelKey, meta.labelFallback)}</SectionTitle>
-          <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 ring-1', c.bg, c.ring)}>
-            <Text size="xs" weight="semibold" className={cn('tabular-nums', c.text)}>{list.length}</Text>
-          </span>
+          <Badge variant="neutral" size="sm" className="tabular-nums">
+            {list.length}
+          </Badge>
           <Text as="p" variant="caption" className="w-full sm:w-auto">
             {t(meta.descKey, meta.descFallback)}
           </Text>
         </div>
+
+        {phase === 'done' && (
+          <Text as="p" variant="caption">
+            {t('roadmap.brief.scope', 'Bundled roadmap entries, not live deployment or release telemetry.')}
+          </Text>
+        )}
 
         {list.length === 0 ? (
           <GlassPanel className="p-4 sm:p-5">
@@ -557,56 +552,26 @@ export default function RoadmapPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('roadmap.title', 'Roadmap')}
       subtitle={t('roadmap.subtitle', "What's been built, what's in progress, and what's coming next")}
     >
-      <Text as="p" variant="bodySm">
-        {t('roadmap.note', 'This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.')}
-      </Text>
       {/* 1 — KPI band: initiatives per phase + totals */}
       <FadeIn>
-        <section
-          aria-label={t('roadmap.overview', 'Roadmap overview')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
-        >
-          <MetricCard
-            label={t('roadmap.phase.done', 'Completed')}
-            value={counts.done}
-            color="green"
-            icon={<CheckCircle className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.phase.current', 'Active Focus')}
-            value={counts.current}
-            color="cyan"
-            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.phase.next', 'Up Next')}
-            value={counts.next}
-            color="purple"
-            icon={<Star className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.phase.future', 'Future')}
-            value={counts.future}
-            color="amber"
-            icon={<Rocket className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.metric.total', 'Total Initiatives')}
-            value={total}
-            color="blue"
-            icon={<Layers className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.metric.featuresShipped', 'Features Shipped')}
-            value={featuresShipped}
-            color="green"
-            icon={<Sparkles className="h-5 w-5" aria-hidden="true" />}
-          />
-        </section>
+        <SystemSummaryBrief
+          title={t('roadmap.overview', 'Roadmap overview')}
+          description={t('roadmap.note', 'This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.')}
+          scope={t('roadmap.brief.scope', 'Bundled roadmap entries, not live deployment or release telemetry.')}
+          available
+          metrics={[
+            { metricId: 'count', occurrenceId: 'done', rawValue: counts.done, label: t('roadmap.phase.done', 'Completed') },
+            { metricId: 'count', occurrenceId: 'current', rawValue: counts.current, label: t('roadmap.phase.current', 'Active focus') },
+            { metricId: 'count', occurrenceId: 'next', rawValue: counts.next, label: t('roadmap.phase.next', 'Up next') },
+            { metricId: 'count', occurrenceId: 'future', rawValue: counts.future, label: t('roadmap.phase.future', 'Future') },
+            { metricId: 'count', occurrenceId: 'total', rawValue: total, label: t('roadmap.metric.total', 'Total initiatives') },
+            { metricId: 'count', occurrenceId: 'features', rawValue: featuresShipped, label: t('roadmap.metric.featuresShipped', 'Features shipped') },
+          ]}
+        />
       </FadeIn>
 
       {/* 2 — Primary visual: delivery progress across phases */}
@@ -618,6 +583,6 @@ export default function RoadmapPage() {
       {PHASE_ORDER.map((phase, i) => (
         <PhaseSection key={phase} phase={phase} items={grouped[phase]} delay={0.15 + i * 0.05} />
       ))}
-    </PageContainer>
+    </PageLayout>
   );
 }

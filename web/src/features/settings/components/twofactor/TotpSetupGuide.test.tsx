@@ -78,6 +78,26 @@ beforeEach(() => {
 })
 
 describe('TotpSetupGuide', () => {
+  it('uses neutral theme roles without implying progress or completion', () => {
+    const { container } = render(<TotpSetupGuide />)
+
+    expect(container.querySelector('svg')?.parentElement).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'text-[var(--text-secondary)]',
+      'ring-[var(--border-default)]',
+    )
+    for (const item of screen.getAllByRole('listitem')) {
+      expect(item).not.toHaveAttribute('data-state')
+      expect(item).not.toHaveAttribute('aria-current')
+      expect(within(item).getByText(/^[1-4]$/).parentElement).toHaveClass(
+        'bg-[var(--surface-2)]',
+        'text-[var(--text-primary)]',
+        'ring-[var(--border-default)]',
+      )
+    }
+    expect(container.innerHTML).not.toMatch(/(?:text|bg|ring)-(?:neon|cyan|purple|emerald|amber)/)
+  })
+
   it('renders the translated heading and subtitle', () => {
     render(<TotpSetupGuide />)
 
@@ -160,8 +180,9 @@ describe('TotpSetupGuide', () => {
 
     // The four ordinal badges are decorative too — the <ol> already conveys
     // position, so the visual number must not double-announce.
-    const badges = container.querySelectorAll('span[aria-hidden="true"]')
+    const badges = screen.getAllByRole('listitem').map(item => item.querySelector('[aria-hidden="true"]'))
     expect(badges).toHaveLength(4)
+    badges.forEach(badge => expect(badge).not.toBeNull())
   })
 
   it('never re-runs translations through a hostile locale for the ordinal badges', () => {

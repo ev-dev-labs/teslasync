@@ -1,4 +1,5 @@
 import type {
+  RepairCase,
   RepairCaseStatus,
 } from '@/api/hooks/useDataRepair';
 import type { TFunction } from 'i18next';
@@ -109,7 +110,7 @@ const REPAIR_CODE_LABELS: Record<string, { key: string; fallback: string }> = {
   },
   overlaps_next_session: {
     key: 'dataRepair.blocked.overlapsNextSession',
-    fallback: 'The proposed boundary overlaps the next session',
+    fallback: 'Applying this would still leave the session overlapping the next one for this vehicle. Fix the neighbouring session first.',
   },
   structural_anomaly_requires_manual_correction: {
     key: 'dataRepair.cases.blockedReasons.structuralCorrection',
@@ -129,8 +130,15 @@ export function humanizeRepairCode(value: string): string {
   return value
     .split('_')
     .filter(Boolean)
-    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
-    .join(' ');
+    .join(' ')
+    .replace(/^./, (character) => character.toUpperCase());
+}
+
+/** Structural findings remain structural even when a lifecycle response omits blocked_reason. */
+export function isStructuralRepairCase(repairCase: Pick<RepairCase, 'rule' | 'blocked_reason'>): boolean {
+  return repairCase.blocked_reason === 'structural_anomaly_requires_manual_correction'
+    || (repairCase.rule !== 'operator_manual_quarantine'
+      && REPAIR_CODE_LABELS[repairCase.rule]?.key.startsWith('dataRepair.cases.findings.') === true);
 }
 
 export function repairCodeLabel(t: TFunction, value: string): string {

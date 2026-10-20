@@ -1,8 +1,10 @@
-import { forwardRef, type ReactNode, type CSSProperties } from 'react';
+import { forwardRef, type ReactNode, type CSSProperties, type HTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
-interface ProgressRingProps {
+interface ProgressRingProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   value: number;
   max?: number;
   size?: number;
@@ -33,16 +35,20 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
       max = 100,
       size = 48,
       strokeWidth = 4,
-      color = '#3b82f6',
+      color = 'var(--semantic-info)',
       label,
       centerLabel,
       centerSubLabel,
       className,
       ariaLabel,
+      'aria-label': nativeAriaLabel,
+      ...props
     },
     ref,
   ) {
     const { t } = useTranslation();
+    const { fmtNumber } = useNumberFormatting();
+    const { reduce } = useMotionPreference();
 
     // Harden the geometry against the values that actually reach this ring:
     // a `value`/`max` that is still `undefined`, `NaN` or `Infinity` while data
@@ -57,15 +63,17 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
     const clamped = Math.max(0, Math.min(safeValue, safeMax));
     const fraction = clamped / safeMax; // safeMax > 0 → always finite in [0, 1]
     const offset = circumference * (1 - fraction);
-    const percent = Math.round(fraction * 100);
+    const percent = fmtNumber(fraction * 100);
     const hasCenter = centerLabel != null || centerSubLabel != null;
     const mainSize = Math.max(10, Math.round(size * 0.32));
     const subSize = Math.max(8, Math.round(size * 0.18));
     const resolvedAriaLabel =
-      ariaLabel ?? t('progressRing.ariaLabel', 'Progress: {{percent}}%', { percent });
+      ariaLabel ?? nativeAriaLabel ?? (Number.isFinite(value)
+        ? t('progressRing.ariaLabel', 'Progress: {{percent}}%', { percent })
+        : t('common.unknown', 'Unknown'));
 
     return (
-      <div ref={ref} className={cn('inline-flex flex-col items-center gap-1', className)}>
+      <div {...props} ref={ref} className={cn('inline-flex min-w-0 flex-col items-center gap-1', className)}>
         <div
           className="relative"
           style={{ width: size, height: size }}
@@ -92,17 +100,20 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={offset}
-              className="transition-all duration-slow"
+              className={cn(
+                'motion-reduce:transition-none',
+                reduce ? 'transition-none' : 'transition-all duration-normal ease-standard',
+              )}
             />
           </svg>
           {hasCenter && (
             <div
-              className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center leading-none"
+              className="pointer-events-none absolute inset-0 flex min-w-0 flex-col items-center justify-center break-words text-center leading-none"
               aria-hidden="true"
             >
               {centerLabel != null && (
                 <span
-                  className="font-semibold tabular-nums text-[var(--text-primary)] text-[length:var(--ring-main-size)]"
+                  className="max-w-full font-semibold tabular-nums text-[var(--text-primary)] text-[length:var(--ring-main-size)]"
                   style={{ '--ring-main-size': `${mainSize}px` } as CSSProperties}
                 >
                   {centerLabel}
@@ -110,7 +121,7 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
               )}
               {centerSubLabel != null && (
                 <span
-                  className="mt-0.5 uppercase tracking-wide text-[var(--text-muted)] text-[length:var(--ring-sub-size)]"
+                  className="mt-0.5 max-w-full text-[var(--text-muted)] text-[length:var(--ring-sub-size)]"
                   style={{ '--ring-sub-size': `${subSize}px` } as CSSProperties}
                 >
                   {centerSubLabel}
@@ -120,7 +131,7 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
           )}
         </div>
         {label && (
-          <span className="text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)]">{label}</span>
+          <span className="max-w-full break-words text-center text-xs font-medium text-[var(--text-muted)]">{label}</span>
         )}
       </div>
     );

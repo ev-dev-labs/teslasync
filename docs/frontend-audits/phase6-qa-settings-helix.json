@@ -1,0 +1,1117 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-settings-helix",
+  "attempt": 1,
+  "phase": 6,
+  "status": "SOURCE_QA_COMPLETE_NEEDS_FIXES_NATIVE_NOT_ACCEPTED",
+  "page": "web/src/features/settings/pages/HelixPage.tsx",
+  "routes": [
+    "/integrations/helix"
+  ],
+  "purpose": "Source-only optional Helix configuration/consent/usage QA.",
+  "primaryGoal": "Explicit safe configuration/save/restore and truthful source feedback, without any real model/provider/job/configuration/network/browser action.",
+  "timestamps": {
+    "reservation": "2026-10-14T01:47:59.989Z",
+    "firstToolClock": "2026-10-14T01:55:00.8916676Z",
+    "reportWrittenAt": "2026-10-14T02:10:49.233090+00:00",
+    "returnBy": "2026-10-14T02:07:59.989Z",
+    "hardBy": "2026-10-14T02:12:59.989Z",
+    "softDeadlineExceeded": true,
+    "reason": "Artifact assembly Windows argv206 failure and invalid evidence-range assertion; no clock reset.",
+    "finalizedAt": "2026-10-14T02:11:26.285903+00:00",
+    "hardDeadlineExceeded": false
+  },
+  "authority": {
+    "exactQueue": "migration-queue.md:67; dispatch limits :49-54",
+    "dependency": "migration-queue.md:2007 Phase5 Helix source-only acceptance716e6217b9022d85a57b43cd04ec21e1e8b00775, receipt not rerun",
+    "read": [
+      "docs/orchestrator-loop.md fully",
+      "design contract core MDC002/021/026/031-034/040-047/060-070 and bounded append context",
+      "mission0-2/15-16/25/33/43-45",
+      "inventory authority and Helix row223",
+      "handoff recovery/privacy/source-only conventions",
+      "worker conventions fully",
+      "copilot and React/SI/unit-conversion/observability instructions"
+    ],
+    "writeAllowlist": [
+      "docs/frontend-audits/phase6-qa-settings-helix.json",
+      "web/logs/phase6-qa-settings-helix.log"
+    ],
+    "GitDisclosure": "One initial read-only git --no-pager status --short before reading no-Git worker convention. No other Git command or Git write.",
+    "heartbeat": "Permitted log/tool response, no unauthorized status file"
+  },
+  "dataSources": [
+    {
+      "owner": "web/src/api/hooks/useSettings.ts",
+      "hook": "useSettings",
+      "endpoint": "GET /settings",
+      "scope": "settings document, no vehicle/range query",
+      "signal": "forwarded"
+    },
+    {
+      "owner": "web/src/api/hooks/useAiSettings.ts",
+      "hooks": [
+        "useSaveAiSettings",
+        "useValidateAiProvider"
+      ],
+      "endpoints": [
+        "PUT /settings",
+        "POST /settings/ai/validate-config"
+      ],
+      "limits": "Only source inspected. Save cache-miss fails closed/full-document merge; explicit validation blank key omitted/422 outcome, no actual dispatch."
+    },
+    {
+      "owner": "web/src/api/hooks/useAiUsage.ts",
+      "hooks": [
+        "useAiUsageToday",
+        "useAiUsageByFeature",
+        "useAiUsageRecent"
+      ],
+      "endpoints": [
+        "GET /ai/usage/today",
+        "GET /ai/usage/by-feature",
+        "GET /ai/usage/recent?limit=50"
+      ],
+      "scope": "calling-user usage todayUTC/default7days/latest50 sample, not workspace historical range",
+      "policies": "signals/query keys/interval/enablement inspected, no requests"
+    }
+  ],
+  "components": [
+    "PageLayout/PageContainer",
+    "AISettings and direct Helix supports",
+    "SettingsSummaryBrief/OperationalBrief raw bridge",
+    "shared Button/Input/Select/RadioCard/Toggle/Typography/FormSection/MetricBar/feedback/motion"
+  ],
+  "preservation": {
+    "sectionCount": 11,
+    "sections": [
+      {
+        "name": "Page chrome",
+        "source": "HelixPage.tsx:64-85",
+        "observation": "Localized PageLayout->PageContainer/title/breadcrumbs, always mounted AISettings"
+      },
+      {
+        "name": "Status Brief",
+        "source": "HelixStatusStrip.tsx:90-121",
+        "observation": "Four raw metrics, source/draft/window qualification and Review"
+      },
+      {
+        "name": "Modes/off notice",
+        "source": "AISettings.tsx:436-509",
+        "observation": "Three radios, off clears features locally, explicit Save"
+      },
+      {
+        "name": "Archive",
+        "source": "AIRestorePanel.tsx:76-126",
+        "observation": "Preview incl unknown IDs, explicit confirm/decline"
+      },
+      {
+        "name": "Provider",
+        "source": "AIProviderSection.tsx:142-402",
+        "observation": "Local/cloud options, model/deployment/protocol/embedding/endpoint/key/cap, explicit Validate"
+      },
+      {
+        "name": "Daily usage",
+        "source": "AIUsageCard.tsx:62-116",
+        "observation": "Tokens/cost/calls/errors, UTC, Brief/Review, loading/fatal/retry/zero"
+      },
+      {
+        "name": "Cap progress",
+        "source": "AICostCapSpendBar.tsx:95-141",
+        "observation": "Cloud/nonzero-cap gate; numeric thresholds and labelled no-reading/real-zero bar"
+      },
+      {
+        "name": "Feature spend",
+        "source": "AIFeatureSpendPanel.tsx:58-152",
+        "observation": "7-day UTC totals and recent50 sample limitation, list metadata/retries"
+      },
+      {
+        "name": "Features",
+        "source": "AIFeatureToggleList.tsx:144-223",
+        "observation": "59 IDs, search/eight filters/toggles/details/no-match/empty-registry"
+      },
+      {
+        "name": "Save",
+        "source": "AISettings.tsx:568-584",
+        "observation": "Explicit full-document cache merge, other-provider/non-AI preservation, toasts"
+      },
+      {
+        "name": "Review actions",
+        "source": "SettingsSummaryBrief.tsx:43-49",
+        "observation": "Existing OperationalBrief details, no native drawer acceptance"
+      }
+    ],
+    "actions": [
+      "mode selection",
+      "provider/model/protocol/embedding/URL/key/cap draft edits",
+      "local/cloud Validate",
+      "restore/decline",
+      "feature search/filter/toggle/more-less",
+      "usage/breakdown retry",
+      "Save",
+      "Brief Review"
+    ],
+    "lineCounts": {
+      "web/src/features/settings/components/AICostCapSpendBar.test.tsx": 301,
+      "web/src/features/settings/components/AICostCapSpendBar.tsx": 141,
+      "web/src/features/settings/components/AIFeatureSpendPanel.test.tsx": 102,
+      "web/src/features/settings/components/AIFeatureSpendPanel.tsx": 152,
+      "web/src/features/settings/components/AIFeatureToggleList.test.tsx": 269,
+      "web/src/features/settings/components/AIFeatureToggleList.tsx": 223,
+      "web/src/features/settings/components/AIProviderSection.test.tsx": 569,
+      "web/src/features/settings/components/AIProviderSection.tsx": 405,
+      "web/src/features/settings/components/AIRestorePanel.test.tsx": 217,
+      "web/src/features/settings/components/AIRestorePanel.tsx": 128,
+      "web/src/features/settings/components/AISettings.tsx": 584,
+      "web/src/features/settings/components/AIUsageCard.tsx": 116,
+      "web/src/features/settings/components/HelixStatusStrip.test.tsx": 188,
+      "web/src/features/settings/components/HelixStatusStrip.tsx": 121,
+      "web/src/features/settings/components/__tests__/AISettings.test.tsx": 570,
+      "web/src/features/settings/components/__tests__/AIUsageCard.test.tsx": 148,
+      "web/src/features/settings/components/index.ts": 18,
+      "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.test.tsx": 166,
+      "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx": 50,
+      "web/src/features/settings/pages/HelixPage.test.tsx": 164,
+      "web/src/features/settings/pages/HelixPage.tsx": 86
+    },
+    "originalLimit": "Historical accepted audit/queue context only, no frozen-original helper gate; no code changed.",
+    "SIAndSigns": "No physical SI display. Raw micro-cents/cents remain on hooks,10000 micro-cents/cent and1000000/dollar at display. Existing tested negative-spend clamp retained, no refund/sign semantics invented; latency_ms DTO not newly displayed.",
+    "preferences": "No settings/theme/font/density/catalog changes or resets. Other-provider/non-AI settings preserved by merge; locale/symbol/precision findings above.",
+    "privacy": "No actual credentials/user identities/data/model output read; repository and existing synthetic fixtures only"
+  },
+  "states": {
+    "initial": "Stable shell/modes; summaries withhold default measurements while loading, independent source-loading captions",
+    "fatal": "Settings QueryError leaves consent surface; usage/breakdown shells and retry remain; no-cache Save fails closed",
+    "retained": "Form/totals/cap/list retained; false paused-failed copy HELIX05",
+    "initialPaused": "DataState initial+blocked; Save readiness unproved C02, no corruption claim",
+    "unknownZero": "Raw Brief metrics and cap null/nonfinite remain missing; measured zero retained; small paid cost rounding HELIX08, malformed row C05",
+    "scopeProvenance": "Draft/current settings versus audit UTC windows and latest50 sample explicitly scoped; no second vehicle/range picker, integrations prefix disables vehicle workspace scope",
+    "consentGates": "Off-mode provider/features/usage and archive-eligibility hiding are intentional, not data-null hidden-section defects"
+  },
+  "confirmedFindings": [
+    {
+      "id": "HELIX-01",
+      "rule": "draft-preservation",
+      "severity": "high",
+      "title": "Dirty draft replaced on changed server snapshot",
+      "file": "web/src/features/settings/components/AISettings.tsx",
+      "line": 232,
+      "endLine": 259,
+      "sha256": "35d55f3c67509c3aad3b3ca28e262f3d0bca5bcd7c2f5c243aa511f88b7f6d58",
+      "source": "  useEffect(() => {\n    if (settings == null) return\n    setMode(serverMode)\n    setFeatures(normaliseFeatureMap(settings.ai_features))\n    const cfg = settings.ai_provider_config\n    const providerName =\n      readProviderString(cfg, 'default', '') ||\n      readProviderString(cfg, 'provider', 'ollama')\n    const entry = readProviderConfigEntry(cfg, providerName) ?? cfg\n    setProvider({\n      provider: providerName,\n      base_url: readProviderString(entry, 'base_url', ''),\n      model: readProviderString(entry, 'model', ''),\n      // ADR-015 §I9 — never pre-populate the key when the server's\n      // mode is off. The server already redacts in that case but we\n      // double-guard here to make the invariant local-state safe.\n      api_key:\n        serverMode === 'off'\n          ? ''\n          : readProviderString(entry, 'api_key', ''),\n      cost_cap_cents: settings.ai_cost_cap_cents ?? 0,\n      api_protocol: readProviderString(entry, 'api_protocol', 'auto'),\n      embedding_model: readProviderString(entry, 'embedding_model', ''),\n    })\n    setRestoreDismissed(false)\n    // Intentionally depend on the JSON snapshot, not the object\n    // reference, to avoid infinite re-renders.\n  }, [aiSnapshot])",
+      "mechanism": "Snapshot effect unconditionally resets mode/features/provider/key/cap/restore dismissal; no dirty/revision guard. Identical snapshots do not cause this reset.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "Edit model/cap/features without Save; a refetch delivers any changed AI-subtree field; trace effect replacing unsaved values."
+      },
+      "fix": "Preserve dirty fields and explicitly reconcile changed snapshots.",
+      "owner": "Helix controller lifecycle",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-02",
+      "rule": "configuration-readiness",
+      "severity": "high",
+      "title": "Mode flip retains incompatible provider",
+      "file": "web/src/features/settings/components/AISettings.tsx",
+      "line": 269,
+      "endLine": 278,
+      "sha256": "35d55f3c67509c3aad3b3ca28e262f3d0bca5bcd7c2f5c243aa511f88b7f6d58",
+      "source": "  function handleModeChange(next: AiMode) {\n    if (next === mode) return\n    setMode(next)\n    if (next === 'off') {\n      // Clear in-flight selections so the UI matches the post-save\n      // server state. The backend re-clears too — this is purely\n      // visual feedback.\n      setFeatures(normaliseFeatureMap(undefined))\n    }\n  }",
+      "mechanism": "Mode handler changes mode only except off-feature clearing. Off/redacted config initializes ollama; cloud options exclude ollama, while payload construction retains provider.provider. Reverse cloud-to-local similarly retains a cloud provider. Native display/backend acceptance unknown.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "Start resolved off/redacted settings; choose cloud; compare draft provider against AIProviderSection.tsx:148-165 options and AISettings.tsx:307-320 payload construction WITHOUT dispatch."
+      },
+      "fix": "Review/select a mode-compatible provider without losing other provider entries; require compatible readiness.",
+      "owner": "Helix controller lifecycle",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-03",
+      "rule": "success-only-lifecycle",
+      "severity": "medium",
+      "title": "Restore dismissed before save success",
+      "file": "web/src/features/settings/components/AISettings.tsx",
+      "line": 383,
+      "endLine": 406,
+      "sha256": "35d55f3c67509c3aad3b3ca28e262f3d0bca5bcd7c2f5c243aa511f88b7f6d58",
+      "source": "  function handleRestoreConfirm() {\n    if (settings?.ai_features_archived == null) return\n    const restored = normaliseFeatureMap(settings.ai_features_archived)\n    setFeatures(restored)\n    setRestoreDismissed(true)\n    // Persist immediately so the archive snapshot itself is cleared\n    // server-side on the next round-trip.\n    saveAi.mutate({\n      ai_mode: mode,\n      ai_features: restored,\n    })\n  }\n\n  function handleRestoreDecline() {\n    setRestoreDismissed(true)\n  }\n\n  // ── Derived state ────────────────────────────────────────────────\n\n  const showProviderSection = mode !== 'off'\n  const showRestorePanel =\n    mode !== 'off' &&\n    !restoreDismissed &&\n    archiveHasRestorableEntries(settings?.ai_features_archived)",
+      "mechanism": "Sets restored features and restoreDismissed before mutate, without rejection rollback/reopen. Hook emits an error toast; main Save can still retry features, so recovery is not wholly absent.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "Trace archive restore with rejecting mutation: prompt already dismissed although persistence failed."
+      },
+      "fix": "Pending confirmation and success-only dismissal; retain archive/draft and retryable failure.",
+      "owner": "Helix controller lifecycle",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-04",
+      "rule": "validation-provenance",
+      "severity": "medium",
+      "title": "Old validation outcome labels new draft",
+      "file": "web/src/features/settings/components/AIProviderSection.tsx",
+      "line": 65,
+      "endLine": 133,
+      "sha256": "06fe27c3cdab58bd995ef432e9ef535d5402bd46f0d1e89553d1e447310d5a36",
+      "source": "  function patch(next: Partial<AIProviderDraft>) {\n    onChange({ ...value, ...next })\n    setValidateBanner(null)\n  }\n\n  async function runValidate() {\n    setValidateBanner(null)\n    // Build the request payload. For local mode only mode + base_url\n    // matter (the validator is provider-agnostic). For cloud mode we\n    // send the full configuration so the backend can build a real\n    // adapter and run a bounded chat probe — omitted fields fall back\n    // to the saved per-provider entry server-side, so editing one\n    // field doesn't force the user to re-state the rest.\n    const req: ValidateAiProviderRequest = isCloud\n      ? {\n          mode: 'cloud',\n          provider: value.provider,\n          base_url: value.base_url,\n          // Only forward api_key when the user actually typed one;\n          // empty string lets the backend fall back to the saved\n          // (encrypted) value rather than clobbering it with \"\".\n          ...(value.api_key.trim() === ''\n            ? {}\n            : { api_key: value.api_key }),\n          model: value.model,\n          api_protocol: value.api_protocol,\n          embedding_model: value.embedding_model,\n        }\n      : {\n          mode: 'local',\n          provider: value.provider,\n          base_url: value.base_url,\n        }\n    try {\n      const result = await validate.mutateAsync(req)\n      if (result.ok) {\n        const okMessage = result.pinned_ip\n          ? t(\n              'ai.settings.validate.successPinned',\n              'OK — pinned to {{ip}}',\n              { ip: result.pinned_ip },\n            )\n          : result.probed_model\n            ? t(\n                'ai.settings.validate.successProbed',\n                'OK — {{model}} reachable',\n                { model: result.probed_model },\n              )\n            : t('ai.settings.validate.success', 'OK — provider reachable')\n        setValidateBanner({ kind: 'ok', message: okMessage })\n        return\n      }\n      setValidateBanner({ kind: 'fail', message: result.message })\n    } catch {\n      // The hook re-shapes only the backend's 422 rejection into the\n      // failure variant. A malformed request (400), a 5xx from the\n      // probe, or the network being unreachable rejects out of\n      // mutateAsync instead. Without this catch that rejection is\n      // swallowed as an unhandled promise and the user gets no\n      // feedback — the button just silently re-enables. Surface a\n      // generic, non-technical banner so validation always resolves\n      // to a visible outcome.\n      setValidateBanner({\n        kind: 'fail',\n        message: t(\n          'ai.settings.validate.networkError',\n          'Validation failed — could not reach the server. Check your connection and try again.',\n        ),\n      })",
+      "mechanism": "patch clears banner but neither versions nor cancels captured validation. Editable inputs can change while pending; old completion publishes outcome against new visible form.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "Hold validation A unresolved, edit URL/model/provider to B, resolve A; inspect unguarded setValidateBanner. No probe executed."
+      },
+      "fix": "Bind outcome to submitted revision/request identity and ignore superseded completion.",
+      "owner": "Provider form",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-05",
+      "rule": "paused-refresh-trust",
+      "severity": "medium",
+      "title": "Paused refresh falsely labelled failed",
+      "file": "web/src/features/settings/components/AIUsageCard.tsx",
+      "line": 91,
+      "endLine": 97,
+      "sha256": "69556ee25afad2fd6588b6b7f5b0291a16252390ee0c152b3ca5e9b585631f42",
+      "source": "      ) : state.status === 'stale' ? (\n        <div role=\"status\" className=\"flex flex-wrap items-center justify-between gap-2\">\n          <Caption>{t('ai.settings.usage.stale', 'Showing the last available totals. Refresh failed.')}</Caption>\n          <Button type=\"button\" size=\"sm\" variant=\"ghost\" onClick={() => void query.refetch()}>\n            {t('ai.settings.usage.retry', 'Retry')}\n          </Button>\n        </div>",
+      "mechanism": "DataState retained paused => stale/isRefreshBlocked true/refreshError null (dataState.ts:243-250). AIUsageCard:93 and AIFeatureSpendPanel:88 branch only on stale and assert refresh failed. Generic settings/cap omissions not counted again.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "Retained valid daily/breakdown payload with fetchStatus paused, no error; trace false failure labels."
+      },
+      "fix": "Existing blocked/error distinction, source timestamp/retry, retain payload and deduplicate shared daily warnings.",
+      "owner": "Usage trust adoption",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-06",
+      "rule": "draft-enforcement-conflation",
+      "severity": "high",
+      "title": "Unsaved cap presented as enforced",
+      "file": "web/src/features/settings/components/AISettings.tsx",
+      "line": 544,
+      "endLine": 556,
+      "sha256": "35d55f3c67509c3aad3b3ca28e262f3d0bca5bcd7c2f5c243aa511f88b7f6d58",
+      "source": "              {isCloud && serverMode !== 'off' && provider.cost_cap_cents > 0 && (\n                <AICostCapSpendBar capCents={provider.cost_cap_cents} />\n              )}\n            </div>\n          </div>\n        </FadeIn>\n      )}\n\n      {showProviderSection && (\n        <FadeIn delay={0.14}>\n          <AIFeatureSpendPanel\n            enabled={serverMode !== 'off'}\n            capCents={provider.cost_cap_cents}",
+      "mechanism": "Draft provider.cost_cap_cents passed to cap/breakdown panels. Bar thresholds/copy claim calls rejected; breakdown noCap claims no cap when draft zero. Saved enforcement need not match draft.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "Saved cloud cap 1000 cents, spend 5000000 micro-cents ($5); edit draft cap to 100 cents without Save -> critical rejection copy. Clear draft -> no-cap copy despite saved $10 cap."
+      },
+      "fix": "Use saved cap/mode for enforcement; qualify unsaved preview separately.",
+      "owner": "Helix controller/cap integration",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-07",
+      "rule": "source-currency-integrity",
+      "severity": "medium",
+      "title": "Dollar audit amount relabelled by preference",
+      "file": "web/src/features/settings/components/AIUsageCard.tsx",
+      "line": 41,
+      "endLine": 59,
+      "sha256": "69556ee25afad2fd6588b6b7f5b0291a16252390ee0c152b3ca5e9b585631f42",
+      "source": "  const data = enabled ? state.data : undefined\n  const costMicroCents = data?.cost_micro_cents\n  const amount = typeof costMicroCents === 'number'\n    ? costMicroCents / 1_000_000\n    : null\n  const loading = enabled && state.status === 'initial'\n  const errors = data?.error_count === 1\n    ? t('ai.settings.usage.errorOne', '1 error')\n    : t('ai.settings.usage.errorMany', '{{total}} errors', { total: formatCount(data?.error_count) })\n  const metrics: readonly StatMetric[] = [\n    { metricId: 'count', occurrenceId: 'helix-input-tokens', rawValue: data?.input_tokens,\n      label: t('ai.settings.usage.tokensIn', 'Tokens in'),\n      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },\n    { metricId: 'count', occurrenceId: 'helix-output-tokens', rawValue: data?.output_tokens,\n      label: t('ai.settings.usage.tokensOut', 'Tokens out'),\n      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },\n    { metricId: 'currency', occurrenceId: 'helix-estimated-cost', rawValue: amount,\n      label: t('ai.settings.usage.cost', 'Estimated cost'),\n      display: { formatter: raw => ({ value: formatCurrency(raw, raw > 0 && raw < 0.01 ? 6 : 2), unit: '' }) } },",
+      "mechanism": "Dollar micro-cent conversion uses formatCurrency, which only prefixes settings.currency_symbol (useFormatting.ts:45-57), no FX/source override. Same call sites AIFeatureSpendPanel:41-45 and HelixStatusStrip:98-100. Existing USD cap/dollar-conversion tests establish intended source unit, not fresh backend evidence.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "Existing 12500000 micro-cent example ($12.50) with saved currency_symbol euro produces euro12.50 at same magnitude."
+      },
+      "fix": "Keep established USD source currency and locale-formatted magnitude; no invented FX or ISO inference from symbol.",
+      "owner": "Usage monetary presentation",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-08",
+      "rule": "nonzero-precision",
+      "severity": "medium",
+      "title": "Small paid strip spend rounds to zero",
+      "file": "web/src/features/settings/components/HelixStatusStrip.tsx",
+      "line": 98,
+      "endLine": 100,
+      "sha256": "2244f9804033e1e8e329dfb259514e093f5fda24c9329528f253774e866f2496",
+      "source": "    { metricId: 'currency', occurrenceId: 'helix-spend', rawValue: sourceCost == null ? null : sourceCost / 1_000_000,\n      label: t('helix.status.spendToday', 'Spend today'),\n      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },",
+      "mechanism": "Strip formatCurrency uses default saved precision, unlike usage six decimals for values below 0.01. Raw nonzero retained but display zero.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "cost_micro_cents 1200 and precision 2: strip $0.00 versus usage $0.001200; trace formatting only."
+      },
+      "fix": "Consistent specialist small-cost precision with measured zero distinct.",
+      "owner": "Usage monetary presentation",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-09",
+      "rule": "locale-preference",
+      "severity": "medium",
+      "title": "Last-call bypasses saved regional locale",
+      "file": "web/src/features/settings/components/AIFeatureSpendPanel.tsx",
+      "line": 46,
+      "endLine": 54,
+      "sha256": "90883547ad23dfed1d1414aa9ae6a646b6ee84e83aab4935b0b73a1a0107f288",
+      "source": "  const formatLastCall = (timestamp: string) => {\n    const date = new Date(timestamp)\n    return Number.isNaN(date.getTime())\n      ? '—'\n      : new Intl.DateTimeFormat(i18n.language || 'en', {\n          dateStyle: 'medium',\n          timeStyle: 'short',\n          timeZone: 'UTC',\n        }).format(date)",
+      "mechanism": "Date Intl uses i18n.language, not saved settings.locale from useDateFormat.ts:73-85. UTC intentionally declared and correct. Dedicated saved hour-cycle contract not established, so no 12/24 defect counted.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "UI language en, saved locale de-DE: panel chooses en for last_call_at while existing owner uses saved locale."
+      },
+      "fix": "Use existing date formatter with explicit UTC audit scope and invalid placeholder.",
+      "owner": "Feature-spend presentation",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-10",
+      "rule": "mobile-target-declaration",
+      "severity": "medium",
+      "title": "Action declarations miss mobile 44px allocation",
+      "file": "web/src/features/settings/components/AIFeatureToggleList.tsx",
+      "line": 170,
+      "endLine": 179,
+      "sha256": "48b7a914d181fe907cc999e457bd33325add5fe665a54fa2c9880a76258fd25f",
+      "source": "            {CATEGORIES.map(id => (\n              <Button\n                key={id}\n                type=\"button\"\n                size=\"sm\"\n                variant={category === id ? 'primary' : 'ghost'}\n                aria-pressed={category === id}\n                onClick={() => setCategory(id)}\n                className=\"min-h-9 rounded-shape-lg border border-[var(--border-default)] px-3\"\n              >",
+      "mechanism": "Categories/disclosure and usage retries size sm resolve Button h-9, categories min-h-9. Nominal 36px at 16px root, no below-md44 override. This is source declaration, NOT measured touch/WCAG spacing failure. Toggle/RadioCard already declare mobile44, not counted.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "Inspect AIFeatureToggleList:109-122,170-179, AIUsageCard:87-95, AIFeatureSpendPanel:80-89 and Button:35-47; native geometry NOTRUN."
+      },
+      "fix": "Existing mobile h/min-h-11 at consumers, preserve desktop/wrapping; no unowned global Button edit.",
+      "owner": "Helix mobile consumers",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-11",
+      "rule": "hardcoded-string",
+      "severity": "low",
+      "title": "Foundry instructional placeholder untranslated",
+      "file": "web/src/features/settings/components/AIProviderSection.tsx",
+      "line": 178,
+      "endLine": 183,
+      "sha256": "06fe27c3cdab58bd995ef432e9ef535d5402bd46f0d1e89553d1e447310d5a36",
+      "source": "          placeholder={\n            value.provider === 'azure'\n              ? 'your-deployment-name'\n              : isCloud\n                ? 'gpt-4o-mini'\n                : 'llama3.1:8b'",
+      "mechanism": "your-deployment-name is instructional English outside t(). Proper provider names/model identifiers/URL examples acceptable and not counted.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "Inspect Azure model placeholder in non-English locale: source instruction is not translated."
+      },
+      "fix": "Canonical translated instructional placeholder.",
+      "owner": "Provider form + serialized catalog",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-12",
+      "rule": "i18n-plural",
+      "severity": "low",
+      "title": "One call gets plural calls",
+      "file": "web/src/features/settings/components/AIFeatureSpendPanel.tsx",
+      "line": 121,
+      "endLine": 126,
+      "sha256": "90883547ad23dfed1d1414aa9ae6a646b6ee84e83aab4935b0b73a1a0107f288",
+      "source": "                          {t('ai.settings.featureSpend.callsTokens', '{{calls}} calls · {{input}} in / {{output}} out · last call {{last}} UTC', {\n                            calls: fmtInt(row.call_count),\n                            input: fmtInt(row.input_tokens),\n                            output: fmtInt(row.output_tokens),\n                            last: formatLastCall(row.last_call_at),\n                          })}",
+      "mechanism": "Canonical callsTokens says {{calls}} calls; invocation supplies formatted calls string without numeric count. Existing test.tsx:71 explicitly expects 1 calls. Inside t(), not double-counted hardcoded-string.",
+      "reproduction": {
+        "executed": false,
+        "kind": "source-derived synthetic scenario; NO mounted/network/model action",
+        "steps": "Existing call_count1 fixture ->1 calls by template; assertion read only."
+      },
+      "fix": "Numeric count-aware canonical plurals with displayed number formatted separately.",
+      "owner": "Feature-spend + serialized catalog",
+      "confidence": "CONFIRMED_SOURCE_MECHANISM; runtime NOTRUN"
+    },
+    {
+      "id": "HELIX-13",
+      "rule": "i18n-catalog-gap",
+      "severity": "medium",
+      "title": "26 generated canonical leaves absent",
+      "file": "web/src/features/settings/components/AIFeatureToggleList.tsx",
+      "line": 86,
+      "endLine": 89,
+      "sha256": "48b7a914d181fe907cc999e457bd33325add5fe665a54fa2c9880a76258fd25f",
+      "mechanism": "59 registry IDs produce118 label/description keys;26 absent canonical English leaves fall back to registry English. One deduplicated catalog mechanism,26 exact leaves, not26 page defects.",
+      "missingCanonicalKeys": [
+        "ai.settings.feature.__redaction_bypass__.label",
+        "ai.settings.feature.__redaction_bypass__.description",
+        "ai.settings.feature.__usage__.label",
+        "ai.settings.feature.__usage__.description",
+        "ai.settings.feature.alert-message-template-suggestion.label",
+        "ai.settings.feature.alert-message-template-suggestion.description",
+        "ai.settings.feature.alert-pack-builder.label",
+        "ai.settings.feature.alert-pack-builder.description",
+        "ai.settings.feature.auto-trip-naming.label",
+        "ai.settings.feature.auto-trip-naming.description",
+        "ai.settings.feature.ml-charging-curve-clustering.label",
+        "ai.settings.feature.ml-charging-curve-clustering.description",
+        "ai.settings.feature.quiet-hours-suggestion.label",
+        "ai.settings.feature.quiet-hours-suggestion.description",
+        "ai.settings.feature.safety-setting-explainer.label",
+        "ai.settings.feature.safety-setting-explainer.description",
+        "ai.settings.feature.suggest-new-geofences.label",
+        "ai.settings.feature.suggest-new-geofences.description",
+        "ai.settings.feature.trip-postcard-share-card-image-generation.label",
+        "ai.settings.feature.trip-postcard-share-card-image-generation.description",
+        "ai.settings.feature.vehicle-paint-preview.label",
+        "ai.settings.feature.vehicle-paint-preview.description",
+        "ai.settings.feature.voice-mode.label",
+        "ai.settings.feature.voice-mode.description",
+        "ai.settings.feature.watch-face-nl-response.label",
+        "ai.settings.feature.watch-face-nl-response.description"
+      ],
+      "reproduction": {
+        "executed": false,
+        "steps": "Construct ai.settings.feature.<id>.label/description for shipped registry and lookup canonical en.json; actual static check raw list logged."
+      },
+      "fix": "Catalog owner integrates exact approved leaves through normal split generation/checks under separate lease; no catalog write/bypass here.",
+      "owner": "Orchestrator serialized catalog",
+      "confidence": "CONFIRMED_STATIC_KEY_JOIN"
+    }
+  ],
+  "unprovedCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/settings/components/AIRestorePanel.tsx",
+      "line": 108,
+      "title": "Long-label row overflow",
+      "sourceFactAndUnprovedLimit": "Nonwrapping row, no wrapLabel; real clipping/RTL/200% narrow-width behavior unmeasured.",
+      "status": "UNPROVED_NOT_COUNTED"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/settings/components/AISettings.tsx",
+      "line": 574,
+      "title": "Initial-paused/fatal Save readiness",
+      "sourceFactAndUnprovedLimit": "Disables raw isLoading/pending, not state.hasData/blocked. No mounted action; useSaveAiSettings:135-141 fails closed on absent cache, no corrupt PUT claim.",
+      "status": "UNPROVED_NOT_COUNTED"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/settings/components/AIProviderSection.tsx",
+      "line": 93,
+      "title": "Actual model/provider readiness",
+      "sourceFactAndUnprovedLimit": "Local payload omits model; backend/auth/pinning/saved-key fallback/probe behavior not exercised. Never invoke a real probe here.",
+      "status": "UNPROVED_NOT_COUNTED"
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/settings/components/AIProviderSection.tsx",
+      "line": 308,
+      "title": "Native fractional cap stepping",
+      "sourceFactAndUnprovedLimit": "step1 with fractional parsing; native keyboard/constraint behavior unmeasured; typebutton Save no asserted submit block.",
+      "status": "UNPROVED_NOT_COUNTED"
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/settings/components/AIFeatureSpendPanel.tsx",
+      "line": 122,
+      "title": "Malformed row unknown-zero",
+      "sourceFactAndUnprovedLimit": "fmtInt/safeNumber null fallback zero, but typed DTO requires numbers; no conforming null/malformed real response observed.",
+      "status": "UNPROVED_NOT_COUNTED"
+    },
+    {
+      "id": "C06",
+      "file": "web/src/features/settings/components/AIFeatureToggleList.tsx",
+      "line": 133,
+      "title": "Reserved mode-only consent rows",
+      "sourceFactAndUnprovedLimit": "Registry __usage__/__redaction_bypass__ metadata describes mode-only gates while all IDs have switches; complete backend consent/enforcement not proven.",
+      "status": "UNPROVED_NOT_COUNTED"
+    },
+    {
+      "id": "C07",
+      "file": "web/src/features/settings/pages/HelixPage.tsx",
+      "line": 72,
+      "title": "Composed native acceptance",
+      "sourceFactAndUnprovedLimit": "All mission widths/contrast/focus/keyboard/touch/drawers/mobile scroll/safe-area/forced-colors/RTL/motion unverified.",
+      "status": "UNPROVED_NOT_COUNTED"
+    }
+  ],
+  "requiredSharedChanges": [
+    {
+      "owner": "Helix controller lifecycle/cap",
+      "findings": [
+        "HELIX-01",
+        "HELIX-02",
+        "HELIX-03",
+        "HELIX-06"
+      ],
+      "existingFiles": [
+        "web/src/features/settings/components/AISettings.tsx",
+        "web/src/features/settings/components/__tests__/AISettings.test.tsx",
+        "web/src/features/settings/components/AICostCapSpendBar.tsx",
+        "web/src/features/settings/components/AICostCapSpendBar.test.tsx"
+      ]
+    },
+    {
+      "owner": "Provider form",
+      "findings": [
+        "HELIX-04",
+        "HELIX-11"
+      ],
+      "existingFiles": [
+        "web/src/features/settings/components/AIProviderSection.tsx",
+        "web/src/features/settings/components/AIProviderSection.test.tsx"
+      ]
+    },
+    {
+      "owner": "Usage trust/money",
+      "findings": [
+        "HELIX-05",
+        "HELIX-07",
+        "HELIX-08"
+      ],
+      "existingFiles": [
+        "web/src/features/settings/components/AIUsageCard.tsx",
+        "web/src/features/settings/components/__tests__/AIUsageCard.test.tsx",
+        "web/src/features/settings/components/HelixStatusStrip.tsx",
+        "web/src/features/settings/components/HelixStatusStrip.test.tsx",
+        "web/src/features/settings/components/AIFeatureSpendPanel.tsx",
+        "web/src/features/settings/components/AIFeatureSpendPanel.test.tsx"
+      ]
+    },
+    {
+      "owner": "Feature-spend, serialize with trust/money",
+      "findings": [
+        "HELIX-09",
+        "HELIX-12"
+      ],
+      "existingFiles": [
+        "web/src/features/settings/components/AIFeatureSpendPanel.tsx",
+        "web/src/features/settings/components/AIFeatureSpendPanel.test.tsx"
+      ]
+    },
+    {
+      "owner": "Mobile consumers, no global Button write",
+      "findings": [
+        "HELIX-10"
+      ],
+      "existingFiles": [
+        "web/src/features/settings/components/AIFeatureToggleList.tsx",
+        "web/src/features/settings/components/AIFeatureToggleList.test.tsx"
+      ]
+    },
+    {
+      "owner": "Orchestrator serialized canonical catalog",
+      "findings": [
+        "HELIX-11",
+        "HELIX-12",
+        "HELIX-13"
+      ],
+      "exactMissingKeys": [
+        "ai.settings.feature.__redaction_bypass__.label",
+        "ai.settings.feature.__redaction_bypass__.description",
+        "ai.settings.feature.__usage__.label",
+        "ai.settings.feature.__usage__.description",
+        "ai.settings.feature.alert-message-template-suggestion.label",
+        "ai.settings.feature.alert-message-template-suggestion.description",
+        "ai.settings.feature.alert-pack-builder.label",
+        "ai.settings.feature.alert-pack-builder.description",
+        "ai.settings.feature.auto-trip-naming.label",
+        "ai.settings.feature.auto-trip-naming.description",
+        "ai.settings.feature.ml-charging-curve-clustering.label",
+        "ai.settings.feature.ml-charging-curve-clustering.description",
+        "ai.settings.feature.quiet-hours-suggestion.label",
+        "ai.settings.feature.quiet-hours-suggestion.description",
+        "ai.settings.feature.safety-setting-explainer.label",
+        "ai.settings.feature.safety-setting-explainer.description",
+        "ai.settings.feature.suggest-new-geofences.label",
+        "ai.settings.feature.suggest-new-geofences.description",
+        "ai.settings.feature.trip-postcard-share-card-image-generation.label",
+        "ai.settings.feature.trip-postcard-share-card-image-generation.description",
+        "ai.settings.feature.vehicle-paint-preview.label",
+        "ai.settings.feature.vehicle-paint-preview.description",
+        "ai.settings.feature.voice-mode.label",
+        "ai.settings.feature.voice-mode.description",
+        "ai.settings.feature.watch-face-nl-response.label",
+        "ai.settings.feature.watch-face-nl-response.description"
+      ]
+    },
+    {
+      "owner": "Separate native/backend acceptance",
+      "candidates": [
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C05",
+        "C06",
+        "C07"
+      ]
+    }
+  ],
+  "deduplication": {
+    "policy": "One finding per mechanism; two paused consumers and26 missing leaves grouped. Needs not claims; serialize overlapping exact repair source/test pairs.",
+    "existingQueueOwners": "Exact support-filename correction-row lookup had no matches; no current owner invented.",
+    "historicalReconfirmed": [
+      "HELIX-01",
+      "HELIX-05",
+      "HELIX-10"
+    ],
+    "notCarriedForward": "Old RadioCard cyan-focus/neon-shell and cap unknown-to-zero observations do not match current source. Restore overflow C01 remains unproved."
+  },
+  "guidelineChecks": {
+    "scope": "13 production page/direct support/hook files, regex plus manual review",
+    "rawOutput": "GREP_RULE static-inline-style RAW_MATCHES=0\nGREP_RULE raw-html RAW_MATCHES=0\nGREP_RULE direct-library-import RAW_MATCHES=0\nGREP_RULE old-api-import RAW_MATCHES=0\nGREP_RULE double-prefix RAW_MATCHES=0\nGREP_RULE camelcase-param RAW_MATCHES=0\nGREP_RULE hidden-section-candidate RAW_MATCHES=0\nGREP_RULE hardcoded-string-candidate RAW_MATCHES=2\nGREP_RULE fetch-useeffect-candidate RAW_MATCHES=1\nGREP_RULE missing-page-container",
+    "exceptions": [
+      "query-snapshot useEffect not fetch",
+      "PageLayout wraps PageContainer",
+      "proper names/model IDs/URLs",
+      "deliberate off/archive consent gates",
+      "native controls sanctioned inside shared ui",
+      "no dynamic style false positives"
+    ],
+    "literalI18n": {
+      "references": 130,
+      "uniqueKeys": 112,
+      "missing": 0,
+      "limit": "selector included colocated AI/Helix tests; not production occurrence count or wholecatalog pass"
+    },
+    "dynamicI18n": {
+      "registryIds": 59,
+      "keysChecked": 118,
+      "missingLeaves": 26,
+      "keys": [
+        "ai.settings.feature.__redaction_bypass__.label",
+        "ai.settings.feature.__redaction_bypass__.description",
+        "ai.settings.feature.__usage__.label",
+        "ai.settings.feature.__usage__.description",
+        "ai.settings.feature.alert-message-template-suggestion.label",
+        "ai.settings.feature.alert-message-template-suggestion.description",
+        "ai.settings.feature.alert-pack-builder.label",
+        "ai.settings.feature.alert-pack-builder.description",
+        "ai.settings.feature.auto-trip-naming.label",
+        "ai.settings.feature.auto-trip-naming.description",
+        "ai.settings.feature.ml-charging-curve-clustering.label",
+        "ai.settings.feature.ml-charging-curve-clustering.description",
+        "ai.settings.feature.quiet-hours-suggestion.label",
+        "ai.settings.feature.quiet-hours-suggestion.description",
+        "ai.settings.feature.safety-setting-explainer.label",
+        "ai.settings.feature.safety-setting-explainer.description",
+        "ai.settings.feature.suggest-new-geofences.label",
+        "ai.settings.feature.suggest-new-geofences.description",
+        "ai.settings.feature.trip-postcard-share-card-image-generation.label",
+        "ai.settings.feature.trip-postcard-share-card-image-generation.description",
+        "ai.settings.feature.vehicle-paint-preview.label",
+        "ai.settings.feature.vehicle-paint-preview.description",
+        "ai.settings.feature.voice-mode.label",
+        "ai.settings.feature.voice-mode.description",
+        "ai.settings.feature.watch-face-nl-response.label",
+        "ai.settings.feature.watch-face-nl-response.description"
+      ]
+    },
+    "backendRules": "NOT_APPLICABLE, no internal/**/*.go scope"
+  },
+  "summary": {
+    "confirmedMechanisms": 13,
+    "unprovedCandidates": 7,
+    "missingCanonicalLeaves": 26,
+    "byRule": {
+      "draft-preservation": 1,
+      "configuration-readiness": 1,
+      "success-only-lifecycle": 1,
+      "validation-provenance": 1,
+      "paused-refresh-trust": 1,
+      "draft-enforcement-conflation": 1,
+      "source-currency-integrity": 1,
+      "nonzero-precision": 1,
+      "locale-preference": 1,
+      "mobile-target-declaration": 1,
+      "hardcoded-string": 1,
+      "i18n-plural": 1,
+      "i18n-catalog-gap": 1
+    },
+    "bySeverity": {
+      "high": 3,
+      "medium": 8,
+      "low": 2
+    },
+    "primaryFileCounts": {
+      "web/src/features/settings/components/AISettings.tsx": 4,
+      "web/src/features/settings/components/AIProviderSection.tsx": 2,
+      "web/src/features/settings/components/AIUsageCard.tsx": 2,
+      "web/src/features/settings/components/HelixStatusStrip.tsx": 1,
+      "web/src/features/settings/components/AIFeatureSpendPanel.tsx": 2,
+      "web/src/features/settings/components/AIFeatureToggleList.tsx": 2
+    },
+    "priority": [
+      "draft preservation",
+      "mode/provider readiness",
+      "saved vs draft enforcement",
+      "success-only restore/revision-aware validation",
+      "paused truth/currency/precision",
+      "locale/plurals/catalog/mobile declarations"
+    ],
+    "acceptance": "Report delivery only, not native/page/application acceptance"
+  },
+  "tests": {
+    "status": "NOTRUN",
+    "existingFiles": 10,
+    "sourceDeclarations": 107,
+    "definition": "raw it/test/.each declarations, not expanded cases",
+    "discovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "limits": "Original tests preserved/read. Page mocks AISettings; controller seeds cache. Tests do not cover dirty successful refetch/provider-domain flip/failed-pending restore/edit-pending validation/paused-errorfree/draft-enforcement/currencyconflict/small-positive-strip/independent-region/fullregistry join/native matrix."
+  },
+  "commands": {
+    "log": "web/logs/phase6-qa-settings-helix.log",
+    "shellIdsBeforeFinalization": [
+      1738,
+      1739,
+      1767,
+      1768,
+      1779,
+      1801,
+      1811,
+      1848,
+      1858,
+      1859,
+      1860,
+      1872,
+      1898,
+      1910,
+      1918,
+      1946,
+      2024,
+      2041,
+      2078,
+      2163,
+      2221,
+      2230
+    ],
+    "failures": [
+      {
+        "shellId": 1768,
+        "exit": 1,
+        "raw": "rg not recognized; following listing not completed"
+      },
+      {
+        "shellId": 1801,
+        "exit": 1,
+        "raw": "UnicodeEncodeError cp1252 stdout on Unicode arrow"
+      },
+      {
+        "shellId": 2163,
+        "exit": 1,
+        "raw": "The filename or extension is too long. (os error206), Python did not start"
+      },
+      {
+        "shellId": 2221,
+        "exit": 1,
+        "raw": "AssertionError in report evidence range: requested cap126-144 past actual141; report not written"
+      },
+      {
+        "tool": "view",
+        "exit": null,
+        "raw": "useAiSettings.ts range251-EOF invalid; file225 lines"
+      }
+    ],
+    "otherCompletedExits": 0,
+    "precision": "Actual raw check/read outputs logged; early command abbreviations and full inline/attempted code retained in tool transcript. Failures not hidden; recovery stdin only, no helper file.",
+    "reportAssembly": {
+      "shellId": 2280,
+      "exit": 0
+    }
+  },
+  "pins": {
+    "algorithm": "SHA-256",
+    "before": {
+      ".github/copilot-instructions.md": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      ".github/instructions/frontend-si-cutover.instructions.md": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      ".github/instructions/observability.instructions.md": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      ".github/instructions/react-frontend.instructions.md": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      ".github/instructions/unit-conversion.instructions.md": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "docs/frontend-audits/audit-page-172.json": "17151df7792f790b382aa8f31fb06e5a5fc6e701ae63efea762a5864ce490e2d",
+      "docs/frontend-design-contract.md": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "docs/frontend-inventory.md": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "docs/frontend-mission.md": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "docs/orchestrator-loop.md": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "docs/session-handoff.md": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "migration-queue.md": "7700e7d5afeba9f7d4d2a41cd670d40429d6cdd0a64d0df4d484d0ae4420b48d",
+      "web/src/ai/features.ts": "a9e780c3591933fb3553872d249e3cf7f19b28f8e22df6fcdbaf957c8e5c2eed",
+      "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "web/src/api/hooks/useAiSettings.ts": "ccf6f066237345e216cf30b9b9c22a4d4b733aeeffb6d77b71c6313bd8c52497",
+      "web/src/api/hooks/useAiUsage.ts": "85b4cda78755361fc2819cbad9709de81f71c37b0e1ef19dc17d7675344f604f",
+      "web/src/api/hooks/useSettings.ts": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "web/src/components/ui/ConfirmDialog.tsx": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "web/src/components/ui/Input.tsx": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "web/src/components/ui/RadioCard.tsx": "9d812391716d093946d5659a48447da7abf335632fb7c781c05a5c36e38fd522",
+      "web/src/components/ui/Select.tsx": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "web/src/features/settings/components/AICostCapSpendBar.test.tsx": "12da313669a4a121327eae863601087c75dfdd51a9a5a0017a601063f9c38b4d",
+      "web/src/features/settings/components/AICostCapSpendBar.tsx": "5619c4e8b0b782dcd5f92de7174019cdda00ad7979a698d7be99ba68a7290821",
+      "web/src/features/settings/components/AIFeatureSpendPanel.test.tsx": "7f1533e15c74b5ffa8bb0359275c2c5900bd24372cf6ffefd437620cb2c1a043",
+      "web/src/features/settings/components/AIFeatureSpendPanel.tsx": "90883547ad23dfed1d1414aa9ae6a646b6ee84e83aab4935b0b73a1a0107f288",
+      "web/src/features/settings/components/AIFeatureToggleList.test.tsx": "0cd2b71bcfd8dbf5c9e7ed19ea5342d29ff0813f2a346cac69eee35b91590f53",
+      "web/src/features/settings/components/AIFeatureToggleList.tsx": "48b7a914d181fe907cc999e457bd33325add5fe665a54fa2c9880a76258fd25f",
+      "web/src/features/settings/components/AIProviderSection.test.tsx": "494f7c5e12d18f66e8ed6d6e7ca475714c6bd94406ffff2755fbc15fad69b643",
+      "web/src/features/settings/components/AIProviderSection.tsx": "06fe27c3cdab58bd995ef432e9ef535d5402bd46f0d1e89553d1e447310d5a36",
+      "web/src/features/settings/components/AIRestorePanel.test.tsx": "e6336192e008ec4426309e77abfe3dba96331ea2ef28f593bec9596a23d49be8",
+      "web/src/features/settings/components/AIRestorePanel.tsx": "90105a4651bcf1f9372c7a0514d9907f9a8f6f44f054cf46fd5c2065676760a1",
+      "web/src/features/settings/components/AISettings.tsx": "35d55f3c67509c3aad3b3ca28e262f3d0bca5bcd7c2f5c243aa511f88b7f6d58",
+      "web/src/features/settings/components/AIUsageCard.tsx": "69556ee25afad2fd6588b6b7f5b0291a16252390ee0c152b3ca5e9b585631f42",
+      "web/src/features/settings/components/HelixStatusStrip.test.tsx": "cfb281609b3d1c63434e11db42a8a6d16cffc2609856df99f09514d4ea60445d",
+      "web/src/features/settings/components/HelixStatusStrip.tsx": "2244f9804033e1e8e329dfb259514e093f5fda24c9329528f253774e866f2496",
+      "web/src/features/settings/components/__tests__/AISettings.test.tsx": "8802b551f0d73b6a4581ce4f8e3db8fea34971fa02cd8143981e37d7176431ed",
+      "web/src/features/settings/components/__tests__/AIUsageCard.test.tsx": "a174c55315b39d3fbed2d308d4e2339da89482a73311edb269889d495f06d79a",
+      "web/src/features/settings/components/index.ts": "13034751d7443aa19fef38b1fd637ff75fa0b5072f9a507fe94869e26be70d82",
+      "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.test.tsx": "d809c7dc23cc2dabd3413ca4be9a73a02eee9506d9db7d79f0d9453a3425f006",
+      "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx": "9075a1bb2c766e225462ee1eaab67e67293f1b97d052e58c1a48e12eb3a07595",
+      "web/src/features/settings/pages/HelixPage.test.tsx": "90aeb868ac4c9a8c31728248f6c397ea721839581dd7dc52531e44e760bdba81",
+      "web/src/features/settings/pages/HelixPage.tsx": "2f88258387fab97296dc3759c90d9e7a85362f71a8c00936c0cf7ed75dc7d76b",
+      "web/src/hooks/useFormatting.ts": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "web/src/hooks/useNumberFormatting.ts": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "web/src/api/hooks/_toastHelpers.ts": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "web/src/api/types.ts": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "web/src/components/ui/Toggle.tsx": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "web/src/hooks/useSettings.ts": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "web/src/i18n/en.json": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "web/src/i18n/en/locale-settings.json": "ca5149bd282cd90aa19c1b6d2a0b2cd43caa23d64c66d954804a7aef35ba61d2",
+      "web/src/lib/numberFormat.ts": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "docs/frontend-worker-conventions.md": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "web/src/hooks/useDateFormat.ts": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "web/src/lib/dateFormat.ts": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+    },
+    "afterAssembly": {
+      ".github/copilot-instructions.md": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      ".github/instructions/frontend-si-cutover.instructions.md": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      ".github/instructions/observability.instructions.md": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      ".github/instructions/react-frontend.instructions.md": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      ".github/instructions/unit-conversion.instructions.md": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "docs/frontend-audits/audit-page-172.json": "17151df7792f790b382aa8f31fb06e5a5fc6e701ae63efea762a5864ce490e2d",
+      "docs/frontend-design-contract.md": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "docs/frontend-inventory.md": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "docs/frontend-mission.md": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "docs/orchestrator-loop.md": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "docs/session-handoff.md": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "migration-queue.md": "c67f9c70b050311a56c39337a980d32b8a7d1d0bb4772921218e69318acd9e5f",
+      "web/src/ai/features.ts": "a9e780c3591933fb3553872d249e3cf7f19b28f8e22df6fcdbaf957c8e5c2eed",
+      "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "web/src/api/hooks/useAiSettings.ts": "ccf6f066237345e216cf30b9b9c22a4d4b733aeeffb6d77b71c6313bd8c52497",
+      "web/src/api/hooks/useAiUsage.ts": "85b4cda78755361fc2819cbad9709de81f71c37b0e1ef19dc17d7675344f604f",
+      "web/src/api/hooks/useSettings.ts": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "web/src/components/ui/ConfirmDialog.tsx": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "web/src/components/ui/Input.tsx": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "web/src/components/ui/RadioCard.tsx": "9d812391716d093946d5659a48447da7abf335632fb7c781c05a5c36e38fd522",
+      "web/src/components/ui/Select.tsx": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "web/src/features/settings/components/AICostCapSpendBar.test.tsx": "12da313669a4a121327eae863601087c75dfdd51a9a5a0017a601063f9c38b4d",
+      "web/src/features/settings/components/AICostCapSpendBar.tsx": "5619c4e8b0b782dcd5f92de7174019cdda00ad7979a698d7be99ba68a7290821",
+      "web/src/features/settings/components/AIFeatureSpendPanel.test.tsx": "7f1533e15c74b5ffa8bb0359275c2c5900bd24372cf6ffefd437620cb2c1a043",
+      "web/src/features/settings/components/AIFeatureSpendPanel.tsx": "90883547ad23dfed1d1414aa9ae6a646b6ee84e83aab4935b0b73a1a0107f288",
+      "web/src/features/settings/components/AIFeatureToggleList.test.tsx": "0cd2b71bcfd8dbf5c9e7ed19ea5342d29ff0813f2a346cac69eee35b91590f53",
+      "web/src/features/settings/components/AIFeatureToggleList.tsx": "48b7a914d181fe907cc999e457bd33325add5fe665a54fa2c9880a76258fd25f",
+      "web/src/features/settings/components/AIProviderSection.test.tsx": "494f7c5e12d18f66e8ed6d6e7ca475714c6bd94406ffff2755fbc15fad69b643",
+      "web/src/features/settings/components/AIProviderSection.tsx": "06fe27c3cdab58bd995ef432e9ef535d5402bd46f0d1e89553d1e447310d5a36",
+      "web/src/features/settings/components/AIRestorePanel.test.tsx": "e6336192e008ec4426309e77abfe3dba96331ea2ef28f593bec9596a23d49be8",
+      "web/src/features/settings/components/AIRestorePanel.tsx": "90105a4651bcf1f9372c7a0514d9907f9a8f6f44f054cf46fd5c2065676760a1",
+      "web/src/features/settings/components/AISettings.tsx": "35d55f3c67509c3aad3b3ca28e262f3d0bca5bcd7c2f5c243aa511f88b7f6d58",
+      "web/src/features/settings/components/AIUsageCard.tsx": "69556ee25afad2fd6588b6b7f5b0291a16252390ee0c152b3ca5e9b585631f42",
+      "web/src/features/settings/components/HelixStatusStrip.test.tsx": "cfb281609b3d1c63434e11db42a8a6d16cffc2609856df99f09514d4ea60445d",
+      "web/src/features/settings/components/HelixStatusStrip.tsx": "2244f9804033e1e8e329dfb259514e093f5fda24c9329528f253774e866f2496",
+      "web/src/features/settings/components/__tests__/AISettings.test.tsx": "8802b551f0d73b6a4581ce4f8e3db8fea34971fa02cd8143981e37d7176431ed",
+      "web/src/features/settings/components/__tests__/AIUsageCard.test.tsx": "a174c55315b39d3fbed2d308d4e2339da89482a73311edb269889d495f06d79a",
+      "web/src/features/settings/components/index.ts": "13034751d7443aa19fef38b1fd637ff75fa0b5072f9a507fe94869e26be70d82",
+      "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.test.tsx": "d809c7dc23cc2dabd3413ca4be9a73a02eee9506d9db7d79f0d9453a3425f006",
+      "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx": "9075a1bb2c766e225462ee1eaab67e67293f1b97d052e58c1a48e12eb3a07595",
+      "web/src/features/settings/pages/HelixPage.test.tsx": "90aeb868ac4c9a8c31728248f6c397ea721839581dd7dc52531e44e760bdba81",
+      "web/src/features/settings/pages/HelixPage.tsx": "2f88258387fab97296dc3759c90d9e7a85362f71a8c00936c0cf7ed75dc7d76b",
+      "web/src/hooks/useFormatting.ts": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "web/src/hooks/useNumberFormatting.ts": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "web/src/api/hooks/_toastHelpers.ts": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "web/src/api/types.ts": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "web/src/components/ui/Toggle.tsx": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "web/src/hooks/useSettings.ts": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "web/src/i18n/en.json": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "web/src/i18n/en/locale-settings.json": "ca5149bd282cd90aa19c1b6d2a0b2cd43caa23d64c66d954804a7aef35ba61d2",
+      "web/src/lib/numberFormat.ts": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "docs/frontend-worker-conventions.md": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "web/src/hooks/useDateFormat.ts": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "web/src/lib/dateFormat.ts": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+    },
+    "sourceTestCatalogDrift": [],
+    "referenceDocumentDrift": [
+      "migration-queue.md"
+    ],
+    "sourceStableAtAssembly": true,
+    "limit": "Exploratory reads preceded main01:56:48 pin; extra inputs pinned before detailed reads. Interval proof, not commit/lock/globalclean claim.",
+    "afterFinalValidation": {
+      ".github/copilot-instructions.md": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      ".github/instructions/frontend-si-cutover.instructions.md": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      ".github/instructions/observability.instructions.md": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      ".github/instructions/react-frontend.instructions.md": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      ".github/instructions/unit-conversion.instructions.md": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "docs/frontend-audits/audit-page-172.json": "17151df7792f790b382aa8f31fb06e5a5fc6e701ae63efea762a5864ce490e2d",
+      "docs/frontend-design-contract.md": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "docs/frontend-inventory.md": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "docs/frontend-mission.md": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "docs/orchestrator-loop.md": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "docs/session-handoff.md": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "migration-queue.md": "c67f9c70b050311a56c39337a980d32b8a7d1d0bb4772921218e69318acd9e5f",
+      "web/src/ai/features.ts": "a9e780c3591933fb3553872d249e3cf7f19b28f8e22df6fcdbaf957c8e5c2eed",
+      "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "web/src/api/hooks/useAiSettings.ts": "ccf6f066237345e216cf30b9b9c22a4d4b733aeeffb6d77b71c6313bd8c52497",
+      "web/src/api/hooks/useAiUsage.ts": "85b4cda78755361fc2819cbad9709de81f71c37b0e1ef19dc17d7675344f604f",
+      "web/src/api/hooks/useSettings.ts": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "web/src/components/ui/ConfirmDialog.tsx": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "web/src/components/ui/Input.tsx": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "web/src/components/ui/RadioCard.tsx": "9d812391716d093946d5659a48447da7abf335632fb7c781c05a5c36e38fd522",
+      "web/src/components/ui/Select.tsx": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "web/src/features/settings/components/AICostCapSpendBar.test.tsx": "12da313669a4a121327eae863601087c75dfdd51a9a5a0017a601063f9c38b4d",
+      "web/src/features/settings/components/AICostCapSpendBar.tsx": "5619c4e8b0b782dcd5f92de7174019cdda00ad7979a698d7be99ba68a7290821",
+      "web/src/features/settings/components/AIFeatureSpendPanel.test.tsx": "7f1533e15c74b5ffa8bb0359275c2c5900bd24372cf6ffefd437620cb2c1a043",
+      "web/src/features/settings/components/AIFeatureSpendPanel.tsx": "90883547ad23dfed1d1414aa9ae6a646b6ee84e83aab4935b0b73a1a0107f288",
+      "web/src/features/settings/components/AIFeatureToggleList.test.tsx": "0cd2b71bcfd8dbf5c9e7ed19ea5342d29ff0813f2a346cac69eee35b91590f53",
+      "web/src/features/settings/components/AIFeatureToggleList.tsx": "48b7a914d181fe907cc999e457bd33325add5fe665a54fa2c9880a76258fd25f",
+      "web/src/features/settings/components/AIProviderSection.test.tsx": "494f7c5e12d18f66e8ed6d6e7ca475714c6bd94406ffff2755fbc15fad69b643",
+      "web/src/features/settings/components/AIProviderSection.tsx": "06fe27c3cdab58bd995ef432e9ef535d5402bd46f0d1e89553d1e447310d5a36",
+      "web/src/features/settings/components/AIRestorePanel.test.tsx": "e6336192e008ec4426309e77abfe3dba96331ea2ef28f593bec9596a23d49be8",
+      "web/src/features/settings/components/AIRestorePanel.tsx": "90105a4651bcf1f9372c7a0514d9907f9a8f6f44f054cf46fd5c2065676760a1",
+      "web/src/features/settings/components/AISettings.tsx": "35d55f3c67509c3aad3b3ca28e262f3d0bca5bcd7c2f5c243aa511f88b7f6d58",
+      "web/src/features/settings/components/AIUsageCard.tsx": "69556ee25afad2fd6588b6b7f5b0291a16252390ee0c152b3ca5e9b585631f42",
+      "web/src/features/settings/components/HelixStatusStrip.test.tsx": "cfb281609b3d1c63434e11db42a8a6d16cffc2609856df99f09514d4ea60445d",
+      "web/src/features/settings/components/HelixStatusStrip.tsx": "2244f9804033e1e8e329dfb259514e093f5fda24c9329528f253774e866f2496",
+      "web/src/features/settings/components/__tests__/AISettings.test.tsx": "8802b551f0d73b6a4581ce4f8e3db8fea34971fa02cd8143981e37d7176431ed",
+      "web/src/features/settings/components/__tests__/AIUsageCard.test.tsx": "a174c55315b39d3fbed2d308d4e2339da89482a73311edb269889d495f06d79a",
+      "web/src/features/settings/components/index.ts": "13034751d7443aa19fef38b1fd637ff75fa0b5072f9a507fe94869e26be70d82",
+      "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.test.tsx": "d809c7dc23cc2dabd3413ca4be9a73a02eee9506d9db7d79f0d9453a3425f006",
+      "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx": "9075a1bb2c766e225462ee1eaab67e67293f1b97d052e58c1a48e12eb3a07595",
+      "web/src/features/settings/pages/HelixPage.test.tsx": "90aeb868ac4c9a8c31728248f6c397ea721839581dd7dc52531e44e760bdba81",
+      "web/src/features/settings/pages/HelixPage.tsx": "2f88258387fab97296dc3759c90d9e7a85362f71a8c00936c0cf7ed75dc7d76b",
+      "web/src/hooks/useFormatting.ts": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "web/src/hooks/useNumberFormatting.ts": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "web/src/api/hooks/_toastHelpers.ts": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "web/src/api/types.ts": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "web/src/components/ui/Toggle.tsx": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "web/src/hooks/useSettings.ts": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "web/src/i18n/en.json": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "web/src/i18n/en/locale-settings.json": "ca5149bd282cd90aa19c1b6d2a0b2cd43caa23d64c66d954804a7aef35ba61d2",
+      "web/src/lib/numberFormat.ts": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "docs/frontend-worker-conventions.md": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "web/src/hooks/useDateFormat.ts": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "web/src/lib/dateFormat.ts": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+    }
+  },
+  "filesRead": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-audits/audit-page-172.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "web/src/ai/features.ts",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/_toastHelpers.ts",
+    "web/src/api/hooks/useAiSettings.ts",
+    "web/src/api/hooks/useAiUsage.ts",
+    "web/src/api/hooks/useSettings.ts",
+    "web/src/api/types.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/ConfirmDialog.tsx",
+    "web/src/components/ui/Input.tsx",
+    "web/src/components/ui/RadioCard.tsx",
+    "web/src/components/ui/Select.tsx",
+    "web/src/components/ui/Toggle.tsx",
+    "web/src/features/settings/components/AICostCapSpendBar.test.tsx",
+    "web/src/features/settings/components/AICostCapSpendBar.tsx",
+    "web/src/features/settings/components/AIFeatureSpendPanel.test.tsx",
+    "web/src/features/settings/components/AIFeatureSpendPanel.tsx",
+    "web/src/features/settings/components/AIFeatureToggleList.test.tsx",
+    "web/src/features/settings/components/AIFeatureToggleList.tsx",
+    "web/src/features/settings/components/AIProviderSection.test.tsx",
+    "web/src/features/settings/components/AIProviderSection.tsx",
+    "web/src/features/settings/components/AIRestorePanel.test.tsx",
+    "web/src/features/settings/components/AIRestorePanel.tsx",
+    "web/src/features/settings/components/AISettings.tsx",
+    "web/src/features/settings/components/AIUsageCard.tsx",
+    "web/src/features/settings/components/HelixStatusStrip.test.tsx",
+    "web/src/features/settings/components/HelixStatusStrip.tsx",
+    "web/src/features/settings/components/__tests__/AISettings.test.tsx",
+    "web/src/features/settings/components/__tests__/AIUsageCard.test.tsx",
+    "web/src/features/settings/components/index.ts",
+    "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.test.tsx",
+    "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx",
+    "web/src/features/settings/pages/HelixPage.test.tsx",
+    "web/src/features/settings/pages/HelixPage.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useSettings.ts",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-settings.json",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/numberFormat.ts",
+    "web/src/lib/workspaceScope.ts"
+  ],
+  "notRun": [
+    "all scoped/full tests and passing reruns",
+    "lint/build/global TSC/fresh gates",
+    "all QA/style/preservation/chart/table helpers",
+    "all real browser/API/network/model/provider/job/configuration actions",
+    "actual provider readiness/auth/key fallback/backend enforcement",
+    "mission10width/narrowcontainer/themes/custom/RTL/200%/forcedcolors/motion/lowbandwidth acceptance",
+    "native keyboard/touch/select/Review drawer focus/scroll/safearea/finalaction",
+    "performance/deployment/privacy/application acceptance"
+  ],
+  "limits": [
+    "Only two permitted artifacts writable; no source/test/catalog/config/queue/handoff/Git writes.",
+    "No subagent/helperfile/tool/install/server. Existing concurrent dirty files preserved.",
+    "Source-derived reproduction scenarios not executed, no mocks/live receipt invented.",
+    "No0violations/TypeScriptpass/wholeappgreen claim."
+  ],
+  "release": {
+    "state": "RELEASED_REPORT_ONLY",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-settings-helix.json",
+      "web/logs/phase6-qa-settings-helix.log"
+    ],
+    "sourceWriteClaim": "NONE; all source/test/direct supports read-only; no future write claim retained",
+    "ownedLongRunningCommands": 0,
+    "ownedBrowserNetworkModelActions": 0,
+    "previousBoundedCommands": "completed including disclosed failures",
+    "utc": "2026-10-14T02:11:26.285903+00:00",
+    "allOwnBoundedCommandsCompleted": true
+  },
+  "finalValidation": {
+    "status": "PASS_ARTIFACT_PARSE_COUNTS_RANGES_AND_INPUT_PINS_ONLY",
+    "utc": "2026-10-14T02:11:26.285903+00:00",
+    "numericExit": 0,
+    "sourceTestCatalogStable": true,
+    "pinnedInputs": 58,
+    "referenceDocumentDrift": [
+      "migration-queue.md"
+    ],
+    "referenceDriftAttribution": "Mutable orchestrator-owned queue changed during read-only review; not written by this worker. Exact authority row read earlier; no report claims a global clean tree.",
+    "command": "python -c <inline final artifact JSON parse/count/range/SHA256 checks; exact payload in log and tool transcript>",
+    "notApplicationValidation": true
+  }
+}

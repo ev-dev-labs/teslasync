@@ -35,8 +35,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -63,15 +64,19 @@ vi.mock('@/components/charts', async () => {
   return {
     EmbeddedChart: chartTestDoubles.EmbeddedChart,
     ChartLegend: chartTestDoubles.ChartLegend,
-    ResponsiveContainer: ({ children }: any) => (
+    ChartTooltip: () => null,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
       <div data-testid="responsive-container">{children}</div>
     ),
-    LineChart: ({ children, margin }: any) => (
+    LineChart: ({ children, margin }: { children?: ReactNode; margin?: { right?: number } }) => (
       <div data-testid="line-chart" data-margin-right={String(margin?.right)}>
         {children}
       </div>
     ),
-    Line: ({ dataKey, name, yAxisId, isAnimationActive, connectNulls, stroke, data }: any) => (
+    Line: ({ dataKey, name, yAxisId, isAnimationActive, connectNulls, stroke, data }: {
+      dataKey?: string; name?: string; yAxisId?: string; isAnimationActive?: boolean;
+      connectNulls?: boolean; stroke?: string; data?: Record<string, unknown>[];
+    }) => (
       <div
         data-testid="line"
         data-key={String(dataKey)}
@@ -83,7 +88,7 @@ vi.mock('@/components/charts', async () => {
         data-x-values={(data ?? []).map((row: Record<string, unknown>) => row.timestampMs).join(',')}
       />
     ),
-  XAxis: ({ dataKey, type, allowDuplicatedCategory }: any) => (
+  XAxis: ({ dataKey, type, allowDuplicatedCategory }: { dataKey?: string; type?: string; allowDuplicatedCategory?: boolean }) => (
     <div
       data-testid="x-axis"
       data-key={String(dataKey)}
@@ -91,12 +96,12 @@ vi.mock('@/components/charts', async () => {
       data-allow-duplicated-category={String(allowDuplicatedCategory)}
     />
   ),
-  YAxis: ({ yAxisId, orientation }: any) => (
+  YAxis: ({ yAxisId, orientation }: { yAxisId?: string; orientation?: string }) => (
     <div data-testid={`y-axis-${yAxisId}`} data-orientation={orientation ?? 'left'} />
   ),
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
-  SmallMultiplesChart: ({ series, cellHeight, syncId }: any) => (
+  SmallMultiplesChart: ({ series, cellHeight, syncId }: { series?: string[]; cellHeight?: number; syncId?: string }) => (
     <div
       data-testid="small-multiples"
       data-series={(series ?? []).join(',')}
@@ -114,6 +119,8 @@ vi.mock('@/components/charts', async () => {
 
 import { SignalChartPanel, type SignalChartPanelProps } from './SignalChartPanel';
 import { projectSmallMultipleSeries } from '@/components/charts';
+import { CHART_COLORS } from '@/lib/colors';
+import { neonColorMap, typography } from '@/lib/tokens';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
 
 // U+00B7 middle dot joins the live event/point counters. Declared via an escape
@@ -152,8 +159,33 @@ function renderPanel(overrides: Partial<SignalChartPanelProps> = {}) {
     stats: BASE_STATS,
     ...overrides,
   };
-  return render(<SignalChartPanel {...props} />);
+  return render(<MemoryRouter><SignalChartPanel {...props} /></MemoryRouter>);
 }
+
+describe('SignalChartPanel — Phase 4 allocation and failure shell', () => {
+  it('contains the grid allocation without changing signal order, cell height or synchronization', () => {
+    const { container } = renderPanel({
+      chartMode: 'grid', selectedSignals: ['speed', 'battery_level'], gridCellHeight: 123,
+    });
+    const panel = container.querySelector('[data-print-card]');
+    expect(panel?.className).toContain('min-w-0');
+    expect(panel?.className).toContain('max-w-full');
+    expect(panel?.parentElement?.className).toContain('min-w-0');
+    const grid = screen.getByTestId('small-multiples');
+    expect(grid).toHaveAttribute('data-series', 'speed,battery_level');
+    expect(grid).toHaveAttribute('data-cell-height', '123');
+    expect(grid).toHaveAttribute('data-sync-id', 'signal-chart-historical');
+  });
+
+  it('keeps its title and offers retry rather than painting an empty grid on initial failure', () => {
+    const onRetry = vi.fn();
+    renderPanel({ data: [], error: new Error('history unavailable'), onRetry, chartMode: 'grid', selectedSignals: ['speed', 'battery_level'] });
+    expect(screen.getByRole('heading', { name: 'Signal chart' })).toBeInTheDocument();
+    expect(screen.queryByTestId('small-multiples')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+});
 
 // ── Header & title ────────────────────────────────────────────────────────────
 
@@ -162,7 +194,7 @@ describe('SignalChartPanel — header & title', () => {
     const { container } = renderPanel();
 
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Signal Chart' }),
+      screen.getByRole('heading', { level: 2, name: 'Signal chart' }),
     ).toBeInTheDocument();
     expect(container.querySelector('.lucide-bar-chart3')).not.toBeNull();
     expect(container.querySelector('.lucide-radio')).toBeNull();
@@ -172,7 +204,7 @@ describe('SignalChartPanel — header & title', () => {
     const { container } = renderPanel({ isLive: true, data: [] });
 
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Live Signal Stream' }),
+      screen.getByRole('heading', { level: 2, name: 'Live signal stream' }),
     ).toBeInTheDocument();
     expect(container.querySelector('.lucide-radio')).not.toBeNull();
     expect(container.querySelector('.lucide-bar-chart3')).toBeNull();
@@ -184,7 +216,7 @@ describe('SignalChartPanel — header & title', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: 'Custom Title' }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Live Signal Stream')).toBeNull();
+    expect(screen.queryByText('Live signal stream')).toBeNull();
   });
 
   it('marks the header status glyph aria-hidden so screen readers skip it', () => {
@@ -209,7 +241,7 @@ describe('SignalChartPanel — live annotations', () => {
 
     // fmtInt(1234) → "1,234"; fmtInt(data.length=2) → "2".
     expect(container).toHaveTextContent(`1,234 events ${DOT} 2 points`);
-    const dot = container.querySelector('.bg-red-500.rounded-full');
+    const dot = container.querySelector(`.rounded-full[aria-hidden="true"][class~="h-1.5"][class~="w-1.5"][class~="${neonColorMap.cyan.dot}"]`);
     expect(dot).toHaveAttribute('aria-hidden', 'true');
   });
 
@@ -260,10 +292,35 @@ describe('SignalChartPanel — loading state', () => {
     const { container } = renderPanel({ loading: true });
 
     expect(screen.getByRole('status', { name: /Loading chart/ })).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[aria-hidden="true"].h-full.w-full')).not.toBeNull();
     // The chart body must NOT render while loading.
     expect(screen.queryByTestId('line-chart')).toBeNull();
     expect(screen.queryByTestId('small-multiples')).toBeNull();
+  });
+
+  describe('SignalChartPanel — restrained live presentation', () => {
+    it('shows a static mode swatch and neutral glyph without asserting transport health', () => {
+      const { container } = renderPanel({ isLive: true, data: [] });
+      const radio = container.querySelector('.lucide-radio');
+      expect(radio).toHaveClass(typography.color.secondary);
+      expect(container.querySelector('.rounded-full')).toHaveClass(neonColorMap.cyan.dot);
+      expect(container.querySelector('.animate-pulse')).toBeNull();
+      expect(screen.getByText(/Waiting for live signal data/)).toBeInTheDocument();
+      expect(screen.queryByText(/connected|online/i)).toBeNull();
+    });
+
+    it('retains selected identifiers and shared series color ordering without coloring metadata', () => {
+      const signals = ['Long_Source_Identifier', 'another.signal'];
+      const { container } = renderPanel({
+        isLive: true, chartMode: 'overlay', selectedSignals: signals, data: [rowFor(signals)],
+      });
+      screen.getAllByTestId('line').forEach((line, index) => {
+        expect(line).toHaveAttribute('data-name', signals[index]);
+        expect(line).toHaveAttribute('data-stroke', CHART_COLORS[index]);
+      });
+      expect(container.querySelector('.text-red-400')).toBeNull();
+      expect(container.querySelector('.text-cyan-300')).toBeNull();
+    });
   });
 
   it('ignores the loading flag in live mode and shows the waiting state', () => {

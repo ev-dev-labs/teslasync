@@ -4,6 +4,7 @@ import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { safeArray } from '@/lib/safeArray';
+import { deriveDataState } from '../dataState';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -62,10 +63,21 @@ interface SetConfigResponse {
   arm_results: Record<string, string>;
 }
 
-interface PanicResponse {
-  command_results: Record<string, string>;
-  notified_channels: string[];
-  event_id: number;
+/** Mirrors GuardPanicResult in internal/api/guard/handler.go.
+ * Successful commands omit error; failures retain the upstream error string. */
+export interface GuardPanicResult {
+  command: string;
+  ok: boolean;
+  error?: string;
+}
+
+/** Successful PANIC response, also emitted by the backend with HTTP 502 on
+ * partial command failure. request() rejects non-2xx responses; this type
+ * does not make partial failure a successful mutation. */
+export interface GuardPanicResponse {
+  vehicle_id: number;
+  vin: string;
+  results: GuardPanicResult[];
 }
 
 // ── Query Keys ──────────────────────────────────────────────────────────
@@ -77,20 +89,35 @@ export const guardKeys = {
 
 // ── Hooks ───────────────────────────────────────────────────────────────
 
+// Fail closed on ordinary auth/transport errors instead of replaying a write.
+// request() still attaches credentials, challenges for sudo, and checks live mode.
+const guardWriteOptions = {
+  method: 'POST',
+  requiresLiveMode: true,
+  skipAuthRefresh: true,
+} as const;
+
 /**
- * Subscribes to the guard config (`GET /vehicles/{id}/guard`).
+ * Subscribes to saved guard policy (`GET /vehicles/{id}/guard/config`).
  *
- *  Backed by `guard_repo` over `security_events`; see
- *  `internal/api/guard_handler.go` and `internal/api/router.go:820-823`.
+ *  Returns null until a policy is saved. GET /guard remains observed Sentry
+ *  telemetry, not configuration; see internal/api/guard/handler.go.
+ *  `state` retains the last policy on refresh failure; only its fatalError
+ *  may replace content. A confirmed null policy is authoritatively empty.
  */
 export function useGuardConfig(vehicleId: number) {
-  return useQuery({
+  const query = useQuery({
     queryKey: guardKeys.config(vehicleId),
-    queryFn: ({ signal }) => request<GuardConfig>(`/vehicles/${vehicleId}/guard`, { signal }),
+    queryFn: ({ signal }) => request<GuardConfig | null>(`/vehicles/${vehicleId}/guard/config`, { signal }),
     enabled: vehicleId > 0,
     staleTime: STALE_TIMES.REALTIME,
     refetchInterval: INTERVALS.REALTIME,
   });
+  return {
+    ...query,
+    // A confirmed null policy is empty, not an unresolved or failed read.
+    state: deriveDataState(query, { unavailable: query.data === null }),
+  };
 }
 
 /**
@@ -101,9 +128,11 @@ export function useGuardConfig(vehicleId: number) {
  *  inside TanStack's `select` so callers always receive `GuardEvent[]`
  *  and never need to defend against shape drift. This is the canonical
  *  way to absorb the contract change without a "bridge" layer.
+ *  `state` annotates the selected history without dropping retained events
+ *  on refresh failure or mistaking a paused first load for an empty feed.
  */
 export function useGuardEvents(vehicleId: number) {
-  return useQuery({
+  const query = useQuery({
     queryKey: guardKeys.events(vehicleId),
     queryFn: ({ signal }) =>
       request<GuardEventsResponse>(`/vehicles/${vehicleId}/guard/events`, { signal }),
@@ -111,6 +140,13 @@ export function useGuardEvents(vehicleId: number) {
     enabled: vehicleId > 0,
     staleTime: STALE_TIMES.QUICK,
   });
+  return {
+    ...query,
+    state: deriveDataState(query, {
+      provenance: 'historical',
+      unavailable: query.data?.length === 0,
+    }),
+  };
 }
 
 /** Mutates the guard config (`POST /vehicles/{id}/guard`). */
@@ -126,18 +162,21 @@ export function useSetGuardConfig() {
       auto_panic: boolean;
     }) =>
       request<SetConfigResponse>(`/vehicles/${vehicleId}/guard`, {
-        method: 'POST',
-        requiresLiveMode: true,
+        ...guardWriteOptions,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }),
     networkMode: 'always',
+    retry: false,
     onSuccess: (_data, { vehicleId }) => {
       invalidateAndBroadcast(queryClient, { queryKey: guardKeys.config(vehicleId) });
       invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
       toast.success('Guard configuration updated');
     },
-    onError: (err: Error) => {
+    onError: (err: Error, { vehicleId }) => {
+      // Arming can fail after the policy is persisted; re-read it even on 502.
+      invalidateAndBroadcast(queryClient, { queryKey: guardKeys.config(vehicleId) });
+      invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
       toast.error(`Failed to update guard config: ${err.message}`);
     },
   });
@@ -149,11 +188,11 @@ export function useGuardPanic() {
   const toast = useToast();
   return useMutation({
     mutationFn: (vehicleId: number) =>
-      request<PanicResponse>(`/vehicles/${vehicleId}/guard/panic`, {
-        method: 'POST',
-        requiresLiveMode: true,
+      request<GuardPanicResponse>(`/vehicles/${vehicleId}/guard/panic`, {
+        ...guardWriteOptions,
       }),
     networkMode: 'always',
+    retry: false,
     onSuccess: (_data, vehicleId) => {
       invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
       toast.success('Panic alert triggered');
@@ -173,11 +212,11 @@ export function useAcknowledgeGuardEvent() {
   const toast = useToast();
   return useMutation({
     mutationFn: ({ vehicleId, eventId }: { vehicleId: number; eventId: number }) =>
-      request<{ status: string }>(`/vehicles/${vehicleId}/guard/events/${eventId}/acknowledge`, {
-        method: 'POST',
-        requiresLiveMode: true,
+      request<GuardEvent>(`/vehicles/${vehicleId}/guard/events/${eventId}/acknowledge`, {
+        ...guardWriteOptions,
       }),
     networkMode: 'always',
+    retry: false,
     onSuccess: (_data, { vehicleId }) => {
       invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
       toast.success('Event acknowledged');

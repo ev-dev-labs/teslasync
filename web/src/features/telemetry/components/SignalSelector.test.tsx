@@ -13,7 +13,7 @@
  *      default, and omitted when `showLayerHelp={false}`.
  *   3. Combobox wiring: exposes a labelled combobox with the search placeholder,
  *      lists the provided options, appends the chosen signal on select (and
- *      drops it from the dropdown), and renders each option in a mono span.
+ *      drops it from the dropdown), and renders each option as canonical Code.
  *   4. Cap enforcement: the cap flows to ComboboxMulti as `maxItems` and blocks
  *      selecting past it; `max={null}` allows unlimited selections.
  *   5. Resilience (the hardening this file adds): an `undefined` `value` renders
@@ -205,13 +205,62 @@ describe('SignalSelector — combobox wiring', () => {
     expect(screen.queryByRole('option', { name: 'battery_level' })).not.toBeInTheDocument();
   });
 
-  it('renders each option label in a monospace span', () => {
+  it('renders each option label with canonical code typography', () => {
     render(<SignalSelector options={OPTIONS} value={[]} onChange={vi.fn()} />);
     fireEvent.focus(screen.getByRole('combobox'));
 
     const mono = screen.getByText('vehicle_speed');
-    expect(mono.tagName).toBe('SPAN');
+    expect(mono.tagName).toBe('CODE');
     expect(mono.className).toContain('font-mono');
+    expect(mono).toHaveClass('[overflow-wrap:anywhere]');
+  });
+
+  it('retains exact long signal identities through selection and removal', () => {
+    const signal = 'LongCanonicalNormalizedTelemetrySignal'.repeat(4);
+    const onChangeSpy = vi.fn();
+    render(<ControlledSelector options={[signal]} max={null} showLayerHelp={false} onChangeSpy={onChangeSpy} />);
+    fireEvent.focus(screen.getByRole('combobox'));
+    expect(screen.getByText(signal)).toHaveClass('[overflow-wrap:anywhere]');
+    fireEvent.click(screen.getByRole('option', { name: signal }));
+    expect(onChangeSpy).toHaveBeenLastCalledWith([signal]);
+    fireEvent.click(screen.getByRole('button', { name: `Remove ${signal}` }));
+    expect(onChangeSpy).toHaveBeenLastCalledWith([]);
+    expect(screen.getByText('Signals (0)')).toBeInTheDocument();
+  });
+
+  it('filters by exact signal text and selects through the native keyboard contract', () => {
+    const onChangeSpy = vi.fn();
+    render(<ControlledSelector onChangeSpy={onChangeSpy} showLayerHelp={false} />);
+    const combo = screen.getByRole('combobox', { name: /signals/i });
+    fireEvent.focus(combo);
+    fireEvent.change(combo, { target: { value: 'vehicle' } });
+    expect(screen.queryByRole('option', { name: 'battery_level' })).not.toBeInTheDocument();
+    fireEvent.keyDown(combo, { key: 'Home' });
+    const option = screen.getByRole('option', { name: 'vehicle_speed' });
+    expect(combo).toHaveAttribute('aria-activedescendant', option.id);
+    fireEvent.keyDown(combo, { key: 'Enter' });
+    expect(onChangeSpy).toHaveBeenLastCalledWith(['vehicle_speed']);
+    fireEvent.keyDown(combo, { key: 'Escape' });
+    expect(combo).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('forwards source loading without dropping retained selection or inventing availability', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <SignalSelector options={[]} value={['battery_level']} onChange={onChange} loading showLayerHelp={false} />,
+    );
+    fireEvent.focus(screen.getByRole('combobox'));
+    expect(screen.getByRole('button', { name: 'Remove battery_level' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Loading' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.queryByText('No results')).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+    rerender(
+      <SignalSelector options={[]} value={['battery_level']} onChange={onChange} loading={false} showLayerHelp={false} />,
+    );
+    expect(screen.getByText('No results')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove battery_level' })).toBeInTheDocument();
+    expect(screen.getByText('Signals (1 / 5)')).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
 

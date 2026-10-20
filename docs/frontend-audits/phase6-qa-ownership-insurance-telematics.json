@@ -1,0 +1,1687 @@
+{
+  "item": "phase6-qa-ownership-insurance-telematics",
+  "return_deadline_utc": "2026-10-14T02:24:58.538Z",
+  "attempt": 1,
+  "started_at_utc": "2026-10-14T02:09:53.7783137Z",
+  "source_pins": [
+    {
+      "lines_before": 951,
+      "path": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "sha256_before": "5bbd747c13a89b007bee1a4ab9b0739b2b3e9094e6308933d1543bec7a493b9d",
+      "sha256_after": "5bbd747c13a89b007bee1a4ab9b0739b2b3e9094e6308933d1543bec7a493b9d",
+      "lines_after": 951,
+      "unchanged": true
+    },
+    {
+      "lines_before": 461,
+      "path": "web/src/features/ownership/pages/InsuranceTelematicsPage.test.tsx",
+      "sha256_before": "9ea89267f4dcb5493302f57bfb2cfb9fffa99904baeea57e7d8029a9c5e0590b",
+      "sha256_after": "9ea89267f4dcb5493302f57bfb2cfb9fffa99904baeea57e7d8029a9c5e0590b",
+      "lines_after": 461,
+      "unchanged": true
+    },
+    {
+      "lines_before": 8,
+      "path": "web/src/features/ownership/components/index.ts",
+      "sha256_before": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "sha256_after": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "lines_after": 8,
+      "unchanged": true
+    },
+    {
+      "lines_before": 88,
+      "path": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "sha256_before": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "sha256_after": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "lines_after": 88,
+      "unchanged": true
+    },
+    {
+      "lines_before": 193,
+      "path": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+      "sha256_before": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "sha256_after": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "lines_after": 193,
+      "unchanged": true
+    },
+    {
+      "lines_before": 194,
+      "path": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "sha256_before": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "sha256_after": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "lines_after": 194,
+      "unchanged": true
+    },
+    {
+      "lines_before": 52,
+      "path": "web/src/features/ownership/components/MoneyInput.tsx",
+      "sha256_before": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+      "sha256_after": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+      "lines_after": 52,
+      "unchanged": true
+    },
+    {
+      "lines_before": 22,
+      "path": "web/src/features/ownership/components/MutationError.tsx",
+      "sha256_before": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "sha256_after": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "lines_after": 22,
+      "unchanged": true
+    },
+    {
+      "lines_before": 130,
+      "path": "web/src/features/ownership/components/VerdictBadge.tsx",
+      "sha256_before": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "sha256_after": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "lines_after": 130,
+      "unchanged": true
+    },
+    {
+      "lines_before": 141,
+      "path": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+      "sha256_before": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "sha256_after": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "lines_after": 141,
+      "unchanged": true
+    },
+    {
+      "lines_before": 81,
+      "path": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "sha256_before": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "sha256_after": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "lines_after": 81,
+      "unchanged": true
+    },
+    {
+      "lines_before": 112,
+      "path": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+      "sha256_before": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+      "sha256_after": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+      "lines_after": 112,
+      "unchanged": true
+    },
+    {
+      "lines_before": 9,
+      "path": "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+      "sha256_before": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "sha256_after": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "lines_after": 9,
+      "unchanged": true
+    },
+    {
+      "lines_before": 148,
+      "path": "web/src/features/ownership/formatters.ts",
+      "sha256_before": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "sha256_after": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "lines_after": 148,
+      "unchanged": true
+    },
+    {
+      "lines_before": 801,
+      "path": "web/src/api/hooks/useOwnership.ts",
+      "sha256_before": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "sha256_after": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "lines_after": 801,
+      "unchanged": true
+    },
+    {
+      "lines_before": 1106,
+      "path": "web/src/types/ownership.ts",
+      "sha256_before": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "sha256_after": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "lines_after": 1106,
+      "unchanged": true
+    },
+    {
+      "lines_before": 17,
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256_before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "sha256_after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines_after": 17,
+      "unchanged": true
+    },
+    {
+      "lines_before": 81,
+      "path": "web/src/components/layout/layout-reference/PageLayout.test.tsx",
+      "sha256_before": "43c89ddc08017a42eaaba33a69cbf083b62a32fd67ce7a6d1dcf716b8892fc1e",
+      "sha256_after": "43c89ddc08017a42eaaba33a69cbf083b62a32fd67ce7a6d1dcf716b8892fc1e",
+      "lines_after": 81,
+      "unchanged": true
+    },
+    {
+      "lines_before": 434,
+      "path": "web/src/api/dataState.ts",
+      "sha256_before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "sha256_after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines_after": 434,
+      "unchanged": true
+    },
+    {
+      "lines_before": 65,
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256_before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "sha256_after": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines_after": 65,
+      "unchanged": true
+    },
+    {
+      "lines_before": 24,
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256_before": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "sha256_after": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lines_after": 24,
+      "unchanged": true
+    },
+    {
+      "lines_before": 137,
+      "path": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256_before": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "sha256_after": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "lines_after": 137,
+      "unchanged": true
+    },
+    {
+      "lines_before": 63,
+      "path": "web/src/lib/metric-reference/types.ts",
+      "sha256_before": "3b9ebc9538365fe381ef8969132361f28da5501914a058a5d4eac8e3afc1b832",
+      "sha256_after": "3b9ebc9538365fe381ef8969132361f28da5501914a058a5d4eac8e3afc1b832",
+      "lines_after": 63,
+      "unchanged": true
+    },
+    {
+      "lines_before": 462,
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256_before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "sha256_after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines_after": 462,
+      "unchanged": true
+    },
+    {
+      "lines_before": 194,
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256_before": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "sha256_after": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines_after": 194,
+      "unchanged": true
+    },
+    {
+      "lines_before": 47,
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256_before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "sha256_after": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines_after": 47,
+      "unchanged": true
+    },
+    {
+      "lines_before": 174,
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256_before": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "sha256_after": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines_after": 174,
+      "unchanged": true
+    },
+    {
+      "lines_before": 118,
+      "path": "web/src/hooks/useConfirm.ts",
+      "sha256_before": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "sha256_after": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "lines_after": 118,
+      "unchanged": true
+    },
+    {
+      "lines_before": 168,
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256_before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "sha256_after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines_after": 168,
+      "unchanged": true
+    },
+    {
+      "lines_before": 1707,
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256_before": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "sha256_after": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines_after": 1707,
+      "unchanged": true
+    },
+    {
+      "lines_before": 1006,
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256_before": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "sha256_after": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lines_after": 1006,
+      "unchanged": true
+    },
+    {
+      "lines_before": 259,
+      "sha256_before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256_after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines_after": 259,
+      "unchanged": true
+    },
+    {
+      "lines_before": 16,
+      "sha256_before": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+      "path": "web/src/features/ownership/components/operationalbrief-all/testAssertions.ts",
+      "sha256_after": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+      "lines_after": 16,
+      "unchanged": true
+    },
+    {
+      "lines_before": 74,
+      "sha256_before": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256_after": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines_after": 74,
+      "unchanged": true
+    },
+    {
+      "lines_before": 321,
+      "sha256_before": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256_after": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "lines_after": 321,
+      "unchanged": true
+    },
+    {
+      "lines_before": 698,
+      "sha256_before": "ac98f166f50835f54a335cd1e349f9a21ce3876f215a6a1922c01cea6d9efe8f",
+      "path": "internal/app/ownershipintelsvc/insurance.go",
+      "sha256_after": "ac98f166f50835f54a335cd1e349f9a21ce3876f215a6a1922c01cea6d9efe8f",
+      "lines_after": 698,
+      "unchanged": true
+    },
+    {
+      "lines_before": 359,
+      "sha256_before": "f6a6a6ac74db331285a6bc365d636896b431e74a24f763272b03cf2f27fdbaf2",
+      "path": "internal/domain/ownershipintel/assurance.go",
+      "sha256_after": "f6a6a6ac74db331285a6bc365d636896b431e74a24f763272b03cf2f27fdbaf2",
+      "lines_after": 359,
+      "unchanged": true
+    },
+    {
+      "lines_before": 86,
+      "sha256_before": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "path": "web/src/api/queryClient.ts",
+      "sha256_after": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "lines_after": 86,
+      "unchanged": true
+    },
+    {
+      "lines_before": 458,
+      "sha256_before": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "path": "web/src/api/client.ts",
+      "sha256_after": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lines_after": 458,
+      "unchanged": true
+    },
+    {
+      "lines_before": 148,
+      "sha256_before": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256_after": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lines_after": 148,
+      "unchanged": true
+    },
+    {
+      "lines_before": 146,
+      "sha256_before": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "path": "web/src/hooks/useSettings.ts",
+      "sha256_after": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "lines_after": 146,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/operationalMode.ts",
+      "lines_before": 89,
+      "sha256_before": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "sha256_after": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "lines_after": 89,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/offlineCache.ts",
+      "lines_before": 185,
+      "sha256_before": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "sha256_after": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "lines_after": 185,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/_toastHelpers.ts",
+      "lines_before": 123,
+      "sha256_before": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "sha256_after": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "lines_after": 123,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/tokens.ts",
+      "lines_before": 439,
+      "sha256_before": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "sha256_after": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "lines_after": 439,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/currencyFormat.ts",
+      "lines_before": 271,
+      "sha256_before": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+      "sha256_after": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+      "lines_after": 271,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "lines_before": 172,
+      "sha256_before": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "sha256_after": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "lines_after": 172,
+      "unchanged": true
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "lines_before": 39002,
+      "sha256_before": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "sha256_after": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "lines_after": 39002,
+      "unchanged": true
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "lines_before": 707,
+      "sha256_before": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "sha256_after": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "lines_after": 707,
+      "unchanged": true
+    },
+    {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "lines_before": 629,
+      "sha256_before": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "sha256_after": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "lines_after": 629,
+      "unchanged": true
+    },
+    {
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "lines_before": 94,
+      "sha256_before": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "sha256_after": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "lines_after": 94,
+      "unchanged": true
+    },
+    {
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "lines_before": 221,
+      "sha256_before": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "sha256_after": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "lines_after": 221,
+      "unchanged": true
+    },
+    {
+      "path": "docs/orchestrator-loop.md",
+      "lines_before": 296,
+      "sha256_before": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "sha256_after": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "lines_after": 296,
+      "unchanged": true
+    },
+    {
+      "path": "docs/frontend-design-contract.md",
+      "lines_before": 2539,
+      "sha256_before": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "sha256_after": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "lines_after": 2539,
+      "unchanged": true
+    }
+  ],
+  "status": "DONE_SOURCE_QA_WITH_CONFIRMED_FINDINGS",
+  "hard_deadline_utc": "2026-10-14T02:29:58.538Z",
+  "writable_files": [
+    "docs/frontend-audits/phase6-qa-ownership-insurance-telematics.json",
+    "web/logs/phase6-qa-ownership-insurance-telematics.log"
+  ],
+  "schema_version": 1,
+  "mode": "READONLY_SOURCE_ONLY",
+  "findings": [
+    {
+      "id": "F01",
+      "classification": "confirmed-source",
+      "rule": "unknown-zero",
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 428,
+      "end_line": 438,
+      "title": "No-drive model defaults are presented as best risk",
+      "mechanism": "The no-usable-drive service branch returns risk_score=0 and frequency/severity/loss-cost=1 with insufficient quality. The page forwards these finite defaults as valid model values, labels 0 best and applies positive tone; it does not condition model validity on drive_count/quality. Quality text below does not make these uncomputed readings measured zero.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 174,
+          "end_line": 187
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 29,
+          "end_line": 33
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Trace the service branch with zero completed usable drives.",
+          "Its non-null response reaches the risk metric: displayed 0, best hint and positive tone, with baseline indices 1. No runtime render was executed."
+        ]
+      },
+      "fix": "Keep a real zero exposure/count separate from an uncomputed risk model. Preserve raw response but present model outputs as not computed with neutral tone and explicit insufficient-data reason.",
+      "owner_need": "insurance-page-model"
+    },
+    {
+      "id": "F02",
+      "classification": "confirmed-source",
+      "rule": "population-provenance",
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 501,
+      "end_line": 508,
+      "title": "Peer/history percentile is not computed from a population",
+      "mechanism": "The service sets PeerPercentile to clamp(RiskScore,0,100), without a peer cohort, rank, history distribution or denominator. The page calls that value Peer percentile and Against your own history distribution.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 245,
+          "end_line": 250
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Read assignment PeerPercentile=clamp(RiskScore).",
+          "A synthetic risk score of 35 is labelled a history/peer percentile of 35 although no population comparison was performed."
+        ]
+      },
+      "fix": "Do not claim peer/history comparison. Mark percentile unavailable or label the returned score-derived proxy accurately until a real population contract exists.",
+      "owner_need": "insurance-page-model"
+    },
+    {
+      "id": "F03",
+      "classification": "confirmed-source",
+      "rule": "numeric-unit",
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 364,
+      "end_line": 367,
+      "title": "Confidence fraction is displayed as a percent without scaling",
+      "mechanism": "riskLevers emits confidence in [0.45,0.95]; formatPct appends % without multiplying. A confidence of 0.70 therefore reads 0.7%, not 70%. The page test uses an unrealistic confidence=70 fixture, so its declared table coverage does not exercise the production contract.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 534,
+          "end_line": 540
+        },
+        {
+          "file": "web/src/features/ownership/formatters.ts",
+          "line": 78,
+          "end_line": 81
+        },
+        {
+          "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.test.tsx",
+          "line": 323,
+          "end_line": 328
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Follow a source confidence fraction of 0.70 into formatPct.",
+          "The formatter emits the number 0.70 plus %, with precision preference controlling trailing digits."
+        ]
+      },
+      "fix": "Retain the raw fraction; scale only the displayed percentage by 100 and add fraction-shaped covering fixtures when tests are authorized.",
+      "owner_need": "insurance-page-model"
+    },
+    {
+      "id": "F04",
+      "classification": "confirmed-source",
+      "rule": "numeric-unit",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 326,
+      "end_line": 333,
+      "title": "Risk-score point delta is rendered as percentage",
+      "mechanism": "The model computes projected_score_delta=(improvedDeviation-factor.Score)*weight*50, an additive delta on the 0-100 risk-score scale. The renderer adds % via formatSignedPct. Its -Math.abs also overwrites a future positive sign, although current production improvement deltas are non-positive; the latter is a candidate rather than evidence of a current sign reversal.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 525,
+          "end_line": 538
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "A synthetic additive score delta of -4 is rendered as -4%.",
+          "That is four score points, not a relative percent change; exported raw delta remains -4."
+        ]
+      },
+      "fix": "Display localized signed score points and preserve the source sign. Do not change the raw export or confuse target_reduction_pct with score delta.",
+      "owner_need": "insurance-page-model"
+    },
+    {
+      "id": "F05",
+      "classification": "confirmed-source",
+      "rule": "semantic-tone",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 247,
+      "end_line": 255,
+      "title": "Factor score uses unreachable overall-risk thresholds",
+      "mechanism": "Factor.Score is a signed bounded deviation in [-1,3], with positive meaning worse than baseline. Thresholds 35/60 copied from the overall 0-100 score are unreachable, so even maximum worsening deviation 3 is always green.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 427,
+          "end_line": 442
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Read factorDeviation clamp(-1,3).",
+          "For any valid positive factor score, both UI comparisons are false and green is selected."
+        ]
+      },
+      "fix": "Use the documented signed factor-deviation semantics for restrained neutral/worsening/improving presentation, not overall-risk thresholds; keep the numeric value and direction text.",
+      "owner_need": "insurance-page-model"
+    },
+    {
+      "id": "F06",
+      "classification": "confirmed-source",
+      "rule": "digest-provenance",
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 905,
+      "end_line": 924,
+      "title": "Evidence digest overclaims dataset/exposure coverage",
+      "mechanism": "The page claims a content hash over exposure, factors and window proving the same dataset. insuranceDigest hashes vehicle ID, window bounds, four rounded indices and factor code/rounded observed rate only. It omits exposure distance/duration, drive IDs/counts, factor samples, policy and model assumptions; it is not a complete evidence-packet or verified identity signature.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 602,
+          "end_line": 609
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Consider two synthetic profile structures with identical hashed fields but different exposure_distance_m or sample_count.",
+          "The digest serialization never reads those differing fields, so both digests are identical despite differing datasets. No digest function was executed."
+        ]
+      },
+      "fix": "Describe the existing digest as a limited risk-summary checksum, explicitly not verified identity or full dataset equality; any complete versioned digest needs separate domain ownership.",
+      "owner_need": "insurance-page-model"
+    },
+    {
+      "id": "F07",
+      "classification": "confirmed-source",
+      "rule": "date-preferences",
+      "severity": "medium",
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "line": 59,
+      "end_line": 70,
+      "title": "Ownership dates bypass saved locale and timezone",
+      "mechanism": "The page trend/coverage, OwnershipBrief bounds/freshness and EvidencePanel observation dates call lib dateFormat without options. Those helpers default to browser locale/timezone, not saved preferences. Trend labels additionally memoize only data.trend, excluding a preference-bound formatter. Raw ISO timestamps remain intact, but interpreted labels can show a different day/zone and do not react correctly to preference changes.",
+      "supporting_locations": [
+        {
+          "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+          "line": 149,
+          "end_line": 157
+        },
+        {
+          "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+          "line": 614,
+          "end_line": 620
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 98,
+          "end_line": 99
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 142,
+          "end_line": 150
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 39,
+          "end_line": 71
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 74,
+          "end_line": 94
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Choose synthetic ISO 2026-01-01T00:00:00Z with saved UTC/fr-FR and a browser in America/Los_Angeles/en-US.",
+          "Trace unconfigured lib calls: they use browser defaults rather than the saved settings. No settings were actually changed."
+        ]
+      },
+      "fix": "Use existing useDateFormat for page and shared ownership adapters; include its formatter in memo dependencies and make the applicable zone explicit without rewriting UTC source/form instants.",
+      "owner_need": "ownership-date-preferences"
+    },
+    {
+      "id": "F08",
+      "classification": "confirmed-source",
+      "rule": "form-api-contract",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 714,
+      "end_line": 723,
+      "title": "Editor accepts maximum discounts the service rejects",
+      "mechanism": "The number input declares max=100 but UpsertInsurancePolicy rejects max_discount_pct>60. Native validity therefore accepts a 61-100 value that the server rejects; the failed draft is retained but advertised bounds are wrong.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 661,
+          "end_line": 663
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Inspect a synthetic max_discount_pct=75.",
+          "It lies within the JSX 0..100 constraint and outside the actual service 0..60 validation. No submission was executed."
+        ]
+      },
+      "fix": "Align form constraints/help to the supported 0..60 contract and provide localized validation. Preserve the existing rejection/draft lifecycle.",
+      "owner_need": "insurance-page-model"
+    },
+    {
+      "id": "F09",
+      "classification": "confirmed-source",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 219,
+      "end_line": 219,
+      "title": "Fixed factor names bypass i18n",
+      "mechanism": "row.label is fixed English emitted by riskFactorSpecs, not a user-authored policy name.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 59,
+          "end_line": 138
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Inspect the authored service/enum value and this JSX interpolation.",
+          "A non-English UI still receives the same English value because this render path performs no translation; no runtime language change was executed."
+        ]
+      },
+      "fix": "Reuse existing canonical enum keys where available; agree stable domain translation keys/structured arguments for authored model copy and retain unknown/user-provided raw fallback. Do not recase or translate insurer/policy identifiers.",
+      "owner_need": "ownership-localization"
+    },
+    {
+      "id": "F10",
+      "classification": "confirmed-source",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 222,
+      "end_line": 222,
+      "title": "Fixed factor narratives bypass i18n",
+      "mechanism": "row.narrative contains fixed English model explanations emitted by riskFactorSpecs.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 59,
+          "end_line": 138
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Inspect the authored service/enum value and this JSX interpolation.",
+          "A non-English UI still receives the same English value because this render path performs no translation; no runtime language change was executed."
+        ]
+      },
+      "fix": "Reuse existing canonical enum keys where available; agree stable domain translation keys/structured arguments for authored model copy and retain unknown/user-provided raw fallback. Do not recase or translate insurer/policy identifiers.",
+      "owner_need": "ownership-localization"
+    },
+    {
+      "id": "F11",
+      "classification": "confirmed-source",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 316,
+      "end_line": 316,
+      "title": "Fixed improvement-lever instructions bypass i18n",
+      "mechanism": "row.label is the fixed English lever instruction from the matching riskFactorSpec.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 59,
+          "end_line": 138
+        },
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 534,
+          "end_line": 537
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Inspect the authored service/enum value and this JSX interpolation.",
+          "A non-English UI still receives the same English value because this render path performs no translation; no runtime language change was executed."
+        ]
+      },
+      "fix": "Reuse existing canonical enum keys where available; agree stable domain translation keys/structured arguments for authored model copy and retain unknown/user-provided raw fallback. Do not recase or translate insurer/policy identifiers.",
+      "owner_need": "ownership-localization"
+    },
+    {
+      "id": "F12",
+      "classification": "confirmed-source",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "line": 72,
+      "end_line": 72,
+      "title": "Quality enum is rendered as unlocalized English",
+      "mechanism": "quality.status is the closed sufficient/limited/insufficient enum. Existing VerdictBadge already maps those values through canonical localized keys, but this branch uses raw Badge text.",
+      "supporting_locations": [
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 12,
+          "end_line": 20
+        },
+        {
+          "file": "web/src/features/ownership/components/VerdictBadge.tsx",
+          "line": 112,
+          "end_line": 130
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Inspect the authored service/enum value and this JSX interpolation.",
+          "A non-English UI still receives the same English value because this render path performs no translation; no runtime language change was executed."
+        ]
+      },
+      "fix": "Reuse existing canonical enum keys where available; agree stable domain translation keys/structured arguments for authored model copy and retain unknown/user-provided raw fallback. Do not recase or translate insurer/policy identifiers.",
+      "owner_need": "ownership-localization"
+    },
+    {
+      "id": "F13",
+      "classification": "confirmed-source",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "line": 106,
+      "end_line": 106,
+      "title": "Fixed model-quality reasons bypass i18n",
+      "mechanism": "The reason rows include fixed English no-drive/sample-count/no-policy strings from the insurance service, not external user prose.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 181,
+          "end_line": 187
+        },
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 286,
+          "end_line": 294
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Inspect the authored service/enum value and this JSX interpolation.",
+          "A non-English UI still receives the same English value because this render path performs no translation; no runtime language change was executed."
+        ]
+      },
+      "fix": "Reuse existing canonical enum keys where available; agree stable domain translation keys/structured arguments for authored model copy and retain unknown/user-provided raw fallback. Do not recase or translate insurer/policy identifiers.",
+      "owner_need": "ownership-localization"
+    },
+    {
+      "id": "F14",
+      "classification": "confirmed-source",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "line": 137,
+      "end_line": 137,
+      "title": "Authored evidence summaries bypass i18n",
+      "mechanism": "The service builds English exposure/policy summary templates; the trailer renders item.summary directly. Counts and insurer interpolation do not make the fixed surrounding prose localized.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 256,
+          "end_line": 280
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Inspect the authored service/enum value and this JSX interpolation.",
+          "A non-English UI still receives the same English value because this render path performs no translation; no runtime language change was executed."
+        ]
+      },
+      "fix": "Reuse existing canonical enum keys where available; agree stable domain translation keys/structured arguments for authored model copy and retain unknown/user-provided raw fallback. Do not recase or translate insurer/policy identifiers.",
+      "owner_need": "ownership-localization"
+    },
+    {
+      "id": "F15",
+      "classification": "confirmed-source",
+      "rule": "measurement-proxy",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 490,
+      "end_line": 498,
+      "title": "Night distance is an undisclosed UTC trip-start proxy",
+      "mechanism": "observeRisk adds the entire drive distance when its StartedAt UTC hour is >=22 or <5. It does not measure distance actually driven at night or use local time. The page places it in Recorded driving exposure and labels it Night distance without disclosing that proxy.",
+      "supporting_locations": [
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 361,
+          "end_line": 364
+        },
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 422,
+          "end_line": 425
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Reason about a synthetic 21:59Z departure spanning midnight: none of its distance is counted.",
+          "A 22:00Z departure contributes all distance even after daylight; local-zone night is not considered. No drive records were read or created."
+        ]
+      },
+      "fix": "Label the returned measure as distance of trips starting in the UTC overnight band, with proxy/bounds explanation; actual night-distance measurement requires separately owned model support.",
+      "owner_need": "insurance-page-model"
+    },
+    {
+      "id": "F16",
+      "classification": "confirmed-source",
+      "rule": "workspace-bounds",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 78,
+      "end_line": 96,
+      "title": "Dated insurance report cannot consume both workspace date bounds",
+      "mechanism": "The page owns a local 30/90/180/365 day selector. The hook key/URL contain vehicle_id and window_days only; the route is absent from RANGE_ENABLED_PATHS. Returned window.from/to are displayed but are not requested shared startInstant/endInstantExclusive bounds. This is a missing integration, not proof of two simultaneously visible pickers.",
+      "supporting_locations": [
+        {
+          "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+          "line": 381,
+          "end_line": 388
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 145,
+          "end_line": 150
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 23,
+          "end_line": 77
+        },
+        {
+          "file": "internal/app/ownershipintelsvc/insurance.go",
+          "line": 142,
+          "end_line": 154
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Inspect /ownership/insurance-telematics against the exact range-enabled set and hook arguments.",
+          "A custom requested historical start/end range has no parameter path to this report; only a rolling day count is accepted. No URL navigation or request occurred."
+        ]
+      },
+      "fix": "Reuse inventory G152/P284 integration: establish typed server filtering for both bounds while preserving rolling windows, then integrate the existing workspace owner. Do not filter loaded rows or simply register a non-consuming route.",
+      "owner_need": "ownership-workspace-integration"
+    },
+    {
+      "id": "F17",
+      "classification": "confirmed-source",
+      "rule": "live-write-guard",
+      "severity": "high",
+      "file": "web/src/api/hooks/useOwnership.ts",
+      "line": 155,
+      "end_line": 178,
+      "title": "Policy writes omit the existing live-mode guard",
+      "mechanism": "PUT/DELETE insurance policy request options omit requiresLiveMode. request defaults it to false and assertOperationalWriteAllowed returns immediately when false. Page actions check selected vehicle/pending/editor state, not operational read-only mode; offlineUnsafePatterns do not include insurance-telematics. QueryClient mutation defaults do prevent queued replay, so this is guard omission, not a proven offline queue/replay bug or backend authorization bypass.",
+      "supporting_locations": [
+        {
+          "file": "web/src/api/client.ts",
+          "line": 348,
+          "end_line": 372
+        },
+        {
+          "file": "web/src/lib/operationalMode.ts",
+          "line": 66,
+          "end_line": 76
+        },
+        {
+          "file": "web/src/api/offlineCache.ts",
+          "line": 50,
+          "end_line": 76
+        },
+        {
+          "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+          "line": 532,
+          "end_line": 533
+        },
+        {
+          "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+          "line": 624,
+          "end_line": 630
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Trace PUT/DELETE options with a hypothetical historical/offline operational snapshot.",
+          "requiresLiveMode is false, so the client live-mode check is bypassed. No mutation, network request or backend authorization check was executed."
+        ]
+      },
+      "fix": "Opt both policy mutations into the existing requiresLiveMode protection and make disabled/recovery reasons truthful through the existing operational-mode owner; preserve confirmation, no-replay defaults and context pinning.",
+      "owner_need": "insurance-live-write-guard"
+    },
+    {
+      "id": "F18",
+      "classification": "confirmed-source",
+      "rule": "page-size",
+      "severity": "low",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 1,
+      "end_line": 951,
+      "title": "Retained insurance page exceeds the frontend thin-page limit",
+      "mechanism": "The page has 951 lines with multiple sections, form handlers and both table column definitions; applicable frontend instructions prohibit page files over 300 lines. It was already 845 lines before Phase5; this is inherited architectural debt, not evidence of deleted functionality.",
+      "supporting_locations": [
+        {
+          "file": ".github/instructions/react-frontend.instructions.md",
+          "line": 570,
+          "end_line": 580
+        }
+      ],
+      "reproduction": {
+        "mode": "synthetic source reasoning only",
+        "executed": false,
+        "steps": [
+          "Compare the actual 951-line source with the documented 300-line page limit."
+        ]
+      },
+      "fix": "Parent may authorize a separate exclusive decomposition claim, preserving all sections/actions/15 raw metrics/tests. This read-only audit authorizes no extraction or helper creation.",
+      "owner_need": "insurance-page-decomposition"
+    }
+  ],
+  "evidence_limits": [
+    "No tests, lint, build, global TypeScript, preservation helpers, browser/native, screenshots, network/API/provider or actual policy/identity/driving/financial actions were executed.",
+    "All reproductions are non-executed synthetic source reasoning; no runtime acceptance or verified actuarial/financial fact is claimed.",
+    "Generic shared infrastructure was pinned and inspected at relevant branches, not exhaustively audited as an independent whole-repository scope.",
+    "The queue changed during other workers’ activity: the same exact QA row moved from line115 to line132. Read-only Git inspection occurred; no Git writes.",
+    "Catalog check verifies 154 literal t-key occurrences exist in canonical English, not translated-language completeness, fallback parity, plural runtime or catalog-generator acceptance."
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "classification": "candidate",
+      "file": "web/src/features/ownership/components/MoneyInput.tsx",
+      "line": 47,
+      "end_line": 49,
+      "title": "Unsafe-integer money input precision",
+      "mechanism": "Number(value) and Math.round lack safe-integer upper bounds; exact minor-unit storage may round very large entered integers.",
+      "needs": "Confirm supported money limits and native input behavior using safe synthetic fixtures; do not treat an actual financial loss as observed."
+    },
+    {
+      "id": "C02",
+      "classification": "candidate",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 792,
+      "end_line": 798,
+      "title": "One-bucket trajectory versus two-bucket empty explanation",
+      "mechanism": "empty checks length===0 while the message says at least two buckets are needed. One-bucket usability is not established without mounted chart review.",
+      "needs": "Native synthetic one-bucket chart review; loss_cost_index remains in the five-column alternative even though only risk_score is drawn."
+    },
+    {
+      "id": "C03",
+      "classification": "candidate",
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "line": 85,
+      "end_line": 99,
+      "title": "Coverage denominator and observation-window disclosure",
+      "mechanism": "Coverage is usable drives / all returned drives, not elapsed-window or all-sensor coverage. The trailer shows a percent but no explicit denominator. The value is preserved, but interpretation needs a source-contract decision.",
+      "needs": "Declare the counted population and sensor coverage limitations, retaining samples/both quality date bounds and reasons."
+    },
+    {
+      "id": "C04",
+      "classification": "candidate",
+      "file": "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+      "line": 332,
+      "end_line": 332,
+      "title": "Future positive score delta sign would be overwritten",
+      "mechanism": "-Math.abs always renders non-positive. Current riskLevers improvements produce non-positive deltas, so no current production sign reversal is confirmed.",
+      "needs": "Retain source sign in the same numeric-unit owner; do not count this separately as a confirmed current sign defect."
+    }
+  ],
+  "needs": [
+    {
+      "owner_key": "insurance-page-model",
+      "finding_ids": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "F08",
+        "F15"
+      ],
+      "files": [
+        "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+        "internal/app/ownershipintelsvc/insurance.go",
+        "web/src/types/ownership.ts"
+      ],
+      "disposition": "one source-owned model/page contract followup; no existing exact open repair claim found; parent assigns/serializes"
+    },
+    {
+      "owner_key": "ownership-date-preferences",
+      "finding_ids": [
+        "F07"
+      ],
+      "files": [
+        "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+        "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "web/src/features/ownership/components/EvidencePanel.tsx"
+      ],
+      "disposition": "one shared ownership date adoption; completed advanced-intelligence date owner at queue line563 is a different feature/file, not a duplicate repair to restart"
+    },
+    {
+      "owner_key": "ownership-localization",
+      "finding_ids": [
+        "F09",
+        "F10",
+        "F11",
+        "F12",
+        "F13",
+        "F14"
+      ],
+      "files": [
+        "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx",
+        "web/src/features/ownership/components/EvidencePanel.tsx",
+        "internal/app/ownershipintelsvc/insurance.go"
+      ],
+      "disposition": "one authored ownership-copy/enum owner; reuse completed phase3-verdict-label-adoption, do not redispatch it; catalogs require parent serialization"
+    },
+    {
+      "owner_key": "ownership-workspace-integration",
+      "finding_ids": [
+        "F16"
+      ],
+      "files": [
+        "web/src/lib/workspaceScope.ts",
+        "web/src/api/hooks/useOwnership.ts",
+        "internal/handler/v1/ownershipintel/handler.go",
+        "internal/app/ownershipintelsvc/insurance.go"
+      ],
+      "disposition": "existing inventory G152/P284 integration responsibility; no exact open source repair claim found; backend handler was not audited or changed"
+    },
+    {
+      "owner_key": "insurance-live-write-guard",
+      "finding_ids": [
+        "F17"
+      ],
+      "files": [
+        "web/src/api/hooks/useOwnership.ts",
+        "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx"
+      ],
+      "disposition": "narrow hook/page live-mode followup; retain client no-replay defaults; serialize overlapping page/hook claims with other needs"
+    },
+    {
+      "owner_key": "insurance-page-decomposition",
+      "finding_ids": [
+        "F18"
+      ],
+      "files": [
+        "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx"
+      ],
+      "disposition": "low-priority inherited architecture need, only after parent reserves exact extraction/test files; not new authorized work here"
+    }
+  ],
+  "acceptance_notrun": [
+    {
+      "area": "Vitest/scoped tests",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    },
+    {
+      "area": "lint",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    },
+    {
+      "area": "build",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    },
+    {
+      "area": "npx tsc --noEmit",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    },
+    {
+      "area": "preservation helper",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    },
+    {
+      "area": "browser/API/network/provider",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    },
+    {
+      "area": "mobile/desktop screenshots",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    },
+    {
+      "area": "keyboard/focus/dialog restoration",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    },
+    {
+      "area": "WCAG contrast/screen-reader/forced-colors",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    },
+    {
+      "area": "dark/light/custom theme, RTL, 200% text and reduced motion",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    },
+    {
+      "area": "actual policy/identity/driving/financial facts",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only assignment; no fresh execution or acceptance claim"
+    }
+  ],
+  "native_followup": {
+    "classification": "native-only-unverified",
+    "widths_px": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "areas": [
+      "contained table horizontal scroll and full 8+8 fields",
+      "44px controls and long localized form labels",
+      "editor focus/scroll and cancel return focus",
+      "open confirm/review dialog focus trap and return target",
+      "chart five-column fallback and forced-colors",
+      "retained/fatal/initial-paused layouts",
+      "dark/light/custom palettes and composed contrast",
+      "RTL, 200% text, reduced motion"
+    ],
+    "executed": false
+  },
+  "preservation": {
+    "baseline_commit": "5983cc91d4e6e921d917a0d83d9835f1748a790b^",
+    "source_lines_before": 845,
+    "source_lines_current": 951,
+    "test_lines_before": 307,
+    "test_lines_current": 461,
+    "ownership_panel_declarations_before": 7,
+    "ownership_panel_declarations_current": 7,
+    "evidence_panel_declarations_before": 1,
+    "evidence_panel_declarations_current": 1,
+    "table_declarations_before": 2,
+    "table_declarations_current": 2,
+    "area_series_before": 1,
+    "area_series_current": 1,
+    "page_literal_test_declarations_before": 8,
+    "page_literal_test_declarations_current": 14,
+    "operational_briefs": 4,
+    "raw_metric_occurrences": 15,
+    "factor_columns": 8,
+    "lever_columns": 8,
+    "chart_alternative_columns": 5,
+    "notice": "Text declaration counts are not semantic preservation-tool or runtime acceptance."
+  },
+  "section_audit": [
+    {
+      "section": "Nonbinding-model notice",
+      "line": 392,
+      "state": "Always declared; localized modelled-not-quoted disclaimer; no verified premium or carrier acceptance claimed."
+    },
+    {
+      "section": "Underwriting position",
+      "line": 404,
+      "metrics": [
+        "score",
+        "frequency",
+        "severity",
+        "losscost"
+      ],
+      "state": "Persistent source panel + brief; model assumptions not measurements; F01/F02/F05 remain."
+    },
+    {
+      "section": "Recorded driving exposure",
+      "line": 468,
+      "metrics": [
+        "exposure",
+        "duration",
+        "night",
+        "percentile"
+      ],
+      "state": "Raw metres/seconds preserved and useUnits at display; counts and both recorded analysis bounds retained; night/history semantics F15/F02."
+    },
+    {
+      "section": "Premium simulation",
+      "line": 517,
+      "metrics": [
+        "baseline",
+        "modelled",
+        "delta",
+        "discount",
+        "expected",
+        "deductible",
+        "perDistance"
+      ],
+      "state": "Policy-denominated ISO minor units; modelled versus stored baseline explicit; null loss/cost not zero, real zero deductible valid; signed delta preserved; cost display fixed /1000m explicitly declared."
+    },
+    {
+      "section": "Stored policy card",
+      "line": 609,
+      "state": "User insurer/reference not recased; both coverage bounds/open-ended end preserved; remove danger confirmation and target revision/policy-id checks declared."
+    },
+    {
+      "section": "Policy baseline editor",
+      "line": 640,
+      "state": "Intentionally conditional on user opening, not hidden for missing analysis; independent of source; original-target draft, duplicate-submit latch, success-generation/context protection and mutation-error retention declared; F08/F17/C01."
+    },
+    {
+      "section": "Risk trajectory",
+      "line": 785,
+      "state": "Persistent source panel; one palette-based risk-score area; loss-cost/exposure/drive-count in five-column alternative; empty/loading/error/retained paths present; dates F07 and single bucket C02."
+    },
+    {
+      "section": "Factor decomposition",
+      "line": 847,
+      "state": "All eight columns present, raw export accessors and source-order-safe sorting declared; no old mobileColumns suppression; F05/F09/F10."
+    },
+    {
+      "section": "Ranked improvement levers",
+      "line": 876,
+      "state": "All eight columns present; null money/effort remain unknown, raw saving sort with null last, localized difficulty badge; F03/F04/F11."
+    },
+    {
+      "section": "Insurer evidence packet",
+      "line": 905,
+      "state": "Full hash text break-all; no upload/download/provider action; hash coverage overclaim F06."
+    },
+    {
+      "section": "Evidence, quality and limitations",
+      "line": 931,
+      "state": "Persistent source shell; quality count/coverage/both observation dates/reasons, every evidence source/summary/count/date and explicit unsupported quotes/claims retained; F07/F12-F14/C03."
+    }
+  ],
+  "action_audit": [
+    {
+      "action": "Analysis window",
+      "source_lines": [
+        381,
+        388
+      ],
+      "status": "Local selected day count in query key; real scope integration missing F16."
+    },
+    {
+      "action": "Add/Edit policy",
+      "source_lines": [
+        190,
+        208,
+        532,
+        537
+      ],
+      "status": "Valid selected vehicle required; bound formVehicleId and initial focus declared; defaults stay editor inputs, not observed facts."
+    },
+    {
+      "action": "Save baseline",
+      "source_lines": [
+        165,
+        187,
+        763,
+        771
+      ],
+      "status": "Pins target and request values, blocks duplicate/cross-vehicle save, closes only own successful generation; no mutation executed."
+    },
+    {
+      "action": "Cancel/Close editor",
+      "source_lines": [
+        159,
+        163,
+        773,
+        775
+      ],
+      "status": "Resets draft and declares invoking-trigger restoration for unsaved same-scope editor; native focus NOTRUN."
+    },
+    {
+      "action": "Remove policy",
+      "source_lines": [
+        109,
+        125,
+        624,
+        631
+      ],
+      "status": "Danger dialog names reference; checks original revision/vehicle/policy ID after confirmation; no delete executed."
+    },
+    {
+      "action": "Factor and saving sort",
+      "source_lines": [
+        136,
+        145,
+        862,
+        898
+      ],
+      "status": "Immutable sorting declared; no raw SI transformation."
+    },
+    {
+      "action": "Retry source",
+      "source_lines": [
+        0
+      ],
+      "status": "OwnershipPanel -> SourceContent delegates to exact riskQuery.refetch; independent panels retain payload/fatal isolation; no retry executed."
+    },
+    {
+      "action": "Brief review / chart/table alternatives",
+      "source_lines": [
+        420,
+        468,
+        540,
+        581,
+        800,
+        820
+      ],
+      "status": "Existing shared disclosures, table/chart persistence IDs and raw data alternatives retained; native accessibility/export completeness unverified."
+    }
+  ],
+  "source_state_audit": {
+    "loading": "No fabricated readings; summaries use OwnershipBrief loading plus source-shaped shared wrapper; other panels skeleton.",
+    "fatal": "No retained payload: source-local error/retry, opted-in unknown summaries remain; editor has no risk-source dependency.",
+    "retained": "Refresh error retains same payload, specific nonblocking retained warning and source retry.",
+    "initial_paused": "OwnershipPanel recognizes isRefreshBlocked even without data and explains initial pause, not cached or authoritatively empty; brief may still say loading within that explicit parent pause context.",
+    "disabled_selection": "Persistent shells, selection-required summary and unknown numeric values; hook requires positive vehicle ID, while sourceEnabled tests non-null selection.",
+    "authoritative_empty": "Loaded profile with null premium/empty factors/levers/trend/hash receives section-specific explanations; absent observation model defaults still violate F01.",
+    "freshness": "Client-loaded timestamp distinct from unknown source-as-of; evidence observed_at retained; dates ignore saved prefs F07."
+  },
+  "rule_screen": {
+    "kind": "text grep candidate screens + source mechanism review, not lint",
+    "all_pinned_frontend_files": 45,
+    "raw_matches": {
+      "static-inline-style": 0,
+      "raw-html": 11,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 1,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 34,
+      "page_wrapper_presence": 6,
+      "fetch-useeffect": 17
+    },
+    "exceptions": [
+      "Raw native input/table inside DataTable building block and comment-only HTML mentions are not page violations.",
+      "API client prefix comment is not a double-prefixed hook URL.",
+      "Literal JSX in test fixtures and TypeScript generic angle-brackets are not user-facing production strings.",
+      "Page effects manage focus/disposal, not data fetching; client fetch is the intended shared boundary; reviewed supporting effects are persistence/UI lifecycles.",
+      "Dynamic contribution width and chart API/palette props are acceptable, not static CSS-variable inline styling.",
+      "PageLayout delegates to actual PageContainer; no missing-page-container finding.",
+      "Conditional editor/confirm/policy detail are intentional actions/subdetails, not missing persistent source sections."
+    ],
+    "backend_scope": "Direct insurance service; no SQL/pool/http constructors, Println or panic grep matches; downstream DB/HTTP implementations NOT AUDITED."
+  },
+  "tests": {
+    "execution_status": "NOTRUN",
+    "runner_discovery": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "literal_declarations": {
+      "InsuranceTelematicsPage.test.tsx": 14,
+      "OwnershipPanel.test.tsx": 18,
+      "OwnershipBrief.test.tsx": 5,
+      "VerdictBadge.test.tsx": 3,
+      "PageLayout.test.tsx": 3
+    },
+    "parameterized_note": "VerdictBadge additionally declares 41+41+3+9+6 parameterized cases: 100 statically enumerated cases plus 3 literals; not runner discovery or execution.",
+    "page_coverage_declarations": [
+      "15 metric markers and money denomination/caps/digest",
+      "scope-pinned drafts and delete confirmations",
+      "sorting/full columns",
+      "retained refresh and unknown-versus-zero"
+    ],
+    "gaps": [
+      "No usable-drive fallback model test",
+      "Production confidence fraction versus fixture confidence=70",
+      "Point-delta units and factor-deviation tones",
+      "Population/history claims and digest completeness",
+      "0..60 discount bound and live-mode policy-write refusal",
+      "Saved locale/timezone on page and shared adapters",
+      "Native widths, focus, contrast and real i18n are not established"
+    ],
+    "historical_receipt": "Phase5 queue receipt: tests external catalog-startup exit1 zero cases; preservation exit1 nine identity deltas; native helper exit2 no PNG. Historical, not rerun or accepted here."
+  },
+  "commands": {
+    "raw_log": "web/logs/phase6-qa-ownership-insurance-telematics.log",
+    "recording": "Each PowerShell/static read/check body, raw stdout/stderr and internal numeric exit recorded. Wrapper shell may exit0 while a logged inner check exits1.",
+    "failures": [
+      {
+        "command": "view root/orchestrator-loop.md",
+        "outcome": "Path not found; corrected to docs/orchestrator-loop.md and read all296 lines."
+      },
+      {
+        "command": "support path-size read web/src/components/layout/PageLayout.tsx",
+        "exit": 1,
+        "outcome": "Path not found; prior pipeline output was lost at termination, explicitly recovered by a bounded read-only command. Correct path layout/layout-reference/PageLayout.tsx."
+      },
+      {
+        "command": "initial owner files-column search",
+        "outcome": "Incorrect column index4 produced empty candidates; explicitly corrected to index5. No absence-of-owner claim made from that output."
+      },
+      {
+        "command": "initial case-insensitive HTML grep",
+        "outcome": "Matched shared capitalized components; case-sensitive corrected grep and all-pinned screen retained in raw log."
+      },
+      {
+        "command": "final JSON/citation/pin check",
+        "exit": 1,
+        "outcome": "All54 hashes matched, then F12 citation ended134 beyond VerdictBadge EOF130; only artifact citation corrected to112-130. Failed raw check retained. This is not a passing rerun."
+      }
+    ]
+  },
+  "guidance_read": {
+    "orchestrator": {
+      "file": "docs/orchestrator-loop.md",
+      "range": [
+        1,
+        296
+      ],
+      "fully_read": true
+    },
+    "design_contract": {
+      "file": "docs/frontend-design-contract.md",
+      "ranges": [
+        [
+          1,
+          230
+        ],
+        [
+          419,
+          605
+        ],
+        [
+          1254,
+          1341
+        ]
+      ],
+      "heading_inventory_scanned": true,
+      "scope": "Applicable architecture, tokens, numeric/source trust, localization, privacy, responsive/a11y and evidence acceptance; unrelated append-only shell/annotation decisions not claimed fully read."
+    },
+    "mission": {
+      "file": "docs/frontend-mission.md",
+      "ranges": [
+        [
+          1,
+          42
+        ],
+        [
+          507,
+          626
+        ],
+        [
+          673,
+          870
+        ],
+        [
+          1416,
+          1518
+        ]
+      ]
+    },
+    "inventory": {
+      "file": "docs/frontend-inventory.md",
+      "rows": [
+        208,
+        502,
+        507,
+        509,
+        1306,
+        1307
+      ]
+    },
+    "handoff": {
+      "file": "docs/session-handoff.md",
+      "ranges": [
+        [
+          1,
+          47
+        ],
+        [
+          2219,
+          2250
+        ]
+      ]
+    },
+    "instructions": [
+      ".github/copilot-instructions.md applicable completion/frontend/SI sections",
+      ".github/instructions/react-frontend.instructions.md lines1-629",
+      ".github/instructions/frontend-si-cutover.instructions.md lines1-94",
+      ".github/instructions/unit-conversion.instructions.md lines1-221; obsolete legacy conversion examples superseded by current SI contract"
+    ],
+    "exact_queue_item": "phase6-qa-ownership-insurance-telematics",
+    "queue_attempt": 1,
+    "queue_reservation": "2026-10-14T02:04:58.538Z",
+    "latest_observed_queue_line": 132,
+    "scope_authority": "Only the two report/log artifacts writable; no source write authority acquired."
+  },
+  "release": {
+    "source_writes": false,
+    "test_writes": false,
+    "catalog_writes": false,
+    "git_writes": false,
+    "background_commands_owned": 0,
+    "claims_acquired": [],
+    "released": true,
+    "command": "RELEASE | phase6-qa-ownership-insurance-telematics | attempt1 | source/test read-only; artifact/log writes finished after final parse/pin check",
+    "released_at_utc": "2026-10-14T02:24:50.297758+00:00",
+    "before_return_deadline": true
+  },
+  "summary": {
+    "confirmed_findings": 18,
+    "candidates": 4,
+    "deduplicated_owner_needs": 6,
+    "confirmed_by_rule": {
+      "unknown-zero": 1,
+      "population-provenance": 1,
+      "numeric-unit": 2,
+      "semantic-tone": 1,
+      "digest-provenance": 1,
+      "date-preferences": 1,
+      "form-api-contract": 1,
+      "hardcoded-string": 6,
+      "measurement-proxy": 1,
+      "workspace-bounds": 1,
+      "live-write-guard": 1,
+      "page-size": 1
+    },
+    "confirmed_by_severity": {
+      "high": 5,
+      "medium": 12,
+      "low": 1
+    },
+    "files_by_primary_findings": {
+      "web/src/features/ownership/pages/InsuranceTelematicsPage.tsx": 13,
+      "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx": 1,
+      "web/src/features/ownership/components/EvidencePanel.tsx": 3,
+      "web/src/api/hooks/useOwnership.ts": 1
+    },
+    "priority": [
+      "F01 no-data risk honesty",
+      "F02 false population claim",
+      "F03 percent scaling",
+      "F06 limited digest scope",
+      "F17 live-mode write guard"
+    ],
+    "runtime_acceptance": "NOTRUN / NOT ACCEPTED"
+  },
+  "report_written_at_utc": "2026-10-14T02:23:17.539962+00:00",
+  "final_validation": {
+    "checked_at_utc": "2026-10-14T02:24:50.297758+00:00",
+    "pin_files": 54,
+    "unchanged_files": 54,
+    "changed_files": [],
+    "pin_check_exit": 0,
+    "citation_ranges_exit": 0,
+    "finding_counts_exit": 0,
+    "json_parse_exit": 0,
+    "previous_failed_check_exit": 1,
+    "remaining_runtime_acceptance": "NOTRUN"
+  }
+}

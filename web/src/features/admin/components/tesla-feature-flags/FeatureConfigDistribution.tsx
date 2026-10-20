@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { PieChart as PieChartIcon } from 'lucide-react';
 
-import { GlassPanel, Badge } from '@/components/ui';
-import { PanelTitle, Caption } from '@/components/ui/Typography';
+import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { fmtInt, safeNumber } from '@/lib/numberFormat';
-import { formatDateTime } from '@/lib/dateFormat';
+import { safeNumber } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import type { FeatureFlagSummary } from './parseFeatureFlags';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FeatureConfigDistributionProps {
   summary: FeatureFlagSummary;
@@ -16,9 +17,6 @@ interface FeatureConfigDistributionProps {
   error: unknown;
   onRetry: () => void;
 }
-
-/** Enabled-rate gauge from the Okabe-Ito-inspired green series color. */
-const GAUGE_COLOR = '#10b981';
 
 /**
  * Overview panel that visualises the enabled ratio as a level gauge plus
@@ -33,7 +31,10 @@ export function FeatureConfigDistribution({
   error,
   onRetry,
 }: FeatureConfigDistributionProps) {
+  const { fmtInt, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
+  const palette = useChartPalette();
 
   // Defensive normalisation. The parent always hands us a well-formed
   // summary from `summarizeFeatureEntries`, but a partial/malformed object
@@ -48,7 +49,7 @@ export function FeatureConfigDistribution({
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <PieChartIcon className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <PieChartIcon className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('featureConfig.distribution', 'Distribution')}
       </PanelTitle>
 
@@ -68,10 +69,10 @@ export function FeatureConfigDistribution({
             value={enabledRate}
             max={100}
             unit="%"
-            decimals={0}
-            color={GAUGE_COLOR}
+            decimals={displayPrecision}
+            color={palette[0]}
             size={148}
-            label={t('featureConfig.kpi.enabledRate', 'Enabled Rate')}
+            label={t('featureConfig.kpi.enabledRate', 'Enabled rate')}
           />
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Badge variant="success" dot>

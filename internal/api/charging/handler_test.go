@@ -18,6 +18,22 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+func TestChargingListRejectsInvalidHistoryBoundsBeforeRepositoryRead(t *testing.T) {
+	for _, query := range []string{
+		"start=invalid", "end=invalid",
+		"start=2026-06-03T12:00:00Z&end=2026-06-02T12:00:00Z",
+	} {
+		t.Run(query, func(t *testing.T) {
+			h := &ChargingHandler{}
+			rec := httptest.NewRecorder()
+			h.ListByVehicle(rec, httptest.NewRequest(http.MethodGet, "/charging?vehicle_id=42&"+query, nil))
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
 // fakeChargingByIDFetcher is the in-memory charging session lookup used by
 // charging_handler tests so the migrated handlers can be exercised end-to-end
 // without a real *chargingdb.ChargingRepo / pgx pool.

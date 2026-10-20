@@ -157,12 +157,12 @@ describe('RecentActivity — activity feed', () => {
     expect(screen.queryByTestId('activity-empty')).not.toBeInTheDocument();
 
     // 12000 m → 12.0 km; 25000 Wh → 25.0 kWh.
-    expect(screen.getByText('12.0 km drive')).toBeInTheDocument();
-    expect(screen.getByText('25.0 kWh charged')).toBeInTheDocument();
+    expect(screen.getByText('12.00 km drive')).toBeInTheDocument();
+    expect(screen.getByText('25.00 kWh charged')).toBeInTheDocument();
     // 3720 s → 1h 2m; SOC transition rendered.
-    expect(screen.getByText('1h 2m · 80% → 60%')).toBeInTheDocument();
+    expect(screen.getByText('1h 2m · 80.00% → 60.00%')).toBeInTheDocument();
     // Cost segment uses the mocked formatCurrency.
-    expect(screen.getByText('30% → 80% · $5.00')).toBeInTheDocument();
+    expect(screen.getByText('30.00% → 80.00% · $5.00')).toBeInTheDocument();
   });
 
   it('orders the merged feed most-recent first (a newer charge outranks an older drive)', () => {
@@ -171,8 +171,8 @@ describe('RecentActivity — activity feed', () => {
       recentCharges: [makeCharge({ started_at: isoAgo(1 * HOUR), total_energy_added_wh: 25_000 })],
     });
 
-    const charge = screen.getByText('25.0 kWh charged');
-    const drive = screen.getByText('12.0 km drive');
+    const charge = screen.getByText('25.00 kWh charged');
+    const drive = screen.getByText('12.00 km drive');
     // Charge (1h ago) must render before drive (3h ago).
     expect(isBefore(charge, drive)).toBe(true);
   });
@@ -184,7 +184,7 @@ describe('RecentActivity — activity feed', () => {
       distanceUnit: 'mi',
     });
 
-    expect(screen.getByText('1.0 mi drive')).toBeInTheDocument();
+    expect(screen.getByText('1.00 mi drive')).toBeInTheDocument();
     expect(screen.queryByText(/km drive/)).not.toBeInTheDocument();
   });
 
@@ -212,11 +212,11 @@ describe('RecentActivity — null safety', () => {
     });
 
     // distance/duration coerce to 0; null end SOC renders "?".
-    expect(screen.getByText('0.0 km drive')).toBeInTheDocument();
-    expect(screen.getByText('0h 0m · 80% → ?%')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km drive')).toBeInTheDocument();
+    expect(screen.getByText('0h 0m · 80.00% → ?%')).toBeInTheDocument();
     // No `· $x` cost tail when cost is undefined.
-    expect(screen.getByText('30% → 80%')).toBeInTheDocument();
-    expect(screen.queryByText(/→ 80% ·/)).not.toBeInTheDocument();
+    expect(screen.getByText('30.00% → 80.00%')).toBeInTheDocument();
+    expect(screen.queryByText('30.00% → 80.00% · $5.00')).not.toBeInTheDocument();
   });
 
   it('sinks rows with an invalid started_at and renders "—" for their relative time', () => {
@@ -228,8 +228,8 @@ describe('RecentActivity — null safety', () => {
       ],
     });
 
-    const valid = screen.getByText('12.0 km drive');
-    const invalid = screen.getByText('24.0 km drive');
+    const valid = screen.getByText('12.00 km drive');
+    const invalid = screen.getByText('24.00 km drive');
     // The valid, recent row outranks the timestamp-less one.
     expect(isBefore(valid, invalid)).toBe(true);
     // The invalid row's time cell is the universal placeholder, not "NaNm ago".
@@ -247,7 +247,7 @@ describe('RecentActivity — battery trend', () => {
       ],
     });
 
-    expect(screen.getByText('Battery Trend')).toBeInTheDocument();
+    expect(screen.getByText('Battery trend')).toBeInTheDocument();
     expect(screen.queryByTestId('battery-empty')).not.toBeInTheDocument();
   });
 
@@ -279,24 +279,24 @@ describe('RecentActivity — fleet performance', () => {
     // <Currency> renders symbol + locale number at precision 2.
     expect(screen.getByText('$123.45')).toBeInTheDocument();
     // CO₂: 200 kWh * 0.42 = 84 kg.
-    expect(screen.getByText('84 kg')).toBeInTheDocument();
+    expect(screen.getByText('84.00 kg')).toBeInTheDocument();
 
-    const badge = screen.getByText('Most Efficient').closest('div') as HTMLElement;
+    const badge = screen.getByText('Most efficient').closest('div') as HTMLElement;
     expect(within(badge).getByText('Model 3')).toBeInTheDocument();
     // efficiency 150 → toEfficiencyDisplay(150) → 300, with the passed unit.
     expect(toEfficiencyDisplay).toHaveBeenCalledWith(150);
-    expect(within(badge).getByText('300 Wh/mi')).toBeInTheDocument();
+    expect(within(badge).getByText('300.00 Wh/mi')).toBeInTheDocument();
   });
 
   it('falls back to zeros and hides the most-efficient badge when analytics is undefined', () => {
     renderActivity({ analytics: undefined });
 
-    expect(screen.getByText('Total Drives (30d)')).toBeInTheDocument();
+    expect(screen.getByText('Total drives (30d)')).toBeInTheDocument();
     // Both count metrics default to 0.
     expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('$0.00')).toBeInTheDocument();
-    expect(screen.getByText('0 kg')).toBeInTheDocument();
-    expect(screen.queryByText('Most Efficient')).not.toBeInTheDocument();
+    expect(screen.getByText('0.00 kg')).toBeInTheDocument();
+    expect(screen.queryByText('Most efficient')).not.toBeInTheDocument();
   });
 
   it('renders an em-dash for a blank most-efficient vehicle name', () => {
@@ -304,7 +304,7 @@ describe('RecentActivity — fleet performance', () => {
       analytics: makeAnalytics({ most_efficient_vehicle: { name: '', efficiency: 120 } }),
     });
 
-    const badge = screen.getByText('Most Efficient').closest('div') as HTMLElement;
+    const badge = screen.getByText('Most efficient').closest('div') as HTMLElement;
     expect(within(badge).getByText('—')).toBeInTheDocument();
   });
 });

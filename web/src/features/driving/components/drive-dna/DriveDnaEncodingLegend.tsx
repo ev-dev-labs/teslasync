@@ -12,7 +12,7 @@ import {
   Text,
 } from '@/components/ui';
 import type { UseUnitsResult } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type {
   DriveDnaEncodingDimension,
@@ -20,6 +20,7 @@ import type {
 } from '../../lib/driveDNA';
 import { DriveDnaSectionBody } from './DriveDnaSectionBody';
 import type { DriveDnaSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const ENCODING_COLUMNS = { default: 1, sm: 2, xl: 5 } as const;
 
@@ -42,6 +43,7 @@ export function DriveDnaEncodingLegend({
   state,
   units,
 }: DriveDnaEncodingLegendProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const range = (
     dimension: DriveDnaEncodingDimension,
@@ -59,8 +61,8 @@ export function DriveDnaEncodingLegend({
           'driveDna.encoding.normalizedRange',
           'Normalized {{min}}–{{max}}',
           {
-            min: fmtNumber(dimension.normalizedMin, 2),
-            max: fmtNumber(dimension.normalizedMax, 2),
+            min: fmtNumber(dimension.normalizedMin),
+            max: fmtNumber(dimension.normalizedMax),
           },
         )
       : t('driveDna.encoding.noNormalizedRange', 'No normalized range');
@@ -101,7 +103,7 @@ export function DriveDnaEncodingLegend({
       title: t('driveDna.encoding.speedTitle', 'Speed'),
       influence: t('driveDna.encoding.speedEffect', 'Petal radius'),
       evidence: range(model.dimensions.speed, (value) =>
-        units.formatSpeed(value, { precision: 1 })),
+        units.formatSpeed(value)),
       icon: <Gauge className="h-4 w-4" aria-hidden="true" />,
       dimension: model.dimensions.speed,
     },
@@ -109,7 +111,7 @@ export function DriveDnaEncodingLegend({
       title: t('driveDna.encoding.powerTitle', 'Pack power'),
       influence: t('driveDna.encoding.powerEffect', 'Hue and stroke width'),
       evidence: range(model.dimensions.power, (value) =>
-        units.formatPower(value, { precision: 1 })),
+        units.formatPower(value)),
       icon: <Zap className="h-4 w-4" aria-hidden="true" />,
       dimension: model.dimensions.power,
     },
@@ -118,7 +120,7 @@ export function DriveDnaEncodingLegend({
       influence: t('driveDna.encoding.socEffect', 'Petal lightness'),
       evidence: range(
         model.dimensions.soc,
-        (value) => `${fmtNumber(value, 1)}%`,
+        (value) => `${fmtNumber(value)}%`,
       ),
       icon: <BatteryMedium className="h-4 w-4" aria-hidden="true" />,
       dimension: model.dimensions.soc,
@@ -130,7 +132,7 @@ export function DriveDnaEncodingLegend({
         model.dimensions.elevation,
         (value) =>
           t('driveDna.encoding.metres', '{{value}} m', {
-            value: fmtNumber(value, 0),
+            value: fmtNumber(value),
           }),
       ),
       icon: <Mountain className="h-4 w-4" aria-hidden="true" />,
@@ -148,7 +150,7 @@ export function DriveDnaEncodingLegend({
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="flex items-center gap-2">
-          <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Route className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('driveDna.encoding.title', 'Encoding legend & evidence')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mt-1">
@@ -169,10 +171,10 @@ export function DriveDnaEncodingLegend({
               return (
                 <div
                   key={row.title}
-                  className="rounded-xl border border-white/[0.05] bg-white/[0.025] p-3"
+                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="text-cyan-300">{row.icon}</div>
+                    <div className="text-[var(--text-secondary)]">{row.icon}</div>
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </div>
                   <MetricValue className="mt-3 text-base">{row.title}</MetricValue>

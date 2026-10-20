@@ -18,10 +18,14 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import * as operationalBridge from '@/hooks/useOperationalMetrics';
+
+const operationalMetricsSpy = vi.spyOn(operationalBridge, 'useOperationalMetrics');
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallbackOrOpts?: unknown, opts?: unknown) => {
+      if (key === 'dataSources.status.paused') return 'Paused offline';
       if (typeof fallbackOrOpts === 'string') {
         if (opts && typeof opts === 'object') {
           const o = opts as Record<string, unknown>;
@@ -111,6 +115,7 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 import DayLogPage from './DayLogPage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { DayLogEvent, DayLogResponse } from '@/api/types';
 
 function queryState(over: Record<string, unknown> = {}) {
@@ -164,14 +169,16 @@ function LocationProbe({ onLocation }: { onLocation: (search: string) => void })
 
 function renderPage(initialSearch = '?date=2026-09-14', onLocation: (search: string) => void = () => {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const page = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/day-log${initialSearch}`]}>
         <LocationProbe onLocation={onLocation} />
         <DayLogPage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(page());
+  return { ...view, rerenderPage: () => view.rerender(page()) };
 }
 
 const oneCarFleet = {
@@ -195,6 +202,23 @@ beforeEach(() => {
 });
 
 describe('DayLogPage', () => {
+  it('keeps historical events, search and business-date controls after a retained refresh failure', () => {
+    const refetch = vi.fn();
+    useDayLogMock.mockReturnValue(queryState({
+      data: dayLogResponse(mixedEvents),
+      error: new Error('refresh failed'),
+      isError: true,
+      status: 'error',
+      refetch,
+    }));
+    renderPage();
+    expect(screen.getByTestId('daylog-date')).toHaveValue('2026-09-14');
+    expect(screen.getByTestId('daylog-search')).toBeInTheDocument();
+    expect(screen.getByText('Day log may be out of date')).toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
   it('keeps day selection, freshness, and copy link in the page header', () => {
     useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse() }));
     renderPage();
@@ -206,7 +230,9 @@ describe('DayLogPage', () => {
     expect(within(header).getByTestId('daylog-date')).toHaveValue('2026-09-14');
     expect(within(header).getByRole('button', { name: /copy link/i })).toBeInTheDocument();
     expect(header.querySelector('[data-action-group="metadata"]')).not.toBeNull();
-    expect(within(header).getByText(/Day boundaries in/)).toBeInTheDocument();
+    const timezoneNote = within(header).getByText(/Day boundaries in/);
+    expect(timezoneNote).toBeVisible();
+    expect(timezoneNote.closest('[data-action-group="metadata"]')).not.toBeNull();
     expect(within(screen.getByTestId('daylog-controls')).queryByText(/Day boundaries in/)).not.toBeInTheDocument();
     expect(screen.getByTestId('daylog-date')).toHaveAccessibleDescription(/Day boundaries in/);
     expect(screen.getAllByTestId('daylog-controls')).toHaveLength(1);
@@ -223,6 +249,80 @@ describe('DayLogPage', () => {
     // Timeline + sources announce their own loading regions.
     expect(screen.getByRole('status', { name: 'Loading timeline' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading sources' })).toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nothing recorded this day.')).not.toBeInTheDocument();
+  });
+
+  it('explains a deferred initial request without inferring offline or an empty day, then recovers', () => {
+    const refetch = vi.fn();
+    useDayLogMock.mockReturnValue(queryState({
+      data: undefined, dataUpdatedAt: 0, isPending: true, isLoading: false,
+      isSuccess: false, status: 'pending', fetchStatus: 'paused', refetch,
+    }));
+    const view = renderPage();
+
+    for (const id of ['daylog-summary', 'daylog-timeline', 'daylog-sources']) {
+      const section = screen.getByTestId(id);
+      expect(section).toBeVisible();
+      expect(within(section).getByRole('status')).toHaveTextContent('Refresh paused');
+      expect(section).toHaveTextContent('missing evidence is not a confirmed empty result');
+    }
+    expect(screen.queryByRole('status', { name: 'Loading timeline' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading sources' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Nothing recorded this day.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No drives or charging sessions this day.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No source information for this day.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline|Can't reach server/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-date')).toHaveValue('2026-09-14');
+    fireEvent.click(within(screen.getByTestId('daylog-timeline')).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse([], {
+      summary: { drive_count: 0, charge_count: 0, drive_duration_s: 0,
+        drive_distance_m: 0, energy_added_wh: 0, energy_used_wh: 0 },
+      sources: [{ source: 'drives', status: 'empty', count: 0 }],
+    }) }));
+    view.rerenderPage();
+    expect(screen.queryByText(/missing evidence is not a confirmed empty result/)).not.toBeInTheDocument();
+    expect(screen.getByText('Nothing recorded this day.')).toBeInTheDocument();
+    expect(screen.getByText('No drives or charging sessions this day.')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Sources' })).toHaveTextContent('0 rows');
+    const brief = screen.getByTestId('day-log-summary');
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('0.0 km');
+    expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveTextContent('0.0 kWh');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('keeps retained history and filters through a paused refresh, failure and recovery', () => {
+    const data = dayLogResponse(mixedEvents, {
+      sources: [{ source: 'drives', status: 'ok', count: 2 }],
+      summary: { drive_count: 1, charge_count: 0, drive_duration_s: 3600,
+        drive_distance_m: 25000, energy_added_wh: null, energy_used_wh: 5200 },
+    });
+    const refetch = vi.fn();
+    useDayLogMock.mockReturnValue(queryState({ data, fetchStatus: 'paused', refetch }));
+    const view = renderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.queryByText(/offline|missing evidence is not a confirmed empty result/i)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('daylog-search'), { target: { value: 'locked' } });
+
+    useDayLogMock.mockReturnValue(queryState({
+      data, error: new Error('refresh failed'), isError: true, status: 'error', refetch,
+    }));
+    view.rerenderPage();
+    expect(screen.getByTestId('daylog-search')).toHaveValue('locked');
+    expect(screen.getByText('Showing 1 of 5 events')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Sources' })).toHaveTextContent('2 rows');
+    expect(screen.getByTestId('day-log-summary').querySelector('[data-operational-metric="distance"]')).toHaveTextContent('25.0 km');
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useDayLogMock.mockReturnValue(queryState({ data, refetch }));
+    view.rerenderPage();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-search')).toHaveValue('locked');
+    expect(screen.getByText('Showing 1 of 5 events')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Recorded day summary');
   });
 
   it('renders an honest empty day with a live-telemetry CTA', () => {
@@ -238,13 +338,17 @@ describe('DayLogPage', () => {
     );
     renderPage();
 
-    expect(screen.getByText('No drives or charging sessions this day.')).toBeInTheDocument();
+    // The day summary reports measured zero counts; the timeline explains the empty day.
     expect(screen.getByText('Nothing recorded this day.')).toBeInTheDocument();
     const cta = screen.getByRole('link', { name: 'Open live telemetry' });
     expect(cta.getAttribute('href')).toBe('/live-monitor?vehicle_id=1');
     // Source honesty: empty + unavailable rows are explicit.
     expect(screen.getByText('0 rows')).toBeInTheDocument();
     expect(screen.getByText('Unavailable')).toBeInTheDocument();
+    const sources = screen.getByRole('table', { name: 'Sources' });
+    expect(within(sources).getAllByRole('rowheader')).toHaveLength(2);
+    expect(within(sources).getByText('0 rows')).toBeInTheDocument();
+    expect(within(sources).getByText('no signal')).toBeInTheDocument();
   });
 
   it('shows every category by default with deep links and SI summaries', () => {
@@ -290,7 +394,7 @@ describe('DayLogPage', () => {
     useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
     renderPage();
 
-    const expanders = screen.getAllByRole('button', { name: 'Show details' });
+    const expanders = screen.getAllByRole('button', { name: /^Show details/ });
     fireEvent.click(expanders[0]);
 
     // Labeled rows + provenance visible; the row title stays put; no raw JSON.
@@ -299,14 +403,14 @@ describe('DayLogPage', () => {
     expect(screen.getAllByText('Home').length).toBe(2);
     expect(screen.getByText('drives')).toBeInTheDocument();
     expect(screen.queryByText(/"start_place"/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Hide details' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Hide details/ })).toBeInTheDocument();
   });
 
   it('shows change and stored-value rows for signal transitions', () => {
     useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
     renderPage();
 
-    const expanders = screen.getAllByRole('button', { name: 'Show details' });
+    const expanders = screen.getAllByRole('button', { name: /^Show details/ });
     fireEvent.click(expanders[3]);
 
     // Turn-signal transition: full change line, labeled component, raw values.
@@ -315,6 +419,43 @@ describe('DayLogPage', () => {
     expect(screen.getByText('Component:')).toBeInTheDocument();
     expect(screen.getByText('Stored values:')).toBeInTheDocument();
     expect(screen.getByText('1 → 2')).toBeInTheDocument();
+  });
+
+  it('uses sentence case for future payload labels while preserving acronyms and values', () => {
+    const payload = {
+      new_signal_label: 'Midnight Silver Metallic',
+      api_signal_id: 'raw_API_id',
+      FSD_status: 'CALIBRATED',
+      is_recorded: false,
+      sample_count: 0,
+      missing_detail: null,
+    };
+    useDayLogMock.mockReturnValue(queryState({
+      data: dayLogResponse([{ ...mixedEvents[2], payload }]),
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /^Show details/ }));
+
+    expect(screen.getByText('New signal label:')).toBeInTheDocument();
+    expect(screen.getByText('API signal ID:')).toBeInTheDocument();
+    expect(screen.getByText('FSD status:')).toBeInTheDocument();
+    expect(screen.getByText('Is recorded:')).toBeInTheDocument();
+    expect(screen.getByText('Sample count:')).toBeInTheDocument();
+    expect(screen.queryByText('New Signal Label:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Missing detail:')).not.toBeInTheDocument();
+    expect(screen.getByText('Midnight Silver Metallic')).toBeInTheDocument();
+    expect(screen.getByText('raw_API_id')).toBeInTheDocument();
+    expect(screen.getByText('CALIBRATED')).toBeInTheDocument();
+    expect(screen.getByText('false')).toBeInTheDocument();
+    expect(screen.getByText('Sample count:').parentElement).toHaveTextContent(/^Sample count:\s*0$/);
+    expect(payload).toEqual({
+      new_signal_label: 'Midnight Silver Metallic',
+      api_signal_id: 'raw_API_id',
+      FSD_status: 'CALIBRATED',
+      is_recorded: false,
+      sample_count: 0,
+      missing_detail: null,
+    });
   });
 
   it('renders complete-coverage event types with titles and categories', () => {
@@ -433,5 +574,173 @@ describe('DayLogPage', () => {
 
     expect(screen.queryByTestId('daylog-controls')).not.toBeInTheDocument();
     expect(screen.getByText('Day log')).toBeInTheDocument();
+  });
+
+  it('bridges raw day counts and SI measurements and retains the real details drawer and routes', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents, {
+      summary: { drive_count: 1, charge_count: 0, drive_duration_s: 3600,
+        drive_distance_m: 25000, energy_added_wh: null, energy_used_wh: 5200 },
+    }) }));
+    renderPage();
+    const brief = screen.getByTestId('day-log-summary');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    assertOperationalMetricUnavailable(brief, 'Energy added');
+    expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'drives', rawValue: 1 }),
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'charges', rawValue: 0 }),
+      expect.objectContaining({ metricId: 'duration', occurrenceId: 'drive-time', rawValue: 3600 }),
+      expect.objectContaining({ metricId: 'distance', occurrenceId: 'distance', rawValue: 25000 }),
+      expect.objectContaining({ metricId: 'energy', occurrenceId: 'energy-added', rawValue: null }),
+      expect.objectContaining({ metricId: 'energy', occurrenceId: 'energy-used', rawValue: 5200 }),
+    ]));
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('25.0 km');
+    expect(brief.querySelector('[data-operational-metric="drive-time"]')).toHaveTextContent('1.0 h');
+    expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveTextContent('5.2 kWh');
+    expect(brief.querySelector('[data-operational-metric="energy-added"]')).toBeNull();
+    assertOperationalBriefDisclosure(brief, '[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z) · end exclusive', { contains: true });
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Day summary details' });
+    expect(within(drawer).getByText('25.0 km')).toBeInTheDocument();
+    expect(within(drawer).getByText('5.2 kWh')).toBeInTheDocument();
+    expect(within(drawer).getByText(/Recorded driving duration in seconds/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/2026-09-14 · UTC/).length).toBeGreaterThanOrEqual(6);
+    expect(within(drawer).getByText(/\[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z\) · end exclusive/, { selector: '[data-drawer-header] span' })).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-search')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Drive started' })[0]).toHaveAttribute('href', '/drives/7');
+  });
+
+  it('does not relabel day aggregates when the timeline is filtered to a subset', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents, {
+      summary: { drive_count: 1, charge_count: 0, drive_duration_s: 3600,
+        drive_distance_m: 25000, energy_added_wh: null, energy_used_wh: 5200 },
+    }) }));
+    renderPage();
+    const brief = screen.getByTestId('day-log-summary');
+    fireEvent.change(screen.getByTestId('daylog-search'), { target: { value: 'locked' } });
+    expect(screen.getByText('Showing 1 of 5 events')).toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('25.0 km');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const filterDrawer = screen.getByRole('dialog');
+    expect(within(filterDrawer).getAllByText(/independent of timeline search and category filters/).length).toBeGreaterThan(0);
+    fireEvent.keyDown(filterDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps measured zero, missing aggregates and partial source coverage distinct', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse([], {
+      summary: { drive_count: 0, charge_count: 0, drive_duration_s: null,
+        drive_distance_m: 0, energy_added_wh: null, energy_used_wh: 0 },
+      sources: [{ source: 'drives', status: 'empty', count: 0 },
+        { source: 'user_presence', status: 'unavailable', count: 0, reason: 'no signal' }],
+    }) }));
+    renderPage();
+    const brief = screen.getByTestId('day-log-summary');
+    assertOperationalBriefDisclosure(brief, 'Some sources unavailable');
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveAttribute('data-value-state', 'value');
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('0.0 km');
+    expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveTextContent('0.0 kWh');
+    expect(brief.querySelector('[data-operational-metric="drive-time"]')).toBeNull();
+    assertOperationalMetricUnavailable(brief, 'Drive time');
+    expect(screen.getByRole('link', { name: 'Open drives' })).toHaveAttribute('href', '/drives');
+    expect(screen.getByText('no signal')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Sources' })).toBeInTheDocument();
+  });
+
+  it('keeps the summary busy on initial loading and reviewable after a retained refresh failure', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: undefined, isPending: true, isLoading: true,
+      isSuccess: false, status: 'pending', fetchStatus: 'fetching' }));
+    const pending = renderPage();
+    const loadingBrief = screen.getByTestId('day-log-summary');
+    expect(loadingBrief).toHaveAttribute('aria-busy', 'true');
+    expect(loadingBrief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    pending.unmount();
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents),
+      error: new Error('refresh failed'), isError: true, status: 'error' }));
+    renderPage();
+    const brief = screen.getByTestId('day-log-summary');
+    assertOperationalBriefDisclosure(brief, 'Retained recorded history');
+    expect(screen.getByText('Day log may be out of date')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Day summary details' })).toBeInTheDocument();
+  });
+
+  it('rejects invalid numeric measurements without displaying a fabricated zero', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse([], {
+      summary: { drive_count: 1, charge_count: 0, drive_duration_s: Number.NaN,
+        drive_distance_m: Number.POSITIVE_INFINITY, energy_added_wh: null, energy_used_wh: 0 },
+    }) }));
+    renderPage();
+    const brief = screen.getByTestId('day-log-summary');
+    const mapped = operationalMetricsSpy.mock.results.at(-1)?.value;
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toBeNull();
+    expect(mapped?.find((metric) => metric.key === 'distance')?.valueState).toBe('invalid');
+    assertOperationalMetricUnavailable(brief, 'Distance');
+    expect(brief.querySelector('[data-operational-metric="drive-time"]')).toBeNull();
+    expect(mapped?.find((metric) => metric.key === 'drive-time')?.valueState).toBe('invalid');
+    assertOperationalMetricUnavailable(brief, 'Drive time');
+    expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveAttribute('data-value-state', 'value');
+  });
+
+  it.each([
+    { caseName: 'recorded signal cap', truncated: true, sources: [], message: 'Some records may be missing — the day exceeded the signal read cap. What loaded is shown in full.' },
+    { caseName: 'unavailable source', truncated: false, sources: [{ source: 'user_presence', status: 'unavailable' as const, count: 0, reason: 'no signal' }], message: 'Some sources unavailable' },
+  ])('discloses $caseName without replacing recorded sections or SI totals', ({ truncated, sources, message }) => {
+    const refetch = vi.fn();
+    useDayLogMock.mockReturnValue(queryState({
+      data: dayLogResponse(mixedEvents, {
+        truncated,
+        sources,
+        summary: { drive_count: 1, charge_count: 0, drive_duration_s: 3600,
+          drive_distance_m: 25000, energy_added_wh: null, energy_used_wh: 5200 },
+      }),
+      refetch,
+    }));
+    renderPage();
+
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveAttribute('data-data-state', 'partial');
+    expect(within(notice).getByText('Partial data')).toBeInTheDocument();
+    expect(within(notice).getByText(message)).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-summary')).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-timeline')).toHaveTextContent('Drive started');
+    expect(screen.getByTestId('daylog-sources')).toBeInTheDocument();
+    expect(screen.getByTestId('day-log-summary').querySelector('[data-operational-metric="distance"]')).toHaveTextContent('25.0 km');
+    expect(screen.getByRole('link', { name: 'Drive started' })).toHaveAttribute('href', '/drives/7');
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps refresh failure recovery ahead of partial-history disclosure', () => {
+    useDayLogMock.mockReturnValue(queryState({
+      data: dayLogResponse(mixedEvents, { truncated: true }),
+      error: new Error('refresh failed'),
+      isError: true,
+      status: 'error',
+    }));
+    renderPage();
+
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveAttribute('data-data-state', 'stale');
+    expect(within(notice).getByText('Day log may be out of date')).toBeInTheDocument();
+    expect(within(notice).queryByText('Partial data')).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-timeline')).toHaveTextContent('Some records may be missing');
+    expect(screen.getByTestId('daylog-search')).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-sources')).toBeInTheDocument();
+  });
+
+  it('does not label a complete recorded day as partial', () => {
+    useDayLogMock.mockReturnValue(queryState({
+      data: dayLogResponse(mixedEvents, {
+        sources: [{ source: 'drives', status: 'ok', count: 2 }],
+      }),
+    }));
+    renderPage();
+
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-count')).toHaveTextContent('5 events');
+    expect(screen.getByRole('table', { name: 'Sources' })).toHaveTextContent('2 rows');
   });
 });

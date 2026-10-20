@@ -20,10 +20,11 @@
  *   GET    /admin/audit-log/verify               → AuditChainVerifyResponse
  *   GET    /admin/gdpr/exports/{id}              → GDPRExportArtifact
  *
- * Every route is read-only (no mutations). Each route returns HTTP 503
+ * Every route is read-only (no mutations). Observability/audit routes return HTTP 503
  * with `code: 'SUBSYSTEM_NOT_CONFIGURED'` when its backing repo is nil
  * — callers should branch on `error.status === 503` to render an
- * explanatory empty-state rather than an error banner.
+ * explanatory empty-state rather than an error banner. GDPR metadata uses
+ * `GDPR_NOT_CONFIGURED` for its missing subsystem.
  *
  * The shared `request()` client auto-prepends `/api/v1`, so hook URLs
  * MUST NOT include that prefix (DRY anti-pattern guard #7).
@@ -328,24 +329,28 @@ export function useAuditChainVerify(
 // ---------- GDPR export ----------------------------------------------------
 
 /**
- * Fetch the metadata for a single GDPR export artifact by ID. The
- * actual file download happens via `/admin/gdpr/exports/{id}/download`
- * which is a browser-redirect stream — the page builds that URL
- * client-side rather than fetching binary data through this hook.
+ * Fetch a persisted GDPR bundle manifest by ID. The separate download GET
+ * streams bundle bytes; it is not fetched through this metadata hook.
  *
- * Polled at FAST (10 s) while status is queued/running, switched off
- * by the page once complete (via `enabled=false`).
+ * The worker inserts manifests after bundle creation. This GET has no pending
+ * job/status capability, so there is no automatic lifecycle polling. A 404
+ * does not prove a queued job, nor does a manifest prove that a file still
+ * exists or that its storage backend supports downloads. Explicit refetch
+ * remains available for recovery and updated download metadata.
  */
 export function useGDPRExport(id: string | null) {
   return useQuery({
     queryKey: operatorConfidenceKeys.gdprExport(id ?? '__none__'),
-    queryFn: ({ signal }) =>
-      fetchEnvelope<GDPRExportArtifact>(
-        request(`/admin/gdpr/exports/${id}`, { signal }),
-      ),
-    enabled: Boolean(id),
+    queryFn: ({ signal }) => {
+      // enabled alone does not guard an explicit refetch of a disabled query.
+      if (!id?.trim()) throw new Error('GDPR export artifact id is required');
+      return fetchEnvelope<GDPRExportArtifact>(
+        request(`/admin/gdpr/exports/${encodeURIComponent(id)}`, { signal }),
+      );
+    },
+    enabled: Boolean(id?.trim()),
     staleTime: STALE_TIMES.QUICK,
-    refetchInterval: INTERVALS.FAST,
+    refetchInterval: false,
     refetchIntervalInBackground: false,
     retry: 1,
   });

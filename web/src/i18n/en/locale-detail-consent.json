@@ -27,7 +27,9 @@
     "state": {
       "accepted": "Accepted — performance & error reporting on",
       "declined": "Declined — only essential storage in use",
-      "unknown": "Not decided — banner will appear on next visit"
+      "declinedPreview": "Declined — preview only; reporting stays on without a consent gate",
+      "unknown": "Not decided — banner will appear on next visit",
+      "unknownPreview": "Not decided — no consent gate on this deployment; reporting stays on"
     },
     "action": {
       "accept": "Re-grant consent",

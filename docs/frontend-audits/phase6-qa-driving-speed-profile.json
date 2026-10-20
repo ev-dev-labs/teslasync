@@ -1,0 +1,1297 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-speed-profile",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_REPORT_ONLY",
+  "page": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+  "routes": [
+    "/speed-profile"
+  ],
+  "sourceUTC": "2026-10-14T01:26:45.5629139Z",
+  "sourceInspectionStartedUTC": "2026-10-14T01:12:22.6667432Z",
+  "purpose": "Current accepted SpeedProfilePage/direct presentation/necessary source QA; no remigration",
+  "primaryGoal": "Preserve raw SI, source scope/populations, sections/actions/preferences/trust and distinguish confirmed mechanisms from candidates",
+  "reservation": {
+    "earlierActual20And25MinuteBoundsWin": true,
+    "reservedUTC": "2026-10-14T01:10:24.802Z",
+    "targetMinutes": 10,
+    "commandHardLimitMinutes": 15,
+    "returnUTC": "2026-10-14T01:30:24.802Z",
+    "hardUTC": "2026-10-14T01:35:24.802Z",
+    "queueInitialLine": 404,
+    "queueLatestObservedLine": 410,
+    "actor": "c0bf9499-5db0-4ad3-8a87-0f168111df3e"
+  },
+  "firstCheck": {
+    "acceptedCommit": "ff544f0e0e37817a8676f4f0a5df8b5084813281",
+    "historicalProof": "22 scoped tests and prior lint receipts are historical, not executed here",
+    "decision": "Report-only/no source changes needed or authorized for this QA item; source defects are reported, not repaired",
+    "closedPhasesPreserved": "0-5 closed;6 unfinished;7 NOTRUN",
+    "acceptedItem": "phase5-page-driving-speed-profile"
+  },
+  "writableOnly": [
+    "docs\\frontend-audits\\phase6-qa-driving-speed-profile.json",
+    "web\\logs\\phase6-qa-driving-speed-profile.log"
+  ],
+  "sourceEdited": false,
+  "governingReads": [
+    {
+      "lines": 296,
+      "file": "docs\\orchestrator-loop.md",
+      "sha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "read": "FULL 1-296"
+    },
+    {
+      "lines": 2539,
+      "file": "docs\\frontend-design-contract.md",
+      "sha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "read": "FULL 1-2539, all truncated continuations completed"
+    },
+    {
+      "lines": 1593,
+      "file": "docs\\frontend-mission.md",
+      "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "read": "43-45:1416-1515"
+    },
+    {
+      "lines": 2460,
+      "file": "docs\\session-handoff.md",
+      "sha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+      "read": "current 1-50 and historical context 51-160"
+    },
+    {
+      "lines": 152,
+      "file": "docs\\frontend-worker-conventions.md",
+      "sha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "read": "FULL 1-152"
+    },
+    {
+      "lines": 94,
+      "file": ".github\\instructions\\frontend-si-cutover.instructions.md",
+      "sha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "read": "FULL 1-94"
+    },
+    {
+      "lines": 629,
+      "file": ".github\\instructions\\react-frontend.instructions.md",
+      "sha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "read": "FULL 1-629"
+    },
+    {
+      "lines": 45,
+      "file": ".github\\instructions\\observability.instructions.md",
+      "sha256": "B56E5B2639AC71DC6C7755E943EAE19DCE41A4BD372B00304819D99472301A42",
+      "read": "FULL 1-45"
+    },
+    {
+      "lines": 221,
+      "file": ".github\\instructions\\unit-conversion.instructions.md",
+      "sha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "read": "FULL 1-221"
+    }
+  ],
+  "sourcePins": [
+    {
+      "lines": 538,
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "sha256": "FC0158296C9CD89672944391D51EBC2988FD6FCF62834A5CE9ABB61A47E68713",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 53,
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+      "sha256": "BCB8C5BB0646613A424B14C4A22B04B456A7507195FF2B4E4BD5C45BE5948060",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 454,
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "sha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 511,
+      "file": "web\\src\\lib\\drivesAggregation.ts",
+      "sha256": "5FCF90610A780F412B01E76B8E4EF7BFE620B2538F3BF14A8FB07DF8058AA0A6",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 168,
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 694,
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "sha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 174,
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 194,
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 65,
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 434,
+      "file": "web\\src\\api\\dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 500,
+      "file": "web\\src\\lib\\unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 411,
+      "file": "web\\src\\types\\driving.ts",
+      "sha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 919,
+      "file": "web\\src\\App.tsx",
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 127,
+      "file": "web\\src\\lib\\routeLoaders.ts",
+      "sha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 289,
+      "file": "web\\src\\lib\\routeRegistry.ts",
+      "sha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 340,
+      "file": "web\\src\\lib\\routePrefetch.ts",
+      "sha256": "63CF77FE5B5687C3C7A8D7F0F188E38767C408B1B254DA31C44859D289DF82A2",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 17,
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 259,
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 42,
+      "file": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "sha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 1006,
+      "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 115,
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 47,
+      "file": "web\\src\\hooks\\useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 24,
+      "file": "web\\src\\hooks\\useOperationalMetrics.tsx",
+      "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 439,
+      "file": "web\\src\\lib\\tokens.ts",
+      "sha256": "04BDAA937938F96AF3B2D39B8236608063DE83D7A530DB8C67FE6BD1DEE120A3",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    },
+    {
+      "lines": 38994,
+      "file": "web\\src\\i18n\\en.json",
+      "sha256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "coverage": "Necessary bounded reads/searches; not a full audit of all shared-file internals",
+      "sourceUTC": "2026-10-14T01:26:45.5629139Z"
+    }
+  ],
+  "routeEvidence": {
+    "loader": {
+      "line": 44,
+      "file": "web\\src\\lib\\routeLoaders.ts"
+    },
+    "app": {
+      "lines": [
+        2,
+        126,
+        903
+      ],
+      "file": "web\\src\\App.tsx"
+    },
+    "workspace": {
+      "lines": [
+        66,
+        156,
+        165,
+        166
+      ],
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "vehicle": true,
+      "range": true
+    },
+    "mounted": "NOTRUN",
+    "registry": {
+      "line": 238,
+      "file": "web\\src\\lib\\routeRegistry.ts"
+    },
+    "prefetch": {
+      "line": 137,
+      "file": "web\\src\\lib\\routePrefetch.ts"
+    }
+  },
+  "counts": {
+    "pageLines": 538,
+    "contentRegions": 6,
+    "SectionErrorBoundaryCallSites": 5,
+    "staleWarningCallSites": 2,
+    "DrivingSummaryBriefCallSites": 1,
+    "directPresentationLines": 53,
+    "directPresentationFiles": 1,
+    "EmbeddedChartCallSites": 2,
+    "GlassPanelCallSites": 7,
+    "driveRetryCallSites": 1,
+    "inlineScatterLegendIncludedInPage": true,
+    "historicalPageLines": 518,
+    "historicalSource": "audit-page-125, not a fresh immutable-baseline comparison",
+    "sectionElementCallSites": 3,
+    "pagePlusDirectPresentationLines": 591,
+    "browseDriveCallSites": 5,
+    "profileRetryCallSites": 5,
+    "LinearGaugeCallSites": 3,
+    "historicalPageSHA256": "D30AFDA523A540E5C6300E4199B5C61FC2824B892A5C64B360786A9B02781672",
+    "note": "Static repeated/mutually exclusive call sites, not mounted panel counts; shared primitives excluded from 591",
+    "macroSections": 4,
+    "confirmedFindings": 9,
+    "candidates": 7
+  },
+  "sections": [
+    {
+      "regions": [
+        "Speed summary metrics"
+      ],
+      "fields": [
+        "average/peak/optimal raw SI speeds",
+        "samples",
+        "drive sample context",
+        "range",
+        "provenance",
+        "unknown observation time",
+        "source status/retry"
+      ],
+      "macro": 1,
+      "anchor": 227
+    },
+    {
+      "regions": [
+        "Speed Distribution",
+        "Speed Envelope"
+      ],
+      "fields": [
+        "source buckets/readings",
+        "mph source caption",
+        "bar tooltip/accessibility table",
+        "all three preference-aware gauges"
+      ],
+      "macro": 2,
+      "anchor": 245
+    },
+    {
+      "regions": [
+        "Speed Buckets"
+      ],
+      "fields": [
+        "identity/order",
+        "count-share/readings",
+        "eligible drive average speed/intensity",
+        "icons",
+        "sparse/loading/error outcomes"
+      ],
+      "macro": 3,
+      "anchor": 342
+    },
+    {
+      "regions": [
+        "Efficiency vs Speed",
+        "Efficiency Insight"
+      ],
+      "fields": [
+        "all eligible returned drive points",
+        "converted axes/tooltips/table",
+        "legend",
+        "optimal source narrative",
+        "no quantified highway-speed gain claim"
+      ],
+      "macro": 4,
+      "anchor": 431
+    }
+  ],
+  "actions": [
+    {
+      "lines": [
+        240,
+        253,
+        300,
+        349,
+        502
+      ],
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "executed": "NOTRUN",
+      "name": "Retry profile",
+      "callSites": 5
+    },
+    {
+      "lines": [
+        441
+      ],
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "executed": "NOTRUN",
+      "name": "Retry drives",
+      "callSites": 1
+    },
+    {
+      "lines": [
+        260,
+        307,
+        362,
+        448,
+        519
+      ],
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "executed": "NOTRUN",
+      "name": "Browse drives",
+      "callSites": 5
+    },
+    {
+      "lines": [
+        225,
+        226
+      ],
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "executed": "NOTRUN",
+      "name": "Retained source warning/retry",
+      "callSites": 2
+    },
+    {
+      "lines": [
+        279,
+        478
+      ],
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "executed": "NOTRUN",
+      "name": "Chart tooltips",
+      "callSites": 2
+    }
+  ],
+  "additionalDelegatedActions": [
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+      "proof": "Existing delegation only; mounted interaction NOTRUN",
+      "name": "OperationalBrief detail interaction",
+      "line": 36
+    },
+    {
+      "name": "Workspace vehicle/View settings",
+      "proof": "Header/mobile shell-owned; no local duplicate picker; NOTRUN"
+    }
+  ],
+  "dataSources": [
+    {
+      "lines": [
+        278,
+        280,
+        281,
+        283,
+        284,
+        285,
+        286,
+        288
+      ],
+      "requestPath": "/analytics/speed-profile",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "policy": "vehicle-enabled; key vehicle/start/end; signal forwarded; normal query policy retained",
+      "hook": "useSpeedProfile",
+      "params": [
+        "vehicle_id",
+        "start",
+        "end"
+      ],
+      "raw": "Required m/s heroes plus source labels/readings"
+    },
+    {
+      "requestPath": "/drives",
+      "policy": "vehicle-enabled, signal, safeArray, FAST staleTime; default 50 limitation documented by hook, not freshly verified backend behavior",
+      "supportedOptions": [
+        "start",
+        "end",
+        "limit",
+        "refetchInterval"
+      ],
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "raw": "meters/seconds/Wh/mps, nullable speed and energy",
+      "pageParams": [
+        "vehicle_id"
+      ],
+      "hook": "useDrives",
+      "lines": [
+        107,
+        114,
+        117,
+        118,
+        120,
+        121,
+        122,
+        125,
+        127,
+        128,
+        130
+      ]
+    }
+  ],
+  "numericReview": {
+    "eligiblePopulation": "getEfficiency requires >=1000m, finite positive measured energy; scatter/bucket mean additionally require avgSpeedMps. Summary drives.length is all locally selected returned drives, not eligible model count.",
+    "countRatio": "sum(readings) denominator, not demonstrated elapsed time: SP03",
+    "means": "Arithmetic equal-drive avgEff/avgSpeedMps, not distance/time weighted; preserve accepted arithmetic pending domain clarification SP-C01",
+    "bucketMembership": "Current accepted fix compares SI speed converted to fixed SOURCE mph bands; raw SI accumulators preserved. Current comment plus accepted audit historical source citations establish source intent, not a new vendor guess.",
+    "rawUnits": "Typed SI Drive meters/seconds/Wh/mps and m/s profile heroes; conversion only at render through useUnits/current unitConversion; no vendor/car unit guessing",
+    "displayPreferences": "SI scatter classification before conversion is correct; scatter coordinate Math.round is SP08; formatter locale/precision follows preference",
+    "backendHeroWeighting": "Unknown; not freshly read/executed",
+    "unknownZero": "Finite speed zero survives summary/gauges; insight >0 policy and unavailable hero DTO semantics remain SP-C02, not fabricated backend proof",
+    "signedEnergy": "No blanket abs/clamp; documented positive-energy eligibility is retained, SP-C03"
+  },
+  "preservation": {
+    "noRemigration": "Accepted 538-line page exceeds thin-page guidance; recorded only, not a reopened Phase5 rewrite",
+    "sourceNoChange": true,
+    "acceptedFixes": [
+      "source mph matching",
+      "removed ~15% claim",
+      "raw-SI scatter color classification",
+      "both chart accessible tables supplied",
+      "restrained CSS semantic role fills"
+    ],
+    "limits": "No tests, preservation CLI, screenshot baseline or original full-presentation comparison run",
+    "presentationSHA256": "BCB8C5BB0646613A424B14C4A22B04B456A7507195FF2B4E4BD5C45BE5948060",
+    "pageSHA256": "FC0158296C9CD89672944391D51EBC2988FD6FCF62834A5CE9ABB61A47E68713",
+    "noInventedCapabilities": "EmbeddedChart export/fullscreen false by default; no page zoom/annotation mutation/export claimed"
+  },
+  "filesRead": [
+    "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\lib\\drivesAggregation.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeLoaders.ts",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\lib\\routePrefetch.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\i18n\\en.json",
+    "migration-queue.md",
+    "docs\\frontend-inventory.md",
+    "docs\\frontend-audits\\audit-page-125.json",
+    ".gitignore",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md"
+  ],
+  "rawLog": "web\\logs\\phase6-qa-driving-speed-profile.log",
+  "release": {
+    "status": "RELEASED",
+    "noLaterWrites": true,
+    "logReleased": true,
+    "sourceReadonly": true,
+    "note": "All report/log/command ownership released at final receipt; no source lease used; no ongoing helper processes",
+    "returnDeadlineExceeded": false,
+    "reportReleased": true,
+    "hardDeadlineExceeded": false,
+    "releaseUTC": "2026-10-14T01:30:14.7354305Z",
+    "commandsReleased": true
+  },
+  "findings": [
+    {
+      "id": "SP01",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 71,
+      "mechanism": "Only start/end dates are destructured. Profile receives date bounds; local drive filtering reconstructs browser-local whole days and inclusive 23:59:59.999. Precise rolling/custom instants from useRangeState are not consumed.",
+      "evidence": "useRangeState.ts:301-318 establishes header-owned defaults;656-684 supplies rolling/calendar startInstant/endInstantExclusive/timezone.",
+      "fix": "Use existing exact instants/timezone and keep header defaults. Establish profile endpoint exclusive-bound semantics before claiming server acceptance; no local picker.",
+      "queueDedup": "No exact open SpeedProfile correction found in owned-source queue lookup; historical audit mechanism cross-reference is context, not a second counted issue.",
+      "rule": "workspace-exact-bounds",
+      "severity": "high",
+      "confidence": "high",
+      "lines": [
+        71,
+        76,
+        108,
+        109,
+        113,
+        235
+      ],
+      "owner": "page/integration"
+    },
+    {
+      "id": "SP02",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 77,
+      "mechanism": "Drive request sends vehicle only and filters only returned rows locally. Hook documents default 50-row page; selected-window coverage is not established. Existing returned-sample disclaimer is preserved, not mistaken for a complete-coverage claim.",
+      "evidence": "useDriving.ts:89-104,107-130 already supports server start/end options, cancellation and keyed windows.",
+      "fix": "Pass both exact window options through the existing hook; distinguish sample-no-match from authoritative no drives. Completeness/pagination requires separate proof, not a raised cap.",
+      "queueDedup": "No exact open SpeedProfile correction found in owned-source queue lookup; historical audit mechanism cross-reference is context, not a second counted issue.",
+      "rule": "range-population",
+      "severity": "high",
+      "confidence": "high",
+      "lines": [
+        77,
+        105,
+        106,
+        113,
+        214,
+        236
+      ],
+      "owner": "page/integration"
+    },
+    {
+      "id": "SP03",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 139,
+      "mechanism": "readings/sum(readings) is labeled Time share and the chart accessible name claims time-share. No elapsed-time weights or duration denominator enter the calculation; SpeedBucket provides readings count only.",
+      "evidence": "types/driving.ts:144-162; historical audit count-population/backend citations are context only, not freshly promoted.",
+      "fix": "Retain counts/ratios; establish the source count population and use truthful localized count-share language. No invented duration endpoint or assumed regular cadence.",
+      "queueDedup": "No exact open SpeedProfile correction found in owned-source queue lookup; historical audit mechanism cross-reference is context, not a second counted issue.",
+      "rule": "unsupported-denominator-claim",
+      "severity": "medium",
+      "confidence": "high",
+      "lines": [
+        118,
+        139,
+        266,
+        390,
+        392
+      ],
+      "owner": "page/domain/catalog"
+    },
+    {
+      "id": "SP04",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 401,
+      "mechanism": "Per-bucket speed and efficiency rows disappear when no eligible drive matches, including drive initial/failure while profile cards remain populated. This is missing fields, not a hidden whole panel.",
+      "owner": "page",
+      "fix": "Always retain both labels with source-local loading/fatal/retained/unknown/unavailable and drive recovery; never invent zero or erase successful profile content.",
+      "queueDedup": "No exact open SpeedProfile correction found in owned-source queue lookup; historical audit mechanism cross-reference is context, not a second counted issue.",
+      "rule": "missing-evidence-field-preservation",
+      "severity": "medium",
+      "confidence": "high",
+      "lines": [
+        166,
+        168,
+        401,
+        404,
+        410,
+        422
+      ]
+    },
+    {
+      "id": "SP05",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 239,
+      "mechanism": "Brief retained only checks isRefreshBlocked, not refreshError/stale. With retained failed-refresh data it receives neither loading/unavailable/retained nor sourceStatus override and chooses Source available. Warnings preserve data but brief status omits stale qualification.",
+      "evidence": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx:28-34,44-45 uses optional sourceStatus and retained props; api/dataState.ts distinguishes refreshError and fatalError.",
+      "fix": "Use current brief optional status/retained props for refresh-error/stale-aware source status; keep profile/drive trust separate. No new shared trust API or inferred device-offline claim.",
+      "queueDedup": "No exact open SpeedProfile correction found in owned-source queue lookup; historical audit mechanism cross-reference is context, not a second counted issue.",
+      "rule": "summary-source-trust",
+      "severity": "medium",
+      "confidence": "high",
+      "lines": [
+        78,
+        79,
+        225,
+        226,
+        238,
+        239
+      ],
+      "owner": "page"
+    },
+    {
+      "id": "SP06",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 82,
+      "mechanism": "Loading uses query.isLoading instead of DataState.initial. No retained payload plus paused/disabled initial query has no fatalError and can fall through to no-data/no-scatter empty branches. unavailable=!hasData similarly conflates unresolved and authoritative absence.",
+      "evidence": "api/dataState.ts deriveDataState no-data branch keeps status initial and isRefreshBlocked; StaleRefreshWarning.tsx:59 intentionally does not render with no retained data.",
+      "fix": "Use initial/isRefreshBlocked/missing-selection semantics before authoritative empty, with truthful source recovery and all section shells preserved.",
+      "queueDedup": "No exact open SpeedProfile correction found in owned-source queue lookup; historical audit mechanism cross-reference is context, not a second counted issue.",
+      "rule": "initial-source-state",
+      "severity": "medium",
+      "confidence": "high",
+      "lines": [
+        82,
+        83,
+        238
+      ],
+      "owner": "page"
+    },
+    {
+      "id": "SP07",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 155,
+      "mechanism": "Four raw Wh/km bands (<140 success,140-<200 info,200-<260 warning,>=260 danger) but three legend labels omit the info band.",
+      "owner": "page/domain/catalog",
+      "fix": "Get domain-approved complete four-band labels and localized accessible meaning. Preserve raw-SI thresholds independent of units; do not remove points or silently reconcile different card thresholds.",
+      "queueDedup": "No exact open SpeedProfile correction found in owned-source queue lookup; historical audit mechanism cross-reference is context, not a second counted issue.",
+      "rule": "scatter-legend-coverage",
+      "severity": "medium",
+      "confidence": "high",
+      "lines": [
+        155,
+        489,
+        490,
+        491
+      ]
+    },
+    {
+      "id": "SP08",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 153,
+      "mechanism": "Scatter coordinates are Math.round-ed after display conversion before chart/table data. Preference-aware fmtNumber cannot recover fractions; physical quantization differs by display unit.",
+      "evidence": "useNumberFormatting.ts:27-28,35 derives locale/precision from saved preferences.",
+      "fix": "Preserve unrounded converted chart coordinates; format labels/tooltips/table at presentation boundary. Keep every point and raw SI cache; deliberate gauge rounding is distinct.",
+      "queueDedup": "No exact open SpeedProfile correction found in owned-source queue lookup; historical audit mechanism cross-reference is context, not a second counted issue.",
+      "rule": "display-precision-loss",
+      "severity": "medium",
+      "confidence": "high",
+      "lines": [
+        153,
+        154,
+        458,
+        459
+      ],
+      "owner": "page"
+    },
+    {
+      "id": "SP09",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "line": 277,
+      "mechanism": "Four tick objects hard-code fontSize:10 rather than canonical scalable chart typography. Recharts API exception means this is not static-inline-style; no measured readability/contrast/clipping claim.",
+      "owner": "page",
+      "fix": "Use existing scalable chart defaults/typography boundary; preserve saved font preferences and validate composed readability separately. No new page scale/config/token write.",
+      "queueDedup": "No exact open SpeedProfile correction found in owned-source queue lookup; historical audit mechanism cross-reference is context, not a second counted issue.",
+      "rule": "fixed-axis-typography",
+      "severity": "low",
+      "confidence": "high",
+      "lines": [
+        277,
+        278,
+        470,
+        476
+      ],
+      "occurrenceCount": 4
+    }
+  ],
+  "candidates": [
+    {
+      "topic": "Arithmetic means and populations",
+      "lines": [
+        163,
+        166,
+        181,
+        182,
+        183,
+        191,
+        214
+      ],
+      "id": "SP-C01",
+      "whyCandidate": "Accepted preservation explicitly retains arithmetic means. Intended mean-drive versus physical aggregate-rate semantics are not established; not automatically a numeric bug.",
+      "evidence": "Equal eligible-drive weighting: sum per-drive Wh/km or m/s divided by count; no distance/time weights. Summary drives.length includes more than eligible energy/speed population.",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "preciseNeed": "Domain owner documents mean-per-eligible-drive and count/provenance. Distance/time weighted changes need separately approved matching known positive denominators/populations; never silently replace arithmetic means.",
+      "line": 191
+    },
+    {
+      "topic": "Zero and hero availability",
+      "lines": [
+        139,
+        204,
+        505,
+        510
+      ],
+      "id": "SP-C02",
+      "whyCandidate": "Backend measured-zero versus unavailable/sentinel semantics unknown. Historical degradation citations are not fresh backend proof; no hypothetical nullable DTO promotion.",
+      "evidence": "Finite zero survives summary/gauge; insight requires optimalSpeedMps>0. Required numeric DTO lacks availability fields; zero-total percentage fallback is zero.",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "preciseNeed": "Authorized contract review establishes optimum-zero and denominator/hero availability. No fabricated source state, blanket zero coalescing or DTO expansion.",
+      "line": 505
+    },
+    {
+      "topic": "Signed/zero consumption eligibility",
+      "lines": [
+        41,
+        53,
+        56,
+        57,
+        58,
+        59,
+        60,
+        63,
+        68,
+        69
+      ],
+      "id": "SP-C03",
+      "whyCandidate": "Consumption analysis is documented; a signed net-energy interpretation is not established from current DTO.",
+      "evidence": "Intentional >=1000m/finite positive energy rule; energy<=0 returns null. No abs/clamp of measurements.",
+      "file": "web\\src\\lib\\drivesAggregation.ts",
+      "preciseNeed": "Preserve eligibility pending domain clarification and disclose omitted population; never blanket abs/clamp signs.",
+      "line": 51
+    },
+    {
+      "id": "SP-C04",
+      "preciseNeed": "Later authorized Edge msedge/parent5173 review at all mission widths, narrow allocation, RTL and 200% text; preserve all three gauges.",
+      "evidence": "grid-cols-3 plus three size=96 props in padded narrow panel.",
+      "line": 310,
+      "topic": "Three declared 96 gauges",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "whyCandidate": "No computed rectangles, mounted overflow or text wrapping measured."
+    },
+    {
+      "id": "SP-C05",
+      "preciseNeed": "Later authorized 320/375/390/430, RTL/200% text and long-label review; every field/action stays reachable.",
+      "evidence": "Two-column cards and justify-between label/value flex rows with translated labels and units.",
+      "line": 365,
+      "topic": "Narrow bucket cards",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "whyCandidate": "No measured clipping/page overflow/overlapping targets."
+    },
+    {
+      "topic": "Semantic band colors/palette intent",
+      "lines": [
+        38,
+        39,
+        40,
+        41,
+        53,
+        54,
+        55,
+        155,
+        374
+      ],
+      "id": "SP-C06",
+      "whyCandidate": "Historical neon/unit-dependent classification defects fixed; no current literal-neon or composed visual failure inferred.",
+      "evidence": "neonColorMap currently resolves restrained semantic variables and shadow-none, not old fluorescent literals. Speed category semantics and card/scatter threshold differences remain domain/presentation decisions.",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "preciseNeed": "Preserve saved palettes/theme IDs/raw thresholds; review domain labeling and actual dark/light/custom/forced-colors contrast without new palette or blanket recoloring.",
+      "line": 38
+    },
+    {
+      "id": "SP-C07",
+      "preciseNeed": "If parity required, future page-only lease aligns nine existing defaults, not a catalog rewrite.",
+      "evidence": "54 literal fallback calls/35 existing keys;20 casing mismatches at9 keys: title,avgSpeed,peakSpeed,optimalSpeed,distribution,buckets,envelope,effVsSpeed,insightTitle.",
+      "line": 66,
+      "topic": "Canonical sentence-case/fallback title-case",
+      "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+      "whyCandidate": "No missing key or unlocalized prose; canonical English wins. Cold split/fallback behavior not mounted."
+    }
+  ],
+  "preciseNeeds": [
+    {
+      "findings": [
+        "SP01",
+        "SP02"
+      ],
+      "id": "N1",
+      "need": "Future queued page window/exact-instant adoption using existing options; authorized profile exclusive-bounds/completeness proof. Reuse accepted drivetrain root, do not redispatch or guess pagination.",
+      "owners": [
+        "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+        "web\\src\\api\\hooks\\useDriving.ts"
+      ],
+      "writeAuthority": "NOT GRANTED by this report"
+    },
+    {
+      "findings": [
+        "SP03"
+      ],
+      "id": "N2",
+      "need": "Establish count population then parent serializes exact truthful speedProfile.timeShare/distributionAria copy; no durations or guessed endpoint.",
+      "owners": [
+        "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+        "web\\src\\i18n\\en.json"
+      ],
+      "writeAuthority": "NOT GRANTED by this report"
+    },
+    {
+      "findings": [
+        "SP04",
+        "SP05",
+        "SP06"
+      ],
+      "id": "N3",
+      "need": "Caller preserves missing fields/initial-paused states and stale-aware brief status via current optional props; no shared API extension needed.",
+      "owners": [
+        "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx"
+      ],
+      "writeAuthority": "NOT GRANTED by this report"
+    },
+    {
+      "findings": [
+        "SP07",
+        "SP08"
+      ],
+      "id": "N4",
+      "need": "Domain-approved complete legend plus unrounded converted scatter coordinates; only exact truly missing legend copy later serialized by parent.",
+      "owners": [
+        "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx"
+      ],
+      "writeAuthority": "NOT GRANTED by this report"
+    },
+    {
+      "findings": [
+        "SP09"
+      ],
+      "id": "N5",
+      "need": "Four tick overrides adopt current scalable chart typography/defaults; global tokens/config readonly, mounted acceptance separately owned.",
+      "owners": [
+        "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx"
+      ],
+      "writeAuthority": "NOT GRANTED by this report"
+    }
+  ],
+  "summary": {
+    "byRule": {
+      "summary-source-trust": 1,
+      "fixed-axis-typography": 1,
+      "initial-source-state": 1,
+      "missing-evidence-field-preservation": 1,
+      "workspace-exact-bounds": 1,
+      "scatter-legend-coverage": 1,
+      "range-population": 1,
+      "display-precision-loss": 1,
+      "unsupported-denominator-claim": 1
+    },
+    "candidates": 7,
+    "confirmedFindings": 9,
+    "filesWithMostIssues": [
+      {
+        "confirmedMechanisms": 9,
+        "file": "web\\src\\features\\driving\\pages\\SpeedProfilePage.tsx",
+        "note": "SP05 counted once at page caller, not again at brief"
+      }
+    ],
+    "priority": [
+      "SP01/SP02 bounds/population",
+      "SP03 denominator truth",
+      "SP04/SP05/SP06 source trust/fields",
+      "SP07/SP08 legend/precision",
+      "SP09 typography"
+    ]
+  },
+  "states": {
+    "unknownZero": "Finite zero preserved in summary/gauges; required DTO availability and insight>0 are candidate SP-C02",
+    "signs": "Page Math.abs grep0; documented positive-energy eligibility retained, no blanket abs/clamp",
+    "retained": "DataState keeps payload and two StaleRefreshWarning surfaces; brief qualification SP05",
+    "fatal": "Only fatalError replaces its own source; neighbors preserved",
+    "initialPaused": "SP06: query.isLoading-only branches can claim empty before initial resolution",
+    "empty": "Five /drives recovery declarations retained; filtered returned sample is not authoritative full-window absence",
+    "loading": "Independent profile/drive source-shaped skeletons"
+  },
+  "responsive": {
+    "candidates": [
+      "SP-C04",
+      "SP-C05"
+    ],
+    "widthsNOTRUN": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "status": "DECLARATIONS_ONLY",
+    "measuredOverflow": "NOTRUN",
+    "declarations": "Hero/secondary stack below xl then2:1; chart heights sm/xl; bucket columns2/3/4/5/6; three96 gauge declarations"
+  },
+  "accessibility": {
+    "evidence": "Localized chart names, aria-hidden decorations, bucket dl/dt/dd; both data/dataColumns accessible chart alternatives supplied",
+    "fallbackOwner": "ChartContainer.tsx:500-509,849-946, SR-visible/forced-colors table; shared raw table expected",
+    "status": "SOURCE_ONLY_NOT_MOUNTED",
+    "limits": "Keyboard/focus/screen-reader/contrast/touch/reduced-motion/OS forced-colors NOTRUN"
+  },
+  "i18n": {
+    "fallbackCasingMismatchUniqueKeys": 9,
+    "fallbackCasingMismatchCalls": 20,
+    "literalFallbackCalls": 54,
+    "missingCanonicalKeys": 0,
+    "candidate": "SP-C07",
+    "catalogGeneratorGuards": "NOTRUN",
+    "catalogReadonly": true,
+    "uniquePageKeys": 35
+  },
+  "stylingImports": {
+    "noBlanketCleanClaim": true,
+    "typeOnlyBarrelCandidates": 2,
+    "disposition": "Erased StatMetric sub-barrel imports acceptable",
+    "exceptions": "Recharts API props and computed Cell colors are not static-inline-style; neonColorMap compatibility name maps restrained semantic roles/shadow-none",
+    "wrapper": "PageLayout.tsx:9-15 delegates PageContainer, acceptable"
+  },
+  "queueDedup": {
+    "matchedRows": {
+      "command8": 4,
+      "command9BroadPrefixes": 157,
+      "command6": 12,
+      "command10ExactSourceOwnership": 4
+    },
+    "authority": "migration-queue.md read-only; Phase5 [x] preserved",
+    "history": "Historical mechanisms referenced, not counted twice. Backend count/zero citations are context not fresh confirmations. mph matching/15% claim/chart alternatives/neon literal source improvements preserved.",
+    "exactScope": "QA reservation, audit-page-125, accepted Phase5 page and accepted drive-window root only; no exact open SpeedProfile correction found",
+    "limit": "Live parent queue grew line404 to410; no lock or unrelated source acceptance inferred",
+    "relatedRoot": "Accepted phase6-drivetrain-exact-range-integration supports existing typed drive window for another caller; reuse not redispatch"
+  },
+  "scanResults": [
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 0,
+      "rule": "static-inline-style"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 0,
+      "rule": "raw-html"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 0,
+      "rule": "direct-library-import"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 0,
+      "rule": "old-api-import"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 0,
+      "rule": "double-prefix"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 0,
+      "rule": "camelcase-param"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 1,
+      "rule": "hidden-section-candidate"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 0,
+      "rule": "hardcoded-visible-text-candidate"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 0,
+      "rule": "fetch-useeffect"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 1,
+      "rule": "page-container-wrapper"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 2,
+      "rule": "category-bypass-candidate"
+    },
+    {
+      "parameters": "Exact regexes/paths emitted in raw log COMMAND08; candidates manually classified",
+      "scope": "page+direct brief",
+      "numericExit": 0,
+      "commandId": 8,
+      "matchedLines": 13,
+      "rule": "numeric-normalization-review"
+    }
+  ],
+  "rawBoundedScanCommands": [
+    {
+      "command": "Governing path inventory/UTC/log initialization",
+      "numericExit": 0,
+      "id": 1,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Document/instruction sizes and paths",
+      "numericExit": 0,
+      "id": 2,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Full orchestrator/exact queue/headings",
+      "numericExit": 0,
+      "id": 3,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Exact reservation/accepted queue/mission43-45",
+      "numericExit": 0,
+      "id": 4,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "11necessary SHA256/line pins",
+      "numericExit": 0,
+      "id": 5,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Scoped declaration search/12queue rows",
+      "numericExit": 0,
+      "id": 6,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Catalog ConvertFrom-Json case-distinct keys parser failure",
+      "numericExit": 1,
+      "id": 7,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "12rule Select-String rerun/-AsHashtable/35key lookup/4queue rows",
+      "numericExit": 0,
+      "id": 8,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "17regex call-site counts/semantic lines/157bounded queue prefixes",
+      "numericExit": 0,
+      "id": 9,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Numbered source/5hook regexes/54fallback calls/exact ownership/pins",
+      "numericExit": 0,
+      "id": 10,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Case-sensitive param correction/9unique mismatch keys/router/ignore",
+      "numericExit": 0,
+      "id": 11,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Router/chart/token source/five stable critical pins",
+      "numericExit": 0,
+      "id": 12,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Tool launch OS206 before PowerShell; no write",
+      "numericExit": 1,
+      "id": 13,
+      "note": "TOOL_LAUNCH_FAILED_OS206; PowerShell NOTSTARTED",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Native report foundation/pins/actions write",
+      "numericExit": 0,
+      "id": 14,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Native nine findings/seven candidates/five needs write",
+      "numericExit": 0,
+      "id": 15,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Report assembly failed: invalid -Depth22; no write",
+      "numericExit": 1,
+      "id": 16,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    },
+    {
+      "command": "Final native parse/count reconciliation/25source pin checks/report-log-command release",
+      "numericExit": 0,
+      "id": 17,
+      "note": "Actual native/tool receipt; no tests or gates",
+      "rawOutput": "web\\logs\\phase6-qa-driving-speed-profile.log"
+    }
+  ],
+  "checkReceiptCorrections": {
+    "command10": "Six case-insensitive camelcase-param regex false positives, corrected command11 -CaseSensitive actual0; not violations",
+    "command16": "A parameter cannot be found that matches parameter name Depth22; corrected to -Depth 22 in final command; no command16 write occurred",
+    "command7": "Case-distinct subFSMs/subFsms parser failure before scan text emission, corrected by -AsHashtable command8",
+    "command13": "OS206 command-too-long launch failure before execution; split native report assembly used authorized files only"
+  },
+  "rawLogReceipt": "Actual raw outputs and grep regex parameters/counts appended only to authorized log. Display truncations retain complete raw log output. No shell redirection/tee/helper files. .gitignore:80 declares logs/ ignored; no Git ignore probe.",
+  "evidenceLimits": {
+    "observability": "No page RUM bootstrap introduced; runtime instrumentation NOTRUN",
+    "API": "NOTRUN",
+    "tests": {
+      "passed": null,
+      "skipped": null,
+      "discovered": null,
+      "executed": null,
+      "failed": null,
+      "status": "NOTRUN"
+    },
+    "lint": "NOTRUN",
+    "native": "NOTRUN",
+    "globalTypeScript": "NOTRUN/no TypeScript pass claim",
+    "scope": "One page/direct adapter/necessary boundaries, not whole-app/shared-internals exhaustive audit",
+    "Git": "NOTRUN",
+    "runtime": "NOTRUN",
+    "contracts": "No guessed vendor units, blanket abs/clamp, fabricated SI bounds/nullability/coverage or hypothetical DTO promotion",
+    "installsServersDockerSubagentsHelpersExtensionsHeartbeats": "NOTRUN",
+    "workingTree": "25source pins only, no global mutation proof about concurrent parent changes",
+    "build": "NOTRUN",
+    "mutations": "NOTRUN",
+    "backend": "NOTRUN/not freshly read; backend SQL/log/panic/context checks outside this frontend scope",
+    "realDriveIdentityLocationDevice": "NOTRUN/no real records accessed",
+    "browser": "NOTRUN/no grant; Edge msedge only if later authorized",
+    "preview": "Parent5173 untouched/no HTTP probe",
+    "pagePASS": "NOTRUN",
+    "screenshots": "NOTRUN"
+  },
+  "validation": {
+    "nativeRuntimePagePASS": "NOTRUN",
+    "candidates": 7,
+    "confirmedFindings": 9,
+    "initialParse": "PASS native ConvertFrom-Json -AsHashtable",
+    "sourcePinsChecked": 25,
+    "ruleGroups": 9,
+    "sourcePinsMismatched": 0,
+    "numericCheckExit": 0,
+    "pagePlusPresentationLines": 591
+  }
+}

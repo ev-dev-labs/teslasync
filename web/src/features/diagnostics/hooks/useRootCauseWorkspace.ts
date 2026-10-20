@@ -1,15 +1,20 @@
 import { useMemo, useState } from 'react';
+import type { SignalHistoryPoint } from '@/api/types';
 import {
   useSignalEvidenceBundle,
   useSignals,
   type SignalEvidenceBundleResult,
+  type SignalEvidenceWindow,
 } from '@/api/hooks/useTelemetry';
 import {
   analyzeRootCause,
   isAnalysisDefensible,
+  presentRootCause,
   selectRelatedSignals,
+  type RawSignalPoint,
   type RelatedSignalCandidate,
   type RootCauseAnalysisResult,
+  type RootCausePresentation,
 } from '../lib/rootCauseIntelligence';
 
 /**
@@ -27,7 +32,8 @@ import {
  *   2. `selectRelatedSignals(focalSignal, catalog)` — a pure, deterministic,
  *      bounded (≤ `MAX_RELATED_SIGNALS`) related-signal selection. This is
  *      synchronous and does not depend on the network.
- *   3. `useSignalEvidenceBundle(vehicleId, [focal, ...related], windowHours)`
+ *   3. `useSignalEvidenceBundle(...)` uses shared instants when provided,
+ *      otherwise retaining the service pack's local hour-based window.
  *      — fetches history for the focal signal plus its related candidates
  *      in one hook (at most 8 signals — exactly `1 + MAX_RELATED_SIGNALS`).
  *   4. `analyzeRootCause(...)` — pure statistics over whatever history has
@@ -47,6 +53,13 @@ export type RootCauseWindowHours = (typeof ROOT_CAUSE_WINDOW_HOUR_PRESETS)[numbe
 
 const DEFAULT_WINDOW_HOURS: RootCauseWindowHours = 72;
 
+function toAnalysisPoint(point: SignalHistoryPoint): RawSignalPoint {
+  return {
+    ts: point.ts,
+    value: typeof point.value === 'boolean' ? null : point.value,
+  };
+}
+
 export interface RootCauseWorkspace {
   /** Full signal-name catalog for the vehicle (empty while loading/absent). */
   catalog: string[];
@@ -64,16 +77,20 @@ export interface RootCauseWorkspace {
   evidenceBundle: SignalEvidenceBundleResult;
   /** The full, memoized root-cause analysis result — never throws, always structurally complete. */
   analysis: RootCauseAnalysisResult;
+  presentation: RootCausePresentation;
   /** Mirrors `isAnalysisDefensible(analysis)` — gates the Service Evidence Pack export action. */
   isDefensible: boolean;
   /** True once the user has picked a focal signal (independent of whether data has loaded yet). */
   hasChosenSignal: boolean;
 }
 
-export function useRootCauseWorkspace(vehicleId: number | null): RootCauseWorkspace {
+export function useRootCauseWorkspace(vehicleId: number | null, window?: SignalEvidenceWindow): RootCauseWorkspace {
   const id = vehicleId ?? 0;
   const [focalSignal, setFocalSignal] = useState('');
-  const [windowHours, setWindowHours] = useState<number>(DEFAULT_WINDOW_HOURS);
+  const [localWindowHours, setWindowHours] = useState<number>(DEFAULT_WINDOW_HOURS);
+  const windowHours = window
+    ? (Date.parse(window.endInstantExclusive) - Date.parse(window.startInstant)) / 3_600_000
+    : localWindowHours;
 
   const signalsQuery = useSignals(id);
   const catalog = useMemo(() => signalsQuery.data ?? [], [signalsQuery.data]);
@@ -88,23 +105,26 @@ export function useRootCauseWorkspace(vehicleId: number | null): RootCauseWorksp
     return [focalSignal, ...relatedCandidates.map((c) => c.signal)];
   }, [focalSignal, relatedCandidates]);
 
-  const evidenceBundle = useSignalEvidenceBundle(id, bundleSignalNames, windowHours);
+  const evidenceBundle = useSignalEvidenceBundle(id, bundleSignalNames, windowHours, 10_000, window);
 
   const analysis = useMemo(() => {
     const bundleData = evidenceBundle.data;
     const focalEntry = bundleData.find((d) => d.signal === focalSignal);
     const relatedSeries = bundleData
       .filter((d) => d.signal !== focalSignal)
-      .map((d) => ({ signal: d.signal, points: d.response.data ?? [] }));
+      .map((d) => ({ signal: d.signal, points: (d.response.data ?? []).map(toAnalysisPoint) }));
     return analyzeRootCause({
       focalSignal,
       catalog,
-      focalPoints: focalEntry?.response.data ?? [],
+      focalPoints: (focalEntry?.response.data ?? []).map(toAnalysisPoint),
       relatedSeries,
     });
   }, [evidenceBundle.data, focalSignal, catalog]);
 
   const isDefensible = useMemo(() => isAnalysisDefensible(analysis), [analysis]);
+  const presentation = useMemo(() => presentRootCause(analysis, evidenceBundle.data.map(
+    ({ signal, response }) => ({ signal, points: response.data ?? [] }),
+  )), [analysis, evidenceBundle.data]);
 
   return {
     catalog,
@@ -116,6 +136,7 @@ export function useRootCauseWorkspace(vehicleId: number | null): RootCauseWorksp
     relatedCandidates,
     evidenceBundle,
     analysis,
+    presentation,
     isDefensible,
     hasChosenSignal: focalSignal !== '',
   };

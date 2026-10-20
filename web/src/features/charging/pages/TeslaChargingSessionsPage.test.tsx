@@ -27,11 +27,14 @@
  * map is stubbed so tests never touch canvas/leaflet.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { createInstance } from 'i18next'
+
+vi.unmock('@/api/hooks/useAnnotations')
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -39,6 +42,11 @@ vi.mock('@/api/client', async () => {
     ...actual,
     request: vi.fn(),
   }
+})
+
+vi.mock('@/lib/csvExport', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/csvExport')>('@/lib/csvExport')
+  return { ...actual, downloadCSV: vi.fn(), downloadJSON: vi.fn() }
 })
 
 vi.mock('react-i18next', async () => {
@@ -78,6 +86,7 @@ vi.mock('./TeslaChargingSessionsMap', () => ({
 }))
 
 import { request } from '@/api/client'
+import { downloadCSV, downloadJSON } from '@/lib/csvExport'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
@@ -91,6 +100,7 @@ import type {
   TeslaChargingSessionSummary,
 } from '@/api/hooks/useCharging'
 import type { Vehicle } from '@/types/vehicle'
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 const never = () => new Promise<never>(() => {})
@@ -183,6 +193,8 @@ const emptySummary: TeslaChargingSessionSummary = {
 
 interface InstallOpts {
   vehicles?: Vehicle[]
+  vehiclesPending?: boolean
+  vehiclesError?: boolean
   sessions?: TeslaChargingSession[]
   summary?: TeslaChargingSessionSummary
   sessionsPending?: boolean
@@ -193,6 +205,8 @@ interface InstallOpts {
 function install(opts: InstallOpts = {}) {
   const {
     vehicles = [makeVehicle()],
+    vehiclesPending = false,
+    vehiclesError = false,
     sessions = defaultSessions,
     summary = defaultSummary,
     sessionsPending = false,
@@ -201,7 +215,11 @@ function install(opts: InstallOpts = {}) {
   } = opts
 
   mockedRequest.mockImplementation((path: string) => {
-    if (path === '/vehicles') return Promise.resolve(vehicles)
+    if (path === '/vehicles') {
+      if (vehiclesPending) return never()
+      if (vehiclesError) return Promise.reject(new Error('vehicles boom'))
+      return Promise.resolve(vehicles)
+    }
     // Refresh must be matched BEFORE the GET prefix (it shares the stem).
     if (path.startsWith('/tesla/charging/sessions/refresh')) {
       if (refreshImpl) return refreshImpl(path)
@@ -217,6 +235,11 @@ function install(opts: InstallOpts = {}) {
   })
 }
 
+function LocationProbe() {
+  const location = useLocation()
+  return <div data-testid="scope-location">{location.search}</div>
+}
+
 function renderPage(initialEntries: string[] = ['/tesla/charging/sessions']) {
   const client = new QueryClient({
     defaultOptions: {
@@ -224,21 +247,25 @@ function renderPage(initialEntries: string[] = ['/tesla/charging/sessions']) {
       mutations: { retry: false },
     },
   })
-  return render(
+  const mounted = render(
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <ToastProvider>
           <SelectedVehicleProvider>
             <TeslaChargingSessionsPage />
+            <LocationProbe />
           </SelectedVehicleProvider>
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...mounted, client }
 }
 
 beforeEach(() => {
   mockedRequest.mockReset()
+  vi.mocked(downloadCSV).mockClear()
+  vi.mocked(downloadJSON).mockClear()
   window.localStorage.clear()
   // fmtNumber/fmtInt read module-global precision/locale that useSettings
   // seeds in production; pin them so currency/number assertions are stable.
@@ -256,6 +283,11 @@ describe('formatDurationSeconds', () => {
     expect(formatDurationSeconds(3600)).toBe('1h 0m')
     expect(formatDurationSeconds(3660)).toBe('1h 1m')
     expect(formatDurationSeconds(7325)).toBe('2h 2m') // 2h2m5s
+    expect(formatDurationSeconds(+90.5)).toBe('1m')
+    expect(formatDurationSeconds(3599.99)).toBe('59m')
+    expect(formatDurationSeconds(3660.5)).toBe('1h 1m')
+    expect(formatDurationSeconds(3_600_060.5)).toBe('1000h 1m')
+    expect(formatDurationSeconds(-0)).toBe('0m')
   })
 
   it('returns an em dash for null/undefined/NaN/Infinity/negative input', () => {
@@ -263,11 +295,42 @@ describe('formatDurationSeconds', () => {
     expect(formatDurationSeconds(undefined)).toBe('—')
     expect(formatDurationSeconds(Number.NaN)).toBe('—')
     expect(formatDurationSeconds(Number.POSITIVE_INFINITY)).toBe('—')
+    expect(formatDurationSeconds(Number.NEGATIVE_INFINITY)).toBe('—')
     expect(formatDurationSeconds(-120)).toBe('—')
+    expect(formatDurationSeconds(-0.5)).toBe('—')
+    expect(formatDurationSeconds('60' as unknown as number)).toBe('—')
+  })
+
+  it('uses localized duration templates and numbers without treating missing timing as measured zero', async () => {
+    const i18n = createInstance()
+    await i18n.init({
+      lng: 'de',
+      resources: { de: { translation: { tesla_sessions: {
+        durationHoursMinutes: '{{hours}} Std. {{minutes}} Min.',
+        durationMinutes: '{{minutes}} Min.',
+      } } } },
+    })
+    const t = i18n.getFixedT('de')
+    expect(formatDurationSeconds(0, t, 'de-DE')).toBe('0 Min.')
+    expect(formatDurationSeconds(-0, t, 'de-DE')).toBe('0 Min.')
+    expect(formatDurationSeconds(+90.5, t, 'de-DE')).toBe('1 Min.')
+    expect(formatDurationSeconds(3_600_060.5, t, 'de-DE')).toBe('1.000 Std. 1 Min.')
+    for (const value of [null, undefined, NaN, Infinity, -Infinity, -60, -0.5]) {
+      expect(formatDurationSeconds(value, t, 'de-DE')).toBe('—')
+    }
   })
 })
 
 describe('buildMonthlyCost', () => {
+  it('preserves refunds and refuses mixed, missing and unsupported currency totals', () => {
+    const charge = makeSession({ total_cost: 5, currency_code: 'EUR' })
+    const refund = makeSession({ total_cost: -8, currency_code: ' eur ' })
+    expect(buildMonthlyCost([charge, refund])).toEqual([{ month: '2025-01', total: -3 }])
+    for (const currency_code of ['USD', null, '', 'XXX', 'invalid']) {
+      expect(buildMonthlyCost([charge, makeSession({ currency_code })])).toEqual([])
+    }
+  })
+
   it('groups by calendar month, sums cost, and sorts ascending', () => {
     const out = buildMonthlyCost([
       makeSession({ charge_start_datetime: '2025-03-10T12:00:00Z', total_cost: 3 }),
@@ -300,6 +363,17 @@ describe('buildMonthlyCost', () => {
 })
 
 describe('groupSessions', () => {
+  it('retains energy and counts without summing costs across denominations', () => {
+    const sessions = [
+      makeSession({ currency_code: 'EUR', total_cost: 5 }),
+      makeSession({ currency_code: 'USD', total_cost: -8 }),
+    ]
+    expect(groupSessions(sessions, s => s.site_location_name ?? '')).toEqual([
+      { key: 'Fremont Supercharger', count: 2, energyWh: 40000, cost: null },
+    ])
+    expect(groupSessions(sessions.map(s => ({ ...s, currency_code: 'EUR' })), () => 'site')[0].cost).toBe(-3)
+  })
+
   it('rolls up count/energy/cost per key with null-safe sums', () => {
     const buckets = groupSessions(
       [
@@ -321,12 +395,352 @@ describe('groupSessions', () => {
 
 /* ── Page ─────────────────────────────────────────────── */
 
+afterEach(() => {
+  onlineManager.setOnline(true)
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
 describe('TeslaChargingSessionsPage', () => {
+  it('gates reads and import during active vehicle resolution instead of querying fleet scope', async () => {
+    install({ vehiclesPending: true })
+    const { client } = renderPage()
+    await act(async () => {
+      client.setQueryData(['tesla-charging-sessions'], { sessions: defaultSessions, summary: defaultSummary })
+    })
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/vehicles', expect.anything()))
+    expect(mockedRequest.mock.calls.some(([path]) => String(path).startsWith('/tesla/charging/sessions'))).toBe(false)
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
+    assertOperationalBriefDisclosure(screen.getByTestId('charging-operational-brief'), 'Updating')
+    expect(screen.queryByText('No sessions in this analysis window')).toBeNull()
+    expect(screen.queryByText('123.00 kWh')).toBeNull()
+  })
+
+  it('allows an explicit vin=* fleet read and import without a vehicle source', async () => {
+    install({ vehiclesError: true })
+    renderPage(['/tesla/charging/sessions?vin=*'])
+    await screen.findByText('123.00 kWh')
+    expect(mockedRequest.mock.calls.some(([path]) => path === '/tesla/charging/sessions')).toBe(true)
+    expect(screen.queryByTestId('vehicle-source-state')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh from Tesla' }))
+    await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) => path === '/tesla/charging/sessions/refresh')).toBe(true))
+    expect(screen.getByTestId('scope-location')).toHaveTextContent('vin=*')
+  })
+
+  it('preserves an unresolved VIN bookmark through empty vehicle results and recovers its concrete scope', async () => {
+    install({ vehicles: [] })
+    const { client } = renderPage(['/tesla/charging/sessions?vin=VIN00000000000008&from=2025-01-01&to=2025-12-31'])
+    await screen.findByRole('button', { name: 'Retry' })
+    expect(screen.getByTestId('scope-location')).toHaveTextContent('vin=VIN00000000000008')
+    expect(mockedRequest.mock.calls.some(([path]) => String(path).startsWith('/tesla/charging/sessions'))).toBe(false)
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
+    install({ vehicles: [makeVehicle(), makeVehicle({ id: 8, vin: 'VIN00000000000008' })] })
+    await act(async () => { await client.refetchQueries({ queryKey: ['vehicles'] }) })
+    await screen.findByText('123.00 kWh')
+    expect(mockedRequest.mock.calls.some(([path]) => path === '/tesla/charging/sessions?vin=VIN00000000000008')).toBe(true)
+    expect(mockedRequest.mock.calls.some(([path]) => path === '/tesla/charging/sessions')).toBe(false)
+    expect(screen.getByTestId('scope-location')).toHaveTextContent('from=2025-01-01')
+    expect(screen.getByTestId('scope-location')).toHaveTextContent('to=2025-12-31')
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeEnabled()
+  })
+
+  it('exposes vehicle-source failure and retries it without issuing an unscoped session read', async () => {
+    install({ vehiclesError: true })
+    renderPage()
+    const source = await screen.findByTestId('vehicle-source-state')
+    await waitFor(() => expect(within(source).getByRole('button', { name: /retry/i })).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
+    expect(mockedRequest.mock.calls.some(([path]) => String(path).startsWith('/tesla/charging/sessions'))).toBe(false)
+    install()
+    fireEvent.click(within(source).getByRole('button', { name: /retry/i }))
+    await screen.findByText('123.00 kWh')
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeEnabled()
+  })
+
+  it('does not show loading or measured empty sessions for a paused vehicle source without data', async () => {
+    onlineManager.setOnline(false)
+    renderPage()
+    await screen.findByRole('button', { name: 'Retry' })
+    // Both the status badge and the unresolved-vehicle scope badge disclose it.
+    assertOperationalBriefDisclosure(screen.getByTestId('charging-operational-brief'), 'Data unavailable', { allMatches: true })
+    expect(within(screen.getByTestId('charging-operational-brief')).queryByText('Updating')).toBeNull()
+    expect(screen.queryByText('No sessions in this analysis window')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
+    expect(mockedRequest.mock.calls.some(([path]) => String(path).startsWith('/tesla/charging/sessions'))).toBe(false)
+    await act(async () => { onlineManager.setOnline(true) })
+    await screen.findByText('123.00 kWh')
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeEnabled()
+  })
+
+  it('retains sessions on vehicle refresh failure, blocks import, and restores trust after retry', async () => {
+    const { client } = renderPage()
+    await screen.findByText('123.00 kWh')
+    install({ vehiclesError: true })
+    await act(async () => { await client.refetchQueries({ queryKey: ['vehicles'] }) })
+    const source = screen.getByTestId('vehicle-source-state')
+    // The failed refetch lands in the cache before React flushes it to
+    // observers; wait for the retained-data warning like the sessions test does.
+    expect(await within(source).findByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
+    assertOperationalBriefDisclosure(screen.getByTestId('charging-operational-brief'), 'Data may be stale')
+    install()
+    fireEvent.click(within(source).getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(within(source).queryByTestId('stale-refresh-warning')).toBeNull())
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeEnabled()
+  })
+
+  it('matches built-in CSV and JSON values to display units and each recorded currency without changing cached SI', async () => {
+    const sessions = [
+      makeSession({ currency_code: 'EUR', total_cost: -5, per_kwh_rate: 0.25 }),
+      makeSession({ id: 2, session_id: 2, currency_code: null, total_cost: 0, total_energy_added_wh: 0, charge_duration_s: null }),
+    ]
+    install({ sessions })
+    const { client } = renderPage()
+    await screen.findByTestId('sessions-map')
+    const table = within(screen.getByRole('region', { name: 'Charging sessions table' }))
+    fireEvent.click(table.getByRole('button', { name: 'Export list' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledOnce())
+    const csv = vi.mocked(downloadCSV).mock.calls[0][1]
+    expect(csv).toContain('Energy (kWh)')
+    // The shared exporter prefixes formula-leading cells (the negative cost)
+    // with a single-quote CSV-injection guard; values are unchanged.
+    expect(csv).toContain(",20,120,30m,'-€5.00,")
+    expect(csv).toContain('0.00 · Unknown currency')
+    expect(csv).not.toContain('20000')
+    fireEvent.click(table.getByRole('button', { name: 'Export list' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }))
+    await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce())
+    expect(vi.mocked(downloadJSON).mock.calls[0][1]).toEqual([
+      expect.objectContaining({ energy: 20, peakPower: 120, duration: '30m', cost: '-€5.00' }),
+      expect.objectContaining({ energy: 0, duration: '—', cost: '0.00 · Unknown currency' }),
+    ])
+    expect(client.getQueriesData({ queryKey: ['tesla-charging-sessions'] })[0][1]).toEqual({
+      sessions, summary: defaultSummary,
+    })
+    expect(sessions[0].total_energy_added_wh).toBe(20000)
+    expect(sessions[0].charge_duration_s).toBe(1800)
+    expect(sessions[0].total_cost).toBe(-5)
+  })
+
+  it('preserves the separate raw selected CSV with Wh, seconds and source currency', async () => {
+    // jsdom has no layout; expose a viewport so the real virtualizer renders rows.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(1024)
+    install({ sessions: [makeSession({ currency_code: 'EUR', total_cost: -5, charge_duration_s: 1800.5 })] })
+    const createUrl = vi.fn<(blob: Blob) => string>().mockReturnValue('blob:selected-sessions')
+    vi.stubGlobal('URL', class extends URL {
+      static createObjectURL = createUrl
+      static revokeObjectURL = vi.fn()
+    })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    renderPage()
+    await screen.findByTestId('sessions-map')
+    const table = within(screen.getByRole('region', { name: 'Charging sessions table' }))
+    fireEvent.click(table.getByRole('checkbox', { name: /Fremont Supercharger/ }))
+    fireEvent.click(table.getByRole('button', { name: 'Export CSV' }))
+    expect(createUrl).toHaveBeenCalledOnce()
+    const blob = createUrl.mock.calls[0][0]
+    const csv = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(blob)
+    })
+    expect(csv).toContain('energy_wh,peak_power_kw,duration_seconds,cost,currency,per_kwh_rate')
+    expect(csv).toContain('"20000","120","1800.5","-5","EUR","0.25"')
+    expect(downloadCSV).not.toHaveBeenCalled()
+  })
+
+  it('uses source EUR for aggregates and refund labels without changing lifetime scope', async () => {
+    install({
+      sessions: [
+        makeSession({ currency_code: 'EUR', total_cost: 5, idle_fee: 2 }),
+        makeSession({ id: 2, session_id: 2, currency_code: 'EUR', total_cost: -8 }),
+      ],
+      summary: { ...defaultSummary, total_cost: -3 },
+    })
+    const { container } = renderPage()
+    await screen.findByTestId('sessions-map')
+    expect(within(screen.getByTestId('charging-operational-brief')).getByText('-€3.00')).toBeInTheDocument()
+    const lifetime = container.querySelector('#tesla-fleet-charging-summary')
+    if (!lifetime) throw new Error('Missing lifetime summary')
+    expect(within(lifetime).getByText('-€3.00')).toBeInTheDocument()
+    expect(within(lifetime).getByText('42')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Fremont Supercharger' })).toHaveTextContent('-€3.00')
+    expect(screen.getByRole('progressbar', { name: 'Fremont Supercharger' })).not.toHaveAttribute('aria-valuenow')
+    expect(screen.getByText(/€2.00 in idle or congestion fees/)).toBeInTheDocument()
+    expect(screen.queryByText('$99.50')).toBeNull()
+    expect(screen.getByText('Monthly charging cost')).toBeInTheDocument()
+  })
+
+  it.each(['USD', null, '', 'XXX'])('qualifies EUR plus %s instead of inventing a common currency', async currency_code => {
+    install({
+      sessions: [
+        makeSession({ currency_code: 'EUR', total_cost: 5, site_location_name: 'Alpha EUR' }),
+        makeSession({ id: 2, session_id: 2, currency_code, total_cost: -8, site_location_name: 'Beta other' }),
+      ],
+    })
+    const { container } = renderPage()
+    await screen.findByTestId('sessions-map')
+    const brief = screen.getByTestId('charging-operational-brief')
+    assertOperationalMetricUnavailable(brief, 'Total cost')
+    expect(screen.getAllByText(/Mixed or unknown currency; monetary totals/).length).toBeGreaterThan(0)
+    for (const site of ['Alpha EUR', 'Beta other']) {
+      expect(screen.getByRole('progressbar', { name: site })).not.toHaveAttribute('aria-valuenow')
+    }
+    const lifetime = container.querySelector('#tesla-fleet-charging-summary')
+    if (!lifetime) throw new Error('Missing lifetime summary')
+    expect(within(lifetime).queryByText('$99.50')).toBeNull()
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:2')
+    expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument()
+  })
+
+  it('does not use a single-currency date window to denominate a mixed lifetime summary', async () => {
+    install({
+      sessions: defaultSessions.map((session, index) => ({
+        ...session, currency_code: index === 1 ? 'EUR' : 'USD',
+      })),
+    })
+    const { container } = renderPage(['/tesla-charging-sessions?from=2025-02-01&to=2025-02-28'])
+    await screen.findByText('123.00 kWh')
+    expect(within(screen.getByTestId('charging-operational-brief')).getByText('€7.00')).toBeInTheDocument()
+    const lifetime = container.querySelector('#tesla-fleet-charging-summary')
+    if (!lifetime) throw new Error('Missing lifetime summary')
+    expect(within(lifetime).getByText('42')).toBeInTheDocument()
+    expect(within(lifetime).queryByText('$99.50')).toBeNull()
+    expect(within(lifetime).queryByText('€99.50')).toBeNull()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:1')
+  })
+
+  it('retains lifetime metrics, maps, operational evidence and the sessions table after a background refresh fails', async () => {
+    const { client } = renderPage()
+    expect(await screen.findByText('123.00 kWh')).toBeInTheDocument()
+    expect(await screen.findByTestId('sessions-map')).toHaveTextContent('map:3')
+    install({ sessionsError: true })
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['tesla-charging-sessions'] })
+    })
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
+    expect(screen.getByText('250.00 kW')).toBeInTheDocument()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
+    expect(screen.getByTestId('charging-operational-brief')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(screen.getByTestId('charging-operational-brief'), 'Data may be stale')
+    expect(within(screen.getByTestId('charging-operational-brief')).queryByText('Source measurements available')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument()
+    expect(screen.queryAllByText("Can't reach server")).toHaveLength(0)
+    install()
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull())
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
+  })
+  it('keeps unknown energy and billing distinct from measured zero without losing sessions or map points', async () => {
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/tesla/charging/sessions')) {
+        return Promise.resolve({
+          sessions: [{ ...makeSession(), total_energy_added_wh: null, total_cost: null }],
+          summary: emptySummary,
+        })
+      }
+      return Promise.resolve([])
+    })
+    renderPage()
+    expect(await screen.findByTestId('sessions-map')).toHaveTextContent('map:1')
+    const brief = screen.getByTestId('charging-operational-brief')
+    for (const label of ['Total energy', 'Total cost']) {
+      assertOperationalMetricUnavailable(brief, label)
+    }
+    expect(screen.getByRole('progressbar', { name: 'SUPERCHARGER' })).not.toHaveAttribute('aria-valuenow')
+    expect(screen.getByRole('progressbar', { name: 'Fremont Supercharger' })).not.toHaveAttribute('aria-valuenow')
+    expect(screen.getByText(/No cost data yet/)).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Charging sessions table' })).toHaveTextContent('Charging sessions')
+  })
+
+  it('preserves measured zero energy and cost and excludes negative durations from the operating average', async () => {
+    install({ sessions: [makeSession({ total_energy_added_wh: 0, total_cost: 0, charge_duration_s: -60 })] })
+    renderPage()
+    await screen.findByTestId('sessions-map')
+    const brief = screen.getByTestId('charging-operational-brief')
+    expect(within(brief).getByText('0.00 kWh')).toBeInTheDocument()
+    expect(within(brief).getByText('$0.00')).toBeInTheDocument()
+    assertOperationalMetricUnavailable(brief, 'Average duration')
+    expect(screen.getByRole('progressbar', { name: 'SUPERCHARGER' })).toHaveAttribute('aria-valuenow', '0')
+    expect(screen.getByRole('progressbar', { name: 'Fremont Supercharger' })).toHaveAttribute('aria-valuenow', '0')
+  })
+
+  it('retains evidence and disables Tesla import while an offline refresh is paused', async () => {
+    const { client } = renderPage()
+    await screen.findByText('123.00 kWh')
+    await act(async () => {
+      onlineManager.setOnline(false)
+      void client.invalidateQueries({ queryKey: ['tesla-charging-sessions'] })
+    })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled())
+    assertOperationalBriefDisclosure(screen.getByTestId('charging-operational-brief'), 'Data may be stale')
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
+    expect(screen.queryByText('No sessions in this analysis window')).toBeNull()
+    expect(screen.queryAllByText("Can't reach server")).toHaveLength(0)
+  })
+
+  it('uses the shared custom window to filter loaded evidence while keeping lifetime metrics independent', async () => {
+    renderPage(['/tesla-charging-sessions?from=2025-02-01&to=2025-02-28'])
+    await screen.findByText('123.00 kWh')
+    const brief = screen.getByTestId('charging-operational-brief')
+    expect(within(brief).getByText('1')).toBeInTheDocument()
+    expect(within(brief).getByText('30.00 kWh')).toBeInTheDocument()
+    expect(within(brief).getByText('$7.00')).toBeInTheDocument()
+    expect(screen.getByText('42')).toBeInTheDocument()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:1')
+    expect(screen.queryByText('DESTINATION')).toBeNull()
+  })
+  it('updates billing precision and locale while mounted without changing canonical amounts', async () => {
+    // jsdom has no layout; expose a viewport so the real virtualizer renders rows.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(1024)
+    const session = makeSession({
+      site_location_name: 'Precision billing fixture',
+      total_cost: 1234.5678,
+      per_kwh_rate: 0.12345,
+      currency_code: 'EUR',
+      charge_duration_s: 3_600_060.5,
+    })
+    install({ sessions: [session] })
+    renderPage()
+    const table = await screen.findByRole('region', { name: 'Charging sessions table' })
+    await waitFor(() => expect(table.textContent).toContain('€1,234.57'))
+    expect(within(table).getByText('1,000h 1m')).toBeInTheDocument()
+    fireEvent.click(within(table).getByRole('button', { name: /(?:reorder|show).*hide columns/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Rate/kWh' }))
+    fireEvent.click(within(table).getByRole('button', { name: /(?:reorder|show).*hide columns/i }))
+    expect(within(table).getByText('€0.12')).toBeInTheDocument()
+    fireEvent.click(within(table).getByRole('button', { name: 'Cost filter' }))
+    expect(screen.getByRole('checkbox', { name: '€1,234.57' })).toBeChecked()
+
+    act(() => setGlobalPrecision(4))
+    expect(within(table).getByText('€1,234.5678')).toBeInTheDocument()
+    expect(within(table).getByText('€0.1235')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: '€1,234.5678' })).toBeChecked()
+    act(() => setGlobalLocale('de-DE'))
+    expect(within(table).getByText('1.000h 1m')).toBeInTheDocument()
+    expect(within(table).getByText('1.234,5678 €')).toBeInTheDocument()
+    expect(within(table).getByText('0,1235 €')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: '1.234,5678\u00a0€' })).toBeChecked()
+    expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBe(table)
+    expect(session.total_cost).toBe(1234.5678)
+    expect(session.per_kwh_rate).toBe(0.12345)
+    expect(session.total_energy_added_wh).toBe(20000)
+  })
   it('renders the full dashboard once sessions + summary load', async () => {
     renderPage()
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Fleet Charging Sessions' }),
+      await screen.findByRole('heading', { level: 1, name: 'Fleet charging sessions' }),
     ).toBeInTheDocument()
 
     const brief = screen.getByTestId('charging-operational-brief')
@@ -337,24 +751,24 @@ describe('TeslaChargingSessionsPage', () => {
     // KPI band derives from the SERVER summary (not the filtered sessions).
     expect(await screen.findByText('42')).toBeInTheDocument()
     expect(within(brief).getByText('3')).toBeInTheDocument()
-    expect(within(brief).getByText('60.0 kWh')).toBeInTheDocument()
+    expect(within(brief).getByText('60.00 kWh')).toBeInTheDocument()
     expect(within(brief).getByText('$15.00')).toBeInTheDocument()
     expect(within(brief).getByText('1h 10m')).toBeInTheDocument()
-    expect(screen.getByText('123.0 kWh')).toBeInTheDocument()
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
     expect(screen.getByText('$99.50')).toBeInTheDocument()
-    expect(screen.getByText('$0.234')).toBeInTheDocument()
-    expect(screen.getByText('250')).toBeInTheDocument()
-    expect(screen.getAllByText('Total Sessions').length).toBeGreaterThan(1)
-    expect(screen.getByText('Peak Power')).toBeInTheDocument()
+    expect(screen.getByText('$0.23')).toBeInTheDocument()
+    expect(screen.getByText('250.00 kW')).toBeInTheDocument()
+    expect(screen.getAllByText('Total sessions').length).toBeGreaterThan(1)
+    expect(screen.getByText('Peak power')).toBeInTheDocument()
 
     // Every section panel is present — nothing stubbed out.
-    expect(screen.getByText('Monthly Charging Cost')).toBeInTheDocument()
-    expect(screen.getByText('Energy by Charger Type')).toBeInTheDocument()
-    expect(screen.getByText('Session Locations')).toBeInTheDocument()
-    expect(screen.getByText('Top Locations by Cost')).toBeInTheDocument()
-    expect(screen.getByText('Charging Sessions')).toBeInTheDocument()
+    expect(screen.getByText('Monthly charging cost')).toBeInTheDocument()
+    expect(screen.getByText('Energy by charger type')).toBeInTheDocument()
+    expect(screen.getByText('Session locations')).toBeInTheDocument()
+    expect(screen.getByText('Top locations by cost')).toBeInTheDocument()
+    expect(screen.getByText('Charging sessions')).toBeInTheDocument()
 
-    // Charger-type breakdown resolves both families (labels are uppercased).
+    // Charger-type breakdown preserves the reported labels.
     expect(screen.getAllByText('SUPERCHARGER').length).toBeGreaterThan(0)
     expect(screen.getAllByText('DESTINATION').length).toBeGreaterThan(0)
 
@@ -370,17 +784,26 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.queryByText(/No fleet charging sessions yet/)).toBeNull()
   })
 
+  it('preserves mixed-case charger labels in the breakdown', async () => {
+    install({ sessions: [makeSession({ charger_type: 'DC fast / CCS' })] })
+    renderPage()
+
+    const bar = await screen.findByRole('progressbar', { name: 'DC fast / CCS' })
+    expect(within(bar).getByText('DC fast / CCS')).toBeInTheDocument()
+    expect(screen.queryByRole('progressbar', { name: 'DC FAST / CCS' })).not.toBeInTheDocument()
+  })
+
   it('shows loading affordances while the sessions query is in flight', async () => {
     install({ sessionsPending: true })
     renderPage()
 
-    expect(
-      await screen.findByRole('status', { name: 'Loading monthly charging costs…' }),
-    ).toHaveAttribute('aria-busy', 'true')
+    await waitFor(() => expect(
+      screen.getByRole('figure', { name: 'Monthly charging cost' }),
+    ).toHaveAttribute('aria-busy', 'true'))
     expect(screen.getByTestId('table-skeleton')).toBeInTheDocument()
 
     // KPI values are withheld — never a half-populated dashboard.
-    expect(screen.queryByText('123.0 kWh')).toBeNull()
+    expect(screen.queryByText('123.00 kWh')).toBeNull()
     expect(screen.queryByText('$99.50')).toBeNull()
   })
 
@@ -388,11 +811,22 @@ describe('TeslaChargingSessionsPage', () => {
     install({ sessionsError: true })
     renderPage()
 
-    expect(await screen.findByText("Can't reach server")).toBeInTheDocument()
+    expect((await screen.findAllByText("Can't reach server")).length).toBeGreaterThan(0)
 
-    // No stale/fabricated KPI values leak through the error branch.
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
-    expect(screen.queryByText('123.0 kWh')).toBeNull()
+    // No stale/fabricated KPI values leak through the error branch: every
+    // metric is omitted with a counted drawer explanation, never a placeholder.
+    const brief = screen.getByTestId('charging-operational-brief')
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument()
+    for (const label of ['Total sessions', 'Total energy', 'Total cost', 'Average duration']) {
+      assertOperationalMetricUnavailable(brief, label)
+    }
+    const lifetime = document.getElementById('tesla-fleet-charging-summary')
+    if (!lifetime) throw new Error('Missing lifetime summary')
+    expect(within(lifetime).getByText('No metric values are available yet.')).toBeInTheDocument()
+    for (const label of ['Total sessions', 'Total energy', 'Total cost', 'Avg cost/kWh', 'Peak power']) {
+      assertOperationalMetricUnavailable(lifetime, label)
+    }
+    expect(screen.queryByText('123.00 kWh')).toBeNull()
   })
 
   it('renders honest per-section empty states when there is no data', async () => {
@@ -407,11 +841,47 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.getByText('No location data available yet.')).toBeInTheDocument()
     expect(screen.getByText('No location breakdown yet.')).toBeInTheDocument()
 
-    // KPI band still renders, folded to honest zero / em-dash placeholders.
+    // KPI band still renders: measured zero stays numeric, unknown readings
+    // are omitted with a counted drawer explanation.
     expect(screen.getAllByText('0').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+    const brief = screen.getByTestId('charging-operational-brief')
+    for (const label of ['Total energy', 'Total cost', 'Average duration']) {
+      assertOperationalMetricUnavailable(brief, label)
+    }
     expect(screen.getByText('No sessions in this analysis window')).toBeInTheDocument()
-    expect(screen.queryByText('123.0 kWh')).toBeNull()
+    expect(screen.queryByText('123.00 kWh')).toBeNull()
+    expect(screen.queryByText('No fleet charging sessions match this analysis window.')).toBeNull()
+    expect(screen.getByText(/Scope: Model 3 Test.*View settings/)).toBeInTheDocument()
+  })
+
+  it('distinguishes a filtered no-match from an empty source while preserving section shells', async () => {
+    renderPage(['/tesla-charging-sessions?from=2024-01-01&to=2024-01-31'])
+
+    const history = screen.getByRole('region', { name: 'Charging sessions table' })
+    expect(await within(history).findByText('No fleet charging sessions match this analysis window.')).toBeInTheDocument()
+    expect(within(history).getByText(/Scope: Model 3 Test.*2024-01-01 to 2024-01-31.*widen or clear.*View settings/)).toBeInTheDocument()
+    expect(screen.getAllByText('No fleet charging sessions match this analysis window.')).toHaveLength(5)
+    expect(screen.queryByText(/No fleet charging sessions yet/)).toBeNull()
+    expect(screen.queryByText(/No cost data yet/)).toBeNull()
+    expect(screen.getByRole('region', { name: 'Cost analysis' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Session locations' })).toBeInTheDocument()
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
+  })
+
+  it('does not claim no matching or empty records when the scoped source is unavailable', async () => {
+    install({ sessionsError: true })
+    renderPage(['/tesla-charging-sessions?from=2024-01-01&to=2024-01-31'])
+
+    const history = screen.getByRole('region', { name: 'Charging sessions table' })
+    // The table section now surfaces the shared query-error card (not the
+    // empty-state copy) when the scoped source fails with nothing retained.
+    expect(await within(history).findByText(/Can't reach server/)).toBeInTheDocument()
+    expect(within(history).getByRole('button', { name: /retry/i })).toBeInTheDocument()
+    expect(within(history).queryByText(/Scope:/)).toBeNull()
+    expect(screen.queryByText('No fleet charging sessions match this analysis window.')).toBeNull()
+    expect(screen.queryByText(/No fleet charging sessions yet/)).toBeNull()
+    expect(screen.getByRole('region', { name: 'Cost analysis' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Session locations' })).toBeInTheDocument()
   })
 
   it('surfaces fee exposure and partial cost coverage as attention items', async () => {
@@ -476,10 +946,12 @@ describe('TeslaChargingSessionsPage', () => {
   })
 
   it('exposes labelled landmark regions and an accessible vehicle filter', async () => {
-    renderPage()
+    const { container } = renderPage()
     await screen.findByText('42')
 
-    expect(screen.getByRole('region', { name: 'Summary metrics' })).toBeInTheDocument()
+    const summary = container.querySelector('#tesla-fleet-charging-summary')
+    if (!summary) throw new Error('Missing Tesla lifetime charging summary container')
+    expect(within(summary).getByRole('region', { name: 'Summary metrics' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Cost analysis' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Session locations' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument()

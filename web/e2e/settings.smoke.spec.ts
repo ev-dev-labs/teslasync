@@ -27,7 +27,7 @@ for (const { width, theme, scale } of [320, 390, 768, 1024, 1280, 1440, 1920, 25
     await expect(page.locator('#reset')).toBeHidden()
     const actionCard = page.locator('[data-tour="settings-tour"]')
     const description = actionCard.locator('p')
-    const action = actionCard.getByRole('button', { name: /Open Tour Launcher/ })
+    const action = actionCard.getByRole('button', { name: 'Show tours', exact: true })
     const descriptionBox = await description.boundingBox()
     const actionBox = await action.boundingBox()
     expect(descriptionBox).not.toBeNull()

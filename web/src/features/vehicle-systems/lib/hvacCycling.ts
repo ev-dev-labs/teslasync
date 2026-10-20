@@ -4,7 +4,10 @@
  * Rows are classified exactly once, timestamped unknown states remain in the
  * timeline as continuity barriers, and only adjacent intervals at or below the
  * configured gap ceiling contribute observed duration. Durations stay in SI
- * seconds; presentation code owns all display-unit conversion.
+ * seconds; presentation code owns all display-unit conversion. Hourly support
+ * and transitions share the explicit analytical zone (UTC unless supplied).
+ * The page has no authoritative vehicle zone; it uses and discloses UTC rather
+ * than guessing from browser or vehicle location.
  */
 
 import { resolveHvacActive } from '@/lib/climateState';
@@ -166,6 +169,8 @@ export interface HvacAccountingIdentities {
 }
 
 export interface HvacCyclingSummary {
+  /** One explicit zone for hourly duration, transitions, and timestamp labels. */
+  timeZone: string;
   rows: HvacRowAccounting;
   signals: HvacSignalAvailability;
   coverage: HvacCoverage;
@@ -203,6 +208,8 @@ export interface HvacCyclingSummary {
 }
 
 export interface HvacCyclingOptions {
+  /** Defaults to UTC, never an inferred browser or vehicle timezone. */
+  timeZone?: string;
   maxGapS?: number;
   shortCycleThresholdS?: number;
   runDisplayLimit?: number;
@@ -363,20 +370,25 @@ function splitIntervalByHour(
   endMs: number,
   on: boolean,
   profile: HvacHourlyProfile[],
+  clock: Intl.DateTimeFormat,
 ): void {
   let cursor = startMs;
   while (cursor < endMs) {
-    const boundary = new Date(cursor);
-    boundary.setMinutes(0, 0, 0);
-    boundary.setHours(boundary.getHours() + 1);
-    const next = Math.min(endMs, Math.max(cursor + 1, boundary.getTime()));
+    // Walk real minute boundaries, not wall-clock setters: repeated/skipped
+    // DST hours and half-hour offset changes must conserve elapsed seconds.
+    const next = Math.min(endMs, cursor + 60_000 - (cursor % 60_000 + 60_000) % 60_000);
     const durationS = (next - cursor) / 1000;
-    const bucket = profile[new Date(cursor).getHours()]!;
+    const bucket = profile[hourInZone(cursor, clock)]!;
     bucket.observedS += durationS;
     if (on) bucket.onS += durationS;
     else bucket.offS += durationS;
     cursor = next;
   }
+
+}
+
+function hourInZone(ms: number, clock: Intl.DateTimeFormat): number {
+  return Number(clock.formatToParts(ms).find((part) => part.type === 'hour')!.value);
 }
 
 function boundaryFromDisposition(disposition: PairDisposition): HvacRunBoundary {
@@ -645,6 +657,12 @@ export function summarizeHvacCycling(
 ): HvacCyclingSummary {
   const source = Array.isArray(samples) ? samples : [];
   const optionValues = isRecord(options) ? options : {};
+  const clock = new Intl.DateTimeFormat('en-US', {
+    timeZone: options?.timeZone ?? 'UTC',
+    hour: '2-digit',
+    hourCycle: 'h23',
+  });
+  const timeZone = clock.resolvedOptions().timeZone;
   const maxGapS = positiveOption(
     optionValues.maxGapS,
     DEFAULT_HVAC_MAX_GAP_S,
@@ -681,7 +699,7 @@ export function summarizeHvacCycling(
     const current = timeline[pair.index]!;
     const next = timeline[pair.index + 1]!;
     if (current.on == null) continue;
-    splitIntervalByHour(pair.startMs, pair.endMs, current.on, hourlyProfile);
+    splitIntervalByHour(pair.startMs, pair.endMs, current.on, hourlyProfile, clock);
     if (current.on) totalOnObservedS += pair.durationS;
     else totalOffObservedS += pair.durationS;
 
@@ -691,7 +709,7 @@ export function summarizeHvacCycling(
       transitions.offToOff += 1;
     } else if (!current.on && next.on) {
       transitions.offToOn += 1;
-      hourlyProfile[new Date(next.ms).getHours()]!.onTransitions += 1;
+      hourlyProfile[hourInZone(next.ms, clock)]!.onTransitions += 1;
     } else if (current.on && !next.on) {
       transitions.onToOff += 1;
     } else {
@@ -790,6 +808,7 @@ export function summarizeHvacCycling(
     + intervals.nonpositiveIntervals;
 
   return {
+    timeZone,
     rows: rowAccounting,
     signals,
     coverage,

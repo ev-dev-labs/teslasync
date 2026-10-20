@@ -8,17 +8,16 @@
  *   • large counts are rendered with locale separators (proving `fmtInt`), and
  *     the storage cell renders a binary-unit byte string, collapsing a zero
  *     footprint to an em-dash (proving `formatBytes`' `zeroAsEmpty`);
- *   • the `isLoading` branch swaps the whole band for five skeleton
- *     placeholders and shows none of the metric labels, while keeping the same
+ *   • loading keeps the Brief and five metric labels with skeleton values and
+ *     no measured values, while keeping the same
  *     labelled landmark region so the summary never loses its accessible name;
  *   • design-language §8 "always visible": an empty account (real
  *     `deriveExportStats([])`) still renders the full five-card band with every
  *     count collapsed to `0` and the storage cell to `—`, never a blank panel;
- *   • null-safety: a malformed `stats` object missing its numeric aggregates
- *     degrades each count to `0` and the storage cell to `—` (proving the
- *     `fmtInt` / `formatBytes` guards) instead of rendering NaN or an empty cell;
- *   • a11y: the band is a labelled region and every lucide glyph is decorative
- *     and hidden from assistive tech.
+ *   • null-safety: missing aggregates stay unknown — omitted from the face
+ *     and counted as "N empty fields hidden" in the drawer — not fabricated
+ *     zero counts, NaN or empty cells;
+ *   • a11y: the band is a labelled region with no exposed decorative glyphs.
  *
  * react-i18next is mocked to echo the English fallback so labels are
  * deterministic. framer-motion is mocked to a passthrough because the
@@ -26,11 +25,21 @@
  * components; the mock keeps module load hermetic even though the band renders
  * no motion itself.
  */
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import { deriveExportStats, type ExportStats } from './exportStats';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import * as metricReference from '@/lib/metric-reference';
+
+const settings = vi.hoisted(() => ({
+  decimal_precision: 2, locale: 'en-US', unit_of_length: 'km',
+  unit_of_temp: 'C', unit_of_pressure: 'bar', currency_symbol: '$',
+}));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings, settingsUnavailable: false }),
+}));
 
 vi.mock('framer-motion', () => ({
   motion: new Proxy(
@@ -90,7 +99,19 @@ function renderBand(over: Partial<ExportStats> = {}, isLoading = false) {
 }
 
 /** All five card labels, in render order. */
-const LABELS = ['Total Exports', 'Ready', 'In Progress', 'Failed', 'Total Size'] as const;
+const LABELS = ['Total exports', 'Ready', 'In progress', 'Failed', 'Total size'] as const;
+
+beforeEach(() => {
+  settings.decimal_precision = 2;
+  settings.locale = 'en-US';
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
+});
 
 describe('ExportKpiBand', () => {
   it('renders every one of the five KPI cards with its label', () => {
@@ -120,26 +141,27 @@ describe('ExportKpiBand', () => {
   it('renders the storage footprint as a binary-unit byte string (formatBytes)', () => {
     renderBand({ totalBytes: 1536 });
 
-    expect(screen.getByText('1.5 KB')).toBeInTheDocument();
+    expect(screen.getByText('1.50 KB')).toBeInTheDocument();
   });
 
   it('collapses a zero storage footprint to an em-dash (formatBytes zeroAsEmpty)', () => {
     renderBand({ totalBytes: 0 });
 
     // The four counts still render; only the storage cell degrades to "—".
-    expect(screen.getByText('Total Size')).toBeInTheDocument();
+    expect(screen.getByText('Total size')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
-  it('swaps the band for five skeleton placeholders while loading and shows no metric labels', () => {
+  it('retains the Brief and five labels with busy skeleton values while loading, not fabricated measurements', () => {
     const { container } = renderBand({}, true);
 
-    // None of the metric cards are mounted during the loading branch.
     for (const label of LABELS) {
-      expect(screen.queryByText(label)).not.toBeInTheDocument();
+      expect(screen.getByText(label)).toBeInTheDocument();
     }
-    // Exactly five skeleton placeholders stand in for the five cards.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-metric] [aria-hidden="true"][class*="--surface-3"]')).toHaveLength(5);
   });
 
   it('keeps the labelled summary region present in both the loading and loaded states', () => {
@@ -168,25 +190,110 @@ describe('ExportKpiBand', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
-  it('is null-safe: coerces a malformed stats object to zero / em-dash rather than NaN or a blank cell', () => {
-    // A stale/partial cached shape with no numeric fields. The formatter guards
-    // (fmtInt → safeNumber, formatBytes → nullish check) must keep every value
-    // cell populated.
+  it('is null-safe: keeps missing stats unknown rather than fabricating zero or rendering NaN', () => {
     render(<ExportKpiBand stats={{} as ExportStats} isLoading={false} />);
 
     for (const label of LABELS) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
-    expect(screen.getAllByText('0')).toHaveLength(4);
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    // Face-value disclosure: unknown values are omitted from the face (no
+    // em-dash placeholders) and counted in the Review-details drawer instead.
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
     expect(screen.queryByText('NaN')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Export summary details' });
+    expect(within(drawer).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('hides its decorative lucide icons from assistive technology (a11y)', () => {
+  it('does not expose decorative glyphs as accessible images (a11y)', () => {
     const { container } = renderBand();
 
-    // One decorative glyph per card → at least five aria-hidden icons.
-    const hidden = container.querySelectorAll('[aria-hidden="true"]');
-    expect(hidden.length).toBeGreaterThanOrEqual(5);
+    expect(screen.queryAllByRole('img')).toHaveLength(0);
+    for (const icon of container.querySelectorAll('svg')) {
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
+  it('preserves raw numeric bytes and counts through the real bridge and distinguishes measured zero from missing', () => {
+    const formatSpy = vi.spyOn(metricReference, 'formatMetric');
+    const view = render(<ExportKpiBand stats={deriveExportStats([])} isLoading={false} />);
+    const storage = view.container.querySelector('[data-operational-metric="storage"]');
+    expect(storage).toHaveAttribute('data-value-state', 'value');
+    expect(storage?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(view.container.querySelector('[data-operational-metric="total"]')).toHaveAttribute('data-value-state', 'value');
+    expect(screen.queryByText('No measurement supplied')).not.toBeInTheDocument();
+    expect(formatSpy).toHaveBeenCalledWith('bytes', 0, expect.any(Object), undefined,
+      expect.objectContaining({ formatter: expect.any(Function) }));
+    expect(formatSpy).toHaveBeenCalledWith('count', 0, expect.any(Object), undefined, undefined);
+
+    view.rerender(<ExportKpiBand stats={deriveExportStats([])} isLoading={false} hasData={false} />);
+    // Face-value disclosure: the five missing metrics are omitted from the
+    // face and counted in the Review-details drawer instead.
+    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const missingDrawer = view.getByRole('dialog', { name: 'Export summary details' });
+    expect(within(missingDrawer).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(missingDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(formatSpy).toHaveBeenCalledWith('bytes', null, expect.any(Object), undefined,
+      expect.objectContaining({ formatter: expect.any(Function) }));
+    formatSpy.mockRestore();
+  });
+
+  it('rejects invalid counts and bytes before the specialist formatter runs', () => {
+    const { container } = renderBand({ total: 1.5, ready: -1, totalBytes: Number.NaN });
+    // Face-value disclosure: invalid metrics are omitted from the face while
+    // the valid ones keep their values; the drawer counts the three empties.
+    expect(container.querySelector('[data-operational-metric="total"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="ready"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="storage"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="in-progress"]')).toHaveAttribute('data-value-state', 'value');
+    expect(container.querySelector('[data-operational-metric="failed"]')).toHaveAttribute('data-value-state', 'value');
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.queryByText('NaN')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Export summary details' });
+    expect(within(drawer).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps binary storage formatting and saved locale/precision without treating numeric bytes as text', () => {
+    settings.decimal_precision = 3;
+    settings.locale = 'de-DE';
+    setGlobalPrecision(3);
+    setGlobalLocale('de-DE');
+    const { container } = renderBand({ total: 12345, totalBytes: 1536 });
+    expect(screen.getByText('12.345')).toBeInTheDocument();
+    expect(screen.getByText('1,500 KB')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="storage"]')).toHaveAttribute('data-value-state', 'value');
+  });
+
+  it('opens the real Review details drawer with complete captions and source limitations, then restores focus on Escape', async () => {
+    renderBand();
+    const trigger = screen.getByRole('button', { name: 'Review details' });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const drawer = await screen.findByRole('dialog', { name: 'Export summary details' });
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
+    expect(within(drawer).getByText('Queued and processing jobs combined; this is not a completion estimate.')).toBeInTheDocument();
+    expect(within(drawer).getByText('Sum of known positive finite file sizes in bytes across all returned jobs; missing or invalid sizes contribute nothing.')).toBeInTheDocument();
+    expect(within(drawer).getByText('Binary byte units use saved precision and locale. A zero footprint displays as —, not as an unknown source.')).toBeInTheDocument();
+    expect(within(drawer).getByText(/Derived from the export\/jobs response snapshot; list coverage is not an all-time or date-range guarantee\./)).toBeInTheDocument();
+    const drawerHeader = drawer.querySelector('[data-drawer-header]');
+    if (!(drawerHeader instanceof HTMLElement)) throw new Error('Export summary drawer header is missing');
+    expect(within(drawerHeader).getByText('Loaded jobs before table filters and pagination; no date window is applied.')).toBeInTheDocument();
+    expect(within(drawerHeader).getByText(/Successful load time is unknown\./)).toBeInTheDocument();
+    expect(within(drawer).getByText('1.50 KB')).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 });

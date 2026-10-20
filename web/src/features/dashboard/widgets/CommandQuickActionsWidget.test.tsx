@@ -20,7 +20,7 @@
  *   - `react-i18next` is stubbed to resolve the developer fallback string so
  *     assertions read the real English copy (and command aria-labels).
  *   - The global test-setup already mocks `useSettings` and `useTimezone`,
- *     which the transitive <DataFreshness> header (rendered by <WidgetShell>)
+ *     which the transitive <FreshnessDot> header (rendered by <WidgetShell>)
  *     depends on.
  *   - Renders are wrapped in <MemoryRouter> for parity with the sibling widget
  *     tests (the shell's error branch renders <QueryError>, which uses Router).
@@ -30,12 +30,12 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
 // jsdom lacks matchMedia; framer-motion (read transitively by
-// useMotionPreference inside <DataFreshness>) touches it on first paint.
+// useMotionPreference inside <FreshnessDot>) touches it on first paint.
 // Install a no-op before any import runs.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
@@ -85,6 +85,7 @@ const SIZE_MEDIUM: WidgetSize = { cols: 2, rows: 2 };
 const SIZE_WIDE: WidgetSize = { cols: 4, rows: 3 };
 
 interface VehiclesOverrides {
+  error?: Error;
   data?: { id: number }[] | undefined;
   isLoading?: boolean;
   isFetching?: boolean;
@@ -157,23 +158,48 @@ describe('visibleCommandsForSize', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('CommandQuickActionsWidget', () => {
+  it('distinguishes failed vehicle discovery from an empty fleet and retries it', () => {
+    const refetch = vi.fn();
+    vehiclesMock.mockReturnValue(makeVehiclesQuery({ data: undefined, error: new Error('discovery failed'), isError: true, refetch }));
+    renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
+    expect(screen.queryByText('No vehicle selected')).toBeNull();
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains selected action identities after fleet refresh failure', () => {
+    const refetch = vi.fn();
+    vehiclesMock.mockReturnValue(makeVehiclesQuery({ isError: true, error: new Error('refresh failed'), refetch }));
+    renderWidget(<CommandQuickActionsWidget size={SIZE_WIDE} />);
+    expect(screen.getByRole('button', { name: 'Trunk' })).toBeInTheDocument();
+        expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Frunk' }));
+    expect(mutateMock).toHaveBeenCalledWith(
+      { vehicleId: 42, command: 'actuate_frunk' },
+      expect.objectContaining({ onSettled: expect.any(Function) }),
+    );
+  });
+
   it('renders the title and the 6-command medium set (Flash/Trunk are wide-only)', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
 
-    expect(screen.getByText('Quick Actions')).toBeInTheDocument();
+    expect(screen.getByText('Quick actions')).toBeInTheDocument();
     // Medium tiles carry a visible text label alongside the icon.
-    expect(screen.getByText('Climate On')).toBeInTheDocument();
+    expect(screen.getByText('Climate on')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Horn' })).toBeInTheDocument();
     // The 7th/8th commands only appear once the tile is wide.
-    expect(screen.queryByRole('button', { name: 'Flash' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Flash Lights' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trunk' })).not.toBeInTheDocument();
   });
 
   it('renders the full command set at wide size (adds Flash + Trunk)', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_WIDE} />);
 
-    expect(screen.getByRole('button', { name: 'Flash' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Flash Lights' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Trunk' })).toBeInTheDocument();
     for (const cmd of COMMANDS) {
       expect(screen.getByRole('button', { name: cmd.labelFallback })).toBeInTheDocument();
@@ -184,13 +210,13 @@ describe('CommandQuickActionsWidget', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_COMPACT} />);
 
     // 1×1 tile suppresses the title chrome.
-    expect(screen.queryByText('Quick Actions')).not.toBeInTheDocument();
+    expect(screen.queryByText('Quick actions')).not.toBeInTheDocument();
     // Tiles are still reachable/announced via aria-label...
     expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Climate Off' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Climate off' })).toBeInTheDocument();
     // ...but the visible text label is dropped (icon-only), and the 5th
     // command (Frunk) is not part of the compact set.
-    expect(screen.queryByText('Climate Off')).not.toBeInTheDocument();
+    expect(screen.queryByText('Climate off')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Frunk' })).not.toBeInTheDocument();
   });
 
@@ -260,7 +286,7 @@ describe('CommandQuickActionsWidget', () => {
     const { container } = renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
 
     // The shell renders its skeleton instead of flashing "No vehicle selected".
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('No vehicle selected')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Lock' })).not.toBeInTheDocument();
   });
@@ -275,7 +301,7 @@ describe('CommandQuickActionsWidget', () => {
     );
 
     // id is known up-front → no skeleton, the command grid is usable.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
   });
 

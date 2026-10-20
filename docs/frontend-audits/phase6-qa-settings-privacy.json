@@ -1,0 +1,1385 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-settings-privacy",
+  "phase": 6,
+  "attempt": 1,
+  "status": "SOURCE_QA_COMPLETE_NOT_NATIVE_ACCEPTED",
+  "route": "/account/privacy",
+  "actualStartedAt": "2026-10-14T01:54:55.5422617Z",
+  "reportWrittenAt": "2026-10-14T02:02:55.391832+00:00",
+  "returnDeadline": "2026-10-14T02:07:59.989Z",
+  "hardDeadline": "2026-10-14T02:12:59.989Z",
+  "authority": {
+    "queueFile": "migration-queue.md",
+    "queueLineAtRead": 68,
+    "queueItem": "phase6-qa-settings-privacy",
+    "dependency": "phase5-page-settings-privacy",
+    "acceptedSourceCommitHistorical": "2d5a0c971eac864294aee15b8650523a1cae4a4a",
+    "writable": [
+      "docs/frontend-audits/phase6-qa-settings-privacy.json",
+      "web/logs/phase6-qa-settings-privacy.log"
+    ],
+    "sourceDirectSupportsTests": "READONLY",
+    "queueStatusOrActorNotModified": true,
+    "noNewWorkerIdInvented": true,
+    "queueActorMappingAtFinalCheck": "086d5531-fc61-4a7b-860b-7f53b0c0f94f (actual queue mapping read; no lifecycle census invented)"
+  },
+  "documentsRead": {
+    "orchestrator": "docs/orchestrator-loop.md fully read via view_range1-EOF (actual file line count 296)",
+    "contract": "docs/frontend-design-contract.md main MDC architecture/trust/privacy/layout/a11y/mobile/evidence sections1-654; later appended section headings indexed for relevance (not unrelated implementation scopes)",
+    "mission": "docs/frontend-mission.md principles/architecture + sections14-16,19-25,30-33,43-45",
+    "inventory": "docs/frontend-inventory.md PrivacyPage route row + docs/frontend-audits/audit-page-173.json purpose/states/responsive/accessibility",
+    "handoff": "docs/session-handoff.md current recovery/lifecycle sections1-210; PrivacyPage/consent owner references indexed",
+    "queue": "migration-queue.md current phase and exact reserved scope/deadlines + exact accepted dependency/current privacy owners",
+    "instructions": [
+      ".github/copilot-instructions.md completion/integrity and relevant heading index",
+      ".github/instructions/react-frontend.instructions.md lines1-540",
+      "docs/I18N_GUIDELINES.md relevant localization rules"
+    ]
+  },
+  "scope": {
+    "primary": "web/src/features/settings/pages/PrivacyPage.tsx",
+    "hashPinnedFiles": 33,
+    "reviewedCoreSources": [
+      "web/src/features/settings/pages/PrivacyPage.tsx",
+      "web/src/features/settings/components/privacy/ConsentControlPanel.tsx",
+      "web/src/features/settings/components/privacy/RecentPagesPanel.tsx",
+      "web/src/features/settings/components/privacy/PrivacyGuaranteesPanel.tsx",
+      "web/src/features/settings/components/privacy/consentMeta.ts",
+      "web/src/features/settings/components/statstrip-privacy/PrivacyOperationalBrief.tsx",
+      "web/src/lib/cookieConsent.ts",
+      "web/src/lib/recentPages.ts"
+    ],
+    "supportReadLimits": "useSettings.ts and API DTO read only version-policy ranges; no unrelated feature/API/backend audits. Barrel-exported legacy PrivacyKpiCards and its tests pinned but not mounted by PrivacyPage; obsolete whole-grid loading/error behavior is not attributed to this route."
+  },
+  "summary": {
+    "confirmedSourceMechanisms": 5,
+    "confirmedRuntimeIssues": 0,
+    "conditionalNativeCandidates": 2,
+    "needs": 5,
+    "existingRootExtensions": 3,
+    "newNarrowAssignmentRequests": 2,
+    "affectedFilesPerMechanismCountsNotAddedAsExtraIssues": true,
+    "byRule": {
+      "unverified-persistence-success": 1,
+      "policy-insensitive-consent-copy": 1,
+      "mobile-target-declaration": 1,
+      "unguarded-storage-capability-read": 1,
+      "unknown-policy-as-failure": 1
+    },
+    "priority": "Persistence accuracy and unsafe storage acquisition first; qualify effective consent copy, then preserve unknown policy semantics and mobile caller sizing.",
+    "filesWithMostConfirmedIssues": [
+      {
+        "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+        "distinctMechanismsReferencingFile": 4
+      },
+      {
+        "file": "web/src/lib/cookieConsent.ts",
+        "distinctMechanismsReferencingFile": 3
+      },
+      {
+        "file": "web/src/features/settings/components/privacy/ConsentControlPanel.tsx",
+        "distinctMechanismsReferencingFile": 2
+      },
+      {
+        "file": "web/src/features/settings/components/statstrip-privacy/PrivacyOperationalBrief.tsx",
+        "distinctMechanismsReferencingFile": 2
+      },
+      {
+        "file": "web/src/lib/recentPages.ts",
+        "distinctMechanismsReferencingFile": 2
+      }
+    ]
+  },
+  "confirmedIssues": [
+    {
+      "id": "privacy-01",
+      "rule": "unverified-persistence-success",
+      "contract": [
+        "MDC-026",
+        "MDC-046"
+      ],
+      "severity": "high",
+      "confirmation": "SOURCE_CONFIRMED; no runtime reproduction",
+      "title": "Local mutation success is asserted even when browser storage did not change",
+      "evidence": [
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 97,
+          "source": "toast.success(tt('recentPages.cleared', 'Recent pages cleared'))"
+        },
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 102,
+          "source": "setConsentLocal('accepted')"
+        },
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 107,
+          "source": "setConsentLocal('declined')"
+        },
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 112,
+          "source": "setConsentLocal('unknown')"
+        },
+        {
+          "file": "web/src/lib/cookieConsent.ts",
+          "line": 95,
+          "source": "ls.setItem(CONSENT_STORAGE_KEY, state)"
+        },
+        {
+          "file": "web/src/lib/cookieConsent.ts",
+          "line": 91,
+          "source": "dispatchChange(state)"
+        },
+        {
+          "file": "web/src/lib/cookieConsent.ts",
+          "line": 116,
+          "source": "dispatchChange('unknown')"
+        },
+        {
+          "file": "web/src/lib/recentPages.ts",
+          "line": 238,
+          "source": "window.localStorage.removeItem(STORAGE_KEY)"
+        }
+      ],
+      "mechanism": "setConsent/clearConsent return void, swallow failed persistence and dispatch the requested state. The page optimistically writes that state and unconditionally toasts success. clearRecentPages swallows removeItem failure and notifies a reread, so unchanged nonzero history can accompany Recent pages cleared. A failed withdraw from stored accepted leaves getConsent()==accepted and required-policy reporting permission true even while the UI shows declined.",
+      "repro": {
+        "status": "NOTRUN; synthetic covering cases for a future assigned owner only",
+        "preconditions": "Synthetic stored accepted consent or one synthetic recent entry; injected Storage.setItem/removeItem failure, no real data",
+        "steps": [
+          "For consent: trace handleDeclineConsent through setConsent with a throwing setItem; compare dispatched/local declined against persisted accepted and isReportingAllowed(true).",
+          "For reset: trace clearConsent with throwing removeItem; compare unknown UI/success against retained accepted storage.",
+          "For recent clear: trace confirmed clear with throwing removeItem; subscriber rereads retained entries but page closes confirmation/toasts cleared."
+        ],
+        "expected": "Confirm success only on authoritative persistence outcome; preserve actual choice/history and disclose storage unavailable/failure."
+      },
+      "deduplication": {
+        "existingEvidence": "docs/frontend-audits/audit-page-173.json states.issues[2]",
+        "existingOwner": "integration / browser-storage helpers + PrivacyPage caller",
+        "queueOwner": "No exact active persistence repair row found; phase5-page-settings-privacy is completed source, not a new write claim",
+        "disposition": "Extend existing root; do not create separate accept/decline/reset/clear duplicates"
+      },
+      "fix": "Parent assigns storage result/evidence integration and caller feedback together; retain keys, subscriptions, local-only scope and reporting semantics."
+    },
+    {
+      "id": "privacy-02",
+      "rule": "policy-insensitive-consent-copy",
+      "contract": [
+        "MDC-025",
+        "MDC-026",
+        "MDC-046"
+      ],
+      "severity": "high",
+      "confirmation": "SOURCE_CONFIRMED; no outbound reporting or browser action",
+      "title": "Consent detail and reset promise do not reflect the deployment policy",
+      "evidence": [
+        {
+          "file": "web/src/features/settings/components/privacy/consentMeta.ts",
+          "line": 57,
+          "source": "detail: localize(t, 'consent.state.declined', 'Declined — only essential storage in use'),"
+        },
+        {
+          "file": "web/src/features/settings/components/privacy/consentMeta.ts",
+          "line": 65,
+          "source": "detail: localize(t, 'consent.state.unknown', 'Not decided — banner will appear on next visit'),"
+        },
+        {
+          "file": "web/src/lib/cookieConsent.ts",
+          "line": 164,
+          "source": "if (!requireCookieConsent) return true"
+        },
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 113,
+          "source": "toast.success(tt('consent.toast.reset', 'Consent reset — banner will reappear'))"
+        },
+        {
+          "file": "web/src/components/feedback/CookieConsentBanner.tsx",
+          "line": 99,
+          "source": "if (!requireConsent) return null"
+        },
+        {
+          "file": "web/src/features/settings/components/privacy/ConsentControlPanel.tsx",
+          "line": 42,
+          "source": "const cp = describeConsent(consent, t)"
+        },
+        {
+          "file": "web/src/features/settings/components/statstrip-privacy/PrivacyOperationalBrief.tsx",
+          "line": 23,
+          "source": "const cp = describeConsent(consent, t);"
+        }
+      ],
+      "mechanism": "describeConsent receives only stored choice, not policy. With require_cookie_consent=false, isReportingAllowed(false) remains true for declined, but both control and summary claim essential-only operation. With the same policy, the banner returns null for unknown; the reset toast and unknown detail still promise a banner. Policy unavailable is also not proof of effective reporting behavior.",
+      "repro": {
+        "status": "NOTRUN; deterministic source branch trace",
+        "preconditions": "Known optional deployment policy and synthetic declined/unknown local choice",
+        "steps": [
+          "Trace describeConsent(declined) against isReportingAllowed(false).",
+          "Trace a reset/unknown choice against CookieConsentBanner requireConsent=false early return."
+        ],
+        "expected": "Distinguish saved browser choice from effective policy; do not promise reporting withdrawal/banner activation when gate is off or unknown."
+      },
+      "deduplication": {
+        "existingEvidence": "docs/frontend-audits/audit-page-173.json states.issues[1]",
+        "existingOwner": "integration / consent presentation with known/unknown policy",
+        "disposition": "One root including both summary/control and reset/banner copy; no backend reporting-policy change"
+      },
+      "fix": "Supply policy-aware or policy-neutral copy through existing presentation, with precise parent-serialized canonical copy needs; preserve reporting behavior."
+    },
+    {
+      "id": "privacy-03",
+      "rule": "mobile-target-declaration",
+      "contract": [
+        "MDC-020",
+        "MDC-040",
+        "MDC-043"
+      ],
+      "severity": "medium",
+      "confirmation": "SOURCE_CONFIRMED sizing declarations only; native dimensions NOTRUN",
+      "title": "Five Privacy controls declare below-44px mobile heights without caller overrides",
+      "evidence": [
+        {
+          "file": "web/src/features/settings/components/privacy/ConsentControlPanel.tsx",
+          "line": 67,
+          "source": "size=\"sm\""
+        },
+        {
+          "file": "web/src/features/settings/components/privacy/ConsentControlPanel.tsx",
+          "line": 107,
+          "source": "onClick={onAccept}"
+        },
+        {
+          "file": "web/src/features/settings/components/privacy/ConsentControlPanel.tsx",
+          "line": 116,
+          "source": "onClick={onDecline}"
+        },
+        {
+          "file": "web/src/features/settings/components/privacy/ConsentControlPanel.tsx",
+          "line": 125,
+          "source": "onClick={onReset}"
+        },
+        {
+          "file": "web/src/features/settings/components/privacy/RecentPagesPanel.tsx",
+          "line": 69,
+          "source": "onClick={onClear}"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 36,
+          "source": "sm: 'h-9 px-3 text-sm',"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 37,
+          "source": "md: 'h-10 px-4 text-sm',"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 61,
+          "source": "({ variant = 'primary', size = 'md', loading, icon, wrapLabel = false, className, children, disabled, ...props }, ref) => {"
+        }
+      ],
+      "mechanism": "Consent retry uses sm h-9 (36px); three consent controls and recent clear use default md h-10 (40px). None supplies mobile min-h-11/wrapLabel. Their 8px gaps are not a documented exemption from the application 44px mobile contract. Initial-paused retry and retained warning retry already use min-h-11; shared ConfirmDialog footer also has it and is not included.",
+      "affectedControlCount": 5,
+      "repro": {
+        "status": "NOTRUN; inspect source declarations, not class-to-mounted acceptance",
+        "preconditions": "Under-md source branch, normal Tailwind spacing; policy failure exposes retry",
+        "steps": [
+          "Resolve these five caller props through Button sizes/defaults.",
+          "Future authorized native owner measures rectangles, five-point hit reach, wrapping and focus at mission widths; no browser action in this audit."
+        ],
+        "expected": "Use existing wrapping/minimum-target utilities below md while preserving >=md density and all controls."
+      },
+      "deduplication": {
+        "existingEvidence": "docs/frontend-audits/audit-page-173.json responsive.issues[0]; migration-queue.md phase5-page-settings-privacy notes mobile40px unaccepted",
+        "existingOwner": "Privacy page/direct-presentational supports; parent must assign explicit component scope",
+        "disposition": "One sizing root, not five new issues; existing status-bar mobile owners do not own these files"
+      },
+      "fix": "Caller-scoped existing min-h-11 with explicit desktop restoration and wrapLabel; no global Button resize."
+    },
+    {
+      "id": "privacy-04",
+      "rule": "unguarded-storage-capability-read",
+      "contract": [
+        "MDC-026",
+        "MDC-046"
+      ],
+      "severity": "high",
+      "confirmation": "SOURCE_CONFIRMED exception propagation; browser occurrence NOTRUN",
+      "title": "Throwing localStorage property access escapes the recent-pages recovery boundary",
+      "evidence": [
+        {
+          "file": "web/src/lib/recentPages.ts",
+          "line": 119,
+          "source": "function hasStorage(): boolean {"
+        },
+        {
+          "file": "web/src/lib/recentPages.ts",
+          "line": 122,
+          "source": "typeof window.localStorage !== 'undefined'"
+        },
+        {
+          "file": "web/src/lib/recentPages.ts",
+          "line": 139,
+          "source": "if (!hasStorage()) return []"
+        },
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 63,
+          "source": "const [count, setCount] = useState<number>(() => getRecentPages().length)"
+        },
+        {
+          "file": "web/src/lib/cookieConsent.ts",
+          "line": 45,
+          "source": "function safeLocalStorage(): Storage | null {"
+        }
+      ],
+      "mechanism": "typeof window.localStorage evaluates the property getter, which may throw SecurityError. hasStorage is not guarded, and load calls it before its getItem try/catch. PrivacyPage invokes getRecentPages during its state initializer, so this conditional capability failure throws before its independent sections render. cookieConsent guards the corresponding accessor, but that protection does not cover recentPages.",
+      "repro": {
+        "status": "NOTRUN; conditional storage-denial environment not exercised",
+        "preconditions": "Synthetic window.localStorage getter throws SecurityError",
+        "steps": [
+          "Source-trace getRecentPages -> load -> hasStorage; the thrown getter is outside load try.",
+          "Source-trace PrivacyPage count initializer; no local page fallback intercepts this exception."
+        ],
+        "expected": "Guard storage acquisition, preserve local sections and describe unavailable storage rather than an uncaught render failure."
+      },
+      "deduplication": {
+        "existingEvidence": "No exact matching mechanism in audit-page-173 states/issues or privacy queue rows",
+        "existingOwner": "none assigned for this new exception boundary; parent owns scope assignment",
+        "disposition": "New narrow shared recentPages + covering test need; not authorized to edit here"
+      },
+      "fix": "Assign recentPages capability acquisition repair with matching synthetic getter-failure coverage; preserve keys/LRU/privacy/subscriptions."
+    },
+    {
+      "id": "privacy-05",
+      "rule": "unknown-policy-as-failure",
+      "contract": [
+        "MDC-026"
+      ],
+      "severity": "medium",
+      "confirmation": "SOURCE_CONFIRMED success/missing-value mapping; no backend request",
+      "title": "Successful version response with omitted optional policy is labeled Failed to load",
+      "evidence": [
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 69,
+          "source": "const policyKnown = typeof versionQuery.data?.require_cookie_consent === 'boolean'"
+        },
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 177,
+          "source": "isError={policyState.fatalError != null || (policyState.status !== 'initial' && !policyKnown)}"
+        },
+        {
+          "file": "web/src/features/settings/components/statstrip-privacy/PrivacyOperationalBrief.tsx",
+          "line": 42,
+          "source": ": t('account.privacy.kpi.loadError', 'Failed to load privacy policy'),"
+        },
+        {
+          "file": "web/src/api/types.ts",
+          "line": 1882,
+          "source": "require_cookie_consent?: boolean"
+        },
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.test.tsx",
+          "line": 220,
+          "source": "it('does not infer Optional from a successful response with no policy flag', async () => {"
+        }
+      ],
+      "mechanism": "VersionInfo permits missing require_cookie_consent. A successful retained DTO without it yields policyKnown=false while deriveDataState remains ok/fatalError null. The caller nevertheless gives the consent panel isError=true and the policy metric missingReason becomes Failed to load privacy policy. Avoiding Optional is correct, but successful unknown metadata is not a failed fetch.",
+      "repro": {
+        "status": "NOTRUN; existing authored scenario read at PrivacyPage.test.tsx:220-228",
+        "preconditions": "Successful version DTO with only optional policy field omitted",
+        "steps": [
+          "Trace deriveDataState with a defined success payload and no error; result is ok.",
+          "Trace policyKnown false -> requireConsent null -> missingReason Failed to load privacy policy and panel isError true."
+        ],
+        "expected": "Preserve unknown/unavailable metadata without inventing a transport failure; retry may still be offered."
+      },
+      "deduplication": {
+        "existingEvidence": "audit-page-173 notes missing-policy preservation but does not list this false-failure mapping as a fix",
+        "existingOwner": "none exact; parent assigns privacy caller/brief semantics",
+        "disposition": "New narrow unknown-versus-failure presentation need; no optional DTO/API change"
+      },
+      "fix": "Keep boolean type guard and null metric; distinguish unknown policy reason from fatal transport error using existing states, preserving local actions."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "privacy-c01",
+      "kind": "NATIVE_ACCEPTANCE_NOTRUN",
+      "title": "Mounted responsiveness, contrast, focus, clipboard and announcement behavior",
+      "source": [
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 124,
+          "source": "copyLink"
+        },
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 191,
+          "source": "<ConfirmDialog"
+        },
+        {
+          "file": "web/src/features/settings/components/privacy/PrivacyGuaranteesPanel.tsx",
+          "line": 92,
+          "source": "<div className=\"grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3\">"
+        }
+      ],
+      "whyNotConfirmed": "Source grids/status roles/shared primitives do not prove actual overflow, long-label fit, dialog focus restoration, screen-reader timing, reduced motion, forced colors or composed contrast. No mounted captures or gestures allowed.",
+      "repro": "Future separately authorized privacy-safe native mission-width/mode/RTL/200%-text/keyboard matrix; neither run nor helper/native budget reset here."
+    },
+    {
+      "id": "privacy-c02",
+      "kind": "CONDITIONAL_PRODUCT_CONTRACT_REVIEW",
+      "title": "Clear-history confirmation can be deliberately silenced",
+      "source": [
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 193,
+          "source": "variant=\"warning\""
+        },
+        {
+          "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+          "line": 201,
+          "source": "silenceKey={CONFIRM_SILENCE_KEY}"
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 98,
+          "source": "silenceKey && variant !== 'danger' && !requireTypedConfirmation,"
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 117,
+          "source": "onConfirm();"
+        }
+      ],
+      "whyNotConfirmed": "Current behavior intentionally preserves a saved warning opt-out for browser-local recents; changing to danger would change existing preference/action semantics. Product decision needed on mandatory destructive confirmation; no unsafe bypass newly introduced by this read-only audit.",
+      "repro": "Future synthetic pre-silenced clear-recent-pages case, no real history erase; inspect auto-confirm vs intended warning opt-out."
+    }
+  ],
+  "needs": [
+    {
+      "findingId": "privacy-01",
+      "priority": "high",
+      "kind": "EXISTING_ROOT_EXTENSION",
+      "owner": "integration / browser-storage helpers + PrivacyPage caller",
+      "request": "Parent assigns storage result/evidence integration and caller feedback together; retain keys, subscriptions, local-only scope and reporting semantics.",
+      "authorizedHere": false
+    },
+    {
+      "findingId": "privacy-02",
+      "priority": "high",
+      "kind": "EXISTING_ROOT_EXTENSION",
+      "owner": "integration / consent presentation with known/unknown policy",
+      "request": "Supply policy-aware or policy-neutral copy through existing presentation, with precise parent-serialized canonical copy needs; preserve reporting behavior.",
+      "authorizedHere": false
+    },
+    {
+      "findingId": "privacy-03",
+      "priority": "medium",
+      "kind": "EXISTING_ROOT_EXTENSION",
+      "owner": "Privacy page/direct-presentational supports; parent must assign explicit component scope",
+      "request": "Caller-scoped existing min-h-11 with explicit desktop restoration and wrapLabel; no global Button resize.",
+      "authorizedHere": false
+    },
+    {
+      "findingId": "privacy-04",
+      "priority": "high",
+      "kind": "NEW_NARROW_ASSIGNMENT_REQUEST",
+      "owner": "none assigned for this new exception boundary; parent owns scope assignment",
+      "request": "Assign recentPages capability acquisition repair with matching synthetic getter-failure coverage; preserve keys/LRU/privacy/subscriptions.",
+      "authorizedHere": false
+    },
+    {
+      "findingId": "privacy-05",
+      "priority": "medium",
+      "kind": "NEW_NARROW_ASSIGNMENT_REQUEST",
+      "owner": "none exact; parent assigns privacy caller/brief semantics",
+      "request": "Keep boolean type guard and null metric; distinguish unknown policy reason from fatal transport error using existing states, preserving local actions.",
+      "authorizedHere": false
+    }
+  ],
+  "sectionsAndActions": {
+    "alwaysRendered": [
+      "OperationalBrief four metrics: recent count/max50, stored consent, boolean-or-null policy, This browser scope",
+      "RecentPagesPanel counter/empty hint/clear",
+      "ConsentControlPanel policy loading/error/boolean copy, textual stored-state pill, accept/withdraw/reset",
+      "PrivacyGuaranteesPanel local storage / no cross-device sync / user control"
+    ],
+    "clear": "Nonempty only; opens shared warning ConfirmDialog, localized cancel/confirm, saved clear-recent-pages silenceKey; no invocation here.",
+    "consent": "Browser-local helpers; accept disabled only for accepted, withdraw for declined, reset for unknown; unaffected by version loading/failure by design. No remote erase/export/auth/settings endpoint.",
+    "recovery": "One policy refetch callback; initial paused retry; fatal retry in brief/panel; retained warning retry; no local state mutation from policy refetch.",
+    "copy": "PageLayout copyLink delegates current URL to shared CopyLinkButton clipboard path; never invoked, no copied URL/personal data retained.",
+    "capability": "No real identity/RBAC/settings capability queried. Browser-local actions remain source-independent; failure-result and storage-access gaps recorded.",
+    "feedback": "Stored count role=status/aria-live; consent textual status; shared toast/ConfirmDialog declarations inspected, actual AT announcement timing NOTRUN."
+  },
+  "trustMatrix": {
+    "initial": "Local facts/actions/guarantees mounted; policy null/loading reason + policy text skeleton only.",
+    "empty": "Known count0 disables clear and shows next-step hint; unknown consent explicitly labeled.",
+    "fatal": "Only policy source gets QueryError/retry and unavailable text; PageLayout query prop does not gate children.",
+    "retained": "deriveDataState keeps payload; warning receives full state/retry/blocked flag; summary explicitly labels retained policy; old audit missing-refresh-retry mechanism is already addressed and not redispatched.",
+    "initialPaused": "No retained policy -> dedicated privacy-policy-paused status/retry; policy not inferred Optional and no invented offline/server failure.",
+    "retainedPaused": "Full-state warning has refresh-blocked metadata/policy-only retry; retained policy/local sections remain.",
+    "unknown": "Boolean guard and null metric preserved; missing optional successful flag incorrectly gets failure wording (privacy-05); local unavailable-storage outcomes not authoritative empty/success (privacy-01/04)."
+  },
+  "identityScopePreferencesI18n": {
+    "sourceScope": "Current browser localStorage recent-page LRU and consent; version query deployment-wide, cache key version. No vehicle/date picker, no common date-range fabrication.",
+    "identity": "No VIN/roster/name/token/private response or browser storage was accessed. Stable metric occurrenceIds, guarantee ids and confirmation silence key read only.",
+    "preferences": "No theme/font/density/units/consent/navigation/confirm-silence resets or rewrites. Counts use OperationalBrief/useOperationalMetrics. No physical measurements or SI conversion needed.",
+    "i18n": "UI fallback strings flow through t/tt; count uses count interpolation; canonical declined/unknown/reset copy was read, unchanged. Feature settings namespace falls back to translation per i18n/index.ts135. Real catalog-loading/RTL/plural rendering NOTRUN.",
+    "mobile": "Source controls stack below xl, guarantees1/2/3 base/sm/xl and wrap containers/min-w-0; five below44px declarations recorded, no actual dimensions claimed.",
+    "a11y": "Named controls/summary/about regions, localized action labels, decorative glyphs aria-hidden, shared button focus/motion/dialog owner declarations. No positive tabindex found in core route sources; native focus/contrast/forced colors unverified."
+  },
+  "standardRuleGrep": {
+    "tool": "inline Python re source grep, shell1865 exit0; raw output in matching log",
+    "coreCandidateMatches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string-candidate": 0,
+      "page-wrapper-candidate": 1,
+      "fetch-useeffect-candidate": 2
+    },
+    "interpretation": "These are actual bounded grep results, not a blanket repository zero-violation claim. PageLayout is the existing PageContainer adapter; the two useEffects subscribe browser-local stores, not fetch server data. Static CSS-variable Tailwind classes are allowed, not inline style objects. UI building blocks raw HTML/clipboard textarea fallback are expected exceptions. Version hook367 uses /system/version with signal, key version and standard staleTime.",
+    "backendRules": "NOT_APPLICABLE; no internal Go source in assignment"
+  },
+  "testEvidence": {
+    "status": "NOTRUN (user prohibits fresh tests/lint/build/global TSC and passing reruns)",
+    "authoredDeclarationCount": 113,
+    "declarationCountCaveat": "113 static it()/it.each() declarations across7 reviewed files; parameter expansion is not runner discovery. Page has17 declarations; no fresh test result inferred.",
+    "files": [
+      {
+        "file": "web/src/features/settings/pages/PrivacyPage.test.tsx",
+        "declarationCount": 17,
+        "status": "READ_ONLY_NOTRUN",
+        "declarations": [
+          {
+            "line": 142,
+            "declaration": "it('renders the KPI band, both control panels, and the guarantees band', async () => {"
+          },
+          {
+            "line": 183,
+            "declaration": "it('disables the clear button and shows the empty hint with no history', async () => {"
+          },
+          {
+            "line": 198,
+            "declaration": "it('shows all browser-local facts and controls while policy is loading, without inventing Optional', () => {"
+          },
+          {
+            "line": 220,
+            "declaration": "it('does not infer Optional from a successful response with no policy flag', async () => {"
+          },
+          {
+            "line": 231,
+            "declaration": "it('renders the policy KPI as Required when consent is enforced', async () => {"
+          },
+          {
+            "line": 243,
+            "declaration": "it('reflects a previously-accepted consent decision on mount', async () => {"
+          },
+          {
+            "line": 261,
+            "declaration": "it('confirms, wipes the list, drops the counter, and toasts', async () => {"
+          },
+          {
+            "line": 281,
+            "declaration": "it('does not clear when the confirmation is cancelled', async () => {"
+          },
+          {
+            "line": 298,
+            "declaration": "it('accepting consent persists the decision, disables accept, and toasts', async () => {"
+          },
+          {
+            "line": 317,
+            "declaration": "it('declining consent persists the decision and toasts', async () => {"
+          },
+          {
+            "line": 335,
+            "declaration": "it('resetting consent returns to the undecided state and toasts', async () => {"
+          },
+          {
+            "line": 357,
+            "declaration": "it('surfaces a retryable error and keeps the consent controls usable, then recovers', async () => {"
+          },
+          {
+            "line": 393,
+            "declaration": "it('live-updates the recent-page counter when a page is recorded elsewhere', async () => {"
+          },
+          {
+            "line": 413,
+            "declaration": "it('keeps the required policy and browser-local consent controls after a failed refresh', async () => {"
+          },
+          {
+            "line": 440,
+            "declaration": "it('retries a failed policy refresh without replacing retained policy or local controls', async () => {"
+          },
+          {
+            "line": 478,
+            "declaration": "it('distinguishes a paused initial policy read from empty or optional policy', async () => {"
+          },
+          {
+            "line": 510,
+            "declaration": "it('offers policy-only recovery for a paused retained read without inventing an error', async () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/settings/components/privacy/ConsentControlPanel.test.tsx",
+        "declarationCount": 21,
+        "status": "READ_ONLY_NOTRUN",
+        "declarations": [
+          {
+            "line": 126,
+            "declaration": "it('renders the titled section and its three action controls', () => {"
+          },
+          {
+            "line": 135,
+            "declaration": "it('exposes the same component as a named and a default export', () => {"
+          },
+          {
+            "line": 141,
+            "declaration": "it('shows a skeleton and no policy/error copy while the version query loads', () => {"
+          },
+          {
+            "line": 152,
+            "declaration": "it('renders the require-on body copy when consent collection is enforced', () => {"
+          },
+          {
+            "line": 158,
+            "declaration": "it('renders the require-off preview copy when consent is not enforced', () => {"
+          },
+          {
+            "line": 164,
+            "declaration": "it('shows the policy-error copy with a working Retry button on fetch failure', () => {"
+          },
+          {
+            "line": 174,
+            "declaration": "it('omits the Retry button when no onRetry handler is supplied', () => {"
+          },
+          {
+            "line": 180,
+            "declaration": "it('gives loading precedence over error when both flags are set', () => {"
+          },
+          {
+            "line": 188,
+            "declaration": "it('is exposed as an assistive-tech status region so changes are announced', () => {"
+          },
+          {
+            "line": 195,
+            "declaration": "it('describes the \"accepted\" state with an emerald dot and full detail line', () => {"
+          },
+          {
+            "line": 207,
+            "declaration": "it('describes the \"declined\" state with an amber dot and full detail line', () => {"
+          },
+          {
+            "line": 219,
+            "declaration": "it('describes the \"unknown\" state with a slate dot and the not-decided copy', () => {"
+          },
+          {
+            "line": 233,
+            "declaration": "it('disables only Accept when consent is already accepted', () => {"
+          },
+          {
+            "line": 240,
+            "declaration": "it('disables only Decline when consent is already declined', () => {"
+          },
+          {
+            "line": 247,
+            "declaration": "it('disables only Reset when consent is unknown (nothing to reset)', () => {"
+          },
+          {
+            "line": 254,
+            "declaration": "it('fires onAccept when an enabled Accept is clicked', () => {"
+          },
+          {
+            "line": 262,
+            "declaration": "it('fires onDecline when an enabled Decline is clicked', () => {"
+          },
+          {
+            "line": 269,
+            "declaration": "it('fires onReset when an enabled Reset is clicked', () => {"
+          },
+          {
+            "line": 275,
+            "declaration": "it('does not fire onAccept when the disabled Accept is clicked', () => {"
+          },
+          {
+            "line": 283,
+            "declaration": "it('marks every control as type=\"button\" so it can never submit a form', () => {"
+          },
+          {
+            "line": 291,
+            "declaration": "it('keeps the decorative Cookie glyph out of the accessibility tree', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/settings/components/privacy/consentMeta.test.ts",
+        "declarationCount": 14,
+        "status": "READ_ONLY_NOTRUN",
+        "declarations": [
+          {
+            "line": 37,
+            "declaration": "it('maps \"accepted\" to the green, reporting-on presentation', () => {"
+          },
+          {
+            "line": 45,
+            "declaration": "it('maps \"declined\" to the amber, essential-only presentation', () => {"
+          },
+          {
+            "line": 53,
+            "declaration": "it('maps \"unknown\" to the neutral, not-decided presentation', () => {"
+          },
+          {
+            "line": 63,
+            "declaration": "it('gives every state a distinct short label, detail and dot', () => {"
+          },
+          {
+            "line": 72,
+            "declaration": "it('requests the exact i18n key + English default for each field', () => {"
+          },
+          {
+            "line": 99,
+            "declaration": "it('passes the translated string through verbatim (localization actually happens)', () => {"
+          },
+          {
+            "line": 115,
+            "declaration": "it('calls the translator exactly twice per invocation (detail + short only)', () => {"
+          },
+          {
+            "line": 123,
+            "declaration": "it('collapses an unrecognised state onto the neutral \"unknown\" presentation', () => {"
+          },
+          {
+            "line": 132,
+            "declaration": "it('never throws for nullish / non-string states', () => {"
+          },
+          {
+            "line": 144,
+            "declaration": "it.each(REAL_STATES)("
+          },
+          {
+            "line": 156,
+            "declaration": "it('falls back when the translator returns null / undefined (misconfigured i18next)', () => {"
+          },
+          {
+            "line": 168,
+            "declaration": "it('every state yields a well-formed ConsentPresentation', () => {"
+          },
+          {
+            "line": 179,
+            "declaration": "it('always pairs colour with a non-empty dot so colour is never the only signal', () => {"
+          },
+          {
+            "line": 187,
+            "declaration": "it('is pure — identical input yields deep-equal but independent objects', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/settings/components/privacy/PrivacyGuaranteesPanel.test.tsx",
+        "declarationCount": 8,
+        "status": "READ_ONLY_NOTRUN",
+        "declarations": [
+          {
+            "line": 60,
+            "declaration": "it('renders an accessible region named by its section heading', () => {"
+          },
+          {
+            "line": 81,
+            "declaration": "it('renders all three guarantee tiles with their translated titles, in order', () => {"
+          },
+          {
+            "line": 93,
+            "declaration": "it('renders the explanatory body copy for each guarantee', () => {"
+          },
+          {
+            "line": 107,
+            "declaration": "it('requests every string from i18n with an English fallback', () => {"
+          },
+          {
+            "line": 124,
+            "declaration": "it('marks the leading tile icons as decorative (aria-hidden)', () => {"
+          },
+          {
+            "line": 133,
+            "declaration": "it('wires each guarantee to its own neon-color accent', () => {"
+          },
+          {
+            "line": 145,
+            "declaration": "it('degrades an empty translation to an em-dash instead of a blank tile', () => {"
+          },
+          {
+            "line": 159,
+            "declaration": "it('re-exports the same component as its default and named export', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/settings/components/privacy/RecentPagesPanel.test.tsx",
+        "declarationCount": 12,
+        "status": "READ_ONLY_NOTRUN",
+        "declarations": [
+          {
+            "line": 56,
+            "declaration": "it('renders the header, description, pluralised counter, and clear button', () => {"
+          },
+          {
+            "line": 70,
+            "declaration": "it('does not render the empty hint when entries exist', () => {"
+          },
+          {
+            "line": 77,
+            "declaration": "it('fires onClear exactly once when the enabled button is clicked', () => {"
+          },
+          {
+            "line": 85,
+            "declaration": "it('disables the button and shows the empty hint at zero entries', () => {"
+          },
+          {
+            "line": 95,
+            "declaration": "it('does not fire onClear when the disabled button is clicked', () => {"
+          },
+          {
+            "line": 103,
+            "declaration": "it('treats a negative count as empty', () => {"
+          },
+          {
+            "line": 112,
+            "declaration": "it('renders 0 (not \"NaN\") for a non-finite count', () => {"
+          },
+          {
+            "line": 120,
+            "declaration": "it('floors a fractional count and keeps the button enabled', () => {"
+          },
+          {
+            "line": 128,
+            "declaration": "it('exposes the counter as a polite live region', () => {"
+          },
+          {
+            "line": 135,
+            "declaration": "it('marks the icon-only affordances as decorative', () => {"
+          },
+          {
+            "line": 146,
+            "declaration": "it('flips the disabled/empty state when the count changes', () => {"
+          },
+          {
+            "line": 161,
+            "declaration": "it('exports the same component as the default and the named binding', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/lib/recentPages.test.ts",
+        "declarationCount": 26,
+        "status": "READ_ONLY_NOTRUN",
+        "declarations": [
+          {
+            "line": 32,
+            "declaration": "it('records a single visit and surfaces it from getRecentPages', () => {"
+          },
+          {
+            "line": 45,
+            "declaration": "it('uses an explicit kind/ref_id when provided', () => {"
+          },
+          {
+            "line": 57,
+            "declaration": "it('falls back to the path when title is empty', () => {"
+          },
+          {
+            "line": 62,
+            "declaration": "it('moves a re-visited entry to the top with a fresh timestamp', () => {"
+          },
+          {
+            "line": 76,
+            "declaration": "it('caps the list at RECENT_PAGES_MAX entries', () => {"
+          },
+          {
+            "line": 87,
+            "declaration": "it('honours the limit argument on getRecentPages', () => {"
+          },
+          {
+            "line": 98,
+            "declaration": "it('removes every entry', () => {"
+          },
+          {
+            "line": 107,
+            "declaration": "it('is idempotent on an already-empty store', () => {"
+          },
+          {
+            "line": 114,
+            "declaration": "it('fires same-tab subscribers on record + clear', () => {"
+          },
+          {
+            "line": 124,
+            "declaration": "it('fires when another tab writes (synthetic StorageEvent)', () => {"
+          },
+          {
+            "line": 141,
+            "declaration": "it('ignores StorageEvents for unrelated keys', () => {"
+          },
+          {
+            "line": 150,
+            "declaration": "it('stops firing after unsubscribe', () => {"
+          },
+          {
+            "line": 158,
+            "declaration": "it('survives a throwing subscriber without aborting other writes', () => {"
+          },
+          {
+            "line": 174,
+            "declaration": "it('accepts normal pathnames', () => {"
+          },
+          {
+            "line": 181,
+            "declaration": "it('rejects empty / non-absolute / non-string paths', () => {"
+          },
+          {
+            "line": 190,
+            "declaration": "it('rejects skip-listed routes', () => {"
+          },
+          {
+            "line": 199,
+            "declaration": "it('does not over-match prefixes', () => {"
+          },
+          {
+            "line": 205,
+            "declaration": "it('recordPageView is a no-op for skipped paths', () => {"
+          },
+          {
+            "line": 214,
+            "declaration": "it('recognises every well-known dynamic route', () => {"
+          },
+          {
+            "line": 240,
+            "declaration": "it('falls back to plain \"page\" for static routes', () => {"
+          },
+          {
+            "line": 248,
+            "declaration": "it('returns the registry label for an exact match', () => {"
+          },
+          {
+            "line": 254,
+            "declaration": "it('returns the registry label for a parameterized match', () => {"
+          },
+          {
+            "line": 259,
+            "declaration": "it('returns null for an unknown path', () => {"
+          },
+          {
+            "line": 266,
+            "declaration": "it('returns an empty list when localStorage payload is malformed', () => {"
+          },
+          {
+            "line": 271,
+            "declaration": "it('returns an empty list when payload is not an array', () => {"
+          },
+          {
+            "line": 276,
+            "declaration": "it('drops malformed individual entries', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/lib/__tests__/cookieConsent.test.ts",
+        "declarationCount": 15,
+        "status": "READ_ONLY_NOTRUN",
+        "declarations": [
+          {
+            "line": 26,
+            "declaration": "it('returns \"unknown\" when nothing is stored', () => {"
+          },
+          {
+            "line": 30,
+            "declaration": "it('persists \"accepted\" and reads it back', () => {"
+          },
+          {
+            "line": 36,
+            "declaration": "it('persists \"declined\" and reads it back', () => {"
+          },
+          {
+            "line": 42,
+            "declaration": "it('clearConsent wipes the stored value', () => {"
+          },
+          {
+            "line": 50,
+            "declaration": "it('treats junk values as \"unknown\" without throwing', () => {"
+          },
+          {
+            "line": 57,
+            "declaration": "it('returns \"unknown\" when getItem throws', () => {"
+          },
+          {
+            "line": 66,
+            "declaration": "it('does not throw when setItem throws (e.g. private mode quota)', () => {"
+          },
+          {
+            "line": 74,
+            "declaration": "it('does not throw when removeItem throws', () => {"
+          },
+          {
+            "line": 84,
+            "declaration": "it('fires CONSENT_CHANGED_EVENT on setConsent and includes the new state', () => {"
+          },
+          {
+            "line": 94,
+            "declaration": "it('fires CONSENT_CHANGED_EVENT with \"unknown\" on clearConsent', () => {"
+          },
+          {
+            "line": 105,
+            "declaration": "it('subscribeConsent invokes the callback and returns an unsubscribe', () => {"
+          },
+          {
+            "line": 119,
+            "declaration": "it('returns true when consent is not required', () => {"
+          },
+          {
+            "line": 125,
+            "declaration": "it('returns false when consent is required and state is unknown', () => {"
+          },
+          {
+            "line": 129,
+            "declaration": "it('returns false when consent is required and the user declined', () => {"
+          },
+          {
+            "line": 134,
+            "declaration": "it('returns true when consent is required and the user accepted', () => {"
+          }
+        ]
+      }
+    ],
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "historicalReceipt": "Exact Phase5 queue note reports17/17 and original bodies preserved; historical only, not a fresh QA pass. No existing privacy execution log found on this host."
+  },
+  "beforeAfterHashes": [
+    {
+      "file": "web/src/api/dataState.test.ts",
+      "beforeSha256": "6ddccac6c0b22bcfb2d126c5d5c59c697d166cb117eb99d738d95653ef798e7c",
+      "afterSha256": "6ddccac6c0b22bcfb2d126c5d5c59c697d166cb117eb99d738d95653ef798e7c",
+      "unchanged": true,
+      "kind": "test"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "beforeSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "afterSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/api/hooks/useSettings.ts",
+      "beforeSha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "afterSha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/components/feedback/CookieConsentBanner.tsx",
+      "beforeSha256": "56155ffc71fbcd7c3266405cd90f5fe20f7fa688cb4b1886faa296acde94262e",
+      "afterSha256": "56155ffc71fbcd7c3266405cd90f5fe20f7fa688cb4b1886faa296acde94262e",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "beforeSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "afterSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/components/layout/CopyLinkButton.tsx",
+      "beforeSha256": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "afterSha256": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "beforeSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "afterSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "afterSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "beforeSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "afterSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/components/ui/ConfirmDialog.tsx",
+      "beforeSha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "afterSha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/ConsentControlPanel.test.tsx",
+      "beforeSha256": "7f1559b569cc6ff943867cd936a36416577b0aac5beef6538f0eccf89bd63bb1",
+      "afterSha256": "7f1559b569cc6ff943867cd936a36416577b0aac5beef6538f0eccf89bd63bb1",
+      "unchanged": true,
+      "kind": "test"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/ConsentControlPanel.tsx",
+      "beforeSha256": "26d5af828915c0fec17c4cc8f66e1553b85f83b1d119d640cd0942370e0a37d1",
+      "afterSha256": "26d5af828915c0fec17c4cc8f66e1553b85f83b1d119d640cd0942370e0a37d1",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/PrivacyGuaranteesPanel.test.tsx",
+      "beforeSha256": "4e7d985fe9627ffa449a4f9df7a950b698d1e766b0742d67f9ac7364403c5eff",
+      "afterSha256": "4e7d985fe9627ffa449a4f9df7a950b698d1e766b0742d67f9ac7364403c5eff",
+      "unchanged": true,
+      "kind": "test"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/PrivacyGuaranteesPanel.tsx",
+      "beforeSha256": "c8d95fa50528cd21fbb6bbeadd9a2dfae4930d61e65c388598d55109c6399d4f",
+      "afterSha256": "c8d95fa50528cd21fbb6bbeadd9a2dfae4930d61e65c388598d55109c6399d4f",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/PrivacyKpiCards.test.tsx",
+      "beforeSha256": "86889365c055d753eadf82ad7908641782e8c865038d36e97ad69211171ee30d",
+      "afterSha256": "86889365c055d753eadf82ad7908641782e8c865038d36e97ad69211171ee30d",
+      "unchanged": true,
+      "kind": "test"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/PrivacyKpiCards.tsx",
+      "beforeSha256": "39bc6a2899e8aa7a2f48f141d252d2a3f28b84beee212dfca12fe50106514911",
+      "afterSha256": "39bc6a2899e8aa7a2f48f141d252d2a3f28b84beee212dfca12fe50106514911",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/RecentPagesPanel.test.tsx",
+      "beforeSha256": "5944bb6c015f97b753215f34730e05d86acb4b353b34e1bc21bd6895c5f72a53",
+      "afterSha256": "5944bb6c015f97b753215f34730e05d86acb4b353b34e1bc21bd6895c5f72a53",
+      "unchanged": true,
+      "kind": "test"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/RecentPagesPanel.tsx",
+      "beforeSha256": "73858744e05562d5e44620c2b6e9b69476fb8ad8cf837274713d41ca8d7e8ccc",
+      "afterSha256": "73858744e05562d5e44620c2b6e9b69476fb8ad8cf837274713d41ca8d7e8ccc",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/consentMeta.test.ts",
+      "beforeSha256": "9852a74d33c191640a9a35ba1b78f8a08e5d41e2eb18bab4f938113193de2502",
+      "afterSha256": "9852a74d33c191640a9a35ba1b78f8a08e5d41e2eb18bab4f938113193de2502",
+      "unchanged": true,
+      "kind": "test"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/consentMeta.ts",
+      "beforeSha256": "c1ac113ddee5f7bec3fbf1099c7705827e2f3b575af4e96b54e3ee13a5912959",
+      "afterSha256": "c1ac113ddee5f7bec3fbf1099c7705827e2f3b575af4e96b54e3ee13a5912959",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/features/settings/components/privacy/index.ts",
+      "beforeSha256": "6de29c2cc39393a793900f613f88fc344391cc3b7d9cb5a5ab5a43fba50ecd64",
+      "afterSha256": "6de29c2cc39393a793900f613f88fc344391cc3b7d9cb5a5ab5a43fba50ecd64",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/features/settings/components/statstrip-privacy/PrivacyOperationalBrief.tsx",
+      "beforeSha256": "ff0b2e695803c74079adf1d9f18aeeb02fc493ecb666c653d96271aa9d8e6725",
+      "afterSha256": "ff0b2e695803c74079adf1d9f18aeeb02fc493ecb666c653d96271aa9d8e6725",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/features/settings/pages/PrivacyPage.test.tsx",
+      "beforeSha256": "cbd96473c225b67afb705a05564568806180922612c07a9bba62970b2eb05f52",
+      "afterSha256": "cbd96473c225b67afb705a05564568806180922612c07a9bba62970b2eb05f52",
+      "unchanged": true,
+      "kind": "test"
+    },
+    {
+      "file": "web/src/features/settings/pages/PrivacyPage.tsx",
+      "beforeSha256": "9630b0a097fce05db9dd5069eff8a3abc28199874a65c121c649f4d51afcfcb8",
+      "afterSha256": "9630b0a097fce05db9dd5069eff8a3abc28199874a65c121c649f4d51afcfcb8",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "beforeSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "afterSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/i18n/index.ts",
+      "beforeSha256": "8804718879d0ccb02c876b64b139da56e67b7d117e34e5de914904242de3ec17",
+      "afterSha256": "8804718879d0ccb02c876b64b139da56e67b7d117e34e5de914904242de3ec17",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/lib/__tests__/cookieConsent.test.ts",
+      "beforeSha256": "0f080bdc7d43b37e7c27ec3fb89af521a1077083345b27014838a5928aeb6aee",
+      "afterSha256": "0f080bdc7d43b37e7c27ec3fb89af521a1077083345b27014838a5928aeb6aee",
+      "unchanged": true,
+      "kind": "test"
+    },
+    {
+      "file": "web/src/lib/confirmSilence.ts",
+      "beforeSha256": "c7ebe7033a92d7ec5a6e8895841a193801bb20afa90e8354ad5bfc49f9f74fa3",
+      "afterSha256": "c7ebe7033a92d7ec5a6e8895841a193801bb20afa90e8354ad5bfc49f9f74fa3",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/lib/cookieConsent.ts",
+      "beforeSha256": "3e584820c728395658bcdc78647dde48b3640d08f277094f3f873f794c60d4c4",
+      "afterSha256": "3e584820c728395658bcdc78647dde48b3640d08f277094f3f873f794c60d4c4",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/lib/recentPages.test.ts",
+      "beforeSha256": "e07fae92a516eb07847e7bd688f92923c37d1ce14ec376ade757566f9c432258",
+      "afterSha256": "e07fae92a516eb07847e7bd688f92923c37d1ce14ec376ade757566f9c432258",
+      "unchanged": true,
+      "kind": "test"
+    },
+    {
+      "file": "web/src/lib/recentPages.ts",
+      "beforeSha256": "0435b42f44cf0c7dcb99825aa869d696bd85cb346dd50640286b0c364d66f6c9",
+      "afterSha256": "0435b42f44cf0c7dcb99825aa869d696bd85cb346dd50640286b0c364d66f6c9",
+      "unchanged": true,
+      "kind": "source"
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "beforeSha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "afterSha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "unchanged": true,
+      "kind": "source",
+      "baselineTiming": "Supplementary declaration file pin captured during artifact-only reconciliation; no application writes performed. Final postwrite check compares this value again."
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "beforeSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "afterSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "unchanged": true,
+      "kind": "source",
+      "baselineTiming": "Supplementary declaration file pin captured during artifact-only reconciliation; no application writes performed. Final postwrite check compares this value again."
+    }
+  ],
+  "hashStatus": "MATCH",
+  "hashDrift": [],
+  "commands": {
+    "rawLog": "web/logs/phase6-qa-settings-privacy.log",
+    "completedReadOnlyShellIds": [
+      1732,
+      1745,
+      1757,
+      1769,
+      1785,
+      1800,
+      1816,
+      1828,
+      1850,
+      1865,
+      1892,
+      1926,
+      1936,
+      1953,
+      2093,
+      2114,
+      2130,
+      2144,
+      2155
+    ],
+    "failures": [
+      {
+        "shellId": 1745,
+        "exit": 1,
+        "cause": "Invalid PowerShell regex with trailing backslash during locator probe"
+      },
+      {
+        "shellId": 1757,
+        "exit": 1,
+        "cause": "rg not installed/recognized; switched to Python source grep"
+      },
+      {
+        "shellId": 1785,
+        "exit": 1,
+        "cause": "Initial broad document index exited1; raw output/exception preserved; subsequent UTF-8 bounded probes completed0"
+      },
+      {
+        "shellId": 2144,
+        "exit": 1,
+        "cause": "Final checker matched both actual task-claim row and concurrent actor-mapping census row; source/test33 pins and citations already matched before the row-count assertion. Checker narrowed to status-bearing task row, no authority/source/test changes."
+      }
+    ],
+    "viewFailures": [
+      "PrivacyPage.test range561+ beyond533",
+      "guessed PageLayout.tsx path absent; actual layout-reference/PageLayout.tsx read",
+      "cookieConsent.test.ts guessed root absent; actual lib/__tests__/cookieConsent.test.ts read",
+      "cookieConsent test range246+ beyond139"
+    ],
+    "actualExecutedValidation": "Only file reads, source grep, SHA256 and JSON parse/pin checks; final check follows report write. Initial shell probes include actual read-only git status; NO Git writes.",
+    "rawCaptureLimit": "Initial shell stdout preserved verbatim from host receipt files when provided. Early discovery commands are logged by invocation/operation and input paths, not byte-for-byte script text; this limitation is not a hidden check pass. Report-write and final reconciliation/check Python command bodies are logged exactly as executed. Shell1769/1892 raw terminal output remains in the tool response; owned log records their command/result plus bounded source/canonical/test findings."
+  },
+  "notRun": [
+    "All fresh tests/test discovery/lint/build/npx tsc --noEmit/full suites",
+    "Browser/native/Playwright/helpers/screenshots/servers/network/API requests",
+    "Personal data/settings/privacy choice/auth/export/erase/device/job actions",
+    "Live backend policy behavior/outbound reporting/privacy compliance certification",
+    "Native touch/focus/keyboard/clipboard/AT/contrast/theme/RTL/zoom/forced-colors/reduced-motion matrix",
+    "Git writes, catalog generation and source/test edits"
+  ],
+  "acceptance": "Report delivery only. No page/full-native/global-engineering/release acceptance. New repair ownership remains parent assignment; original Phase5 source stays completed.",
+  "finalValidation": {
+    "status": "FINAL_POSTWRITE_RECEIPT_IN_MATCHING_LOG",
+    "reconciledAt": "2026-10-14T02:03:38.765013+00:00",
+    "sourceTestPins": 33,
+    "allSourceTestPinsMatched": true,
+    "allEvidenceAndCandidateCitationsMatched": true,
+    "finalCommand": "Final json.loads/count/scope/citation/queue/pin/deadline check after this last JSON write.",
+    "interpretation": "Final source/JSON/citation checks run after this last report write; actual output, numeric exit and final report SHA256 are recorded in matching ignored log, not inferred from this declaration."
+  },
+  "release": {
+    "sourceWrites": "none held or performed",
+    "sourceTestSharedApiBackendCatalog": "READONLY; no writes",
+    "artifactClaims": "RELEASED after final postwrite validation command succeeds; no further writes planned",
+    "releasedAt": "2026-10-14T02:06:02.586766+00:00",
+    "queueEdited": false,
+    "needsOwner": "parent/orchestrator only"
+  }
+}

@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/feedback'
 import { Badge, Code, Heading, Text } from '@/components/ui'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import { formatCurrencyValue } from '@/lib/currencyFormat'
 import { Icons } from '@/lib/icons'
-import { fmtNumber, getGlobalLocale } from '@/lib/numberFormat'
+import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat'
 import {
   humanizeManagementLabel,
   parseSubscriptionEligibility,
@@ -15,36 +16,29 @@ interface SubscriptionDataViewProps {
   data: unknown
 }
 
-function formatReportedPrice(option: SubscriptionBillingData): string {
-  if (option.price == null) return '—'
-  if (!option.currencyCode) {
-    return fmtNumber(option.price, Number.isInteger(option.price) ? 0 : 2)
+function formatReportedMoney(
+  value: number | null,
+  currency: string | null,
+  precision: number,
+  locale: string,
+): string {
+  if (!isFiniteNumber(value)) return '—'
+  const digits = Math.max(2, precision)
+  if (!currency) {
+    return fmtNumber(value, digits, locale)
   }
   return formatCurrencyValue(
-    option.price,
-    option.currencyCode,
-    getGlobalLocale(),
-    Number.isInteger(option.price) ? 0 : 2,
-    { useGrouping: true },
-  )
-}
-
-function formatReportedTotal(option: SubscriptionBillingData): string {
-  if (option.total == null) return '—'
-  if (!option.currencyCode) {
-    return fmtNumber(option.total, Number.isInteger(option.total) ? 0 : 2)
-  }
-  return formatCurrencyValue(
-    option.total,
-    option.currencyCode,
-    getGlobalLocale(),
-    Number.isInteger(option.total) ? 0 : 2,
+    value,
+    currency,
+    locale,
+    digits,
     { useGrouping: true },
   )
 }
 
 function BillingOption({ option }: { option: SubscriptionBillingData }) {
   const { t } = useTranslation()
+  const { precision, locale } = useNumberFormatting()
   const periodKey = option.billingPeriod?.trim().toUpperCase()
   const period = {
     DAILY: t('vehicleManagement.subscriptions.period.day', 'day'),
@@ -63,7 +57,7 @@ function BillingOption({ option }: { option: SubscriptionBillingData }) {
           : t('vehicleManagement.subscriptions.billingOption', 'Billing option')}
       </Text>
       <Text variant="metricValue" as="p" className="mt-1">
-        {formatReportedPrice(option)}
+        {formatReportedMoney(option.price, option.currencyCode, precision, locale)}
         {period && (
           <Text variant="bodySm">
             {t('vehicleManagement.subscriptions.perPeriod', ' / {{period}}', {
@@ -75,7 +69,7 @@ function BillingOption({ option }: { option: SubscriptionBillingData }) {
       {option.total != null && (
         <Text variant="helper" as="p" className="mt-1">
           {t('vehicleManagement.subscriptions.total', 'Total {{amount}}', {
-            amount: formatReportedTotal(option),
+            amount: formatReportedMoney(option.total, option.currencyCode, precision, locale),
           })}
         </Text>
       )}
@@ -135,7 +129,7 @@ export function SubscriptionDataView({
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
-                <div className="rounded-lg bg-blue-500/10 p-2 text-blue-300">
+                <div className="rounded-lg bg-[var(--surface-1)] p-2 text-[var(--text-secondary)]">
                   <Icons.receipt className="h-4 w-4" aria-hidden="true" />
                 </div>
                 <div className="min-w-0 space-y-1">

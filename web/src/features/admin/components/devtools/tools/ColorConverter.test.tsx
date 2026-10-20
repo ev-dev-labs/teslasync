@@ -62,7 +62,7 @@ beforeEach(() => {
 })
 
 function setHex(value: string) {
-  fireEvent.change(screen.getByLabelText('Hex Color'), { target: { value } })
+  fireEvent.change(screen.getByLabelText('Hex color'), { target: { value } })
 }
 
 describe('ColorConverterTool', () => {
@@ -83,7 +83,7 @@ describe('ColorConverterTool', () => {
   it('exposes an accessible, labelled input and a role="img" swatch tracking the hex', () => {
     render(<ColorConverterTool />)
 
-    expect(screen.getByLabelText('Hex Color')).toHaveValue('#3b82f6')
+    expect(screen.getByLabelText('Hex color')).toHaveValue('#3b82f6')
 
     const swatch = screen.getByRole('img')
     expect(swatch).toHaveAttribute('aria-label', 'Color preview: #3b82f6')

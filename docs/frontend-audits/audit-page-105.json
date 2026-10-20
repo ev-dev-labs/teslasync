@@ -1,0 +1,359 @@
+{
+  "item": "audit-page-105",
+  "page": "web\\src\\features\\driving\\pages\\DepartureForecastPage.tsx",
+  "routes": ["/departure-forecast"],
+  "purpose": "Describe the selected vehicle's departure routines using returned drive starts, with explicit evidence accounting and model limitations.",
+  "primaryGoal": "Find supported upcoming local-hour windows and understand how much observed history supports the modeled likelihood, without scheduling or commanding the vehicle.",
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr, 1000)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<encoded selected vehicle>&limit=1000",
+      "routeEvidence": "internal\\api\\router.go:3463-3464 mounts driveHandler.ListByVehicle under /drives.",
+      "owner": "Driving query domain; backend DriveHandler",
+      "contract": "Key drivingKeys.history(vehicleId, boundedLimit); enabled only for a selected vehicle; request receives AbortSignal; MODERATE stale time; safeArray selection; no pagination, range parameters, or periodic refresh here.",
+      "limits": "Backend handler/repository behavior and real response ordering were not inspected or exercised. The hook documents a 1000-row server cap; the UI describes returned rows rather than lifetime coverage."
+    },
+    {
+      "hook": "useSelectedVehicle() and useTimezone('vehicle')",
+      "file": "web\\src\\features\\driving\\pages\\DepartureForecastPage.tsx",
+      "line": 36,
+      "endpoint": null,
+      "owner": "Existing workspace vehicle selection and timezone infrastructure",
+      "contract": "No local vehicle selector; selected ID scopes the drive request and vehicle timezone scopes model/calendar labels. useTimezone implementation and its ancillary requests were not traced.",
+      "workspace": "web\\src\\lib\\workspaceScope.ts:23-78 does not register /departure-forecast for range; the vehicle-disabled sets also do not exclude it. Preserve shared vehicle ownership and the independent fixed 120-day training window; do not add an inert range control or silently retrain the model on workspace range."
+    },
+    {
+      "hook": "forecastDepartures(drives, frozen nowMs, vehicle timezone, { historyLimit: 1000 })",
+      "file": "web\\src\\features\\driving\\lib\\departureForecast.ts",
+      "line": 886,
+      "endpoint": null,
+      "owner": "Page-specific pure departure model",
+      "contract": "Injected frozen clock; recorded drive start is one event; default 120-day lookback, 24 real local-hour boundaries, Gamma-Poisson estimates, descriptive evidence support, supported-only peaks/ranking, illustrative planning marker. Millisecond calendar instants are internal model values, not new physical-unit API fields."
+    },
+    {
+      "hook": "useDataState(drivesQuery, { provenance: 'historical' })",
+      "file": "web\\src\\features\\driving\\pages\\DepartureForecastPage.tsx",
+      "line": 43,
+      "endpoint": null,
+      "owner": "web\\src\\hooks\\useDataState.ts and existing api/dataState contract",
+      "contract": "fatalError and refreshError remain distinct. Cached data survives refresh failure; paused/offline retained data gets StaleRefreshWarning. PageLayout receives the original query for freshness metadata."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer / Grid",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "PageLayout delegates PageContainer props and uses full-width min-w-0 container. PageContainer owns header, query freshness, operational mode and announcements. Grid uses one column below xl and two at xl for the two paired rows."
+    },
+    {
+      "name": "DepartureEvidenceBrief / DrivingSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DepartureEvidenceBrief.tsx",
+      "contract": "Six typed StatMetric measurements adapted through useOperationalMetrics; localized context, source provenance, missing reasons, retained/loading state. Do not restore the alternate MetricCard KPI grid."
+    },
+    {
+      "name": "ChartContainer / EmbeddedChart",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "contract": "Panel/embedded variants; loading/error/empty/onRetry; responsive size/height/mobileHeight/fluid; chartKey and hidden-series provider; localized ariaLabel/description, fallback data/dataColumns, image export and explicit exportData CSV. EmbeddedChart delegates to the same owner, not a separate chart engine."
+    },
+    {
+      "name": "GlassPanel / PanelTitle / Heading / Text / Badge / Button",
+      "owner": "Existing @/components/ui category",
+      "contract": "Shared surface and typography roles, semantic badges and named retry button; current page has no raw interactive HTML controls."
+    },
+    {
+      "name": "DepartureForecastSectionBody / DepartureForecastQueryStatus",
+      "owner": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastSectionBody.tsx",
+      "contract": "Page-specific passive repeated placeholders plus one actionable source status. Evidence quality permits resolved empty accounting; methodology stays visible independently of query results."
+    },
+    {
+      "name": "StaleRefreshWarning / QueryError / EmptyState / Skeleton / AlertBanner / FadeIn",
+      "owner": "Existing feedback and motion category owners",
+      "contract": "Preserve retained content and retry, localized passive states and one loading status. FadeIn implementation/reduced-motion behavior was not independently exercised."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastNext24Plot.tsx",
+      "line": 86,
+      "rule": "MDC-002 / MDC-034 single chart interaction owner",
+      "detail": "Next24Chart already supplies a panel ChartContainer and six-column evidence table; Next24Plot mounts another ChartContainer through EmbeddedChart, with a different chartKey and a three-column table. Its inner context takes precedence over the externally passed state at line 94.",
+      "fix": "Use one existing chart frame/provider and one complete evidence table per logical next-24 chart. Preserve legend state and both existing URL identities with an explicit integration decision; do not silently drop saved links or evidence columns.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastEvidenceMetricGroup.tsx",
+      "line": 22,
+      "rule": "MDC-033 stats ownership",
+      "detail": "The accounting/coverage/support groups render preformatted label/value cards separately from the shared operational metrics pipeline. This is specialist presentation, not proof that all fields can be safely replaced by generic metrics.",
+      "fix": "Evaluate existing StatGroup support with the stats owner before any adoption; preserve all 22 entries, three groups, missing values, unrounded specialist semantics and resolved-zero row counts.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceObservations": [
+      "Two paired page grids stack until xl; weekday routines use sm two-column reflow; methodology uses md two and xl three columns.",
+      "Heatmap deliberately contains a 58rem minimum-width matrix inside overflow-auto rather than deleting weekday/hour cells.",
+      "Hour-distribution dayparts reflow from two to four columns; fixed chart heights include explanatory content."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastRankedWindows.tsx",
+        "line": 62,
+        "rule": "MDC-043 mobile reachability and long-content preservation",
+        "detail": "Each ranked row is an unwrapped horizontal flex group containing rank, localized datetime/evidence, and modeled-percentage badge. There is no small-width stacked variant; long badge text can squeeze the central content. This is a source-identified risk, not observed clipping.",
+        "fix": "Keep all rank/time/evidence/likelihood fields and adopt a small-width stacked or wrapping row while retaining desktop alignment. Exercise 320px, long locale strings, RTL and 200% text before acceptance.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceObservations": [
+      "Chart frames have explicit ariaLabel, descriptions and evidence tables; heatmap presentation is aria-hidden while its owner supplies a 168-cell fallback dataset.",
+      "Retry uses the shared Button; ranked windows use ol/li; evidence metrics use dl/dt/dd; decorative icons generally have aria-hidden.",
+      "QueryStatus has one labeled loading live status and separate fatal/refresh recovery surfaces."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastHeatmapGrid.tsx",
+        "line": 124,
+        "rule": "MDC-040 keyboard/touch equivalence",
+        "detail": "Per-cell modeled likelihood, departures and occurrences are exposed visually through a native title on a nonfocusable div inside aria-hidden content. The shared fallback table supplies assistive/forced-colors access, but the grid itself has no explicit keyboard/touch disclosure of that detail.",
+        "fix": "Retain the complete fallback table and assess a shared chart table/disclosure affordance or accessible non-hover cell-detail pattern. Avoid 168 gratuitous tab stops; verify touch, keyboard and screen-reader paths before calling this resolved.",
+        "owner": "integration",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastNext24Plot.tsx",
+        "line": 60,
+        "rule": "MDC-026 / MDC-045 truthful model interpretation",
+        "detail": "The inner chart's fallback accessible name says cumulative probability, while the model and outer frame explicitly state modeled likelihood is not a calibrated probability.",
+        "fix": "Use the existing localized modeled-likelihood terminology consistently for the inner frame or remove redundant framing through the single-owner integration. Keep the calibration disclaimer accessible.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["keyboard order", "focus visibility/restoration", "screen-reader output", "touch targets", "effective contrast", "forced-colors rendering", "reduced-motion behavior"]
+  },
+  "states": {
+    "sourceConfirmed": {
+      "noVehicle": "Passive section bodies and central select-vehicle message; no request enabled.",
+      "initialLoading": "Six summary measurements remain unknown with waiting explanations; section skeletons and one live loading status.",
+      "fatalError": "Shared QueryError retry once in QueryStatus; persistent section shells and methodology.",
+      "refreshError": "Retained historical evidence stays visible; central warning and retry; brief labels retained evidence.",
+      "pausedOfflineWithData": "StaleRefreshWarning above retained sections with shared recovery.",
+      "empty": "No prior-only summary peak/horizon/marker; section placeholders; quality accounting remains present via allowEmpty.",
+      "noQualifyingStarts": "Distinct message for returned rows with no valid starts in the lookback.",
+      "thinEvidence": "Descriptive estimates and explicit support warning; no planning marker.",
+      "historyCapReached": "Summary, ranked-window and quality disclaimers retain capped-history meaning.",
+      "unsupportedWeekdays": "Explicit unsupported weekdays/cells, never prior-only learned routines."
+    },
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastNext24Chart.tsx",
+        "line": 67,
+        "rule": "MDC-026 / MDC-034 shared frame state fidelity",
+        "detail": "The chart wrappers gate their child content and exportable/data, but do not pass loading, empty, error or onRetry into ChartContainer. The shared owner derives data-chart-state and aria-busy from those props (ChartContainer.tsx:487-492), so frames remain classified ready during unresolved/loading/fatal/empty source states. Heatmap, hourly distribution and weekly trend repeat the pattern.",
+        "fix": "Coordinate the existing frame state API with the page's passive placeholder strategy; expose truthful busy/unavailable state without hiding shells, creating repeated live announcements/retry controls, or replacing retained data on refresh failure.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ],
+    "runtimeAcceptance": "unverified"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastHeatmapGrid.tsx",
+      "line": 24,
+      "rule": "MDC-010 / MDC-011 restrained semantic palette",
+      "detail": "Four supported-cell intensity bands hardcode cyan border/background colors while unsupported cells use neutral tokens. This bypasses selected chart/theme accent ownership; it is not evidence of measured contrast failure or neon text.",
+      "fix": "Use a reviewed restrained sequential chart/semantic palette with subdued neutral boundaries, preserving supported/unsupported distinction, numeric counts and intensity ordering. Retain saved theme and explicit user chart-palette choices.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastMethodology.tsx",
+      "line": 118,
+      "rule": "MDC-010 / MDC-012 / MDC-016 hierarchy over decorative hue",
+      "detail": "Every methodology article's title/icon row inherits fixed text-cyan-300, and quality/ranked/weekday titles repeat cyan icon decoration. Typography and panel surfaces otherwise use shared roles and semantic variables.",
+      "fix": "Prefer existing muted/secondary semantic text/icon tokens for explanatory headings, reserving semantic hue for evidence meaning. No new page palette, glow or per-card accent system.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DepartureEvidenceBrief.tsx",
+      "line": 5,
+      "rule": "MDC-002 typed domain presentation ownership",
+      "detail": "The active brief derives its Props via ComponentProps of the alternate DepartureForecastKpiBand presentation, even though that component is not mounted by this page. A presentation implementation therefore owns the new brief's type contract.",
+      "fix": "In a later assigned source change, place the forecast/state/locale/timeZone props with existing departure-domain types and let both presenters consume that contract; do not resurrect the alternate KPI grid or change model behavior.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "The page already preserves its nine sections, modeled-data caveats, shared workspace vehicle scope and retained trust. Address competing chart controllers and truthful frame/accessibility semantics before restrained palette polish.",
+    "order": ["single next-24 chart owner", "truthful chart source states and accessible terminology", "mobile/heatmap detail acceptance", "restrained semantic colors", "presentation type and stats convergence"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse the canonical chart frame/provider; do not create a replacement",
+      "existingOwnerFile": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "changeNeeded": "No new public API is established as necessary by this audit; integration must resolve nested ownership.",
+      "props": ["variant panel/embedded", "chartKey", "children render-prop hiddenSeries", "data", "dataColumns", "ariaLabel", "ariaDescription", "loading", "empty", "error", "onRetry", "height/mobileHeight/fluid", "exportable", "exportFilename", "exportData"],
+      "states": ["ready", "initial loading", "resolved empty", "fatal unavailable", "retained refresh failure"],
+      "usedBy": ["DepartureForecastNext24Chart", "DepartureForecastNext24Plot", "DepartureForecastHeatmap", "DepartureForecastHourDistribution", "DepartureForecastWeeklyTrend"],
+      "dependsOn": ["EmbeddedChart delegation", "ChartHiddenSeriesProvider", "URL legend identity preservation", "shared fallback Table", "ChartExportMenu", "page-specific passive source-state contract"],
+      "acceptance": "One logical provider/frame, complete evidence columns, stable supported series and saved identities, no duplicate source retries/live status; actual browser/export/legend checks pending."
+    },
+    {
+      "name": "Reuse source-trust and operational metric owners",
+      "existingOwnerFile": "web\\src\\hooks\\useDataState.ts",
+      "changeNeeded": "None proven; preserve rather than extend.",
+      "props": ["provenance historical", "DataState fatalError/refreshError/hasData/isRefreshBlocked", "StaleRefreshWarning state/label/hideRetry", "DrivingSummaryBrief metrics/loading/error/retained/statusLabel"],
+      "states": ["unknown", "initial", "fatal failure", "retained refresh failure", "paused offline", "resolved zero accounting"],
+      "usedBy": ["DepartureForecastPage", "DepartureEvidenceBrief", "DepartureForecastQueryStatus", "DepartureForecastSectionBody"],
+      "dependsOn": ["original drive-history query key and AbortSignal", "useOperationalMetrics", "OperationalBrief", "source-specific missing reasons", "vehicle timezone"],
+      "acceptance": "No fabricated measurements, all six summary metrics and 22 accounting/coverage/support entries retained; no conversion of unknown values into zero."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastKpiBand.tsx",
+      "line": 17,
+      "detail": "Barrel still exports the alternate KpiBand/KpiCards path with the same summary test identity, six MetricCards and source status. Current root mounts DepartureEvidenceBrief instead; no claim that both render concurrently or that the alternate has no other consumers.",
+      "ownerDecision": "Keep the active OperationalBrief path canonical for this page; review references before any future removal. Do not restore the alternate to fix presentation."
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastNext24Plot.tsx",
+      "line": 87,
+      "detail": "Inner departure-forecast-24h legend provider competes with outer departure-forecast-next-24; this is one logical chart, not two independent data sources."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "00A963FD6BA1EFC96DEF6A66098B2495B6121351D6471B52A0B7EA64CF7A6B6B",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 163,
+    "mountedTsxLineCountIncludingRootAndSharedFeatureBriefAdapter": 2243,
+    "sectionCount": 9,
+    "sections": [
+      {"name": "Forecast evidence", "component": "DepartureEvidenceBrief", "summaryMetricCount": 6},
+      {"name": "Modeled likelihood — next 24 local hours", "component": "DepartureForecastNext24Chart", "seriesCount": 2, "evidenceColumnCount": 6},
+      {"name": "Strongest upcoming supported windows", "component": "DepartureForecastRankedWindows"},
+      {"name": "Weekday peaks and routine support", "component": "DepartureForecastWeekdayRoutines", "weekdayCount": 7},
+      {"name": "Learned weekday-hour profile", "component": "DepartureForecastHeatmap", "cellCount": 168},
+      {"name": "Historical local-hour and daypart distribution", "component": "DepartureForecastHourDistribution", "hourCount": 24, "daypartCount": 4},
+      {"name": "Recent weekly departure trend and active-day cadence", "component": "DepartureForecastWeeklyTrend", "seriesCount": 2},
+      {"name": "Evidence quality and coverage", "component": "DepartureForecastEvidenceQuality", "groupCount": 3, "metricCount": 22},
+      {"name": "Methodology and limitations", "component": "DepartureForecastMethodology", "explanationCount": 6}
+    ],
+    "frameCounts": {"mountedGlassPanel": 4, "mountedChartContainer": 4, "mountedEmbeddedChart": 1, "rootFrames": 0},
+    "actions": [
+      "Existing shared header vehicle selection",
+      "Initial-failure Retry and retained-refresh Retry",
+      "Offline retained-source Refresh through StaleRefreshWarning",
+      "Chart image/export menu when evidence is ready; actual download behavior unverified",
+      "Next-24 likelihood/cumulative and weekly departures/active-days legend toggles with existing URL identities",
+      "Heatmap contained scrolling and complete chart fallback tables"
+    ],
+    "data": [
+      "Drive history capped request, original query/cache identity, cancellation and selected vehicle enablement",
+      "startTs interpretation; preserve raw Drive SI distanceM/durationS/energyUsedWh/speedMps values without display-unit writes or legacy helpers",
+      "Frozen nowMs for the entire mount, even when query data changes; existing page test explicitly preserves this",
+      "Vehicle timezone, DST/offset-aware calendar and labels; locale-aware number/date presentation",
+      "Every recorded drive start counts independently, including multiple starts per local day",
+      "Included/invalid/future/outside-window accounting plus history-cap qualification",
+      "Supported peaks and ranked windows, prior-shrunk chart cells, cumulative estimates and evidence band/ingredients",
+      "No calibrated-probability claim, automatic planning, climate/wake/charge/navigation command or extra model input",
+      "All sections remain mounted across no vehicle/loading/error/empty; retained refresh evidence stays visible",
+      "Methodology remains available and quality allows resolved-empty accounting",
+      "Do not add workspace range filtering without explicit model/workspace semantics coordination"
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only bounded source inspection, route/hook trace, SHA256 and source-pattern/line counts.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "Existing DepartureForecastPage.test.tsx scenarios inspected only; no tests executed and no historical result borrowed.",
+    "notRun": ["TypeScript", "build", "lint", "full audit.sh", "browser", "API requests", "mutations", "Git"],
+    "auditScriptLimit": "The loaded audit skill's script was inspected but not executed because it unconditionally runs whole-frontend npx tsc --noEmit. The assignment forbids full validation; bounded source pattern counts were used instead.",
+    "sourcePatternEvidence": {
+      "scope": "Assigned root, departure-forecast directory and two operational brief feature adapters",
+      "staticOrDynamicInlineStyleSites": 0,
+      "caseSensitiveRawControlSites": 0,
+      "directRechartsLeafletFramerImports": 0,
+      "oldRelativeApiImports": 0,
+      "neonTextBackgroundGlowMatches": 0,
+      "initialCaseInsensitiveRawControlCount": 1,
+      "initialRawControlCountLimit": "PowerShell's default case-insensitive matching counted a capitalized component/type prefix; rerun with -CaseSensitive returned no raw control matches.",
+      "mountedVsDirectoryCounts": "Directory count showed 10 section tags/10 frames including alternate unmounted KpiBand; actual current root has 9 business sections, 4 GlassPanel, 4 outer ChartContainer and 1 inner EmbeddedChart."
+    },
+    "commandResults": [
+      {"command": "Get-FileHash web\\src\\features\\driving\\pages\\DepartureForecastPage.tsx -Algorithm SHA256; (Get-Content <same page>).Count", "exitCode": 0, "output": "00A963FD6BA1EFC96DEF6A66098B2495B6121351D6471B52A0B7EA64CF7A6B6B; 163"},
+      {"command": "Bounded PowerShell Select-String/line-count batch, initial quoting attempt", "exitCode": 1, "output": "ParserError: Unexpected token ']' in expression or statement; no source writes."},
+      {"command": "Corrected bounded PowerShell Select-String/line-count batch", "exitCode": 0, "output": "directLibraries: 0; inlineStyles: 0; rawControls: 1 (case-insensitive); sections: 10; frames: 10; oldApi: 0; neon: 0"},
+      {"command": "Same bounded files | Select-String -CaseSensitive -Pattern '<(button|input|textarea|select|table)\\b'; mounted TSX line sum; Get-FileHash assigned page", "exitCode": 0, "output": "No raw control matches; Mounted TSX lines=2243; SHA256 unchanged"}
+    ],
+    "writeScope": ["docs\\frontend-audits\\audit-page-105.json", ".agent-status\\audit-page-105.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\DepartureForecastPage.tsx",
+    "web\\src\\features\\driving\\pages\\DepartureForecastPage.test.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DepartureEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastEvidenceMetricGroup.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastEvidenceMetrics.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastEvidenceQuality.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastHeatmap.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastHeatmapGrid.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastHourDistribution.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastKpiBand.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastKpiCards.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastMethodology.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastNext24Chart.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastNext24Plot.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastQueryStatus.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastRankedWindows.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastWeekdayRoutines.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\DepartureForecastWeeklyTrend.tsx",
+    "web\\src\\features\\driving\\components\\departure-forecast\\index.ts",
+    "web\\src\\features\\driving\\components\\departure-forecast\\labels.ts",
+    "web\\src\\features\\driving\\components\\departure-forecast\\types.ts",
+    "web\\src\\features\\driving\\lib\\departureForecast.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\components\\layout\\sidebar\\sidebarIcons.ts",
+    "web\\src\\components\\layout\\sidebar\\collections.ts",
+    "web\\src\\features\\explore\\featureCatalog.ts",
+    "web\\src\\__tests__\\lazyRoutes.list.ts",
+    "internal\\api\\router.go"
+  ]
+}

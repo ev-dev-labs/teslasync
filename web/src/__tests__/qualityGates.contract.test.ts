@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -43,6 +44,129 @@ import {
 import { auditArchivedEntries } from '../../scripts/check-audit-registry.mjs'
 
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
+
+describe('inline-help extracted editor coverage', () => {
+  let fixtureRoot: string
+
+  beforeEach(() => {
+    const base = join(webRoot, 'node_modules', '.tmp-quality-gates')
+    mkdirSync(base, { recursive: true })
+    fixtureRoot = mkdtempSync(join(base, 'inline-help-'))
+    mkdirSync(join(fixtureRoot, 'scripts'))
+    writeFileSync(
+      join(fixtureRoot, 'scripts', 'audit-inline-help.mjs'),
+      readFileSync(join(webRoot, 'scripts', 'audit-inline-help.mjs'), 'utf8'),
+    )
+    for (const [segments, count] of [
+      [['settings'], 6],
+      [['automations'], 8],
+      [['notifications', 'components', 'channels'], 5],
+    ] as const) {
+      const target = join(fixtureRoot, 'src', 'features', ...segments)
+      mkdirSync(target, { recursive: true })
+      writeFileSync(join(target, 'Fields.tsx'), '<HelpIcon />\n'.repeat(count))
+    }
+    mkdirSync(join(fixtureRoot, 'src', 'features', 'notifications', 'components', 'alert-editor-source-closure'))
+    writeFileSync(
+      join(fixtureRoot, 'src', 'features', 'notifications', 'components', 'AlertRuleEditor.tsx'),
+      'export function AlertRuleEditor() { return <IdentityFields /> }\n',
+    )
+  })
+
+  afterEach(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true })
+  })
+
+  function runAudit() {
+    return spawnSync(process.execPath, [join(fixtureRoot, 'scripts', 'audit-inline-help.mjs')], {
+      cwd: fixtureRoot,
+      encoding: 'utf8',
+    })
+  }
+
+  function writeEditorFields(filename: string, source: string) {
+    writeFileSync(
+      join(fixtureRoot, 'src', 'features', 'notifications', 'components', 'alert-editor-source-closure', filename),
+      source,
+    )
+  }
+
+  it('counts the actual extracted production fields rather than the thin entry', () => {
+    writeEditorFields('Fields.tsx', '<HelpIcon />\n'.repeat(6))
+    const result = runAudit()
+    expect(result.status, result.stderr).toBe(0)
+    expect(result.stdout).toContain('total adoptions: 25 (min 25), failures: 0')
+    expect(result.stdout).toContain('alert-editor-source-closure')
+  })
+
+  it('still rejects a real help regression with the unchanged per-target minimum', () => {
+    writeEditorFields('Fields.tsx', '<HelpIcon />\n'.repeat(5))
+    const result = runAudit()
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('reason=5 HelpIcon usage(s) < required minimum of 6')
+    expect(result.stderr).toContain('reason=24 total HelpIcon usage(s) < required minimum of 25')
+  })
+
+  it('does not count test fixtures or imports as production help adoption', () => {
+    writeEditorFields('Fields.tsx', "import { HelpIcon } from '@/components/ui'\n")
+    writeEditorFields('Fields.test.tsx', '<HelpIcon />\n'.repeat(6))
+    const result = runAudit()
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('reason=0 HelpIcon usage(s) < required minimum of 6')
+  })
+})
+
+describe('bundle-size output selection', () => {
+  let fixtureRoot: string
+
+  beforeEach(() => {
+    const base = join(webRoot, 'node_modules', '.tmp-quality-gates')
+    mkdirSync(base, { recursive: true })
+    fixtureRoot = mkdtempSync(join(base, 'bundle-'))
+  })
+
+  afterEach(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true })
+  })
+
+  function runBundleCheck(args: string[]) {
+    return spawnSync(process.execPath, [join(webRoot, 'scripts', 'check-bundle-size.mjs'), ...args], {
+      cwd: webRoot,
+      encoding: 'utf8',
+    })
+  }
+
+  it('measures a separate private output without replacing the public dist', () => {
+    const assets = join(fixtureRoot, 'assets')
+    mkdirSync(assets)
+    writeFileSync(join(fixtureRoot, 'index.html'), '<script type="module" src="/assets/custom-entry.js"></script>')
+    writeFileSync(join(assets, 'custom-entry.js'), 'export const fixture = true')
+    writeFileSync(join(assets, 'custom-entry.js.map'), JSON.stringify({
+      version: 3,
+      file: 'custom-entry.js',
+      sources: ['../../src/main.tsx'],
+      names: [],
+      mappings: 'AAAA',
+    }))
+
+    const result = runBundleCheck(['--dist', fixtureRoot, '--strict'])
+    expect(result.status, result.stderr).toBe(0)
+    expect(result.stdout).toContain('custom-entry.js')
+    expect(result.stdout).toContain('startup JS')
+  })
+
+  it.each([['--dist'], ['--dist', '--strict']])('rejects missing output arguments: %j', (...args) => {
+    const result = runBundleCheck(args)
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('--dist requires a directory argument')
+  })
+
+  it('rejects absent build output in strict mode instead of skipping the measurement', () => {
+    const result = runBundleCheck(['--dist', fixtureRoot, '--strict'])
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('strict measurement requires a build')
+  })
+})
 
 /**
  * Mutation coverage for the quality gates themselves.
@@ -753,6 +877,38 @@ describe('dependency duplication: per package, not fungible totals', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('virtualization backlog: derived from a source scan', () => {
+  it('discovers a paginated shared date-grouped list without an inline map', () => {
+    const source = `
+      export function DriveRows() {
+        return <><DateGroupedList groups={groups} renderItem={row => <DriveCard drive={row} />} /><Pagination /></>
+      }
+    `
+    expect(classifyLongListSource(source)).toEqual({
+      isLongListSurface: true,
+      reasons: ['pagination'],
+      excludedBy: null,
+    })
+    expect(classifyLongListSource(source.replace('<Pagination />', '')).excludedBy)
+      .toBe('no-long-list-admission')
+  })
+
+  it('does not treat an unused date-grouped list import as rendered rows', () => {
+    const source = `
+      import { DateGroupedList } from '@/components/data-display'
+      export function EmptyPage() { return <Pagination /> }
+    `
+    expect(classifyLongListSource(source).excludedBy).toBe('no-mapped-list')
+  })
+
+  it.each([
+    'const example = "<DateGroupedList groups={groups} />"',
+    '// <DateGroupedList groups={groups} />',
+    '/* <DateGroupedList groups={groups} /> */',
+  ])('does not discover date-grouped list examples or comments: %s', (example) => {
+    const source = `${example}\nexport function EmptyPage() { return <Pagination /> }`
+    expect(classifyLongListSource(source).excludedBy).toBe('no-mapped-list')
+  })
+
   it('keeps rule-list rendering in the backlog when its bulk controls are extracted', () => {
     const source = `
       export default function RulesPage() {
@@ -1020,12 +1176,13 @@ describe('virtualization discovery: JSX context must be genuine', () => {
     expect(mapCallbackReturnsJsx(obj, obj.indexOf('('))).toBe(false)
   })
 
-  it('the shipped backlog no longer acknowledges the non-rendering ChargingListPage', () => {
+  it('tracks both charging card renderers, including delegated date-grouped rows', () => {
     const audit = readFileSync(join(webRoot, 'scripts', 'audit-virtualization.mjs'), 'utf8')
     const list = /ACKNOWLEDGED_LONG_LIST_SURFACES = \[([\s\S]*?)\n\];/.exec(audit)?.[1] ?? ''
     expect(list).not.toBe('')
-    expect(list).not.toContain("'features/charging/pages/ChargingListPage.tsx'")
-    // …while the component that really renders those rows is still tracked.
+    const page = readFileSync(join(webRoot, 'src', 'features', 'charging', 'pages', 'ChargingListPage.tsx'), 'utf8')
+    expect(classifyLongListSource(page).isLongListSurface).toBe(true)
+    expect(list).toContain("'features/charging/pages/ChargingListPage.tsx'")
     expect(list).toContain("'features/charging/components/charging-list/SessionListSection.tsx'")
   })
 })

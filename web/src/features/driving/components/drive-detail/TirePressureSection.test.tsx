@@ -29,6 +29,16 @@ import type { ReactElement, ReactNode } from 'react';
 import { ChartTimeRangeProvider } from '@/components/charts';
 import { TirePressureSection } from './TirePressureSection';
 import type { ChartDataPoint, DriveStats } from './types';
+import { chartTokens } from '@/lib/tokens';
+
+vi.mock('@/components/charts', async () => ({
+  ...await vi.importActual<typeof import('@/components/charts')>('@/components/charts'),
+  ...(await import('@/test/chartTestDoubles')).inertCartesianParts,
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+  LineChart: ({ children }: { children: ReactNode }) => <>{children}</>,
+  Line: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
+    <span data-testid={`pressure-${dataKey}`} data-stroke={stroke} />,
+}));
 
 // U+2013 EN DASH separates min–max; U+2014 EM DASH is the "no reading" marker.
 const EN_DASH = '\u2013';
@@ -42,7 +52,10 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+        const text = typeof fallback === 'string' ? fallback : key;
+        return options ? text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options[name] ?? '')) : text;
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -61,6 +74,7 @@ vi.mock('@/hooks/useChartExport', () => ({
   }),
 }));
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [] }),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
@@ -151,10 +165,28 @@ function renderSection(
 }
 
 describe('TirePressureSection', () => {
+  it('uses distinct shared wheel identities rather than a danger color for a normal rear-right reading', () => {
+    renderSection(fullPressure, driveStats({ hasTirePressure: true }));
+    for (const [key, index] of Object.entries({ tireFl: 0, tireFr: 1, tireRl: 2, tireRr: 4 })) {
+      expect(screen.getByTestId(`pressure-${key}`)).toHaveAttribute('data-stroke', chartTokens.series[index]);
+    }
+    expect(screen.getByTestId('pressure-tireRr')).not.toHaveAttribute('data-stroke', chartTokens.series[3]);
+    expect(screen.getByText(`3.10${EN_DASH}3.40`)).toBeInTheDocument();
+  });
+  it('suppresses image export according to the same pressure flag as the chart body', () => {
+    const { container, unmount } = renderSection(fullPressure, driveStats({ hasTirePressure: false }));
+    expect(container.querySelector('[data-chart-state]')).toHaveAttribute('data-chart-state', 'empty');
+    expect(screen.queryByRole('button', { name: 'Export chart' })).not.toBeInTheDocument();
+    unmount();
+    renderSection(fullPressure, driveStats({ hasTirePressure: true }));
+    expect(screen.getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /CSV/i })).not.toBeInTheDocument();
+  });
+
   it('always renders the titled, screen-reader-labelled chart figure', () => {
     renderSection(fullPressure, driveStats({ hasTirePressure: true }));
     expect(
-      screen.getByRole('heading', { name: 'Tire Pressure During Drive' }),
+      screen.getByRole('heading', { name: 'Tire pressure during drive' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', {
@@ -168,31 +200,29 @@ describe('TirePressureSection', () => {
     // the empty branch must win so we never render a half-populated section.
     renderSection(fullPressure, driveStats({ hasTirePressure: false }));
     expect(screen.getByText('No telemetry data available')).toBeInTheDocument();
-    expect(screen.queryByText('Front Left')).not.toBeInTheDocument();
-    expect(screen.queryByText('Rear Right')).not.toBeInTheDocument();
-    // The figure keeps its accessible name even in the empty state.
-    expect(
-      screen.getByRole('img', {
-        name: /front and rear tire pressure lines over the drive timeline/i,
-      }),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Front left pressure range (bar)')).toBeInTheDocument();
+    expect(screen.getByText('Rear right pressure range (bar)')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('No telemetry data available');
+    expect(screen.queryByRole('img', {
+      name: /front and rear tire pressure lines over the drive timeline/i,
+    })).not.toBeInTheDocument();
   });
 
   it('renders all four per-wheel summary tiles when tire pressure is present', () => {
     renderSection(fullPressure, driveStats({ hasTirePressure: true }));
-    expect(screen.getByText('Front Left')).toBeInTheDocument();
-    expect(screen.getByText('Front Right')).toBeInTheDocument();
-    expect(screen.getByText('Rear Left')).toBeInTheDocument();
-    expect(screen.getByText('Rear Right')).toBeInTheDocument();
+    expect(screen.getByText('Front left pressure range (bar)')).toBeInTheDocument();
+    expect(screen.getByText('Front right pressure range (bar)')).toBeInTheDocument();
+    expect(screen.getByText('Rear left pressure range (bar)')).toBeInTheDocument();
+    expect(screen.getByText('Rear right pressure range (bar)')).toBeInTheDocument();
   });
 
   it('summarises each wheel as a min–max range in the user pressure unit (bar)', () => {
     renderSection(fullPressure, driveStats({ hasTirePressure: true }));
     // fmtNumber renders 2 decimals; the default settings mock uses `bar`.
-    expect(screen.getByText(`2.80${EN_DASH}2.90 bar`)).toBeInTheDocument(); // FL
-    expect(screen.getByText(`2.90${EN_DASH}3.00 bar`)).toBeInTheDocument(); // FR
-    expect(screen.getByText(`3.00${EN_DASH}3.20 bar`)).toBeInTheDocument(); // RL
-    expect(screen.getByText(`3.10${EN_DASH}3.40 bar`)).toBeInTheDocument(); // RR
+    expect(screen.getByText(`2.80${EN_DASH}2.90`)).toBeInTheDocument(); // FL
+    expect(screen.getByText(`2.90${EN_DASH}3.00`)).toBeInTheDocument(); // FR
+    expect(screen.getByText(`3.00${EN_DASH}3.20`)).toBeInTheDocument(); // RL
+    expect(screen.getByText(`3.10${EN_DASH}3.40`)).toBeInTheDocument(); // RR
   });
 
   it('renders an em-dash placeholder for wheels with no positive readings', () => {
@@ -204,10 +234,10 @@ describe('TirePressureSection', () => {
       point({ tireFl: 2.9, tireFr: null, tireRl: null, tireRr: 0 }),
     ];
     renderSection(partial, driveStats({ hasTirePressure: true }));
-    expect(screen.getByText(`2.80${EN_DASH}2.90 bar`)).toBeInTheDocument();
+    expect(screen.getByText(`2.80${EN_DASH}2.90`)).toBeInTheDocument();
     expect(screen.getAllByText(EM_DASH)).toHaveLength(3);
     // The zero-only wheel keeps its label even though it has no numeric range.
-    expect(screen.getByText('Rear Right')).toBeInTheDocument();
+    expect(screen.getByText('Rear right pressure range (bar)')).toBeInTheDocument();
   });
 
   it('skips non-finite samples so a NaN never leaks into the range', () => {
@@ -218,7 +248,7 @@ describe('TirePressureSection', () => {
     ];
     renderSection(withNaN, driveStats({ hasTirePressure: true }));
     // The NaN row is ignored: min = 2.5, max = 3.5.
-    expect(screen.getByText(`2.50${EN_DASH}3.50 bar`)).toBeInTheDocument();
+    expect(screen.getByText(`2.50${EN_DASH}3.50`)).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
@@ -232,7 +262,7 @@ describe('TirePressureSection', () => {
     expect(() =>
       renderSection(big, driveStats({ hasTirePressure: true })),
     ).not.toThrow();
-    expect(screen.getByText(`2.70${EN_DASH}2.70 bar`)).toBeInTheDocument();
+    expect(screen.getByText(`2.70${EN_DASH}2.70`)).toBeInTheDocument();
   });
 
   it('degrades a missing chartData array to empty tiles without throwing', () => {
@@ -242,7 +272,7 @@ describe('TirePressureSection', () => {
       renderSection(undefined, driveStats({ hasTirePressure: true })),
     ).not.toThrow();
     expect(screen.getAllByText(EM_DASH)).toHaveLength(4);
-    expect(screen.getByText('Front Left')).toBeInTheDocument();
+    expect(screen.getByText('Front left pressure range (bar)')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
@@ -253,8 +283,8 @@ describe('TirePressureSection', () => {
       (ui) => <ChartTimeRangeProvider syncId="drive-detail">{ui}</ChartTimeRangeProvider>,
     );
     expect(
-      screen.getByRole('heading', { name: 'Tire Pressure During Drive' }),
+      screen.getByRole('heading', { name: 'Tire pressure during drive' }),
     ).toBeInTheDocument();
-    expect(screen.getByText(`2.80${EN_DASH}2.90 bar`)).toBeInTheDocument();
+    expect(screen.getByText(`2.80${EN_DASH}2.90`)).toBeInTheDocument();
   });
 });

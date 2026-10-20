@@ -6,8 +6,9 @@ import { GlassPanel, MetricValue, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 
 import { JourneyFragmentationSectionProps } from './_types';
+import { PendingEvidence } from './PendingEvidence';
 
-export function JourneyDirectory({ result }: JourneyFragmentationSectionProps) {
+export function JourneyDirectory({ result, state, loading = false }: JourneyFragmentationSectionProps) {
   const { t } = useTranslation();
   const { formatDistance, formatDuration } = useUnits();
   const journeys = [...result.journeys]
@@ -19,7 +20,7 @@ export function JourneyDirectory({ result }: JourneyFragmentationSectionProps) {
         <Text as="h2" variant="panelTitle">{t('journeyFragmentation.directory.title', 'Ranked observed journey directory')}</Text>
         <Text as="p" variant="caption" className="mt-1">{t('journeyFragmentation.directory.subtitle', 'Top chains by included drive count, then distance. This is a directory of records, not a recommendation list.')}</Text>
       </div>
-      {journeys.length === 0 ? (
+      {state && !state.hasData ? <PendingEvidence state={state} loading={loading} /> : journeys.length === 0 ? (
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<MapPin className="h-7 w-7" />} message={t('journeyFragmentation.directory.empty', 'No observed journeys are available for the directory.')} />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -32,13 +33,13 @@ export function JourneyDirectory({ result }: JourneyFragmentationSectionProps) {
                 </div>
                 <Text as="p" variant="caption">{t('journeyFragmentation.directory.fragments', '{{count}} drives', { count: journey.fragments })}</Text>
               </div>
-              <MetricValue>{formatDistance(journey.distanceM, { precision: 1 })}</MetricValue>
+              <MetricValue>{formatDistance(journey.distanceM)}</MetricValue>
               <Text as="p" variant="caption">
                 {journey.startAddress ?? t('journeyFragmentation.directory.unknownStart', 'Unlocated start')}
                 {' → '}
                 {journey.endAddress ?? t('journeyFragmentation.directory.unknownEnd', 'Unlocated end')}
               </Text>
-              <Text as="p" variant="caption">{formatDuration(journey.drivingSeconds + journey.observedParkingSeconds, { precision: 1 })} · {t('journeyFragmentation.directory.gaps', '{{count}} linked gaps', { count: journey.parkingGapsMin.length })}</Text>
+              <Text as="p" variant="caption">{formatDuration(journey.drivingSeconds + journey.observedParkingSeconds)} · {t('journeyFragmentation.directory.gaps', '{{count}} linked gaps', { count: journey.parkingGapsMin.length })}</Text>
             </div>
           ))}
         </div>

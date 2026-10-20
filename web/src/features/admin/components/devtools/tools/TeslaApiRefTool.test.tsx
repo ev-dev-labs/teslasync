@@ -60,7 +60,7 @@ const matchesQuery = (q: string) =>
       e.desc.toLowerCase().includes(q),
   )
 
-const SEARCH_NAME = 'Search Endpoints'
+const SEARCH_NAME = 'Search endpoints'
 const LIST_PATH = '/api/1/vehicles' // the sole GET list endpoint
 const WAKE_PATH = '/api/1/vehicles/{id}/command/wake_up' // a POST command
 
@@ -83,7 +83,7 @@ describe('TeslaApiRefTool', () => {
     render(<TeslaApiRefTool />)
 
     expect(
-      screen.getByRole('heading', { name: 'Tesla Api Ref' }),
+      screen.getByRole('heading', { name: 'Tesla API ref' }),
     ).toBeInTheDocument()
 
     // The field exposes an accessible name (aria-label), not merely a
@@ -96,7 +96,7 @@ describe('TeslaApiRefTool', () => {
     expect(screen.getByRole('columnheader', { name: 'Method' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Path' })).toBeInTheDocument()
     expect(
-      screen.getByRole('columnheader', { name: 'Endpoint Desc' }),
+      screen.getByRole('columnheader', { name: 'Endpoint desc' }),
     ).toBeInTheDocument()
   })
 
@@ -121,18 +121,18 @@ describe('TeslaApiRefTool', () => {
 
     const getRow = screen.getByText(LIST_PATH).closest('tr') as HTMLElement
     const getBadge = within(getRow).getByText('GET')
-    expect(getBadge.className).toMatch(/bg-blue/)
+    expect(getBadge.className).toMatch(/bg-\[var\(--semantic-info-bg\)\]/)
 
     const postRow = screen.getByText(WAKE_PATH).closest('tr') as HTMLElement
     const postBadge = within(postRow).getByText('POST')
-    expect(postBadge.className).toMatch(/bg-yellow/)
+    expect(postBadge.className).toMatch(/bg-\[var\(--semantic-warning-bg\)\]/)
   })
 
   it('filters by HTTP method case-insensitively', () => {
     render(<TeslaApiRefTool />)
 
     // Mixed case proves the query is lower-cased before matching.
-    fireEvent.change(getSearch(), { target: { value: 'PoSt' } })
+    fireEvent.change(getSearch(), { target: { value: 'POST' } })
 
     expect(methodBadges('POST')).toHaveLength(POST_COUNT)
     expect(methodBadges('GET')).toHaveLength(0)

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useRef } from 'react';
 import { request } from '../client';
 import { queryPolicy } from '../queryPolicy';
 import type { DayLogLayer, DayLogResponse } from '../types';
@@ -26,6 +27,14 @@ export interface UseDayLogParams {
   layers?: DayLogLayer[];
 }
 
+/** Paging failures retain actual records without claiming a server signal cap. */
+export class DayLogPagingError extends Error {
+  constructor(message: string, readonly partialData: DayLogResponse, readonly cause?: unknown) {
+    super(message);
+    this.name = 'DayLogPagingError';
+  }
+}
+
 async function fetchAllPages(
   vehicleId: number,
   date: string,
@@ -47,40 +56,86 @@ async function fetchAllPages(
   const first = await request<DayLogResponse>(`/day-log?${base.toString()}`, { signal });
   const total = first.total_events;
   const events = [...(first.events ?? [])];
+  const retained = () => ({ ...first, events: [...events], offset: 0, limit: DAY_LOG_PAGE_LIMIT });
+  const fail = (message: string): never => {
+    throw new DayLogPagingError(message, retained());
+  };
+  const seen = new Set(events.map((event) => event.id));
+  if (!Number.isSafeInteger(total) || total < 0 || first.offset !== 0
+    || events.length > total || seen.size !== events.length) {
+    fail('Invalid day-log paging metadata');
+  }
   let offset = events.length;
   while (events.length < total) {
     const params = new URLSearchParams(base);
     params.set('offset', String(offset));
-    const page = await request<DayLogResponse>(`/day-log?${params.toString()}`, { signal });
+    let page: DayLogResponse;
+    try {
+      page = await request<DayLogResponse>(`/day-log?${params.toString()}`, { signal });
+    } catch (cause) {
+      // Cancellation belongs to Query's lifecycle, not a paging failure.
+      if (signal?.aborted) throw cause;
+      throw new DayLogPagingError('Day-log page request failed', retained(), cause);
+    }
     const got = page.events ?? [];
-    if (got.length === 0) break;
+    if (page.offset !== offset || page.total_events !== total
+      || page.vehicle_id !== first.vehicle_id || page.date !== first.date
+      || page.timezone !== first.timezone || page.day_start !== first.day_start
+      || page.day_end !== first.day_end) {
+      fail('Day-log paging metadata changed');
+    }
+    if (got.length === 0) fail('Day-log paging stopped before all records loaded');
+    if (events.length + got.length > total || got.some((event) => seen.has(event.id))
+      || new Set(got.map((event) => event.id)).size !== got.length) {
+      fail('Day-log paging returned overlapping or excess records');
+    }
     events.push(...got);
+    got.forEach((event) => seen.add(event.id));
     offset += got.length;
-    if (offset > total + DAY_LOG_PAGE_LIMIT) break;
   }
-  return { ...first, events, offset: 0, limit: DAY_LOG_PAGE_LIMIT };
+  return retained();
 }
 
 /**
  * Fetches one vehicle's COMPLETE local-day event history.
  *
- * The query resolves only after every page is loaded (see
- * total_events), so consumers never mistake a partial page for the
- * whole day. Day-log rows close on state transitions (drives,
+ * The query succeeds only after every page is loaded. A paging error
+ * exposes retained records alongside Query's failure/retry state; a
+ * failed refresh keeps the last successful payload instead. The server's
+ * `truncated` provenance is never synthesized. Day-log rows close on state transitions (drives,
  * sessions, FSM edges), so the `operational` tier fits: no ambient
  * poll, SSE/mutation invalidation is the refresh path.
  */
 export function useDayLog({ vehicleId, date, timezone, layers = [] }: UseDayLogParams) {
   const id = typeof vehicleId === 'number' && Number.isInteger(vehicleId) && vehicleId > 0 ? vehicleId : null;
   const enabled = id != null && date !== '' && timezone !== '';
+  const queryKey = dayLogKeys.day(id ?? 0, date, timezone, layers);
+  const scope = JSON.stringify(queryKey);
+  const partial = useRef<{ scope: string; data: DayLogResponse } | null>(null);
 
-  return useQuery({
-    queryKey: dayLogKeys.day(id ?? 0, date, timezone, layers),
-    queryFn: ({ signal }) => {
+  const query = useQuery({
+    queryKey,
+    queryFn: async ({ signal }) => {
       if (id == null) throw new Error('vehicleId is required');
-      return fetchAllPages(id, date, timezone, layers, signal);
+      try {
+        const data = await fetchAllPages(id, date, timezone, layers, signal);
+        if (partial.current?.scope === scope) partial.current = null;
+        return data;
+      } catch (error) {
+        if (error instanceof DayLogPagingError && !signal.aborted) {
+          partial.current = { scope, data: error.partialData };
+        }
+        throw error;
+      }
     },
     enabled,
     ...queryPolicy('operational'),
   });
+  const pagingError = query.error instanceof DayLogPagingError ? query.error : null;
+  return {
+    ...query,
+    data: query.data ?? pagingError?.partialData
+      ?? (partial.current?.scope === scope ? partial.current.data : undefined),
+    pagingError,
+  };
 }

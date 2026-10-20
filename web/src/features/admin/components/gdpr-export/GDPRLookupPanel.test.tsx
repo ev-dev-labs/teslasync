@@ -55,7 +55,7 @@ function setup(over: SetupOverrides = {}) {
     <GDPRLookupPanel idInput={over.idInput ?? ''} onIdChange={onIdChange} onLookup={onLookup} />,
   );
   const input = screen.getByLabelText('Artifact ID') as HTMLInputElement;
-  const button = screen.getByRole('button', { name: /look up/i });
+  const button = screen.getByRole('button', { name: /Look up/i });
   return { ...utils, input, button, onIdChange, onLookup };
 }
 
@@ -76,8 +76,8 @@ describe('GDPRLookupPanel — structure', () => {
     expect(input).toBeInTheDocument();
     expect(input).toHaveAttribute('placeholder', 'e.g. 8f4c…');
     expect(button).toBeInTheDocument();
-    expect(screen.getByText(/IDs come from the GDPR export queue/i)).toBeInTheDocument();
-    expect(screen.getByText(/Bundles are streamed straight from the backend/i)).toBeInTheDocument();
+    expect(screen.getByText(/Enter an artifact ID to look up its saved metadata/i)).toBeInTheDocument();
+    expect(screen.getByText(/they do not create exports or download bundles/i)).toBeInTheDocument();
   });
 
   it('reflects the idInput prop as the input value', () => {
@@ -130,7 +130,7 @@ describe('GDPRLookupPanel — change handling', () => {
     const onLookup = vi.fn();
     render(<StatefulHarness onLookup={onLookup} />);
     const input = screen.getByLabelText('Artifact ID') as HTMLInputElement;
-    const button = screen.getByRole('button', { name: /look up/i });
+    const button = screen.getByRole('button', { name: /Look up/i });
 
     // Starts empty → disabled.
     expect(input).toHaveValue('');
@@ -212,7 +212,7 @@ describe('GDPRLookupPanel — null-safety', () => {
     ).not.toThrow();
 
     const input = screen.getByLabelText('Artifact ID') as HTMLInputElement;
-    const button = screen.getByRole('button', { name: /look up/i });
+    const button = screen.getByRole('button', { name: /Look up/i });
     // `?? ''` keeps the control controlled + empty rather than uncontrolled.
     expect(input).toHaveValue('');
     expect(button).toBeDisabled();

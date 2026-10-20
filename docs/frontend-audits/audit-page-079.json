@@ -1,0 +1,346 @@
+{
+  "item": "audit-page-079",
+  "page": "web\\src\\features\\charging\\pages\\ChargerHealthPage.tsx",
+  "routes": ["/charger-health"],
+  "purpose": "Compare charging locations against their own demonstrated session-derived power baseline, identify persistent shortfall and explain estimated annual time lost.",
+  "primaryGoal": "Identify which previously used charging locations are underperforming without confusing inferred health, insufficient observations or retained history with measured charger condition.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "evidence": "web\\src\\features\\charging\\pages\\ChargerHealthPage.tsx:18-19",
+      "behavior": "Workspace-selected vehicle ID; no competing local selector. Hook implementation not inspected."
+    },
+    {
+      "hook": "useChargingSessions(vehicleIdStr)",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 56,
+      "endpoint": "GET /api/v1/charging-sessions?vehicle_id=<selected vehicle>",
+      "routeEvidence": [
+        "internal\\api\\router.go:5008-5037 delegates registration to v1ChargingHandler",
+        "internal\\handler\\v1\\charging_handler.go:24-46 registers /charging-sessions and accepts vehicle_id"
+      ],
+      "behavior": "Enabled only with vehicle ID; vehicle-specific chargingKeys.byVehicle cache; AbortSignal forwarded; safeArray selection; no explicit bounds, limit, polling or page-level query policy overrides.",
+      "sourceOwnership": "v1 ChargingHandler -> chargingsvc.Service.GetByVehicleID -> ChargingSessionRepository. Service forwards repository records without mapping. Endpoint existence is confirmed; actual response compatibility is not.",
+      "risk": "The registered handler returns internal/domain/charging.ChargingSession, whose JSON tags differ materially from the frontend ChargingSession used by the analysis. See architectureIssues."
+    },
+    {
+      "hook": "useDataState(sessionsQuery, { provenance: 'historical' })",
+      "owner": "web\\src\\hooks\\useDataState.ts",
+      "evidence": "web\\src\\features\\charging\\pages\\ChargerHealthPage.tsx:24; web\\src\\api\\dataState.ts:178-245",
+      "behavior": "Retained payload survives refresh error/offline pause; fatal errors require no retained data; historical provenance describes the source, while inferred analysis is explained separately."
+    },
+    {
+      "hook": "analyzeChargerHealth",
+      "owner": "web\\src\\features\\charging\\lib\\chargerHealth.ts",
+      "evidence": "web\\src\\features\\charging\\pages\\ChargerHealthPage.tsx:25-28",
+      "behavior": "Pure memoized derived model; place-name/rounded-coordinate grouping; minimum 600 seconds and 2000 Wh; taper exclusion above 80% SoC; four clean sessions to rate; up to five recent clean sessions; high-quantile baseline; ratios below 0.9 slipping and below 0.75 degraded; inferred AC/DC above observed 25000 W; annualized usage-shortfall estimate; worst-first then energy ordering.",
+      "units": "Derived power W, energy Wh, duration seconds; specialist hoursLostPerYear retained and converted to seconds for shared duration rendering. Existing duration_min activity fallback is interpreted as minutes, not changed or generalized."
+    }
+  ],
+  "components": [
+    {
+      "name": "ChargerHealthPage",
+      "owner": "web\\src\\features\\charging\\pages\\ChargerHealthPage.tsx",
+      "role": "Typed source orchestration, selected-vehicle guard, page title, four-metric summary followed by chart and locations."
+    },
+    {
+      "name": "PageLayout / CardGrid",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx; web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+      "role": "Existing full-width page composition and allocated-container packing; both analytical panels use size=full; PageLayout delegates to PageContainer, which owns freshness chrome.",
+      "evidence": "ChargerHealthPage.tsx:37-63; CardGrid.tsx:26-45"
+    },
+    {
+      "name": "ChargerHealthStats / ChargingSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthStats.tsx; web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx; web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "role": "Four typed raw-source metrics, unknown period, inference explanation, source trust footer and shared details drawer. Existing useOperationalMetrics display bridge is reused."
+    },
+    {
+      "name": "ChargerHealthChart / ChartContainer",
+      "owner": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthChart.tsx; web\\src\\components\\charts\\ChartContainer.tsx",
+      "role": "Rated sites only; rounded percentage comparison, 100% reference, tooltip, accessible data fallback and PNG/SVG/clipboard/CSV exports. No explicit fullscreen, annotations or chartKey are supplied; do not invent them as current page actions."
+    },
+    {
+      "name": "ChargerHealthLocations / LayoutCard / DataTable",
+      "owner": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthLocations.tsx; web\\src\\components\\ui\\DataTable.tsx",
+      "role": "Nine site facts, semantic statuses, inferred AC/DC, display-only power/energy conversion, method footer, contextual grouping help and mobile quick-view details. Stable tableId charging:charger-health-locations; pagination/search/export disabled by caller."
+    },
+    {
+      "name": "ChargerHealthSourceNotice / StaleRefreshWarning / QueryError",
+      "owner": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthSourceNotice.tsx; web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "role": "Source-local retained-data warnings, fatal recovery and paused/offline status. Shared retries invoke the same query refetch."
+    },
+    {
+      "name": "NoVehicleSelected",
+      "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "role": "Explicit prerequisite empty state with governed onboarding action and explanatory details; not a replacement for a selected vehicle's analytical sections."
+    },
+    {
+      "name": "Existing presentation primitives",
+      "owner": "web\\src\\components\\ui; web\\src\\components\\feedback; web\\src\\components\\motion",
+      "role": "Badge, Text, Button, HelpTooltip, EmptyState, Skeleton and FadeIn are reused; no local surface/token/overlay engine found."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthSourceNotice.tsx",
+      "line": 14,
+      "rule": "MDC-026 / mission visual hierarchy",
+      "detail": "One source notice is rendered under metrics, above the chart and inside locations. In refresh failure/offline cases this repeats warnings and retry controls for the same source. Independent source shells are intentional, but repeated alert intensity may distract.",
+      "fix": "Review mounted failure states before changing; keep local trust visibility and retained content, and use the existing hideRetry contract where redundant controls are demonstrably unnecessary.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthLocations.tsx",
+      "line": 33,
+      "rule": "MDC-023 / existing presentation ownership",
+      "detail": "Desktop render/export callbacks and mobile displayValue share local formatting helpers. This is an adapter for DataTable rather than evidence for a second table system.",
+      "fix": "Retain the existing helper reuse and allColumns details pipeline; do not extract a competing charger-specific table or duplicate mobile details.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "ChargerHealthPage.tsx:51-62 uses two full-width CardGrid placements.",
+      "ChargerHealthChart.tsx:37 and 64 retain min-w-0 and width=100%; fixed 340px chart with angled/truncated site labels.",
+      "ChargerHealthLocations.tsx:110-122 opts into mobile cards, with label/status/recent prominent and energy/lastSeen/cost hidden only from the summary.",
+      "DataTable.tsx:1385-1390 forwards allColumns=columns into the mobile adapter, preserving the nine fields for quick-view details.",
+      "CardGrid.tsx:26-45 measures allocated container width and packs existing Grid tracks."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthChart.tsx",
+        "line": 67,
+        "rule": "MDC-043 / mission 15-17",
+        "detail": "The comparison chart keeps 10px angled labels and a fixed height for any number of rated sites, with no page-specific dense-site mobile strategy. Long names are truncated. Crowding/readability is a source-based risk, not observed overflow.",
+        "fix": "Exercise dense and long-name data at the ten contract widths; retain full names and exact rows in tooltip/fallback/export. Use existing ChartContainer sizing and presentation contracts if a responsive adjustment is needed.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "Unverified at every viewport, including 320/375/390/430/768/1024/1280/1440/1920/2560, 200% text, RTL and open mobile drawer."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "ChargerHealthChart.tsx:43-44 supplies localized ariaLabel and :56-61 provides full fallback columns, including textual status.",
+      "ChartContainer.tsx:482-487 supplies figure/title/fallback association and aria-busy; :750-800 implements the accessible fallback table.",
+      "ChargerHealthLocations.tsx:92-101 provides named/captioned DataTable, stable row keys and row labels; :45-51 uses text statuses and neutral inferred class badges.",
+      "ChargerHealthLocations.tsx:83-88 gives grouping HelpTooltip an explicit localized accessible name.",
+      "ChargerHealthSourceNotice.tsx:24 uses role=status; StaleRefreshWarning.tsx:90-99 uses polite live status and a named retry control.",
+      "Decorative location/activity/power/plug icons are aria-hidden in stats and locations.",
+      "OperationalBrief.tsx:152-160 and :234-300 retain shared details-button/drawer behavior; no new overlay system."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthChart.tsx",
+        "line": 81,
+        "rule": "MDC-025 / MDC-040",
+        "detail": "Healthy/slipping/degraded bars use palette indices without a visible status legend; color mapping does not follow the semantic badge mapping. A textual status fallback exists, so this is not a claim that all status information is color-only.",
+        "fix": "Preserve fallback text and add/reuse an accessible semantic status key only if mounted review confirms a comprehension gap; align palette meaning through existing shared owners.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["Keyboard traversal", "Focus visibility and restoration", "HelpTooltip open/closed semantics", "Screen-reader announcements", "Drawer trapping and Escape", "44px targets", "Effective contrast in actual themes", "Forced colors", "Reduced-motion behavior"]
+  },
+  "states": {
+    "noVehicle": "Page returns NoVehicleSelected and onboarding guidance; sessions hook disabled.",
+    "initialLoading": "No retained payload, no fatal error and no offline pause produces metrics loading, chart loading and a 180px locations skeleton.",
+    "emptyHistory": "Resolved [] is hasData=true in DataState. Site count can truthfully be zero; underperforming/fastest/time lost remain unknown without rated sites. Chart and locations show separate explanatory empties.",
+    "insufficientCleanSessions": "Locations remain visible with unknown badge; baseline sentinel is rendered as an em dash, not measured zero. Chart excludes unknown sites.",
+    "fatalError": "Metrics/locations show QueryError; chart owns its error/retry surface. PageContainer is not given an error gate that erases all shells.",
+    "refreshError": "Cached summary, chart and rows remain visible with repeated nonblocking StaleRefreshWarning and retained source label.",
+    "offlinePaused": "No payload produces paused status and retry, not a perpetual loading skeleton; retained payload is stale and kept visible.",
+    "refreshing": "Page busy uses isRefreshing; current content is retained; warning retry disables while refreshing.",
+    "partialUnknown": "Four metric values independently distinguish missing benchmarks from source-present zero. There is no partial source fan-out on this page.",
+    "trust": "Returned history period is explicitly unknown, not a lifetime guarantee; fastest is demonstrated baseline, not hardware rating; annualized time loss is an estimate; AC/DC is inferred.",
+    "runtime": "All transitions are source-inspected only; no query/network/browser state was exercised."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthChart.tsx",
+      "line": 72,
+      "rule": "MDC-010 / MDC-025 / MDC-034 / mission 5,7,27",
+      "detail": "Baseline reference and healthy bars both use chartTokens.series[2] (amber #f59e0b); slipping uses series[3] (red #ef4444); degraded uses series[5] (cyan #06b6d4). These saturated hues give a target the same emphasis as data and disagree with locations' success/warning/danger meanings.",
+      "fix": "Use the existing subdued reference token and governed semantic chart-color mapping; preserve thresholds, every plotted value and saved theme/chart choices. Coordinate shared palette changes rather than adding local hex colors.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 59,
+      "rule": "MDC-045 / MDC-046 / typed source contract",
+      "detail": "Endpoint is real, but its registered v1 handler returns domain ChargingSession with startedAt/completedAt/energyAddedWh/startBatteryLevel/endBatteryLevel and no place/coordinates. analyzeChargerHealth instead needs started_at or start_ts, ended_at or duration_min, total_energy_added_wh, start_soc_pct/end_soc_pct and start_place or coordinates. Service.GetByVehicleID forwards the records without mapping. Merely asserting request<frontend ChargingSession[]> cannot supply those fields. This can turn genuine history into an empty inferred analysis. Current runtime payload and resilientFetch transformation were not exercised.",
+      "fix": "Integration owner must reconcile the actual wire DTO, repository source and typed hook under the preservation contract, including timestamps, SI energy/duration, SoC and real location identity. Do not silently substitute useChargingHistory, add queries, fabricate sites or alter limits/window/cache keys in a page-only makeover.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": [
+        "internal\\handler\\v1\\charging_handler.go:24-46",
+        "internal\\app\\chargingsvc\\service.go:82-84",
+        "internal\\domain\\charging\\types.go:10-24",
+        "web\\src\\types\\charging.ts:15-47",
+        "web\\src\\features\\charging\\lib\\chargerHealth.ts:134-175"
+      ]
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthLocations.tsx",
+      "line": 3,
+      "rule": "MDC-002 / component-first category imports",
+      "detail": "Feature imports LayoutCard and useCardPlacement from the layout-reference implementation path; chart also directly imports useCardPlacement, and stats imports types from stat-reference. Canonical PageLayout/CardGrid and UI/chart barrels are otherwise reused.",
+      "fix": "Use category exports where available; shared barrel owner must confirm/export missing placement/type contracts before any caller-only cleanup. Do not duplicate the reference implementation.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthChart.tsx",
+      "line": 31,
+      "rule": "MDC-033 / MDC-044 / MDC-045",
+      "detail": "Chart fallback/export baseline/recent operands are fixed kW conversions, while locations and power metrics use current useUnits/useOperationalMetrics. The existing frozen chart explicitly preserves historical kW operands. This is display-contract debt, not evidence that hook/cache SI was mutated.",
+      "fix": "Keep W/Wh sources and existing export scope intact; integration/formatting owners must decide specialist display parity explicitly before changing labels or values. Do not rewrite the pure analysis to display units.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve the source DTO/location compatibility risk before cosmetic acceptance; page already uses shared modernized layouts, source-local trust states, typed metrics and mobile details. Secondary work is chart semantic color/reference emphasis and real responsive/a11y validation."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Charging sessions wire-to-analysis contract reconciliation",
+      "ownerFile": "web\\src\\api\\hooks\\useCharging.ts",
+      "existingOwnerFiles": ["internal\\handler\\v1\\charging_handler.go", "internal\\domain\\charging\\types.go", "web\\src\\types\\charging.ts"],
+      "propsVariantsStates": "Preserve selected-vehicle enablement, AbortSignal, cache identity, real returned history scope and SI fields; verify populated, empty, missing location, incomplete sessions, refresh failure and offline retained history.",
+      "usedBy": ["ChargerHealthPage", "Other useChargingSessions consumers require integration-owner inventory; not audited here"],
+      "dependsOn": ["Actual v1 response and repository record inspection", "Preservation decision for existing frozen operands", "Integration-owned regression validation"],
+      "owner": "integration"
+    },
+    {
+      "name": "Canonical layout/stat category exports",
+      "ownerFile": "web\\src\\components\\layout\\index.ts",
+      "existingOwnerFiles": ["web\\src\\components\\data-display\\index.ts", "web\\src\\components\\layout\\layout-reference\\CardPlacementContext.tsx"],
+      "propsVariantsStates": "Reuse LayoutCard, useCardPlacement and StatMetric/StatPeriod without implementation-path imports; retain full-card placement and raw measurement/unknown-period types. Barrel availability itself was not inspected.",
+      "usedBy": ["ChargerHealthChart", "ChargerHealthLocations", "ChargerHealthStats"],
+      "dependsOn": ["Shared owner export confirmation", "Existing chunk-cycle avoidance contract"],
+      "owner": "shared"
+    },
+    {
+      "name": "Semantic chart status/reference palette review",
+      "ownerFile": "web\\src\\lib\\tokens.ts",
+      "propsVariantsStates": "Existing chartTokens owner; subdued baseline reference plus healthy/degrading/degraded meanings consistent with Badge success/warning/danger, preserving textual fallback and user palette preferences.",
+      "usedBy": ["ChargerHealthChart", "ChargerHealthLocations status comparison"],
+      "dependsOn": ["MDC-010/MDC-011/MDC-025/MDC-034", "Actual composed-theme contrast review", "Shared owner approval if token contract changes"],
+      "owner": "shared"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Existing /charging-sessions versus /charging history sources",
+      "evidence": "useCharging.ts:34-43,56-84; router.go:3502-3509,5037",
+      "detail": "Two real endpoint families exist. The page deliberately consumes ordinary useChargingSessions, not useChargingHistory(limit=1000) or getChargingSessions(limit=50). They are not interchangeable during cosmetic modernization."
+    },
+    {
+      "name": "No competing page-owned UI engine found",
+      "evidence": "ChargerHealthPage.tsx:1-13; page-specific presentation component imports",
+      "detail": "Shared OperationalBrief, ChartContainer, DataTable, LayoutCard, Badge and trust contract are reused. Deep reference imports are contract leakage, not proof of a new UI library."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "E781D8B31872FCA1CC527994DC414E1A7A3ABC0305B95185AC67F82B1EABB2AB",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact bytes of root-relative web\\src\\features\\charging\\pages\\ChargerHealthPage.tsx",
+    "currentLineCount": 64,
+    "pageSpecificPresentationLineCounts": {
+      "ChargerHealthChart.tsx": 88,
+      "ChargerHealthLocations.tsx": 126,
+      "ChargerHealthSourceNotice.tsx": 34,
+      "ChargerHealthStats.tsx": 102
+    },
+    "pagePlusPresentationLineCount": 414,
+    "originalHistoricalLineCount": "Not inspected; current snapshot is not historical parity proof.",
+    "sections": ["Four-slot charger health metrics and inference explanation", "Recent Power vs. Own Baseline comparison chart", "Locations details and scoring/grouping explanations"],
+    "sectionCount": 3,
+    "metricCount": 4,
+    "locationColumnCount": 9,
+    "literalPageGlassPanelCount": 0,
+    "literalPageChartContainerCount": 0,
+    "extractedChartContainerCount": 1,
+    "metricNames": ["Locations Tracked", "Underperforming", "Fastest Site", "Time Lost per Year"],
+    "locationFacts": ["Site", "Status", "Inferred AC/DC class", "Baseline", "Recent", "Energy taken", "Visits and scored count", "Last visit", "Costs you"],
+    "actions": [
+      "No-vehicle onboarding navigation and guidance details",
+      "Source retry/refresh on fatal, stale and paused states",
+      "Shared OperationalBrief measurement/evidence details drawer",
+      "Locations grouping HelpTooltip",
+      "Mobile locations quick-view with all nine fields",
+      "Chart PNG, SVG, clipboard and CSV export through ChartContainer"
+    ],
+    "notCurrentActions": ["No charger command or mutation", "No page date/vehicle picker", "No locations export/search/pagination", "No explicit chart fullscreen or annotation controls"],
+    "dataBehavior": [
+      "Keep real selected-vehicle sessions; no fixtures, extra sources, history-hook substitution, polling, limit/bounds or query-policy change.",
+      "Keep SI wire/cache W/Wh and real timestamps; unit conversion is presentation-only.",
+      "Keep pure analysis grouping, filtering, tapering, thresholds, recent window, rounding and ordering.",
+      "Never equate insufficient benchmarks with healthy status, measured zero or charger hardware condition.",
+      "Keep inferred AC/DC, annualization limitations, observed history period and all model explanations.",
+      "Keep independent shells and retained rows/chart during refresh error or offline pause.",
+      "Keep stable table identity and every desktop/mobile fact; hidden card metadata must remain reachable."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only bounded Phase 0 source audit",
+    "runtime": "Unverified; no browser, server, network request, production action or test execution.",
+    "visual": "Unverified; source palette/style risks are not screenshots or measured contrast.",
+    "mobileAndAccessibility": "Unverified; props/semantics and shared forwarding inspected only.",
+    "backend": "Registered handler/service/domain DTO inspected; repository query, actual records, response envelope and resilientFetch implementation not inspected. No completeness/retention/limit guarantee is inferred.",
+    "validation": "No TypeScript, full-repository lint/build or audit.sh execution. audit.sh was read but not run because it unconditionally executes project TypeScript, outside this task's bounded audit authority.",
+    "staticChecks": [
+      "Scoped functions.rg search for neon/glow/white/raw HTML/inline styles/direct library imports returned No matches found.",
+      "Corrected bounded PowerShell count: decoration=0, inline=0; case-sensitive raw elements=0.",
+      "Earlier case-insensitive PowerShell raw count=1 was the shared <Button> false positive at ChargerHealthSourceNotice.tsx:28, resolved by case-sensitive count.",
+      "First bounded PowerShell pattern command failed with a quoting ParserError; corrected command executed successfully.",
+      "Get-FileHash -Algorithm SHA256 captured root page hash; current page and extracted presentation lines counted.",
+      "No historical Git/parity comparison performed, as Git is prohibited."
+    ],
+    "noiseAssessment": "No page-local neon/glow/pure-white decoration was found in inspected production presentation files. Saturated chart colors and strong amber reference remain concrete findings. Global neonColorMap declarations are not reported as mounted page glow without consumer evidence.",
+    "scope": "Only this assigned route and directly relevant source/presentation contracts; no whole-app inventory or claim of completion."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\ChargerHealthPage.tsx",
+    "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthChart.tsx",
+    "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthLocations.tsx",
+    "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthStats.tsx",
+    "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthSourceNotice.tsx",
+    "web\\src\\features\\charging\\components\\charger-health-modernization\\ChargerHealthPage.runtime.test.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\features\\charging\\lib\\chargerHealth.ts",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\types\\charging.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\charging_handler.go",
+    "internal\\app\\chargingsvc\\service.go",
+    "internal\\domain\\charging\\types.go"
+  ]
+}

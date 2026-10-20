@@ -1,0 +1,321 @@
+{
+  "item": "audit-page-057",
+  "page": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx",
+  "routes": ["/automations/history"],
+  "purpose": "Review automation execution outcomes across a shared workspace date range, optionally narrowed by rule and status.",
+  "primaryGoal": "Find an execution, understand its outcome and action results, and inspect associated vehicle state transitions.",
+  "dataSources": [
+    {
+      "hook": "useAutomationHistoryPage",
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 105,
+      "endpoints": ["GET /automations/history", "GET /automations/{id}/history"],
+      "routeEvidence": "internal\\api\\router.go:3821-3823,3838-3841",
+      "owner": "internal\\api\\automation\\history.go:22-137",
+      "behavior": "25 rows per server page; limit/offset/status/since/until; rule ID selects the per-rule endpoint rather than an unsupported global automation_id query parameter. Query key includes all scope inputs, forwards cancellation signal and polls at INTERVALS.STANDARD. assertHistoryPage rejects malformed envelopes rather than converting failed data into empty history.",
+      "sourceTrust": "Items, total, summary and trend arrive in one envelope. Handler supplies the same filter to ListAll/GetStats/GetTrend. A failure in any of those operations fails the envelope; independent successful aggregates are not separately available.",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:19-45", "web\\src\\api\\hooks\\useAutomations.ts:73-124", "internal\\api\\automation\\history.go:33-65,105-136"],
+      "limitations": "Repository SQL implementation and live responses were not inspected/exercised. Per-rule endpoint checks rule existence and returns 404 for a missing rule."
+    },
+    {
+      "hook": "useAutomations",
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 44,
+      "endpoints": ["GET /automations"],
+      "owner": "automation API and existing safeArray query selector",
+      "behavior": "Separate polling query supplies rule names/options. Page retains a Rule #id option when URL selection is not in the loaded rules. Its error/retry is independent of history.",
+      "routeEvidence": "internal\\api\\router.go:3804-3805",
+      "evidence": ["web\\src\\api\\hooks\\useAutomations.ts:44-50", "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:43-54,127-130"],
+      "limitations": "List route registration confirmed; list-handler implementation and safeArray implementation not audited."
+    },
+    {
+      "hook": "useAutomationExecutionDetail",
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 128,
+      "endpoints": ["GET /automations/history/{historyId}"],
+      "routeEvidence": "internal\\api\\router.go:3821-3823",
+      "owner": "internal\\api\\automation\\history.go:144-192",
+      "behavior": "Enabled only for non-null selected execution ID; ID-specific query key, cancellation signal, STALE_TIMES.STANDARD. Detail is not polled by this hook.",
+      "sourceTrust": "Record is authoritative execution history. FSM transitions are fetched for its vehicle and execution window, capped at 100. Backend normalizes missing transitions and transition-query failure to an empty array, and returns 200 for the record. Detail success_rate is unfiltered per-rule history and is not currently displayed.",
+      "evidence": ["web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx:16-31", "internal\\api\\automation\\history.go:162-192", "web\\src\\api\\types.ts:2735-2747"]
+    },
+    {
+      "hook": "useRangeState",
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "line": 1,
+      "endpoints": [],
+      "owner": "Existing workspace header/range preference and URL state",
+      "behavior": "Page passes startInstant and endInstantExclusive directly as since/until. Route is registered for header-owned range; /automations prefix disables header vehicle scope. No competing local date or vehicle picker.",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:27-42", "web\\src\\lib\\workspaceScope.ts:28,96-98,156-167", "web\\src\\hooks\\useRangeState.ts:1-20", "internal\\api\\automation\\history.go:195-220"]
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-15", "usage": "Page heading/subtitle, copy link and navigation CTA; full-width min-w-0 container delegates shell behavior to PageContainer."},
+    {"name": "AutomationHistorySummary / OperationalBrief", "kind": "domain / composite", "owner": "web\\src\\features\\automations\\components\\AutomationHistorySummary.tsx:13-66", "usage": "Six operational metrics, full-filter scope, provenance/freshness explanation and retained-summary status through useOperationalMetrics."},
+    {"name": "AutomationHistoryTrend / ChartContainer", "kind": "domain / chart composite", "owner": "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx:11-62", "usage": "Success/failed/other period buckets; shared tooltip, legend, accessible fallback data table and chart export pipeline. Stable chartKey automation-history-trend."},
+    {"name": "AutomationHistoryTable / DataTable", "kind": "domain / table composite", "owner": "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx:9-41", "usage": "Seven columns; stable automations:history ID, compact density, column visibility/reorder/resize persistence, default loaded-row export pipeline."},
+    {"name": "AutomationExecutionDetail / Modal", "kind": "domain / overlay", "owner": "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx:10-96", "usage": "Selected execution metadata, optional error, action-result JSON and FSM transitions; existing modal close and scroll behavior."},
+    {"name": "Select, Pagination, Button, Text, PanelTitle, GlassPanel", "kind": "primitives", "owner": "Existing @/components/ui category", "usage": "Rule/status filtering, caller-owned page navigation, detail-opening action, typography and surfaces."},
+    {"name": "QueryError, Skeleton, EmptyState, StaleRefreshWarning, DataStateNotice", "kind": "feedback", "owner": "Existing @/components/feedback category", "usage": "Initial failure/retry, contextual loading, empty navigation and retained-data warning."},
+    {"name": "DateTime / useNumberFormatting", "kind": "display / formatting", "owner": "Existing @/components/data-display and @/hooks", "usage": "User-context timestamps and specialist duration formatting; implementations not inspected."},
+    {"name": "FadeIn", "kind": "motion", "owner": "web\\src\\components\\motion\\FadeIn.tsx:23-35", "usage": "Three section entrances; source uses existing motion preference and removes delay/reveal initial state when reduction is requested."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx",
+      "line": 90,
+      "rule": "MDC-020",
+      "detail": "New-automation Link hand-copies neutral button chrome rather than composing existing BUTTON_BASE/BUTTON_VARIANTS; focus and shape can drift.",
+      "fix": "Reuse existing navigation-button styling while retaining Link semantics and /automations/new destination.",
+      "owner": "page",
+      "confidence": "high",
+      "existingContract": "web\\src\\components\\ui\\Button.tsx:9-34"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": [
+      "PageLayout uses w-full/min-w-0 container; filters use flex-wrap; panel padding increases at sm.",
+      "Table mobile allow-list is rule/status. Other five columns are hidden below md by DataTable; rule action opens detail exposing timestamp, trigger, action counts, duration and error.",
+      "Detail metadata stacks then becomes two columns at sm; JSON supports wrapping/local horizontal scroll; Modal is bottom-aligned below sm with constrained body scrolling.",
+      "Pagination source uses container-dependent controls, 44px mobile buttons, page counts and a direct-jump form."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx",
+        "line": 117,
+        "rule": "MDC-043",
+        "detail": "Filter flex-1/w-full/min-w-0/sm:max-w classes are passed to Select's inner native select, while its outer div is the actual flex item. Intended filter reflow/allocated widths are not guaranteed.",
+        "fix": "Apply allocation classes on page-owned wrapper elements around Select and retain localized accessible labels; test narrow containers and long rule names.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": ["web\\src\\components\\ui\\Select.tsx:67,89-96", "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:113-125"]
+      },
+      {
+        "file": "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx",
+        "line": 16,
+        "rule": "MDC-023/MDC-043",
+        "detail": "Triggered time is hidden below 768px. Rows of the same rule/outcome have identical visible information and detail-opening names; users must open each record to identify when it occurred. All seven column values remain obtainable from the detail, so this is not a claim of total data loss.",
+        "fix": "Use the existing mobilePresentation contract or a deliberate compact identity cell including trigger time; preserve full metadata/detail access and loaded export scope.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": ["web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx:16-25,35-39", "web\\src\\components\\ui\\DataTable.tsx:715-725"]
+      }
+    ],
+    "requiredChecks": "320/375/390/430/768/1024/1280/1440/1920/2560 widths, allocated container widths, 200% text, long rule names/errors and open detail; all unverified."
+  },
+  "accessibility": {
+    "verified": false,
+    "positiveSourceEvidence": [
+      "Localized Select aria-labels and decorative icon aria-hidden on page.",
+      "Named DataTable caption; chart ariaLabel and supplied data/dataColumns fallback.",
+      "Modal source has role=dialog, aria-modal and title association; shared close control is 44px. Focus trapping/restoration helper implementation not inspected.",
+      "Text statuses accompany outcomes; color is not their only representation. DateTime uses existing user context.",
+      "FadeIn reads shared reduced-motion preference; real OS/low-bandwidth behavior not exercised."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx",
+        "line": 18,
+        "rule": "MDC-040",
+        "detail": "Detail-opening button overrides height/padding to content size; its accessible name is only the rule name. Minimum target spacing and distinguishability between executions require review.",
+        "fix": "Retain ghost appearance with an adequate touch target and localized execution-specific name including timestamp; do not replace the real rule label.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx",
+        "line": 90,
+        "rule": "MDC-020/MDC-040",
+        "detail": "Navigation CTA specifies min-h-9 rather than 44px and no shared focus-ring classes. Select defaults to min-h-10. Actual spacing exception, computed target sizes and browser focus visibility are unverified.",
+        "fix": "Reuse shared link chrome and mobile target sizing; make filter targets at least the shared mobile default without altering selection behavior.",
+        "owner": "page",
+        "confidence": "medium",
+        "evidence": ["web\\src\\components\\ui\\Select.tsx:34-38", "web\\src\\components\\ui\\Button.tsx:27-34"]
+      }
+    ],
+    "evidenceLimits": "No keyboard, screen-reader, effective contrast, forced-colors, focus restoration or browser interaction tests."
+  },
+  "states": {
+    "initialLoading": "History rows show four skeletons; summary and trend retain their own loading surfaces. Detail shows h-48 skeleton.",
+    "empty": "No matching rows explains period/filters and offers Manage automation rules; trend offers the same destination. Summary keeps zero counts but treats rate/duration as undefined when no completed runs.",
+    "fatalError": "History, rules and detail expose retryable QueryError independently; summary and trend reuse history fatal error without hiding other page sections.",
+    "refreshError": "Retained rows/rules/detail remain rendered with StaleRefreshWarning. Summary status becomes Retained execution summary. Trend keeps retained points using fatalError rather than raw query.error.",
+    "offline": "Shared useDataState distinguishes paused refresh with retained data; StaleRefreshWarning renders offline explanation. Cold/offline initial request behavior not runtime verified.",
+    "unknownUnavailable": "Missing summary renders unavailable notice; missing detail renders unavailable plus retry. Missing durations/trigger/errors use dash rather than zero.",
+    "partial": "Execution status partial is preserved as a business outcome; it is not the same as a partially unavailable data source.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx",
+        "line": 29,
+        "rule": "MDC-026",
+        "detail": "Trend derives DataState but only passes loading/fatalError to ChartContainer. Its own retained-state/freshness notice is absent; the history-source warning appears later in the table panel.",
+        "fix": "Attach existing StaleRefreshWarning and/or ChartContainer source metadata adjacent to trend; preserve retained points and independent retry.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx",
+        "line": 75,
+        "rule": "MDC-026",
+        "detail": "FSM transition subsection disappears for an empty array. Backend supplies the same [] for no vehicle, no transitions and failed transition lookup; results are capped at 100 without truncation metadata. The UI cannot truthfully distinguish these states from the current envelope.",
+        "fix": "Keep transition-section identity with a neutral unavailable/no-results explanation; do not assert no transitions occurred. Integration owner should expose availability/failure and bounded-result metadata before stronger trust claims.",
+        "owner": "integration",
+        "confidence": "high",
+        "evidence": ["internal\\api\\automation\\history.go:169-186", "web\\src\\api\\types.ts:2735-2747"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx",
+      "line": 54,
+      "rule": "MDC-010/MDC-034",
+      "detail": "Three fixed hex fills define a feature-local success/failed/other chart palette. No glow/neon classes were found in the five assigned source files, but composed appearance/contrast is unverified.",
+      "fix": "Consume existing semantic/chart palette tokens without changing series identities, aggregation or saved legend state.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx",
+      "line": 60,
+      "rule": "MDC-012",
+      "detail": "Error text uses fixed text-rose-300 rather than shared error typography/semantic tokens; light-theme contrast is unknown.",
+      "fix": "Use existing error typography/semantic color contract and preserve the complete error text.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx",
+      "line": 29,
+      "rule": "MDC-023",
+      "detail": "Table receives a server-paged slice but not DataTable.paginationControls; page renders Pagination separately. DataTable therefore treats default search/export as loaded-row operations, not full server-range operations. Existing export description correctly labels loaded scope, which must not be silently upgraded.",
+      "fix": "Consider supplying existing paginationControls and variant=embedded within the page panel to unify table/footer ownership. Preserve page URL semantics and explicitly retain loaded-page search/export scope unless backend full-result support is separately authorized.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx:147-154", "web\\src\\components\\ui\\DataTable.tsx:452,525,907-918"]
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Already uses modern layout, operational metrics, typed hooks, server bounds and retained-data handling. Prioritize filter allocation/mobile execution identity and per-source trust; no evidence supports a wholesale rewrite."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Execution-detail FSM source availability and bounded-result metadata",
+      "owner": "internal\\api\\automation\\history.go",
+      "line": 169,
+      "concreteContract": "An integration-owned additive typed availability result distinguishing unavailable/no vehicle, successful empty, successful populated and lookup failure, plus whether the 100-result cap truncated the window. Retain existing record and fsm_transitions payload; exact API shape must be agreed by its owner.",
+      "propsVariantsStates": ["unavailable", "empty", "available", "error", "bounded/truncated"],
+      "usedBy": ["web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx"],
+      "dependsOn": ["internal\\api\\automation\\history.go", "web\\src\\api\\types.ts:2735", "existing FSM repository bounded-query contract, not inspected"],
+      "classification": "integration contract requirement, not a proposed new shared UI composite",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx",
+      "line": 90,
+      "detail": "Local navigation CTA styling competes with existing shared Button link-chrome constants; reuse rather than add another component."
+    },
+    {
+      "file": "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx",
+      "line": 54,
+      "detail": "Feature-local hardcoded chart palette competes with centralized chart colors."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "13BA15C788E48F2E05F6247BD544B4B6A9AAD6E9B446F1FF9932FA3D3070F5A0",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 162,
+    "pageAndNarrowComponentLineCount": 428,
+    "componentLineCounts": {
+      "AutomationHistorySummary.tsx": 67,
+      "AutomationHistoryTrend.tsx": 62,
+      "AutomationHistoryTable.tsx": 41,
+      "AutomationExecutionDetail.tsx": 96
+    },
+    "sectionCount": 4,
+    "sections": [
+      {"name": "Execution summary", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx", "line": 97, "preserve": "Six metrics: completed runs, succeeded, failed, partial, success rate, average duration; scope, source context, freshness and unavailable fallback."},
+      {"name": "Execution activity", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx", "line": 109, "preserve": "Full-range server trend, success/failed/other groups, resolution by bucket count, sorted periods, legend persistence, chart fallback table and image exports."},
+      {"name": "Filtered execution history", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx", "line": 112, "preserve": "Rule/status options, independent rules trust, seven columns, detail action, table preferences, loaded exports, 25-row server paging and all loading/error/empty states."},
+      {"name": "Execution details overlay", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx", "line": 159, "preserve": "Six metadata fields, optional full error, optional action JSON results and optional state transitions; independent trust, retry and dismissal."}
+    ],
+    "overlayOptionalSubsectionCount": 2,
+    "sourceJsxCounts": {"GlassPanel": 2, "ChartContainer": 1, "OperationalBrief": 1, "DataTable": 1, "Modal": 1, "FadeIn": 3},
+    "actions": [
+      "Copy page link via PageLayout copyLink; underlying PageContainer behavior not exercised.",
+      "Navigate to /automations/new; navigate to /automations/list from empty rows/chart.",
+      "Select rule or one of running/success/partial/failed/skipped/cancelled/test/undo outcomes; URL replace preserves other parameters and resets page for non-page filter changes.",
+      "Navigate server pages, first/last/previous/next/direct jump through shared Pagination; page count clamps and updates invalid high page.",
+      "Open execution by rule button and close detail via Modal; selected ID remains local rather than adding a URL state.",
+      "Retry history, rule list and detail independently; stale warning offers retained-source refresh.",
+      "Table column visibility/reorder/resize persistence and default CSV/JSON loaded-row exports through shared DataTable, not full-range exports.",
+      "Trend legend hide/show via stable chartKey and shared image export menu. No fullscreen prop or exportData supplied; do not claim current fullscreen or chart CSV capability.",
+      "Inspect complete action-result JSON and timestamped FSM transitions."
+    ],
+    "dataBehavior": [
+      "Retain typed raw payload, URL parameter names, query keys, polling intervals, cancellation signal and ID enablement.",
+      "Keep both instant range bounds server-side for rows/summary/trend; preserve timezone/rolling URL preference semantics from shared hook.",
+      "Fleet/workflow route intentionally has no global vehicle selector; do not introduce a duplicate.",
+      "Summary counts/rate come from server, not loaded-row calculations. No-runs rate and average remain undefined rather than measured zero.",
+      "Duration milliseconds remain raw on existing API; summary conversion to seconds is display adaptation only. Do not undertake wire/schema unit changes in a page modernization.",
+      "Trend groups success, failed and every other status; period prefixes switch daily/monthly/yearly at existing thresholds 730/3650 rows.",
+      "Null history rows become [] only after validated successful envelope; retained data is never discarded merely for a refresh error.",
+      "Keep rule ID fallback for URL-selected rules missing from rules list; per-rule missing-rule 404 remains a real error.",
+      "Detail records carry additional snapshots/conditions/vehicle/completion fields not currently presented. Audit does not invent these as existing visible sections or remove them from wire/cache."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source audit; no source changes, Git, nested agents, production mutations, browser use, lint/build/TypeScript or test suite.",
+    "runtime": "Unverified",
+    "visual": "Unverified",
+    "keyboard": "Unverified",
+    "contrast": "Unverified",
+    "viewport": "Unverified",
+    "scope": "Assigned mounted page and four narrow feature dependencies, scoped shared implementation ranges, hook/type/route and history-handler source only.",
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx -Algorithm SHA256", "result": "Exit 0; sourceHash recorded from actual file bytes."},
+      {"command": "Scoped Get-Content/Select-String counts across page plus four feature components", "result": "Exit 0; 428 lines, 2 GlassPanel openings, 1 ChartContainer opening, 0 style=, 0 direct recharts/react-leaflet/framer-motion imports, 0 text-neon/shadow-neon/glow matches, 3 fixed hex color matches. Case-insensitive raw-element probe also matched capitalized shared Button/Select and is not a raw-HTML violation count."},
+      {"command": "Select-String -Path <each of the five scoped TSX files> -Pattern '<(?:button|input|textarea|select|table)\\b' -CaseSensitive", "result": "Exit 0; Case-sensitive raw HTML matches: 0"},
+      {"command": "ConvertFrom-Json plus required-field, exact-route and current-source Get-FileHash comparisons", "result": "Exit 0; JSON valid; required fields present; page SHA-256 matches; exact route verified."}
+    ],
+    "notRun": "Skill audit.sh includes project-wide TypeScript and therefore was inspected but not executed under this read-only/no full-gate assignment. No zero-violation/runtime acceptance claim.",
+    "historicalAcceptance": "Design contract explicitly marks centralized runtime/visual/accessibility validation pending; no old receipts borrowed as proof."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx",
+    "web\\src\\features\\automations\\components\\AutomationHistorySummary.tsx",
+    "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx",
+    "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx",
+    "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx",
+    "web\\src\\api\\hooks\\useAutomations.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Modal.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\automation\\history.go",
+    "internal\\api\\automation\\history_filter_test.go",
+    "internal\\api\\automation\\dtos.go"
+  ]
+}
