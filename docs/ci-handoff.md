@@ -42,6 +42,11 @@
 - Downloaded old responsive15 artifact outside checkout and inspected its actual results.json: cumulative route-guard execution **4823.1 seconds**, settings212.8s, vehicles165.0s, grid-footer77.3s, data-table67.1s, production journeys14.7s. Slowest route cases325–342s each, passed on first attempt. Thus the heavy-route batching addresses measured skew, not merely retry speculation. Cumulative test time is not wall time.
 - New push deliberately supersedes the completed failing old run; no waiting for remote completion and no sharding-only push with known roots unfixed. Refresh PR validation section, retain draft/major release mechanism, then monitor new-head checks. Final-head CI and remaining product followups are not yet claimed complete.
 
+### First new-head contract correction — 02:47 UTC
+- Pushedbbd3bda5ff after stable-HEAD production build/postbuild passed. Earlier local postbuild failed because HEAD changed during the build; rebuilding without commits resolved the PWA build-SHA contract, with no gate edit.
+- New quality39360564948 discovery job118425518108 first error: harness contract still expects visual matrix1..10 and the former engine worker job/command. Locally reproduced **1 failed/23 passed**, then adapted strict expectations to all64 visual/64 responsive/13 a11y partitions and three smoke shards per engine, retaining singleton build/download/managed-preview assertions and adding strict engine aggregate assertions. Exact `npm run e2e:contract`: **24 passed (774ms)**; routes/scenario contracts and focused ESLint exit0. No assertion removed or loosened.
+- CI39360565099 and quality39360564948 are predecessor runs; monitor the new correction head after pushing. No final green claim.
+
 ## Takeover validation — 2026-10-19
 - Checkout verified on `ui/simplification`, head `6f838a5da5`; 65 pre-existing uncommitted files preserved. Codex process exists but its checkout session ended with `task_complete`; no active test runner found before edits. Existing preview processes were not started by this agent.
 - First real frontend shard-2 error in run `39303008716`: `TypeError: queries is not iterable`, at `pickWorstQuery` in PageContainer. Pending Codex change discriminates arrays with `Array.isArray` and includes a regression for optional `isError`; changed unit suites passed 409/409.
