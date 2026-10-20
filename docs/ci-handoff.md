@@ -1,5 +1,18 @@
 # CI handoff — PR #198 (ui/simplification)
 
+## Post-merge continuation — 2026-10-20
+
+PR #198 was squash-merged as `c353a59399`. Active work now starts from
+`origin/main` (`e6c401fba1`) on `fix/post-merge-followups`. Do not merge or
+cherry-pick any former redesign branches. The owner supplied the remaining
+product decisions; `followups-plan.md` is the active execution plan.
+
+Product changes and the security re-check are implemented locally. Full local
+CI verification is in progress before the first push/draft PR. No workflow or
+threshold changes. Tailwind v4 remains a separate, later draft PR, conditional
+on the A/B PR being fully green. Historical PR #198 details below are retained
+as evidence, not as checkout or push instructions for this branch.
+
 ## Final CI closeout — 2026-10-20 03:25 UTC
 - Verified implementation head **f0c63853df84a507212ac637d1a6a481aa4ee586**, pushed only to `ui/simplification`: `gh pr checks 198 --json state` reports **204 SUCCESS / 3 SKIPPED**, with no pending or failed checks. All five branch-protection checks pass. Worktree was clean before this documentation closeout. Earlier pending/failure entries below are chronological history, not current blockers.
 - Successful full implementation runs: [CI39361384841](https://github.com/ev-dev-labs/teslasync/actions/runs/39361384841) and [Frontend Quality39361384951](https://github.com/ev-dev-labs/teslasync/actions/runs/39361384951). Security, performance, SI, Helm, ops and all other reported checks also completed without failure. The three skips are existing conditional jobs; no job, assertion, threshold, race check, strict audit or required aggregate was weakened.

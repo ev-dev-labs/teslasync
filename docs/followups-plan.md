@@ -1,6 +1,64 @@
 # Post-redesign follow-ups — plan
 
-## Current status — 2026-10-20 CI closeout
+## Post-merge execution — 2026-10-20
+
+Base: `origin/main` at `e6c401fba1` (PR #198 squash `c353a59399`).
+Branch: `fix/post-merge-followups`; no old branch merges or cherry-picks.
+The historical branch instructions and decision options below are superseded
+by the owner's explicit post-merge task. Draft PR only; never merge it.
+
+- A1–3: implemented; final verification running — header-owned, server-bounded vehicle cost, energy flow,
+  science lab; retain 90-day / 3650-day / 30-day ceilings respectively.
+- A4: implemented, targeted tests pass — independent future planning; remove historical header coupling.
+- A5: implemented, targeted tests pass — translate stable categories, preserve supplied names/unknown codes.
+- A6: implemented, targeted Go/frontend tests pass — typed facts localize in both
+  the timeline and dashboard widget, with unit conversion and legacy prose fallback.
+- A7: implemented — disabled duplicate through create API, then open its editor.
+  Export hidden: the existing portable endpoint forwards arbitrary
+  `CommandParams` and `action_set_setting` text without secret redaction
+  (`internal/api/automation/handler.go`, `automationStepRawMessage`). A JSON
+  download cannot currently guarantee the requested secret-free contract.
+  No non-working Export control remains.
+- A8: NEEDS OWNER DECISION — Insurance "0..60" policy remains unresolved;
+  its audit origin is traced below. No guessed change.
+- B: re-check completed: web 9 (7 high, 2 moderate), docs 2 low to 0. Published
+  braces 3.0.3, micromatch 4.0.8 and x/crypto v0.58.0 still have no newer fix.
+  Mermaid plugin 2.0.17 still peers only Mermaid 10/11; replaced it with the
+  verified direct integration below. Tailwind belongs exclusively to Part C.
+- C: NOT STARTED — separate draft PR only after A/B PR is fully green.
+
+Insurance origin (owner decision still required): audit F08 in
+`docs/frontend-audits/phase6-qa-ownership-insurance-telematics.json` (introduced
+by `acb9513fe2`) means maximum telematics discount. Current backend
+`internal/app/ownershipintelsvc/insurance.go:671` validates 0..60; current form
+`web/src/features/ownership/pages/InsuranceTelematicsPage.tsx:738` allows 100.
+No insurance issues were returned by the GitHub issue search. The owner
+explicitly requested no implementation, so neither bound was changed.
+
+Security re-check evidence (2026-10-20): docs Mermaid 11.17.2 to 12.2.0 via a
+small direct Vue/markdown integration; removed the Mermaid plugin. Kept neutral
+theme tokens, explicitly retained Dagre layout, strict rendering and keyboard
+zoom. `npm run docs:build` passes; all 20 diagrams on seven pages produce SVGs,
+zero browser errors. Docs npm audit: 2 low to 0. Web remains 9 (7 high, 2
+moderate); no published braces/micromatch fix, Tailwind reserved for Part C.
+x/crypto v0.58.0 remains latest; govulncheck reports 0 affecting / 1 uncalled
+module vulnerability ([GO-2026-5932](https://pkg.go.dev/vuln/GO-2026-5932),
+unmaintained OpenPGP package, fixed version N/A). No forced audit fixes or workflow changes.
+The direct integration follows the [Mermaid render API](https://mermaid.js.org/config/usage.html)
+and [VitePress theme component extension](https://vitepress.dev/guide/extending-default-theme).
+
+Dependabot has 2 open alerts (web medium, docs low), fewer than the historical
+inventory. Alerts track main; the docs alert can close after owner merge and rescan. Only open Dependabot PR: [#200 nginx
+1.31.5 to 1.31.7](https://github.com/ev-dev-labs/teslasync/pull/200), a patch
+upgrade with no expected configuration migration. Backend/database/race/build
+checks passed; Security Scan failed on 12 old Go stdlib vulnerabilities in
+run39164557505. Recommendation: update/retest against current main, then merge
+only after green CI; do not merge while that security check is red. Not merged.
+
+Verification: full local CI replica required before each push, followed by
+remote checks on the exact pushed commit. Temporary reports stay outside Git.
+
+## Historical CI closeout — 2026-10-20 CI closeout
 
 Current working branch is `ui/simplification`, draft PR #198; the branch note
 and baseline results below describe historical work, not a new checkout instruction.
