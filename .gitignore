@@ -134,3 +134,16 @@ state/
 
 # Worktree-local side navigation preview dependency cache.
 /.sidenav-vite-cache/
+
+# Local agent source copies and browser-session captures.
+/.agents/artifacts/
+/.agents/atomic-*/
+/.agents/state.md
+/.copilot-artifacts/
+/files/atomic-*/
+/files/page-source-cycle*-operationalbrief-*/
+/files/parallel-statistics-page-live/
+/.playwright-mcp/
+/web/.playwright-mcp/
+/web/precision-admin-analytics-*.log
+/web/precision-admin-analytics-bounded.json

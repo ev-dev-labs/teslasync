@@ -1,9 +1,0 @@
-{
-  "requestedCatalogAdditions": [
-    {"key":"statistics.periodSummary","text":"Totals and averages"},
-    {"key":"statistics.healthAndState","text":"Battery health and vehicle states"},
-    {"key":"statistics.mileageAndFleet","text":"Mileage and fleet comparison"}
-  ],
-  "catalogEdits": "NONE; parent owns canonical catalog integration",
-  "existingTextPreserved": true
-}

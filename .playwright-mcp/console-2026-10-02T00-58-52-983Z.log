@@ -1,6 +1,0 @@
-[      92ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'join-ad-interest-group'. @ :0
-[      92ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'run-ad-auction'. @ :0
-[    1232ms] [WARNING] Something has shimmed the React DevTools global hook (__REACT_DEVTOOLS_GLOBAL_HOOK__). Fast Refresh is not compatible with this shim and will be disabled. @ http://127.0.0.1:5175/@react-refresh:341
-[    1956ms] [INFO] 🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙 @ http://127.0.0.1:5175/node_modules/.vite/deps/chunk-RMV57XKV.js?v=f3c00091:1802
-[    1967ms] [INFO] [rum] VITE_OTLP_HTTP_ENDPOINT not set; OpenTelemetry RUM disabled. @ http://127.0.0.1:5175/src/main.tsx?t=1790902643985:51
-[    2915ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5175/api/v1/admin/rbac/matrix:0
