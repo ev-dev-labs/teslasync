@@ -2226,19 +2226,6 @@
     }
   },
   "tour": {
-    "launcher": {
-      "close": "Close",
-      "completed": "Completed",
-      "empty": "No tours are available yet.",
-      "recommendedHere": "Recommended for this page",
-      "replay": "Replay",
-      "replayAria": "Replay {{tour}} tour",
-      "resetAll": "Reset all tours",
-      "start": "Start",
-      "startAria": "Start {{tour}} tour",
-      "subtitle": "Guided walkthroughs for every major feature.",
-      "title": "Take a tour"
-    },
     "tours": {
       "alerts": {
         "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs.",
