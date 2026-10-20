@@ -17,7 +17,8 @@ describe('Tooltip allocated boundary', () => {
         <span>Prepared marker</span>
       </Tooltip>,
     );
-    expect(screen.getByRole('tooltip')).toHaveStyle({ maxWidth: '200px', translate: '-92px 0' });
+    expect(screen.getByRole('tooltip')).toHaveStyle({ maxWidth: '200px', left: '-190px' });
+    expect(screen.getByRole('tooltip').style.translate).toBe('');
     expect(screen.getByRole('tooltip')).toHaveClass('whitespace-normal', 'break-words');
   });
 

@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+
+afterEach(() => vi.restoreAllMocks());
 
 const preferences = vi.hoisted(() => ({ contextualHelp: true }));
 
@@ -110,13 +112,18 @@ describe('HelpTooltip', () => {
   });
 
   it.each([
-    ['top', 'bottom-full'],
-    ['bottom', 'top-full'],
-    ['left', 'right-full'],
-    ['right', 'left-full'],
-  ] as const)('preserves %s placement', (placement, sideClass) => {
+    ['top', 'bottom-full', '-32px'],
+    ['bottom', 'top-full', '-32px'],
+    ['left', 'top-1/2', '-108px'],
+    ['right', 'top-1/2', '44px'],
+  ] as const)('preserves %s placement', (placement, sideClass, left) => {
+    vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(1280);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(400, 40, 36, 36));
     render(<HelpTooltip text="Body" placement={placement} />);
     expect(screen.getByRole('tooltip')).toHaveClass(sideClass, 'whitespace-normal', 'break-words');
+    expect(screen.getByRole('tooltip').style.left).toBe(left);
+    expect(screen.getByRole('tooltip').style.translate).toBe('');
   });
 
   it('inherits the inverse tooltip foreground for long localized RTL content and links', () => {
@@ -158,7 +165,7 @@ describe('HelpTooltip', () => {
     render(<HelpTooltip text="Body" />);
     const trigger = screen.getByRole('button');
     const tooltip = screen.getByRole('tooltip');
-    trigger.focus();
+    act(() => trigger.focus());
     expect(trigger).toHaveFocus();
     fireEvent.keyDown(trigger, { key: 'Escape' });
     expect(tooltip).toHaveClass('!opacity-0');

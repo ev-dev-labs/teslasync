@@ -1110,8 +1110,10 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     expect(within(row('Negative variance')).getByText(formatPct(-5.1))).toHaveClass(severityTokens.warn.fg);
     expect(within(row('Negative variance')).getByText('-$3.45')).toHaveClass(severityTokens.success.fg);
     expect(within(row('Positive energy delta')).getByText(formatPct(5.1))).toHaveClass(severityTokens.warn.fg);
-    const shares = card('Variance attribution').querySelectorAll<HTMLElement>('[style]');
-    expect(Array.from(shares).map((share) => share.style.width)).toEqual(['100%', '0%']);
+    const shares = Array.from(card('Variance attribution').querySelectorAll<HTMLElement>('[style]'))
+      .filter((share) => share.style.width !== '');
+    expect(shares).toHaveLength(2);
+    expect(shares.map((share) => share.style.width)).toEqual(['100%', '0%']);
     for (const share of shares) expect(share).toHaveClass(severityTokens.warn.dot);
     expect(screen.getByText('full-dispute-packet-digest-with-no-truncation')).toHaveClass(...typography.role.code.split(' '));
     expect(mockDispute().mutate).not.toHaveBeenCalled();

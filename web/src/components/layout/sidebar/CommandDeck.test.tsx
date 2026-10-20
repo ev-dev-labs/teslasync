@@ -229,6 +229,9 @@ describe('CommandDeck', () => {
   })
 
   it('keeps visible rail labels and gives icon-only utilities right-side tooltips', () => {
+    vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(1280)
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100)
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 40, 36, 36))
     renderControlledDeck({})
     const rail = screen.getByTestId('command-deck-rail')
     for (const button of rail.querySelectorAll('.sidenav-rail-item')) {
@@ -238,7 +241,10 @@ describe('CommandDeck', () => {
     const utilities = rail.querySelector('.sidenav-utilities')!
     const tips = utilities.querySelectorAll('[role="tooltip"]')
     expect(tips).toHaveLength(3)
-    for (const tip of tips) expect(tip).toHaveClass('left-full')
+    for (const tip of tips) {
+      expect(tip).toHaveClass('top-1/2', '-translate-y-1/2')
+      expect(tip).toHaveStyle({ left: '44px' })
+    }
   })
 
   it('docks the secondary panel to a group and collapses it on re-press', () => {
