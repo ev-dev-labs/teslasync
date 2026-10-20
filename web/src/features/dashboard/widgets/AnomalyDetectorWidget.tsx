@@ -1,5 +1,7 @@
 import { memo, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useUnits } from '@/hooks/useUnits';
+import { formatAnomalyExplanation, formatAnomalyReading } from '@/lib/anomalyExplanation';
 import { useTicker } from '@/hooks/useTicker';
 import type { TFunction } from 'i18next';
 import { AlertTriangle, AlertOctagon, Info } from 'lucide-react';
@@ -88,6 +90,7 @@ export default memo(function AnomalyDetectorWidget({ vehicleId, size }: WidgetPr
   // charts, so a tick costs a trivial feed re-render while heavy widgets
   // stay untouched.
   useTicker();
+  const units = useUnits();
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
@@ -116,14 +119,14 @@ export default memo(function AnomalyDetectorWidget({ vehicleId, size }: WidgetPr
           id: `${entry.signal ?? 'signal'}-${entry.detected_at ?? index}`,
           icon: severityIcon(entry.severity),
           title: `${entry.signal ?? '—'} · z=${entry.z_score != null && Number.isFinite(entry.z_score) ? fmtNumber(entry.z_score) : '—'} · ${formatRelativeTime(entry.detected_at ?? '', t)}`,
-          description: entry.message ?? '—',
+          description: formatAnomalyExplanation(entry, t, value => formatAnomalyReading(value, entry.unit, units, fmtNumber), fmtNumber) ?? '—',
           impact: SEVERITY_IMPACT[entry.severity] ?? ('low' as const),
           impactLabel: t(
             `widget.anomalyDetector.severity.${entry.severity}`,
             entry.severity ?? '—',
           ),
         })),
-    [anomalies, t, fmtNumber],
+    [anomalies, t, fmtNumber, units],
   );
 
   const handleRefresh = useCallback(() => {

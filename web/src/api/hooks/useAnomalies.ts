@@ -12,7 +12,18 @@ export interface AnomalyData {
   anomalies_last_24h: number;
 }
 
+export interface AnomalyExplanationParams {
+  value: number;
+  baseline: number;
+  z_score?: number;
+  minimum?: number;
+  maximum?: number;
+  percent_change?: number;
+}
+
 export interface AnomalyEntry {
+  explanation_code?: string;
+  explanation_params?: AnomalyExplanationParams;
   signal: string;
   type: 'z_score' | 'range' | 'trend';
   severity: 'critical' | 'warning' | 'info';
