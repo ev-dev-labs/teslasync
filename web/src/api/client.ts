@@ -30,6 +30,7 @@ import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys, parseE
 import { authHeaders, isRemoteMode } from '../lib/serverConnection'
 import { assertOperationalWriteAllowed } from '../lib/operationalMode'
 import { assertNeverQueuedOffline } from './offlineCache'
+import { assertDocumentActive } from '../lib/documentCancellation'
 import {
   demoCredentialsMode,
   getDemoApiBase,
@@ -236,6 +237,7 @@ async function directRequest<T>(
   responseType: 'json' | 'text',
   acceptedStatuses: readonly number[],
 ): Promise<T> {
+  assertDocumentActive()
   const { headers, body, ...rest } = options
   const credentials = demoCredentialsMode()
   const res = await fetch(apiUrl(path), {

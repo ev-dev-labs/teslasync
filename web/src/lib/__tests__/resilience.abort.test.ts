@@ -13,6 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
  */
 
 import { resilientFetch, ApiError, _resetRateLimitCache } from '../resilience'
+import { __resetDocumentCancellationForTests } from '../documentCancellation'
+import { documentLifecycleDriver } from '../../test/documentLifecycle'
 
 /**
  * Build a fetch mock that respects an incoming `AbortSignal`. The
@@ -44,16 +46,31 @@ function makeAbortAwareFetch() {
 }
 
 beforeEach(() => {
+  __resetDocumentCancellationForTests()
   Object.defineProperty(navigator, 'onLine', { configurable: true, value: true })
   _resetRateLimitCache()
 })
 
 afterEach(() => {
+  __resetDocumentCancellationForTests()
   vi.unstubAllGlobals()
   vi.useRealTimers()
 })
 
 describe('resilientFetch — user-side AbortSignal', () => {
+  it('rejects a new read after unload without fetching, retrying or probing authentication', async () => {
+    const fetchMock = vi.fn(async () => new Response('{}', {
+      headers: { 'Content-Type': 'application/json' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const lifecycle = documentLifecycleDriver()
+    await resilientFetch('/document-active', { retries: 0 })
+    lifecycle('beforeunload')
+    await expect(resilientFetch('/document-unload-regression', { retries: 3 }))
+      .rejects.toMatchObject({ name: 'AbortError' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('rejects with AbortError when the caller aborts mid-request (NOT 408)', async () => {
     const fetchMock = makeAbortAwareFetch()
     vi.stubGlobal('fetch', fetchMock)

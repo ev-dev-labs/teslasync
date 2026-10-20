@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { __resetDocumentCancellationForTests } from '../lib/documentCancellation'
+import { documentLifecycleDriver } from '../test/documentLifecycle'
 
 /**
  * Comprehensive coverage for the api/client foundation module.
@@ -75,6 +77,7 @@ function urlOf(callIndex: number): string {
 }
 
 beforeEach(() => {
+  __resetDocumentCancellationForTests()
   __resetSudoStateForTests()
   resilientFetchMock.mockReset()
   fetchMock = vi.spyOn(globalThis, 'fetch')
@@ -82,8 +85,44 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  __resetDocumentCancellationForTests()
   __resetSudoStateForTests()
   vi.restoreAllMocks()
+})
+
+describe('request — late document starts', () => {
+  it('rejects a new direct read after document unload without entering fetch or retry', async () => {
+    const lifecycle = documentLifecycleDriver()
+    fetchMock.mockImplementation(async () => jsonResponse({ id: 7 }))
+    await request('/vehicles')
+    lifecycle('beforeunload')
+    await expect(request('/vehicles')).rejects.toMatchObject({ name: 'AbortError' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  it('preserves the exact caller signal and resumes reads after cancelled navigation', async () => {
+    vi.useFakeTimers()
+    const caller = new AbortController()
+    const lifecycle = documentLifecycleDriver()
+    fetchMock.mockImplementation(async () => jsonResponse({ id: 7 }))
+    await request('/vehicles', { signal: caller.signal })
+    const prevent = (event: Event) => event.preventDefault()
+    window.addEventListener('beforeunload', prevent)
+    try {
+      lifecycle('beforeunload')
+      await expect(request('/vehicles', { signal: caller.signal })).rejects.toMatchObject({ name: 'AbortError' })
+      await vi.runAllTimersAsync()
+      await expect(request('/vehicles', { signal: caller.signal })).resolves.toEqual({ id: 7 })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      for (const call of fetchMock.mock.calls) expect(call[1]).toHaveProperty('signal', caller.signal)
+      expect(caller.signal.aborted).toBe(false)
+      expect(resilientFetchMock).not.toHaveBeenCalled()
+    } finally {
+      window.removeEventListener('beforeunload', prevent)
+      vi.useRealTimers()
+    }
+  })
 })
 
 describe('module constants + re-exports', () => {

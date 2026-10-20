@@ -14,6 +14,7 @@ import { purgeServiceWorkerApiCache } from '@/sw/purgeApiCache'
 // it is a leaf that reads `import.meta.env` and validates it.
 import { demoCredentialsMode, getDemoApiBase } from './demoMode'
 import { getErrorMessage } from './errorMessage'
+import { assertDocumentActive } from './documentCancellation'
 
 type RequestStatus = 'online' | 'offline'
 
@@ -745,6 +746,7 @@ async function _doFetch<T>(
   timeout: number,
   acceptedStatuses: readonly number[],
 ): Promise<T> {
+  assertDocumentActive()
   let lastError: Error | null = null
 
   // Pull the user-provided signal out of the spread so we can merge
@@ -767,6 +769,7 @@ async function _doFetch<T>(
   }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
+    assertDocumentActive()
     // If the caller cancelled before this
     // attempt (e.g. between a 401 refresh + retry, or after an offline
     // check), bail out without issuing more network work.
@@ -899,6 +902,7 @@ async function _doFetch<T>(
       const parsed = camelCaseKeys(await res.json())
       return parsed as T
     } catch (err) {
+      assertDocumentActive()
       if (err instanceof ApiError) throw err
 
       // Distinguish user-cancel from internal timeout.
