@@ -28,7 +28,7 @@ import type {
   TOUSettingsPayload,
 } from '@/types/energy';
 
-export type EnergyStatsWindow = number | { start: string };
+export type EnergyStatsWindow = number | { start: string; end?: string };
 
 /** Live-state power is already normalized to watts; EnergyRemaining has no verified unit. */
 export interface EnergyFlowSnapshot {
@@ -46,10 +46,10 @@ export function useEnergyStats(
   vehicleId: string | null,
   window: EnergyStatsWindow = 30,
 ) {
-  const windowKey = typeof window === 'number' ? `days:${window}` : `start:${window.start}`;
+  const windowKey = typeof window === 'number' ? `days:${window}` : `start:${window.start}${window.end ? `:end:${window.end}` : ""}`;
   const query = typeof window === 'number'
     ? `days=${window}`
-    : `start=${encodeURIComponent(window.start)}`;
+    : `start=${encodeURIComponent(window.start)}${window.end ? `&end=${encodeURIComponent(window.end)}` : ""}`;
 
   return useQuery({
     queryKey: ['energy-stats', vehicleId, windowKey],

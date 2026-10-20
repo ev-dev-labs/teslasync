@@ -47,7 +47,7 @@ type VehicleCostReport struct {
 // `pg_stat_user_tables.n_tup_ins` × avg row size). It is an
 // estimate not a measurement to avoid a per-call `pg_total_relation_size`
 // scan; the admin UI labels it accordingly.
-func (r *IngestXRayRepo) VehicleCostReport(ctx context.Context, since time.Time, limit int) (*VehicleCostReport, error) {
+func (r *IngestXRayRepo) VehicleCostReport(ctx context.Context, since time.Time, limit int, until ...time.Time) (*VehicleCostReport, error) {
 	if r == nil || r.exec == nil {
 		return nil, fmt.Errorf("database: VehicleCostReport: nil repo or pool")
 	}
@@ -58,6 +58,11 @@ func (r *IngestXRayRepo) VehicleCostReport(ctx context.Context, since time.Time,
 		limit = 1000
 	}
 
+	end := time.Now().UTC()
+	if len(until) > 0 {
+		end = until[0]
+	}
+
 	// Single query joins signal_log (cost) ⟕ vehicles (name) ⟕
 	// signal_log_failures (DLQ count). LEFT JOIN preserves vehicles
 	// with zero DLQ entries.
@@ -66,15 +71,15 @@ WITH agg AS (
   SELECT vehicle_id,
          COUNT(*)::bigint AS row_count,
          MAX(ts)          AS last_seen,
-         (COUNT(*) FILTER (WHERE ts >= now() - interval '24 hours'))::float8 / (24.0 * 60.0) AS rate_24h
+         (COUNT(*) FILTER (WHERE ts >= $3 - interval '24 hours'))::float8 / (24.0 * 60.0) AS rate_24h
     FROM signal_log
-   WHERE ts >= $1
+   WHERE ts >= $1 AND ts < $3
    GROUP BY vehicle_id
 ), dlq AS (
   SELECT vehicle_id,
          COUNT(*)::bigint AS fail_24h
     FROM signal_log_failures
-   WHERE first_seen >= now() - interval '24 hours'
+   WHERE first_seen >= GREATEST($1, $3 - interval '24 hours') AND first_seen < $3
    GROUP BY vehicle_id
 )
 SELECT a.vehicle_id,
@@ -90,13 +95,13 @@ SELECT a.vehicle_id,
  ORDER BY a.row_count DESC
  LIMIT $2`
 
-	rows, err := r.exec.Query(ctx, sql, since, limit)
+	rows, err := r.exec.Query(ctx, sql, since, limit, end)
 	if err != nil {
 		// Older installations might not have signal_log_failures.
 		// Surface the report without DLQ counts rather than failing
 		// the row-count view.
 		if isMissingRelationError(err) {
-			return r.vehicleCostReportNoDLQ(ctx, since, limit)
+			return r.vehicleCostReportNoDLQ(ctx, since, limit, end)
 		}
 		return nil, fmt.Errorf("database: VehicleCostReport: query: %w", err)
 	}
@@ -125,15 +130,19 @@ SELECT a.vehicle_id,
 // vehicleCostReportNoDLQ runs the cost report against installations
 // that lack signal_log_failures. Mirrors VehicleCostReport but skips
 // the DLQ CTE.
-func (r *IngestXRayRepo) vehicleCostReportNoDLQ(ctx context.Context, since time.Time, limit int) (*VehicleCostReport, error) {
+func (r *IngestXRayRepo) vehicleCostReportNoDLQ(ctx context.Context, since time.Time, limit int, until ...time.Time) (*VehicleCostReport, error) {
+	end := time.Now().UTC()
+	if len(until) > 0 {
+		end = until[0]
+	}
 	const sql = `
 WITH agg AS (
   SELECT vehicle_id,
          COUNT(*)::bigint AS row_count,
          MAX(ts)          AS last_seen,
-         (COUNT(*) FILTER (WHERE ts >= now() - interval '24 hours'))::float8 / (24.0 * 60.0) AS rate_24h
+         (COUNT(*) FILTER (WHERE ts >= $3 - interval '24 hours'))::float8 / (24.0 * 60.0) AS rate_24h
     FROM signal_log
-   WHERE ts >= $1
+   WHERE ts >= $1 AND ts < $3
    GROUP BY vehicle_id
 )
 SELECT a.vehicle_id,
@@ -147,7 +156,7 @@ SELECT a.vehicle_id,
   LEFT JOIN vehicles v ON v.id = a.vehicle_id
  ORDER BY a.row_count DESC
  LIMIT $2`
-	rows, err := r.exec.Query(ctx, sql, since, limit)
+	rows, err := r.exec.Query(ctx, sql, since, limit, end)
 	if err != nil {
 		return nil, fmt.Errorf("database: vehicleCostReportNoDLQ: query: %w", err)
 	}

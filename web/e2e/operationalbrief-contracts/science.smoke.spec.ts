@@ -84,6 +84,7 @@ async function bootScience(
   units: DisplayUnits = 'metric', pendingWeather?: Promise<void>,
 ) {
   expect(ROUTE_REGISTRY.find((route) => route.path === '/science')?.name).toBe('ScienceLab');
+  await page.clock.setFixedTime(new Date('2026-08-27T12:00:00.000Z'));
   await page.setViewportSize({ width, height: 1000 });
   await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
   await seedBrowserState(page, theme, '/science');
@@ -410,15 +411,19 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(drawer).toContainText('0.18 kWh…0.52 kWh');
       await closeReview(page, 'science-tires-brief');
       const windowControls = page.getByRole('group', { name: 'Window', exact: true });
-      await expect(windowControls.getByRole('button', { name: 'Last 7d', exact: true })).toHaveAttribute('aria-pressed', 'true');
-      await windowControls.getByRole('button', { name: 'Last 30d', exact: true }).click();
+      await expect(windowControls.getByRole('button')).toHaveCount(0);
+      await page.getByRole('button', { name: /^Analysis window:/ }).click();
+      const settings = page.getByRole('dialog', { name: 'View settings' });
+      await settings.getByRole('button', { name: '30 days', exact: true }).click();
+      await settings.getByRole('button', { name: 'Close view settings' }).click();
       await waitForHarnessReady(page, controller);
-      await expect(windowControls.getByRole('button', { name: 'Last 30d', exact: true })).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByRole('button', { name: /^Analysis window: 30 days/ })).toBeVisible();
       const params = new URL(page.url()).searchParams;
-      expect(params.get('days')).toBe('30');
-      const start = params.get('start');
-      const end = params.get('end');
-      if (!start || !end) throw new Error('Window control lost its URL bounds');
+      const from = params.get('from');
+      const to = params.get('to');
+      if (!from || !to) throw new Error('Workspace header lost its URL bounds');
+      const start = new Date(`${from}T00:00:00Z`).toISOString();
+      const end = new Date(Date.parse(`${to}T00:00:00Z`) + 86400000).toISOString();
       expect(Date.parse(end) - Date.parse(start)).toBe(30 * 86400000);
       for (const domain of SCIENCE_DOMAINS) {
         expect(requests.some((request) => request.domain === domain && request.start === start && request.end === end),

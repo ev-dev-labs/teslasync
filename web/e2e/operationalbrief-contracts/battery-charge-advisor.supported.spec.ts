@@ -139,12 +139,12 @@ async function finish(page: Page, mocks: MockApiController, diagnostics: ReturnT
   // literals.
   const query = (entries: ReadonlyArray<readonly [string, string]>) =>
     new URLSearchParams(entries.map(([key, value]) => [key, value] as [string, string])).toString();
-  const week = query([['vehicle_id', '7'], ['limit', '1000'], ['start', '2026-05-27T00:00:00.000Z'], ['end', '2026-06-03T00:00:00.000Z']]);
+  const evidence = query([['vehicle_id', '7'], ['limit', '1000'], ['start', '2025-12-05T00:00:00.000Z'], ['end', ADVISOR_NOW]]);
   const accounting = query([['vehicle_id', '7'], ['start', '2025-12-05T00:00:00.000Z'], ['end', '2026-06-02T00:00:00.000Z'], ['limit', '1000'], ['offset', '0']]);
   for (const request of [
-    `GET /drives?${week}`,
+    `GET /drives?${evidence}`,
     `GET /drives?${accounting}`,
-    `GET /charging?${week}`,
+    `GET /charging?${evidence}`,
     'GET /signals/7/live',
   ]) expect(mocks.seen.has(request), request).toBe(true);
   await expectNoHorizontalOverflow(page);

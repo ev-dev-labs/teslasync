@@ -560,9 +560,9 @@ describe('EnergyFlowPage — period presentation', () => {
     expect(metric.metricId).toBe('duration');
     expect(metric.rawValue).toBe(days * 86400);
     expect(data.period_days).toBe(days);
-    expect(props.period.kind).toBe('unknown');
-    expect(props.period).toHaveProperty('reason',
-      'The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.');
+    expect(props.period.kind).toBe('analysis');
+    expect(props.period).toHaveProperty('provenance',
+      'Completed drives are filtered by the workspace start and exclusive end; live power remains a separate snapshot.');
     expect(translationCalls).toHaveBeenCalledWith('energyFlow.units.days', 'days', { count: days });
   });
 
@@ -584,16 +584,16 @@ describe('EnergyFlowPage — period presentation', () => {
     expect(translationCalls).toHaveBeenCalledWith('energyFlow.units.days', 'days', { count: 1234.5 });
   });
 
-  it('uses canonical singular copy for a one-day trailing window and retains the warning', () => {
+  it('publishes exact one-day bounds without claiming complete historical coverage', () => {
     renderPage(['/battery/energy?from=2025-03-07&to=2025-03-07']);
-    assertOperationalBriefDisclosure(kpiRegion(), 'Trailing 1 day', { contains: true });
+    assertOperationalBriefDisclosure(kpiRegion(), 'Selected workspace range', { contains: true });
     expect(translationCalls).toHaveBeenCalledWith(
-      'energyFlow.summary.trailingWindow', 'Trailing {{days}} days', { count: 1, days: '1' },
+      'energyFlow.summary.selectedWindow', 'Selected workspace range', undefined,
     );
     fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
     const trailingDialog = screen.getByRole('dialog');
     expect(within(trailingDialog).getAllByText(
-      'The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.',
+      'Completed drives are filtered by the workspace start and exclusive end; live power remains a separate snapshot.',
     )).toHaveLength(3);
     fireEvent.keyDown(trailingDialog, { key: 'Escape' });
     expect(en.energyFlow.units.days_one).toBe('day');
@@ -821,20 +821,20 @@ describe('EnergyFlowPage — historical sections', () => {
 });
 
 describe('EnergyFlowPage — data contract & controls', () => {
-  it('requests stats with a numeric days window derived from the URL range', () => {
+  it('requests exact history bounds from the workspace header range', () => {
     renderPage(['/battery/energy?from=2025-03-01&to=2025-03-07']);
     // Inclusive 7-day window, snake_case-free positional args, string vehicle id.
-    expect(mockStats).toHaveBeenCalledWith('1', 7);
+    expect(mockStats).toHaveBeenCalledWith('1', {start:'2025-03-01T00:00:00.000Z',end:'2025-03-08T00:00:00.000Z'});
     expect(mockFlow).toHaveBeenCalledWith('1');
   });
 
   it('re-queries when the shared header chooses a one-day window', async () => {
     renderPage(); // default 7d preset → days 7
-    expect(mockStats).toHaveBeenCalledWith('1', 7);
+    expect(mockStats).toHaveBeenCalledWith('1', expect.objectContaining({ start: expect.any(String), end: expect.any(String) }));
 
     fireEvent.click(screen.getByTestId('header-energy-range'));
 
-    await waitFor(() => expect(mockStats).toHaveBeenCalledWith('1', 1));
+    await waitFor(() => expect(mockStats).toHaveBeenCalledWith('1', {start:'2025-03-07T00:00:00.000Z',end:'2025-03-08T00:00:00.000Z'}));
   });
 
   it('does not duplicate the shared header vehicle and range controls', () => {

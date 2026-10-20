@@ -57,6 +57,31 @@ func (h *EnergyHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Supplying end selects exact half-open instants; legacy start-only/date
+	// and days callers retain their existing trailing-window behavior.
+	if r.URL.Query().Has("end") {
+		start, startErr := time.Parse(time.RFC3339, r.URL.Query().Get("start"))
+		end, endErr := time.Parse(time.RFC3339, r.URL.Query().Get("end"))
+		if startErr != nil || endErr != nil || !end.After(start) || end.Sub(start) > maxDays*24*time.Hour {
+			httpx.WriteError(w, http.StatusBadRequest, "start and end must define an increasing window of at most 3650 days")
+			return
+		}
+		calculator, ok := h.energySvc.(interface {
+			CalculateStatsRange(context.Context, int64, time.Time, time.Time) (*service.EnergyStats, error)
+		})
+		if !ok {
+			httpx.WriteError(w, http.StatusInternalServerError, "bounded energy statistics are unavailable")
+			return
+		}
+		stats, err := calculator.CalculateStatsRange(r.Context(), vehicleID, start, end)
+		if err != nil || stats == nil {
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to get energy stats")
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, energyStatsResponse(stats))
+		return
+	}
+
 	days := defaultStatsDays
 	if s := r.URL.Query().Get("start"); s != "" {
 		if t, perr := time.Parse("2006-01-02", s); perr == nil {

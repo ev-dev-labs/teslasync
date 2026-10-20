@@ -22,6 +22,8 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
+import { AlertBanner } from '@/components/feedback';
+import { useTimezone } from '@/lib/timezone';
 import { FadeIn } from '@/components/motion';
 import { SectionState } from '../components/energy-flow-modernization/SectionState';
 
@@ -254,25 +256,16 @@ export default function EnergyFlowPage() {
   const { formatDistance, formatEnergy, formatPower, unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
-  const { start, end } = useRangeState({
-    persistKey: 'energy-flow.range',
-    defaultPresetId: '7d',
-  });
-
-  // Backend accepts a trailing `?days=N` window. Compute the inclusive day
-  // count from the picker; `presetsOnly` hides the calendar so custom windows
-  // that don't end today can't imply a precision the API doesn't honour.
-  const days = useMemo(() => {
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T00:00:00`).getTime();
-    return Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
-  }, [start, end]);
+  const timezone = useTimezone('vehicle');
+  const { startInstant, endInstantExclusive } = useRangeState({ timezone });
+  const days = Math.ceil((Date.parse(endInstantExclusive) - Date.parse(startInstant)) / 86_400_000);
+  const rangeSupported = days > 0 && days <= 3650;
 
   const activeId = vehicleId != null ? String(vehicleId) : null;
   const noVehicle = activeId == null;
 
   // Historical stats — GET /vehicles/{id}/energy?days=N
-  const statsQuery = useEnergyStats(activeId, days);
+  const statsQuery = useEnergyStats(rangeSupported ? activeId : null, { start: startInstant, end: endInstantExclusive });
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = statsQuery;
   const statsState = useDataState(statsQuery, { provenance: 'historical' });
 
@@ -418,12 +411,15 @@ export default function EnergyFlowPage() {
 
 
   const noVehicleMsg = t('energyFlow.noVehicle', 'Select a vehicle to view its energy flow.');
-  // The backend honors a trailing day count, not precise calendar bounds.
-  // Do not present the workspace's custom dates as server-side coverage.
+  // The request bounds select evidence; they do not certify complete coverage.
   const period: StatPeriod = {
-    kind: 'unknown',
-    label: t('energyFlow.summary.trailingWindow', 'Trailing {{days}} days', { count: days, days: fmtInt(days) }),
-    reason: t('energyFlow.summary.windowReason', 'The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.'),
+    kind: 'analysis',
+    label: t('energyFlow.summary.selectedWindow', 'Selected workspace range'),
+    start: startInstant,
+    endExclusive: endInstantExclusive,
+    timezone,
+    completeness: 'unknown',
+    provenance: t('energyFlow.summary.boundedSource', 'Completed drives are filtered by the workspace start and exclusive end; live power remains a separate snapshot.'),
   };
   const missingReason = t('energyFlow.state.missing', 'No measurement supplied');
   const sharedEnergyContext = t('energyFlow.metrics.sharedSource', 'Shared source total');
@@ -483,6 +479,7 @@ export default function EnergyFlowPage() {
       query={[statsQuery, flowQuery]}
       dataSources={dataSources}
     >
+      {!rangeSupported && <AlertBanner variant="warning">{t('energyFlow.rangeLimit', 'Choose a workspace range of at most 3650 days to view energy history.')}</AlertBanner>}
       {/* ── 1 — KPI band: full-width responsive metric grid ── */}
       <FadeIn>
         <section>

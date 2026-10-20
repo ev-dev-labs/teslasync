@@ -585,3 +585,47 @@ func TestNewEnergyHandler(t *testing.T) {
 		t.Fatal("NewEnergyHandler did not wire the energy service")
 	}
 }
+
+// Explicit history bounds must reach the calculator unchanged; a trailing day
+// count cannot represent a historical end or a timezone boundary.
+type boundedStatsCalculator struct {
+	fakeStatsCalculator
+	start, end time.Time
+}
+
+func (f *boundedStatsCalculator) CalculateStatsRange(_ context.Context, id int64, start, end time.Time) (*service.EnergyStats, error) {
+	f.gotVID = id
+	f.start = start
+	f.end = end
+	return sampleStats(), nil
+}
+func TestStatsExplicitHistoryBounds(t *testing.T) {
+	f := &boundedStatsCalculator{}
+	h := &EnergyHandler{energySvc: f}
+	router := chi.NewRouter()
+	router.Get("/vehicles/{vehicleID}/energy", h.Stats)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest("GET", "/vehicles/42/energy?start=2026-01-02T03:00:00Z&end=2026-01-04T03:00:00Z", nil))
+	if w.Code != 200 || !f.start.Equal(time.Date(2026, 1, 2, 3, 0, 0, 0, time.UTC)) || !f.end.Equal(time.Date(2026, 1, 4, 3, 0, 0, 0, time.UTC)) || f.gotVID != 42 || f.calls != 0 {
+		t.Fatalf("bounds lost: status=%d start=%v end=%v id=%d trailingCalls=%d", w.Code, f.start, f.end, f.gotVID, f.calls)
+	}
+}
+func TestStatsRejectsInvalidExplicitBounds(t *testing.T) {
+	for _, query := range []string{
+		"start=garbage&end=2026-01-04T00:00:00Z",
+		"start=2026-01-04T00:00:00Z&end=2026-01-04T00:00:00Z",
+		"start=2026-01-05T00:00:00Z&end=2026-01-04T00:00:00Z",
+		"start=2000-01-01T00:00:00Z&end=2026-01-04T00:00:00Z",
+		"end=2026-01-04T00:00:00Z",
+	} {
+		f := &boundedStatsCalculator{}
+		h := &EnergyHandler{energySvc: f}
+		router := chi.NewRouter()
+		router.Get("/vehicles/{vehicleID}/energy", h.Stats)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest("GET", "/vehicles/42/energy?"+query, nil))
+		if w.Code != http.StatusBadRequest || f.calls != 0 || !f.start.IsZero() {
+			t.Errorf("%s: status=%d calls=%d start=%v", query, w.Code, f.calls, f.start)
+		}
+	}
+}
