@@ -51,6 +51,7 @@ const m = vi.hoisted(() => ({
   testRunMutate: vi.fn(),
   reEnableMutate: vi.fn(),
   importMutate: vi.fn(),
+  duplicateMutate: vi.fn(),
   navigate: vi.fn(),
   importSuccess: vi.fn(),
   importWarning: vi.fn(),
@@ -131,6 +132,7 @@ vi.mock('@/api/hooks/useAutomations', async (importOriginal) => ({
   useTestRunAutomation: () => ({ mutate: m.testRunMutate }),
   useReEnableAutomation: () => ({ mutate: m.reEnableMutate }),
   useImportAutomations: m.useImportAutomations,
+  useDuplicateAutomation: () => ({mutate:m.duplicateMutate,isPending:false}),
 }));
 
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: m.useVehicles }));
@@ -160,11 +162,12 @@ interface CardProbeProps {
   onReEnable: (id: number) => void;
   onDelete: (id: number) => void;
   onTestRun: (id: number) => void;
+  onDuplicate: (id: number) => void;
 }
 
 vi.mock('./AutomationCard', () => ({
   AutomationCard: ({
-    automation, isFiring, vehicleName, onToggle, onReEnable, onDelete, onTestRun,
+    automation, isFiring, vehicleName, onToggle, onReEnable, onDelete, onTestRun, onDuplicate,
   }: CardProbeProps) => (
     <div data-testid="automation-card">
       <span>{automation.name}</span>
@@ -175,6 +178,7 @@ vi.mock('./AutomationCard', () => ({
       </button>
       <button type="button" onClick={() => onReEnable(automation.id)}>{`reenable:${automation.id}`}</button>
       <button type="button" onClick={() => onDelete(automation.id)}>{`delete:${automation.id}`}</button>
+      <button type="button" onClick={() => onDuplicate(automation.id)}>{`duplicate:${automation.id}`}</button>
       <button type="button" onClick={() => onTestRun(automation.id)}>{`testrun:${automation.id}`}</button>
     </div>
   ),
@@ -866,6 +870,16 @@ describe('AutomationsListPage — card wiring', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'testrun:42' }));
     expect(m.testRunMutate).toHaveBeenCalledWith(42);
+  });
+
+  it('opens the newly created copy only after the create mutation succeeds', () => {
+    setAutomations([makeAutomation({id:42,name:'Morning charge'})]);renderPage();
+    fireEvent.click(screen.getByRole('button',{name:'duplicate:42'}));
+    expect(m.duplicateMutate).toHaveBeenCalledWith(42,expect.objectContaining({onSuccess:expect.any(Function)}));
+    expect(m.navigate).not.toHaveBeenCalled();
+    const options=m.duplicateMutate.mock.calls[0][1];
+    options.onSuccess({id:99,enabled:false});
+    expect(m.navigate).toHaveBeenCalledWith('/automations/99/edit');
   });
 
   it('orders pinned automations ahead of the rest', () => {

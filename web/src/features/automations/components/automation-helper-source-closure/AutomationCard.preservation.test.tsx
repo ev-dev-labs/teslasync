@@ -65,7 +65,7 @@ const automation = (overrides: Partial<Automation> = {}): Automation => ({
 } as unknown as Automation);
 
 function handlers() {
-  return { onToggle: vi.fn(), onReEnable: vi.fn(), onDelete: vi.fn(), onTestRun: vi.fn() };
+  return { onToggle: vi.fn(), onReEnable: vi.fn(), onDelete: vi.fn(), onTestRun: vi.fn(), onDuplicate: vi.fn() };
 }
 
 // The actions trigger carries the per-automation accessible name.
@@ -112,7 +112,7 @@ describe('AutomationCard extraction preservation (mock callbacks only)', () => {
     expect(screen.getByRole('button', { name: menuName })).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('retains permission reasons, blocks write controls and keeps inherited dismiss-only actions', () => {
+  it('retains permission reasons, blocks duplicate writes and hides unsafe export', () => {
     const callbacks = handlers();
     render(
       <AutomationCard
@@ -131,8 +131,9 @@ describe('AutomationCard extraction preservation (mock callbacks only)', () => {
       expect(control).toHaveAttribute('title', 'Read-only retained data');
       fireEvent.click(control);
     }
-    expect(screen.getByRole('button', { name: 'Export' })).not.toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Duplicate' }));
+    expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Duplicate' })).toBeDisabled();
+    fireEvent.keyDown(window, {key:'Escape'});
     expect(screen.getByRole('button', { name: menuName })).toHaveAttribute('aria-expanded', 'false');
     Object.values(callbacks).forEach(callback => expect(callback).not.toHaveBeenCalled());
   });
