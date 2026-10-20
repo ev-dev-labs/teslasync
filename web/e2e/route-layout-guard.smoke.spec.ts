@@ -22,8 +22,9 @@ import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockAp
  * curated copy of the JPEGs.
  *
  * `GALLERY_ONLY=/a,/b` restricts the run to those routes (attribution and
- * iteration). Routes are split into 3 chunks x 4 widths = 12 tests so
- * workers parallelize the full sweep.
+ * iteration). Routes are split into up to 64 nonempty chunks x 5 widths.
+ * Small independently seeded batches let CI distribute the expensive route
+ * sweep across runners instead of assigning 15 giant tests to one shard.
  *
  * Route table extracted from `src/App.tsx` (`node /tmp/gen-routes.mjs`):
  * 277 entries. Parameterized routes use canonical mock ids (drives/412,
@@ -320,10 +321,9 @@ const WIDTHS = [
   { width: 1920, height: 900 },
 ] as const
 
-const CHUNKS = 3
-
 const onlyEnv = process.env.GALLERY_ONLY?.split(',').map((s) => s.trim()).filter(Boolean) ?? null
 const ACTIVE_ROUTES = onlyEnv ? ROUTES.filter((r) => onlyEnv.includes(r)) : ROUTES
+const CHUNKS = Math.min(64, Math.max(1, ACTIVE_ROUTES.length))
 
 interface NarrowCard { selector: string; width: number; height: number; text: string }
 interface PerChar { tag: string; text: string; width: number; height: number; lines: number }
