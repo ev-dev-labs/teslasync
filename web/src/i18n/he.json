@@ -32,5 +32,47 @@
       "skip_dc": "Skip {{site}} ({{sc}}) — home now is {{home}} for the same energy.",
       "charge_home_now": "Charge at home now — the cheapest window is already open (or too far out to wait)."
     }
+  },
+  "admin": {
+    "vehicleCost": {
+      "rangeLimit": "בחרו טווח של עד 90 יום בסביבת העבודה כדי להציג את עלות קליטת נתוני הרכב."
+    }
+  },
+  "energyFlow": {
+    "rangeLimit": "בחרו טווח של עד 3650 יום בסביבת העבודה כדי להציג את היסטוריית האנרגיה.",
+    "summary": {
+      "selectedWindow": "הטווח שנבחר בסביבת העבודה",
+      "boundedSource": "נסיעות שהושלמו מסוננות לפי תחילת הטווח בסביבת העבודה וסופו הבלעדי; ההספק החי נשאר תמונת מצב נפרדת."
+    }
+  },
+  "science": {
+    "rangeLimit": "בחרו טווח של עד 30 יום בסביבת העבודה כדי להציג ראיות מדעיות."
+  },
+  "chargeAdvisor": {
+    "planningWindow": "חלון התכנון כולל את שבעת הימים המקומיים הבאים, החל ממחר."
+  },
+  "automations": {
+    "copyName": "{{name}} (עותק)"
+  },
+  "costAnalysis": {
+    "category": {
+      "home": "בית",
+      "supercharger": "סופרצ׳ארג׳ר",
+      "public": "ציבורי",
+      "publicDC": "טעינה ציבורית בזרם ישר",
+      "workL2": "עבודה / רמה 2",
+      "other": "אחר"
+    }
+  },
+  "anomaly": {
+    "explanation": {
+      "zScore": "הערך {{value}} של {{signal}} נמצא במרחק {{sigma}} סטיות תקן מהממוצע ({{baseline}}).",
+      "belowMinimum": "הערך {{value}} של {{signal}} נמוך מהמינימום הבטוח ({{minimum}}).",
+      "aboveMaximum": "הערך {{value}} של {{signal}} חורג מהמקסימום הבטוח ({{maximum}}).",
+      "increased": "{{signal}} עלה ב־24 השעות האחרונות בהשוואה לממוצע של שבעה ימים (מ־{{baseline}} ל־{{value}}).",
+      "decreased": "{{signal}} ירד ב־24 השעות האחרונות בהשוואה לממוצע של שבעה ימים (מ־{{baseline}} ל־{{value}}).",
+      "increasedPercent": "{{signal}} עלה ב־{{percent}}% ב־24 השעות האחרונות בהשוואה לממוצע של שבעה ימים (מ־{{baseline}} ל־{{value}}).",
+      "decreasedPercent": "{{signal}} ירד ב־{{percent}}% ב־24 השעות האחרונות בהשוואה לממוצע של שבעה ימים (מ־{{baseline}} ל־{{value}})."
+    }
   }
 }

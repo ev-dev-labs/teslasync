@@ -439,8 +439,8 @@
   },
   {
     "file": "web/src/features/admin/pages/VehicleCostPage.tsx",
-    "calls": 8,
-    "sha256": "cf4e18515253af0fa5b1d195afdbf400633834e6bd83d1ac465c1162df88485a"
+    "calls": 10,
+    "sha256": "9b61a5493c12ab6328c888b0c3e1d2cf6d955d662a42c3e21025b52ed72de20b"
   },
   {
     "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsBatteryBrief.tsx",
@@ -555,7 +555,7 @@
   {
     "file": "web/src/features/dashboard/widgets/AnomalyDetectorWidget.tsx",
     "calls": 13,
-    "sha256": "bc796969612e3617cec068495ace0c03a2bb98e7a1adcd2bc2c8ab0f8283519b"
+    "sha256": "599e23e866364fc1bb85d0dc5e6ef253682f55d4dcfc5b525425f8965a233f5d"
   },
   {
     "file": "web/src/features/dashboard/widgets/AutomationStatusWidget.tsx",

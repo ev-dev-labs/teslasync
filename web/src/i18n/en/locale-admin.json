@@ -137,7 +137,8 @@
       "window1d": "Last 1 day",
       "window7d": "Last 7 days",
       "window30d": "Last 30 days",
-      "window90d": "Last 90 days"
+      "window90d": "Last 90 days",
+      "rangeLimit": "Choose a workspace range of at most 90 days to view vehicle ingest cost."
     },
     "systemStatus": {
       "clientPerformance": {
