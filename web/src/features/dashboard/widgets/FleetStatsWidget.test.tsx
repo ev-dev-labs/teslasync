@@ -441,7 +441,7 @@ describe('FleetStatsWidget — resilience & shell wiring', () => {
     const { container } = renderWidget();
 
     // The error is communicated by the freshness chip…
-    expect(container.querySelector('button[aria-label*="Error"] [class~="bg-[var(--semantic-danger)]"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-label*="error"] [class~="bg-[var(--semantic-danger)]"]')).not.toBeNull();
     // …while the measured zero fleet count still renders (unknown tiles omitted).
     expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
     expect(within(group('Fleet size')).getByText('0')).toBeInTheDocument();

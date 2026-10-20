@@ -74,5 +74,8 @@
       "increasedPercent": "ارتفع {{signal}} بنسبة {{percent}}% خلال آخر 24 ساعة مقارنة بمتوسط سبعة أيام (من {{baseline}} إلى {{value}}).",
       "decreasedPercent": "انخفض {{signal}} بنسبة {{percent}}% خلال آخر 24 ساعة مقارنة بمتوسط سبعة أيام (من {{baseline}} إلى {{value}})."
     }
+  },
+  "widget": {
+    "overview": "نظرة عامة على الأداة"
   }
 }

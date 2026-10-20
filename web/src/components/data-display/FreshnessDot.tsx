@@ -45,6 +45,10 @@ export interface FreshnessDotProps {
   manual?: boolean;
   /** Smaller dot and touch target for title-less widget overlays. */
   compact?: boolean;
+  /** Widget headers align the painted dot with their shared right inset. */
+  edgeAligned?: boolean;
+  /** Static content has no observation clock; never label it up to date. */
+  untracked?: boolean;
 }
 
 export type FreshnessStatus = 'fresh' | 'fetching' | 'stale' | 'error';
@@ -70,9 +74,9 @@ const STATUS_CONFIG = {
 
 const STATUS_LABEL = {
   fresh: { key: 'freshness.fresh', fallback: 'Up to date' },
-  fetching: { key: 'freshness.updating', fallback: 'Updating…' },
+  fetching: { key: 'freshness.updating', fallback: 'updating…' },
   stale: { key: 'freshness.stale', fallback: 'Stale' },
-  error: { key: 'freshness.error', fallback: 'Error' },
+  error: { key: 'freshness.error', fallback: 'error' },
 } as const;
 
 // Centralize this once the shared
@@ -117,6 +121,8 @@ export function FreshnessDot({
   refreshIntervalMs,
   manual = false,
   compact = false,
+  edgeAligned = false,
+  untracked = false,
 }: FreshnessDotProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
@@ -172,7 +178,9 @@ export function FreshnessDot({
   const sourceTitle = source
     ? t('freshness.source', 'Source: {{source}}', { source })
     : null;
-  const statusLabel = t(STATUS_LABEL[status].key, STATUS_LABEL[status].fallback);
+  const statusLabel = untracked
+    ? t('freshness.neverUpdated', 'Never updated')
+    : t(STATUS_LABEL[status].key, STATUS_LABEL[status].fallback);
   const stateLabel = ageLabel
     ? t('freshness.ariaLabel', '{{status}} · {{age}}', {
         status: statusLabel,
@@ -189,12 +197,13 @@ export function FreshnessDot({
     <IconButton
       icon={(
         <span
+          data-role="freshness-dot"
           className={cn(
             'relative shrink-0 rounded-full',
             compact ? 'h-2 w-2' : 'h-2.5 w-2.5',
             status === 'stale'
               ? 'border border-[var(--semantic-warning)] bg-transparent'
-              : cfg.dotColor,
+              : untracked ? 'bg-[var(--text-muted)]' : cfg.dotColor,
             status === 'error' && !reduce && 'animate-[pulse_2s_ease-in-out_infinite]',
             status === 'fetching' && !reduce && 'animate-pulse',
           )}
@@ -210,9 +219,10 @@ export function FreshnessDot({
       tooltipMultiline
       variant="ghost"
       onClick={onRefresh ? handleClick : undefined}
-      busy={isFetching}
+      busy={isFetching && !edgeAligned}
+      aria-busy={isFetching || undefined}
       disabled={!onRefresh || isFetching}
-      className={compact ? '!h-5 !w-5 !min-h-0 !min-w-0 !p-0' : '!h-7 !w-7 !min-h-0 !min-w-0 !p-0'}
+      className={cn(compact ? '!h-5 !w-5 !min-h-0 !min-w-0 !p-0' : '!h-7 !w-7 !min-h-0 !min-w-0 !p-0', edgeAligned && '!w-2.5')}
     />
   );
 }
@@ -228,6 +238,7 @@ export type FreshnessQuery = Pick<
 >;
 
 export interface FreshnessDotAutoProps {
+  edgeAligned?: boolean;
   /** Pass the entire TanStack Query result (the object returned by `useQuery`). */
   query: FreshnessQuery;
   /**
@@ -268,6 +279,7 @@ export interface FreshnessDotAutoProps {
  * `useQuery()` result handy. .
  */
 export function FreshnessDotAuto({
+  edgeAligned,
   query,
   refetchable = true,
   forceStaleAfterMs,
@@ -278,6 +290,7 @@ export function FreshnessDotAuto({
 }: FreshnessDotAutoProps) {
   return (
     <FreshnessDot
+      edgeAligned={edgeAligned}
       updatedAt={query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null}
       isFetching={query.isFetching}
       isStale={query.isStale}

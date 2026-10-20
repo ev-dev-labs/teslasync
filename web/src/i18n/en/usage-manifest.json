@@ -44226,6 +44226,7 @@
       "widget.open",
       "widget.outside",
       "widget.outsideTemp",
+      "widget.overview",
       "widget.playbackProgress",
       "widget.playing",
       "widget.positionHeatmap.count",

@@ -1,35 +1,4 @@
-/**
- * WidgetShell — behaviour + hardening coverage.
- *
- * WidgetShell is the shared chrome every dashboard widget renders inside. Its
- * job is orchestration: pick the loading / error / content state, lay out the
- * header (title, icon, help tooltip, freshness chip, pin button, actions) vs.
- * the title-less overlay layout, resolve which freshness indicator to show
- * (granular `updatedAt` props vs. a whole `query`), and pulse a green glow when
- * the underlying data timestamp changes.
- *
- * The leaf children (`Skeleton`, `QueryError`, `HelpTooltip`, `PinButton`,
- * `FreshnessDot`, `FreshnessDotAuto`) are mocked with lightweight stand-ins so
- * this suite asserts WidgetShell's own contract — which child renders and with
- * which props — without dragging in their QueryClient / Router / i18n trees or
- * ever touching the network.
- *
- * Facets covered:
- *   - state machine: loading → Skeleton (content withheld); error → QueryError
- *     wrapping a real Error; otherwise children render.
- *   - titled header: title heading, decorative icon, help tooltip (only with a
- *     title), actions, and the i18n'd "More info about {{title}}" aria-label.
- *   - title-less layout: freshness moves to an absolute overlay (compact), the
- *     actions row still renders, and help/pin are suppressed.
- *   - freshness resolution: `updatedAt` wins over `query`; `updatedAt === 0`
- *     collapses to a null timestamp; a bare `query` uses FreshnessDotAuto; and
- *     neither prop renders no chip. Omitted flags default to false; `onRefresh`
- *     is forwarded and fires.
- *   - pin: rendered only when title + widgetId + dashboardId are all present.
- *   - padding: `noPadding` swaps the scroll container classes.
- *   - freshness/content state: timestamps reach the shared indicator, stale
- *     retained values are dimmed, and headings expose their full title.
- */
+/** Shared shell state, single header ownership, controls and freshness wiring. */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -132,6 +101,7 @@ vi.mock('@/components/data-display', () => ({
 }));
 
 import { WidgetShell } from './WidgetShell';
+import { WidgetHeaderContext } from './WidgetHeaderContext';
 import type { FreshnessQuery } from '@/components/data-display';
 
 const Child = () => <div data-testid="child">child content</div>;
@@ -314,27 +284,18 @@ describe('WidgetShell — titled header', () => {
 });
 
 describe('WidgetShell — title-less layout', () => {
-  it('moves the freshness chip into an absolute compact overlay', () => {
-    const { container } = render(
-      <WidgetShell updatedAt={1000}>
-        <Child />
-      </WidgetShell>,
-    );
-
-    // No header heading is rendered for a title-less widget.
-    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
-
+  it('uses the same titled header and edge-aligned freshness control without a caller title', () => {
+    const { container } = render(<WidgetShell updatedAt={1000}><Child /></WidgetShell>);
+    expect(screen.getByRole('heading', { name: 'Widget overview' })).toBeInTheDocument();
     const chip = screen.getByTestId('data-freshness');
-    expect(chip.getAttribute('data-compact')).toBe('true');
-    const overlay = chip.parentElement as HTMLElement;
-    expect(overlay.className).toContain('absolute');
-    expect(overlay.className).toContain('top-1.5');
-    expect(overlay.className).toContain('right-4');
-    // Content still renders under the overlay.
+    expect(chip.getAttribute('data-compact')).toBe('false');
+    expect(chip.closest('[data-role="widget-shell-header"]')).not.toBeNull();
+    expect(chip.parentElement?.lastElementChild).toBe(chip);
+    expect(chip.parentElement?.className).not.toContain('absolute');
     expect(root(container)).toContainElement(screen.getByTestId('child'));
   });
 
-  it('renders an actions row but suppresses help and pin without a title', () => {
+  it('preserves actions, help and pin in the common header without a caller title', () => {
     render(
       <WidgetShell
         actions={<span data-testid="actions" />}
@@ -347,19 +308,19 @@ describe('WidgetShell — title-less layout', () => {
     );
 
     expect(screen.getByTestId('actions')).toBeInTheDocument();
-    expect(screen.queryByTestId('help-tooltip')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('pin-button')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.getByTestId('help-tooltip')).toBeInTheDocument();
+    expect(screen.getByTestId('pin-button')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Widget overview' })).toBeInTheDocument();
   });
 
-  it('drops the decorative icon when there is no title', () => {
+  it('preserves the decorative icon in the common header without a caller title', () => {
     render(
       <WidgetShell icon={<span data-testid="icon" />}>
         <Child />
       </WidgetShell>,
     );
 
-    expect(screen.queryByTestId('icon')).not.toBeInTheDocument();
+    expect(screen.getByTestId('icon')).toBeInTheDocument();
   });
 });
 
@@ -427,14 +388,15 @@ describe('WidgetShell — freshness resolution', () => {
     expect(screen.queryByTestId('data-freshness-auto')).not.toBeInTheDocument();
   });
 
-  it('renders no freshness chip when neither updatedAt nor query is given', () => {
+  it('renders one neutral untimestamped freshness control for static content', () => {
     render(
       <WidgetShell title="Battery">
         <Child />
       </WidgetShell>,
     );
 
-    expect(screen.queryByTestId('data-freshness')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('data-freshness')).toHaveLength(1);
+    expect(screen.getByTestId('data-freshness')).toHaveAttribute('data-updated-at', 'null');
     expect(screen.queryByTestId('data-freshness-auto')).not.toBeInTheDocument();
   });
 
@@ -573,5 +535,19 @@ describe('WidgetShell - freshness and content state', () => {
     );
     expect(screen.getByTestId('data-freshness')).toHaveAttribute('data-updated-at', 'null');
     expect(root(container).querySelector('[data-content-degraded="true"]')).not.toBeInTheDocument();
+  });
+});
+
+
+describe('WidgetShell — shared grid controls', () => {
+  it('keeps caller and grid controls immediately before the sole header freshness control', () => {
+    const { container } = render(<WidgetHeaderContext.Provider value={{ editMode: true, actions: <button>Arrange</button> }}>
+      <WidgetShell title="Battery" actions={<button>Details</button>} updatedAt={123}><Child /></WidgetShell>
+    </WidgetHeaderContext.Provider>);
+    const cluster = container.querySelector('[data-role="widget-header-actions"]')!;
+    expect(Array.from(cluster.children).map(el => el.textContent)).toEqual(['Details', 'Arrange', '']);
+    expect(cluster.lastElementChild).toBe(screen.getByTestId('data-freshness'));
+    expect(screen.getByRole('heading').parentElement).toHaveClass('widget-drag-handle');
+    expect(screen.getByTestId('child').querySelector('[data-testid="data-freshness"]')).toBeNull();
   });
 });

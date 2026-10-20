@@ -74,5 +74,8 @@
       "increasedPercent": "{{signal}} עלה ב־{{percent}}% ב־24 השעות האחרונות בהשוואה לממוצע של שבעה ימים (מ־{{baseline}} ל־{{value}}).",
       "decreasedPercent": "{{signal}} ירד ב־{{percent}}% ב־24 השעות האחרונות בהשוואה לממוצע של שבעה ימים (מ־{{baseline}} ל־{{value}})."
     }
+  },
+  "widget": {
+    "overview": "סקירת יישומון"
   }
 }

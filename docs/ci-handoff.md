@@ -7,13 +7,36 @@ PR #198 was squash-merged as `c353a59399`. Active work now starts from
 cherry-pick any former redesign branches. The owner supplied the remaining
 product decisions; `followups-plan.md` is the active execution plan.
 
-Product changes and the security re-check are implemented and the full local
-CI replica passed (2026-10-20 15:38 UTC). Quality2,021, visual49, a11y13,
-engines6, performance9 and affected Edge35 passed; every proxy postcheck0.
-Vitest57,184/0, Go build/test/lint and all static/generated/build gates passed.
-The first draft PR and remote validation are next. No workflow or threshold changes. Tailwind v4 remains a separate, later draft PR, conditional
-on the A/B PR being fully green. Historical PR #198 details below are retained
-as evidence, not as checkout or push instructions for this branch.
+Product/security work is implemented; draft PR #202 remains open to main.
+Its first pushed head ce1e14ddff completed 198 passing checks, one existing
+conditional skip, and one failure: Lighthouse's strict startup-size preflight
+(400.5 KB versus the unchanged 400 KB budget). Commits 6aadcb5913 and cad1237f5f
+load the tour launcher on request and regenerate verified preservation pins.
+The current private build and complete perf:check pass at 399.7 KB after the
+additional widget work. No workflow, budget, coverage or tolerance change.
+
+Owner-added widget-header work takes priority before the next push: remove
+DashboardGrid's pr-28 reservation and independent edit/expand overlays; put
+controls in the sole shared header before its edge-aligned dot. VehicleHero's
+body dot and status decoration are removed, preserving status/provenance.
+Static widgets get a neutral, untimestamped indicator rather than fabricated
+freshness. Title-less shells now use the same translated fallback header.
+The ownership regression fails before and passes after; affected units 230/230.
+All 121 widgets pass six min/default/large x view/edit configurations, including
+exactly one dot, <=2px inset/centering deltas and <=8px action gaps. Eight new
+375/768/1280/1920 light/dark tests also pass hover/edit geometry and save shots;
+all wrappers report zero proxy escapes. Original before/after captures and
+review output remain in D:/tmp, not Git.
+
+Full local replica is repeating before push. Go build/test, route generation,
+contracts/discovery (2,083 tests), TypeScript and strict production/performance
+gates pass. Full Vitest rerun passes57,191/0 (four existing pending cases). Final lint
+and browser matrices remain in progress. Windows
+snapshot review found a stale fixture-only 8.5rem width pin on freshness
+controls; widget headers now use actual compact geometry while non-widget
+fixtures retain their existing pin. No mask/assertion/tolerance changes.
+Tailwind v4 remains a separate later draft PR, conditional on A/B PR fully green.
+Historical PR #198 details below are evidence, not checkout/push instructions.
 
 ## Final CI closeout — 2026-10-20 03:25 UTC
 - Verified implementation head **f0c63853df84a507212ac637d1a6a481aa4ee586**, pushed only to `ui/simplification`: `gh pr checks 198 --json state` reports **204 SUCCESS / 3 SKIPPED**, with no pending or failed checks. All five branch-protection checks pass. Worktree was clean before this documentation closeout. Earlier pending/failure entries below are chronological history, not current blockers.
