@@ -910,3 +910,9 @@ describe('useCostAnalysisData — hardening', () => {
     });
   });
 });
+
+it.each(['__proto__','constructor','SpacePort'])('preserves unknown server category %s without object-key collisions',code=>{
+ const {current}=render({sessions:[makeSession({charger_type:code})]});
+ expect(current.chargerTypeData[0].name).toBe(code);
+ expect(current.chargerTypeData[0].sessions).toBe(1);
+});
