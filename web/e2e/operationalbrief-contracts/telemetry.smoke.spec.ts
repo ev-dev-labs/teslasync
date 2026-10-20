@@ -315,7 +315,7 @@ for (const layout of LAYOUTS) {
     await reviewBrief(page, brief, '2 of 4 signals arriving');
     await reviewBrief(page, brief, 'a sleeping vehicle can be stale without being unhealthy');
     const beforeRefresh = fixtures.liveRequests;
-    fixtures.holdNextLive();
+    fixtures.holdLiveRequests();
     try {
       await page.getByRole('button', { name: 'Refresh signals', exact: true }).click();
       await expect.poll(() => fixtures.liveRequests).toBeGreaterThan(beforeRefresh);

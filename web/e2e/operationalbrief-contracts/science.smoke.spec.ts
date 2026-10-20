@@ -417,7 +417,7 @@ for (const theme of ['light', 'dark'] as const) {
       await settings.getByRole('button', { name: '30 days', exact: true }).click();
       await settings.getByRole('button', { name: 'Close view settings' }).click();
       await waitForHarnessReady(page, controller);
-      await expect(page.getByRole('button', { name: /^Analysis window: 30 days/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Analysis window: Last 30 days', exact: true })).toBeVisible();
       const params = new URL(page.url()).searchParams;
       const from = params.get('from');
       const to = params.get('to');
