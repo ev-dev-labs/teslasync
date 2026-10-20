@@ -40,7 +40,7 @@ export function SettingsSummaryBrief({
         : t('summaryBrief.available', 'Source available')
 
   return (
-    <OperationalBrief compact variant={variant} title={title} description={description}
+    <OperationalBrief compact wrapTitle variant={variant} title={title} description={description}
       eyebrow={source} statusLabel={statusLabel}
       statusTone={retained || unavailable ? 'warning' : 'neutral'}
       metrics={bridged.map((metric, index) => ({ ...metric, loading: metrics[index]?.loading }))}

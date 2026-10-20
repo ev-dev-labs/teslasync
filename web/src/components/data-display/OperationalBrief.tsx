@@ -68,6 +68,8 @@ export interface OperationalBriefProps {
   compact?: boolean
   /** Keep the title for the details drawer while omitting a repeated inner heading. */
   hideHeading?: boolean
+  /** Preserve the complete heading when user text scaling needs multiple lines. */
+  wrapTitle?: boolean
   /** Render without a surface when this brief is already inside a card or widget. */
   variant?: 'standalone' | 'embedded'
   loading?: boolean
@@ -145,6 +147,7 @@ export function OperationalBrief({
   showRange = false,
   compact = false,
   hideHeading = false,
+  wrapTitle = false,
   variant = 'standalone',
   metricColumns,
   maxPerRow,
@@ -181,7 +184,7 @@ export function OperationalBrief({
         <BriefSurface variant={variant} className={className}>
           <div className={cn(variant === 'embedded' ? 'min-w-0' : compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
             <div className="flex min-w-0 items-center justify-between gap-2">
-              {!hideHeading && <PanelTitle id={titleId} className={cn('min-w-0 flex-1 truncate', compact ? 'text-base' : undefined)} title={title}>{title}</PanelTitle>}
+              {!hideHeading && <PanelTitle id={titleId} className={cn('min-w-0 flex-1', wrapTitle ? 'whitespace-normal break-words' : 'truncate', compact ? 'text-base' : undefined)} title={title}>{title}</PanelTitle>}
               {showRange && scope && <span className="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{scope}</span>}
               <div className="flex shrink-0 items-center gap-2">
                 {actions}

@@ -61,8 +61,15 @@ for (const theme of ['light', 'dark'] as const) {
       expect(geometry.scrollTop).toBeGreaterThan(0);
       expect(geometry.footerBelowViewport).toBe(true);
       if (width < 640) {
-        for (const control of await footer.locator('button, input, select').all()) {
+        // Container-responsive numeric/edge alternatives are deliberately hidden.
+        // Measure real tap targets, while independently requiring core navigation.
+        await expect(pagination.getByRole('button', { name: 'Previous page', exact: true })).toBeVisible();
+        await expect(pagination.getByRole('button', { name: 'Next page', exact: true })).toBeVisible();
+        const controls = footer.locator('button, input, select').filter({ visible: true });
+        expect(await controls.count()).toBeGreaterThan(0);
+        for (const control of await controls.all()) {
           const bounds = await control.boundingBox();
+          expect(bounds).not.toBeNull();
           expect(bounds!.height).toBeGreaterThanOrEqual(44);
           expect(bounds!.width).toBeGreaterThanOrEqual(44);
         }

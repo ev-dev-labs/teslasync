@@ -37,6 +37,16 @@ vi.mock('@/hooks/useDateFormat', () => ({
 }))
 
 describe('settings summaries use the real compact Brief and raw bridge', () => {
+  it('wraps the complete overview heading rather than clipping scaled narrow-screen text', () => {
+    render(<SettingsSummaryBrief title="Preferences at a glance"
+      description="Configuration choices" source="Saved settings" scope="Current preferences"
+      metrics={[]} />)
+    const heading = screen.getByRole('heading', { name: 'Preferences at a glance', exact: true })
+    expect(heading).toHaveClass('min-w-0', 'whitespace-normal', 'break-words')
+    expect(heading).not.toHaveClass('truncate')
+    expect(heading).toHaveTextContent('Preferences at a glance')
+  })
+
   it('renders an embedded brief without adding a second surface inside its host card', () => {
     const { container } = render(<MemoryRouter><SettingsSummaryBrief title="Configuration"
       description="Independent settings sources" source="Saved settings" scope="Latest configuration"
