@@ -47,6 +47,10 @@
 - New quality39360564948 discovery job118425518108 first error: harness contract still expects visual matrix1..10 and the former engine worker job/command. Locally reproduced **1 failed/23 passed**, then adapted strict expectations to all64 visual/64 responsive/13 a11y partitions and three smoke shards per engine, retaining singleton build/download/managed-preview assertions and adding strict engine aggregate assertions. Exact `npm run e2e:contract`: **24 passed (774ms)**; routes/scenario contracts and focused ESLint exit0. No assertion removed or loosened.
 - CI39360565099 and quality39360564948 are predecessor runs; monitor the new correction head after pushing. No final green claim.
 
+### Lint-owned workflow contract correction — 02:54 UTC
+- Head4ec8135eea quality discovery progressed; CI39360788834 frontend-lint job118426861262 failed a second strict contract in `.github/scripts/ci_workflows.test.mjs`, not ESLint or a production audit. This separate Node test still expected16 responsive/10 visual shards and singleton a11y/old engine worker.
+- Locally reproduced4 passed/1 failed, then updated exact64/13/3 expectations, retained serial performance1/1, all fail-fast/build-reuse/Windows/waiver assertions, and added strict engine aggregate/denominator checks. Exact CI-owned Node command **11 passed/0 failed**, harness **24 passed (690ms)**. Searched workflow-contract sources for obsolete10/16 browser-shard expectations; no further matches. Push narrow correction; no broad rebuild needed for this test-only change.
+
 ## Takeover validation — 2026-10-19
 - Checkout verified on `ui/simplification`, head `6f838a5da5`; 65 pre-existing uncommitted files preserved. Codex process exists but its checkout session ended with `task_complete`; no active test runner found before edits. Existing preview processes were not started by this agent.
 - First real frontend shard-2 error in run `39303008716`: `TypeError: queries is not iterable`, at `pickWorstQuery` in PageContainer. Pending Codex change discriminates arrays with `Array.isArray` and includes a regression for optional `isError`; changed unit suites passed 409/409.
