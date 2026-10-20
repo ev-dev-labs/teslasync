@@ -22,6 +22,8 @@ export interface AnomalyExplanationParams {
 }
 
 export interface AnomalyEntry {
+  /** Canonical unit supplied by the detector; absent on older deployments. */
+  unit?: string;
   explanation_code?: string;
   explanation_params?: AnomalyExplanationParams;
   signal: string;
