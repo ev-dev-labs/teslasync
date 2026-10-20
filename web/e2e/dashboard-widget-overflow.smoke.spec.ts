@@ -288,6 +288,19 @@ async function measureAll(page: Page): Promise<WidgetRecord[]> {
           cssWidth: style.width, paddingLeft: style.paddingLeft, paddingRight: style.paddingRight,
           overflowX: style.overflowX, overflowY: style.overflowY,
           boxSizing: style.boxSizing, transform: style.transform, scrollbarGutter: style.scrollbarGutter,
+          afterMeasurement: body.scrollWidth,
+          nestedOverflow: [...body.querySelectorAll<HTMLElement>('*')]
+            .filter(el => el.scrollWidth > el.clientWidth + 1).slice(0, 16).map(el => ({
+              tag: el.tagName, cls: String(el.className), text: el.textContent?.slice(0, 80),
+              scroll: el.scrollWidth, client: el.clientWidth,
+              width: el.getBoundingClientRect().width,
+              right: el.getBoundingClientRect().right - clientRight,
+              overflow: getComputedStyle(el).overflowX,
+            })),
+          pseudo: ['::before', '::after'].map(pseudo => {
+            const computed = getComputedStyle(body, pseudo)
+            return { pseudo, content: computed.content, width: computed.width, position: computed.position }
+          }),
         }, overflowingElements: [...body.querySelectorAll<HTMLElement>('*')]
           .filter(el => el.getBoundingClientRect().right > clientRight + 1)
           .slice(0, 12).map(el => ({

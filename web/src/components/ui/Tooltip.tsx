@@ -100,10 +100,10 @@ function warnIfHardcodedTextColor(content: ReactNode, callerHint: string): void 
 }
 
 const sideClasses = {
-  top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-  bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-  left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-  right: 'left-full top-1/2 -translate-y-1/2 ml-2',
+  top: 'bottom-full mb-2',
+  bottom: 'top-full mt-2',
+  left: 'top-1/2 -translate-y-1/2',
+  right: 'top-1/2 -translate-y-1/2',
 } as const;
 
 /** Ancestors whose horizontal overflow is clipped — the bubble must stay inside them. */
@@ -213,7 +213,9 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
         ? bounds.right + 8
         : bounds.left + bounds.width / 2 - width / 2;
     const left = Math.max(leftBound, Math.min(desiredLeft, rightBound - width));
-    setHorizontalOffset(left - desiredLeft);
+    // Position the layout box itself. A negative translation only moves the
+    // painted bubble: its original box can still enlarge scrollable overflow.
+    setHorizontalOffset(left - bounds.left);
   }, [side, multiline, boundaryRef]);
 
   // Opacity-hidden bubbles still expand scrollable bounds before interaction.
@@ -295,7 +297,7 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
         ref={tooltipRef}
         role="tooltip"
         style={{
-          ...(horizontalOffset ? { translate: `${horizontalOffset}px 0` } : {}),
+          left: horizontalOffset,
           ...(maxWidth !== undefined ? { maxWidth } : {}),
         }}
         className={cn(

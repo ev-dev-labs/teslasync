@@ -140,19 +140,31 @@ describe('Tooltip — placement (side)', () => {
   });
 
   it('applies the matching class group for each explicit side', () => {
-    const cases: Array<[NonNullable<TooltipProps['side']>, string]> = [
-      ['bottom', 'top-full'],
-      ['left', 'right-full'],
-      ['right', 'left-full'],
+    const cases: Array<[NonNullable<TooltipProps['side']>, string, string]> = [
+      ['bottom', 'top-full', '-32px'],
+      ['left', 'top-1/2', '-108px'],
+      ['right', 'top-1/2', '44px'],
     ];
-    for (const [side, expected] of cases) {
-      const { unmount } = render(
-        <Tooltip content="Tip" side={side}>
-          <button>T</button>
-        </Tooltip>,
-      );
-      expect(screen.getByRole('tooltip').className).toContain(expected);
-      unmount();
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100);
+    const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(1280);
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(500, 100, 36, 36));
+    try {
+      for (const [side, expected, left] of cases) {
+        const { unmount } = render(
+          <Tooltip content="Tip" side={side}>
+            <button>T</button>
+          </Tooltip>,
+        );
+        const tip = screen.getByRole('tooltip');
+        expect(tip.className).toContain(expected);
+        expect(tip.style.left).toBe(left);
+        expect(tip.style.translate).toBe('');
+        unmount();
+      }
+    } finally {
+      width.mockRestore();
+      viewport.mockRestore();
+      bounds.mockRestore();
     }
   });
 });
@@ -177,7 +189,7 @@ describe('Tooltip — multiline', () => {
       expect(tip.style.translate).toBe('');
       measuredWidth = 320;
       act(() => notifyResize());
-      expect(tip.style.translate).toBe('-140px 0');
+      expect(tip.style.left).toBe('-282px');
       unmount();
       expect(disconnect).toHaveBeenCalled();
     } finally {
@@ -232,7 +244,7 @@ describe('Tooltip — multiline', () => {
     try {
       if (interaction === 'hover') fireEvent.mouseEnter(wrapper);
       else fireEvent.focus(trigger);
-      expect(tip.style.translate).toBe('-140px 0');
+      expect(tip.style.left).toBe('-282px');
     } finally {
       width.mockRestore();
       viewport.mockRestore();
@@ -253,13 +265,13 @@ describe('Tooltip — multiline', () => {
         </Tooltip>,
       );
       const tip = screen.getByRole('tooltip');
-      expect(tip.style.translate).toBe('-140px 0');
+      expect(tip.style.left).toBe('-282px');
 
       width.mockReturnValue(296);
       viewport.mockReturnValue(320);
       bounds.mockReturnValue(new DOMRect(270, 40, 36, 36));
       fireEvent(window, new Event('resize'));
-      expect(tip.style.translate).toBe('-128px 0');
+      expect(tip.style.left).toBe('-258px');
 
       unmount();
       const callsAfterUnmount = bounds.mock.calls.length;
@@ -311,7 +323,11 @@ describe('Tooltip — clipping ancestors', () => {
       // Trigger centre (318) minus half the bubble (50) wants x=268, which
       // would end at 368 — 16px past the clipper's padding box (352). The
       // bubble shifts left to 252 instead of overflowing the ancestor.
-      expect(screen.getByRole('tooltip').style.translate).toBe('-16px 0');
+      const tip = screen.getByRole('tooltip');
+      expect(tip.style.left).toBe('-48px');
+      expect(tip.style.translate).toBe('');
+      expect(tip).not.toHaveClass('-translate-x-1/2');
+      expect(300 + Number.parseFloat(tip.style.left) + 100).toBe(352);
       // The clipper itself is observed so a post-mount shrink (e.g. a
       // vertical scrollbar appearing) re-clamps the bubble.
       expect(observed.some((target) => (target as HTMLElement).hasAttribute('data-clipper'))).toBe(true);
