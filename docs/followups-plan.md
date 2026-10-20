@@ -1,5 +1,25 @@
 # Post-redesign follow-ups — plan
 
+## Current status — 2026-10-20 CI closeout
+
+Current working branch is `ui/simplification`, draft PR #198; the branch note
+and baseline results below describe historical work, not a new checkout instruction.
+Implementation head `f0c63853df` passed **204 checks with3 existing conditional
+skips**, including every required check, CI39361384841 and Frontend Quality39361384951.
+The historical24-red inventory below is superseded by this actual green CI result;
+do not report those tests as current failures.
+
+This takeover completed the managed-workspace compile repair, unknown-versus-unset
+drive pricing, remaining named unit/browser/network repairs, artifact cleanup,
+balanced64-way browser partitioning and strict workflow-contract updates.
+Detailed commands, counts, release mechanism and run links are in `ci-handoff.md`.
+
+Not every product followup is completed: the security section retains its
+framework-migration/upstream-fix blockers, and the eight Step6 product-contract
+decisions remain explicitly deferred rather than silently marked done.
+Older Step5 decision notes are historical context; they are not evidence of
+current CI failures. No new product policy was invented merely to close this plan.
+
 Branch: `fix/post-redesign-followups` (from `ui/simplification` at the sidenav merge `f6150b0715`). Push only this branch.
 
 ## Baseline
@@ -888,4 +908,3 @@ precedent; the smoke pin + authorial intent were grouped '1,000-row').
 Ownership contracts: expectMetrics/review/missing assertions pre-migrated to
 the withhold contract (visible-only listitem count, count-0 missing, drawer
 context + hidden-count readings) ahead of its first local run.
-
