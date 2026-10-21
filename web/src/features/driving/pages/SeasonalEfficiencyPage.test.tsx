@@ -438,7 +438,7 @@ describe('SeasonalEfficiencyPage', () => {
     renderPage();
     expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
     expect(screen.getAllByText('0.18 kWh / km').length).toBeGreaterThan(0);
-    assertOperationalBriefDisclosure(screen.getByTestId('seasonal-kpis'), 'Vehicle timezone: America/Los_Angeles', { contains: true });
+    expect(screen.getByTestId('seasonal-kpis')).not.toHaveTextContent('America/Los_Angeles');
   });
 
   it('offers accessible chart summaries for a ready descriptive fit', () => {

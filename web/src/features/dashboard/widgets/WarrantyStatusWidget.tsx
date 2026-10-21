@@ -67,7 +67,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
-  const { formatDate, locale } = useDateFormat();
+  const { formatDate, formatMonthYear } = useDateFormat();
 
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = useCallback(
@@ -192,7 +192,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
         items.push({
           label: t(cov.labelKey, cov.fallback),
           value: covExpiry && covDays != null
-            ? new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(new Date(covExpiry))
+            ? formatMonthYear(covExpiry)
             : t('widget.warranty.included', 'Included'),
           badge: {
             text: covDays == null ? t('widget.status.unknown', 'Unknown') : covActive
@@ -205,7 +205,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
     }
 
     return items;
-  }, [warrantyData, expiryDate, daysRemaining, effectiveDays, variant, mileageLimitM, currentMileageM, toDistanceDisplay, distanceUnit, t, formatDate, locale, fmtInt, fmtNumber]);
+  }, [warrantyData, expiryDate, daysRemaining, effectiveDays, variant, mileageLimitM, currentMileageM, toDistanceDisplay, distanceUnit, t, formatDate, formatMonthYear, fmtInt, fmtNumber]);
 
   const shellProps = {
     title: t('widget.warranty.title', 'Warranty status'),

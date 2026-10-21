@@ -36,10 +36,29 @@ export interface FormatOptions {
   clock?: Pick<Intl.DateTimeFormatOptions, 'hour' | 'minute' | 'second' | 'hour12' | 'hourCycle'>
 }
 
+/**
+ * Usable `timeZone` for `Intl`, or `undefined` (browser zone) when the
+ * supplied zone is blank or unknown. Kept local instead of importing
+ * `@/lib/timezone` because that module also carries React hooks and this
+ * leaf library must stay importable from non-React contexts. Primary
+ * validation lives in `resolveTimezone`; this is the backstop that keeps
+ * every formatter total per the contract above.
+ */
+function safeTimeZone(tz: unknown): string | undefined {
+  if (typeof tz !== 'string' || tz.trim() === '') return undefined
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(0)
+    return tz
+  } catch {
+    return undefined
+  }
+}
+
 function intlOpts(base: Intl.DateTimeFormatOptions, opts?: FormatOptions): Intl.DateTimeFormatOptions {
   const fields = base.hour ? { ...base, ...opts?.clock } : base
-  if (opts?.tz) {
-    return { ...fields, timeZone: opts.tz }
+  const timeZone = safeTimeZone(opts?.tz)
+  if (timeZone) {
+    return { ...fields, timeZone }
   }
   return fields
 }
@@ -445,6 +464,200 @@ export function formatDateWithDay(iso: string | Date | null | undefined, opts?: 
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
     weekday: 'short', month: 'short', day: 'numeric',
   }, opts))
+}
+
+/**
+ * User-facing label for a half-open API range `[start, endExclusive)`:
+ * renders the inclusive last day ("Sep 22 – Oct 21, 2026") via
+ * `Intl.DateTimeFormat.formatRange`, which collapses shared fields in a
+ * locale-aware way. A reversed range is swapped rather than thrown on —
+ * a display helper must stay total. Missing or invalid bounds return
+ * the universal placeholder.
+ */
+export function formatDateRange(
+  start: string | Date | null | undefined,
+  endExclusive: string | Date | null | undefined,
+  opts?: FormatOptions,
+): string {
+  if (!start || !endExclusive) return FALLBACK
+  const s = new Date(start)
+  const e = new Date(endExclusive)
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return FALLBACK
+  let from = s.getTime()
+  let until = e.getTime()
+  if (until < from) [from, until] = [until, from]
+  // Last included instant, then its civil day in the target zone. Query
+  // ends carry millisecond precision, so minus 1ms is exactly the final
+  // included millisecond; a DST transition inside the day cannot move it.
+  const inclusiveEnd = new Date(Math.max(0, until - 1))
+  const timeZone = safeTimeZone(opts?.tz)
+  try {
+    const fmt = new Intl.DateTimeFormat(intlLocale(opts), {
+      ...(timeZone ? { timeZone } : {}),
+      year: 'numeric', month: 'short', day: 'numeric',
+    })
+    // ICU pads the range separator with thin/narrow spaces that vary by
+    // version; normalize to plain spaces so labels, tests and snapshots
+    // stay stable and match the existing "{{start}} – {{end}}" labels.
+    return fmt.formatRange(new Date(from), inclusiveEnd).replace(/[\u2009\u202F]/g, ' ')
+  } catch {
+    return FALLBACK
+  }
+}
+
+/**
+ * User-facing label for an inclusive `YYYY-MM-DD` calendar span
+ * ("Aug 1 – 8, 2026"). Business dates are not instants, so both ends
+ * are noon-anchored in UTC exactly like {@link formatDayKey} — the label
+ * never shifts with the display zone. A reversed span is swapped rather
+ * than thrown on; missing or invalid keys return the placeholder.
+ */
+export function formatDayKeyRange(
+  startKey: string | null | undefined,
+  endKey: string | null | undefined,
+  opts?: FormatOptions,
+): string {
+  const toNoon = (key: string | null | undefined): Date | null => {
+    if (typeof key !== 'string') return null
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key)
+    if (!m) return null
+    const noon = new Date(0)
+    noon.setUTCHours(12, 0, 0, 0)
+    noon.setUTCFullYear(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    if (noon.getUTCFullYear() !== Number(m[1]) || noon.getUTCMonth() !== Number(m[2]) - 1 || noon.getUTCDate() !== Number(m[3])) {
+      return null
+    }
+    return noon
+  }
+  const from = toNoon(startKey)
+  const until = toNoon(endKey)
+  if (!from || !until) return FALLBACK
+  const [first, last] = from.getTime() <= until.getTime() ? [from, until] : [until, from]
+  try {
+    const fmt = new Intl.DateTimeFormat(intlLocale(opts), {
+      timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric',
+    })
+    return fmt.formatRange(first, last).replace(/[\u2009\u202F]/g, ' ')
+  } catch {
+    return FALLBACK
+  }
+}
+
+/**
+ * Offset of `timeZone` at `instantMs` in milliseconds (local wall clock
+ * minus UTC). Used to interpret `datetime-local` entries in the display
+ * zone instead of the browser zone.
+ */
+function zoneOffsetMs(instantMs: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(new Date(instantMs))
+  const get = (type: string): number => Number(parts.find((p) => p.type === type)?.value ?? '0')
+  return Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second')) - instantMs
+}
+
+/**
+ * Interprets a `datetime-local` wall time (`YYYY-MM-DDTHH:mm`, seconds
+ * optional) in `timeZone` and returns the matching UTC instant, or `null`
+ * when the text is unparseable. Spring-forward gaps resolve forward to
+ * the later offset and fall-back overlaps resolve to the first
+ * occurrence, matching `Temporal`'s "compatible" behavior. An unknown
+ * zone falls back to browser-local interpretation (plain `new Date`).
+ */
+export function zonedWallTimeToUtc(wall: string | null | undefined, timeZone: string): Date | null {
+  if (typeof wall !== 'string') return null
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(wall.trim())
+  if (!m) return null
+  const [, Y, Mo, D, h, mi, s] = m.map(Number)
+  const asUTC = Date.UTC(Y, Mo - 1, D, h, mi, s || 0)
+  const check = new Date(asUTC)
+  if (check.getUTCFullYear() !== Y || check.getUTCMonth() !== Mo - 1 || check.getUTCDate() !== D
+    || check.getUTCHours() !== h || check.getUTCMinutes() !== mi || check.getUTCSeconds() !== (s || 0)) {
+    return null
+  }
+  const tz = safeTimeZone(timeZone)
+  if (!tz) return new Date(wall)
+  try {
+    const off0 = zoneOffsetMs(asUTC, tz)
+    const first = asUTC - off0
+    // Second pass: a DST transition between the guess and the result
+    // changes the applicable offset; one correction converges.
+    const off1 = zoneOffsetMs(first, tz)
+    let instant = asUTC - off1
+    if (off1 !== off0) {
+      // Offset changed across the guess: verify the wall reads back. A
+      // spring-forward gap never reads back, so shift forward by the gap
+      // (compatible behavior); a fall-back overlap already resolved to
+      // the first occurrence and reads back unchanged.
+      const back = instant + zoneOffsetMs(instant, tz)
+      if (back !== asUTC) instant += off1 - off0
+    }
+    return new Date(instant)
+  } catch {
+    return new Date(wall)
+  }
+}
+
+/**
+ * Formats `d` as a `datetime-local`-ready `YYYY-MM-DDTHH:mm` wall time in
+ * `timeZone` (for prefilling entries in the display zone). Unknown zones
+ * fall back to browser-local formatting.
+ */
+export function toZonedDatetimeStr(d: Date, timeZone: string): string {
+  const tz = safeTimeZone(timeZone)
+  if (!tz) return toLocalDatetimeStr(d)
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    }).formatToParts(d)
+    const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? '00'
+    return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+  } catch {
+    return toLocalDatetimeStr(d)
+  }
+}
+
+/**
+ * User-facing month-year label ("Mar 2027"). Plain `YYYY-MM` / `YYYY-MM-DD`
+ * calendar values are formatted zone-stable (noon-anchored UTC, like
+ * {@link formatDayKey}); full instants are rendered in the target zone.
+ * Missing or invalid input returns the placeholder; an invalid locale
+ * falls back to `en-US` before giving up. Never throws.
+ */
+export function formatMonthYear(
+  value: string | Date | null | undefined,
+  opts?: FormatOptions,
+): string {
+  if (value == null || value === '') return FALLBACK
+  const render = (d: Date, timeZone: string | undefined): string => {
+    const fields: Intl.DateTimeFormatOptions = {
+      ...(timeZone ? { timeZone } : {}), year: 'numeric', month: 'short',
+    }
+    try {
+      return new Intl.DateTimeFormat(intlLocale(opts), fields).format(d)
+    } catch {
+      try {
+        return new Intl.DateTimeFormat('en-US', fields).format(d)
+      } catch {
+        return FALLBACK
+      }
+    }
+  }
+  if (typeof value === 'string') {
+    const cal = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(value.trim())
+    if (cal) {
+      const month = Number(cal[2])
+      if (month < 1 || month > 12) return FALLBACK
+      return render(new Date(Date.UTC(Number(cal[1]), month - 1, 1, 12)), 'UTC')
+    }
+  }
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return FALLBACK
+  return render(d, safeTimeZone(opts?.tz))
 }
 
 /**

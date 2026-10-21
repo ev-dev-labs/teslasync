@@ -13,7 +13,6 @@ export function SeasonalKpiEvidenceBand({
   state,
   locale,
   units,
-  timeZone,
 }: SeasonalSectionProps) {
   useNumberFormatting();
   const { t } = useTranslation();
@@ -92,7 +91,6 @@ export function SeasonalKpiEvidenceBand({
           />
         </div>
         <div className="mt-4 grid gap-2 text-xs text-[var(--text-muted)] sm:grid-cols-2 xl:grid-cols-4">
-          <span>{t('seasonalEfficiency.kpis.timeZone', 'Vehicle timezone: {{timeZone}}', { timeZone })}</span>
           <span>{t('seasonalEfficiency.kpis.evidenceBand', 'Evidence band: {{band}} ({{index}}/100)', {
             band: supportBandLabel(analysis.support.band, t),
             index: analysis.support.index,

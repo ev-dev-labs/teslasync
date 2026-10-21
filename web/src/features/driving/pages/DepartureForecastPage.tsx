@@ -11,6 +11,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSettings } from '@/hooks/useSettings';
+import { isValidTimezone } from '@/lib/timezone';
 import type { Drive } from '@/types/driving';
 
 import {
@@ -77,18 +78,21 @@ export default function DepartureForecastPage() {
   const vehicleTimeZone = vehicleId != null && vehicle?.id === vehicleId
     ? vehicle.timezone
     : null;
-  const usesVehicleMetadata = Boolean(vehicleTimeZone && vehicleTimeZone !== 'UTC');
+  const usesVehicleMetadata = Boolean(
+    vehicleTimeZone && vehicleTimeZone !== 'UTC' && isValidTimezone(vehicleTimeZone),
+  );
+  const savedUserZone = settings.timezone_user?.trim();
   const timeZoneProvenance = [
-    t('departure.method.effectiveZone', 'Effective model timezone: {{timeZone}}.', { timeZone: modelTimeZone }),
+    t('departure.method.effectiveZone', 'The model follows your selected time zone.'),
     usesVehicleMetadata
-      ? t('departure.method.zoneMetadata', 'Source: selected vehicle timezone metadata ({{timeZone}}).', { timeZone: vehicleTimeZone })
-      : t('departure.method.zoneFallback', 'Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing or UTC.', {
-          source: settings.timezone_user?.trim()
+      ? t('departure.method.zoneMetadata', 'Source: selected vehicle timezone metadata.')
+      : t('departure.method.zoneFallback', 'Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing, invalid, or UTC.', {
+          source: savedUserZone && isValidTimezone(savedUserZone)
             ? t('departure.method.zoneSavedUser', 'saved user timezone')
             : t('departure.method.zoneBrowser', 'browser timezone, or UTC if unavailable'),
         }),
     timeZone.trim() !== modelTimeZone
-      ? t('departure.method.zoneInvalid', 'The resolved timezone "{{requested}}" is missing or invalid; this model uses UTC without changing shared settings.', { requested: timeZone })
+      ? t('departure.method.zoneInvalid', 'The selected time zone is missing or invalid; this model uses UTC without changing shared settings.')
       : '',
   ].filter(Boolean).join(' ');
 

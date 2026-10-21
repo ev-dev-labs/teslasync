@@ -7,6 +7,7 @@ import { CardGrid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -63,8 +64,9 @@ export default function RegenEfficiencyPage() {
 
   const aggregateState = toRegenSectionState(aggregateDataState, aggregateQuery);
   const detailState = toRegenSectionState(detailDataState, drivesQuery);
+  const { formatDateRange } = useDateFormat();
   const summaryScope = startInstant && endInstantExclusive
-    ? `${startInstant} — ${endInstantExclusive} (${timezone})`
+    ? formatDateRange(startInstant, endInstantExclusive)
     : t('regen.brief.allReturned', 'Selected all-time scope; detailed rows remain capped.');
   // Match the shared warning's trust contract: paused refreshes can retain
   // evidence without a refresh error. An unresolved source is not retained.

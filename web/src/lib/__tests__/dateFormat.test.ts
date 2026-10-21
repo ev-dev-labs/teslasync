@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   formatDateTime, formatDate, formatTime, formatDateShort, tzAbbreviation,
-  formatRelativeDays, formatRelativeDayKey, formatDayKey, ymdInTz,
+  formatRelativeDays, formatRelativeDayKey, formatDayKey, formatMonthYear, ymdInTz,
   isoUtcToLocalDatetimeInput, localDatetimeInputToIso,
   formatDurationMs, formatDurationMsCompact, formatDurationMsLong,
   formatDurationSecondsAsMinutes, formatDurationMinutes, formatDurationRange,
@@ -387,6 +387,32 @@ describe('formatDayKey', () => {
     // This is the whole reason formatDayKey exists vs round-tripping
     // through Date in some tz that might cross midnight.
     expect(formatDayKey('2026-04-24', { style: 'long', locale: 'en-US' })).toBe('Apr 24, 2026');
+  });
+});
+
+describe('formatMonthYear', () => {
+  it('renders calendar months zone-stable', () => {
+    expect(formatMonthYear('2027-03-15', { locale: 'en-US', tz: 'America/Los_Angeles' })).toBe('Mar 2027');
+    expect(formatMonthYear('2027-03-15', { locale: 'en-US', tz: 'Asia/Tokyo' })).toBe('Mar 2027');
+    expect(formatMonthYear('2027-03', { locale: 'en-US' })).toBe('Mar 2027');
+  });
+
+  it('renders instants in the target zone', () => {
+    // Nov 1 06:00Z is still Oct 31 in LA but Nov 1 in Tokyo.
+    expect(formatMonthYear('2026-11-01T06:00:00.000Z', { locale: 'en-US', tz: 'America/Los_Angeles' })).toBe('Oct 2026');
+    expect(formatMonthYear('2026-11-01T06:00:00.000Z', { locale: 'en-US', tz: 'Asia/Tokyo' })).toBe('Nov 2026');
+  });
+
+  it('returns the placeholder for missing or invalid input', () => {
+    expect(formatMonthYear(null, { locale: 'en-US' })).toBe('—');
+    expect(formatMonthYear(undefined, { locale: 'en-US' })).toBe('—');
+    expect(formatMonthYear('', { locale: 'en-US' })).toBe('—');
+    expect(formatMonthYear('not-a-date', { locale: 'en-US' })).toBe('—');
+    expect(formatMonthYear('2027-13', { locale: 'en-US' })).toBe('—');
+  });
+
+  it('falls back to en-US for an invalid locale tag', () => {
+    expect(formatMonthYear('2027-03-15', { locale: 'not-a-locale' })).toBe('Mar 2027');
   });
 });
 

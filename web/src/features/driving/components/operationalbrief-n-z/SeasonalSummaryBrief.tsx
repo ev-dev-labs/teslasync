@@ -9,7 +9,7 @@ import {
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { DrivingSummaryBrief } from './DrivingSummaryBrief';
 
-export function SeasonalSummaryBrief({ analysis, state, locale, units, timeZone }: SeasonalSectionProps) {
+export function SeasonalSummaryBrief({ analysis, state, locale, units }: SeasonalSectionProps) {
   useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
@@ -75,7 +75,7 @@ export function SeasonalSummaryBrief({ analysis, state, locale, units, timeZone 
         unavailable={!resolved}
         retained={state.refreshError != null}
         scope={<>
-          {t('seasonalEfficiency.kpis.timeZone', 'Vehicle timezone: {{timeZone}}', { timeZone })} · {resolved ? t(
+          {resolved ? t(
             analysis.accounting.historyCapReached ? 'seasonalEfficiency.kpis.capReached' : 'seasonalEfficiency.kpis.capNotReached',
             analysis.accounting.historyCapReached ? 'Latest returned 1,000-row window reached' : 'Returned window below the 1,000-row cap',
           ) : t('seasonalEfficiency.brief.coveragePending', 'Returned-history coverage has not resolved.')}

@@ -18,6 +18,7 @@ import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
 import { useSignalSnapshot } from '@/api/hooks/useTelemetry';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useTimezone } from '@/lib/timezone';
@@ -396,11 +397,11 @@ export default function StateMachineDebuggerPage() {
   /* Resolve the active range's human label for empty-state copy so users see
    * "No transitions in the selected window" rather than a generic message.
    * Uses the date span when defined; falls back to "All time" when empty. */
+  const { formatDateRange, formatDayKeyRange } = useDateFormat();
   const activeRangeLabel = useMemo(() => {
     if (!start || !end) return t('fsm.allTime', 'All time');
-    if (start === end) return start;
-    return `${start} → ${end}`;
-  }, [start, end, t]);
+    return formatDayKeyRange(start, end);
+  }, [start, end, t, formatDayKeyRange]);
   const emptyRangeMessage = totalRows > 0
     ? t('fsm.noTransitionsOnPage', 'No transitions on the loaded server page.')
     : t('fsm.noTransitionsInRange', {
@@ -438,9 +439,7 @@ export default function StateMachineDebuggerPage() {
       : unconfirmedStateScope,
   };
   const rangeScope = startInstant && endInstantExclusive
-    ? t('fsm.brief.bounds', '{{label}} · [{{start}}, {{end}}) · {{timezone}}', {
-        label: activeRangeLabel, start: startInstant, end: endInstantExclusive, timezone: vehicleTz,
-      })
+    ? formatDateRange(startInstant, endInstantExclusive)
     : summaryPeriod.kind === 'unknown' ? summaryPeriod.reason : activeRangeLabel;
   const pageScope = t('fsm.statstrip.pageOnly', 'Loaded transition page only');
 

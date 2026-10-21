@@ -67,8 +67,7 @@ export function MonthlyTransitionTrend({
         )}
         subtitle={t(
           'destinationTransitions.month.subtitle',
-          'Accepted transition starts grouped by calendar month in {{timeZone}}.',
-          { timeZone },
+          'Accepted transition starts grouped by calendar month in your selected time zone.',
         )}
         ariaLabel={t(
           'destinationTransitions.month.aria',

@@ -138,8 +138,7 @@ export function PackCapacityMethodology({
       ),
       body: t(
         'packCapacity.method.calendarBody',
-        'Months, active days, and active weeks use {{timeZone}}. The analysis clock is frozen when the page mounts so future classification and recency do not drift.',
-        { timeZone: result.timeZone },
+        'Months, active days, and active weeks use your selected time zone. The analysis clock is frozen when the page mounts so future classification and recency do not drift.',
       ),
     },
     {

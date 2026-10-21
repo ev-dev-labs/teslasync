@@ -308,6 +308,19 @@ describe('useSaveSettings', () => {
     expect(errorToast).not.toHaveBeenCalled();
   });
 
+  it('pushes the saved settings into the cache so subscribers update without waiting for the refetch', async () => {
+    const saved = makeSettings({ tz_display_default: 'user', timezone_user: 'Asia/Tokyo' });
+    mockedRequest.mockResolvedValueOnce(saved);
+
+    const { Wrapper, qc } = makeWrapper();
+    const setQueryData = vi.spyOn(qc, 'setQueryData');
+    const { result } = renderHook(() => useSaveSettings(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync(saved);
+    expect(setQueryData).toHaveBeenCalledWith(settingsKeys.settings, saved);
+    expect(qc.getQueryData(settingsKeys.settings)).toEqual(saved);
+  });
+
   it('toasts the error (no invalidation) when the PUT fails', async () => {
     mockedRequest.mockRejectedValueOnce(new Error('save boom'));
 

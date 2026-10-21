@@ -54,8 +54,7 @@ export function DepartureConsistency({
       <Text as="p" variant="caption" className="mt-1">
         {t(
           'rhythm.consistency.subtitle',
-          'Typical 24-hour departure and median circular deviation by local weekday in {{timezone}}.',
-          { timezone: summary.timeZone },
+          'Typical 24-hour departure and median circular deviation by local weekday.',
         )}
       </Text>
 
@@ -99,7 +98,7 @@ export function DepartureConsistency({
                     </Badge>
                   </div>
                   <NestedDrivingBrief variant="embedded" title={dayLabel(day)}
-                    description={t('rhythm.consistency.subtitle', 'Typical 24-hour departure and median circular deviation by local weekday in {{timezone}}.', { timezone: summary.timeZone })}
+                    description={t('rhythm.consistency.subtitle', 'Typical 24-hour departure and median circular deviation by local weekday.')}
                     loading={state.isLoading} unavailable={state.error != null} retained={state.retained}
                     period={{ kind: 'unknown', label: dayLabel(day),
                       reason: t('rhythm.consistency.sampleBadge', '{{count}}/{{minimum}}', { count: profile.drives, minimum: summary.minConsistencyDrives }) }}

@@ -76,11 +76,6 @@ export default function DayLogPage() {
       actionLayout="scope-first"
       title={title}
       subtitle={t('dayLog.subtitle', 'What happened to this vehicle today')}
-      metadataActions={
-        <Text as="span" variant="caption" className="[overflow-wrap:anywhere]" id="daylog-timezone">
-          {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
-        </Text>
-      }
       query={dayLogQuery}
       copyLink
       contextActions={<DayLogControls date={date} timezone={timezone} onDateChange={setDate} />}
@@ -119,7 +114,6 @@ export default function DayLogPage() {
             <DayLogOperationalSummary
               data={data}
               date={date}
-              timezone={timezone}
               isLoading={isLoading}
               error={fatalError}
               status={state.status}

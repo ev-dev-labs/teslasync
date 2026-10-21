@@ -80,17 +80,15 @@ export function OvernightParkingContext({
     isFiniteNumber(summary.nightShare) && summary.nightShare >= 0 && summary.nightShare <= 1
       ? t(
           'parking.overnight.subtitle',
-          '{{pct}}% of observed dwell overlaps the local night window across {{count}} stints in {{timeZone}}.',
+          '{{pct}}% of observed dwell overlaps the local night window across {{count}} stints in your selected time zone.',
           {
             pct: fmtNumber(summary.nightShare * 100),
             count: summary.stints.length,
-            timeZone: summary.coverage.timeZone,
           },
         )
       : t(
           'parking.overnight.subtitleEmpty',
-          'Observed dwell will be split at 22:00 and 06:00 in {{timeZone}}.',
-          { timeZone: summary.coverage.timeZone },
+          'Observed dwell will be split at 22:00 and 06:00 in your selected time zone.',
         );
 
   return (

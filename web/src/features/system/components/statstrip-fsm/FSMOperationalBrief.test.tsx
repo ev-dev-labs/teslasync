@@ -101,8 +101,9 @@ describe('FSM shared OperationalBrief', () => {
     expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(strip).toHaveAttribute('data-operational-brief');
     // The explicit selected range moved off the face into the drawer header...
-    expect(strip).not.toHaveTextContent('[2026-10-01T00:00:00Z, 2026-10-03T00:00:00Z)');
-    assertOperationalBriefDisclosure(strip, '[2026-10-01T00:00:00Z, 2026-10-03T00:00:00Z)', { contains: true });
+    expect(strip).not.toHaveTextContent('1.–3. Okt. 2026');
+    assertOperationalBriefDisclosure(strip, '2026-10-01 → 2026-10-02 · 1.–3. Okt. 2026', { contains: true });
+    assertOperationalBriefDisclosure(strip, '[2026-10-01T00:00:00Z', { contains: true, absent: true });
     // ...and the page-versus-total context into the drawer's per-metric group.
     expect(screen.queryByText('0 / 73')).not.toBeInTheDocument();
     fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
@@ -135,6 +136,7 @@ describe('FSM shared OperationalBrief', () => {
     const drawer = await screen.findByRole('dialog');
     expect(within(drawer).getByText('0 / 73')).toBeInTheDocument();
     expect(within(drawer).getByText(/independent of the transition range/)).toBeInTheDocument();
-    expect(within(drawer).getAllByText(/2026-10-01T00:00:00Z/).length).toBeGreaterThan(0);
+    expect(within(drawer).getByText('2026-10-01 → 2026-10-02 · 1.–3. Okt. 2026')).toBeInTheDocument();
+    expect(within(drawer).queryByText(/2026-10-01T00:00:00Z/)).toBeNull();
   });
 });

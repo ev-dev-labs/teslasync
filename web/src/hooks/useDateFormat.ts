@@ -5,6 +5,10 @@ import {
   formatTime as libFormatTime,
   formatDateShort as libFormatDateShort,
   formatDateWithDay as libFormatDateWithDay,
+  formatDateRange as libFormatDateRange,
+  formatMonthYear as libFormatMonthYear,
+  formatDayKey as libFormatDayKey,
+  formatDayKeyRange as libFormatDayKeyRange,
   formatRelative as libFormatRelative,
   formatRelativeTime as libFormatRelativeTime,
   formatRelativeDays as libFormatRelativeDays,
@@ -36,6 +40,25 @@ export interface UseDateFormatResult {
   formatTime: DateFormatter
   formatDateShort: DateFormatter
   formatDateWithDay: DateFormatter
+  /** Half-open `[start, endExclusive)` rendered with an inclusive last day. */
+  formatDateRange: (
+    start: string | Date | null | undefined,
+    endExclusive: string | Date | null | undefined,
+    override?: FormatOptions,
+  ) => string
+  /** Inclusive `YYYY-MM-DD` calendar span, zone-stable. */
+  formatDayKeyRange: (
+    startKey: string | null | undefined,
+    endKey: string | null | undefined,
+    override?: FormatOptions,
+  ) => string
+  /** Single `YYYY-MM-DD` business day without timezone conversion. */
+  formatDayKey: (
+    key: string | null | undefined,
+    override?: FormatOptions & { style?: 'short' | 'long' },
+  ) => string
+  /** Month-year label; calendar values stay zone-stable, instants use the zone. */
+  formatMonthYear: DateFormatter
   formatRelative: DateFormatter
   formatRelativeTime: DateFormatter
   formatRelativeDays: DateFormatter
@@ -104,6 +127,22 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
     (value, override) => libFormatDateWithDay(value, { ...opts, ...override }),
     [opts],
   )
+  const formatDateRange = useCallback<UseDateFormatResult['formatDateRange']>(
+    (start, endExclusive, override) => libFormatDateRange(start, endExclusive, { ...opts, ...override }),
+    [opts],
+  )
+  const formatDayKeyRange = useCallback<UseDateFormatResult['formatDayKeyRange']>(
+    (startKey, endKey, override) => libFormatDayKeyRange(startKey, endKey, { ...opts, ...override }),
+    [opts],
+  )
+  const formatDayKey = useCallback<UseDateFormatResult['formatDayKey']>(
+    (key, override) => libFormatDayKey(key, { ...opts, ...override }),
+    [opts],
+  )
+  const formatMonthYear = useCallback<DateFormatter>(
+    (value, override) => libFormatMonthYear(value, { ...opts, ...override }),
+    [opts],
+  )
   const formatRelative = useCallback<DateFormatter>(
     (value, override) => libFormatRelative(value, { ...opts, ...override }),
     [opts],
@@ -127,6 +166,10 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
       formatTime,
       formatDateShort,
       formatDateWithDay,
+      formatDateRange,
+      formatDayKey,
+      formatDayKeyRange,
+      formatMonthYear,
       formatRelative,
       formatRelativeTime,
       formatRelativeDays,
@@ -140,6 +183,10 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
       formatTime,
       formatDateShort,
       formatDateWithDay,
+      formatDateRange,
+      formatDayKey,
+      formatDayKeyRange,
+      formatMonthYear,
       formatRelative,
       formatRelativeTime,
       formatRelativeDays,

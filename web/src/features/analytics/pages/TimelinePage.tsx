@@ -30,7 +30,7 @@ import {
 } from '@/api/hooks/useTimelinePage';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateRange, formatDateTime } from '@/lib/dateFormat';
 
 import { getErrorMessage } from '@/lib/errorMessage';
 import { buildContextHref } from '@/lib/contextNavigation';
@@ -208,11 +208,9 @@ export default function TimelinePage() {
   };
   const summaryPeriod: StatPeriod = {
     kind: 'analysis',
-    label: t('timeline.summary.period', '{{start}} – {{end}} (exclusive) · {{timezone}}', {
-      start: formatDateTime(startInstant, { tz: timezone, locale }),
-      end: formatDateTime(endInstantExclusive, { tz: timezone, locale }),
-      timezone,
-    }),
+    // One formatted range in the display zone; the explicit-datimes plus
+    // zone suffix duplicated the span and exposed the exclusive end.
+    label: formatDateRange(startInstant, endInstantExclusive, { tz: timezone, locale }),
     start: startInstant,
     endExclusive: endInstantExclusive,
     timezone,

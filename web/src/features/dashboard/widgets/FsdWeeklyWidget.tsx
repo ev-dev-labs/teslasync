@@ -10,8 +10,7 @@ import { Text } from '@/components/ui';
 import { getWeekRange } from '@/features/analytics/components/weekly-digest/helpers';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
-
-import { browserTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { WidgetShell } from './WidgetShell';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
@@ -25,6 +24,7 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { formatDistance } = useUnits();
+  const { formatDateRange, tz } = useDateFormat();
   const isCompact = size.cols <= 1;
 
   const [weekStart, weekEnd] = useMemo(() => getWeekRange(0), []);
@@ -35,7 +35,7 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
     id > 0 ? String(id) : undefined,
     startIso,
     endIso,
-    browserTimezone(),
+    tz,
   );
   const {
     data,
@@ -100,8 +100,8 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
               eyebrow={t('widget.fsdWeekly.summary.eyebrow', 'Supervised driving')}
               title={t('widget.fsdWeekly.summary.title', 'Weekly FSD summary')}
               description={t('widget.fsdWeekly.honesty', 'Unmeasured is not zero. Last week is the previous Monday–Sunday window.')}
-              scope={t('widget.fsdWeekly.summary.scope', 'Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}', {
-                id, start: startIso, end: endIso, timezone: browserTimezone(),
+              scope={t('widget.fsdWeekly.summary.scope', 'Vehicle {{id}} · {{range}}', {
+                id, range: formatDateRange(startIso, endIso),
               })}
               testId="fsd-weekly-operational-brief"
             />

@@ -140,9 +140,10 @@ describe('API log summary supported severity and measured count', () => {
     expect(container.querySelector('[data-operational-metric="api-average-duration"] [data-operational-value]'))
       .toHaveTextContent('146 ms');
     const selected = screen.getByTestId('api-logs-range-summary');
-    assertOperationalBriefDisclosure(selected, range.start, { contains: true });
-    assertOperationalBriefDisclosure(selected, range.endExclusive, { contains: true });
-    assertOperationalBriefDisclosure(selected, 'UTC, exclusive end', { contains: true });
+    assertOperationalBriefDisclosure(selected, 'View settings range: Oct 1, 2026', { contains: true });
+    expect(selected).not.toHaveTextContent(range.start);
+    expect(selected).not.toHaveTextContent(range.endExclusive);
+    expect(selected).not.toHaveTextContent('UTC, exclusive end');
     assertOperationalBriefDisclosure(selected, 'request-list filters do not change these metrics', { contains: true });
     const rolling = screen.getByTestId('api-logs-24h-summary');
     expect(rolling).toHaveTextContent('56');

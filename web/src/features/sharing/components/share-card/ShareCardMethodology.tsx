@@ -26,8 +26,7 @@ export function ShareCardMethodology({
     ),
     t(
       'shareCard.method.timezone',
-      'Month, weekday, and active-day buckets use {{timezone}}; URL calendar labels remain distinct from RFC3339 query instants.',
-      { timezone: analysis.window.resolvedTimezone },
+      'Month, weekday, and active-day buckets use your selected time zone; calendar labels remain distinct from the queried instants.',
     ),
     t(
       'shareCard.method.privacy',

@@ -40,7 +40,7 @@ export function DepartureForecastMethodology({
         <time dateTime={new Date(forecast.nowMs).toISOString()}>
           {departureDateTime(forecast.nowMs, locale, timeZone)}
         </time>
-        {' · '}{timeZone}{'. '}
+        {'. '}
         {t(
           'departure.method.snapshotBody',
           'The clock is captured when this page mounts and stays fixed while it remains mounted, including history refreshes and vehicle or timezone changes. The lookback, next-24-hour horizon, “in” times, and planning marker use that anchor, not the current clock or the history fetch time. Refreshed rows can change the estimates without advancing the anchor.',
@@ -90,8 +90,7 @@ export function DepartureForecastMethodology({
         {timeZoneProvenance}{' '}
         {t(
         'departure.method.modelTimezoneBody',
-        'Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the effective model timezone: {{timeZone}}.',
-        { timeZone },
+        'Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use your selected time zone.',
         )}
       </>,
     },

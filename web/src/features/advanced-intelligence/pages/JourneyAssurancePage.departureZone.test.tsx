@@ -1,9 +1,9 @@
-// Pin the worker to the divergent host zone this contract requires. The specs
-// below prove browser-local departure parsing against literal LA instants,
-// so they fail on any host that is not America/Los_Angeles unless the zone
-// is pinned here (AdvancedIntelligencePages/SmartCharge precedent). Each
-// test file runs in its own worker process, so this cannot leak elsewhere;
-// the beforeEach guards verify the pin took effect before every test.
+// Pin the worker to a divergent host zone so the specs below prove the entry
+// follows the display setting rather than the browser zone: every expected
+// instant is literal and differs from the browser-local reading of the same
+// draft. Each test file runs in its own worker process, so this cannot leak
+// elsewhere; the beforeEach guards verify the pin took effect before every
+// test.
 process.env.TZ = 'America/Los_Angeles';
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -25,13 +25,17 @@ vi.unmock('@/lib/timezone');
 
 const scenarioPath = '/api/v1/advanced-intelligence/journey-assurance/scenarios';
 const draft = '2026-01-15T12:00';
-// Literal expected instants prove the browser-local parser rather than
+// Literal expected instants prove the display-zone parser rather than
 // deriving expectations with the same parser. The worker TZ is pinned at the
 // top of this file; the beforeEach guards fail loudly if the pin ever stops
 // taking effect instead of letting every spec below go red ambiguously.
-const submittedInstant = '2026-01-15T20:00:00.000Z';
+const submittedByMode = {
+  utc: '2026-01-15T12:00:00.000Z',
+  vehicle: '2026-01-15T11:00:00.000Z',
+  user: '2026-01-15T03:00:00.000Z',
+} as const;
 const browserZone = 'America/Los_Angeles';
-const entryDescription = `Enter departure in your browser time zone (${browserZone}). Display time zone preferences do not change this entry.`;
+const entryDescription = 'Enter departure in your selected time zone.';
 
 let client: QueryClient;
 let settings: Partial<AppSettings>;
@@ -146,31 +150,12 @@ afterEach(() => {
   expect(unexpectedRequests).toEqual([]);
 });
 
-describe('Journey departure browser-local zone contract', () => {
-  it.each(['empty', 'throwing'] as const)('discloses an unknown entry zone when Intl resolution is %s without fabricating UTC', async (resolution) => {
-    const dateTimeFormat = Intl.DateTimeFormat;
-    vi.spyOn(Intl, 'DateTimeFormat').mockImplementation((...args) => {
-      const formatter = new dateTimeFormat(...args);
-      const options = formatter.resolvedOptions();
-      vi.spyOn(formatter, 'resolvedOptions').mockImplementation(() => {
-        if (resolution === 'throwing') throw new Error('Synthetic zone resolution unavailable');
-        return { ...options, timeZone: '' };
-      });
-      return formatter;
-    });
-    await renderPage('utc');
-    expect(departureInput()).toHaveAccessibleDescription(
-      'Enter departure in your browser time zone (Unknown). Display time zone preferences do not change this entry.',
-    );
-    expect(departureInput()).not.toHaveAccessibleDescription(/UTC/);
-    expect(scenarioRequests()).toHaveLength(0);
-  });
-
+describe('Journey departure display-zone contract', () => {
   it.each([
     { mode: 'utc' as const, displayZone: 'UTC' },
     { mode: 'vehicle' as const, displayZone: 'Europe/Berlin' },
     { mode: 'user' as const, displayZone: 'Asia/Tokyo' },
-  ])('discloses America/Los_Angeles entry independently of $mode display zone $displayZone', async ({ mode, displayZone }) => {
+  ])('names no zone in the entry hint under $mode display zone $displayZone', async ({ mode, displayZone }) => {
     await renderPage(mode);
     expect(departureInput()).toHaveAttribute('type', 'datetime-local');
     expect(departureInput()).toHaveAccessibleDescription(entryDescription);
@@ -178,54 +163,66 @@ describe('Journey departure browser-local zone contract', () => {
     expect(hintId).toBeTruthy();
     expect(document.getElementById(hintId ?? '')).toBeVisible();
     expect(document.getElementById(hintId ?? '')).not.toHaveTextContent(displayZone);
+    expect(document.getElementById(hintId ?? '')).not.toHaveTextContent(browserZone);
     expect(scenarioRequests()).toHaveLength(0);
   });
 
-  it('submits browser-local noon as unchanged 20:00Z raw ISO with canonical SI and nullable optionals', async () => {
-    await renderPage('utc');
+  it.each([
+    { mode: 'utc' as const },
+    { mode: 'vehicle' as const },
+    { mode: 'user' as const },
+  ])('submits noon interpreted in the $mode display zone with canonical SI and nullable optionals', async ({ mode }) => {
+    await renderPage(mode);
     await publishDraft();
     expect(scenarioRequests()).toHaveLength(1);
     expect(payload()).toEqual({
       vehicle_id: 7, confirmed: true, route_distance_m: 250000,
-      departure_at: submittedInstant, reserve_target_pct: 15,
+      departure_at: submittedByMode[mode], reserve_target_pct: 15,
       outside_temp_c: null, average_speed_mps: null, auxiliary_load_w: null,
     });
     expect(departureInput()).toHaveValue(draft);
   });
 
-  it('renders published departure in the effective vehicle zone rather than the browser entry zone', async () => {
+  it('renders published departure in the effective vehicle zone', async () => {
     await renderPage('vehicle');
     await publishDraft();
     const summary = screen.getByRole('region', { name: 'Journey readiness assessment' });
-    expect(summary).toHaveTextContent('Jan 15, 2026, 09:00 PM');
-    expect(summary).not.toHaveTextContent('Jan 15, 2026, 12:00 PM');
-    expect(payload().departure_at).toBe(submittedInstant);
+    expect(summary).toHaveTextContent('Jan 15, 2026, 12:00 PM');
+    expect(summary).not.toHaveTextContent('Jan 15, 2026, 11:00 AM');
+    expect(payload().departure_at).toBe(submittedByMode.vehicle);
     expect(departureInput()).toHaveAccessibleDescription(entryDescription);
   });
 
-  it('does not reinterpret a draft when display preference changes before submission', async () => {
+  it('reinterprets a draft in the new display zone when the preference changes before submission', async () => {
     await renderPage('utc');
+    await publishDraft();
+    expect(payload().departure_at).toBe(submittedByMode.utc);
     fireEvent.change(departureInput(), { target: { value: draft } });
     await changePreference('user');
+    // Gate the resubmission on the observed re-render: the retained UTC
+    // publish must first appear in Tokyo time, proving the new zone is live.
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Journey readiness assessment' }))
+      .toHaveTextContent('Jan 15, 2026, 09:00 PM'));
     expect(departureInput()).toHaveValue(draft);
     expect(departureInput()).toHaveAccessibleDescription(entryDescription);
     fireEvent.click(runButton());
-    await waitFor(() => expect(scenarioRequests()).toHaveLength(1));
-    expect(payload().departure_at).toBe(submittedInstant);
+    await waitFor(() => expect(scenarioRequests()).toHaveLength(2));
+    expect(payload(1).departure_at).toBe(submittedByMode.user);
     await waitFor(() => expect(screen.getByRole('region', { name: 'Journey readiness assessment' }))
-      .toHaveTextContent('Jan 16, 2026, 05:00 AM'));
+      .toHaveTextContent('Jan 15, 2026, 12:00 PM'));
   });
 
   it('reformats retained published inputs after preference changes without replacing their instant or the edited draft', async () => {
     await renderPage('utc');
     await publishDraft();
-    expect(screen.getByRole('region', { name: 'Journey readiness assessment' })).toHaveTextContent('Jan 15, 2026, 08:00 PM');
+    expect(screen.getByRole('region', { name: 'Journey readiness assessment' })).toHaveTextContent('Jan 15, 2026, 12:00 PM');
     fireEvent.change(departureInput(), { target: { value: '2026-02-20T08:45' } });
     await changePreference('vehicle');
     expect(departureInput()).toHaveValue('2026-02-20T08:45');
-    expect(screen.getByRole('region', { name: 'Journey readiness assessment' })).toHaveTextContent('Jan 15, 2026, 09:00 PM');
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Journey readiness assessment' }))
+      .toHaveTextContent('Jan 15, 2026, 01:00 PM'));
     expect(scenarioRequests()).toHaveLength(1);
-    expect(payload().departure_at).toBe(submittedInstant);
+    expect(payload().departure_at).toBe(submittedByMode.utc);
   });
 
   it.each([
@@ -259,10 +256,10 @@ describe('Journey departure browser-local zone contract', () => {
     fireEvent.change(departureInput(), { target: { value: '2026-02-20T08:45' } });
     fireEvent.click(runButton());
     await waitFor(() => expect(screen.getAllByText(/Synthetic scenario rejected/).length).toBeGreaterThan(0));
-    expect(screen.getByRole('region', { name: 'Journey readiness assessment' })).toHaveTextContent('Jan 15, 2026, 09:00 PM');
+    expect(screen.getByRole('region', { name: 'Journey readiness assessment' })).toHaveTextContent('Jan 15, 2026, 12:00 PM');
     expect(departureInput()).toHaveValue('2026-02-20T08:45');
-    expect(payload().departure_at).toBe(submittedInstant);
-    expect(payload(1).departure_at).toBe('2026-02-20T16:45:00.000Z');
+    expect(payload().departure_at).toBe(submittedByMode.vehicle);
+    expect(payload(1).departure_at).toBe('2026-02-20T07:45:00.000Z');
     for (const title of ['Journey scenario', 'Readiness and arrival range', 'Readiness factors', 'Evidence, quality, and limitations']) {
       expect(screen.getByRole('heading', { name: title })).toBeVisible();
     }

@@ -38,7 +38,6 @@ export function ArrivalReliabilityWindowComparisons({
   analysis,
   state,
   locale,
-  timeZone,
   formatDuration,
 }: ArrivalReliabilityWindowComparisonsProps) {
   const { fmtInt } = useNumberFormatting();
@@ -123,8 +122,8 @@ export function ArrivalReliabilityWindowComparisons({
                 <Text as="p" variant="caption" className="mt-1">
                   {t(
                     'arrivalReliability.windows.localWindow',
-                    '{{window}} in {{timeZone}}',
-                    { window: windowLabel(window), timeZone },
+                    '{{window}}',
+                    { window: windowLabel(window) },
                   )}
                 </Text>
                 <NestedDrivingBrief variant="embedded" title={t('arrivalReliability.brief.windowQuantities', 'Route-window timing quantities')}
@@ -132,7 +131,7 @@ export function ArrivalReliabilityWindowComparisons({
                   loading={state.isLoading} unavailable={state.error != null}
                   retained={state.refreshError != null || state.isRefreshBlocked}
                   period={{ kind: 'unknown',
-                    label: `${window.routeLabel} · ${t('arrivalReliability.windows.localWindow', '{{window}} in {{timeZone}}', { window: windowLabel(window), timeZone })}`,
+                    label: `${window.routeLabel} · ${t('arrivalReliability.windows.localWindow', '{{window}}', { window: windowLabel(window) })}`,
                     reason: t('arrivalReliability.windows.support', '{{count}} samples · route allowance {{allowance}}', {
                       count: window.samples, allowance: formatDuration(window.allowanceThresholdS),
                     }) }}

@@ -2,9 +2,8 @@
  * EnergySiteInfoWidget contract + hardening tests.
  *
  * The widget is a self-refreshing dashboard tile that summarises the user's
- * first Tesla Energy site (solar size, Powerwall count/energy, gateway firmware
- * and the installation timezone). Its whole shape is a function of two chained
- * queries and the widget `size`:
+ * first Tesla Energy site (solar size, Powerwall count/energy, gateway firmware).
+ * Its whole shape is a function of two chained queries and the widget `size`:
  *
  *   1. `useTeslaEnergySites()` — the product list. The FIRST site's
  *      `energy_site_id` becomes the `siteId`.
@@ -12,7 +11,7 @@
  *      truthy `siteId` (disabled until the site list resolves).
  *
  *   - size.cols <= 1  → compact tile: titled header and compact detail rows.
- *   - otherwise       → full tile: titled header + the four detail rows.
+ *   - otherwise       → full tile: titled header + the three detail rows.
  *   - no sites        → the accessible "No Tesla Energy site linked" empty state.
  *   - sites but null info data → the "No site info available" empty state.
  *   - isLoading / hard error → skeleton / QueryError chrome (no rows).
@@ -20,8 +19,8 @@
  * The suite locks, facet by facet:
  *   1. Full view (populated): the SI-on-disk watts / watt-hours are scaled to
  *      kW / kWh at the display boundary, count and total site capacity compose, the
- *      firmware + timezone render, and the info query is gated on the resolved
- *      `siteId`.
+ *      firmware renders without a timezone row, and the info query is gated on the
+ *      resolved `siteId`.
  *   2. Null-safety: every optional field absent → each row degrades to an em
  *      dash, never a `undefined kW` / `NaN kWh` artefact.
  *   3. Compact view retains the header identity and all detail rows.
@@ -186,7 +185,7 @@ beforeEach(() => {
   mockUseSiteInfo.mockClear();
 });
 
-it('uses the canonical responsive details while preserving all four complete source values', () => {
+it('uses the canonical responsive details while preserving all three complete source values', () => {
   const firmware = '2026.40.5-complete-energy-gateway-firmware-identity';
   const timezone = 'America/Argentina/ComodRivadavia';
   const { container } = renderWidget(FULL, {
@@ -198,10 +197,10 @@ it('uses the canonical responsive details while preserving all four complete sou
   });
   const list = container.querySelector('dl');
   expect(list).toHaveClass('@container/kv-list');
-  expect(list?.querySelectorAll('dt')).toHaveLength(4);
-  expect(list?.querySelectorAll('dd')).toHaveLength(4);
+  expect(list?.querySelectorAll('dt')).toHaveLength(3);
+  expect(list?.querySelectorAll('dd')).toHaveLength(3);
   expect(screen.getByText(firmware)).not.toHaveClass('truncate');
-  expect(screen.getByText(timezone)).toBeInTheDocument();
+  expect(screen.queryByText(timezone)).not.toBeInTheDocument();
   expect(screen.getByText(/27\.00 kWh/)).toBeInTheDocument();
   expect(mockUseSiteInfo).toHaveBeenCalledWith(42);
 });
@@ -229,8 +228,8 @@ describe('EnergySiteInfoWidget — full view (populated)', () => {
     expect(screen.getByText('2 · 27.00 kWh')).toBeInTheDocument();
     expect(screen.getByText('Gateway firmware')).toBeInTheDocument();
     expect(screen.getByText('23.44.30.9')).toBeInTheDocument();
-    expect(screen.getByText('Installation timezone')).toBeInTheDocument();
-    expect(screen.getByText('America/Los_Angeles')).toBeInTheDocument();
+    expect(screen.queryByText('Installation timezone')).not.toBeInTheDocument();
+    expect(screen.queryByText('America/Los_Angeles')).not.toBeInTheDocument();
   });
 
   it('gates the info query on the FIRST site’s energy_site_id', () => {
@@ -254,14 +253,13 @@ describe('EnergySiteInfoWidget — null-safety', () => {
       info: infoQuery({ data: infoResponse({}) }),
     });
 
-    // All four rows render their labels …
+    // All three rows render their labels …
     expect(screen.getByText('Solar system')).toBeInTheDocument();
     expect(screen.getByText('Powerwalls')).toBeInTheDocument();
     expect(screen.getByText('Gateway firmware')).toBeInTheDocument();
-    expect(screen.getByText('Installation timezone')).toBeInTheDocument();
 
     // … but every value is the em-dash placeholder, never "undefined kW" etc.
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.getAllByText('—')).toHaveLength(3);
     expect(screen.queryByText(/kWh/)).toBeNull();
     expect(screen.queryByText(/kW/)).toBeNull();
     expect(screen.queryByText(/undefined/)).toBeNull();
@@ -390,7 +388,7 @@ describe('EnergySiteInfoWidget — refresh', () => {
     expect(screen.getByText('10.50 kW')).toBeInTheDocument();
     expect(screen.getByText('2 · 27.00 kWh')).toBeInTheDocument();
     expect(screen.getByText('23.44.30.9')).toBeInTheDocument();
-    expect(screen.getByText('America/Los_Angeles')).toBeInTheDocument();
+    expect(screen.queryByText('America/Los_Angeles')).not.toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -402,7 +400,7 @@ describe('EnergySiteInfoWidget — refresh', () => {
     });
     expect(screen.getByText('0.00 kW')).toBeInTheDocument();
     expect(screen.getByText('0 · 0.00 kWh')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getAllByText('—')).toHaveLength(1);
   });
 
   it('retains measured site capacity when the battery count is unknown', () => {
@@ -413,7 +411,7 @@ describe('EnergySiteInfoWidget — refresh', () => {
     expect(screen.getByText('— · 27.00 kWh')).toBeInTheDocument();
   });
 
-  it('retains long firmware and installation timezone values without truncating their content', () => {
+  it('retains long firmware values without truncating their content', () => {
     const firmware = 'gateway-firmware-build-with-a-long-release-identifier';
     const timezone = 'America/Argentina/ComodRivadavia';
     renderWidget(COMPACT, {
@@ -421,7 +419,7 @@ describe('EnergySiteInfoWidget — refresh', () => {
       info: infoQuery({ data: infoResponse({ version: firmware, installation_time_zone: timezone }) }),
     });
     expect(screen.getByText(firmware)).toBeInTheDocument();
-    expect(screen.getByText(timezone)).toBeInTheDocument();
+    expect(screen.queryByText(timezone)).not.toBeInTheDocument();
   });
   it('refetches BOTH queries when a site is linked', () => {
     const sitesRefetch = vi.fn();

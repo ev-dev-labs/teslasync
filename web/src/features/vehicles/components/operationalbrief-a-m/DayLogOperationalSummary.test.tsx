@@ -52,7 +52,6 @@ function renderSummary(overrides: Partial<ComponentProps<typeof DayLogOperationa
         <DayLogOperationalSummary
           data={response()}
           date="2026-10-10"
-          timezone="Europe/London"
           isLoading={false}
           error={null}
           status="ok"
@@ -200,13 +199,14 @@ describe('DayLogOperationalSummary', () => {
     assertOperationalMetricUnavailable(screen.getByTestId('day-log-summary'), 'Drive time');
   });
 
-  it('preserves server scope and exclusive day bounds in the details provenance', () => {
+  it('shows the vehicle day once, formatted, in the details provenance', () => {
     renderSummary({ data: response({ truncated: true }) });
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
 
     const details = screen.getByRole('dialog');
-    expect(details).toHaveTextContent('2026-10-11 · UTC');
-    expect(details).toHaveTextContent('[2026-10-11T00:00:00Z, 2026-10-12T00:00:00Z) · end exclusive');
+    expect(details).toHaveTextContent('Selected vehicle day · Oct 11, 2026');
+    expect(details).not.toHaveTextContent('2026-10-11 · UTC');
+    expect(details).not.toHaveTextContent('[2026-10-11T00:00:00Z, 2026-10-12T00:00:00Z)');
     expect(details).toHaveTextContent('Recorded drives and charging sessions for the selected vehicle day. Signal transitions and per-source availability remain in Timeline and Sources.');
     expect(details).toHaveTextContent(capNotice);
     expect(within(details).getByText('Distance').parentElement?.parentElement).toHaveTextContent('25.00 km');
@@ -223,11 +223,11 @@ describe('DayLogOperationalSummary', () => {
     expect(screen.getByTestId('day-log-summary').querySelector('[data-operational-value]')).toBeNull();
   });
 
-  it('preserves unknown summary values and unknown bounds without claiming cap loss', () => {
+  it('preserves unknown summary values and the formatted day without claiming cap loss', () => {
     renderSummary({ data: null, status: 'unavailable' });
 
     assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Day summary unavailable');
-    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Recorded day bounds unavailable');
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Selected vehicle day · Oct 10, 2026');
     expect(screen.queryByText(capNotice)).not.toBeInTheDocument();
     for (const label of ['Drives', 'Charges', 'Drive time', 'Distance', 'Energy added', 'Energy used']) {
       assertOperationalMetricUnavailable(screen.getByTestId('day-log-summary'), label);

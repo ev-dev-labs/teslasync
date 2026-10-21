@@ -87,7 +87,6 @@ import BatteryDegradationForecastWidget, {
   riskIcon,
   healthTier,
   scoreToImpact,
-  formatProjectedMonth,
 } from './BatteryDegradationForecastWidget';
 import { useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -224,27 +223,11 @@ describe('riskIcon', () => {
   });
 });
 
-describe('formatProjectedMonth', () => {
-  it('formats a valid ISO date as a localized month + year', () => {
-    const expected = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short' }).format(
-      new Date('2027-03-15'),
-    );
-    expect(formatProjectedMonth('2027-03-15', 'en-US')).toBe(expected);
-    expect(formatProjectedMonth('2027-03-15', 'en-US')).toContain('2027');
-  });
-
-  it('returns an em dash for missing / empty / unparseable dates (no crash)', () => {
-    expect(formatProjectedMonth(null, 'en-US')).toBe('—');
-    expect(formatProjectedMonth(undefined, 'en-US')).toBe('—');
-    expect(formatProjectedMonth('', 'en-US')).toBe('—');
-    expect(formatProjectedMonth('not-a-date', 'en-US')).toBe('—');
-  });
-
-  it('falls back to en-US when handed an invalid locale tag', () => {
-    const expected = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short' }).format(
-      new Date('2027-03-15'),
-    );
-    expect(formatProjectedMonth('2027-03-15', 'not-a-locale')).toBe(expected);
+describe('projected month', () => {
+  it('renders the shared month-year label for the projected date', () => {
+    mockDegradation.mockReturnValue(qr({ data: makeData() }));
+    renderWidget(STANDARD);
+    expect(screen.getByText('Mar 2027')).toBeInTheDocument();
   });
 });
 

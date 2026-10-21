@@ -6,6 +6,7 @@ import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/compone
 import { DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { useNotificationReport } from '@/api/hooks/useNotifications';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { NotificationReport } from '@/api/types';
 
 import { notificationEventTypeFallback } from '@/lib/notificationEventType';
@@ -19,6 +20,7 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const palette = useChartPalette();
   const { t } = useTranslation();
+  const { formatDateRange } = useDateFormat();
   const query = useNotificationReport(fromInstant, toExclusive, timezone);
   const state = useDataState(query, { provenance: 'historical' });
   const report = query.data;
@@ -66,9 +68,7 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
   ], [t, fmtInt]);
   const countNote = t('notifications.report.countNote', 'Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.');
   const httpScope = t('notifications.report.httpScope', 'Counts use the View settings window. Outbound HTTP calls include retries and failures; they are not channel deliveries. Compare with Notifications under API Logs’ By Service for the same window.');
-  const scope = t('notifications.report.brief.scope', '{{from}} to {{to}} (exclusive) · {{timezone}}', {
-    from: fromInstant, to: toExclusive, timezone,
-  });
+  const scope = formatDateRange(fromInstant, toExclusive);
   const metrics: StatMetric[] = [
     { metricId: 'count', occurrenceId: 'report-triggered', rawValue: report?.triggered,
       label: t('notifications.report.triggered', 'Triggers recorded'), context: countNote },

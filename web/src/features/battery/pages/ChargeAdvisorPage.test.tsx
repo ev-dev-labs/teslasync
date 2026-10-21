@@ -699,16 +699,16 @@ describe('ChargeAdvisorPage', () => {
 
   it('freezes the analysis clock across cached query rerenders', () => {
     const view = renderPage();
-    expect(screen.getByText(/through 2026-06-02/)).toBeInTheDocument();
+    expect(screen.getByText(/Included history window:.*Jun 2, 2026/)).toBeInTheDocument();
     vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 20 * 86_400_000);
     view.rerenderPage();
-    expect(screen.getByText(/through 2026-06-02/)).toBeInTheDocument();
+    expect(screen.getByText(/Included history window:.*Jun 2, 2026/)).toBeInTheDocument();
   });
 
   it('advances only the live validation clock when a live snapshot updates', () => {
     const view = renderPage();
     expect(screen.getByText('Live signal')).toBeInTheDocument();
-    expect(screen.getByText(/through 2026-06-02/)).toBeInTheDocument();
+    expect(screen.getByText(/Included history window:.*Jun 2, 2026/)).toBeInTheDocument();
 
     vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 2 * 60 * 1_000);
     h.live = {
@@ -725,7 +725,7 @@ describe('ChargeAdvisorPage', () => {
 
     expect(screen.getByText('Live signal')).toBeInTheDocument();
     expect(screen.getByText('Charge limit 85.00%')).toBeInTheDocument();
-    expect(screen.getByText(/through 2026-06-02/)).toBeInTheDocument();
+    expect(screen.getByText(/Included history window:.*Jun 2, 2026/)).toBeInTheDocument();
   });
 
   it('recomputes scenarios when the shared reserve selector changes', () => {
@@ -983,7 +983,7 @@ describe('ChargeAdvisorPage', () => {
     expect(current.getByText('Stale')).toBeInTheDocument();
     expect(current.getByText('80.00%')).toBeInTheDocument();
     expect(screen.getByText('Current state is stale')).toBeInTheDocument();
-    expect(screen.getByText(/through 2026-06-02/)).toBeInTheDocument();
+    expect(screen.getByText(/Included history window:.*Jun 2, 2026/)).toBeInTheDocument();
     const directory = within(screen.getByTestId('charge-advisor-directory'));
     expect(directory.getByText('2026-06-03')).toBeInTheDocument();
     expect(directory.getByText('2026-06-09')).toBeInTheDocument();

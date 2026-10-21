@@ -8,19 +8,15 @@ import { useRangeState } from '@/hooks/useRangeState';
 
 export function useDrivetrainStatisticsCopy() {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat();
-  const { startInstant, endInstantExclusive, timezone } = useRangeState({
+  const { formatDateRange } = useDateFormat();
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'drivetrain-health.range',
   });
-  const bound = (instant: string | undefined) => {
-    const formatted = formatDateTime(instant, { tz: timezone });
-    return formatted === '—' ? formatted : `${formatted} [${instant}]`;
-  };
   return {
     scope: t(
       'drivetrain.modernization.selectedStatisticsBounds',
-      'Drive start: {{start}} (inclusive) to {{end}} (exclusive) · {{timezone}}',
-      { start: bound(startInstant), end: bound(endInstantExclusive), timezone },
+      'Drive start in {{range}} (start inclusive, end exclusive)',
+      { range: formatDateRange(startInstant, endInstantExclusive) },
     ),
     provenance: t(
       'drivetrain.modernization.completedStatisticsPopulation',

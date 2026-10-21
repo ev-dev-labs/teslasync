@@ -418,7 +418,7 @@ describe('FsdDriveAnalyticsPanels', () => {
     const resets = screen.getByTestId('fsd-attribution');
     expect(within(drives).getByRole('link', { name: '3. März 2026, 08:30' })).toBeInTheDocument();
     expect(within(resets).getByText('3. März 2026, 08:30')).toBeInTheDocument();
-    expectComparisonGroupContext('Previous FSD distance', '2026-01-03 - 2026-02-01 · America/Los_Angeles');
+    expectComparisonGroupContext('Previous FSD distance', '3. Jan. – 1. Feb. 2026');
     expect(insights.period.timezone).toBe('America/Los_Angeles');
     fireEvent.click(within(drives).getByRole('button', { name: 'JSON' }));
     expect(downloadJSON.mock.calls[0][1].drives[0].started_at).toBe(instant);
@@ -433,7 +433,7 @@ describe('FsdDriveAnalyticsPanels', () => {
     expect(within(drives).getByRole('link', { name: 'Mar 2, 2026, 03:30 PM' })).toBeInTheDocument();
     expect(within(resets).getByText('Mar 2, 2026, 03:30 PM')).toBeInTheDocument();
     expect(within(drives).queryByRole('link', { name: '3. März 2026, 08:30' })).not.toBeInTheDocument();
-    expectComparisonGroupContext('Previous FSD distance', '2026-01-03 - 2026-02-01 · America/Los_Angeles');
+    expectComparisonGroupContext('Previous FSD distance', 'Jan 3 – Feb 1, 2026');
   });
 
   it.each(['not-a-date', '', null, undefined])('shows unavailable timestamps (%s) without hiding drives or resets', (value) => {

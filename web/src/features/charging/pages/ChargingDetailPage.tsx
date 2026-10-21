@@ -15,9 +15,7 @@ import { useChartPalette } from '@/hooks/useChartPalette';
 import { convertTempFromSI, convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
-import { useSettings } from '@/hooks/useSettings';
-import { resolveLocale } from '@/lib/locale';
-import { formatDate as displayDate, formatTime as displayTime, formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { chartTokens } from '@/lib/tokens';
 
@@ -215,38 +213,10 @@ export default function ChargingDetailPage() {
   } = telemetryQuery;
   const telemetryError = telemetryDataState.fatalError;
   const { data: vehicle } = useVehicle(String(session?.vehicle_id ?? ''));
-  const { settings } = useSettings();
-  const locale = resolveLocale(settings.locale);
-  const sourceTimezone = useMemo(() => {
-    if (!vehicle?.timezone || vehicle.id !== session?.vehicle_id) return null;
-    try {
-      return new Intl.DateTimeFormat('en-US', { timeZone: vehicle.timezone })
-        .resolvedOptions().timeZone;
-    } catch {
-      return null;
-    }
-  }, [vehicle?.id, vehicle?.timezone, session?.vehicle_id]);
-  const dateOptions = useMemo(
-    () => ({ locale, tz: sourceTimezone ?? 'UTC' }),
-    [locale, sourceTimezone],
+  const { formatDate, formatTime, formatDateTime } = useDateFormat();
+  const recordTimestamp = (value: string | null | undefined) => (
+    <span>{formatDateTime(value)}</span>
   );
-  const formatDate = useCallback(
-    (value: string | null | undefined) => displayDate(value, dateOptions),
-    [dateOptions],
-  );
-  const formatTime = useCallback(
-    (value: string | null | undefined) => displayTime(value, dateOptions),
-    [dateOptions],
-  );
-  const recordTimestamp = (value: string | null | undefined) => {
-    const display = formatDateTime(value, dateOptions);
-    const instant = value ? new Date(value) : null;
-    return (
-      <span title={instant && Number.isFinite(instant.getTime()) ? instant.toISOString() : undefined}>
-        {display}{display !== '—' ? ` (${dateOptions.tz})` : ''}
-      </span>
-    );
-  };
   const liveQuery = useChargingTelemetryLatest(
     session?.vehicle_id ?? 0,
   );
@@ -1383,11 +1353,6 @@ export default function ChargingDetailPage() {
                   </Text>
                 </div>
               </div>
-              {!sourceTimezone && (
-                <Text as="p" variant="caption" className="mt-4">
-                  {t('charging.detail.sourceTimezoneUnresolved', 'Source timezone unresolved; timestamps are shown in UTC.')}
-                </Text>
-              )}
             </LayoutCard>
           ) },
         ] satisfies readonly CardGridItem[]}

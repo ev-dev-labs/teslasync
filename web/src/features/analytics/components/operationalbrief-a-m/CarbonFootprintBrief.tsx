@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import type { StatMetric } from '@/components/data-display';
 import { Text } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { CarbonSectionProps } from '../carbon-intelligence/types';
 import { CarbonBriefBand } from './CarbonBriefBand';
 
 export function CarbonFootprintBrief({ analysis, states, display }: CarbonSectionProps) {
   const { t } = useTranslation();
+  const { formatDateRange } = useDateFormat();
   const period = analysis.period;
   const resolved = states.period.hasData;
   const comparison = period.netDisposition === 'excess'
@@ -36,7 +38,7 @@ export function CarbonFootprintBrief({ analysis, states, display }: CarbonSectio
   return <CarbonBriefBand testId="carbon-period-footprint" metrics={metrics} state={states.period}
     title={t('carbon.footprint.title', 'Selected-period footprint vs gas baseline')}
     description={t('carbon.brief.coverage', 'Selected-period summary; continuous source coverage is unknown.')}
-    scope={<span>{analysis.window.startLabel} – {analysis.window.endLabel} · {analysis.window.timezone}</span>}>
+    scope={<span>{formatDateRange(analysis.window.startInstant, analysis.window.endInstantExclusive)}</span>}>
     <Text as="p" variant="bodySm" className="mt-4">{comparison}</Text>
   </CarbonBriefBand>;
 }

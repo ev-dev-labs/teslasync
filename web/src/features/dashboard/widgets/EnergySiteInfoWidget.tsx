@@ -68,10 +68,6 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
     info.nameplate_power, info.nameplate_energy, info.battery_count,
   ].some((value) => knownNumber(value) == null) });
 
-  // `installation_time_zone` is a timezone string (location context), not a
-  // date — surfaced under the "Installation Timezone" label below.
-  const installTimezone = knownString(info?.installation_time_zone);
-
   const solarPower = formatPower(knownNumber(info?.nameplate_power));
 
   const batteryCount = knownNumber(info?.battery_count);
@@ -104,11 +100,8 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
       value: gatewayFirmware,
       mono: true,
     });
-    entries.push({
-      id: 'timezone',
-      label: t('widget.energySiteInfo.timezone', 'Installation timezone'),
-      value: installTimezone,
-    });
+    // The installation timezone stays out of the widget: zone names are not
+    // shown on pages (the value remains in the API payload and exports).
   }
 
   return (

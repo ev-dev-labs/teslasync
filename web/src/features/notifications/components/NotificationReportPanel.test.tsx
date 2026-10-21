@@ -250,7 +250,7 @@ describe('NotificationReportPanel', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 
-  it('reviews raw-count evidence, attribution limits, HTTP scope, and exact exclusive bounds in the actual drawer', () => {
+  it('reviews raw-count evidence, attribution limits, HTTP scope, and one formatted range in the actual drawer', () => {
     renderPanel();
     const brief = screen.getByTestId('notification-report-brief');
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
@@ -260,10 +260,10 @@ describe('NotificationReportPanel', () => {
     expect(drawer).toHaveTextContent('1.67');
     expect(drawer).toHaveTextContent('Older deliveries without an event identifier');
     expect(drawer).toHaveTextContent('Outbound HTTP calls include retries and failures');
-    expect(drawer).toHaveTextContent('2026-01-01T08:00:00Z');
-    expect(drawer).toHaveTextContent('2026-01-31T08:00:00Z');
-    expect(drawer).toHaveTextContent('America/Los_Angeles');
-    expect(drawer).toHaveTextContent('2026-01-01T08:00:00Z to 2026-01-31T08:00:00Z (exclusive) · America/Los_Angeles');
+    expect(drawer).toHaveTextContent('Jan 1 – 31, 2026');
+    expect(drawer).not.toHaveTextContent('2026-01-01T08:00:00Z');
+    expect(drawer).not.toHaveTextContent('2026-01-31T08:00:00Z');
+    expect(drawer).not.toHaveTextContent('America/Los_Angeles');
     fireEvent.click(within(drawer).getAllByRole('button', { name: 'Close' }).at(-1)!);
     expect(screen.getAllByRole('table')).toHaveLength(5);
   });

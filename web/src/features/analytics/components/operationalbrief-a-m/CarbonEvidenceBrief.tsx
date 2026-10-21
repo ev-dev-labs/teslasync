@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { CarbonSectionBody } from '../carbon-intelligence/CarbonSectionBody';
 import type { CarbonSectionProps } from '../carbon-intelligence/types';
 
 export function CarbonEvidenceBrief({ analysis, states, display }: CarbonSectionProps) {
   const { t } = useTranslation();
+  const { formatDateRange } = useDateFormat();
   const period = analysis.period;
   const resolved = states.period.hasData;
   const netLabel = period.netDisposition === 'excess' ? t('carbon.evidence.netExcess', 'Excess vs gas baseline')
@@ -55,9 +57,7 @@ export function CarbonEvidenceBrief({ analysis, states, display }: CarbonSection
             : t('analytics.brief.returned', 'Returned evidence')}
       statusTone={!resolved || states.period.refreshError || states.period.refreshPaused ? 'warning' : 'neutral'}
       scope={<span>{invalidWindow ? t('carbon.source.period', 'Selected-period summary')
-        : t('carbon.source.periodScope', '{{start}} through {{end}} calendar labels', {
-          start: analysis.window.startLabel, end: analysis.window.endLabel })}
-        {!invalidWindow && ` · ${analysis.window.startInstant} – ${analysis.window.endInstantExclusive} · ${analysis.window.timezone}`}</span>}
+        : formatDateRange(analysis.window.startInstant, analysis.window.endInstantExclusive)}</span>}
       provenance={provenance}
     />
     <CarbonSectionBody state={states.period}>

@@ -23,7 +23,6 @@ export function DepartureForecastWeekdayRoutines({
   forecast,
   state,
   locale,
-  timeZone,
 }: DepartureForecastWeekdayRoutinesProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -41,8 +40,7 @@ export function DepartureForecastWeekdayRoutines({
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'departure.weekdays.subtitle',
-            'Supported peak cells in {{timeZone}} from qualifying returned drive starts; unsupported days remain explicit.',
-            { timeZone },
+            'Supported peak cells in your selected time zone from qualifying returned drive starts; unsupported days remain explicit.',
           )}
         </Text>
         <DepartureForecastSectionBody forecast={forecast} state={state}>

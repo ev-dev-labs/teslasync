@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { LayoutCard } from '@/components/layout';
 import { Text } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { CarbonSectionProps } from './types';
 
 export function CarbonMethodology({
   analysis,
 }: CarbonSectionProps) {
   const { t } = useTranslation();
+  const { formatDayKeyRange } = useDateFormat();
   const items = [
     {
       icon: <Database className="h-4 w-4" aria-hidden="true" />,
@@ -47,11 +49,9 @@ export function CarbonMethodology({
       title: t('carbon.method.rangeTitle', 'Selected range'),
       body: t(
         'carbon.method.rangeBody',
-        'URL calendar labels {{start}} through {{end}} are interpreted in {{timezone}} and sent as RFC3339 instants using an exclusive upper bound. Period charts never substitute lifetime rows.',
+        'The selected range ({{range}}) is interpreted in your selected time zone and queried with an exclusive upper bound. Period charts never substitute lifetime rows.',
         {
-          start: analysis.window.startLabel,
-          end: analysis.window.endLabel,
-          timezone: analysis.window.timezone,
+          range: formatDayKeyRange(analysis.window.startLabel, analysis.window.endLabel),
         },
       ),
     },

@@ -1465,7 +1465,7 @@ export default function EnergyPage() {
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
                   <Caption className="flex items-center gap-1">
                     <Icon icon={Moon} size="xs" />
-                    {t('energy.tip.timezone', 'Buckets use {{timezone}} session start time.', { timezone })}
+                    {t('energy.tip.timezone', 'Buckets use session start time in your selected time zone.')}
                   </Caption>
                   <Caption className="flex items-center gap-1">
                     <Icon icon={Sun} size="xs" />

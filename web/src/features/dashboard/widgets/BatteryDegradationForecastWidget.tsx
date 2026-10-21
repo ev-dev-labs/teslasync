@@ -53,31 +53,13 @@ function impactVariant(impact: 'high' | 'medium' | 'low'): 'danger' | 'warning' 
   return 'success';
 }
 
-/**
- * Format an ISO date string as a localized "MMM YYYY" label. Returns an em
- * dash for a missing or unparseable date so a malformed API value never
- * throws a RangeError out of `Intl.DateTimeFormat` (which would crash the
- * whole widget render).
- */
-export function formatProjectedMonth(dateStr: string | null | undefined, locale: string): string {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return '—';
-  try {
-    return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short' }).format(d);
-  } catch {
-    // Malformed BCP-47 locale tag — fall back to en-US so we still render.
-    return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short' }).format(d);
-  }
-}
-
 export default function BatteryDegradationForecastWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = id != null ? String(id) : null;
-  const { locale } = useDateFormat();
+  const { formatMonthYear } = useDateFormat();
 
   const query = useBatteryDegradation(idStr);
   const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
@@ -88,7 +70,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
   const rate = knownNumber(data?.degradation_rate_pct_per_month);
   const tier = rate != null ? healthTier(rate) : null;
   const currentHealthPct = knownNumber(data?.current_health_pct) ?? knownNumber(data?.current_health);
-  const projectedDate = formatProjectedMonth(data?.projected_80pct_date, locale);
+  const projectedDate = formatMonthYear(data?.projected_80pct_date);
   const summaryMetrics: StatMetric[] = [
     { metricId: 'percent', occurrenceId: 'forecast-current-health', rawValue: currentHealthPct,
       label: t('widget.forecast.currentHealth', 'Current health'),

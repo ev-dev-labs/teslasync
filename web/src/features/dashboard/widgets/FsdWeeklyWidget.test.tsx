@@ -168,13 +168,17 @@ describe('FsdWeeklyWidget', () => {
     expect(screen.getByRole('link', { name: 'Weekly digest' })).toHaveAttribute('href', '/weekly-digest');
   });
 
-  it('reviews source-backed FSD metrics and exact exclusive bounds without replacing drill-through links', () => {
+  it('reviews source-backed FSD metrics and one formatted week range without replacing drill-through links', () => {
     renderWidget();
     const brief = screen.getByTestId('fsd-weekly-operational-brief');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    expect(drawer.querySelector('[data-drawer-header]')).toHaveTextContent('exclusive · UTC');
+    const header = drawer.querySelector('[data-drawer-header]');
+    expect(header).toHaveTextContent(/Vehicle 7 · /);
+    expect(header).not.toHaveTextContent('exclusive');
+    expect(header).not.toHaveTextContent('UTC');
+    expect(header).not.toHaveTextContent(/T\d{2}:/);
     expect(within(drawer).getByText('16.00 km')).toBeInTheDocument();
     expect(within(drawer).getByText('+3.00 pts')).toBeInTheDocument();
     expect(within(drawer).getByText(/not a percent growth rate/)).toBeInTheDocument();

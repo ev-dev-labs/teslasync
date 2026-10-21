@@ -9,6 +9,7 @@ import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
@@ -65,6 +66,7 @@ export default function FSDInsightsPage() {
   const { startInstant, endInstantExclusive, timezone, setRangeWithUrlUpdates } = useRangeState({
     defaultPresetId: preferences.defaultAnalysisRange,
   });
+  const { formatDateRange } = useDateFormat();
   const migratingLegacyLink = legacyDays !== null
     && !searchParams.has('from') && !searchParams.has('to');
   useEffect(() => {
@@ -163,9 +165,7 @@ export default function FSDInsightsPage() {
       <FadeIn>
         <SectionErrorBoundary name="FsdEvidenceBrief">
           <FsdEvidenceBrief insights={insightsState.data} state={sectionState}
-            scope={t('fsd.brief.window', '{{start}}–{{end}} (exclusive end) · {{timezone}}', {
-              start: startInstant, end: endInstantExclusive, timezone,
-            })}
+            scope={formatDateRange(startInstant, endInstantExclusive)}
             retained={insightsState.status === 'stale' || insightsState.refreshError != null} />
         </SectionErrorBoundary>
       </FadeIn>

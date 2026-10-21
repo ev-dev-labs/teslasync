@@ -82,10 +82,9 @@ export function ParkingTemporalProfile({
         title={t('parking.temporal.title', 'When parking starts')}
         subtitle={t(
           'parking.temporal.subtitle',
-          '{{count}} reconstructed starts grouped in {{timeZone}}; dwell is credited to its start period.',
+          '{{count}} reconstructed starts grouped by local start; dwell is credited to its start period.',
           {
             count: summary.stints.length,
-            timeZone: summary.coverage.timeZone,
           },
         )}
         ariaLabel={t(
