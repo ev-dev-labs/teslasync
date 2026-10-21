@@ -626,12 +626,12 @@
       "activeHint": "days / weeks",
       "monthHint": "distinct months of year",
       "months": "Calendar months",
-      "rows": "{{count}} included rows",
+      "rows": "included rows",
       "span": "Observed span",
       "spanHint": "first to last included start",
-      "subtitle": "Month and date fields use the vehicle IANA timezone, including DST boundaries.",
+      "subtitle": "Month and date fields use your selected time zone, including DST boundaries.",
       "title": "Vehicle-local calendar coverage",
-      "zone": "Timezone"
+      "zone": "Included rows"
     },
     "curve": {
       "aria": "Fitted annual Wh per distance curve with a central residual band",

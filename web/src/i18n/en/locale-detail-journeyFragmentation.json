@@ -100,7 +100,7 @@
     },
     "weekday": {
       "title": "Weekday journey-start profile",
-      "subtitle": "Local weekday counts use the normalized vehicle timezone.",
+      "subtitle": "Local weekday counts use your selected time zone.",
       "aria": "Bar chart of observed journey starts by local weekday",
       "day": "Weekday",
       "journeys": "Journeys",

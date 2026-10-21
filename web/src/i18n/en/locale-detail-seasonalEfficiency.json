@@ -80,15 +80,15 @@
     },
     "calendar": {
       "title": "Vehicle-local calendar coverage",
-      "subtitle": "Month and date fields use the vehicle IANA timezone, including DST boundaries.",
+      "subtitle": "Month and date fields use your selected time zone, including DST boundaries.",
       "months": "Calendar months",
       "monthHint": "distinct months of year",
       "span": "Observed span",
       "spanHint": "first to last included start",
       "active": "Active local periods",
       "activeHint": "days / weeks",
-      "zone": "Timezone",
-      "rows": "{{count}} included rows"
+      "zone": "Included rows",
+      "rows": "included rows"
     },
     "support": {
       "title": "Evidence support and fit eligibility",

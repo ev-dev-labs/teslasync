@@ -55337,7 +55337,6 @@
       "pwa.update.runningLabel",
       "pwa.update.serverLabel",
       "pwa.update.unsavedBlocked",
-      "quietHours.form.timezone",
       "quietHours.severity.critical",
       "quietHours.severity.info",
       "quietHours.severity.warn",

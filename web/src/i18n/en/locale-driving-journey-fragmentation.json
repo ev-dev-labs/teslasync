@@ -617,7 +617,7 @@
       "journeys": "Journeys",
       "monday": "Monday",
       "saturday": "Saturday",
-      "subtitle": "Local weekday counts use the normalized vehicle timezone.",
+      "subtitle": "Local weekday counts use your selected time zone.",
       "sunday": "Sunday",
       "thursday": "Thursday",
       "title": "Weekday journey-start profile",
