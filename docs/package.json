@@ -14,7 +14,7 @@
   "license": "ISC",
   "type": "module",
   "overrides": {
-    "vite": "^6.4.3"
+    "vite": "^6.4.4"
   },
   "devDependencies": {
     "mermaid": "^12.2.0",
