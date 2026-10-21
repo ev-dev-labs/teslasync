@@ -41,7 +41,7 @@ export function GearTheaterPanel({ driveId }: { driveId: string | undefined }) {
               keyExtractor={(event) => `${event.at}-${event.index}`}
               enableValueFilters
               columns={[
-                { key: 'at', header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'), render: (event) => <time dateTime={event.at} title={event.at}>{formatDateTime(event.at)}</time>, visibleOnMobile: true },
+                { key: 'at', header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'), render: (event) => <time dateTime={event.at}>{formatDateTime(event.at)}</time>, visibleOnMobile: true },
                 { key: 'gear', header: t('driveDetail.report.gear', 'Gear'), filterValue: (event) => event.gear ?? null, render: (event) => event.gear ? <Badge variant="neutral" size="sm">{event.gear}</Badge> : '—', visibleOnMobile: true },
                 { key: 'latch', header: t('driveDetail.report.latch', 'Charge-port latch'), filterValue: (event) => event.charge_port_latch ?? null, render: (event) => event.charge_port_latch ?? '—', visibleOnMobile: true },
                 { key: 'door', header: t('driveDetail.report.port', 'Charge port'), filterValue: (event) => event.charge_port_door_open ?? null, filterValueLabel: (raw) => raw == null ? '—' : raw ? t('driveDetail.theater.portOpen', 'Port open') : t('driveDetail.theater.portClosed', 'Port closed'), render: (event) => event.charge_port_door_open == null ? '—' : event.charge_port_door_open ? t('driveDetail.theater.portOpen', 'Port open') : t('driveDetail.theater.portClosed', 'Port closed'), visibleOnMobile: true },

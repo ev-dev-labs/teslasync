@@ -34,6 +34,8 @@ export interface FormatOptions {
   locale?: string
   /** Explicit clock fields for instants; date-only and business-day labels ignore these. */
   clock?: Pick<Intl.DateTimeFormatOptions, 'hour' | 'minute' | 'second' | 'hour12' | 'hourCycle'>
+  /** Year width; only `formatDate` and `formatMonthYear` honor this. */
+  yearStyle?: 'numeric' | '2-digit'
 }
 
 /**
@@ -89,7 +91,7 @@ export function formatDate(iso: string | Date | null | undefined, opts?: FormatO
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
-    year: 'numeric', month: 'short', day: 'numeric',
+    year: opts?.yearStyle ?? 'numeric', month: 'short', day: 'numeric',
   }, opts))
 }
 
@@ -622,7 +624,8 @@ export function toZonedDatetimeStr(d: Date, timeZone: string): string {
 }
 
 /**
- * User-facing month-year label ("Mar 2027"). Plain `YYYY-MM` / `YYYY-MM-DD`
+ * User-facing month-year label ("Mar 2027", or "Mar '27" with
+ * `yearStyle: '2-digit'`). Plain `YYYY-MM` / `YYYY-MM-DD`
  * calendar values are formatted zone-stable (noon-anchored UTC, like
  * {@link formatDayKey}); full instants are rendered in the target zone.
  * Missing or invalid input returns the placeholder; an invalid locale
@@ -633,9 +636,10 @@ export function formatMonthYear(
   opts?: FormatOptions,
 ): string {
   if (value == null || value === '') return FALLBACK
+  const yearStyle = opts?.yearStyle ?? 'numeric'
   const render = (d: Date, timeZone: string | undefined): string => {
     const fields: Intl.DateTimeFormatOptions = {
-      ...(timeZone ? { timeZone } : {}), year: 'numeric', month: 'short',
+      ...(timeZone ? { timeZone } : {}), year: yearStyle, month: 'short',
     }
     try {
       return new Intl.DateTimeFormat(intlLocale(opts), fields).format(d)
@@ -652,12 +656,127 @@ export function formatMonthYear(
     if (cal) {
       const month = Number(cal[2])
       if (month < 1 || month > 12) return FALLBACK
-      return render(new Date(Date.UTC(Number(cal[1]), month - 1, 1, 12)), 'UTC')
+      // Validate the full calendar value (including the day when present)
+      // with a round-trip, like formatDayKey, so impossible dates such as
+      // "2026-02-30" return the placeholder instead of a rolled-over month.
+      const day = cal[3] === undefined ? 1 : Number(cal[3])
+      const anchor = new Date(0)
+      anchor.setUTCHours(12, 0, 0, 0)
+      anchor.setUTCFullYear(Number(cal[1]), month - 1, day)
+      if (anchor.getUTCFullYear() !== Number(cal[1]) || anchor.getUTCMonth() !== month - 1 || anchor.getUTCDate() !== day) {
+        return FALLBACK
+      }
+      return render(anchor, 'UTC')
     }
   }
   const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return FALLBACK
   return render(d, safeTimeZone(opts?.tz))
+}
+
+/**
+ * User-facing month name ("Mar"). Plain `YYYY-MM` calendar values and
+ * 1–12 month numbers are formatted zone-stable (mid-month-anchored UTC,
+ * like {@link formatMonthYear}); `Date` values and other date strings
+ * are treated as instants and rendered in the target zone. Missing or
+ * invalid input returns the placeholder; an invalid locale falls back
+ * to `en-US` before giving up. Never throws.
+ */
+export function formatMonthName(
+  value: string | number | Date | null | undefined,
+  opts?: FormatOptions,
+): string {
+  if (value == null || value === '') return FALLBACK
+  const render = (d: Date, timeZone: string | undefined): string => {
+    const fields: Intl.DateTimeFormatOptions = {
+      ...(timeZone ? { timeZone } : {}), month: 'short',
+    }
+    try {
+      return new Intl.DateTimeFormat(intlLocale(opts), fields).format(d)
+    } catch {
+      try {
+        return new Intl.DateTimeFormat('en-US', fields).format(d)
+      } catch {
+        return FALLBACK
+      }
+    }
+  }
+  if (typeof value === 'number') {
+    if (!Number.isInteger(value) || value < 1 || value > 12) return FALLBACK
+    return render(new Date(Date.UTC(2024, value - 1, 15)), 'UTC')
+  }
+  if (typeof value === 'string') {
+    const cal = /^(\d{4})-(\d{2})$/.exec(value.trim())
+    if (cal) {
+      const month = Number(cal[2])
+      if (month < 1 || month > 12) return FALLBACK
+      return render(new Date(Date.UTC(Number(cal[1]), month - 1, 15)), 'UTC')
+    }
+  }
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return FALLBACK
+  return render(d, safeTimeZone(opts?.tz))
+}
+
+/**
+ * User-facing short weekday name ("Mon") for the given date in the
+ * target zone. Weekday-bucket labels pass a UTC-nooned anchor date with
+ * an explicit `{ tz: 'UTC' }` override so the name never shifts with
+ * the display zone. Missing or invalid input returns the placeholder;
+ * an invalid locale falls back to `en-US` before giving up.
+ * Never throws.
+ */
+export function formatWeekdayName(
+  value: string | Date | null | undefined,
+  opts?: FormatOptions,
+): string {
+  if (value == null || value === '') return FALLBACK
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return FALLBACK
+  const timeZone = safeTimeZone(opts?.tz)
+  const fields: Intl.DateTimeFormatOptions = {
+    ...(timeZone ? { timeZone } : {}), weekday: 'short',
+  }
+  try {
+    return new Intl.DateTimeFormat(intlLocale(opts), fields).format(d)
+  } catch {
+    try {
+      return new Intl.DateTimeFormat('en-US', fields).format(d)
+    } catch {
+      return FALLBACK
+    }
+  }
+}
+
+/**
+ * Chart tick label with a numeric GMT offset ("Nov 1, 01:30 GMT-7").
+ * The offset is not a zone name: it disambiguates repeated fall-back
+ * hours on time axes, where the wall time alone is ambiguous.
+ * Missing or invalid input returns the placeholder; an invalid locale
+ * falls back to `en-US` before giving up. Never throws.
+ */
+export function formatChartInstant(
+  value: string | Date | number | null | undefined,
+  opts?: FormatOptions,
+): string {
+  if (value == null || value === '') return FALLBACK
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return FALLBACK
+  const timeZone = safeTimeZone(opts?.tz)
+  const fields: Intl.DateTimeFormatOptions = {
+    ...(timeZone ? { timeZone } : {}),
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    timeZoneName: 'shortOffset',
+  }
+  try {
+    return new Intl.DateTimeFormat(intlLocale(opts), fields).format(d)
+  } catch {
+    try {
+      return new Intl.DateTimeFormat('en-US', fields).format(d)
+    } catch {
+      return FALLBACK
+    }
+  }
 }
 
 /**

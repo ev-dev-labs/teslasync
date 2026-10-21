@@ -7,20 +7,20 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
-import { formatDisplayDistance, formatMonth } from './formatters';
+import { formatDisplayDistance } from './formatters';
+import { formatMonthName } from '@/lib/dateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalMonthSupport({
   analysis,
   state,
   locale,
-  timeZone,
   units,
 }: SeasonalSectionProps) {
   useNumberFormatting();
   const { t } = useTranslation();
   const data = analysis.months.map((month) => ({
-    monthKey: `${month.month}-${formatMonth(month.month, locale, timeZone)}`,
+    monthKey: `${month.month}-${formatMonthName(month.month, { locale })}`,
     samples: month.sampleCount,
     distance: convertDistanceFromSI(month.distanceM, units.unitPrefs.distance),
   }));

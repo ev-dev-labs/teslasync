@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 
+import { formatMonthYear } from '@/lib/dateFormat';
 import type { RangeBufferEvidenceBand } from '../../lib/rangeBuffer';
 import { getGlobalPrecision } from '@/lib/numberFormat';
 
@@ -77,14 +78,7 @@ export function rangeBufferMonthLabel(
   locale: string,
 ): string {
   const match = /^(\d{4})-(\d{2})$/.exec(monthKey);
-  if (!match) return monthKey;
-  return new Intl.DateTimeFormat(locale, {
-    month: 'short',
-    year: '2-digit',
-    timeZone: 'UTC',
-  }).format(
-    new Date(
-      Date.UTC(Number(match[1]), Number(match[2]) - 1, 1, 12),
-    ),
-  );
+  const monthNumber = match ? Number(match[2]) : NaN;
+  if (!match || monthNumber < 1 || monthNumber > 12) return monthKey;
+  return formatMonthYear(monthKey, { locale, yearStyle: '2-digit' });
 }

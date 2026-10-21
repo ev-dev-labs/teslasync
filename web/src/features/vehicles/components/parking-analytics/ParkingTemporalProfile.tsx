@@ -28,7 +28,7 @@ export function ParkingTemporalProfile({
 }: ParkingTemporalProfileProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const { locale, formatTime } = useDateFormat();
+  const { formatTime, formatWeekdayName } = useDateFormat();
   const hourRows = useMemo(
     () =>
       summary.hourly.map((bucket) => ({
@@ -41,17 +41,15 @@ export function ParkingTemporalProfile({
     [summary.hourly, formatTime],
   );
   const weekdayRows = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale, {
-      weekday: 'short',
-      timeZone: 'UTC',
-    });
+    // Anchors are UTC-nooned Sundays; pin UTC so names never shift zones.
     return summary.weekdays.map((bucket) => ({
-      label: formatter.format(
+      label: formatWeekdayName(
         new Date(Date.UTC(2026, 0, 4 + bucket.weekday, 12)),
+        { tz: 'UTC' },
       ),
       stints: bucket.stints,
     }));
-  }, [locale, summary.weekdays]);
+  }, [formatWeekdayName, summary.weekdays]);
   const hasData = summary.stints.length > 0;
   const fallbackRows = hasData
     ? [

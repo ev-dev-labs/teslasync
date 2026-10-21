@@ -5,7 +5,8 @@ import { Text } from '@/components/ui';
 import { SeasonalSectionBody } from '../seasonal-efficiency/SeasonalSectionBody';
 import { SeasonalEmpty } from '../seasonal-efficiency/SeasonalEmpty';
 import type { SeasonalSectionProps } from '../seasonal-efficiency/types';
-import { fitStatusLabel, formatDecimal, formatInteger, formatLocalDate, supportBandLabel } from '../seasonal-efficiency/formatters';
+import { fitStatusLabel, formatDecimal, formatInteger, supportBandLabel } from '../seasonal-efficiency/formatters';
+import { formatDate } from '@/lib/dateFormat';
 import { DrivingSummaryBrief } from './DrivingSummaryBrief';
 
 interface SeasonalCoverageBriefProps extends SeasonalSectionProps {
@@ -59,9 +60,9 @@ export function SeasonalCoverageBrief({ kind, analysis, state, locale, timeZone,
           display: { formatter: (raw: number) => ({ value: `${raw} / ${analysis.activeLocalWeeks}`, unit: '' }) },
         },
         {
-          metricId: 'text', occurrenceId: 'timezone', rawValue: calendarResolved ? timeZone : null,
-          label: t('seasonalEfficiency.calendar.zone', 'Timezone'),
-          context: calendarResolved ? t('seasonalEfficiency.calendar.rows', '{{count}} included rows', { count: analysis.includedCount }) : undefined,
+          metricId: 'count', occurrenceId: 'included-rows', rawValue: calendarResolved ? analysis.includedCount : null,
+          label: t('seasonalEfficiency.calendar.zone', 'Included rows'),
+          display: { formatter: (raw: number) => ({ value: formatInteger(raw, locale), unit: '' }) },
         },
       ],
     },
@@ -121,10 +122,10 @@ export function SeasonalCoverageBrief({ kind, analysis, state, locale, timeZone,
           })}</Text>
           <Text variant="caption" as="p">{t('seasonalEfficiency.accounting.window', 'History window limit: {{limit}} rows', { limit: analysis.accounting.historyLimit })}</Text>
           <Text variant="caption" as="p">{t('seasonalEfficiency.accounting.first', 'First included local date: {{date}}', {
-            date: formatLocalDate(analysis.firstIncludedTimestampMs, locale, timeZone),
+            date: formatDate(analysis.firstIncludedTimestampMs == null ? null : new Date(analysis.firstIncludedTimestampMs), { locale, tz: timeZone }),
           })}</Text>
           <Text variant="caption" as="p">{t('seasonalEfficiency.accounting.last', 'Last included local date: {{date}}', {
-            date: formatLocalDate(analysis.lastIncludedTimestampMs, locale, timeZone),
+            date: formatDate(analysis.lastIncludedTimestampMs == null ? null : new Date(analysis.lastIncludedTimestampMs), { locale, tz: timeZone }),
           })}</Text>
           <Text variant="caption" as="p">{t('seasonalEfficiency.accounting.energy', '{{energy}} total energy · {{distance}} total distance', {
             energy: units.formatEnergy(analysis.totalEnergyWh), distance: units.formatDistance(analysis.totalDistanceM),

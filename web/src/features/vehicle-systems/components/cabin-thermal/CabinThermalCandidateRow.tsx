@@ -40,7 +40,7 @@ export function CabinThermalCandidateRow({
   formatDuration,
 }: CabinThermalCandidateRowProps) {
   const { fmtInt, fmtScientificNumber, fmtPercent } = useNumberFormatting();
-  const { formatDateTime, tz } = useDateFormat();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const status = candidate.reason != null
     ? cabinRejectionLabel(t, candidate.reason)
@@ -57,8 +57,8 @@ export function CabinThermalCandidateRow({
           </Text>
           <Text as="p" variant="caption">
             {/* Evidence dates stay absolute even when relative display is saved. */}
-            <time dateTime={candidate.startTs} title={`${candidate.startTs} (${tz})`}>
-              {formatDateTime(candidate.startTs)} ({tz})
+            <time dateTime={candidate.startTs}>
+              {formatDateTime(candidate.startTs)}
             </time>
           </Text>
         </div>

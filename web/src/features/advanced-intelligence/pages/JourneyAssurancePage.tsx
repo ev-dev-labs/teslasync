@@ -14,6 +14,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { toZonedDatetimeStr, zonedWallTimeToUtc } from '@/lib/dateFormat';
+import { useConversionTimezone } from '@/lib/timezone';
 
 import { glassCardClasses } from '@/lib/tokens';
 import { SI } from '@/lib/unitConversion';
@@ -30,18 +31,23 @@ type JourneyForm = Omit<JourneyAssuranceRequest,
   reserve_target_pct: number | null;
 };
 
-function defaultDeparture(displayTz: string): string {
-  // datetime-local values are wall-clock in the display zone: build the
-  // default from zoned fields, not a UTC slice or the browser zone.
+function defaultDeparture(conversionTz: string): string {
+  // datetime-local values are wall-clock in the conversion zone: build the
+  // default from zoned fields, not a UTC slice.
   const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  return toZonedDatetimeStr(date, displayTz);
+  return toZonedDatetimeStr(date, conversionTz);
 }
 
 export default function JourneyAssurancePage() {
   const { fmtNumber } = useNumberFormatting();
-  const { formatDateTime, tz } = useDateFormat();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
+  // Conversion (not display): the datetime-local draft is wall-clock in the
+  // selected zone. Resolve raw so bare renders use the browser zone exactly
+  // like the display fallback, and an invalid saved zone reaches the
+  // conversion helper instead of being pre-guessed by the display layer.
+  const conversionTz = useConversionTimezone();
   const units = useUnits();
   const mutation = useRunJourneyAssurance();
   const publication = useRetainedMutation(mutation, vehicleId, {
@@ -49,7 +55,7 @@ export default function JourneyAssurancePage() {
   });
   const [form, setForm] = useState<JourneyForm>({
     route_distance_m: 250000,
-    departure_at: defaultDeparture(tz),
+    departure_at: defaultDeparture(conversionTz),
     reserve_target_pct: 15,
     outside_temp_c: null,
     average_speed_mps: null,
@@ -62,9 +68,8 @@ export default function JourneyAssurancePage() {
     const { route_distance_m, reserve_target_pct } = form;
     if (vehicleId == null || publication.pending || route_distance_m == null || reserve_target_pct == null
       || !event.currentTarget.reportValidity()) return;
-    // The entry is wall-clock in the user's display zone (DST-aware),
-    // not browser-local time.
-    const departure = zonedWallTimeToUtc(form.departure_at, tz);
+    // The entry is wall-clock in the conversion zone (DST-aware).
+    const departure = zonedWallTimeToUtc(form.departure_at, conversionTz);
     if (departure == null) return;
     mutation.mutate({
       ...form,

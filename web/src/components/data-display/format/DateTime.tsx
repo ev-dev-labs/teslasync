@@ -5,7 +5,6 @@ import {
   formatDateShort,
   formatTime,
   formatDayKey,
-  tzAbbreviation,
   type FormatOptions,
 } from '@/lib/dateFormat';
 import { resolveLocale } from '@/lib/locale';
@@ -31,20 +30,19 @@ interface DateTimeProps {
    * `web/src/lib/timezone.ts` for the resolution rules.
    */
   in?: TzMode;
-  /** Append the short tz abbreviation (e.g. "PST") for instants, never business days. */
-  showTz?: boolean;
   /** Explicit clock precision uses the selected locale and default timezone mode. */
   clock?: FormatOptions['clock'];
   className?: string;
 }
 
 /**
- * Locale-aware datetime renderer that hovers the canonical ISO for instants
- * or the original calendar key for business days. The `day` variant reads
- * the selected locale but never resolves a timezone or displays a clock.
- * Wraps the pure helpers in `@/lib/dateFormat`.
+ * Locale-aware datetime renderer. Each timestamp is shown once, formatted
+ * in the resolved display zone — never with a raw ISO hover or a zone
+ * abbreviation suffix. The `day` variant reads the selected locale but
+ * never resolves a timezone or displays a clock. Wraps the pure helpers
+ * in `@/lib/dateFormat`.
  *
- * When `in`, `showTz`, or explicit `clock` options are set, renders via the
+ * When `in` or explicit `clock` options are set, renders via the
  * provider-aware variant `<DateTimeWithTz>`. The default no-prop path
  * stays pure to keep render cost low across table-heavy pages.
  */
@@ -52,7 +50,7 @@ export function DateTime(props: DateTimeProps) {
   if (props.variant === 'day') {
     return <BusinessDay {...props} />;
   }
-  if (props.in !== undefined || props.showTz || props.clock !== undefined) {
+  if (props.in !== undefined || props.clock !== undefined) {
     return <DateTimeWithTz {...props} />;
   }
   return <PureDateTime {...props} />;
@@ -62,7 +60,7 @@ function BusinessDay({ value, className }: DateTimeProps) {
   const { settings } = useSettings();
   const key = typeof value === 'string' ? value : undefined;
   const display = formatDayKey(key, { locale: resolveLocale(settings.locale) });
-  return <span className={className} title={display === '—' ? undefined : key}>{display}</span>;
+  return <span className={className}>{display}</span>;
 }
 
 function PureDateTime({ value, variant = 'full', className }: DateTimeProps) {
@@ -71,10 +69,9 @@ function PureDateTime({ value, variant = 'full', className }: DateTimeProps) {
 
 /**
  * Module-cached IANA timezone validity probe. `Intl.DateTimeFormat` throws a
- * `RangeError` when constructed with an unknown `timeZone`, and the shared
- * display formatters in `@/lib/dateFormat` (unlike `tzAbbreviation`/`ymdInTz`)
- * propagate that throw. Caching keeps the check O(1) after a zone is first
- * seen — this runs once per row on table-heavy pages.
+ * `RangeError` when constructed with an unknown `timeZone`. Caching keeps
+ * the check O(1) after a zone is first seen — this runs once per row on
+ * table-heavy pages.
  */
 const TZ_VALIDITY = new Map<string, boolean>();
 function isValidTimeZone(tz: string): boolean {
@@ -99,17 +96,16 @@ function isValidTimeZone(tz: string): boolean {
  * only when `in` / `showTz` / `clock` is set, so the render path is consistent
  * for the lifetime of any given DateTime instance.
  */
-function DateTimeWithTz({ value, variant = 'full', in: mode, showTz, clock, className }: DateTimeProps) {
+function DateTimeWithTz({ value, variant = 'full', in: mode, clock, className }: DateTimeProps) {
   const { settings } = useSettings();
   const effectiveMode = (mode ?? settings.tz_display_default ?? 'vehicle') as TzMode;
   const resolvedTz = useTimezone(effectiveMode);
   // A malformed IANA zone (e.g. a garbage `vehicle.timezone` that slipped past
-  // resolveTimezone) makes the pure display formatters throw RangeError, which
-  // would crash the whole panel. Degrade an invalid zone to UTC so the
-  // timestamp still renders. Validity is cached, so this stays cheap per row.
+  // resolveTimezone) degrades to UTC so the timestamp still renders in a
+  // known zone. Validity is cached, so this stays cheap per row.
   const tz = isValidTimeZone(resolvedTz) ? resolvedTz : 'UTC';
   const locale = resolveLocale(settings.locale);
-  return renderSpan({ value, variant, className, opts: { tz, locale, clock }, showTz, tz });
+  return renderSpan({ value, variant, className, opts: { tz, locale, clock } });
 }
 
 interface RenderArgs {
@@ -117,11 +113,9 @@ interface RenderArgs {
   variant: DateTimeVariant;
   className?: string;
   opts?: FormatOptions;
-  showTz?: boolean;
-  tz?: string;
 }
 
-function renderSpan({ value, variant, className, opts, showTz, tz }: RenderArgs) {
+function renderSpan({ value, variant, className, opts }: RenderArgs) {
   let display: string;
   switch (variant) {
     case 'relative':
@@ -142,22 +136,5 @@ function renderSpan({ value, variant, className, opts, showTz, tz }: RenderArgs)
       break;
   }
 
-  let title: string | undefined;
-  if (value) {
-    const d = value instanceof Date ? value : new Date(value);
-    if (!isNaN(d.getTime())) {
-      title = opts?.tz ? `${d.toISOString()} (${opts.tz})` : d.toISOString();
-    }
-  }
-
-  const abbrev = showTz && tz && value ? tzAbbreviation(value, tz) : '';
-
-  return (
-    <span className={className} title={title}>
-      {display}
-      {abbrev && (
-        <span className="ml-1 text-xs text-[var(--text-muted)]">{abbrev}</span>
-      )}
-    </span>
-  );
+  return <span className={className}>{display}</span>;
 }

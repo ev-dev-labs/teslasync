@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useUnits } from '@/hooks/useUnits';
+import { formatMonthYear } from '@/lib/dateFormat';
 
 import {
   convertDistanceFromSI,
@@ -74,24 +75,7 @@ export function useSpeedSweetSpotDisplay() {
     [convertBandSpeed, speedUnit, t, fmtNumber],
   );
   const formatMonth = useCallback(
-    (month: string) => {
-      const match = /^(\d{4})-(\d{2})$/.exec(month);
-      if (!match) return '—';
-      const year = Number(match[1]);
-      const monthIndex = Number(match[2]) - 1;
-      if (!Number.isFinite(year) || monthIndex < 0 || monthIndex > 11) {
-        return '—';
-      }
-      try {
-        return new Intl.DateTimeFormat(unitPrefs.locale, {
-          month: 'short',
-          year: '2-digit',
-          timeZone: 'UTC',
-        }).format(new Date(Date.UTC(year, monthIndex, 1, 12)));
-      } catch {
-        return month;
-      }
-    },
+    (month: string) => formatMonthYear(month, { locale: unitPrefs.locale, yearStyle: '2-digit' }),
     [unitPrefs.locale],
   );
 

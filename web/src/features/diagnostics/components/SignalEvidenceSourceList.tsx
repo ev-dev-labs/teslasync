@@ -61,16 +61,16 @@ export function SignalEvidenceSourceList({ sources, label }: SignalEvidenceSourc
             ) : null}
             {state.data && (
               <>
-                <Caption className="block break-words" title={`${state.data.from ?? '—'} → ${state.data.to ?? '—'}`}>
+                <Caption className="block break-words">
                   {t('teslaOnly.workbench.requested', 'Requested window')}: {formatDateTime(state.data.from)} → {formatDateTime(state.data.to)}
                 </Caption>
-                <Caption className="block break-words" title={`${firstObservation ?? '—'} → ${lastObservation ?? '—'}`}>
+                <Caption className="block break-words">
                   {t('teslaOnly.workbench.recorded', 'Actually recorded')}: {formatDateTime(firstObservation)} → {formatDateTime(lastObservation)}
                 </Caption>
               </>
             )}
             {state.updatedAt != null && (
-              <Caption className="block break-words" title={String(state.updatedAt)}>
+              <Caption className="block break-words">
                 {t('operationalSource.fetchedAt', 'Fetched {{time}}', {
                   time: formatDateTime(new Date(state.updatedAt)),
                 })}

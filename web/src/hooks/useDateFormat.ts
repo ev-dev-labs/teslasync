@@ -7,6 +7,8 @@ import {
   formatDateWithDay as libFormatDateWithDay,
   formatDateRange as libFormatDateRange,
   formatMonthYear as libFormatMonthYear,
+  formatMonthName as libFormatMonthName,
+  formatWeekdayName as libFormatWeekdayName,
   formatDayKey as libFormatDayKey,
   formatDayKeyRange as libFormatDayKeyRange,
   formatRelative as libFormatRelative,
@@ -59,6 +61,13 @@ export interface UseDateFormatResult {
   ) => string
   /** Month-year label; calendar values stay zone-stable, instants use the zone. */
   formatMonthYear: DateFormatter
+  /** Month name; calendar values and 1–12 numbers stay zone-stable. */
+  formatMonthName: (
+    value: string | number | Date | null | undefined,
+    override?: FormatOptions,
+  ) => string
+  /** Short weekday name in the target zone. */
+  formatWeekdayName: DateFormatter
   formatRelative: DateFormatter
   formatRelativeTime: DateFormatter
   formatRelativeDays: DateFormatter
@@ -69,7 +78,9 @@ export interface UseDateFormatResult {
  * `settings.tz_display_default` column predates the enum, is nullable, and
  * is written by older clients, so at runtime it can be `undefined`, an empty
  * string, or a legacy value outside the union — none of which the nullish
- * coalescing operator alone would sanitise.
+ * coalescing operator alone would sanitise. Local copy (mirrors the private
+ * one in `@/lib/timezone`): this hook must not gain imports from that
+ * widely-mocked module, or tests with explicit mocks break.
  */
 function isTzMode(value: unknown): value is TzMode {
   return value === 'vehicle' || value === 'user' || value === 'utc'
@@ -143,6 +154,14 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
     (value, override) => libFormatMonthYear(value, { ...opts, ...override }),
     [opts],
   )
+  const formatMonthName = useCallback<UseDateFormatResult['formatMonthName']>(
+    (value, override) => libFormatMonthName(value, { ...opts, ...override }),
+    [opts],
+  )
+  const formatWeekdayName = useCallback<DateFormatter>(
+    (value, override) => libFormatWeekdayName(value, { ...opts, ...override }),
+    [opts],
+  )
   const formatRelative = useCallback<DateFormatter>(
     (value, override) => libFormatRelative(value, { ...opts, ...override }),
     [opts],
@@ -170,6 +189,8 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
       formatDayKey,
       formatDayKeyRange,
       formatMonthYear,
+      formatMonthName,
+      formatWeekdayName,
       formatRelative,
       formatRelativeTime,
       formatRelativeDays,
@@ -187,6 +208,8 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
       formatDayKey,
       formatDayKeyRange,
       formatMonthYear,
+      formatMonthName,
+      formatWeekdayName,
       formatRelative,
       formatRelativeTime,
       formatRelativeDays,

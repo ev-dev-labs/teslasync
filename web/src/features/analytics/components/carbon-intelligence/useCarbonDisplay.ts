@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useUnits } from '@/hooks/useUnits';
+import { formatMonthYear } from '@/lib/dateFormat';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type { CarbonDisplay } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -82,14 +83,9 @@ export function useCarbonDisplay(): CarbonDisplay {
   const formatMonth = useCallback(
     (month: string) => {
       const match = /^(\d{4})-(\d{2})$/.exec(month);
-      if (!match) return month;
-      const year = Number(match[1]);
-      const monthIndex = Number(match[2]) - 1;
-      return new Intl.DateTimeFormat(locale, {
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'UTC',
-      }).format(new Date(Date.UTC(year, monthIndex, 1)));
+      const monthNumber = match ? Number(match[2]) : NaN;
+      if (!match || monthNumber < 1 || monthNumber > 12) return month;
+      return formatMonthYear(month, { locale });
     },
     [locale],
   );

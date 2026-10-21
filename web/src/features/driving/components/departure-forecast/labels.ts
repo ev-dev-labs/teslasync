@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 
-import { formatDateTime, formatTime } from '@/lib/dateFormat';
+import { formatChartInstant, formatDateTime, formatTime } from '@/lib/dateFormat';
 import type {
   DepartureDaypart,
   EvidenceBand,
@@ -35,14 +35,7 @@ export function departureChartLabel(
 ): string {
   const date = departureInstant(ms);
   if (!date) return '—';
-  return new Intl.DateTimeFormat(locale || undefined, {
-    timeZone,
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZoneName: 'shortOffset',
-  }).format(date);
+  return formatChartInstant(date, { locale, tz: timeZone });
 }
 
 /** Format an already-local abstract hour without applying a browser offset. */

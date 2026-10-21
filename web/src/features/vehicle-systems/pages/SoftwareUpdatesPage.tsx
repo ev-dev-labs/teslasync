@@ -26,7 +26,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlBatch } from '@/hooks/useUrlState';
-import { ymdInTz } from '@/lib/dateFormat';
+import { formatMonthYear, ymdInTz } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { useSoftwareUpdatesPage, PAGE_SIZE, type SoftwareUpdate } from '@/api/hooks/useSoftwareUpdatesPage';
@@ -42,16 +42,12 @@ import { deriveDataState } from '@/api/dataState';
 import { VehicleSourceContent } from '../components/VehicleSourceContent';
 import { VehicleSourcePause } from '../components/VehicleSourcePause';
 
-/** `YYYY-MM` → short label, e.g. `Mar '25`. */
+/** `YYYY-MM` → short label, e.g. `Mar 25`. */
 function monthLabel(key: string, locale: string): string {
   const [y, m] = key.split('-').map(Number);
   if (!Number.isFinite(y) || !Number.isFinite(m)) return key;
   // The bucket is already a selected-zone calendar month, not an instant.
-  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(locale, {
-    timeZone: 'UTC',
-    month: 'short',
-    year: '2-digit',
-  });
+  return formatMonthYear(key, { locale, yearStyle: '2-digit' });
 }
 
 // ─── Page component ──────────────────────────────────────────────────────────

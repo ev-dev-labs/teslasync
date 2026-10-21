@@ -101,36 +101,6 @@ export function formatSignedIntensityWhPerMPerYear(
   return `${sign}${formatIntensityWhPerM(Math.abs(value), unitPrefs, precision)} / yr`;
 }
 
-export function formatLocalDate(
-  timestampMs: number | null | undefined,
-  locale: string,
-  timeZone: string,
-  options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' },
-): string {
-  if (timestampMs == null || !Number.isFinite(timestampMs)) return '—';
-  try {
-    return new Intl.DateTimeFormat(locale, { ...options, timeZone }).format(
-      new Date(timestampMs),
-    );
-  } catch {
-    return new Intl.DateTimeFormat('en-US', { ...options, timeZone: 'UTC' }).format(
-      new Date(timestampMs),
-    );
-  }
-}
-
-export function formatMonth(
-  month: number,
-  locale: string,
-  timeZone: string,
-): string {
-  const safeMonth = Math.max(1, Math.min(12, month));
-  return new Intl.DateTimeFormat(locale, {
-    month: 'short',
-    timeZone,
-  }).format(new Date(Date.UTC(2024, safeMonth - 1, 15)));
-}
-
 export function formatInteger(value: number | null | undefined, locale: string): string {
   return value == null || !Number.isFinite(value)
     ? '—'

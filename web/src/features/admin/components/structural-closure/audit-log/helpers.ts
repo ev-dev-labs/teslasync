@@ -1,3 +1,5 @@
+import { toZonedDatetimeStr } from '@/lib/dateFormat';
+
 export const LIMIT_OPTIONS = [
   { value: '50', label: '50' },
   { value: '100', label: '100' },
@@ -8,12 +10,7 @@ export const LIMIT_OPTIONS = [
 export function toDateTimeInput(iso: string, timezone: string): string {
   const date = new Date(iso);
   if (!iso || Number.isNaN(date.getTime())) return '';
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  }).formatToParts(date);
-  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
+  return toZonedDatetimeStr(date, timezone);
 }
 
 /** Reject nonexistent civil minutes; an ambiguous DST minute uses its first occurrence. */

@@ -73,7 +73,6 @@ export function DepartureEvidenceBrief({ forecast, state, locale, timeZone, time
         <time dateTime={new Date(forecast.nowMs).toISOString()}>
           {departureDateTime(forecast.nowMs, locale, timeZone)}
         </time>
-        {' · '}{timeZone}
         {timeZoneProvenance && <>{' · '}{timeZoneProvenance}</>}
         {' · '}{t('departure.brief.snapshotMeaning', 'Next 24 hours and “in” times are relative to this fixed anchor, not a live countdown; history coverage is limited to returned rows.')}
       </>}

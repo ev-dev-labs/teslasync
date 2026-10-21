@@ -13,7 +13,6 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { tzAbbreviation } from '@/lib/dateFormat';
 import { useTimezone } from '@/lib/timezone';
 
 import {
@@ -103,8 +102,8 @@ export default function ColdStartPage() {
             'coldStart.brief.window',
             '{{start}}–{{end}}; returned selected-window drives',
             {
-              start: `${formatDateTime(startInstant)} ${tzAbbreviation(startInstant, timezone)}`,
-              end: `${formatDateTime(endInstantExclusive)} ${tzAbbreviation(endInstantExclusive, timezone)}`,
+              start: formatDateTime(startInstant),
+              end: formatDateTime(endInstantExclusive),
             },
           )}
           retained={sectionState.retained ?? false}

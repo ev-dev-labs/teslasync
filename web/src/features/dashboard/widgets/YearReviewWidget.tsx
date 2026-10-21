@@ -14,6 +14,7 @@ import { DashboardSourceBrief } from '../components/operationalbrief-all/Dashboa
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { formatMonthName } from '@/lib/dateFormat';
 import { isFiniteNumber } from '@/lib/numberFormat';
 
 // The year-review endpoint emits distances in kilometres and speeds in km/h
@@ -55,9 +56,8 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
     if (stats.length === 0) return '—';
     const best = stats.reduce((a, b) => (b.drives > a.drives ? b : a), stats[0]);
     if (!Number.isInteger(best.month) || best.month < 1 || best.month > 12) return '—';
-    return new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' })
-      .format(new Date(Date.UTC(currentYear, best.month - 1, 1)));
-  }, [data?.monthly_stats, locale, currentYear]);
+    return formatMonthName(best.month, { locale });
+  }, [data?.monthly_stats, locale]);
 
   const coreStats = useMemo((): StatMetric[] => {
     if (!data) return [];

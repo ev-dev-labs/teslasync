@@ -314,7 +314,7 @@ export function FleetSetupSubscribePanel() {
                 {err.message && <span className="whitespace-pre-wrap">{err.message}</span>}
                 {err.message && err.timestamp ? ' · ' : null}
                 {err.timestamp && (
-                  <time dateTime={err.timestamp} title={err.timestamp}>
+                  <time dateTime={err.timestamp}>
                     {formatDateTime(err.timestamp)}
                   </time>
                 )}

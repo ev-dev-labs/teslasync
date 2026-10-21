@@ -135,7 +135,7 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
               {selectedCandidate && (
                 <Text as="p" variant="bodySm" role="status">
                   {t('driveDetail.road.possibleJolt', 'Possible jolt')}
-                  {' · '}<time dateTime={selectedCandidate.ts} title={selectedCandidate.ts}>{formatDateTime(selectedCandidate.ts)}</time>
+                  {' · '}<time dateTime={selectedCandidate.ts}>{formatDateTime(selectedCandidate.ts)}</time>
                   {' · '}{fmtScientificNumber(selectedCandidate.latitude, 5)}, {fmtScientificNumber(selectedCandidate.longitude, 5)}
                 </Text>
               )}
@@ -145,7 +145,7 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
                 data={candidates.map((candidate, index) => ({ ...candidate, index }))}
                 keyExtractor={(candidate) => `${candidate.ts}-${candidate.index}`}
                 columns={[
-                  { key: 'time', header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'), render: (candidate) => <Button variant="ghost" size="sm" onClick={() => setSelectedCandidateId(`${candidate.ts}-${candidate.index}`)}><time dateTime={candidate.ts} title={candidate.ts}>{formatDateTime(candidate.ts)}</time></Button>, visibleOnMobile: true },
+                  { key: 'time', header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'), render: (candidate) => <Button variant="ghost" size="sm" onClick={() => setSelectedCandidateId(`${candidate.ts}-${candidate.index}`)}><time dateTime={candidate.ts}>{formatDateTime(candidate.ts)}</time></Button>, visibleOnMobile: true },
                   { key: 'speed', header: t('driveDetail.road.speed', 'Recorded speed'), render: (candidate) => formatSpeed(candidate.speed_mps), visibleOnMobile: true },
                   { key: 'location', header: t('driveDetail.road.position', 'Approximate location'), render: (candidate) => `${fmtScientificNumber(candidate.latitude, 5)}, ${fmtScientificNumber(candidate.longitude, 5)}`, visibleOnMobile: true },
                 ]}
