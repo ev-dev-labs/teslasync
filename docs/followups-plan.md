@@ -61,6 +61,30 @@ only after green CI; do not merge while that security check is red. Not merged.
 Verification: full local CI replica required before each push, followed by
 remote checks on the exact pushed commit. Temporary reports stay outside Git.
 
+### Latest security refresh — 2026-10-21 02:05 UTC
+
+Vite6.4.4 now replaces6.4.3 in web and the docs override, addressing the
+[Windows existence-check advisory](https://github.com/advisories/GHSA-587h-7wmj-h5pm),
+[Windows argument-escaping advisory](https://github.com/advisories/GHSA-698v-4r3x-3vcv)
+and [editor argument advisory](https://github.com/advisories/GHSA-r825-w8mm-5pxw).
+A final refresh had raised audits to web10/docs2; after sequential single-package
+updates with all tests/previews stopped, web returns9 (7 high/2 moderate), docs0.
+Only Vite versions changed; npm also normalized three web lockfile dev flags.
+Patched private/mock/docs builds and full strict perf:check pass (399.6KB/400KB).
+All20 Mermaid diagrams on seven pages render, zero browser errors; no snapshots
+changed for dependency patches.
+
+A refreshed Go scan newly reports reachable GO-2026-6809 in Go1.27.2 x509,
+fixed in1.27.3. Raised go.mod to1.27.3 and the automatic Windows toolchain is
+verified. All workflows already use go-version-file; Docker follows1.27, so
+no workflow edits. Go build/test and route generation pass. CI-pinned
+golangci-lint2.15.0 rebuilt with1.27.3 reports0 issues; govulncheck now
+reports0 reachable/0 imported-package/1 uncalled-module vulnerabilities.
+x/crypto0.58.0 remains latest; uncalled OpenPGP GO-2026-5932 has no fixed version.
+The previous fully passing header-source unit/browser sweep is preserved in
+the progress log; the full replica repeats after these environment patches.
+Tailwind v4 still waits for PR202 to pass every remote check.
+
 ### Additional owner item — shared widget freshness header
 
 Implemented on `fix/post-merge-followups`; complete local/remote verification
