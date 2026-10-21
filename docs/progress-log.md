@@ -460,3 +460,9 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Calendar values: formatMonthYear day-rollover validation; new LA+Kiritimati tests (Mar 2026 / Mar 1, 2026 unshifted, midnight instant converts); dateFormat.test.ts 82 green. tsc clean.
 - TZ-4 design (read-only): carbon needs ?timezone= param (AT TIME ZONE \, 400 invalid, UTC default) + useCarbon sends effective zone; useRangeState fallback + useWeeklyDigest + FSD defaults to effective zone. Guard sweep: 33 Intl + 12 toLocale files outside shared layer/tests to triage.
 - Next: full-suite result, commit TZ-3b batch, TZ-4 implementation.
+## 2026-10-21 16:15 - Muse: TZ-4 implementation done, full suite running
+- Backend ?timezone= (400 invalid, UTC default, AT TIME ZONE bucketing, Go tests green): carbon summary+recommendation, regen monthly, tempimpact trend+points+shift, costforecast history (SQL const extracted, AI port stays UTC), RUL SoH series (both endpoints), mileage monthly+daily (zone-snapped windows + snap tests).
+- Frontend sends effective zone (omitted -> useDateFormat().tz, Auckland tests): carbon, RUL (new test files), regen, tempimpact, cost forecast, mileage monthly/daily; getWeekRange optional zone (digest + FSD widget); ChartTooltip default; DayLogPage + audit-log hook unified.
+- Display follows setting (32 files): 24 pages/components from hardcoded useTimezone(mode) to useDateFormat().tz; DateTime in-prop; ScienceLab scope+display unified; mode-pin tests updated. Left as designed: caller-less legacy getters (UTC), rolling stats, journey drive-vehicle frame, automation schedule zones, pure lib sanitizers.
+- tsc clean. Full Vitest running as the TZ-4 push gate.
+- Next: commit TZ-4 (backend, frontend, docs) + push + PR checks; then TZ-5 guard + 277-route sweep, TZ-6 e2e, freshness revert, TZ-7 replica.

@@ -4,14 +4,14 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-21 ~20:40 UTC by Muse (continuing after Codex).
-Branch HEAD: `9c3586d103` (+ uncommitted Part 1 work, see below).
+Last updated: 2026-10-21 ~23:10 UTC by Muse (continuing after Codex).
+Branch HEAD: `86dab84447` (+ uncommitted TZ-4 work, see below).
 
 ## Parts overview
 
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
-| 1 | Time zone: follow setting everywhere, remove duplicates | in progress | `9c3586d103` docs (pushed); TZ-3b batch uncommitted, 19/32 suite failures fixed | Fix remaining 13 failures (AdvancedIntelligence 3 next), then calendar-value tests, TZ-4 backend, TZ-5 guard + 277-route sweep, TZ-6 e2e, freshness revert, TZ-7 replica + push |
+| 1 | Time zone: follow setting everywhere, remove duplicates | in progress | `86dab84447` TZ-3b (pushed); TZ-4 code done uncommitted, full suite running | Commit + push TZ-4, then TZ-5 guard + 277-route sweep, TZ-6 e2e, freshness revert, TZ-7 replica + push |
 | 2 | Dashboard widget redesign (119 widgets) | not started | inputs present (`README.md`, `widgets-compare.html`, `widgets.json`) | Phase 0 only after Part 1 clean + pushed; Phase 1 header task SKIPPED (freshness frozen) |
 | 3 | Shared-pattern consolidation (whole codebase) | not started | — | `docs/shared-patterns.md` catalog first |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
@@ -28,7 +28,7 @@ Branch HEAD: `9c3586d103` (+ uncommitted Part 1 work, see below).
 | TZ-3b direct-formatter migration (shared layer) | done | `d4653c5517` src + `86bb6e735d` tests + `330fb6052d` i18n | Full suite 2724/57248 green |
 | Calendar values unshifted (LA + Kiritimati tests) | done | `d4653c5517` + `86bb6e735d` | `formatMonthYear` day-rollover validation; `dateFormat.test.ts` 82 green |
 | `useConversionTimezone` + `resolveRawTimezone` (conversion boundaries) | done | `d4653c5517` + `86bb6e735d` | RateForm + JourneyAssurancePage converted; `timezone.test.ts` extended |
-| TZ-4 API `timezone` sends + backend zone params + Go tests | not started | triaged | `useRangeState` fallback + `useWeeklyDigest` to effective zone; carbon `EXTRACT(HOUR)` zone param; survey other day-bucket endpoints |
+| TZ-4 API `timezone` sends + backend zone params + Go tests | in progress (verify) | code done uncommitted | `?timezone=` on carbon/regen/tempimpact/costforecast/rul/mileage + Go tests; 7 hooks send zone; 32 display files to `useDateFormat().tz`; full suite + tsc gate, then commit + push |
 | TZ-5 guard (lint/audit) + ALL-routes (277) sweep | not started | — | Fail on direct date formatting, raw ISO, zone names, extra pickers; record per-route results |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | not started | — | Drive times, drawers, ranges, midnight day assignment |
 | Freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106`) | not started | revert set identified | `git revert` (no resets) after Part 1 code done; `cad1237f5f` only if shell-preservation fails; i18n conflicts via generators |
@@ -64,16 +64,21 @@ exceptions / bugs-fixed: —.
 - TopParkingLocations zone-label assertion was stale (fails on HEAD
   too) and contradicts spec section 3: flipped to assert absence; the
   no-shift assertions (the test's actual subject) pass unchanged.
+- Intermediate pushes (TZ-3b batch) go without the section-3 replica:
+  full Vitest + tsc gate them, CI gives the early e2e/visual signal,
+  and the full local replica runs once at the TZ-7 Part 1 gate.
+- TZ-4: backend `?timezone=` validates IANA (400) and defaults UTC;
+  omitted hook zones resolve to `useDateFormat().tz` (Auckland
+  fail-before/pass-after tests). Rolling stats, caller-less legacy
+  getters, the AI cost port (UTC), journey drive-vehicle frame, and
+  automation schedule zones intentionally unchanged (see plan file).
 
 ## Blockers
 
-None. (The 13 remaining Part 1 test failures are in-progress work,
-actively being fixed, not blockers.)
+None.
 
 ## Exact next step
 
-TZ-4 frontend: `useRangeState` fallback + `useWeeklyDigest` + FSD-hook
-defaults send the effective zone (fail-before/pass-after tests).
-Then TZ-4 backend: carbon `?timezone=` param (AT TIME ZONE, 400 on
-invalid, UTC default) + `useCarbon` sends zone + Go tests. Then TZ-5
-guard + 277-route sweep, TZ-6 e2e, freshness revert, TZ-7 replica + push.
+TZ-4 commit + push once the full Vitest suite passes (running).
+Then TZ-5 guard + 277-route sweep, TZ-6 e2e, freshness revert,
+TZ-7 replica + push.

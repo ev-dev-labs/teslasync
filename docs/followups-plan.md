@@ -225,6 +225,39 @@ files / 57248 tests green after migrating 19 test files' pins):
   America/Los_Angeles and Pacific/Kiritimati; midnight-UTC
   instants convert (new unit tests).
 
+TZ-4 API timezone sends + backend zone params (spec §5; full suite +
+tsc green, see TZ-7 gate for the replica):
+- Backend `?timezone=` added (validate IANA → 400, default UTC,
+  `AT TIME ZONE $N` bucketing, Go tests per endpoint): carbon
+  summary (month+hour) + recommendation (hour); regen monthly;
+  tempimpact monthly trend + drive-point dates (+ Shift endpoint);
+  costforecast monthly history (SQL extracted to a pinned const);
+  RUL daily SoH series (both endpoints); mileage monthly + daily
+  (window starts snap to zone midnight/month-start; new
+  zone-frame snap tests). FSD + daylog already had zone params.
+- Frontend sends the effective display zone (`useDateFormat().tz`,
+  explicit-overridable, in query keys): new `useCarbon.test.tsx`
+  + `useRUL.test.tsx`; extended `useDriving` (regen),
+  `useAnalytics` (mileage monthly/daily, tempimpact),
+  `useCharging` (cost forecast) tests with omitted-zone →
+  Auckland assertions.
+- Display follows the setting (32 files): 24 pages/components
+  converted from hardcoded `useTimezone('vehicle'|'user')` to
+  `useDateFormat().tz`; `DateTime` (`in` prop), `ChartTooltip`
+  (default), `DayLogPage`, audit-log hook likewise; `getWeekRange`
+  takes an optional zone (digest + FSD widget pass `tz`; zoned +
+  fallback tests). ScienceLab scope+display unified (was
+  split-brain); mode-pin tests updated to setting-driven.
+- Deliberately unchanged: legacy getters without prod callers
+  (`getRegenStats`, `getTemperatureImpact`, `getDailyMileage`,
+  `getMonthlyMileage`) stay on the UTC default; rolling-duration
+  stats (mileage stats, carbon intensity) take no zone; AI cost
+  forecaster buckets in UTC (the AI port carries no user zone);
+  journey drive-detail keeps the drive-vehicle frame (differs
+  from the selected vehicle by design); automation
+  trigger/condition schedule zones stay (schedule data, not
+  display); pure lib zone sanitizers take the caller value.
+
 ## Post-merge execution — 2026-10-20
 
 Base: `origin/main` at `e6c401fba1` (PR #198 squash `c353a59399`).
