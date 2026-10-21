@@ -398,6 +398,9 @@ describe('AuditLogPage presentation preservation', () => {
   });
 
   it('sends actor/category/date changes through the existing bounded server query', async () => {
+    // Wall inputs convert in the saved zone (October = EDT, UTC-4), never
+    // the host zone, so the bounds are host-independent.
+    preferences.timezone = 'America/New_York';
     install();
     renderPage();
     await screen.findByText('operator@example.test');
@@ -409,8 +412,8 @@ describe('AuditLogPage presentation preservation', () => {
     await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) => {
       const params = new URLSearchParams(path.split('?')[1]);
       return params.get('actors') === 'reviewer' && params.get('categories') === 'vehicle'
-        && params.get('since') === new Date('2026-10-04T08:00').toISOString()
-        && params.get('until') === new Date('2026-10-05T08:00').toISOString();
+        && params.get('since') === '2026-10-04T12:00:00.000Z'
+        && params.get('until') === '2026-10-05T12:00:00.000Z';
     })).toBe(true));
     fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Actor' })).toHaveValue(''));

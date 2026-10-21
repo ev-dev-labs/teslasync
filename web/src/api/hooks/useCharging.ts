@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { queryPolicy } from '../queryPolicy';
 import { scopedPath } from '../scope';
 import { safeArray } from '@/lib/safeArray';
@@ -175,10 +176,16 @@ export function useChargingSessionsPaginated(
   });
 }
 
-export function useCostForecast(vehicleId: string | null, months = 6) {
+export function useCostForecast(vehicleId: string | null, months = 6, timezone?: string) {
+  const { tz } = useDateFormat();
+  const zone = timezone ?? tz;
   return useQuery({
-    queryKey: ['cost-forecast', vehicleId, months],
-    queryFn: ({ signal }) => request<CostForecastData>(`/analytics/cost-forecast?vehicle_id=${vehicleId}&months=${months}`, { signal }),
+    queryKey: ['cost-forecast', vehicleId, months, zone],
+    queryFn: ({ signal }) =>
+      request<CostForecastData>(
+        `/analytics/cost-forecast?vehicle_id=${vehicleId}&months=${months}&timezone=${encodeURIComponent(zone)}`,
+        { signal },
+      ),
     enabled: vehicleId !== null,
     staleTime: STALE_TIMES.SLOW,
   });

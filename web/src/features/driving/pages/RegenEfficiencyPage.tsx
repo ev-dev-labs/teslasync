@@ -11,7 +11,6 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
 
 import {
   MonthlyRecoveryTrend,
@@ -35,7 +34,7 @@ export default function RegenEfficiencyPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const selectedTimeZone = useTimezone('vehicle');
+  const { tz: selectedTimeZone } = useDateFormat();
   const { startInstant, endInstantExclusive, timezone } = useRangeState({
     persistKey: 'regen-efficiency.range',
     defaultPresetId: 'all',

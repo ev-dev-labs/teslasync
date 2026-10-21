@@ -4,12 +4,13 @@ import { DateTime } from '../DateTime';
 import type { DateTimeVariant } from '../DateTime';
 
 // The timezone-aware branch (`<DateTime in=… />`) reads the IANA
-// zone from `useTimezone()`, which in production reaches useSelectedVehicle →
+// zone from `useDateFormat()`, which in production reaches useSelectedVehicle →
 // useVehicles (react-query) and Router context — neither is mounted by a bare
-// render(). Mock the hook (repo convention — `src/test-setup.ts` stubs it to
-// 'UTC' globally; a file-level vi.mock takes precedence) so each test can drive
-// a deterministic zone AND capture the mode the component resolved.
-// `importActual` keeps the real resolveTimezone / TzMode for type-compat.
+// render(). Mock the underlying `useTimezone` (repo convention —
+// `src/test-setup.ts` stubs it to 'UTC' globally; a file-level vi.mock takes
+// precedence) so each test can drive a deterministic zone AND capture the
+// mode the component resolved. `importActual` keeps the real
+// resolveTimezone / TzMode for type-compat.
 const tzMock = vi.hoisted(() => ({ tz: 'UTC', lastMode: undefined as string | undefined }));
 const settingsMock = vi.hoisted(() => ({ locale: 'en-US', tz_display_default: 'vehicle' }));
 vi.mock('@/hooks/useSettings', () => ({

@@ -506,10 +506,12 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.queryByText(/Invalid Date|1970/)).not.toBeInTheDocument();
   });
 
-  it('renders every persistent analytical shell, requests 1,000 rows, and uses vehicle time', () => {
+  it('renders every persistent analytical shell, requests 1,000 rows, and follows the display-mode setting', () => {
     renderPage();
     expect(h.historyHook).toHaveBeenCalledWith('7', 1_000);
-    expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
+    // Mocked tz_display_default is 'user': the page must resolve the mode
+    // from the setting, never a hardcoded mode.
+    expect(h.timezoneHook).toHaveBeenCalledWith('user');
     expectPersistentAnalyticalShells();
     expect(screen.getAllByRole('img').length).toBeGreaterThanOrEqual(5);
     expect(screen.getByText(/days since the latest included drive/)).toBeInTheDocument();

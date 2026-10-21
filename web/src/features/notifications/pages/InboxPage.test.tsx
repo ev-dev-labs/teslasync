@@ -224,7 +224,7 @@ describe('InboxPage — page shell & composition', () => {
   it('passes the top date filter to notification activity', () => {
     renderPage('/notifications/inbox?from=2026-01-01&to=2026-01-30');
     expect(screen.getByTestId('notification-report')).toHaveTextContent(
-      `Notification activity ${new Date('2026-01-01T00:00:00').toISOString()} ${new Date('2026-01-31T00:00:00').toISOString()}`,
+      `Notification activity ${new Date('2026-01-01T00:00:00Z').toISOString()} ${new Date('2026-01-31T00:00:00Z').toISOString()}`,
     );
     expect(screen.getByTestId('notification-report').getAttribute('data-timezone')).toBeTruthy();
   });
@@ -458,7 +458,7 @@ describe('InboxPage — restrained navigation and independent registry trust', (
     renderPage(route);
     expect(screen.getByTestId('route-state')).toHaveTextContent(route);
     expect(screen.getByTestId('notification-report')).toHaveTextContent(
-      `Notification activity ${new Date('2026-01-01T00:00:00').toISOString()} ${new Date('2026-01-31T00:00:00').toISOString()}`,
+      `Notification activity ${new Date('2026-01-01T00:00:00Z').toISOString()} ${new Date('2026-01-31T00:00:00Z').toISOString()}`,
     );
     expect(mockLogs).toHaveBeenCalledWith({ archived: false });
     expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: VEHICLES, rules: RULES });

@@ -502,10 +502,12 @@ describe('ScienceLabPage', () => {
   });
 
   it.each([
-    ['user', 'America/Los_Angeles'],
-    ['vehicle', 'Asia/Tokyo'],
-    ['utc', 'UTC'],
-  ])('formats science dates in %s mode and updates locale without changing raw evidence or query scope', async (mode, timezone) => {
+    // [display mode, resolved zone, scope start, scope end-exclusive] for
+    // ?from=2026-09-01&to=2026-09-07: scope AND display follow the setting.
+    ['user', 'America/Los_Angeles', '2026-09-01T07:00:00.000Z', '2026-09-08T07:00:00.000Z'],
+    ['vehicle', 'Asia/Tokyo', '2026-08-31T15:00:00.000Z', '2026-09-07T15:00:00.000Z'],
+    ['utc', 'UTC', '2026-09-01T00:00:00.000Z', '2026-09-08T00:00:00.000Z'],
+  ])('formats science dates in %s mode and updates locale without changing raw evidence or query scope', async (mode, timezone, start, end) => {
     const { fireEvent } = await import('@testing-library/react');
     settingsMock.tz_display_default = mode;
     settingsMock.timezone_user = 'America/Los_Angeles';
@@ -524,8 +526,6 @@ describe('ScienceLabPage', () => {
     for (const domain of ['electrochem', 'thermal', 'weather', 'tires', 'notebook'] as const) {
       scienceMocks[domain].mockReturnValue(queryState({ data: reports[domain], dataUpdatedAt: loadedAt }));
     }
-    const start = '2026-08-31T15:00:00.000Z';
-    const end = '2026-09-07T15:00:00.000Z';
     const { rerenderPage } = renderPage('/science?from=2026-09-01&to=2026-09-07');
     fireEvent.click(screen.getByText(/electrochem · Rest voltage maps SOC/));
 

@@ -21,7 +21,6 @@ import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
-import { useTimezone } from '@/lib/timezone';
 
 import { cn } from '@/lib/cn';
 import type { FSMTransition, FSMType } from '@/types/fsm';
@@ -89,7 +88,7 @@ export default function StateMachineDebuggerPage() {
    * the production deploy was a PST user's evening drives recorded at
    * next-day UTC falling outside the UTC-midnight filter). The
    * The API and timeline chart share these exact half-open bounds. */
-  const vehicleTz = useTimezone('vehicle');
+  const { tz: vehicleTz } = useDateFormat();
   const { start, end, startInstant, endInstantExclusive, presetId } = useRangeState({
     persistKey: 'fsm-debugger.range',
     defaultPresetId: '7d',

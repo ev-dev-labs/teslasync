@@ -42,7 +42,7 @@ import { formatDateTime, formatRelative, formatDayKey } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { gaugeTone, typography } from '@/lib/tokens';
 import { localDayKey } from '@/lib/drivesAggregation';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   CheckCircle, XCircle, Terminal, History,
   Search, Gamepad2, ListChecks, BarChart3, ShieldCheck, CircleHelp,
@@ -203,7 +203,7 @@ export default function CommandHistoryPage() {
   const noVehicle = !activeVehicleId;
 
   const { preferences } = useProductPreferences();
-  const timeZone = useTimezone('vehicle');
+  const { tz: timeZone } = useDateFormat();
   const { startInstant, endInstantExclusive } = useRangeState({
     defaultPresetId: preferences.defaultAnalysisRange,
     timezone: timeZone,

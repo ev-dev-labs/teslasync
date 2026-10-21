@@ -7,9 +7,9 @@ import { useAlertHistory } from '@/api/hooks/useNotifications';
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSettings } from '@/hooks/useSettings';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { formatDateShort } from '@/lib/dateFormat';
 import { safeNumber } from '@/lib/numberFormat';
-import { browserTimezone } from '@/lib/timezone';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 
 import type {
@@ -98,15 +98,16 @@ function chargingPowerW(session: ChargingSession): number | null {
 export function useWeeklyDigest() {
   const { t } = useTranslation();
   const { locale: dateLocale } = useSettings();
+  const { tz } = useDateFormat();
   const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const [weekOffset, setWeekOffset] = useState(0);
 
-  const [weekStart, weekEnd] = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
-  const [prevStart, prevEnd] = useMemo(() => getWeekRange(weekOffset - 1), [weekOffset]);
+  const [weekStart, weekEnd] = useMemo(() => getWeekRange(weekOffset, tz), [weekOffset, tz]);
+  const [prevStart, prevEnd] = useMemo(() => getWeekRange(weekOffset - 1, tz), [weekOffset, tz]);
 
   const weekLabel = useMemo(
-    () => `${formatDateShort(weekStart, { locale: dateLocale })} – ${formatDateShort(weekEnd, { locale: dateLocale })}`,
-    [weekStart, weekEnd, dateLocale],
+    () => `${formatDateShort(weekStart, { locale: dateLocale, tz })} – ${formatDateShort(weekEnd, { locale: dateLocale, tz })}`,
+    [weekStart, weekEnd, dateLocale, tz],
   );
 
   const isCurrentWeek = weekOffset === 0;
@@ -191,7 +192,7 @@ export function useWeeklyDigest() {
     selectedVehicleId || undefined,
     weekStartIso,
     queryEndExclusive,
-    browserTimezone(),
+    tz,
   );
   const {
     data: fsdInsights,

@@ -9,7 +9,8 @@ import {
 } from '@/lib/dateFormat';
 import { resolveLocale } from '@/lib/locale';
 import { useSettings } from '@/hooks/useSettings';
-import { useTimezone, type TzMode } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import type { TzMode } from '@/lib/timezone';
 
 export type DateTimeVariant = 'full' | 'date' | 'time' | 'relative' | 'short' | 'day';
 
@@ -90,7 +91,7 @@ function isValidTimeZone(tz: string): boolean {
 
 /**
  * Renders the timestamp in the IANA timezone resolved from the user's
- * settings + the active vehicle. Always calls `useTimezone` and
+ * settings + the active vehicle. Always calls `useDateFormat` and
  * `useSettings` so React's hook rules are honored regardless of which
  * branch was taken on the previous render — this component is mounted
  * only when `in` / `showTz` / `clock` is set, so the render path is consistent
@@ -98,8 +99,7 @@ function isValidTimeZone(tz: string): boolean {
  */
 function DateTimeWithTz({ value, variant = 'full', in: mode, clock, className }: DateTimeProps) {
   const { settings } = useSettings();
-  const effectiveMode = (mode ?? settings.tz_display_default ?? 'vehicle') as TzMode;
-  const resolvedTz = useTimezone(effectiveMode);
+  const { tz: resolvedTz } = useDateFormat(mode);
   // A malformed IANA zone (e.g. a garbage `vehicle.timezone` that slipped past
   // resolveTimezone) degrades to UTC so the timestamp still renders in a
   // known zone. Validity is cached, so this stays cheap per row.

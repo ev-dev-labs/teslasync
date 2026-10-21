@@ -27,7 +27,7 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
   const { formatDateRange, tz } = useDateFormat();
   const isCompact = size.cols <= 1;
 
-  const [weekStart, weekEnd] = useMemo(() => getWeekRange(0), []);
+  const [weekStart, weekEnd] = useMemo(() => getWeekRange(0, tz), [tz]);
   const startIso = weekStart.toISOString();
   const endIso = useMemo(() => new Date(weekEnd.getTime() + 1).toISOString(), [weekEnd]);
 

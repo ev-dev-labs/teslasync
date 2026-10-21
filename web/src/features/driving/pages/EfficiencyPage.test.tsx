@@ -477,8 +477,8 @@ describe('EfficiencyPage', () => {
 
   it('loads every server page within both header bounds without changing lifetime statistics', async () => {
     H.realHistory = true;
-    const start = new Date(2000, 0, 1).toISOString();
-    const end = new Date(2000, 0, 3).toISOString();
+    const start = new Date(Date.UTC(2000, 0, 1)).toISOString();
+    const end = new Date(Date.UTC(2000, 0, 3)).toISOString();
     const firstPage = Array.from({ length: 1000 }, (_, index) => makeDrive({
       id: index + 1, startTs: start,
     }));

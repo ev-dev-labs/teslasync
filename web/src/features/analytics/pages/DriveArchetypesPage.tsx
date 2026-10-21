@@ -9,7 +9,7 @@ import { FadeIn } from '@/components/motion';
 import { Icon, IconButton } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   ArchetypeAssignmentDirectory,
   ArchetypeCandidateModels,
@@ -35,7 +35,7 @@ export default function DriveArchetypesPage() {
   const { t } = useTranslation();
   usePageTitle(t('archetypes.title', 'Drive archetypes'));
   const { vehicleId } = useSelectedVehicle();
-  const timeZone = useTimezone('vehicle');
+  const { tz: timeZone } = useDateFormat();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const historyQuery = useDriveHistory(vehicleIdStr, 1000);
   const display = useDriveArchetypeDisplay(timeZone);

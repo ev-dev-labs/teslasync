@@ -10,7 +10,7 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { isValidYmd, todayYmd } from '../lib/daylog';
 import { DayLogControls } from '../components/daylog/DayLogControls';
 import { DayLogOperationalSummary } from '../components/operationalbrief-a-m/DayLogOperationalSummary';
@@ -33,7 +33,10 @@ export default function DayLogPage() {
   usePageTitle(title);
 
   const { vehicleId } = useSelectedVehicle();
-  const timezone = useTimezone('vehicle');
+  // Single resolved display zone: the day scope, the controls' today/max,
+  // and the timeline all share it, so the page follows the user's
+  // Settings > Units time-zone choice (vehicle frame by default).
+  const { tz: timezone } = useDateFormat();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const date = useMemo(() => {

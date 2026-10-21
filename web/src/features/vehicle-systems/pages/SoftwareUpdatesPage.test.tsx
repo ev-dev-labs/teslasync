@@ -297,11 +297,13 @@ describe('SoftwareUpdatesPage — selected date presentation', () => {
     const { rerenderPage } = renderPage();
     await screen.findByTestId('cadence-chart');
 
-    const check = (locale: string, timeZone: string, months: string[]) => {
+    // Async: switching the display zone recomputes the header range in the
+    // new zone, so the page query refetches under a new key; await it.
+    const check = async (locale: string, timeZone: string, months: string[]) => {
       const date = (iso: string) => new Intl.DateTimeFormat(locale, {
         timeZone, year: 'numeric', month: 'short', day: 'numeric',
       }).format(new Date(iso));
-      expect(within(kpiCard('Last installed')).getByText(date(installed))).toBeInTheDocument();
+      expect(await within(kpiCard('Last installed')).findByText(date(installed))).toBeInTheDocument();
       const timeline = screen.getByRole('list', { name: 'Update timeline' });
       expect(within(timeline).getByText(`Installed ${date(installed)}`)).toBeInTheDocument();
       expect(within(timeline).getByText(`Scheduled ${date(scheduled)}`)).toBeInTheDocument();
@@ -313,13 +315,13 @@ describe('SoftwareUpdatesPage — selected date presentation', () => {
       }).format(new Date(`${months[0]}-01T00:00:00Z`)));
       expect(within(kpiCard('Avg cadence')).getByText('1d')).toBeInTheDocument();
     };
-    check('de-DE', 'America/Los_Angeles', ['2025-02']);
+    await check('de-DE', 'America/Los_Angeles', ['2025-02']);
     savedPreferences('fr-FR', 'America/Los_Angeles');
     rerenderPage();
-    check('fr-FR', 'America/Los_Angeles', ['2025-02']);
+    await check('fr-FR', 'America/Los_Angeles', ['2025-02']);
     savedPreferences('fr-FR', 'Asia/Tokyo');
     rerenderPage();
-    check('fr-FR', 'Asia/Tokyo', ['2025-02', '2025-03']);
+    await check('fr-FR', 'Asia/Tokyo', ['2025-02', '2025-03']);
     expect(JSON.stringify(api.updates)).toBe(originalRows);
   });
 

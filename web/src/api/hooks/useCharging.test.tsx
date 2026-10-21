@@ -40,6 +40,20 @@ vi.mock('./_toastHelpers', () => ({
   useMutationToast: () => ({ success: successToast, error: errorToast }),
 }));
 
+// Saved display zone for the cost-forecast omitted-timezone test: Auckland
+// is neither the CI host zone (UTC) nor a typical dev host zone, so it
+// proves the hook resolves the effective zone instead of the browser zone.
+const h = vi.hoisted(() => ({
+  timezone_user: 'Pacific/Auckland',
+  tz_display_default: 'user',
+}));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    locale: 'en-US',
+    settings: { timezone_user: h.timezone_user, tz_display_default: h.tz_display_default },
+  }),
+}));
+
 import { request } from '@/api/client';
 import { __flushQueryBroadcastForTests } from '@/lib/queryBroadcast';
 import {
@@ -446,18 +460,30 @@ describe('useCostForecast', () => {
   it('defaults to a 6-month horizon', async () => {
     mockedRequest.mockResolvedValueOnce({});
     const { Wrapper } = makeWrapper();
-    renderHook(() => useCostForecast('3'), { wrapper: Wrapper });
+    renderHook(() => useCostForecast('3', 6, 'UTC'), { wrapper: Wrapper });
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
     expect(mockedRequest.mock.calls[0][0]).toBe(
-      '/analytics/cost-forecast?vehicle_id=3&months=6',
+      '/analytics/cost-forecast?vehicle_id=3&months=6&timezone=UTC',
     );
+  });
+
+  it('sends the effective display zone when the timezone is omitted', async () => {
+    mockedRequest.mockResolvedValueOnce({});
+    const { Wrapper } = makeWrapper();
+    renderHook(() => useCostForecast('3'), { wrapper: Wrapper });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    const url = mockedRequest.mock.calls[0][0] as string;
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('vehicle_id')).toBe('3');
+    expect(params.get('months')).toBe('6');
+    expect(params.get('timezone')).toBe('Pacific/Auckland');
   });
 
   it('honours a custom month count and is disabled when vehicleId is null', async () => {
     mockedRequest.mockResolvedValueOnce({});
     const { Wrapper } = makeWrapper();
     const { rerender, result } = renderHook(
-      ({ id }: { id: string | null }) => useCostForecast(id, 12),
+      ({ id }: { id: string | null }) => useCostForecast(id, 12, 'UTC'),
       { wrapper: Wrapper, initialProps: { id: null as string | null } },
     );
     await tick();
@@ -467,7 +493,7 @@ describe('useCostForecast', () => {
     rerender({ id: '4' });
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
     expect(mockedRequest.mock.calls[0][0]).toBe(
-      '/analytics/cost-forecast?vehicle_id=4&months=12',
+      '/analytics/cost-forecast?vehicle_id=4&months=12&timezone=UTC',
     );
   });
 });

@@ -338,8 +338,10 @@ describe('TimeMachinePage shared primitive adoption', () => {
     await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, latest));
     const honoluluLatest = formatDateTime(latest, { locale: 'en-US', tz: 'Pacific/Honolulu' });
     const honoluluEarliest = formatDateShort(earliest, { locale: 'en-US', tz: 'Pacific/Honolulu' });
-    expect(within(view.container).getByText(honoluluLatest)).toBeInTheDocument();
-    expect(within(view.container).getByText(honoluluEarliest)).toBeInTheDocument();
+    // Await the async range render: readState resolving does not guarantee
+    // the earliest/latest labels have painted yet under full-suite load.
+    expect(await within(view.container).findByText(honoluluLatest)).toBeInTheDocument();
+    expect(await within(view.container).findByText(honoluluEarliest)).toBeInTheDocument();
     expect(view.container.querySelector('[title^="2026-"]')).toBeNull();
     fireEvent.click(within(screen.getByTestId('time-machine-summary')).getByRole('button', { name: 'Review details' }));
     const tzDrawer = screen.getByRole('dialog');

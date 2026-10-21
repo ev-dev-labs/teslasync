@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useDrives, useDriveScore } from '@/api/hooks/useDriving'
 import { calendarRangeToInstants, civilDateInTimeZone } from '@/lib/dateRange'
-import { useTimezone } from '@/lib/timezone'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { SidebarCountChip } from './SidebarRow'
 
 interface SidebarDriveBadgeProps {
@@ -11,7 +11,7 @@ interface SidebarDriveBadgeProps {
 
 export function SidebarDriveBadge({ kind, vehicleId }: SidebarDriveBadgeProps) {
   const { t } = useTranslation()
-  const timezone = useTimezone()
+  const { tz: timezone } = useDateFormat()
   const today = civilDateInTimeZone(new Date(), timezone)
   const { startInstant, endInstantExclusive } = calendarRangeToInstants({
     startDate: today,

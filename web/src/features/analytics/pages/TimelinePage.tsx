@@ -9,7 +9,7 @@ import { PageLayout, CardGrid, LayoutCard, ChartCard } from '@/components/layout
 import { Badge, Button, DataTable, Text, Caption, Icon, type Column } from '@/components/ui';
 
 import { useRangeState } from '@/hooks/useRangeState';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   FreshnessDotAuto,
   EntityPreviewDrawer,
@@ -144,7 +144,7 @@ export default function TimelinePage() {
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const enabled = activeId !== '';
 
-  const timezone = useTimezone('vehicle');
+  const { tz: timezone } = useDateFormat();
   const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'timeline.range',
     defaultPresetId: '7d',

@@ -27,6 +27,20 @@ vi.mock('../client', async () => {
   return { ...actual, request: vi.fn() };
 });
 
+// Saved display zone for the omitted-timezone tests: Auckland is neither the
+// CI host zone (UTC) nor a typical dev host zone, so it proves the hooks
+// resolve the effective zone instead of the browser zone.
+const h = vi.hoisted(() => ({
+  timezone_user: 'Pacific/Auckland',
+  tz_display_default: 'user',
+}));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    locale: 'en-US',
+    settings: { timezone_user: h.timezone_user, tz_display_default: h.tz_display_default },
+  }),
+}));
+
 import { request } from '../client';
 import {
   analyticsKeys,
@@ -305,11 +319,22 @@ describe('useMonthlyMileage', () => {
         },
       ],
     });
-    const { result } = renderHook(() => useMonthlyMileage('7'), { wrapper });
+    const { result } = renderHook(() => useMonthlyMileage('7', 'UTC'), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(callAt()[0]).toBe('/mileage/monthly?vehicle_id=7');
+    expect(callAt()[0]).toBe('/mileage/monthly?vehicle_id=7&timezone=UTC');
     expect(result.current.data).toHaveLength(1);
     expect(result.current.data?.[0].year_month).toBe('2024-01');
+  });
+
+  it('sends the effective display zone when the timezone is omitted', async () => {
+    mockedRequest.mockResolvedValueOnce({ vehicle_id: 7, months: [] });
+    const { result } = renderHook(() => useMonthlyMileage('7'), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url] = callAt();
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('vehicle_id')).toBe('7');
+    expect(params.get('timezone')).toBe('Pacific/Auckland');
   });
 
   it('coerces a null / envelope-less payload to an empty array', async () => {
@@ -338,18 +363,30 @@ describe('useDailyMileage', () => {
         { date: '2024-01-01', drive_count: 2, total_km: 40, end_odometer_km: 12000 },
       ],
     });
-    const { result } = renderHook(() => useDailyMileage('7'), { wrapper });
+    const { result } = renderHook(() => useDailyMileage('7', 90, 'UTC'), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(callAt()[0]).toBe('/mileage/daily?vehicle_id=7&days=90');
+    expect(callAt()[0]).toBe('/mileage/daily?vehicle_id=7&days=90&timezone=UTC');
     expect(result.current.data?.[0].total_km).toBe(40);
   });
 
   it('threads a custom day count into the query string', async () => {
     mockedRequest.mockResolvedValueOnce({ vehicle_id: 7, days: [] });
-    const { result } = renderHook(() => useDailyMileage('7', 30), { wrapper });
+    const { result } = renderHook(() => useDailyMileage('7', 30, 'UTC'), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(callAt()[0]).toBe('/mileage/daily?vehicle_id=7&days=30');
+    expect(callAt()[0]).toBe('/mileage/daily?vehicle_id=7&days=30&timezone=UTC');
     expect(result.current.data).toEqual([]);
+  });
+
+  it('sends the effective display zone when the timezone is omitted', async () => {
+    mockedRequest.mockResolvedValueOnce({ vehicle_id: 7, days: [] });
+    const { result } = renderHook(() => useDailyMileage('7'), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url] = callAt();
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('vehicle_id')).toBe('7');
+    expect(params.get('days')).toBe('90');
+    expect(params.get('timezone')).toBe('Pacific/Auckland');
   });
 
   it('is disabled without a vehicle id', async () => {
@@ -708,12 +745,23 @@ describe('useTemperatureImpact', () => {
 
   it('GETs the temperature-impact endpoint and surfaces every array', async () => {
     mockedRequest.mockResolvedValueOnce(fixture);
-    const { result } = renderHook(() => useTemperatureImpact('7'), { wrapper });
+    const { result } = renderHook(() => useTemperatureImpact('7', 'UTC'), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(callAt()[0]).toBe('/analytics/temperature-impact?vehicle_id=7');
+    expect(callAt()[0]).toBe('/analytics/temperature-impact?vehicle_id=7&timezone=UTC');
     expect(result.current.data?.points[0].outside_temp).toBe(4);
     expect(result.current.data?.monthly_trend[0].month).toBe('2024-01');
     expect(result.current.data?.vampire_drain).toEqual([]);
+  });
+
+  it('sends the effective display zone when the timezone is omitted', async () => {
+    mockedRequest.mockResolvedValueOnce(fixture);
+    const { result } = renderHook(() => useTemperatureImpact('7'), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url] = callAt();
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('vehicle_id')).toBe('7');
+    expect(params.get('timezone')).toBe('Pacific/Auckland');
   });
 
   it('is disabled without a vehicle id', async () => {
@@ -927,6 +975,20 @@ describe('useFsdInsights', () => {
     renderHook(() => useFsdInsightsForDrive('7', undefined, 'UTC', true), { wrapper });
     await tick();
     expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['days', () => useFsdInsights('7', 90)],
+    ['range', () => useFsdInsightsRange('7', '2026-03-01T08:00:00.000Z', '2026-03-02T08:00:00.000Z')],
+    ['drive', () => useFsdInsightsForDrive('7', '350')],
+  ])('sends the effective display zone when %s omits the timezone', async (_kind, useHook) => {
+    mockedRequest.mockResolvedValueOnce(fixture);
+    const { result } = renderHook(useHook, { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url] = callAt();
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('timezone')).toBe('Pacific/Auckland');
   });
 
   it('opts into bounded route evidence only when requested', async () => {

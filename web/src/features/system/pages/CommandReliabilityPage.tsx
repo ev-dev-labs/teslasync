@@ -24,7 +24,7 @@ import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { chartTokens, typography } from '@/lib/tokens';
 import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { analyzeCommandReliability, type ReliabilityGrade } from '../lib/commandReliability';
 import { commandReliabilityMetrics } from '../components/statstrip-command-summaries/commandSummaryMetrics';
@@ -53,7 +53,7 @@ export default function CommandReliabilityPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const { preferences } = useProductPreferences();
-  const timeZone = useTimezone('vehicle');
+  const { tz: timeZone } = useDateFormat();
   const { startInstant, endInstantExclusive } = useRangeState({
     defaultPresetId: preferences.defaultAnalysisRange,
     timezone: timeZone,

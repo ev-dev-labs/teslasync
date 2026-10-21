@@ -66,7 +66,7 @@ import { cn } from '@/lib/cn';
 import type { ChargingSession } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── Local: Cost Comparison Card ────────────────────────────────── */
@@ -123,7 +123,7 @@ export default function EnergyPage() {
   const palette = useChartPalette();
   const { reduce, durationMs } = useMotionPreference();
   const { formatCurrency, currencySymbol, estimateGasCost } = useFormatting();
-  const timezone = useTimezone();
+  const { tz: timezone } = useDateFormat();
   const sessionHourFormatter = useMemo(
     () => new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,

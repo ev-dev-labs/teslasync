@@ -23,7 +23,7 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { FadeIn } from '@/components/motion';
 import { SectionState } from '../components/energy-flow-modernization/SectionState';
 
@@ -256,7 +256,7 @@ export default function EnergyFlowPage() {
   const { formatDistance, formatEnergy, formatPower, unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
-  const timezone = useTimezone('vehicle');
+  const { tz: timezone } = useDateFormat();
   const { startInstant, endInstantExclusive } = useRangeState({ timezone });
   const days = Math.ceil((Date.parse(endInstantExclusive) - Date.parse(startInstant)) / 86_400_000);
   const rangeSupported = days > 0 && days <= 3650;

@@ -23,6 +23,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { getWorkspaceRouteScope, isWorkspaceRangePresetAvailable } from '@/lib/workspaceScope';
 import {
@@ -83,11 +84,11 @@ export interface UseRangeStateOptions {
   enableCompare?: boolean;
   /**
    * IANA timezone the calendar dates are interpreted in when computing
-   * `startInstant` / `endInstantExclusive`. Defaults to the browser's
-   * resolved timezone. Vehicle-centric pages should pass the vehicle's
-   * IANA tz (via `useTimezone('vehicle')`) so the API filter spans the
-   * user's intended wall-clock window — sending UTC midnight silently
-   * dropped today's local rows for any user not on UTC.
+   * `startInstant` / `endInstantExclusive`. Defaults to the single
+   * resolved display zone (`useDateFormat().tz`: settings display mode
+   * + override, vehicle-aware, browser fallback) so ranges and day
+   * boundaries follow the user's selected zone. An explicit zone still
+   * wins for pages with a genuine reason to differ.
    */
   timezone?: string;
 }
@@ -320,15 +321,12 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   const sourceId = useId();
   const [params, setParams] = useSearchParams();
   const [rollingNow, setRollingNow] = useState(() => Date.now());
+  const { tz: settingsTimezone } = useDateFormat();
 
   const resolvedTimezone = useMemo(() => {
     if (timezone && timezone.trim()) return timezone;
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-    } catch {
-      return 'UTC';
-    }
-  }, [timezone]);
+    return settingsTimezone;
+  }, [timezone, settingsTimezone]);
 
   const urlStart = params.get(fromKey);
   const urlEnd = params.get(toKey);

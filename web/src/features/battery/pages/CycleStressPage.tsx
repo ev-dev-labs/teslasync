@@ -10,7 +10,7 @@ import { FadeIn } from '@/components/motion';
 import { Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
 
@@ -50,7 +50,7 @@ export default function CycleStressPage() {
   usePageTitle(t('cycleStress.title', 'Cycle Stress'));
 
   const { vehicleId } = useSelectedVehicle();
-  const selectedTimeZone = useTimezone('vehicle');
+  const { tz: selectedTimeZone } = useDateFormat();
   const vehicleIdStr =
     vehicleId != null ? String(vehicleId) : undefined;
   const sessionsQuery = useChargingHistory(

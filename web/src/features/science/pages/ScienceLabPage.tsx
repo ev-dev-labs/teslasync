@@ -17,7 +17,6 @@ import {
 import { ScienceEvidenceOverview } from '@/features/science/components/ScienceEvidenceOverview';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
-import { useTimezone } from '@/lib/timezone';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
@@ -25,10 +24,9 @@ type Translate = (key: string, fallback: string, options?: Record<string, unknow
 
 
 export default function ScienceLabPage() {
-  const { formatDateTime } = useDateFormat();
+  const { formatDateTime, tz: timezone } = useDateFormat();
   const { t: translate } = useTranslation();
   const t: Translate = (key, fallback, options) => String(translate(key, fallback, options));
-  const timezone = useTimezone('vehicle');
   const { start, end, startInstant, endInstantExclusive } = useRangeState({ timezone });
   const window = { start: startInstant, end: endInstantExclusive };
   const rangeSupported = Date.parse(window.end) > Date.parse(window.start)

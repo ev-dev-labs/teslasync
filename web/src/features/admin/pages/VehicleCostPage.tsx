@@ -29,7 +29,7 @@ import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, DataStateNotice, SectionErrorBoundary } from '@/components/feedback';
 import { useRangeState } from '@/hooks/useRangeState';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicleCost } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
@@ -55,7 +55,7 @@ export default function VehicleCostPage() {
   const { t } = useTranslation();
   usePageTitle(t('admin.vehicleCost.pageTitle', 'Vehicle ingest cost'));
 
-  const timezone = useTimezone('user');
+  const { tz: timezone } = useDateFormat();
   const { startInstant, endInstantExclusive } = useRangeState({ timezone });
   const since = useMemo(() => new Date(startInstant), [startInstant]);
   const until = useMemo(() => new Date(endInstantExclusive), [endInstantExclusive]);

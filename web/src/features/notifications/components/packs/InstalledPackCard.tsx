@@ -4,7 +4,7 @@ import { type PackInstallation, useRemoveAlertPack } from '@/api/hooks/useAlertP
 import { Button, Caption, GlassPanel, Modal, PanelTitle, Text, Toggle } from '@/components/ui'
 import { ErrorDisplay } from '@/components/feedback'
 import { formatDateTime } from '@/lib/dateFormat'
-import { useTimezone } from '@/lib/timezone'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { useSettings } from '@/hooks/useSettings'
 
 interface Props {
@@ -15,8 +15,8 @@ interface Props {
 
 export default function InstalledPackCard({ installation, name, onEditRule }: Props) {
   const { t } = useTranslation()
-  const { settings, locale } = useSettings()
-  const tz = useTimezone(settings.tz_display_default ?? 'vehicle')
+  const { locale } = useSettings()
+  const { tz } = useDateFormat()
   const remove = useRemoveAlertPack()
   const [confirm, setConfirm] = useState(false)
   const [deleteIDs, setDeleteIDs] = useState<number[]>([])

@@ -74,6 +74,15 @@ vi.mock('@/api/hooks/_toastHelpers', () => ({
   useMutationToast: () => ({ success: mockSuccessToast, error: mockErrorToast }),
 }));
 
+// Display zone for the range hook. Defaults to UTC (what the global timezone
+// mock resolves for bare renders); the DST test sets a non-UTC zone to keep
+// its transition coverage. Spread keeps every other timezone export real.
+const savedZone = vi.hoisted(() => ({ tz: 'UTC' }));
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return { ...actual, useTimezone: () => savedZone.tz };
+});
+
 // i18n → developer fallback with {{var}} interpolation so assertions read real
 // sentences rather than raw keys.
 vi.mock('react-i18next', async () => {
@@ -260,6 +269,7 @@ beforeEach(() => {
   setGlobalLocale('en-US');
   for (const key of Object.keys(translations)) delete translations[key];
   window.localStorage.clear();
+  savedZone.tz = 'UTC';
 });
 afterEach(() => {
   __resetQueryBroadcastForTests();
@@ -614,10 +624,9 @@ describe('ChargingHeatmapPage — precise server range contract', () => {
   });
 
   it('preserves non-UTC custom midnights across DST and Sunday-first buckets', async () => {
-    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
-    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
-      return { ...resolvedOptions.call(this), timeZone: 'America/Los_Angeles' };
-    });
+    // The range follows the saved display zone (not the browser zone), so
+    // set a non-UTC saved zone to keep the DST-transition coverage.
+    savedZone.tz = 'America/Los_Angeles';
     installRequest();
     renderPage('/charging-heatmap?from=2026-03-08&to=2026-03-09&time_scope=custom');
     await screen.findByRole('img', { name: GRID_ARIA });

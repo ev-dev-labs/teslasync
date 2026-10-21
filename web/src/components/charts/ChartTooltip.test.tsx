@@ -7,6 +7,13 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 // useSettings → fmtNumber locale resolution path is exercised by the existing
 // Format.test.tsx; here we only assert the tooltip's wiring & label heuristics.
 
+// The tooltip reads the display zone from useDateFormat; pin it here so the
+// ISO-label tests are host-zone independent (no router/query providers mounted).
+const h = vi.hoisted(() => ({ tz: 'UTC' }))
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({ tz: h.tz }),
+}));
+
 describe('ChartTooltipBase', () => {
   it('uses neutral elevation and wrapping without changing series order or supplied colors', () => {
     setGlobalLocale('en-US')
@@ -152,11 +159,26 @@ describe('ChartTooltipBase', () => {
         payload={[{ name: 'x', value: 1 }]}
       />,
     )
-    // formatDateTime renders something like "Apr 30, 2026, 06:30 AM" — exact
-    // output depends on test runner's timezone, so just assert it's not the
-    // raw ISO string.
+    // Display zone pinned to UTC above: exact, host-independent output.
     expect(screen.queryByText('2026-04-30T13:30:15Z')).toBeNull()
-    expect(screen.getByText(/2026/)).toBeInTheDocument()
+    expect(screen.getByText('Apr 30, 2026, 01:30 PM')).toBeInTheDocument()
+  })
+
+  it('renders omitted-timezone ISO labels in the display zone', () => {
+    h.tz = 'America/Los_Angeles'
+    try {
+      render(
+        <ChartTooltipBase
+          active={true}
+          label="2026-04-30T13:30:15Z"
+          payload={[{ name: 'x', value: 1 }]}
+        />,
+      )
+      expect(screen.queryByText('2026-04-30T13:30:15Z')).toBeNull()
+      expect(screen.getByText('Apr 30, 2026, 06:30 AM')).toBeInTheDocument()
+    } finally {
+      h.tz = 'UTC'
+    }
   })
 
   it('passes an explicit vehicle timezone and precision to shared formatters', () => {

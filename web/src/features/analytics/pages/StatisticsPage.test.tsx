@@ -1279,7 +1279,8 @@ describe('StatisticsPage', () => {
     const { startInstant, endInstantExclusive } = calendarRangeToInstants({
       startDate: '2025-03-01',
       endDate,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      // Bare renders resolve the display zone to UTC (global timezone mock).
+      timezone: 'UTC',
     });
     const { client } = renderPage([`/statistics?from=2025-03-01&to=${endDate}`]);
     await screen.findByRole('region', { name: 'Statistics' });
@@ -1308,7 +1309,8 @@ describe('StatisticsPage', () => {
     const { startInstant, endInstantExclusive } = calendarRangeToInstants({
       startDate: '2025-03-01',
       endDate: '2025-03-15',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      // Bare renders resolve the display zone to UTC (global timezone mock).
+      timezone: 'UTC',
     });
     const { client } = renderPage(['/statistics?from=2025-03-01&to=2025-03-15']);
     await screen.findByRole('region', { name: 'Statistics' });

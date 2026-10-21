@@ -12,7 +12,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useCrossTabRefresh } from '@/hooks/useCrossTabRefresh';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { calendarRangeToInstants } from '@/lib/dateRange';
 import type { Drive } from '@/types/driving';
 import type { DriveFsdInsight } from '@/types/fsd';
@@ -94,7 +94,7 @@ export function useDrivesListPageData() {
  * zone, otherwise late-night drives appear under the wrong day in the
  * grouped list, the chart shows ghost bars on the next UTC day, and
  * the period stats undercount/overcount drives near the boundary. */
-  const tz = useTimezone('vehicle');
+  const { tz } = useDateFormat();
   const fsdRange = useMemo(
     () => calendarRangeToInstants({
       startDate,

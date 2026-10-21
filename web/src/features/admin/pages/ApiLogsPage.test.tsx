@@ -251,8 +251,8 @@ describe('ApiLogsPage', () => {
     renderPage('/api-logs?service=notify-generic&from=2026-09-19&to=2026-09-25');
 
     await waitFor(() => expect(railChip(/Notifications/)).toHaveTextContent('12'));
-    const start = new Date('2026-09-19T00:00:00').toISOString();
-    const endExclusive = new Date('2026-09-26T00:00:00').toISOString();
+    const start = new Date('2026-09-19T00:00:00Z').toISOString();
+    const endExclusive = new Date('2026-09-26T00:00:00Z').toISOString();
     expect(mockedStats).toHaveBeenCalledWith(start, endExclusive, { signal: expect.any(AbortSignal) });
     expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({
       service: 'notify-generic', start, endExclusive,
@@ -349,11 +349,10 @@ describe('ApiLogsPage', () => {
     // Scope and comparison context moved off the face into the drawer. The
     // scope shows the selected window once, end-inclusive, with no raw ISO
     // bounds, zone suffix or "exclusive end" note. (TZ-4 aligns the range
-    // computation zone with the display zone; until then the last day can
-    // read 25 or 26 depending on which zone each layer resolved, so pin the
-    // shared 'Sep 19 – 2' prefix.)
+    // computation zone with the display zone, so from=09-19&to=09-25 renders
+    // Sep 19 – 25 exactly (range and display both resolve UTC here).
     assertOperationalBriefDisclosure(range, 'View settings range:', { contains: true });
-    assertOperationalBriefDisclosure(range, 'Sep 19 – 2', { contains: true });
+    assertOperationalBriefDisclosure(range, 'Sep 19 – 25, 2026', { contains: true });
     assertOperationalBriefDisclosure(range, 'exclusive end', { contains: true, absent: true });
     assertOperationalBriefDisclosure(range, '2026-09-19', { contains: true, absent: true });
     expect(range.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
@@ -877,8 +876,8 @@ describe('ApiLogsPage', () => {
     const { router } = renderPage('/api-logs?page=3&method=GET&from=2026-09-01&to=2026-09-02');
     await requestRow('/vehicles');
     await act(() => router.navigate('/api-logs?page=3&method=GET&from=2026-09-19&to=2026-09-25'));
-    const start = new Date('2026-09-19T00:00:00').toISOString();
-    const endExclusive = new Date('2026-09-26T00:00:00').toISOString();
+    const start = new Date('2026-09-19T00:00:00Z').toISOString();
+    const endExclusive = new Date('2026-09-26T00:00:00Z').toISOString();
     await waitFor(() => expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({
       method: 'GET', offset: 0, start, endExclusive,
     })));
@@ -919,8 +918,8 @@ describe('ApiLogsPage restrained source adoption', () => {
     mockedLogs.mockResolvedValue(makeLogsResponse({ total: 200 }));
     renderPage(`/api-logs?page=${page}&size=${size}&method=POST&service=tesla-api&from=2026-09-19&to=2026-09-25`);
     await requestRow('/vehicles');
-    const start = new Date('2026-09-19T00:00:00').toISOString();
-    const endExclusive = new Date('2026-09-26T00:00:00').toISOString();
+    const start = new Date('2026-09-19T00:00:00Z').toISOString();
+    const endExclusive = new Date('2026-09-26T00:00:00Z').toISOString();
     for (const [params] of mockedLogs.mock.calls) {
       expect(params).toEqual(expect.objectContaining({
         offset: 0, limit: Number(size), method: 'POST', service: 'tesla-api', start, endExclusive,

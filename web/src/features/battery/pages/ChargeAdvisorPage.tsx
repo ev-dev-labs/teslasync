@@ -15,7 +15,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { isLiveFieldFresh, liveFieldAge, LIVE_FRESHNESS_MS, useVehicleLive } from '@/hooks/useVehicleLive';
 import { calendarRangeToInstants } from '@/lib/dateRange';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { ChargeAdvisorLiveSnapshot } from '../lib/chargeAdvisor';
 import {
   ChargeAdvisorAccounting,
@@ -46,7 +46,7 @@ export default function ChargeAdvisorPage() {
   const operationalMode = useOperationalMode();
   const liveRecommendationsBlocked = operationalMode.mode !== 'live';
   const { formatEnergy } = useUnits();
-  const timeZone = useTimezone('vehicle');
+  const { tz: timeZone } = useDateFormat();
   const vehicleIdStr = vehicleId == null ? undefined : String(vehicleId);
   const live = useVehicleLive(vehicleId ?? undefined);
   const [analysisNowMs] = useState(() => Date.now());
