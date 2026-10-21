@@ -231,3 +231,22 @@ describe('AnomalyTimelineCard', () => {
     expect(items[0].tagName).toBe('LI');
   });
 });
+
+describe('structured anomaly explanations', () => {
+ it('renders typed facts with display-unit conversion instead of legacy prose',()=>{
+  display.prefs.temperature='°F';
+  const anomaly=makeAnomaly({signal:'ModuleTempMax',unit:'°C',message:'Legacy English.',explanation_code:'above_maximum',explanation_params:{value:60,baseline:17.5,maximum:55}});
+  renderCard(anomaly);
+  expect(screen.getByText('ModuleTempMax value 140.00°F exceeds the safe maximum (131.00°F).')).toBeVisible();
+  expect(screen.queryByText('Legacy English.')).not.toBeInTheDocument();
+  expect(anomaly.explanation_params?.value).toBe(60);
+ });
+ it.each(['future_code','above_maximum','z_score'])('falls back safely for unknown or incomplete facts: %s',code=>{
+  renderCard(makeAnomaly({message:'Legacy English.',explanation_code:code,explanation_params:{value:0,baseline:0}}));
+  expect(screen.getByText('Legacy English.')).toBeVisible();
+ });
+ it('preserves a measured zero baseline without fabricating a percentage',()=>{
+  renderCard(makeAnomaly({signal:'PackVoltage',explanation_code:'trend_increased',explanation_params:{value:10,baseline:0}}));
+  expect(screen.getByText('PackVoltage increased in the last 24 hours compared with the seven-day average (0.00 to 10.00).')).toBeVisible();
+ });
+});

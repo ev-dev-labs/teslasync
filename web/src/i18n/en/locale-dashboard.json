@@ -901,6 +901,15 @@
       "emptyHint": "Select a vehicle above to explain its anomalies.",
       "generateButton": "Generate explanation",
       "title": "Helix explanation"
+    },
+    "explanation": {
+      "aboveMaximum": "{{signal}} value {{value}} exceeds the safe maximum ({{maximum}}).",
+      "belowMinimum": "{{signal}} value {{value}} is below the safe minimum ({{minimum}}).",
+      "decreased": "{{signal}} decreased in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "decreasedPercent": "{{signal}} decreased by {{percent}}% in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "increased": "{{signal}} increased in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "increasedPercent": "{{signal}} increased by {{percent}}% in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "zScore": "{{signal}} value {{value}} is {{sigma}} standard deviations from the mean ({{baseline}})."
     }
   },
   "automations": {
@@ -941,7 +950,8 @@
         "speed": "Speed",
         "state": "Vehicle state"
       }
-    }
+    },
+    "copyName": "{{name}} (copy)"
   },
   "battery": {
     "aiNarrative": {
@@ -3864,6 +3874,7 @@
     "open": "Open",
     "outside": "Outside",
     "outsideTemp": "Outside temperature",
+    "overview": "Widget overview",
     "playbackProgress": "Playback progress",
     "playing": "Playing",
     "positionHeatmap": {

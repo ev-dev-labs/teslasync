@@ -211,11 +211,11 @@ describe('resolved known-missing canonical producers', () => {
     const oldEntries = leaves(catalog)
       .filter(([key]) => !addedKeys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    expect(oldEntries).toHaveLength(30028)
+    expect(oldEntries).toHaveLength(30049)
     // User-approved current checkpoint; preserve every exact leaf/value in this partition.
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe("bfd0b367d31dc47e731d0afab57fb57de2aa9e6d8eaa15f6f6a8dd3598cd789a")
-    expect(leaves(catalog)).toHaveLength(32977)
+      .toBe("20a9e48cb8002f7a058204936f5c3c1d3f2f98cf37cd309e28032435b910d576")
+    expect(leaves(catalog)).toHaveLength(32998)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa.offline.banner).toBe(
       'Showing cached data. Operational changes stay disabled until you reconnect.',

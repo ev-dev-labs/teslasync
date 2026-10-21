@@ -81,7 +81,16 @@ func (h *AdminObservabilityHandler) VehicleCost(w http.ResponseWriter, r *http.R
 			since = t
 		}
 	}
-	rep, err := h.svc.VehicleCost(r.Context(), since, limit)
+	var until []time.Time
+	if r.URL.Query().Has("until") {
+		end, err := time.Parse(time.RFC3339, r.URL.Query().Get("until"))
+		if err != nil || since.IsZero() || !end.After(since) || end.Sub(since) > 90*24*time.Hour {
+			httputil.RespondError(w, http.StatusBadRequest, "INVALID_DATE_RANGE", "since and until must define an increasing window of at most 90 days")
+			return
+		}
+		until = []time.Time{end}
+	}
+	rep, err := h.svc.VehicleCost(r.Context(), since, limit, until...)
 	if h.handleNotConfigured(w, err, "vehicle_cost") {
 		return
 	}

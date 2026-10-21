@@ -32,5 +32,50 @@
       "skip_dc": "Skip {{site}} ({{sc}}) — home now is {{home}} for the same energy.",
       "charge_home_now": "Charge at home now — the cheapest window is already open (or too far out to wait)."
     }
+  },
+  "admin": {
+    "vehicleCost": {
+      "rangeLimit": "اختر نطاقًا لمساحة العمل لا يتجاوز 90 يومًا لعرض تكلفة استيعاب بيانات المركبات."
+    }
+  },
+  "energyFlow": {
+    "rangeLimit": "اختر نطاقًا لمساحة العمل لا يتجاوز 3650 يومًا لعرض سجل الطاقة.",
+    "summary": {
+      "selectedWindow": "نطاق مساحة العمل المحدد",
+      "boundedSource": "تُرشّح الرحلات المكتملة وفق بداية نطاق مساحة العمل ونهايته غير المشمولة؛ وتبقى القدرة المباشرة لقطة مستقلة."
+    }
+  },
+  "science": {
+    "rangeLimit": "اختر نطاقًا لمساحة العمل لا يتجاوز 30 يومًا لعرض الأدلة العلمية."
+  },
+  "chargeAdvisor": {
+    "planningWindow": "تغطي فترة التخطيط الأيام السبعة المحلية القادمة، بدءًا من الغد."
+  },
+  "automations": {
+    "copyName": "{{name}} (نسخة)"
+  },
+  "costAnalysis": {
+    "category": {
+      "home": "المنزل",
+      "supercharger": "شاحن فائق",
+      "public": "عام",
+      "publicDC": "تيار مستمر عام",
+      "workL2": "العمل / المستوى الثاني",
+      "other": "أخرى"
+    }
+  },
+  "anomaly": {
+    "explanation": {
+      "zScore": "تبعد قيمة {{signal}} البالغة {{value}} بمقدار {{sigma}} انحراف معياري عن المتوسط ({{baseline}}).",
+      "belowMinimum": "قيمة {{signal}} البالغة {{value}} أقل من الحد الأدنى الآمن ({{minimum}}).",
+      "aboveMaximum": "تتجاوز قيمة {{signal}} البالغة {{value}} الحد الأقصى الآمن ({{maximum}}).",
+      "increased": "ارتفع {{signal}} خلال آخر 24 ساعة مقارنة بمتوسط سبعة أيام (من {{baseline}} إلى {{value}}).",
+      "decreased": "انخفض {{signal}} خلال آخر 24 ساعة مقارنة بمتوسط سبعة أيام (من {{baseline}} إلى {{value}}).",
+      "increasedPercent": "ارتفع {{signal}} بنسبة {{percent}}% خلال آخر 24 ساعة مقارنة بمتوسط سبعة أيام (من {{baseline}} إلى {{value}}).",
+      "decreasedPercent": "انخفض {{signal}} بنسبة {{percent}}% خلال آخر 24 ساعة مقارنة بمتوسط سبعة أيام (من {{baseline}} إلى {{value}})."
+    }
+  },
+  "widget": {
+    "overview": "نظرة عامة على الأداة"
   }
 }

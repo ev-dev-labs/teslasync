@@ -26,3 +26,30 @@ export function gasEquivalentCost(
   const price = Number.isFinite(gasPrice) ? gasPrice : 0;
   return (kwh / KWH_PER_GALLON) * price;
 }
+
+/** Stable category codes are distinct from server/user display names. */
+export function chargerCategoryLabel(
+  t: (key: string, fallback: string) => string,
+  code: string,
+  suppliedName?: string | null,
+): string {
+  if (suppliedName != null) return suppliedName;
+  switch (code) {
+    case 'home': return t('costAnalysis.category.home', 'Home');
+    case 'supercharger': return t('costAnalysis.category.supercharger', 'Supercharger');
+    case 'public': return t('costAnalysis.category.public', 'Public');
+    case 'public_dc': return t('costAnalysis.category.publicDC', 'Public DC');
+    case 'work_l2': return t('costAnalysis.category.workL2', 'Work / L2');
+    case 'other': return t('costAnalysis.category.other', 'Other');
+    default: return code;
+  }
+}
+
+export function chargerCategoryCode(session: ChargingSession): string {
+  const raw = session.charger_type;
+  const code = raw?.toLowerCase();
+  if (code && ['home','supercharger','public','public_dc','work_l2','other'].includes(code)) return code;
+  if (raw && !/^(?:tesla\b|supercharger\b|ccs\b|ac$|dc$|type[ _-]?2$|j1772$)/i.test(raw)) return raw;
+  const category = categorizeCharger(session);
+  return ({Home:'home',Supercharger:'supercharger','Public DC':'public_dc','Work / L2':'work_l2'} as Record<string,string>)[category] ?? category;
+}

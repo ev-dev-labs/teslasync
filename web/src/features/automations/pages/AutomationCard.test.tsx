@@ -106,8 +106,21 @@ function makeHandlers() {
     onReEnable: vi.fn(),
     onDelete: vi.fn(),
     onTestRun: vi.fn(),
+    onDuplicate: vi.fn(),
   };
 }
+
+it('duplicates only after an explicit action and forwards the exact automation ID', () => {
+  const handlers = makeHandlers();
+  renderCard(makeAutomation({ id: 42 }), { handlers });
+  expect(handlers.onDuplicate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Actions for Precondition at 7am' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Duplicate' }));
+  expect(handlers.onDuplicate).toHaveBeenCalledExactlyOnceWith(42);
+  expect(handlers.onDelete).not.toHaveBeenCalled();
+  expect(handlers.onTestRun).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Actions for Precondition at 7am' })).toHaveAttribute('aria-expanded', 'false');
+});
 
 function renderCard(
   automation: Automation,
@@ -131,6 +144,7 @@ function renderCard(
       onReEnable={handlers.onReEnable}
       onDelete={handlers.onDelete}
       onTestRun={handlers.onTestRun}
+      onDuplicate={handlers.onDuplicate}
     />,
     { wrapper: Wrapper },
   );
@@ -310,7 +324,7 @@ describe('AutomationCard — actions menu', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'Test run' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Duplicate' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     // Re-enable is hidden unless the automation is auto-disabled.
     expect(screen.queryByRole('button', { name: 'Re-enable' })).not.toBeInTheDocument();

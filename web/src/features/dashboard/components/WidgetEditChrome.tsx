@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  GripHorizontal,
   Maximize2,
   Move,
   Settings,
@@ -62,17 +61,7 @@ export function WidgetEditChrome({
   };
 
   return (
-    <div className="widget-edit-overlay pointer-events-none absolute inset-0 z-10">
-      <div
-        className="widget-edit-toolbar widget-drag-handle pointer-events-auto absolute left-0 right-0 top-0 flex min-h-11 cursor-grab items-center justify-between
-          rounded-t-xl border-b border-[var(--border-default)] bg-[var(--surface-1)] px-2
-          active:cursor-grabbing"
-      >
-        <div className="flex min-w-0 items-center gap-1">
-          <GripHorizontal className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-          <Caption className="truncate">{def.name}</Caption>
-        </div>
-        <div className="flex shrink-0 items-center gap-0.5">
+    <div className="widget-edit-controls flex shrink-0 items-center gap-2">
           <Button
             ref={arrangeButtonRef}
             type="button"
@@ -118,8 +107,6 @@ export function WidgetEditChrome({
           >
             <X className="h-3.5 w-3.5" />
           </Button>
-        </div>
-      </div>
 
       <Popover
         open={arrangeOpen}
@@ -240,13 +227,6 @@ export function WidgetEditChrome({
         </div>
       </Popover>
 
-      <div className="absolute bottom-1 right-1 opacity-0 transition-opacity group-hover:opacity-50">
-        <Maximize2 className="h-3 w-3 text-[var(--text-muted)]" />
-      </div>
-      <div
-        className="pointer-events-none absolute inset-0 rounded-xl border-2 border-transparent
-          transition-colors group-hover:border-[var(--theme-primary)]/30"
-      />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
@@ -570,5 +571,48 @@ export function useInstallRoutine() {
       success('toast.automations.routine.success', 'Routine installed');
     },
     onError: (err) => error(err, 'toast.automations.routine.error', 'Failed to install routine'),
+  });
+}
+
+/** Copies only the typed create contract, never IDs or execution state. */
+export function automationCopyInput(full: AutomationFull, name: string): AutomationFullInput {
+  const fields: Record<string, readonly string[]> = {
+    trigger_signal:['signal','op','value_num','value_text','value_bool'],
+    trigger_geofence:['place_id','event','dwell_minutes'],
+    trigger_schedule:['cron_expr','timezone'], trigger_event:['event_type'],
+    condition_signal:['signal','op','value_num','value_text','value_bool','value_min','value_max'],
+    condition_time_window:['start_time','end_time','timezone','days_of_week'],
+    condition_geofence:['place_id','state'], condition_other_automation:['other_automation_id','state'],
+    action_command:['command_name','command_params'], action_notify:['channel_id','template'],
+    action_wait:['duration_s'], action_set_setting:['setting_key','value_num','value_text','value_bool'],
+    action_call_automation:['target_automation_id'],
+  };
+  const copyStep = (step: AutomationStepInput): AutomationStepInput => {
+    const allowed = fields[step.kind];
+    if (!allowed) throw new Error('Unsupported automation step kind');
+    const record = step as unknown as Record<string, unknown>;
+    return structuredClone(Object.fromEntries(['kind','step_order',...allowed]
+      .filter(key => record[key] !== undefined).map(key => [key,record[key]]))) as AutomationStepInput;
+  };
+  return {name,description:full.description ?? undefined,vehicle_id:full.vehicle_id,enabled:false,
+    triggers:full.triggers.map(copyStep) as AutomationTriggerInput[],
+    conditions:full.conditions.map(copyStep) as AutomationConditionInput[],
+    actions:full.actions.map(copyStep) as AutomationActionInput[]};
+}
+
+export function useDuplicateAutomation() {
+  const qc = useQueryClient();
+  const { t } = useTranslation();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const full = await request<AutomationFull>(`/automations/${id}`);
+      const input = automationCopyInput(full, t('automations.copyName', '{{name}} (copy)', {name:full.name}));
+      return request<AutomationFull>('/automations', {method:'POST',requiresLiveMode:true,
+        headers:{'Content-Type':'application/json'},body:JSON.stringify(input)});
+    },
+    networkMode:'always',
+    onSuccess:()=>{invalidateAndBroadcast(qc,{queryKey:automationKeys.all});success('toast.automation.create.success','Automation created');},
+    onError:(err)=>error(err,'toast.automation.create.error','Failed to create automation'),
   });
 }

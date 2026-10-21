@@ -484,6 +484,20 @@ describe('useVehicleCost', () => {
     expect(url).toContain('since=2025-01-02T03%3A04%3A05.000Z');
   });
 
+  it('includes the exclusive end in the wire query and cache identity', async () => {
+    requestMock.mockResolvedValue(envelope(payload));
+    const since=new Date('2026-01-01T08:00:00Z');
+    const {result,rerender}=renderHook(({until})=>useVehicleCost(since,100,until),{
+      initialProps:{until:new Date('2026-01-03T08:00:00Z')},wrapper:makeWrapper(),
+    });
+    await waitFor(()=>expect(result.current.isSuccess).toBe(true));
+    const url=new URL(firstUrl(),'https://example.test');
+    expect(url.searchParams.get('since')).toBe(since.toISOString());expect(url.searchParams.get('until')).toBe('2026-01-03T08:00:00.000Z');
+    rerender({until:new Date('2026-01-04T08:00:00Z')});
+    await waitFor(()=>expect(requestMock).toHaveBeenCalledTimes(2));
+    expect(operatorConfidenceKeys.vehicleCost(since.toISOString(),100,'2026-01-03T08:00:00.000Z')).not.toEqual(operatorConfidenceKeys.vehicleCost(since.toISOString(),100,'2026-01-04T08:00:00.000Z'));
+  });
+
   it('does NOT crash render for an invalid Date — degrades to no since filter', async () => {
     requestMock.mockResolvedValueOnce(envelope(payload));
     // new Date('nonsense') yields an Invalid Date; an unguarded

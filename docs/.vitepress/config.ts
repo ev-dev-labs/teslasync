@@ -1,11 +1,10 @@
 import { defineConfig } from 'vitepress'
-import { withMermaid } from 'vitepress-plugin-mermaid'
 
 // teslasync.dev serves the site from /. Forks without a custom domain can
 // set DOCS_BASE to their GitHub Pages project path (e.g. /teslasync/).
 const base = process.env.DOCS_BASE || '/'
 
-export default withMermaid(defineConfig({
+export default defineConfig({
   title: 'TeslaSync Docs',
   titleTemplate: ':title — TeslaSync Docs',
   description:
@@ -76,6 +75,15 @@ export default withMermaid(defineConfig({
   },
 
   markdown: {
+    config(md) {
+      const fence = md.renderer.rules.fence!
+      md.renderer.rules.fence = (tokens, index, options, env, self) => {
+        if (tokens[index].info.trim() === 'mermaid') {
+          return `<MermaidDiagram :source="${md.utils.escapeHtml(JSON.stringify(tokens[index].content))}" />`
+        }
+        return fence(tokens, index, options, env, self)
+      }
+    },
     theme: { light: 'github-light', dark: 'github-dark' },
     image: { lazyLoading: true },
   },
@@ -219,16 +227,4 @@ export default withMermaid(defineConfig({
     lastUpdatedText: 'Updated',
   },
 
-  mermaid: {
-    theme: 'neutral',
-    themeVariables: {
-      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-      primaryColor: '#f5f4f0',
-      primaryTextColor: '#1c1917',
-      primaryBorderColor: '#e82127',
-      lineColor: '#78716c',
-      secondaryColor: '#fafaf9',
-      tertiaryColor: '#ffffff',
-    },
-  },
-}))
+})

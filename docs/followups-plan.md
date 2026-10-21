@@ -1,6 +1,273 @@
 # Post-redesign follow-ups — plan
 
-## Current status — 2026-10-20 CI closeout
+## Post-merge execution — 2026-10-20
+
+Base: `origin/main` at `e6c401fba1` (PR #198 squash `c353a59399`).
+Branch: `fix/post-merge-followups`; draft [PR #202](https://github.com/ev-dev-labs/teslasync/pull/202).
+No old branch merges or cherry-picks.
+The historical branch instructions and decision options below are superseded
+by the owner's explicit post-merge task. Draft PR only; never merge it.
+
+- A1–3: implemented; full local verification passed — header-owned, server-bounded vehicle cost, energy flow,
+  science lab; retain 90-day / 3650-day / 30-day ceilings respectively.
+- A4: implemented, full local verification passed — independent future planning; remove historical header coupling.
+- A5: implemented, full local verification passed — translate stable categories, preserve supplied names/unknown codes.
+- A6: implemented, full local Go/frontend verification passed — typed facts localize in both
+  the timeline and dashboard widget, with unit conversion and legacy prose fallback.
+- A7: implemented — disabled duplicate through create API, then open its editor.
+  Export hidden: the existing portable endpoint forwards arbitrary
+  `CommandParams` and `action_set_setting` text without secret redaction
+  (`internal/api/automation/handler.go`, `automationStepRawMessage`). A JSON
+  download cannot currently guarantee the requested secret-free contract.
+  No non-working Export control remains.
+- A8: NEEDS OWNER DECISION — Insurance "0..60" policy remains unresolved;
+  its audit origin is traced below. No guessed change.
+- B: re-check completed: web 9 (7 high, 2 moderate), docs 2 low to 0. Published
+  braces 3.0.3, micromatch 4.0.8 and x/crypto v0.58.0 still have no newer fix.
+  Mermaid plugin 2.0.17 still peers only Mermaid 10/11; replaced it with the
+  verified direct integration below. Tailwind belongs exclusively to Part C.
+- Additional owner item: DONE; PR202 remote CI GREEN, final local browser refresh PASS — shared widget-header freshness ownership, corner/action geometry, all-widget guard, reviewed Windows snapshots and eight light/dark responsive dashboard captures. Complete before the remaining CI loop and Part C.
+- C: IN PROGRESS — chore/tailwind-v4 branches from unmerged PR202 head f84aad0ce7, with199 successful checks and one existing conditional skip. Separate draft PR targets main and depends on #202.
+
+Insurance origin (owner decision still required): audit F08 in
+`docs/frontend-audits/phase6-qa-ownership-insurance-telematics.json` (introduced
+by `acb9513fe2`) means maximum telematics discount. Current backend
+`internal/app/ownershipintelsvc/insurance.go:671` validates 0..60; current form
+`web/src/features/ownership/pages/InsuranceTelematicsPage.tsx:738` allows 100.
+No insurance issues were returned by the GitHub issue search. The owner
+explicitly requested no implementation, so neither bound was changed.
+
+Security re-check evidence (2026-10-20): docs Mermaid 11.17.2 to 12.2.0 via a
+small direct Vue/markdown integration; removed the Mermaid plugin. Kept neutral
+theme tokens, explicitly retained Dagre layout, strict rendering and keyboard
+zoom. `npm run docs:build` passes; all 20 diagrams on seven pages produce SVGs,
+zero browser errors. Docs npm audit: 2 low to 0. Web remains 9 (7 high, 2
+moderate); no published braces/micromatch fix, Tailwind reserved for Part C.
+x/crypto v0.58.0 remains latest; govulncheck reports 0 affecting / 1 uncalled
+module vulnerability ([GO-2026-5932](https://pkg.go.dev/vuln/GO-2026-5932),
+unmaintained OpenPGP package, fixed version N/A). No forced audit fixes or workflow changes.
+The direct integration follows the [Mermaid render API](https://mermaid.js.org/config/usage.html)
+and [VitePress theme component extension](https://vitepress.dev/guide/extending-default-theme).
+
+Dependabot has 2 open alerts (web medium, docs low), fewer than the historical
+inventory. Alerts track main; the docs alert can close after owner merge and rescan. Only open Dependabot PR: [#200 nginx
+1.31.5 to 1.31.7](https://github.com/ev-dev-labs/teslasync/pull/200), a patch
+upgrade with no expected configuration migration. Backend/database/race/build
+checks passed (latest inventory: 42 passing checks, 1 failure); Security Scan
+failed on 12 old Go stdlib vulnerabilities in
+run39164557505. Recommendation: update/retest against current main, then merge
+only after green CI; do not merge while that security check is red. Not merged.
+
+Verification: full local CI replica required before each push, followed by
+remote checks on the exact pushed commit. Temporary reports stay outside Git.
+
+### C migration setup — 2026-10-21
+
+Branch `chore/tailwind-v4` starts at `f84aad0ce7`, the verified unmerged A/B
+branch. Separate draft PR to main; owner must merge #202 first. The official
+[Tailwind v4 upgrade guide](https://tailwindcss.com/docs/upgrade-guide) and
+published4.3.3 tool/plugin versions were checked. Use the official upgrader,
+CSS-first configuration and native container queries. Keep all tokens, exact
+accent behavior and themes; do not accept default v4 palette/shape drift.
+The complete v3 resolved configuration, source CSS/config/dependencies and49
+Windows baseline PNGs are saved under `D:/tmp/tailwind-v3-reference` before
+any dependency changes. Browser previews and backend are stopped.
+
+A/B final production build and complete strict perf:check pass399.6KB/400KB.
+Isolated performance9/9 passes with zero proxy escapes. The full local replica
+is complete on the source this planning commit inherits; only documentation
+changes follow it. No workflow or test threshold changes.
+
+### A/B outcome and final verification — 2026-10-21
+
+PR202 is green at `f84aad0ce7`:199 successful checks and one existing conditional
+skip. CI, Frontend Quality, Security and Performance workflows all succeeded.
+A1–6 are complete with backend/frontend regression coverage; A7 Duplicate is
+complete and intentionally disabled on creation. A7 Export is safely hidden
+because the API forwards arbitrary values without redaction. A8 remains an
+owner decision; no range policy was guessed. The shared dashboard header item
+is complete with one header-owned dot,44px icon targets directly to its left,
+16px corner inset and a28px title line that preserves widget body space.
+All121 registry widgets pass min/default/large x view/edit geometry (726 rows),
+and all eight375/768/1280/1920 light/dark captures are saved outside Git.
+
+Fresh local security-environment results:57,191 units pass (four existing
+pending);2,029 quality pass (two existing skips);49 Windows visual pass
+(41 existing profile skips); a11y13, Firefox/WebKit6 and isolated performance9 pass. Zero retries,
+failures or proxy escapes. Complete lint/audits, TypeScript, route registries,
+contracts, catalog checks, Go1.27.3 build/test/generator and pinned Go lint pass.
+Exactly five intended dashboard baselines were reviewed before regeneration;
+the corrected28px header produces byte-identical images to those reviewed
+baselines. No tolerance, test skip, workflow or coverage changes.
+
+Security before/after: initial web9/docs2 low became9/0 after Mermaid12/direct
+rendering. Newly published Vite advisories temporarily raised this to10/2
+(1 high/1 moderate in docs); Vite6.4.4 restores9/0. The remaining web development
+chains are unpatched braces3.0.3/micromatch4.0.8 and Tailwind3 dependencies;
+Tailwind is handled separately in C, with no unsafe downgrade/override.
+The refreshed Go1.27.2 scan found one reachable x509 issue; Go1.27.3 restores
+zero reachable/imported findings, with one uncalled OpenPGP module finding
+and no published x/crypto fix. Dependabot #200 remains patch-safe in scope but
+not merge-ready:42 passing checks and one old-Go Security Scan failure.
+Recommendation: rebase/retest against the security-fixed branch after owner
+merge, then merge only when green. No Dependabot PR was merged.
+
+The A/B source head stays unchanged and green. Its documentation closeout is
+carried into the separate C planning commit, rather than changing the already
+verified source head. C branches from this unmerged A/B head, and its draft PR
+targets main to run the complete workflow matrix. No old branch merge or
+cherry-pick is involved. Insurance discount bounds need the owner's decision;
+Export needs a backend redaction contract before it can be restored.
+
+### Latest security refresh — 2026-10-21 02:05 UTC
+
+Vite6.4.4 now replaces6.4.3 in web and the docs override, addressing the
+[Windows existence-check advisory](https://github.com/advisories/GHSA-587h-7wmj-h5pm),
+[Windows argument-escaping advisory](https://github.com/advisories/GHSA-698v-4r3x-3vcv)
+and [editor argument advisory](https://github.com/advisories/GHSA-r825-w8mm-5pxw).
+A final refresh had raised audits to web10/docs2; after sequential single-package
+updates with all tests/previews stopped, web returns9 (7 high/2 moderate), docs0.
+Only Vite versions changed; npm also normalized three web lockfile dev flags.
+Patched private/mock/docs builds and full strict perf:check pass (399.6KB/400KB).
+All20 Mermaid diagrams on seven pages render, zero browser errors; no snapshots
+changed for dependency patches.
+
+A refreshed Go scan newly reports reachable GO-2026-6809 in Go1.27.2 x509,
+fixed in1.27.3. Raised go.mod to1.27.3 and the automatic Windows toolchain is
+verified. All workflows already use go-version-file; Docker follows1.27, so
+no workflow edits. Go build/test and route generation pass. CI-pinned
+golangci-lint2.15.0 rebuilt with1.27.3 reports0 issues; govulncheck now
+reports0 reachable/0 imported-package/1 uncalled-module vulnerabilities.
+x/crypto0.58.0 remains latest; uncalled OpenPGP GO-2026-5932 has no fixed version.
+The previous fully passing header-source unit/browser sweep is preserved in
+the progress log; the full replica repeats after these environment patches.
+Tailwind v4 still waits for PR202 to pass every remote check.
+
+### Additional owner item — shared widget freshness header
+
+Implemented on `fix/post-merge-followups`; complete local/remote verification
+is still in progress before the next push. Root cause: DashboardGrid reserved
+`pr-28` for a separate absolute expand target, while edit controls and title-less
+freshness used independent overlays. The shared shell now spans the widget,
+uses one horizontal inset, and owns the sole dot after one compact action cluster.
+The grid supplies controls through context, including inline edit actions.
+VehicleHero keeps its state badge/provenance without its body freshness or badge
+dot. Static widgets show a neutral untimestamped dot; title-less widgets use the
+same translated fallback header. These choices avoid inventing observation times.
+
+- Extended original overflow guard: all121 registry widgets x min/default/large
+  x view/edit pass (726 rows), with exactly one dot, <=2px right-inset/centering
+  deltas, <=8px action gaps, zero missing widgets and zero proxy escapes.
+- Added body import-ownership and real charging-hero regressions, fetching-dot
+  continuity and inline grid-header unit coverage. The ownership test and full
+  header guard were red before the change. Consumer tests preserve loading,
+  retained-data, error-color and refresh assertions under the new header contract.
+- Added eight responsive smoke cases with screenshots at375/768/1280/1920,
+  light/dark, asserting hover and edit alignment. First complete run8/8, proxy0.
+- Compared original/new dashboard frames before regeneration. Updated only five
+  intended Windows baselines: visual-390-dark, visual-390-light,
+  visual-1440-dark, visual-1440-light and visual-forced-colors. Differences are
+  the shared corner indicator and consistent header-line height (body links move
+  with that line). Degraded profile unchanged. Targeted regeneration5/5, proxy0.
+- Visual fixture correction: its legacy8.5rem freshness text-width pin distorted
+  new widget icon geometry. Scoped that pin to non-widget controls; widget
+  snapshots now use actual production geometry. Masks, threshold0.1,
+  maxDiffPixels500 and all assertions remain unchanged. No workflow edits.
+- Private production build and complete strict perf:check pass at399.7KB startup,
+  with the400KB limit unchanged. Generated translations/source checkpoints use
+  repository generators and LF normalization. No temporary captures/reports added
+  to Git. Final full-unit and browser-matrix results will be recorded below.
+
+### Latest local correction — 2026-10-21 01:20 UTC
+
+The44px target correction exposed two driving/1440 catalogue failures:
+Speed discipline was clipped because the header line grew16px. The shared
+action cluster now keeps its28px title line while44px hit targets fit inside
+the existing header padding. This retains body space, target size, tight
+spacing and dot alignment. Eight responsive guards also check action bounds.
+Focused66 tests pass; translations/source fingerprints are generator-verified.
+Fresh mock build, all726 registry rows, eight responsive cases and eight
+repeated driving cases pass, zero escapes. Five final dashboard PNGs are byte-
+identical to the reviewed f6d6be4106 versions; restored them after comparison,
+discarding the intermediate taller-header captures. Dashboard6/6 pass. Full
+replica continues; the32-worker unit run hit two30s source-scan timeouts, so
+the entire affected shard repeats under its two-worker limit. No timeout
+change. The previous full units were
+57,191/0/4 existing pending, direct lint/Go/strict private perf all green
+(399.7KB/400KB), but previous-artifact browsers do not count for this correction.
+No per-widget patch, assertion relaxation or workflow change.
+
+### Header verification correction — 2026-10-21 00:50 UTC
+
+The first full sweep exposed an existing44px Expand target requirement in four
+catalogue-workspace cases. Restored44px Expand and edit controls with8px gaps,
+and changed the collision guard to the requested icons-left/dot-right order.
+The guard retains44px minimums, keyboard/no-hover visibility, exact native hit
+targets, readable text and minimum8px spacing, adding maximum8px spacing.
+All four cases pass. All726 registry rows and eight responsive capture cases
+pass again with zero proxy escapes after the correction.
+
+Compared the five affected Windows dashboard frames before regeneration again:
+the only additional difference is the intentional44px header-line height and
+dependent content displacement. Updated390light/dark,1440light/dark and
+forced-colors; degraded unchanged. Comparison and eight final responsive shots
+are in D:/tmp/widget-touch-* outside Git. No tolerance or mask changes.
+
+Remote f6d6be4106 WebKit3/3 job118970569625 passed assertions but the preview
+correctly rejected a late settings request. Its mobile navigation test omitted
+the existing strict mock-completion guard used by its siblings. Added that
+assertion/drain; both engines repeated three times pass18/18, zero escapes.
+Full local matrices are repeating before the next explicit branch push.
+No workflow changes.
+
+### A/B local verification — 2026-10-20 15:38 UTC
+
+- All 16 quality shards: 2,021 passed, 2 existing conditional skips, no flaky
+  or failed tests; all 10 Windows visual shards: 49 passed, 41 existing
+  profile skips, no baseline or tolerance changes. Every wrapper reports
+  zero proxy escapes. Backend/Docker services remain stopped.
+- Accessibility 13/13, Firefox/WebKit 6/6, isolated performance 9/9, and Edge
+  guard 35/35 on the seven affected routes at 375/414/768/1280/1920 passed.
+- Full Vitest: 57,184 passed, 0 failed, 4 existing pending. TypeScript, full
+  lint and audits, production/postbuild, hermetic mock build, route generator
+  checks, route/scenario/harness contracts and discovery passed. Go build,
+  full tests and golangci-lint passed. Generated freshness verified all 281
+  registered paths without mutation. Docs build/assets/diagrams passed.
+- Browser corrections preserve all assertions: Science pins the shared
+  header's exact “Last 30 days” label and all five API bounds. Telemetry holds
+  every live request through its explicit release, so background polling
+  cannot consume the refresh barrier. Affected full shards pass with retries
+  disabled. Playwright cache garbage collection interrupted an earlier run;
+  restored the exact pinned official browsers and reran every affected shard.
+- Frozen producer/catalog fingerprints were regenerated by repository tools
+  after English/Arabic/Hebrew verification; no hashes were edited manually.
+  No workflow, coverage, test-skip, visual-tolerance or baseline changes.
+- Pushed ce1e14ddff after its stable-HEAD production rebuild/postbuild passed.
+  Remote validation: CI39450664946 / Frontend Quality39450664732 running.
+  Part C remains gated on fully green A/B CI.
+
+### PR #202 CI correction — 2026-10-20 16:08 UTC
+
+Initial head ce1e14ddff completed with 198 passing checks, one existing
+conditional skip and one failure. Lighthouse's strict preflight found startup
+JavaScript400.5KB over the unchanged400KB budget; actual Lighthouse measurements
+had not run. The exact local private-map build reproduced it.
+
+Deferred the closed tour launcher using the existing command-palette event/initialOpen
+pattern; the first opening request, close/reopen and seen state remain covered.
+The new regression failed before and passed after; focused layout/launcher110
+passed. Complete private build and perf:check now pass at399.6KB, including
+translation locality and duplicate-module gates. No budget/workflow changes.
+The catalog generator moved11 unchanged tour strings into their existing lazy
+bundle (1262 startup keys). Verified translations and regenerated both source
+and shell-preservation pins with repository generators, LF-normalized.
+
+Full unit rerun:57,185 passed with one stale Layout pin; after generator refresh,
+all8,110 i18n tests pass. Other unit source files remain unchanged. The complete
+browser replica is running again against the committed application source before
+the next push; interrupted resource-contention attempts do not count as passes.
+
+## Historical CI closeout — 2026-10-20 CI closeout
 
 Current working branch is `ui/simplification`, draft PR #198; the branch note
 and baseline results below describe historical work, not a new checkout instruction.

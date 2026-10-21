@@ -28,6 +28,7 @@ interface AutomationCardProps {
   onReEnable: (id: number) => void;
   onDelete: (id: number) => void;
   onTestRun: (id: number) => void;
+  onDuplicate?: (id: number) => void;
   actionsDisabled?: boolean;
   actionsDisabledReason?: string;
 }
@@ -40,6 +41,7 @@ export function AutomationCard({
   onReEnable,
   onDelete,
   onTestRun,
+  onDuplicate,
   actionsDisabled = false,
   actionsDisabledReason,
 }: AutomationCardProps) {
@@ -115,6 +117,7 @@ export function AutomationCard({
               actionsDisabled={actionsDisabled}
               actionsDisabledReason={actionsDisabledReason}
               onTestRun={onTestRun}
+              onDuplicate={onDuplicate}
               onReEnable={onReEnable}
               onRequestDelete={() => setConfirmDelete(true)}
             />

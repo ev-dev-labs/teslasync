@@ -597,7 +597,7 @@ describe('UptimeMonitorWidget — graceful degradation on transient error', () =
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // … and the freshness indicator is in its error state (danger dot).
-    expect(screen.getByRole('button', { name: 'Refresh data · Error · just now' }).querySelector('[aria-hidden="true"].rounded-full'))
+    expect(screen.getByRole('button', { name: 'Refresh data · error · just now' }).querySelector('[aria-hidden="true"].rounded-full'))
       .toHaveClass('bg-[var(--semantic-danger)]');
   });
 });

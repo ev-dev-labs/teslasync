@@ -34,6 +34,7 @@ const LIVE_ONLY_MUTATIONS = {
     'useBulkAutomationsUpdate',
     'useTestRunAutomation',
     'useCreateAutomationFull',
+    'useDuplicateAutomation',
     'useUpdateAutomationFull',
   ],
   'hooks/useCharging.ts': ['useApplySchedule', 'useBulkDeleteCharging', 'useAutopilotRun'],

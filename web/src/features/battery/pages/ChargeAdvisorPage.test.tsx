@@ -10,7 +10,8 @@ import type { VehicleLiveState } from '@/hooks/useVehicleLive';
 import type { OperationalModeContextValue } from '@/hooks/useOperationalMode';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { ChargeAdvisorChargingTiming } from '../components/charge-advisor/ChargeAdvisorChargingTiming';
-import { computeChargeAdvice } from '../lib/chargeAdvisor';
+import { chargeAdvisorCoverageWindow, computeChargeAdvice } from '../lib/chargeAdvisor';
+import { calendarRangeToInstants } from '@/lib/dateRange';
 
 const FROZEN_NOW = Date.parse('2026-06-02T12:00:00.000Z');
 const h = vi.hoisted(() => ({
@@ -32,6 +33,7 @@ const h = vi.hoisted(() => ({
   driveRefetch: vi.fn(),
   chargingRefetch: vi.fn(),
   adviceHook: vi.fn(),
+  rangeHook: vi.fn(),
   provenance: null as VehicleLiveState['advisorProvenance'] | null,
   observations: null as null | {
     batteryLevelObservation: { present: boolean; valid: boolean; value: number | null };
@@ -100,10 +102,10 @@ vi.mock('@/hooks/useOperationalMode', () => ({
 }));
 
 vi.mock('@/hooks/useRangeState', () => ({
-  useRangeState: () => ({
+  useRangeState: () => { h.rangeHook(); return ({
     startInstant: h.historyWindow.start,
     endInstantExclusive: h.historyWindow.end,
-  }),
+  }); },
 }));
 
 vi.mock('@/lib/timezone', async (importOriginal) => {
@@ -310,7 +312,8 @@ beforeEach(() => {
     writeBlockReason: null, canWrite: true,
   };
   h.timeZone = 'America/Los_Angeles';
-  h.historyWindow = { start: '2026-05-01T07:00:00.000Z', end: '2026-06-02T12:00:00.000Z' };
+  const bounds = calendarRangeToInstants({ startDate: chargeAdvisorCoverageWindow(FROZEN_NOW,h.timeZone).startDate, endDate: chargeAdvisorCoverageWindow(FROZEN_NOW,h.timeZone).lastCompleteDate, timezone:h.timeZone });
+  h.historyWindow = { start: bounds.startInstant, end: new Date(FROZEN_NOW).toISOString() };
   h.drives = query(readyDrives(), {}, h.driveRefetch);
   h.charging = query([chargingAt('2026-05-30')], {}, h.chargingRefetch);
   h.calendar = query(readyDrives());
@@ -397,13 +400,17 @@ describe('ChargeAdvisorPage', () => {
     expect(analysis.chargingProfile.startsByHour[3]).toBe(2.75);
   });
 
-  it('changes both history bounds without moving tomorrow-first planning dates', () => {
+  it('keeps history and tomorrow-first planning independent of the workspace header', () => {
     const view = renderPage();
     expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
     expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
     expect(within(screen.getByTestId('charge-advisor-directory')).getByText('2026-06-03')).toBeInTheDocument();
+    const original = {...h.historyWindow};
     h.historyWindow = { start: '2026-05-10T15:42:19.125Z', end: '2026-05-20T15:42:19.125Z' };
     view.rerenderPage();
+    expect(h.rangeHook).not.toHaveBeenCalled();
+    h.historyWindow = original;
+    expect(screen.getByText('The planning window covers the next seven local days, starting tomorrow.')).toBeVisible();
     expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
     expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
     expect(within(screen.getByTestId('charge-advisor-directory')).getByText('2026-06-03')).toBeInTheDocument();

@@ -36,7 +36,7 @@ type hypertablePort interface {
 // ingestXRayPort is the narrow per-vehicle-cost surface Service depends
 // on.
 type ingestXRayPort interface {
-	VehicleCostReport(ctx context.Context, since time.Time, limit int) (*dbobs.VehicleCostReport, error)
+	VehicleCostReport(ctx context.Context, since time.Time, limit int, until ...time.Time) (*dbobs.VehicleCostReport, error)
 }
 
 // rotationPort is the narrow secret-rotation surface Service depends on.
@@ -173,14 +173,14 @@ func (s *Service) SlowQueries(ctx context.Context, orderBy dbobs.SlowQueryOrderB
 }
 
 // VehicleCost returns the per-vehicle cost report.
-func (s *Service) VehicleCost(ctx context.Context, since time.Time, limit int) (*dbobs.VehicleCostReport, error) {
+func (s *Service) VehicleCost(ctx context.Context, since time.Time, limit int, until ...time.Time) (*dbobs.VehicleCostReport, error) {
 	if s == nil || s.ingestXRay == nil {
 		return nil, ErrNotConfigured
 	}
 	if since.IsZero() {
 		since = s.now().Add(-30 * 24 * time.Hour)
 	}
-	return s.ingestXRay.VehicleCostReport(ctx, since, limit)
+	return s.ingestXRay.VehicleCostReport(ctx, since, limit, until...)
 }
 
 // DiskForecast returns per-hypertable size + days-to-quota.

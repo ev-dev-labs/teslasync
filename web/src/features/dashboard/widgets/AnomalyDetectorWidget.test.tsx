@@ -429,3 +429,13 @@ describe('AnomalyDetectorWidget — compact', () => {
     expect(screen.getByText('No anomalies')).toBeInTheDocument();
   });
 });
+
+it('uses localized structured anomaly facts in dashboard tips while retaining the prose fallback', () => {
+ useAnomaliesMock.mockReturnValue(makeResult({data:makeData([makeEntry({
+  signal:'ModuleTempMax',unit:'°C',message:'Legacy detector prose.',
+  explanation_code:'above_maximum',explanation_params:{value:60,baseline:17.5,maximum:55},
+ })])}));
+ renderWidget();
+ expect(screen.getByText('ModuleTempMax value 60.00°C exceeds the safe maximum (55.00°C).')).toBeVisible();
+ expect(screen.queryByText('Legacy detector prose.')).not.toBeInTheDocument();
+});

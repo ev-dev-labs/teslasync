@@ -11,6 +11,7 @@ import { cn } from '@/lib/cn';
 import { Button as UiButton, GlassPanel, Modal, SectionTitle } from '@/components/ui';
 import { EmptyState, Skeleton, SectionErrorBoundary } from '@/components/feedback';
 import { getWidgetDef } from '../widgets/registry';
+import { WidgetHeaderContext } from '../widgets/WidgetHeaderContext';
 import { kioskPanelStyle } from '../lib/kioskAppearance';
 import {
   GRID_BREAKPOINTS, GRID_COLS, ROW_HEIGHT, GRID_MARGIN,
@@ -609,6 +610,29 @@ export const DashboardGrid = memo(function DashboardGrid({
     if (!def) return null;
     const Component = def.component;
     const size = getWidgetSizeLive(widget.id);
+    const headerActions = editMode ? (
+          <WidgetEditChrome
+            def={def}
+            onRemove={() => onRemoveWidget(widget.id)}
+            onSettings={() => onOpenSettings(widget.id)}
+            onArrange={(action) => arrangeWidget(widget.id, action)}
+            arrangeAvailability={getArrangeAvailability(widget.id, def)}
+          />
+    ) : (
+          <UiButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setFullscreenWidget(widget.id)}
+            className="h-11 w-11 p-0 rounded-lg bg-[var(--surface-overlay)]
+              text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-overlay)]
+              opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity
+              pointer-events-none group-hover:pointer-events-auto focus-visible:pointer-events-auto"
+            aria-label={t('dashboard.grid.expandLabel', 'Expand {{name}}', { name: def.name })}
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </UiButton>
+    );
 
     return (
       <div
@@ -622,34 +646,6 @@ export const DashboardGrid = memo(function DashboardGrid({
           widget.id === droppedId && 'widget-just-dropped',
         )}
       >
-        {/* Edit mode chrome provides both drag handles and discrete layout controls. */}
-        {editMode && (
-          <WidgetEditChrome
-            def={def}
-            onRemove={() => onRemoveWidget(widget.id)}
-            onSettings={() => onOpenSettings(widget.id)}
-            onArrange={(action) => arrangeWidget(widget.id, action)}
-            arrangeAvailability={getArrangeAvailability(widget.id, def)}
-          />
-        )}
-
-        {/* Fullscreen button (view mode) */}
-        {!editMode && (
-          <UiButton
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setFullscreenWidget(widget.id)}
-            className="absolute top-2 right-12 z-10 h-11 w-11 p-0 rounded-lg bg-[var(--surface-overlay)]
-              text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-overlay)]
-              opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all
-              pointer-events-none group-hover:pointer-events-auto focus-visible:pointer-events-auto"
-            aria-label={t('dashboard.grid.expandLabel', 'Expand {{name}}', { name: def.name })}
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-          </UiButton>
-        )}
-
         {/* Visual resize affordance — desktop edit mode only; resize
             isn't wired up on the mobile stack path. */}
         {editMode && !mobile && (
@@ -664,9 +660,6 @@ export const DashboardGrid = memo(function DashboardGrid({
             // (RGL v2 merges `react-grid-item` onto the container root, so
             // transform animations must live here, not on the item.)
             'widget-panel w-full overflow-clip rounded-xl',
-            // Reserve the overlay expand target without covering caller-owned
-            // header actions (for example the checklist's Dismiss button).
-            !editMode && '[&_[data-role=widget-shell-header]]:pr-28',
             mobile ? 'flex flex-1 min-h-0 flex-col' : 'h-full',
             showWidgetBorders && 'border border-[var(--border-subtle)]',
             panelStyle && 'kiosk-panel',
@@ -684,11 +677,13 @@ export const DashboardGrid = memo(function DashboardGrid({
                 </div>
               }
             >
+              <WidgetHeaderContext.Provider value={{ actions: headerActions, editMode }}>
               <Component
                 vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
                 config={widget.config}
                 size={size}
               />
+              </WidgetHeaderContext.Provider>
             </Suspense>
           </SectionErrorBoundary>
         </GlassPanel>

@@ -2001,7 +2001,8 @@
     "weekdayEvidence": "Weekday and frequency evidence",
     "burnEvidence": "Daily trend and consumption distribution",
     "chargingEvidence": "Charging profile and timing",
-    "summaryScope": "History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot."
+    "summaryScope": "History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot.",
+    "planningWindow": "The planning window covers the next seven local days, starting tomorrow."
   },
   "driveCalendar": {
     "brief": {
@@ -11019,7 +11020,8 @@
       "window1d": "Last 1 day",
       "window7d": "Last 7 days",
       "window30d": "Last 30 days",
-      "window90d": "Last 90 days"
+      "window90d": "Last 90 days",
+      "rangeLimit": "Choose a workspace range of at most 90 days to view vehicle ingest cost."
     },
     "systemStatus": {
       "clientPerformance": {
@@ -15509,7 +15511,8 @@
       "active": "Active",
       "disabled": "Disabled",
       "auto-disabled": "Auto-disabled"
-    }
+    },
+    "copyName": "{{name}} (copy)"
   },
   "energy": {
     "tou": {
@@ -17074,7 +17077,15 @@
     },
     "kpis": "Cost summary metrics",
     "trends": "Cost trends",
-    "impact": "Lifetime and environmental impact"
+    "impact": "Lifetime and environmental impact",
+    "category": {
+      "home": "Home",
+      "supercharger": "Supercharger",
+      "public": "Public",
+      "publicDC": "Public DC",
+      "workL2": "Work / L2",
+      "other": "Other"
+    }
   },
   "chargePlanner": {
     "modernization": {
@@ -19999,7 +20010,8 @@
     "exportFailed": "Failed",
     "exportQueued": "Queued",
     "exportRunning": "Running",
-    "exportDone": "Done"
+    "exportDone": "Done",
+    "overview": "Widget overview"
   },
   "operationalSummary": {
     "retained": "Retained source data",
@@ -20123,7 +20135,16 @@
       "badge": "Helix"
     },
     "colSignal": "Signal",
-    "overview": "Anomaly overview"
+    "overview": "Anomaly overview",
+    "explanation": {
+      "zScore": "{{signal}} value {{value}} is {{sigma}} standard deviations from the mean ({{baseline}}).",
+      "belowMinimum": "{{signal}} value {{value}} is below the safe minimum ({{minimum}}).",
+      "aboveMaximum": "{{signal}} value {{value}} exceeds the safe maximum ({{maximum}}).",
+      "increased": "{{signal}} increased in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "decreased": "{{signal}} decreased in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "increasedPercent": "{{signal}} increased by {{percent}}% in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "decreasedPercent": "{{signal}} decreased by {{percent}}% in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}})."
+    }
   },
   "driveDetail": {
     "report": {
@@ -37719,7 +37740,9 @@
       "trailingWindow": "Trailing {{days}} days",
       "trailingWindow_one": "Trailing {{days}} day",
       "trailingWindow_other": "Trailing {{days}} days",
-      "windowReason": "The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source."
+      "windowReason": "The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.",
+      "selectedWindow": "Selected workspace range",
+      "boundedSource": "Completed drives are filtered by the workspace start and exclusive end; live power remains a separate snapshot."
     },
     "metrics": {
       "estimated": "Estimated",
@@ -37805,7 +37828,8 @@
       "title": "Daily energy history",
       "noData": "No energy history records available.",
       "empty": "No energy records found."
-    }
+    },
+    "rangeLimit": "Choose a workspace range of at most 3650 days to view energy history."
   },
   "vehicleSystems": {
     "brief": {
@@ -38858,7 +38882,8 @@
       "provenance": "Historical inputs and derived fits; source eligibility, assumptions and uncertainty apply. Counts are not a health grade.",
       "pressureImbalance": "Reported corner-pressure imbalance in the selected source window.",
       "underinflation": "Source underinflation fraction relative to the assumed placard pressure."
-    }
+    },
+    "rangeLimit": "Choose a workspace range of at most 30 days to view science evidence."
   },
   "serverConnect": {
     "connect": {

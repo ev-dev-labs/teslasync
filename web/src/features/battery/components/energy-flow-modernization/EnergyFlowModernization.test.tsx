@@ -107,7 +107,9 @@ describe('Energy flow modernization — real shared surfaces', () => {
     const view = mount();
     expect(view.container.querySelectorAll('[data-card]')).toHaveLength(8);
     expect(view.container.querySelector('[data-layout-reference]')).toBeInTheDocument();
-    expect(mockStats).toHaveBeenLastCalledWith('42', 7);
+    expect(mockStats).toHaveBeenLastCalledWith('42', {
+      start: '2026-09-28T00:00:00.000Z', end: '2026-10-05T00:00:00.000Z',
+    });
     expect(mockFlow).toHaveBeenLastCalledWith('42');
     for (const title of ['Daily energy usage', 'Daily distance', 'Daily efficiency']) {
       expect(within(card(title)).getByRole('table', { hidden: true })).toBeInTheDocument();
@@ -184,7 +186,9 @@ describe('Energy flow modernization — real shared surfaces', () => {
   it('keeps all section shells and onboarding recovery without a selected vehicle', () => {
     selected.mockReturnValue({ vehicleId: null, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
     const view = mount();
-    expect(mockStats).toHaveBeenLastCalledWith(null, 7);
+    expect(mockStats).toHaveBeenLastCalledWith(null, {
+      start: '2026-09-28T00:00:00.000Z', end: '2026-10-05T00:00:00.000Z',
+    });
     expect(mockFlow).toHaveBeenLastCalledWith(null);
     expect(view.container.querySelectorAll('[data-card]')).toHaveLength(8);
     expect(within(card('Live power')).getByRole('link', { name: 'Set up TeslaSync' }))

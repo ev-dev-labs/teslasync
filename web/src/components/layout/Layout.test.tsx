@@ -259,6 +259,7 @@ vi.mock('@/api/hooks/useSettings', () => ({
 // ── tour registry / broadcast (pure-ish, mocked for determinism) ──────
 vi.mock('@/lib/tourRegistry', () => ({
   TOUR_START_EVENT: 'teslasync:tour:start',
+  TOUR_OPEN_LAUNCHER_EVENT: 'teslasync:tour:openLauncher',
   TOURS: {},
   dispatchTourStart: vi.fn(),
   isTourCompleted: () => false,

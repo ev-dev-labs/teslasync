@@ -53,7 +53,7 @@ export interface TelemetryFixtureControls {
   historyRequests: URL[];
   agreementRequests: URL[];
   liveRequests: number;
-  holdNextLive: () => void;
+  holdLiveRequests: () => void;
   releaseLive: () => void;
   emptyHistory: boolean;
   agreementMode: 'measured' | 'insufficient_overlap';
@@ -67,12 +67,16 @@ export async function installTelemetryFixtures(
 ): Promise<TelemetryFixtureControls> {
   if (!mocks) throw new Error('OperationalBrief telemetry contracts require strict mocked E2E mode');
   let holdLive = false;
-  let release: (() => void) | undefined;
+  const pendingLive = new Set<() => void>();
   const controls: TelemetryFixtureControls = {
     historyRequests: [], agreementRequests: [], liveRequests: 0,
     emptyHistory: false, agreementMode: 'measured', brokerEmpty: false, brokerUnavailable: false,
-    holdNextLive: () => { holdLive = true; },
-    releaseLive: () => { holdLive = false; release?.(); release = undefined; },
+    holdLiveRequests: () => { holdLive = true; },
+    releaseLive: () => {
+      holdLive = false;
+      for (const release of pendingLive) release();
+      pendingLive.clear();
+    },
   };
   await page.route('**/api/v1/signals/7/available', route => {
     expect(route.request().method()).toBe('GET');
@@ -111,8 +115,10 @@ export async function installTelemetryFixtures(
     expect(route.request().method()).toBe('GET');
     controls.liveRequests += 1;
     if (holdLive) {
-      holdLive = false;
-      await new Promise<void>(resolve => { release = resolve; });
+      // A background poll can reach this route before the explicit refresh,
+      // which cancels/replaces it. Keep every request behind the same barrier
+      // until the retained-state assertions finish.
+      await new Promise<void>(resolve => { pendingLive.add(resolve); });
     }
     const now = Date.now();
     const data: VehicleLiveSignalsResponse = {

@@ -1215,7 +1215,15 @@
     },
     "kpis": "Cost summary metrics",
     "trends": "Cost trends",
-    "impact": "Lifetime and environmental impact"
+    "impact": "Lifetime and environmental impact",
+    "category": {
+      "home": "Home",
+      "supercharger": "Supercharger",
+      "public": "Public",
+      "publicDC": "Public DC",
+      "workL2": "Work / L2",
+      "other": "Other"
+    }
   },
   "metrics": {
     "peakPower": "{{value}} kW peak",

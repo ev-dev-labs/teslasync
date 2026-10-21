@@ -72,7 +72,7 @@ type fakeIngestXRay struct {
 	gotLimit int
 }
 
-func (f *fakeIngestXRay) VehicleCostReport(_ context.Context, since time.Time, limit int) (*dbobs.VehicleCostReport, error) {
+func (f *fakeIngestXRay) VehicleCostReport(_ context.Context, since time.Time, limit int, until ...time.Time) (*dbobs.VehicleCostReport, error) {
 	f.calls++
 	f.gotSince = since
 	f.gotLimit = limit

@@ -7,9 +7,9 @@ import type {
   ScienceWeather,
 } from '../../src/api/types';
 
-export const SCIENCE_START = '2026-08-19T16:00:00.000Z';
-export const SCIENCE_END = '2026-08-26T16:00:00.000Z';
-export const SCIENCE_ROUTE = `/science?vehicle_id=7&days=7&start=${SCIENCE_START}&end=${SCIENCE_END}`;
+export const SCIENCE_START = '2026-08-20T00:00:00.000Z';
+export const SCIENCE_END = '2026-08-27T00:00:00.000Z';
+export const SCIENCE_ROUTE = '/science?vehicle_id=7&from=2026-08-20&to=2026-08-26';
 
 const envelope = { vehicle_id: 7, start: SCIENCE_START, end: SCIENCE_END };
 

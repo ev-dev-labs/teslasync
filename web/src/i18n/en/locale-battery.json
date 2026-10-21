@@ -721,7 +721,8 @@
     "weekdayEvidence": "Weekday and frequency evidence",
     "burnEvidence": "Daily trend and consumption distribution",
     "chargingEvidence": "Charging profile and timing",
-    "summaryScope": "History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot."
+    "summaryScope": "History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot.",
+    "planningWindow": "The planning window covers the next seven local days, starting tomorrow."
   },
   "cycleStress": {
     "modernization": {
@@ -1236,7 +1237,9 @@
       "trailingWindow": "Trailing {{days}} days",
       "trailingWindow_one": "Trailing {{days}} day",
       "trailingWindow_other": "Trailing {{days}} days",
-      "windowReason": "The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source."
+      "windowReason": "The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.",
+      "selectedWindow": "Selected workspace range",
+      "boundedSource": "Completed drives are filtered by the workspace start and exclusive end; live power remains a separate snapshot."
     },
     "metrics": {
       "estimated": "Estimated",
@@ -1322,7 +1325,8 @@
       "title": "Daily energy history",
       "noData": "No energy history records available.",
       "empty": "No energy records found."
-    }
+    },
+    "rangeLimit": "Choose a workspace range of at most 3650 days to view energy history."
   },
   "energyLedger": {
     "summaryScope": "Months reconstructed from returned charging and drive history; exact complete-history bounds are not supplied.",

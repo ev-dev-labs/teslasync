@@ -13,7 +13,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
 import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
-import { TourLauncher } from '@/features/onboarding/TourLauncher'
+import { TourLauncherHost } from './TourLauncherHost'
 import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { SkipToContent } from '../feedback/SkipToContent'
 import { BrowserCompatBanner } from '../feedback/BrowserCompatBanner'
@@ -1529,7 +1529,7 @@ export default function Layout() {
       )}
 
       {/* Tour launcher — opens via TOUR_OPEN_LAUNCHER_EVENT */}
-      <TourLauncher />
+      <TourLauncherHost />
 
       {/* "What's new since last visit" modal — auto-shows
           once-per-24h after the OnboardingWizard, or on demand via the command

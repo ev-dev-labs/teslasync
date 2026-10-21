@@ -95,7 +95,7 @@ export async function installSupportedAdvisorSources(
   await installBatteryEndpoint(page, mocks, '/drives', qualifiedAdvisorDrives, [
     {
       vehicle_id: '7', limit: '1000',
-      start: '2026-05-27T00:00:00.000Z', end: '2026-06-03T00:00:00.000Z',
+      start: '2025-12-05T00:00:00.000Z', end: ADVISOR_NOW,
     },
     {
       vehicle_id: '7', limit: '1000', offset: '0',
@@ -104,7 +104,7 @@ export async function installSupportedAdvisorSources(
   ]);
   await installBatteryEndpoint(page, mocks, '/charging', qualifiedAdvisorCharging, {
     vehicle_id: '7', limit: '1000',
-    start: '2026-05-27T00:00:00.000Z', end: '2026-06-03T00:00:00.000Z',
+    start: '2025-12-05T00:00:00.000Z', end: ADVISOR_NOW,
   });
   await installBatteryEndpoint(page, mocks, '/signals/7/live', getLive, {});
 }

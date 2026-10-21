@@ -11,7 +11,7 @@ import type { AnomalyEntry } from '@/api/hooks/useAnomalies';
 import { anomalyTypeLabel } from './anomalyHelpers';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { PASCALS_PER_KPA } from '@/lib/unitConversion';
+import { formatAnomalyExplanation, formatAnomalyReading } from '@/lib/anomalyExplanation';
 
 interface AnomalyTimelineCardProps {
   anomaly: Omit<AnomalyEntry, 'value' | 'baseline' | 'z_score'> & {
@@ -32,20 +32,8 @@ function AnomalyTimelineCardImpl({ anomaly }: AnomalyTimelineCardProps) {
   const units = useUnits();
   const { t } = useTranslation();
 
-  const formatReading = (value: number | null | undefined) => {
-    if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
-    switch (anomaly.unit) {
-      case 'm': return units.formatDistance(value);
-      case 'm/s': return units.formatSpeed(value);
-      case '°C': return units.formatTemperature(value);
-      case 'Pa': return units.formatPressure(value / PASCALS_PER_KPA);
-      case 'kPa': return units.formatPressure(value);
-      case 'Wh': return units.formatEnergy(value);
-      case 'W': return units.formatPower(value);
-      case 's': return units.formatDuration(value);
-      default: return anomaly.unit ? `${fmtNumber(value)} ${anomaly.unit}` : fmtNumber(value);
-    }
-  };
+  const formatReading = (value: number | null | undefined) => formatAnomalyReading(value, anomaly.unit, units, fmtNumber);
+  const explanation = formatAnomalyExplanation(anomaly, t, formatReading, fmtNumber);
 
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4">
@@ -76,7 +64,7 @@ function AnomalyTimelineCardImpl({ anomaly }: AnomalyTimelineCardProps) {
         )}
       </div>
 
-      <Text as="p" variant="bodySm">{anomaly.message}</Text>
+      <Text as="p" variant="bodySm">{explanation}</Text>
 
       <div className={cn('mt-auto flex flex-wrap gap-x-4 gap-y-1', typography.size['2xs'], typography.color.muted)}>
         <span>

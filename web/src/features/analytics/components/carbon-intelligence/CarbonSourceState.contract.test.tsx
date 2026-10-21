@@ -355,9 +355,9 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
     const retry = vi.fn();
     render(row(carbonQueryState(query({ isError: true, error: REFRESH_ERROR }), true, retry)));
     const freshness = screen.getByRole('button', {
-      name: 'Data freshness: Error · 5m ago · Source: Selected-period summary',
+      name: 'Data freshness: error · 5m ago · Source: Selected-period summary',
     });
-    expect(freshness).toHaveAccessibleName('Data freshness: Error · 5m ago · Source: Selected-period summary');
+    expect(freshness).toHaveAccessibleName('Data freshness: error · 5m ago · Source: Selected-period summary');
     expect(screen.getByText('Cached · refresh failed')).toBeInTheDocument();
     expect(screen.getByText('Refresh failed; the most recently loaded evidence remains visible.'))
       .toBeInTheDocument();
@@ -401,7 +401,7 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
       isFetching: true, fetchStatus: 'fetching',
     }), true, retry)));
     expect(screen.getByRole('button')).toHaveAccessibleName(
-      'Data freshness: Updating… · 5m ago · Source: Selected-period summary',
+      'Data freshness: updating… · 5m ago · Source: Selected-period summary',
     );
     expect(screen.getByText('Refreshing cached data')).toBeInTheDocument();
     view.rerender(row(carbonQueryState(query({ dataUpdatedAt: NOW - 60_000 }), true, retry)));
@@ -431,7 +431,7 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
       expect(state.dataUpdatedAt).toBe(timestamps[index]);
       const source = within(screen.getByRole('region', { name: `${id} synthetic source` }));
       expect(source.getByRole('button', {
-        name: `Data freshness: Error · ${index + 1}m ago · Source: ${id}`,
+        name: `Data freshness: error · ${index + 1}m ago · Source: ${id}`,
       })).toBeInTheDocument();
       expect(source.getByText(`Synthetic ${id} scope`)).toBeInTheDocument();
       fireEvent.click(source.getByRole('button', { name: 'Retry refresh' }));
