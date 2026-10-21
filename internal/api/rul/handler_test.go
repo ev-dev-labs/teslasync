@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -384,6 +385,81 @@ func isBadFloat(f float64) bool {
 	return f != f || f > 1e308 || f < -1e308
 }
 
+func TestRUL_TimezonePropagation(t *testing.T) {
+	t.Parallel()
+
+	// The SoH read is the second Query call (order: [configs, soh]).
+	sohZone := func(t *testing.T, pool *fakePool) string {
+		t.Helper()
+		if len(pool.queryArgs) != 2 {
+			t.Fatalf("query calls = %d, want 2", len(pool.queryArgs))
+		}
+		args := pool.queryArgs[1]
+		if len(args) != 2 {
+			t.Fatalf("soh args = %v, want [vehicleID zone]", args)
+		}
+		zone, _ := args[1].(string)
+		return zone
+	}
+
+	t.Run("forwards_timezone_to_soh_series", func(t *testing.T) {
+		t.Parallel()
+		now := time.Now().UTC()
+		pool := happyPool(now)
+		rec := httptest.NewRecorder()
+		r := reqWithParams(httptest.NewRequest(http.MethodGet, "/vehicles/7/rul?timezone=America%2FLos_Angeles", nil), "7", "")
+		testHandler(pool).RUL(rec, r)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (body=%q)", rec.Code, rec.Body.String())
+		}
+		if zone := sohZone(t, pool); zone != "America/Los_Angeles" {
+			t.Fatalf("soh zone = %q, want America/Los_Angeles", zone)
+		}
+	})
+
+	t.Run("defaults_to_utc_when_omitted", func(t *testing.T) {
+		t.Parallel()
+		now := time.Now().UTC()
+		pool := happyPool(now)
+		rec := httptest.NewRecorder()
+		testHandler(pool).RUL(rec, rulReq("7"))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (body=%q)", rec.Code, rec.Body.String())
+		}
+		if zone := sohZone(t, pool); zone != "UTC" {
+			t.Fatalf("soh zone = %q, want UTC", zone)
+		}
+	})
+
+	t.Run("invalid_timezone_is_bad_request", func(t *testing.T) {
+		t.Parallel()
+		now := time.Now().UTC()
+		pool := happyPool(now)
+		rec := httptest.NewRecorder()
+		r := reqWithParams(httptest.NewRequest(http.MethodGet, "/vehicles/7/rul?timezone=Not%2FAZone", nil), "7", "")
+		testHandler(pool).RUL(rec, r)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400", rec.Code)
+		}
+		if len(pool.queryArgs) != 0 {
+			t.Fatalf("query calls = %d, want 0 on invalid zone", len(pool.queryArgs))
+		}
+	})
+
+	t.Run("sql_pins_caller_zone", func(t *testing.T) {
+		t.Parallel()
+		if !strings.Contains(sohSeriesQuery, "date_trunc('day', ts AT TIME ZONE $2)") {
+			t.Error("sohSeriesQuery must bucket days in the caller's zone ($2)")
+		}
+		if strings.Contains(sohSeriesQuery, "date_trunc('day', ts)") {
+			t.Error("sohSeriesQuery still buckets in the session timezone")
+		}
+	})
+}
+
 func TestRUL_VehicleNotFoundIsGraceful(t *testing.T) {
 	t.Parallel()
 	pool := &fakePool{
@@ -506,11 +582,15 @@ func TestRUL_QueryArgsAndOrder(t *testing.T) {
 	if len(pool.queryRowSQLs) != 2 {
 		t.Fatalf("QueryRow calls = %d, want 2 [vehicle, odometer]", len(pool.queryRowSQLs))
 	}
-	// configs takes no args; the other three are scoped to the vehicle.
+	// configs takes no args; the other three are scoped to the vehicle. The
+	// SoH read additionally carries the bucketing zone (UTC when omitted).
 	if len(pool.queryArgs[0]) != 0 {
 		t.Errorf("configs query args = %v, want none", pool.queryArgs[0])
 	}
-	for _, args := range [][]any{pool.queryArgs[1], pool.queryRowArgs[0], pool.queryRowArgs[1]} {
+	if args := pool.queryArgs[1]; len(args) != 2 || args[0] != int64(42) || args[1] != "UTC" {
+		t.Errorf("soh query args = %v, want [42 UTC]", args)
+	}
+	for _, args := range [][]any{pool.queryRowArgs[0], pool.queryRowArgs[1]} {
 		if len(args) != 1 || args[0] != int64(42) {
 			t.Errorf("scoped query args = %v, want [42]", args)
 		}

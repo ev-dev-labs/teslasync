@@ -54,6 +54,7 @@ type fakeRegenRepo struct {
 
 	driveCalls   []regenCall
 	monthlyCalls []regenCall
+	monthlyZones []string
 	energyCalls  []regenCall
 	modelCalls   []int64
 	order        []string
@@ -70,9 +71,10 @@ func (f *fakeRegenRepo) DriveRegens(ctx context.Context, vehicleID int64, hasRan
 	return f.drives, nil
 }
 
-func (f *fakeRegenRepo) MonthlyRegens(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) ([]monthlyRegenRow, error) {
+func (f *fakeRegenRepo) MonthlyRegens(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time, zone string) ([]monthlyRegenRow, error) {
 	f.contexts = append(f.contexts, trace.SpanContextFromContext(ctx))
 	f.monthlyCalls = append(f.monthlyCalls, regenCall{vehicleID, hasRange, start, end})
+	f.monthlyZones = append(f.monthlyZones, zone)
 	f.order = append(f.order, "monthly")
 	if f.monthlyErr != nil {
 		return nil, f.monthlyErr
@@ -854,6 +856,55 @@ func TestStats_DateRangePropagation(t *testing.T) {
 		c := repo.driveCalls[0]
 		if c.hasRange || !c.start.IsZero() || !c.end.IsZero() {
 			t.Errorf("no range expected, got hasRange=%v start=%v end=%v", c.hasRange, c.start, c.end)
+		}
+	})
+}
+
+func TestStats_TimezonePropagation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("forwards_timezone_to_monthly_bucket", func(t *testing.T) {
+		t.Parallel()
+		repo := &fakeRegenRepo{}
+		h := newRegenHandlerForTest(repo)
+		rec := httptest.NewRecorder()
+		h.Stats(rec, regenRequest("/analytics/regen?vehicle_id=42&timezone=America%2FLos_Angeles"))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", rec.Code)
+		}
+		if len(repo.monthlyZones) != 1 || repo.monthlyZones[0] != "America/Los_Angeles" {
+			t.Fatalf("monthly zones = %v, want [America/Los_Angeles]", repo.monthlyZones)
+		}
+	})
+
+	t.Run("defaults_to_utc_when_omitted", func(t *testing.T) {
+		t.Parallel()
+		repo := &fakeRegenRepo{}
+		h := newRegenHandlerForTest(repo)
+		rec := httptest.NewRecorder()
+		h.Stats(rec, regenRequest("/analytics/regen?vehicle_id=42"))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", rec.Code)
+		}
+		if len(repo.monthlyZones) != 1 || repo.monthlyZones[0] != "UTC" {
+			t.Fatalf("monthly zones = %v, want [UTC]", repo.monthlyZones)
+		}
+	})
+
+	t.Run("invalid_timezone_is_bad_request", func(t *testing.T) {
+		t.Parallel()
+		repo := &fakeRegenRepo{}
+		h := newRegenHandlerForTest(repo)
+		rec := httptest.NewRecorder()
+		h.Stats(rec, regenRequest("/analytics/regen?vehicle_id=42&timezone=Not%2FAZone"))
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400", rec.Code)
+		}
+		if len(repo.monthlyCalls) != 0 {
+			t.Fatalf("monthly calls = %d, want 0 on invalid zone", len(repo.monthlyCalls))
 		}
 	})
 }

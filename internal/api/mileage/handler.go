@@ -31,9 +31,41 @@ import (
 // without spinning up a database; the codebase has no pgxmock harness.
 type mileageRepository interface {
 	VehicleExists(ctx context.Context, vehicleID int64) (bool, error)
-	Monthly(ctx context.Context, vehicleID int64, windowStart time.Time) ([]drivedb.MileageMonthlyRow, error)
+	Monthly(ctx context.Context, vehicleID int64, windowStart time.Time, zone string) ([]drivedb.MileageMonthlyRow, error)
 	Stats(ctx context.Context, vehicleID int64, since7d, since30d, since365d time.Time) (drivedb.MileageStats, error)
-	Daily(ctx context.Context, vehicleID int64, windowStart time.Time) ([]drivedb.MileageDailyRow, error)
+	Daily(ctx context.Context, vehicleID int64, windowStart time.Time, zone string) ([]drivedb.MileageDailyRow, error)
+}
+
+// maxTimezoneLen rejects absurd `timezone` values before they reach
+// time.LoadLocation, which touches the filesystem zoneinfo database.
+const maxTimezoneLen = 64
+
+// defaultTimezone is the bucketing frame when the caller omits
+// `?timezone=`: UTC preserves the historical bucketing behavior.
+const defaultTimezone = "UTC"
+
+// resolveTimezone validates the optional `timezone` query parameter and
+// reports whether the handler may proceed, returning the zone name for
+// the SQL bucketing frame plus the loaded location for window-start
+// snapping. An invalid zone fails the request: silently bucketing days
+// or months in a guessed zone would mislabel the charts the user sees.
+//
+// Stats needs no zone: its windows are rolling durations (7/30/365 days),
+// not calendar buckets, and its instants render in the user's zone.
+func resolveTimezone(w http.ResponseWriter, raw string) (string, *time.Location, bool) {
+	if raw == "" {
+		return defaultTimezone, time.UTC, true
+	}
+	if len(raw) > maxTimezoneLen {
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+		return "", nil, false
+	}
+	loc, err := time.LoadLocation(raw)
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+		return "", nil, false
+	}
+	return raw, loc, true
 }
 
 // mileageClock is injected so handler tests can pin the window
@@ -194,9 +226,14 @@ func (h *Handler) Monthly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	zone, loc, ok := resolveTimezone(w, r.URL.Query().Get("timezone"))
+	if !ok {
+		return
+	}
+
 	now := h.now()
-	windowStart := monthsAgo(now, months)
-	rows, err := h.repo.Monthly(ctx, vehicleID, windowStart)
+	windowStart := monthsAgo(now, loc, months)
+	rows, err := h.repo.Monthly(ctx, vehicleID, windowStart, zone)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("months", months).Msg("mileage.monthly: query failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to load monthly mileage")
@@ -357,9 +394,14 @@ func (h *Handler) Daily(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	zone, loc, ok := resolveTimezone(w, r.URL.Query().Get("timezone"))
+	if !ok {
+		return
+	}
+
 	now := h.now()
-	windowStart := daysAgo(now, days)
-	rows, err := h.repo.Daily(ctx, vehicleID, windowStart)
+	windowStart := daysAgo(now, loc, days)
+	rows, err := h.repo.Daily(ctx, vehicleID, windowStart, zone)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("days", days).Msg("mileage.daily: query failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to load daily mileage")
@@ -392,7 +434,8 @@ func (h *Handler) now() time.Time {
 	return time.Now().UTC()
 }
 
-// monthsAgo subtracts `months` calendar months from `now`. We use
+// monthsAgo subtracts `months` calendar months from `now` in the zone
+// frame and snaps to the first of that month at zone midnight. We use
 // time.AddDate (which respects month-end edge cases) rather than a
 // fixed 30-day window so the monthly bucket includes the full earliest
 // month even if `now` is mid-month.
@@ -400,20 +443,21 @@ func (h *Handler) now() time.Time {
 // Caller-side correctness: the SQL filter is `started_at >= windowStart`
 // so anything from the start of the windowStart's month onward is
 // included; PostgreSQL's date_trunc handles the per-bucket rounding.
-func monthsAgo(now time.Time, months int) time.Time {
-	t := now.AddDate(0, -months, 0)
+func monthsAgo(now time.Time, loc *time.Location, months int) time.Time {
+	t := now.In(loc).AddDate(0, -months, 0)
 	// Snap to the first day of t's month so the earliest bucket
 	// includes drives from the start of that month rather than from
 	// `now.Day()` of that month (which would clip the earliest bucket).
-	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, loc)
 }
 
-// daysAgo subtracts `days` calendar days from `now` and snaps to UTC
-// midnight so the earliest bucket includes drives from the start of
-// that day rather than from `now.Hour()` of that day (which would clip
-// the earliest bucket exactly like monthsAgo's month-snap does).
+// daysAgo subtracts `days` calendar days from `now` in the zone frame
+// and snaps to zone midnight so the earliest bucket includes drives
+// from the start of that day rather than from `now.Hour()` of that day
+// (which would clip the earliest bucket exactly like monthsAgo's
+// month-snap does).
 
-func daysAgo(now time.Time, days int) time.Time {
-	t := now.AddDate(0, 0, -days)
-	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+func daysAgo(now time.Time, loc *time.Location, days int) time.Time {
+	t := now.In(loc).AddDate(0, 0, -days)
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
 }

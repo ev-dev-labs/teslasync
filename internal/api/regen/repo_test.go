@@ -33,8 +33,8 @@ func TestRegenSQLInstantScope(t *testing.T) {
 	if !strings.Contains(lifetimeEnergySQL, "ended_at IS NOT NULL") {
 		t.Fatal("energy must preserve the completed-drive rollup population")
 	}
-	if !strings.Contains(monthlyRegenSQL, "started_at AT TIME ZONE 'UTC'") {
-		t.Fatal("monthly buckets must not depend on the database session timezone")
+	if !strings.Contains(monthlyRegenSQL, "started_at AT TIME ZONE $6") {
+		t.Fatal("monthly buckets must use the caller's timezone parameter, not the database session timezone")
 	}
 }
 
