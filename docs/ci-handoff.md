@@ -28,13 +28,25 @@ exactly one dot, <=2px inset/centering deltas and <=8px action gaps. Eight new
 all wrappers report zero proxy escapes. Original before/after captures and
 review output remain in D:/tmp, not Git.
 
-Full local replica is repeating before push. Go build/test, route generation,
-contracts/discovery (2,083 tests), TypeScript and strict production/performance
-gates pass. Full Vitest rerun passes57,191/0 (four existing pending cases). Final lint
-and browser matrices remain in progress. Windows
-snapshot review found a stale fixture-only 8.5rem width pin on freshness
-controls; widget headers now use actual compact geometry while non-widget
-fixtures retain their existing pin. No mask/assertion/tolerance changes.
+Full local replica is repeating before the next push. Remote head f6d6be4106
+is on fix/post-merge-followups, with main only the draft PR202 merge target.
+The preceding local full Vitest passed57,191/0 (four existing pending cases),
+all10 Windows visual shards, a11y and Firefox/WebKit passed; quality15/16
+shards passed. Quality3 exposed the existing44px Expand requirement. Shared
+Expand/edit controls now retain44px targets with8px gaps. The existing
+collision guard follows the owner's new icon-before-dot order while retaining
+hit testing, focus, readable text and minimum spacing, adding maximum8px.
+Focused230 units and all four workspace collision cases pass; registry and
+full-suite reruns continue. Verified source checkpoints are generator-produced.
+
+Reviewed and regenerated exactly five dashboard baselines again for the
+intentional44px header height:390dark/light,1440dark/light,forced-colors.
+Degraded unchanged. No masks, tolerances or coverage changed. Comparisons and
+captures remain outside Git. The remote WebKit3/3 job118970569625 passed its
+assertions but failed the strict proxy guard on late GET /api/v1/settings.
+The mobile navigation test lacked the mock-completion guard already used by
+its sibling tests; added that assertion/drain before teardown and repeating
+both engines, retaining the strict preview escape check.
 Tailwind v4 remains a separate later draft PR, conditional on A/B PR fully green.
 Historical PR #198 details below are evidence, not checkout/push instructions.
 

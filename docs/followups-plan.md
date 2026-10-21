@@ -96,6 +96,29 @@ same translated fallback header. These choices avoid inventing observation times
   repository generators and LF normalization. No temporary captures/reports added
   to Git. Final full-unit and browser-matrix results will be recorded below.
 
+### Header verification correction — 2026-10-21 00:50 UTC
+
+The first full sweep exposed an existing44px Expand target requirement in four
+catalogue-workspace cases. Restored44px Expand and edit controls with8px gaps,
+and changed the collision guard to the requested icons-left/dot-right order.
+The guard retains44px minimums, keyboard/no-hover visibility, exact native hit
+targets, readable text and minimum8px spacing, adding maximum8px spacing.
+All four cases pass. All726 registry rows and eight responsive capture cases
+pass again with zero proxy escapes after the correction.
+
+Compared the five affected Windows dashboard frames before regeneration again:
+the only additional difference is the intentional44px header-line height and
+dependent content displacement. Updated390light/dark,1440light/dark and
+forced-colors; degraded unchanged. Comparison and eight final responsive shots
+are in D:/tmp/widget-touch-* outside Git. No tolerance or mask changes.
+
+Remote f6d6be4106 WebKit3/3 job118970569625 passed assertions but the preview
+correctly rejected a late settings request. Its mobile navigation test omitted
+the existing strict mock-completion guard used by its siblings. Added that
+assertion/drain; both engines repeated three times pass18/18, zero escapes.
+Full local matrices are repeating before the next explicit branch push.
+No workflow changes.
+
 ### A/B local verification — 2026-10-20 15:38 UTC
 
 - All 16 quality shards: 2,021 passed, 2 existing conditional skips, no flaky
