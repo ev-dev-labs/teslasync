@@ -425,3 +425,21 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Go1.27.3 build, full tests, route generation and CI-pinned golangci-lint2.15.0 all pass (0 lint issues). Refreshed govulncheck moves1 reachable standard-library finding to0; the sole uncalled OpenPGP module finding remains. No workflows changed; their existing go-version-file uses the corrected floor.
 - Vite6.4.4 web/docs audits restore9/0. Patched mock/private/docs builds and full strict perf:check pass399.6KB/400KB; all20 docs diagrams render without browser errors. Node installs were sequential single-package updates with every test/server stopped. Vite patch committed8d1a90396f.
 - Starting a fresh complete frontend replica on the final security environment. Full units use8 shards/two workers with no browser jobs in parallel; browser pool follows with at most6 commands, keeping each required shard and its worker flags. The earlier large-fleet readiness retry remains recorded, never hidden or counted as a clean first pass. No timeout, snapshot tolerance, skip or audit threshold changed.
+
+
+## 2026-10-21 17:45 UTC — Muse takeover from Codex; Tailwind WIP preserved
+- Verified no active agent: stale codex daemons only, no git holder; removed a stale 0-byte index.lock (no live owner) and fetched. Both draft PRs green at pushed heads: PR202 199 pass/1 existing skip at f84aad0ce7, PR203 199 pass/1 existing skip at planning head b22db3c049.
+- fix/post-merge-followups Part A/B confirmed done per plan; only Part C verification remained. Preserved the 194-file uncommitted Tailwind migration on chore/tailwind-v4 in four local commits (toolchain/CSS-first, tests+audits+pins, component renames, docs) without pushing; PR203 stays green at its planning head until the migration is verified.
+- New high-priority timezone item goes on fix/post-merge-followups, so switched there (clean tree) and reinstalled branch-correct node modules via npm ci (no dependency changes).
+
+
+## 2026-10-21 18:34 UTC — timezone core + brief duplicate removal in progress
+- TZ-1 core green: resolveTimezone validates override/vehicle zones via Intl with browser-zone fallback (trimmed), dateFormat sanitizes tz in every formatter, new formatDateRange (end-inclusive via formatRange, thin-space normalized) and formatDayKeyRange (zone-stable calendar spans) exposed through useDateFormat. New unit tests failed before (26 red) and pass after, including DST spring-forward/fall-back cases.
+- TZ-2 duplicates removed from 16 brief/page scope lines (charging, driving, analytics, carbon, notifications, FSM, API logs, timeline, regen, FSD, rhythm, debugger): raw ISO pairs plus zone suffixes replaced by one formatted range/moment; affected unit tests updated to formatted pins (UTC, LA, Tokyo, de-DE). Each entry recorded in docs/followups-plan.md with its verifying test.
+- Remaining: day-log/parking/FSD-weekly/share/carbon-ledger/methodology prose/zone echoes, direct-formatter migration, API/backend zone params, guard audit, e2e spec, i18n regen, full replica, push, PR202 green, then Part C resume.
+
+
+## 2026-10-21 19:40 UTC — timezone prose batch + catalog regen committed
+- Finished the ~36-site methodology/prose migration: arrival/departure/destination/range-buffer/journey/seasonal/parking/charge-advisor/vampire/cold-start-adjacent texts no longer render zone values; removed a standalone zone Caption (VampireDrain), a `friendly (tz) · ISO` duplicate (ChargeDepartureAlignment, CSV keeps ISO via split csvRows), and a methodology `· zone` suffix (DepartureForecast). DepartureForecastPage provenance now validates zones (invalid vehicle → saved-user wording; invalid saved user → browser wording).
+- Full Vitest surfaced 74 failures; rewrote affected pins to the new contract (no zone values on pages; fallback-chain semantics for invalid zones). tsc needed tsconfig lib ES2020→ES2021 for formatRange (type-level only). en.json synced for 51 keys (ar/he unaffected); checkpoints/fingerprints/bundles regenerated via repo scripts; all 20 i18n suites green (8110 tests).
+- Next: remaining direct-formatter migration (RangePicker, YearReview, MonthlyRhythm, ParkingTemporal weekday, useCarbonDisplay, seasonal/audit-label helpers, chart-label helpers), showTz/ColdStart abbreviation removal, then TZ-4 API/backend zone params.

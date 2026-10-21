@@ -1,5 +1,178 @@
 # Post-redesign follow-ups — plan
 
+## Timezone display follow-up — 2026-10-21 (PR #202, high priority)
+
+Goal: every displayed date/time follows Settings > Units "Time zone
+display" + "My time zone override" (fallback: browser zone); no raw
+ISO/UTC text, no zone-name suffixes, no duplicate moments/ranges on
+pages; ranges end-inclusive for users; day boundaries in the effective
+zone; API timezone params send the effective zone; backend day
+bucketing gains a zone parameter where missing; setting changes apply
+without reload.
+
+Approach: harden the existing shared layer (`resolveTimezone` in
+`web/src/lib/timezone.ts`, formatters in `web/src/lib/dateFormat.ts`,
+`useDateFormat`/`useTimezone`) instead of building a parallel one:
+validate override/vehicle zones via `Intl` and fall back to the
+browser zone; add one end-inclusive range formatter. Migrate direct
+`Intl`/`toLocale*` display sites and `· {timezone}` / `({timezone})`
+suffix sites to it. Keep schedule-definition zones (automation cron /
+time-window, quiet-hours windows, car clock format) as domain data,
+not display preferences. Keep full ISO with offsets in CSV/JSON
+exports and the Settings page's own explanation.
+
+Decisions (recorded, no questions asked):
+- Invalid `timezone_user` or vehicle zone falls back to the browser
+  zone (then UTC), never throws, never renders raw.
+- Per-automation trigger/window timezones and quiet-hours window
+  zones are kept: they define when something fires, not how times
+  display. Zone-name suffixes are still removed from their display.
+- Exports keep ISO-with-offset; the audit allowlists export builders.
+- `DateTime.tsx` invalid-tz guard stays as the component-level backstop.
+
+Duplicates removed (file, shown before, what remains):
+- `charging/.../ChargingSummaryBrief.tsx`: freshness showed raw
+  `start – endExclusive (timezone)` plus raw event/snapshot ISO; now one
+  `formatDateRange` / formatted moment in the display zone (test:
+  `ChargingSummaryBrief.test.tsx` drawer assertions).
+- `driving/.../NestedDrivingBrief.tsx`: scope showed raw ISO bounds with
+  `(exclusive end)` plus `· timezone`; now one formatted range/moment
+  plus unchanged coverage wording (test: mock-marker scope assertions).
+- `analytics/.../CalendarSummaryCards.tsx`: scope label plus raw
+  `start – endExclusive · timezone`; now label plus one formatted range.
+- `analytics/.../CarbonEvidenceBrief.tsx`: calendar labels plus raw
+  instants plus zone; now one formatted range (`EvidenceBriefs.test`).
+- `analytics/.../CarbonFootprintBrief.tsx`: `startLabel – endLabel ·
+  timezone`; now one formatted range.
+- `analytics/.../MileageBudgetBrief.tsx`: raw event/analysis ISO plus
+  zone; now formatted bounds / one formatted range.
+- `driving/.../FsdDriveAnalyticsPanels.tsx`: previous-period
+  `start_date - end_date · timezone` and insights `start_at – end_at ·
+  timezone`; now `formatDayKeyRange` / `formatDateRange`
+  (`FsdDriveAnalyticsPanels.test.tsx` de-DE + en-US pins).
+- `driving/.../FsdObservatoryPanel.tsx`: `start_at – end_at · timezone`
+  label; now one formatted range.
+- `admin/.../ApiLogsSummary.tsx`: `start – end (timezone, exclusive
+  end)`; now one formatted range (both ApiLogsSummary tests).
+- `analytics/pages/TimelinePage.tsx`: formatted datetimes plus
+  `(exclusive) · timezone`; now one formatted range.
+- `driving/pages/RegenEfficiencyPage.tsx`: raw ISO em-dash span plus
+  `(timezone)`; now one formatted range.
+- `driving/pages/FSDInsightsPage.tsx`: raw `start–end (exclusive end) ·
+  timezone`; now one formatted range.
+- `driving/pages/DrivingRhythmPage.tsx`: raw `start–end · timezone`
+  calendar keys; now one `formatDayKeyRange`.
+- `notifications/.../NotificationReportPanel.tsx`: raw `from to to
+  (exclusive) · timezone`; now one formatted range (drawer test).
+- `system/.../FSMOperationalBrief.tsx`: `label · [start, end) ·
+  timezone`; now `label · formatted range` (de-DE pin `1.–3. Okt. 2026`).
+- `system/pages/StateMachineDebuggerPage.tsx`: raw `[start, end) ·
+  timezone` caption plus raw `YYYY-MM-DD` labels; now one formatted
+  range and formatted day labels (Mar 8 DST-day test).
+- `vehicles/.../DayLogOperationalSummary.tsx` + `DayLogPage.tsx` +
+  `DayLogControls.tsx`: scope `date · timezone` and raw freshness
+  bounds are now one formatted day; the `Day boundaries in {{tz}}` note
+  and its `aria-describedby` are gone; the unused timezone prop is gone.
+- `dashboard/widgets/FsdWeeklyWidget.tsx`: raw `start to end
+  exclusive · browserZone` is now `Vehicle id · formatted range`, and
+  the API call sends the display zone instead of the browser zone.
+- `vehicles/pages/ParkingAnalyticsPage.tsx`: raw `start → end ·
+  timezone` is now `sample · formatted day-key range` (de-DE + DST-day
+  pins).
+- `sharing/.../ShareCardBrief.tsx` +
+  `ShareCardSourceScopeLedger.tsx`: calendar labels plus zone are now
+  one formatted range; the API-window row keeps its `≤` notation with
+  formatted datetimes instead of raw ISO.
+- `analytics/.../CarbonSourceScopeLedger.tsx` +
+  `CarbonEvidenceLedger.tsx`: raw labels/window plus zone are now one
+  formatted range; API window uses formatted datetimes; `Calendar
+  timezone: X · N days` is now `N days`.
+- Methodology prose no longer names zones: `CarbonMethodology.tsx`
+  (range + selected-zone wording), `EnergyPage.tsx` (bucket tip),
+  `DrivingRhythmMethodology.tsx`, `DepartureConsistency.tsx` (×2),
+  `WeeklyPunchcard.tsx`, `FsdDistanceTrend.tsx`,
+  `ShareCardMethodology.tsx`. The rhythm UTC-fallback explainer stays:
+  it discloses grouping semantics, not a display zone.
+- `driving/.../drivetrain-health-modernization/MethodologyPanel.tsx`:
+  `formatted [raw ISO] · zone` is now one formatted range.
+- `admin/.../AuditLogFilters.tsx`: `Filter timezone: X` is now
+  `Filters use your selected time zone.` (the controller already
+  resolves the zone from settings).
+- `battery/.../DrainEventDirectory.tsx`: removed the per-page `Time
+  zone display: X` echo; event times already use the shared layer.
+- `dashboard/widgets/EnergySiteInfoWidget.tsx`: removed the
+  Installation timezone row (dashboard is a main route; the value
+  remains in API payloads and exports).
+- `advanced-intelligence/pages/JourneyAssurancePage.tsx`: departure
+  entry and default are now display-zone wall time (new
+  `zonedWallTimeToUtc`/`toZonedDatetimeStr` helpers with DST-gap,
+  overlap, and invalid-input tests); the browser-zone hint is now
+  `Enter departure in your selected time zone.`; the departure-zone
+  contract tests were rewritten for the new behavior.
+- `components/layout/sidebar/SidebarDriveBadge.tsx`: `today` is now
+  computed in the display zone instead of the browser zone.
+- `battery/.../charge-advisor/ChargeAdvisorAccounting.tsx`: `Analysis
+  window: rawStart – rawEnd (zone)` and `Included history window: raw
+  through raw in zone` are now one `formatDayKeyRange`; tests assert
+  `Included history window: … Jun 2, 2026`.
+- `battery/.../charge-advisor/ChargeAdvisorMethodology.tsx`: `Calendar
+  calculations use X.` is now selected-zone wording; the `analysis`
+  prop destructure is gone.
+- `analytics/.../drive-archetypes/ArchetypeMethodology.tsx`:
+  `circular hour in X` (×2) is now selected-zone wording.
+- `battery/.../cycle-stress/CycleStressMethodology.tsx` +
+  `CycleStressSourceCoverage.tsx`: `… use X` and `X local calendar`
+  are now selected-zone wording (formatter plumbing untouched).
+- `battery/.../pack-capacity/PackCapacityMethodology.tsx`: `… use X`
+  is now selected-zone wording.
+- `battery/pages/VampireDrainPage.tsx`: removed the standalone
+  `<Caption>{timeZone}</Caption>` zone echo; grouping caption is now
+  selected-zone wording.
+- `charging/pages/ChargeDepartureAlignmentPage.tsx`:
+  `friendly (tz) · ISO` instant labels are now the single friendly
+  label; CSV export rows keep full ISO instants via a separate
+  `csvRows` array (accessible rows use `scalarRows`).
+- `driving/.../arrival-reliability/`: methodology, month/weekday
+  profiles and window comparisons no longer name the zone; unused
+  `timeZone` destructures removed (WeekdayProfile, Methodology,
+  WindowComparisons).
+- `driving/.../departure-forecast/`: methodology snapshot anchor
+  dropped its `· zone` suffix; methodology/hour/weekday/weekly texts
+  are selected-zone wording. `DepartureForecastPage.tsx` provenance no
+  longer renders zone values; `usesVehicleMetadata` and the
+  saved-user/browser source label now validate zones, and the fallback
+  wording covers invalid metadata. Page tests rewritten for the
+  fallback chain (invalid vehicle → saved user zone; invalid saved
+  user → browser zone; blank legacy → model-local UTC).
+- `driving/.../destination-transitions/`: methodology, two-hour,
+  month and weekday texts no longer name the zone; unused `timeZone`
+  destructures removed.
+- `driving/.../range-buffer/`: methodology/hour/weekday texts are
+  selected-zone wording; unused destructures removed.
+- `driving/.../journey-fragmentation/MethodologyPanel.tsx` +
+  `StartProfileChart.tsx`: `vehicle IANA timezone: X` is now
+  selected-zone wording.
+- `driving/.../seasonal-efficiency/`: removed the `Vehicle timezone:
+  X` scope prefix (`SeasonalSummaryBrief`) and evidence-band span
+  (`SeasonalKpiEvidenceBand`); methodology scope is selected-zone
+  wording; unused destructures removed.
+- `driving/.../fsd-insights/useFsdConfidenceItems.ts`: observation
+  window value dropped its `(zone)` suffix.
+- `vehicles/.../parking-analytics/`: month/overnight/method-caveat
+  texts are selected-zone wording; `MonthlyDwellTrend` month labels
+  migrated from raw `Intl` to `formatMonthYear`.
+- i18n: `en.json` updated for 51 changed keys (values verified
+  against source fallbacks; ar/he have none of these keys);
+  checkpoints + fingerprints regenerated via
+  `i18n-trio-checkpoint`/`i18n-trio-combined-checkpoint`/`split-i18n-catalog`
+  (`--typed` for the debugger page's dynamic key); two fsdWeekly pins
+  updated to the new catalog value. `tsconfig.json` lib widened
+  ES2020→ES2021 (type-level; `formatRange` needs it).
+- Kept as schedule-definition domain data (not display preferences):
+  automation trigger/condition timezones, quiet-hours window zones and
+  their settings/preview summaries, the car clock format. Exports keep
+  full ISO with offsets; Settings keeps its own explanation.
+
 ## Post-merge execution — 2026-10-20
 
 Base: `origin/main` at `e6c401fba1` (PR #198 squash `c353a59399`).
