@@ -61,7 +61,7 @@ export function WidgetEditChrome({
   };
 
   return (
-    <div className="widget-edit-controls flex shrink-0 items-center gap-1.5">
+    <div className="widget-edit-controls flex shrink-0 items-center gap-2">
           <Button
             ref={arrangeButtonRef}
             type="button"
@@ -72,7 +72,7 @@ export function WidgetEditChrome({
               setArrangeOpen((open) => !open);
             }}
             onMouseDown={(event) => event.stopPropagation()}
-            className="h-7 w-7 rounded p-0 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+            className="h-11 w-11 rounded p-0 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
             aria-label={t('dashboard.grid.arrangeLabel', 'Arrange {{name}}', { name: def.name })}
             aria-haspopup="dialog"
             aria-expanded={arrangeOpen}
@@ -88,7 +88,7 @@ export function WidgetEditChrome({
               onSettings();
             }}
             onMouseDown={(event) => event.stopPropagation()}
-            className="h-7 w-7 rounded p-0 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+            className="h-11 w-11 rounded p-0 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
             aria-label={t('dashboard.grid.settingsLabel', 'Settings for {{name}}', { name: def.name })}
           >
             <Settings className="h-3.5 w-3.5" />
@@ -102,7 +102,7 @@ export function WidgetEditChrome({
               onRemove();
             }}
             onMouseDown={(event) => event.stopPropagation()}
-            className="h-7 w-7 rounded p-0 text-[var(--text-secondary)] transition-colors hover:bg-red-500/20 hover:text-red-400"
+            className="h-11 w-11 rounded p-0 text-[var(--text-secondary)] transition-colors hover:bg-red-500/20 hover:text-red-400"
             aria-label={t('dashboard.grid.removeLabel', 'Remove {{name}}', { name: def.name })}
           >
             <X className="h-3.5 w-3.5" />
