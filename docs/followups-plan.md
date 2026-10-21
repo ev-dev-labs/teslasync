@@ -173,6 +173,58 @@ Duplicates removed (file, shown before, what remains):
   their settings/preview summaries, the car clock format. Exports keep
   full ISO with offsets; Settings keeps its own explanation.
 
+TZ-3b duplicates removed (shared-layer migration; full suite 2724
+files / 57248 tests green after migrating 19 test files' pins):
+- `components/data-display/format/DateTime.tsx` (shared): removed the
+  ISO `title` (`toISOString()` / `ISO (tz)`) and the `showTz`
+  abbreviation span; the `showTz` prop is deleted (no prod uses
+  left). One friendly span, no title.
+- Direct `Intl`/`toLocale*` migrated to shared helpers (zone now
+  resolved, output contract unchanged): `RangePicker.tsx`→
+  `formatDayKeyRange`; `YearReviewWidget`, `MonthlyRhythmTrend`,
+  `ParkingTemporalProfile` (weekday UTC-pinned);
+  `seasonal-efficiency/formatters.ts` deleted (`formatLocalDate`/
+  `formatMonth`) with 8 seasonal components migrated;
+  drive-archetype/odometer/carbon/cold-start/sweet-spot display
+  hooks; cycle-stress/range-buffer/pack-capacity/drive-calendar
+  `labels.ts`; 3 pack-capacity timelines; `SoftwareUpdatesPage`
+  monthLabel; audit-log `toDateTimeInput`→`toZonedDatetimeStr`;
+  departure labels→`formatChartInstant` (GMT-offset, no zone name).
+- Zone/abbrev suffixes removed: `ColdStartPage` `(PT)`,
+  HVAC/seasonal zone cards, cabin-thermal suffix.
+- ISO `title` attributes removed (friendly text remains, shown
+  once): `GDPRArtifactDetails` (`title={iso}`), TripReplay drawers,
+  `JourneyDetailsPanel`/`JourneySequence`, `RoadAnomalyPanel`,
+  `RouteMapSection`, `SilentCounterPanel`, `ShareDriveDialog`,
+  `NotificationRow`, `TimeMachinePage`, `DriveDetailHeader`
+  (double `showTz`), Gear/WhyEnded panels, `SignalEvidence`,
+  `TeslaAccountSection`, `VehicleDetailPage`,
+  Communications/SourceFreshness panels, `FleetSetupSubscribePanel`,
+  `CabinThermalCandidateRow`.
+- Copy to selected-zone wording: `SeasonalCalendarCoverage`/
+  `SeasonalCoverageBrief` (`Timezone` row → `Included rows`,
+  vehicle-IANA → selected zone), journey `WeekdayProfileChart`
+  (normalized-vehicle → selected zone). `ApiLogsSummary` and
+  drivetrain `MethodologyPanel` scopes (batch-1 code) had their
+  tests migrated to the friendly range.
+- Conversion boundaries use the raw saved zone
+  (`useConversionTimezone`/`resolveRawTimezone`): `RateForm` and
+  `JourneyAssurancePage`. Display still falls back (never throws);
+  conversion with an invalid saved zone reaches the helper, which
+  throws → form validation error instead of persisting instants
+  converted in a guessed zone.
+- `TopParkingLocations` zone-label assertion was stale (fails on
+  HEAD too) and contradicts spec §3: flipped to assert absence;
+  its no-shift assertions (the test's subject) pass unchanged.
+- i18n: 4 more `en.json` keys (calendar subtitle/zone/rows,
+  weekday subtitle); split catalogs + producer/combined
+  checkpoints + catalog pins regenerated via repo scripts.
+- Calendar values verified: `formatMonthYear` validates its own
+  input (incl. day rollover, e.g. `2026-02-30` → placeholder);
+  `2026-03`→Mar 2026 and `2026-03-01`→Mar 1, 2026 unshifted in
+  America/Los_Angeles and Pacific/Kiritimati; midnight-UTC
+  instants convert (new unit tests).
+
 ## Post-merge execution — 2026-10-20
 
 Base: `origin/main` at `e6c401fba1` (PR #198 squash `c353a59399`).
@@ -259,6 +311,24 @@ the progress log; the full replica repeats after these environment patches.
 Tailwind v4 still waits for PR202 to pass every remote check.
 
 ### Additional owner item — shared widget freshness header
+
+SUPERSEDED 2026-10-21 (owner update): the freshness indicator stays exactly
+as it is on `main`. Do not change FreshnessDot/FreshnessDotAuto, WidgetShell
+freshness props, or per-widget freshness wiring; ignore the "Live"/age dots in
+widgets-compare.html (placeholders); add no age text/"Live" labels/new
+freshness UI. The Phase 1 WIDGET HEADER task is SKIPPED and its guard
+assertions DROPPED. The work below (already committed on this branch) must be
+REVERTED as its own commit group (verified: 2026-10-21, the uncommitted
+working tree contains zero FreshnessDot/freshness-prop diff lines, so there is
+nothing to revert in uncommitted work). Sequencing decision: finish the
+in-flight timezone batch first (clean tree), then revert the freshness commits
+via `git revert` (no resets), re-verify, and push once. The redesign loop must
+reject any worker diff touching freshness. Revert set identified
+2026-10-21: `c8aad38605`, `dc22ed9bfb`, `f6d6be4106` (reverse order);
+`cad1237f5f` (Layout preservation pins) only if the shell-preservation
+suite fails after the revert; `8a895df1ad` is range-label e2e, unrelated,
+keep. Expected revert conflicts in i18n pins (timezone commits touched the
+same files) — resolve by re-running the repo i18n generators, never by hand.
 
 Implemented on `fix/post-merge-followups`; complete local/remote verification
 is still in progress before the next push. Root cause: DashboardGrid reserved

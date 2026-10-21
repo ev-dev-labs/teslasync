@@ -25,8 +25,9 @@ Branch HEAD: `9c3586d103` (+ uncommitted Part 1 work, see below).
 | TZ-1 core resolver + range helper + unit tests | done | `cf1d4d79c7` | — |
 | TZ-2 zone suffix / duplicate ISO removal (~36 sites + batch) | done | `cf1d4d79c7` | duplicates logged in `docs/followups-plan.md` |
 | TZ-3a prose/duplicate migration + en.json sync + push | done | `0d90f894fc`, `9c3586d103` | — |
-| TZ-3b direct-formatter migration (shared layer) | in progress | uncommitted (~100 files) | 13 failures left: AdvancedIntelligence 3, ChargeDeparture 3, Carbon 1, ShareCard 1, LiveBattery 1, LiveMotor 1, DrivingDynamics 1, WeeklyPunchcard 1, ApiLogsPage 1 |
-| Calendar values unshifted (LA + Kiritimati tests) | not started | — | `"2026-03"` -> Mar 2026, `"2026-03-01"` -> Mar 1 2026; midnight-UTC instant converts |
+| TZ-3b direct-formatter migration (shared layer) | done | `d4653c5517` src + `86bb6e735d` tests + `330fb6052d` i18n | Full suite 2724/57248 green |
+| Calendar values unshifted (LA + Kiritimati tests) | done | `d4653c5517` + `86bb6e735d` | `formatMonthYear` day-rollover validation; `dateFormat.test.ts` 82 green |
+| `useConversionTimezone` + `resolveRawTimezone` (conversion boundaries) | done | `d4653c5517` + `86bb6e735d` | RateForm + JourneyAssurancePage converted; `timezone.test.ts` extended |
 | TZ-4 API `timezone` sends + backend zone params + Go tests | not started | triaged | `useRangeState` fallback + `useWeeklyDigest` to effective zone; carbon `EXTRACT(HOUR)` zone param; survey other day-bucket endpoints |
 | TZ-5 guard (lint/audit) + ALL-routes (277) sweep | not started | — | Fail on direct date formatting, raw ISO, zone names, extra pickers; record per-route results |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | not started | — | Drive times, drawers, ranges, midnight day assignment |
@@ -71,7 +72,8 @@ actively being fixed, not blockers.)
 
 ## Exact next step
 
-In `web/`: fix `AdvancedIntelligenceClosure/Pages`,
-`JourneyAssurancePage` failures (check `zonedWallTimeToUtc` /
-`toZonedDatetimeStr` / `safeTimeZone` batch-1 semantics vs pinned
-conversion/seeding behavior), then the remaining 10, then full suite.
+TZ-4 frontend: `useRangeState` fallback + `useWeeklyDigest` + FSD-hook
+defaults send the effective zone (fail-before/pass-after tests).
+Then TZ-4 backend: carbon `?timezone=` param (AT TIME ZONE, 400 on
+invalid, UTC default) + `useCarbon` sends zone + Go tests. Then TZ-5
+guard + 277-route sweep, TZ-6 e2e, freshness revert, TZ-7 replica + push.
