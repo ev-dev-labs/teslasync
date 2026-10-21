@@ -1,4 +1,36 @@
-# CI handoff — PR #198 (ui/simplification)
+# CI handoff — post-merge PR #202
+
+## CI — 2026-10-21 final source is remotely green
+
+Draft [PR #202](https://github.com/ev-dev-labs/teslasync/pull/202),
+`fix/post-merge-followups` to `main`, head `f84aad0ce7`:
+**199 successful checks, one existing conditional skip, zero failures or pending checks**.
+Frontend Quality run `39534812045`, CI `39534812154`, Security `39534812081`
+and Performance `39534812123` all completed successfully. No merge performed.
+
+Three pushed source heads were needed: the first exposed the strict 400KB
+startup budget; the second exposed 44px action targets and late mocked-request
+teardown in WebKit. Lazy tour loading, shared 44px header targets in a 28px
+line, restored body space and complete navigation/request settling fixed the
+causes. The third also includes newly available Vite6.4.4 and Go1.27.3 security
+patches. No workflow changes, reduced thresholds, new skips or tolerance changes.
+
+A1–7 and the shared widget-header item are implemented. Export is hidden because
+the existing API does not guarantee secret redaction; Duplicate creates a disabled
+copy and opens it. Insurance "0..60" remains an explicit owner decision, with
+backend/form disagreement and audit origin recorded in `followups-plan.md`.
+The separate Tailwind v4 draft is eligible now that PR202 is green.
+
+Final local security-environment rerun: all57,191 unit tests pass (four existing
+pending), complete lint/audits and route/catalog/contracts checks pass; Go build,
+tests, route generator and CI-pinned lint pass. All16 quality shards pass2,029 tests (two existing skips), all10 Windows visual
+shards pass49 (41 existing profile skips), a11y13 and Firefox/WebKit6 pass.
+Every browser wrapper reports zero proxy escapes; zero retries in this fresh
+sweep. Eight375/768/1280/1920 light/dark dashboard captures are saved in
+`D:/tmp/dashboard-widget-header-review.html`. Isolated performance9/9 also passes, zero proxy escapes.
+All temporary logs, screenshots and comparisons remain outside Git in `D:/tmp`.
+
+The sections below preserve earlier checkpoints; this CI section is authoritative.
 
 ## Post-merge continuation — 2026-10-20
 

@@ -425,3 +425,15 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Go1.27.3 build, full tests, route generation and CI-pinned golangci-lint2.15.0 all pass (0 lint issues). Refreshed govulncheck moves1 reachable standard-library finding to0; the sole uncalled OpenPGP module finding remains. No workflows changed; their existing go-version-file uses the corrected floor.
 - Vite6.4.4 web/docs audits restore9/0. Patched mock/private/docs builds and full strict perf:check pass399.6KB/400KB; all20 docs diagrams render without browser errors. Node installs were sequential single-package updates with every test/server stopped. Vite patch committed8d1a90396f.
 - Starting a fresh complete frontend replica on the final security environment. Full units use8 shards/two workers with no browser jobs in parallel; browser pool follows with at most6 commands, keeping each required shard and its worker flags. The earlier large-fleet readiness retry remains recorded, never hidden or counted as a clean first pass. No timeout, snapshot tolerance, skip or audit threshold changed.
+
+
+## 2026-10-21 05:44 UTC — resumed; PR202 is green
+- Confirmed fix/post-merge-followups tracks its own remote branch; current head f84aad0ce7 is already pushed. PR202 has199 successful checks and one existing conditional skip, zero failures or pending checks. No merge performed.
+- Fresh security-environment units completed57,191 pass/0 fail/4 existing pending. Static gates, complete lint/audits, Go1.27.3 build/test/route/lint and vulnerability checks pass. Continuing the remaining hermetic Windows browser shards and isolated performance run before final local closeout. Saved browser jobs resumed with actual process creation times checked; no backend/proxy listener exists.
+- PartC is now eligible after remote green; reviewed the official Tailwind v4 upgrade guide. No migration or dependency install while current browser verification runs.
+
+
+## 2026-10-21 06:01 UTC — A/B fully green; separate Tailwind branch starts
+- Final security-environment local replica passes57,191 units/2,029 quality/49 Windows visuals/13 a11y/6 secondary-engine/9 isolated performance, all browser proxy checks0 and no retries. Existing skips/pending remain unchanged. Full lint/audits, TypeScript, route generators/contracts/catalogs, Go build/test/lint/vulnerability gates pass. Private production and full strict perf:check pass399.6KB/400KB.
+- Confirmed remote f84aad0ce7 has199 successful checks and one existing conditional skip. Updated PR202 description/title with complete outcomes; it remains draft and unmerged. Shared-header screenshots refreshed at375/768/1280/1920 light/dark; gallery outside Git.
+- Created chore/tailwind-v4 from that unmerged verified A/B head; documentation closeout travels in its initial planning commit. Draft PR targets main so all existing CI workflows run, and explicitly depends on #202. No merge/cherry-pick. Saved all49 old Windows baselines and resolved v3 tokens/CSS/dependencies outside Git. Official guide/tool4.3.3 checked; dependency work starts only after all tests/previews stop.

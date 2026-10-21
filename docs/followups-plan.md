@@ -26,8 +26,8 @@ by the owner's explicit post-merge task. Draft PR only; never merge it.
   braces 3.0.3, micromatch 4.0.8 and x/crypto v0.58.0 still have no newer fix.
   Mermaid plugin 2.0.17 still peers only Mermaid 10/11; replaced it with the
   verified direct integration below. Tailwind belongs exclusively to Part C.
-- Additional owner item: implemented; final verification IN PROGRESS — shared widget-header freshness ownership, corner/action geometry, all-widget guard, reviewed Windows snapshots and eight light/dark responsive dashboard captures. Complete before the remaining CI loop and Part C.
-- C: NOT STARTED — separate draft PR only after A/B PR is fully green.
+- Additional owner item: DONE; PR202 remote CI GREEN, final local browser refresh PASS — shared widget-header freshness ownership, corner/action geometry, all-widget guard, reviewed Windows snapshots and eight light/dark responsive dashboard captures. Complete before the remaining CI loop and Part C.
+- C: IN PROGRESS — chore/tailwind-v4 branches from unmerged PR202 head f84aad0ce7, with199 successful checks and one existing conditional skip. Separate draft PR targets main and depends on #202.
 
 Insurance origin (owner decision still required): audit F08 in
 `docs/frontend-audits/phase6-qa-ownership-insurance-telematics.json` (introduced
@@ -60,6 +60,64 @@ only after green CI; do not merge while that security check is red. Not merged.
 
 Verification: full local CI replica required before each push, followed by
 remote checks on the exact pushed commit. Temporary reports stay outside Git.
+
+### C migration setup — 2026-10-21
+
+Branch `chore/tailwind-v4` starts at `f84aad0ce7`, the verified unmerged A/B
+branch. Separate draft PR to main; owner must merge #202 first. The official
+[Tailwind v4 upgrade guide](https://tailwindcss.com/docs/upgrade-guide) and
+published4.3.3 tool/plugin versions were checked. Use the official upgrader,
+CSS-first configuration and native container queries. Keep all tokens, exact
+accent behavior and themes; do not accept default v4 palette/shape drift.
+The complete v3 resolved configuration, source CSS/config/dependencies and49
+Windows baseline PNGs are saved under `D:/tmp/tailwind-v3-reference` before
+any dependency changes. Browser previews and backend are stopped.
+
+A/B final production build and complete strict perf:check pass399.6KB/400KB.
+Isolated performance9/9 passes with zero proxy escapes. The full local replica
+is complete on the source this planning commit inherits; only documentation
+changes follow it. No workflow or test threshold changes.
+
+### A/B outcome and final verification — 2026-10-21
+
+PR202 is green at `f84aad0ce7`:199 successful checks and one existing conditional
+skip. CI, Frontend Quality, Security and Performance workflows all succeeded.
+A1–6 are complete with backend/frontend regression coverage; A7 Duplicate is
+complete and intentionally disabled on creation. A7 Export is safely hidden
+because the API forwards arbitrary values without redaction. A8 remains an
+owner decision; no range policy was guessed. The shared dashboard header item
+is complete with one header-owned dot,44px icon targets directly to its left,
+16px corner inset and a28px title line that preserves widget body space.
+All121 registry widgets pass min/default/large x view/edit geometry (726 rows),
+and all eight375/768/1280/1920 light/dark captures are saved outside Git.
+
+Fresh local security-environment results:57,191 units pass (four existing
+pending);2,029 quality pass (two existing skips);49 Windows visual pass
+(41 existing profile skips); a11y13, Firefox/WebKit6 and isolated performance9 pass. Zero retries,
+failures or proxy escapes. Complete lint/audits, TypeScript, route registries,
+contracts, catalog checks, Go1.27.3 build/test/generator and pinned Go lint pass.
+Exactly five intended dashboard baselines were reviewed before regeneration;
+the corrected28px header produces byte-identical images to those reviewed
+baselines. No tolerance, test skip, workflow or coverage changes.
+
+Security before/after: initial web9/docs2 low became9/0 after Mermaid12/direct
+rendering. Newly published Vite advisories temporarily raised this to10/2
+(1 high/1 moderate in docs); Vite6.4.4 restores9/0. The remaining web development
+chains are unpatched braces3.0.3/micromatch4.0.8 and Tailwind3 dependencies;
+Tailwind is handled separately in C, with no unsafe downgrade/override.
+The refreshed Go1.27.2 scan found one reachable x509 issue; Go1.27.3 restores
+zero reachable/imported findings, with one uncalled OpenPGP module finding
+and no published x/crypto fix. Dependabot #200 remains patch-safe in scope but
+not merge-ready:42 passing checks and one old-Go Security Scan failure.
+Recommendation: rebase/retest against the security-fixed branch after owner
+merge, then merge only when green. No Dependabot PR was merged.
+
+The A/B source head stays unchanged and green. Its documentation closeout is
+carried into the separate C planning commit, rather than changing the already
+verified source head. C branches from this unmerged A/B head, and its draft PR
+targets main to run the complete workflow matrix. No old branch merge or
+cherry-pick is involved. Insurance discount bounds need the owner's decision;
+Export needs a backend redaction contract before it can be restored.
 
 ### Latest security refresh — 2026-10-21 02:05 UTC
 
