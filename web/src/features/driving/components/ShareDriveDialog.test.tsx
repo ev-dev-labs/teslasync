@@ -201,7 +201,7 @@ describe('ShareDriveDialog — create mode', () => {
     }
     const time = await screen.findByText(`Expires ${formatDate(expires_at, { locale: 'de-DE', tz: 'America/Los_Angeles' })}`);
     expect(time).toHaveAttribute('datetime', expires_at);
-    expect(time).toHaveAttribute('title', expires_at);
+    expect(time).not.toHaveAttribute('title');
     expect(screen.queryByText('Expired')).not.toBeInTheDocument();
   });
 

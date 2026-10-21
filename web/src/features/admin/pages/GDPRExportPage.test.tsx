@@ -215,12 +215,12 @@ function expectManifestMetadata(artifact: GDPRExportArtifact) {
   ] as const) {
     expect(metadataValue(label).textContent).toBe(value);
   }
-  for (const [label, value] of [
+  for (const [label] of [
     ['Created', artifact.created_at],
     ['Downloaded', artifact.downloaded_at],
     ['Expires', artifact.expires_at],
   ] as const) {
-    expect(metadataValue(label).querySelector('[title]')).toHaveAttribute('title', value);
+    expect(metadataValue(label).querySelector('[title]')).toBeNull();
   }
   expect(detailsPanel().querySelectorAll('dt')).toHaveLength(11);
 }
@@ -618,7 +618,7 @@ describe('GDPRExportPage — canonical manifest boundary coverage', () => {
       expect(screen.queryByRole('link', { name: 'Download bundle' })).toBeNull();
       expect(screen.getByTestId('gdpr-export-summary')).toHaveTextContent('Download eligibility unknown');
       expect(screen.getByText(/Download eligibility is unknown because storage or a valid expiry is missing/)).toBeInTheDocument();
-      expect(metadataValue('Expires').querySelector('[title]')).toHaveAttribute('title', expiresAt);
+      expect(metadataValue('Expires').querySelector('[title]')).toBeNull();
     },
   );
 
@@ -640,7 +640,7 @@ describe('GDPRExportPage — canonical manifest boundary coverage', () => {
     wire({ [ART_A]: () => Promise.resolve(offset) });
     renderPage([pagePath(ART_A)], undefined, client);
     await screen.findByRole('link', { name: 'Download bundle' });
-    expect(metadataValue('Expires').querySelector('[title]')).toHaveAttribute('title', offset.expires_at);
+    expect(metadataValue('Expires').querySelector('[title]')).toBeNull();
     for (const artifact of [{ ...offset, storage_kind: '' }, { ...offset, id: ART_B }]) {
       await act(async () => { client.setQueryData(operatorConfidenceKeys.gdprExport(ART_A), artifact); });
       await waitFor(() => expect(metadataValue('ID').textContent).toBe(artifact.id));

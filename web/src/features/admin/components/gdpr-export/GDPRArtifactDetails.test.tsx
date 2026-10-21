@@ -226,7 +226,7 @@ describe('GDPRArtifactDetails — populated grid', () => {
     for (const iso of [artifact.created_at, artifact.downloaded_at, artifact.expires_at]) {
       expect(dates.absolute).toHaveBeenCalledWith(iso);
       expect(dates.relative).toHaveBeenCalledWith(iso);
-      expect(screen.getByText(`DT:${iso}`)).toHaveAttribute('title', iso);
+      expect(screen.getByText(`DT:${iso}`)).not.toHaveAttribute('title');
       expect(screen.getByText(`REL:${iso}`)).toBeInTheDocument();
     }
     expect(dates.absolute.mock.calls).toEqual([
@@ -254,7 +254,7 @@ describe('GDPRArtifactDetails — populated grid', () => {
       const value = definition(label);
       expect(value).toHaveTextContent(sharedDates.formatDateTime(iso, preferences));
       expect(value).toHaveTextContent(sharedDates.formatRelative(iso, preferences));
-      expect(value.querySelector('[title]')).toHaveAttribute('title', iso);
+      expect(value.querySelector('[title]')).toBeNull();
     }
   });
 

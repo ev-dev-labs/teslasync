@@ -804,14 +804,16 @@ describe('DepartureForecastPage', () => {
       const time = method.querySelector('time');
       expect(time).toHaveAttribute('datetime', new Date(anchor).toISOString());
       expect(time).toHaveTextContent(departureDateTime(anchor, h.locale, h.timeZone));
-      expect(method).not.toHaveTextContent(h.timeZone);
+      // IANA zone values never render; the bare word "UTC" may appear in
+      // fallback-chain prose.
+      if (h.timeZone.includes('/')) expect(method).not.toHaveTextContent(h.timeZone);
       const kpis = screen.getByTestId('departure-kpis');
       fireEvent.click(within(kpis).getByRole('button', { name: 'Review details' }));
       const drawer = screen.getByRole('dialog');
       const drawerTime = drawer.querySelector('time');
       expect(drawerTime).toHaveAttribute('datetime', new Date(anchor).toISOString());
       expect(drawerTime).toHaveTextContent(departureDateTime(anchor, h.locale, h.timeZone));
-      expect(drawer).not.toHaveTextContent(h.timeZone);
+      if (h.timeZone.includes('/')) expect(drawer).not.toHaveTextContent(h.timeZone);
       fireEvent.keyDown(drawer, { key: 'Escape' });
     };
     assertAnchor(FROZEN_NOW);

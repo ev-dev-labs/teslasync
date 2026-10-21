@@ -352,7 +352,7 @@ describe('signed live physics and independent errors', () => {
     expect(metric('Top Drive Speed')).toHaveTextContent('72.00');
     expect(metric('Motor Power')).toHaveTextContent('42.35');
     assertOperationalBriefDisclosure(screen.getByTestId('dynamics-current-motor-power'),
-      `Current signals · not trip history · ${sample.ts}`);
+      'Current signals · not trip history · Oct 1, 2026, 10:00 AM');
     assertOperationalBriefDisclosure(screen.getByTestId('dynamics-range-speeds'),
       'Average and maximum of the loaded trips, including any current drive; not a complete-range aggregate.');
   });

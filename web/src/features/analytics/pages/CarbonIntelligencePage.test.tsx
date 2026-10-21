@@ -411,9 +411,12 @@ describe('CarbonIntelligencePage', () => {
       END_INSTANT,
     );
     expect(h.summaryHook).toHaveBeenNthCalledWith(2, 7, undefined, undefined);
+    // The hooks above still receive the exact ISO instants; the ledger shows
+    // each bound once, formatted in the vehicle zone (LA midnights here).
     expect(screen.getByText(
-      `API window: ${START_INSTANT} ≤ timestamp < ${END_INSTANT}`,
+      'API window: Apr 18, 2026, 12:00 AM ≤ timestamp < Jul 17, 2026, 12:00 AM',
     )).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(START_INSTANT.replace(/[.+?^${}()|[\]\\]/g, '\\$&')))).not.toBeInTheDocument();
   });
 
   it('keeps intensity evidence useful and excludes disabled vehicle queries from page freshness', () => {

@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TimeMachineField, TimeMachineRange, TimeMachineState } from '@/api/hooks/useTimeMachine';
 import { fmtNumber, fmtScientificNumber } from '@/lib/numberFormat';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
 
 const h = vi.hoisted(() => ({
   vehicleId: 7,
@@ -289,7 +289,8 @@ describe('TimeMachinePage shared primitive adoption', () => {
     const summary = screen.getByTestId('time-machine-summary');
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const instantDrawer = screen.getByRole('dialog');
-    expect(instantDrawer.querySelector(`[title^="${latest}"]`)).toBeInTheDocument();
+    expect(instantDrawer.textContent).toContain('2026');
+    expect(instantDrawer.querySelector('[title^="2026-"]')).toBeNull();
     fireEvent.keyDown(instantDrawer, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, earliest));
@@ -316,7 +317,7 @@ describe('TimeMachinePage shared primitive adoption', () => {
     expect(screen.getByText(fmtScientificNumber(-0.0000002, 4))).toBeInTheDocument();
     const timestamp = screen.getByText('ObservedTime').closest('li');
     if (!(timestamp instanceof HTMLElement)) throw new Error('Timestamp field missing');
-    expect(timestamp.querySelector(`[title^="${latest}"]`)).toBeInTheDocument();
+    expect(timestamp.querySelector('[title^="2026-"]')).toBeNull();
     expect(signedFields).toEqual(original);
   });
 
@@ -335,11 +336,14 @@ describe('TimeMachinePage shared primitive adoption', () => {
     ] };
     const view = renderPage();
     await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, latest));
-    expect(view.container.querySelectorAll(`[title="${latest} (Pacific/Honolulu)"]`).length).toBeGreaterThanOrEqual(3);
-    expect(view.container.querySelector(`[title="${earliest} (Pacific/Honolulu)"]`)).toBeInTheDocument();
+    const honoluluLatest = formatDateTime(latest, { locale: 'en-US', tz: 'Pacific/Honolulu' });
+    const honoluluEarliest = formatDateShort(earliest, { locale: 'en-US', tz: 'Pacific/Honolulu' });
+    expect(within(view.container).getByText(honoluluLatest)).toBeInTheDocument();
+    expect(within(view.container).getByText(honoluluEarliest)).toBeInTheDocument();
+    expect(view.container.querySelector('[title^="2026-"]')).toBeNull();
     fireEvent.click(within(screen.getByTestId('time-machine-summary')).getByRole('button', { name: 'Review details' }));
     const tzDrawer = screen.getByRole('dialog');
-    expect(tzDrawer.querySelector(`[title="${latest} (Pacific/Honolulu)"]`)).toBeInTheDocument();
+    expect(within(tzDrawer).getByText(honoluluLatest)).toBeInTheDocument();
     fireEvent.keyDown(tzDrawer, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('slider')).toHaveAttribute('aria-valuetext', formatDateTime(latest, { locale: 'en-US', tz: h.timezone }));

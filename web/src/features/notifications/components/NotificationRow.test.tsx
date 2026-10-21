@@ -356,37 +356,39 @@ describe('NotificationRow', () => {
     expect(screen.queryByText(severity)).not.toBeInTheDocument();
   });
 
-  it('uses and discloses one user timezone instead of borrowing selected or row vehicle identity', () => {
+  it('uses one user timezone without a zone suffix instead of borrowing selected or row vehicle identity', () => {
     fixtures.userZone = 'America/New_York';
     const { container } = renderRow({
       vehicle: { ...VEHICLE, timezone: 'America/Los_Angeles' },
     });
     expect(fixtures.timezone).toHaveBeenCalledWith('user');
     expect(fixtures.timezone).not.toHaveBeenCalledWith('vehicle');
-    expect(container.querySelector('[title="2024-01-02T03:04:05.000Z (America/New_York)"]'))
-      .toHaveTextContent('EST');
+    expect(screen.getByText('Jan 1, 2024, 10:04 PM')).toBeInTheDocument();
+    expect(container.querySelector('[title]')).toBeNull();
   });
 
   it('keeps retained row timestamps stable across unrelated workspace selection changes', () => {
     fixtures.userZone = 'America/New_York';
     const { container, rerender } = renderRow();
-    const before = container.querySelector('[title$="(America/New_York)"]')?.textContent;
+    const before = screen.getByText('Jan 1, 2024, 10:04 PM').textContent;
     fixtures.selectedZone = 'Pacific/Auckland';
     rerender(
       <MemoryRouter>
         <NotificationRow log={makeLog()} rule={RULE} vehicle={VEHICLE} selected={false} onSelectionChange={vi.fn()} />
       </MemoryRouter>,
     );
-    expect(container.querySelector('[title$="(America/New_York)"]')?.textContent).toBe(before);
+    expect(screen.getByText('Jan 1, 2024, 10:04 PM').textContent).toBe(before);
+    expect(container.querySelector('[title]')).toBeNull();
     expect(fixtures.timezone).not.toHaveBeenCalledWith('vehicle');
   });
 
   it.each([undefined, '', 'UTC', 'Invalid/VehicleZone'])(
-    'keeps the disclosed user zone when row timezone is %s',
+    'keeps the user-zone rendering without a zone suffix when row timezone is %s',
     timezone => {
       fixtures.userZone = 'America/New_York';
       const { container } = renderRow({ vehicle: { ...VEHICLE, timezone } });
-      expect(container.querySelector('[title$="(America/New_York)"]')).toBeInTheDocument();
+      expect(screen.getByText('Jan 1, 2024, 10:04 PM')).toBeInTheDocument();
+      expect(container.querySelector('[title]')).toBeNull();
       expect(fixtures.timezone).not.toHaveBeenCalledWith('vehicle');
     },
   );

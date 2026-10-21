@@ -958,7 +958,7 @@ describe('ColdStartPage', () => {
       limit: 1000,
     });
     expect(briefPropsMock.mock.lastCall?.[0].scope).toBe(
-      '2026-10-11T14:38:00.123Z (vehicle time) PDT–2026-10-12T14:38:00.123Z (vehicle time) PDT; returned selected-window drives',
+      '2026-10-11T14:38:00.123Z (vehicle time)–2026-10-12T14:38:00.123Z (vehicle time); returned selected-window drives',
     );
     expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
     expect(screen.queryByTestId('cold-start-range')).not.toBeInTheDocument();

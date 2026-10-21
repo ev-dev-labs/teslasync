@@ -113,7 +113,7 @@ describe('GDPRArtifactDetails canonical manifest contract', () => {
     for (const iso of [artifact.created_at, artifact.downloaded_at, artifact.expires_at]) {
       expect(dates.absolute).toHaveBeenCalledWith(iso);
       expect(dates.relative).toHaveBeenCalledWith(iso);
-      expect(screen.getByText(`DT:${iso}`)).toHaveAttribute('title', iso);
+      expect(screen.getByText(`DT:${iso}`)).not.toHaveAttribute('title');
     }
   });
 

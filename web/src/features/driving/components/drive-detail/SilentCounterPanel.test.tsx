@@ -52,7 +52,7 @@ describe('SilentCounterPanel', () => {
     for (const at of ['2026-04-02T00:30:00Z', '2026-04-02T08:30:00Z', 'invalid', '']) {
       const time = Array.from(container.querySelectorAll('time')).find((node) => node.getAttribute('datetime') === at);
       expect(time).toHaveTextContent(formatDateTime(at, { locale: 'de-DE', tz: 'America/Los_Angeles' }));
-      expect(time).toHaveAttribute('title', at);
+      expect(time).not.toHaveAttribute('title');
     }
   });
 

@@ -346,8 +346,16 @@ describe('ApiLogsPage', () => {
     const range = screen.getByTestId('api-logs-range-summary');
     const rolling = screen.getByTestId('api-logs-24h-summary');
     expect(range).toHaveAttribute('data-operational-brief');
-    // Scope and comparison context moved off the face into the drawer.
-    assertOperationalBriefDisclosure(range, 'exclusive end', { contains: true });
+    // Scope and comparison context moved off the face into the drawer. The
+    // scope shows the selected window once, end-inclusive, with no raw ISO
+    // bounds, zone suffix or "exclusive end" note. (TZ-4 aligns the range
+    // computation zone with the display zone; until then the last day can
+    // read 25 or 26 depending on which zone each layer resolved, so pin the
+    // shared 'Sep 19 – 2' prefix.)
+    assertOperationalBriefDisclosure(range, 'View settings range:', { contains: true });
+    assertOperationalBriefDisclosure(range, 'Sep 19 – 2', { contains: true });
+    assertOperationalBriefDisclosure(range, 'exclusive end', { contains: true, absent: true });
+    assertOperationalBriefDisclosure(range, '2026-09-19', { contains: true, absent: true });
     expect(range.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
     expect(rolling.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
     assertOperationalBriefDisclosure(rolling, 'Independent rolling 24-hour count', { contains: true });

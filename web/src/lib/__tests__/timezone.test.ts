@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { resolveTimezone, browserTimezone, isValidTimezone, sanitizeTimezone } from '../timezone';
+import { resolveTimezone, resolveRawTimezone, browserTimezone, isValidTimezone, sanitizeTimezone } from '../timezone';
 
 describe('resolveTimezone', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -95,5 +95,27 @@ describe('browserTimezone', () => {
     const tz = browserTimezone();
     expect(typeof tz).toBe('string');
     expect(tz.length).toBeGreaterThan(0);
+  });
+});
+
+describe('resolveRawTimezone', () => {
+  it('mirrors the sanitized resolver for valid inputs', () => {
+    expect(resolveRawTimezone('utc', 'Asia/Tokyo', 'Europe/Berlin')).toBe('UTC');
+    expect(resolveRawTimezone('user', 'Asia/Tokyo', 'Europe/Berlin')).toBe('Europe/Berlin');
+    expect(resolveRawTimezone('vehicle', 'Asia/Tokyo', 'Europe/Berlin')).toBe('Asia/Tokyo');
+    expect(resolveRawTimezone('vehicle', null, '')).toBe(browserTimezone());
+  });
+
+  it('propagates an invalid saved zone raw so conversion throws instead of guessing', () => {
+    // Display (resolveTimezone) must fall back; conversion must NOT guess.
+    expect(resolveTimezone('user', 'Asia/Tokyo', 'Invalid/Zone')).toBe(browserTimezone());
+    expect(resolveRawTimezone('user', 'Asia/Tokyo', 'Invalid/Zone')).toBe('Invalid/Zone');
+    expect(() => new Intl.DateTimeFormat('en-US', {
+      timeZone: resolveRawTimezone('user', 'Asia/Tokyo', 'Invalid/Zone'),
+    }).format(0)).toThrow(RangeError);
+  });
+
+  it('still prefers a valid vehicle zone over an invalid override', () => {
+    expect(resolveRawTimezone('vehicle', 'Asia/Tokyo', 'Invalid/Zone')).toBe('Asia/Tokyo');
   });
 });

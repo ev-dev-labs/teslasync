@@ -286,7 +286,8 @@ describe('AuditLogPage presentation preservation', () => {
       expect(screen.queryByLabelText('Until')).not.toBeInTheDocument();
       expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
-      expect(screen.getByText('Filter timezone: America/Los_Angeles')).toBeInTheDocument();
+      expect(screen.getByText('Filters use your selected time zone.')).toBeInTheDocument();
+      expect(screen.queryByText(/America\/Los_Angeles/)).not.toBeInTheDocument();
     });
 
     it('restores the existing saved shared range instead of inventing another preference', async () => {

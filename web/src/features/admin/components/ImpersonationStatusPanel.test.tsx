@@ -127,10 +127,9 @@ describe('ImpersonationStatusPanel', () => {
     expect(screen.getByText('admin@corp.example')).toBeInTheDocument()
     expect(screen.getByText('driver@corp.example')).toBeInTheDocument()
 
-    // The <DateTime> span carries the canonical ISO string in its title,
-    // independent of the runtime locale/timezone.
-    const stamp = container.querySelector('[title]')
-    expect(stamp?.getAttribute('title')).toContain('2026-07-04T22:00:00')
+    // The expiry renders once in friendly form with no ISO title or text.
+    expect(container.querySelector('[title^="2026-"]')).toBeNull()
+    expect(container.textContent).not.toContain('2026-07-04T22:00:00')
   })
 
   it('falls back to an em dash when active fields are empty', () => {

@@ -202,9 +202,9 @@ describe('LiveMotorPanel independent isolation trust', () => {
     });
     expect(within(metric(container, 'isolation')).getByText('987.00 kΩ')).toBeVisible();
     const motorBriefs = container.querySelectorAll('[data-operational-brief]');
-    assertOperationalBriefDisclosure(motorBriefs[1], 'HV Isolation · 2026-08-01T10:00:00Z');
+    assertOperationalBriefDisclosure(motorBriefs[1], 'HV Isolation · Aug 1, 2026, 10:00 AM');
     expect(screen.getByText('Reported isolation signal; freshness not established.')).toBeVisible();
-    assertOperationalBriefDisclosure(motorBriefs[0], 'Live Motor Status · 2026-09-01T12:00:00Z');
+    assertOperationalBriefDisclosure(motorBriefs[0], 'Live Motor Status · Sep 1, 2026, 12:00 PM');
     expect(screen.queryByText(/1790000000000/)).not.toBeInTheDocument();
   });
 });
