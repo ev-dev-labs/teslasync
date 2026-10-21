@@ -24,7 +24,7 @@ const additions = [
   ['admin.teslaOrders.card.aria', '{{model}} order, {{status}}'],
   ['widget.backupHistory.summaryScope', 'Energy site {{siteId}}; history since {{since}}, no explicit exclusive end bound'],
   ['widget.energyStats.summary.scope', 'Vehicle {{id}} · source period {{days}} days'],
-  ['widget.fsdWeekly.summary.scope', 'Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}'],
+  ['widget.fsdWeekly.summary.scope', 'Vehicle {{id}} · {{range}}'],
   ['widget.lifetimeStats.summary.scope', 'Vehicle {{id}} · lifetime'],
   ['widget.mileageStats.summary.scope', 'Vehicle {{id}} · rolling 30 days / lifetime'],
   ['widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day'],
@@ -226,7 +226,7 @@ describe('exact81 feature-owned consistent producer defaults', () => {
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(oldEntries).toHaveLength(30067)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe("d3547c8c35416745e7128970c26f182c859f8e8a05065fa033a50837f6542a7f")
+      .toBe("de58e2152a1cd996178d16a6f57878f5149f58d1e818b952979268a2a24a4d72")
     expect(leaves(catalog)).toHaveLength(32998)
     expect(english.t('settings.title')).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)

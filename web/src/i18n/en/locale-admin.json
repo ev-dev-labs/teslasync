@@ -4,7 +4,7 @@
       "detailId": "Entry ID",
       "detailPreviousHash": "Previous row hash",
       "detailsHint": "Use “{{action}}” to view complete entry details.",
-      "rangeZone": "Filter timezone: {{timezone}}",
+      "rangeZone": "Filters use your selected time zone.",
       "boundedProof": "Bounded row-hash proof only: not adjacency proof, full-ledger verification, or the current entry filters.",
       "retainedVerification": "Verification is running; the previous receipt remains visible.",
       "verificationPaused": "Verification was requested but is paused. No verification receipt has been received.",
@@ -2960,7 +2960,6 @@
     "subtitle": "Record of all API calls with request/response details",
     "summary": {
       "last24hScope": "Independent rolling 24-hour count, not the View settings range. The response does not record its exact bounds.",
-      "rangeBounds": "{{start}} – {{end}} ({{timezone}}, exclusive end)",
       "rangeScope": "Totals, error rate, and average duration use the View settings range; request-list filters do not change these metrics.",
       "selectedRange": "View settings range",
       "title": "Request activity"

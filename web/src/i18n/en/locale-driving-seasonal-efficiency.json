@@ -679,7 +679,6 @@
       "returned": "{{count}} returned · {{excluded}} excluded",
       "subtitle": "Canonical intensity is Wh/m; display conversion follows the selected distance and energy preferences.",
       "support": "{{ratio}} samples / 6 parameters",
-      "timeZone": "Vehicle timezone: {{timeZone}}",
       "title": "Observed seasonal evidence",
       "trend": "Descriptive trend",
       "trendHint": "deseasonalized Wh/m per year"
@@ -691,7 +690,7 @@
       "eligibilityTitle": "Eligibility",
       "model": "Six terms are fitted with distance weights: intercept, annual sine/cosine, semiannual sine/cosine, and a linear time term. Ridge regularization is sanitized before solving.",
       "modelTitle": "Model",
-      "scope": "The result describes the returned latest history in {{timeZone}}. Weather, temperature, route mix, tyres, firmware, charging losses, and driving behavior are not modeled or attributed.",
+      "scope": "The result describes the returned latest history in your selected time zone. Weather, temperature, route mix, tyres, firmware, charging losses, and driving behavior are not modeled or attributed.",
       "scopeTitle": "Scope",
       "title": "Methodology and interpretation limits"
     },

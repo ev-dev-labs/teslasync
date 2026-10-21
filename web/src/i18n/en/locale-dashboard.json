@@ -3448,7 +3448,6 @@
       "noSite": "No Tesla energy site linked",
       "powerwall": "Powerwalls",
       "solarSize": "Solar system",
-      "timezone": "Installation timezone",
       "title": "Energy site"
     },
     "energyStats": {
@@ -3558,7 +3557,7 @@
         "changeHelp": "Share change in percentage points versus the previous Monday–Sunday window, not a percent growth rate.",
         "distanceHelp": "Reported supervised-driving distance in metres for this Monday–Sunday window.",
         "eyebrow": "Supervised driving",
-        "scope": "Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}",
+        "scope": "Vehicle {{id}} · {{range}}",
         "shareHelp": "Source-reported FSD share, on the 0–100 percent scale.",
         "title": "Weekly FSD summary"
       },

@@ -3809,7 +3809,6 @@
     "autoRefresh": "Live 10s",
     "avgInterval": "Avg interval",
     "brief": {
-      "bounds": "{{label}} · [{{start}}, {{end}}) · {{timezone}}",
       "description": "Inspect page-scoped transitions and flap evidence alongside the matching server total and independently fetched current state.",
       "eyebrow": "State-machine observability",
       "freshness": "Transitions: {{history}} · Live state: {{live}}",

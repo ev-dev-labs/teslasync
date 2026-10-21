@@ -319,8 +319,8 @@
   },
   {
     "file": "web/src/features/admin/components/statstrip-api-quality/ApiLogsSummary.tsx",
-    "calls": 20,
-    "sha256": "e6aaffc8e5f3028b393e6f06028c856f55c4a7e6bb679c456dae29002092796f"
+    "calls": 19,
+    "sha256": "1730fd84fe7e911cf3dc38ad34237a3d65786e51bc2d31092519318a90cd2d70"
   },
   {
     "file": "web/src/features/admin/components/statstrip-coverage-flags-secrets/SecretRotationOperationalBrief.tsx",
@@ -345,7 +345,7 @@
   {
     "file": "web/src/features/admin/components/structural-closure/audit-log/AuditLogFilters.tsx",
     "calls": 13,
-    "sha256": "92ef1b38ca12c3179048aa0744b294cf01069e082811279c6097e19115b298fd"
+    "sha256": "e1d031008d26d2749fda09106d9268514eaea695c88969f5c8e9c6e385c107d5"
   },
   {
     "file": "web/src/features/admin/components/structural-closure/audit-log/AuditLogIntegrity.tsx",
@@ -520,7 +520,7 @@
   {
     "file": "web/src/features/battery/pages/BatteryDegradationPage.tsx",
     "calls": 121,
-    "sha256": "02dc91bb261f1198ca50d73fdb07b1e736d43988b3a91624c5b7c2ab8480d7de"
+    "sha256": "4aac3a2c362d0522508cd72304bcfeae765d4465ec9964d46e1bac12b74f369f"
   },
   {
     "file": "web/src/features/charging/components/charging-list/ChargingInsights.tsx",
@@ -598,6 +598,11 @@
     "sha256": "6565c005699ffce7e15a69dc2cb017da014c719b79bc4a43287dcfcc49e9847b"
   },
   {
+    "file": "web/src/features/dashboard/widgets/FsdWeeklyWidget.tsx",
+    "calls": 15,
+    "sha256": "9aa634dd25355844d6ec7def1e847be9d23f1b77e4594ba574fec79dba1be66c"
+  },
+  {
     "file": "web/src/features/dashboard/widgets/NotificationStatsWidget.tsx",
     "calls": 28,
     "sha256": "61237693fbae45ddeecd0859f9fd81ec50bdd700686fb36ea9d365c50cc80291"
@@ -635,7 +640,7 @@
   {
     "file": "web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx",
     "calls": 20,
-    "sha256": "ad82207e6e5a180d8d572f996b5c2d8ba6e3ed30b39bd86264efdf55084dc4fd"
+    "sha256": "43d0442a0fdb9cd39f2a34f80c531c3737d4b8c12b8a7f90eeca9b3cfb8e3d32"
   },
   {
     "file": "web/src/features/driving/components/driving-dynamics-modernization/LiveMotorStatus.tsx",
@@ -952,8 +957,8 @@
   },
   {
     "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
-    "calls": 82,
-    "sha256": "2fe65149f864ec8d2057fb01afa6556ee98a90e725205dcc6b4f4815258c5fed"
+    "calls": 81,
+    "sha256": "c75f14310e05d21acebd6802660df2b9e23e00a9a5a091cd7fe01722a2839108"
   },
   {
     "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",

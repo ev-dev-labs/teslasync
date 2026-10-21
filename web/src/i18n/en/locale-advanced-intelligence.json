@@ -235,7 +235,7 @@
       "form": {
         "auxiliary": "Auxiliary load (canonical SI, optional)",
         "departure": "Departure",
-        "departureZone": "Enter departure in your browser time zone ({{timeZone}}). Display time zone preferences do not change this entry.",
+        "departureZone": "Enter departure in your selected time zone.",
         "distance": "Route distance (canonical SI)",
         "reserve": "Reserve target (%)",
         "run": "Run confirmed readiness assessment",

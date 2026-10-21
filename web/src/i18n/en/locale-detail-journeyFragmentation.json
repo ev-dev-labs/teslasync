@@ -93,7 +93,7 @@
     },
     "startProfile": {
       "title": "Local two-hour journey-start profile",
-      "subtitle": "Journey starts grouped in the vehicle timezone {{timeZone}}.",
+      "subtitle": "Journey starts grouped in your selected time zone.",
       "aria": "Bar chart of observed journey starts by local two-hour period",
       "period": "Local period",
       "journeys": "Journeys"
@@ -161,7 +161,7 @@
       "continuity": "A linked pair needs adjacent included records, non-overlapping timestamps, matching normalized addresses or GPS within {{meters}} m, and a gap at or below {{minutes}} minutes.",
       "invariant": "Each included drive belongs to one observed journey, so journey count equals included drives minus linked pairs.",
       "energy": "Energy intensity uses complete-energy journeys only and is reported in canonical Wh/m before display-unit formatting; coverage and support remain visible.",
-      "clock": "The analysis clock is fixed at page load and calendar profiles use the vehicle IANA timezone: {{timeZone}}.",
+      "clock": "The analysis clock is fixed at page load and calendar profiles use your selected time zone.",
       "scope": "Returned history is capped at {{limit}} rows and is not a claim about lifetime history. Structural indicators and observed energy-intensity differences do not establish intent or causality."
     },
     "footer": {

@@ -217,7 +217,7 @@
     {
       "file": "web/src/features/battery/pages/BatteryDegradationPage.tsx",
       "calls": 121,
-      "sha256": "02dc91bb261f1198ca50d73fdb07b1e736d43988b3a91624c5b7c2ab8480d7de"
+      "sha256": "4aac3a2c362d0522508cd72304bcfeae765d4465ec9964d46e1bac12b74f369f"
     },
     {
       "file": "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",

@@ -49,7 +49,7 @@
       "detailsScope": "All loaded pairs, newest first. “Well matched” means no model flag was triggered, not proof of intent. Already-full dwell is inferred from charge-end SoC, not continuous parked measurements. Dates use your browser timezone.",
       "pending": "Both charging and drive history must be loaded before pairings can be evaluated.",
       "chargeBounds": "Observed charge-end timestamps",
-      "chartTime": "Chart timestamps use {{zone}}. Pairing uses elapsed instants within 24 hours, not local calendar dates or a business timezone.",
+      "chartTime": "Chart timestamps use your selected time zone. Pairing uses elapsed instants within 24 hours, not local calendar dates or a separate business timezone.",
       "driveBounds": "Observed drive-start timestamps",
       "paused": "History loading is paused. Connect to resume or retry this source.",
       "loaded": "{{count}} records loaded",

@@ -1636,7 +1636,7 @@
     "watchDefaultVehicle": "default",
     "fsdWeekly": {
       "summary": {
-        "scope": "Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}",
+        "scope": "Vehicle {{id}} · {{range}}",
         "distanceHelp": "Reported supervised-driving distance in metres for this Monday–Sunday window.",
         "shareHelp": "Source-reported FSD share, on the 0–100 percent scale.",
         "changeHelp": "Share change in percentage points versus the previous Monday–Sunday window, not a percent growth rate.",
