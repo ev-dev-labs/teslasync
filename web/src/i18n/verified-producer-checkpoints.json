@@ -620,7 +620,7 @@
   {
     "file": "web/src/features/dashboard/widgets/WidgetShell.tsx",
     "calls": 2,
-    "sha256": "01dc5f6f15d545733207fa73816819150dfeeb88524450f93c213dc386f897dc"
+    "sha256": "4d038f00e67c82729aa3673c542b385f2e99bda744c3432c18fee11f65c2d1f7"
   },
   {
     "file": "web/src/features/driving/components/drive-detail/SupervisedDrivingPanel.tsx",

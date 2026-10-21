@@ -7,6 +7,25 @@ PR #198 was squash-merged as `c353a59399`. Active work now starts from
 cherry-pick any former redesign branches. The owner supplied the remaining
 product decisions; `followups-plan.md` is the active execution plan.
 
+### Latest local correction — 2026-10-21 01:20 UTC
+
+The44px target correction exposed two driving/1440 catalogue failures:
+Speed discipline was clipped because the header line grew16px. The shared
+action cluster now keeps its28px title line while44px hit targets fit inside
+the existing header padding. This retains body space, target size, tight
+spacing and dot alignment. Eight responsive guards also check action bounds.
+Focused66 tests pass; translations/source fingerprints are generator-verified.
+Fresh mock build, all726 registry rows, eight responsive cases and eight
+repeated driving cases pass, zero escapes. Five final dashboard PNGs are byte-
+identical to the reviewed f6d6be4106 versions; restored them after comparison,
+discarding the intermediate taller-header captures. Dashboard6/6 pass. Full
+replica continues; the32-worker unit run hit two30s source-scan timeouts, so
+the entire affected shard repeats under its two-worker limit. No timeout
+change. The previous full units were
+57,191/0/4 existing pending, direct lint/Go/strict private perf all green
+(399.7KB/400KB), but previous-artifact browsers do not count for this correction.
+No per-widget patch, assertion relaxation or workflow change.
+
 Product/security work is implemented; draft PR #202 remains open to main.
 Its first pushed head ce1e14ddff completed 198 passing checks, one existing
 conditional skip, and one failure: Lighthouse's strict startup-size preflight

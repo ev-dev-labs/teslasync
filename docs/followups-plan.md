@@ -96,6 +96,25 @@ same translated fallback header. These choices avoid inventing observation times
   repository generators and LF normalization. No temporary captures/reports added
   to Git. Final full-unit and browser-matrix results will be recorded below.
 
+### Latest local correction — 2026-10-21 01:20 UTC
+
+The44px target correction exposed two driving/1440 catalogue failures:
+Speed discipline was clipped because the header line grew16px. The shared
+action cluster now keeps its28px title line while44px hit targets fit inside
+the existing header padding. This retains body space, target size, tight
+spacing and dot alignment. Eight responsive guards also check action bounds.
+Focused66 tests pass; translations/source fingerprints are generator-verified.
+Fresh mock build, all726 registry rows, eight responsive cases and eight
+repeated driving cases pass, zero escapes. Five final dashboard PNGs are byte-
+identical to the reviewed f6d6be4106 versions; restored them after comparison,
+discarding the intermediate taller-header captures. Dashboard6/6 pass. Full
+replica continues; the32-worker unit run hit two30s source-scan timeouts, so
+the entire affected shard repeats under its two-worker limit. No timeout
+change. The previous full units were
+57,191/0/4 existing pending, direct lint/Go/strict private perf all green
+(399.7KB/400KB), but previous-artifact browsers do not count for this correction.
+No per-widget patch, assertion relaxation or workflow change.
+
 ### Header verification correction — 2026-10-21 00:50 UTC
 
 The first full sweep exposed an existing44px Expand target requirement in four
