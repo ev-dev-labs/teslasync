@@ -380,7 +380,7 @@
   {
     "file": "web/src/features/admin/hooks/useAuditLogPage.ts",
     "calls": 3,
-    "sha256": "22dca86578f0003d09a412a9d922aece2923ad70cbbc5454ec865a0401959c03"
+    "sha256": "bd5c8aaa26877bc773e3a3f0c8849e4da73839219dbf2b7e7ecf47cbf269bf12"
   },
   {
     "file": "web/src/features/admin/hooks/useSecretRotationPage.ts",
@@ -455,7 +455,7 @@
   {
     "file": "web/src/features/admin/pages/VehicleCostPage.tsx",
     "calls": 10,
-    "sha256": "9b61a5493c12ab6328c888b0c3e1d2cf6d955d662a42c3e21025b52ed72de20b"
+    "sha256": "36a944ab73bf48f2020d53c96e3f16828fdee7dacaf61a5af2d2aeea957996d3"
   },
   {
     "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsBatteryBrief.tsx",
@@ -600,7 +600,7 @@
   {
     "file": "web/src/features/dashboard/widgets/FsdWeeklyWidget.tsx",
     "calls": 15,
-    "sha256": "9aa634dd25355844d6ec7def1e847be9d23f1b77e4594ba574fec79dba1be66c"
+    "sha256": "84899f80889f65d19180a8ab54f5ffba8b3c53b4bdced57feb266ea7200dc13e"
   },
   {
     "file": "web/src/features/dashboard/widgets/NotificationStatsWidget.tsx",
@@ -690,7 +690,7 @@
   {
     "file": "web/src/features/driving/pages/DrivingDynamicsPage.tsx",
     "calls": 21,
-    "sha256": "acfceb388892d5cf989209a593e547ddd7b02497e04949c3d5702582791f48cf"
+    "sha256": "e8dfad94a7cbcc57aac3ff2d03423c134f8b398dcecf1767cca92550c0b5794b"
   },
   {
     "file": "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx",
@@ -928,12 +928,12 @@
   {
     "file": "web/src/features/system/pages/CommandHistoryPage.tsx",
     "calls": 101,
-    "sha256": "a189146fa581524d1b355845196de09dc59f6f3c0e92beeeff50359ac2d81461"
+    "sha256": "3f2fd4db373776fb0298ee515362dc36f9e843a99702165c929bde63c89bec53"
   },
   {
     "file": "web/src/features/system/pages/CommandReliabilityPage.tsx",
     "calls": 43,
-    "sha256": "30d590cf02fbf34cfd07917eaddf04c2098c48d623ea629880e07409364c1480"
+    "sha256": "0e25dff4038db298f0fdff2001c90cb7e99c34041935d1ad3a2af3fc34b78ecb"
   },
   {
     "file": "web/src/features/system/pages/DataExportPage.tsx",
@@ -958,7 +958,7 @@
   {
     "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
     "calls": 81,
-    "sha256": "c75f14310e05d21acebd6802660df2b9e23e00a9a5a091cd7fe01722a2839108"
+    "sha256": "ab7f7c69039b200031deffa949c81497f531fde7300fb3c2209daebf6f8a21d1"
   },
   {
     "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",
