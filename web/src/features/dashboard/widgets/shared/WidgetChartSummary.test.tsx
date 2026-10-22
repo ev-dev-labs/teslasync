@@ -3,14 +3,12 @@
  *
  * The component is the shared "stat row + chart body" layout used by the
  * dashboard's chart widgets. It has one runtime export (the component) plus
- * type exports (`ChartSummaryStat`, `ChartSummaryTimeAxis`,
- * `ChartSummaryLegendItem`). Every branch is exercised through the
- * component:
+ * type exports (`ChartSummaryStat`, `ChartSummaryLegendItem`). Every branch
+ * is exercised through the component:
  *   - `isEmpty` short-circuits to an <EmptyState> (default vs. caller message + icon).
  *   - the stat row renders label / value / optional unit for each stat.
  *   - `compact` hides the chart body (stats-only), otherwise the chart renders.
  *   - `yAxisLabel` / `xAxisLabel` render quiet chart captions (hidden with the chart).
- *   - `timeAxis` renders a GMT-offset-annotated caption via `formatChartInstant`.
  *   - `legend` renders a dot + word series key defaulting to the
  *     `chartTokens.series` dark/light pairs (hidden with the chart).
  *
@@ -28,7 +26,6 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import '@/i18n';
 import { chartTokens } from '@/lib/tokens';
-import { formatChartInstant } from '@/lib/dateConvert';
 import { WidgetChartSummary, type ChartSummaryStat } from './WidgetChartSummary';
 
 const chartNode = <div data-testid="chart">chart-body</div>;
@@ -192,79 +189,6 @@ describe('WidgetChartSummary — axis labels', () => {
 
     expect(screen.queryByText('kW')).not.toBeInTheDocument();
     expect(screen.queryByText('Speed range')).not.toBeInTheDocument();
-  });
-});
-
-describe('WidgetChartSummary — time-axis GMT-offset disambiguation', () => {
-  // 2026-11-01 spans the US fall-back transition: 08:30Z renders GMT-7 and
-  // 09:30Z renders GMT-8 in America/Los_Angeles, so the wall times alone
-  // would be ambiguous without the offsets.
-  const tz = 'America/Los_Angeles';
-  const start = '2026-11-01T08:30:00.000Z';
-  const end = '2026-11-01T09:30:00.000Z';
-
-  it('renders both endpoints with their own GMT offsets across a DST transition', () => {
-    render(
-      <WidgetChartSummary
-        stats={sampleStats}
-        chart={chartNode}
-        timeAxis={{ start, end, timeZone: tz }}
-      />,
-    );
-
-    const expected = `${formatChartInstant(new Date(start), { tz })} – ${formatChartInstant(new Date(end), { tz })}`;
-    expect(screen.getByText(expected)).toBeInTheDocument();
-    expect(expected).toContain('GMT-7');
-    expect(expected).toContain('GMT-8');
-  });
-
-  it('renders a single offset-annotated instant when only one endpoint is given', () => {
-    render(
-      <WidgetChartSummary
-        stats={sampleStats}
-        chart={chartNode}
-        timeAxis={{ start, timeZone: tz }}
-      />,
-    );
-
-    const expected = formatChartInstant(new Date(start), { tz });
-    expect(screen.getByText(expected)).toBeInTheDocument();
-    expect(expected).toContain('GMT-7');
-  });
-
-  it('renders a single caption when both endpoints are the same instant', () => {
-    render(
-      <WidgetChartSummary
-        stats={sampleStats}
-        chart={chartNode}
-        timeAxis={{ start, end: start, timeZone: tz }}
-      />,
-    );
-
-    expect(screen.getByText(formatChartInstant(new Date(start), { tz }))).toBeInTheDocument();
-  });
-
-  it('renders no caption for missing or invalid instants instead of a placeholder range', () => {
-    const { container, rerender } = render(
-      <WidgetChartSummary stats={sampleStats} chart={chartNode} timeAxis={{ start: 'not-a-date', end: null }} />,
-    );
-    expect(container.querySelector('p')).not.toBeInTheDocument();
-
-    rerender(<WidgetChartSummary stats={sampleStats} chart={chartNode} />);
-    expect(container.querySelector('p')).not.toBeInTheDocument();
-  });
-
-  it('hides the time caption in compact mode with the chart', () => {
-    const { container } = render(
-      <WidgetChartSummary
-        compact
-        stats={sampleStats}
-        chart={chartNode}
-        timeAxis={{ start, end, timeZone: tz }}
-      />,
-    );
-
-    expect(container.querySelector('p')).not.toBeInTheDocument();
   });
 });
 

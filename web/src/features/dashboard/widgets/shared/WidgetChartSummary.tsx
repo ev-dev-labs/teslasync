@@ -3,25 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { chartTokens, typography } from '@/lib/tokens';
-import { formatChartInstant } from '@/lib/dateConvert';
 import { dashboardTokens } from '../../lib/dashboardTokens';
 
 export interface ChartSummaryStat {
   label: string;
   value: string | number | null | undefined;
   unit?: string;
-}
-
-/**
- * Time-axis disambiguation for a chart body. The offset-annotated caption is
- * rendered from {@link formatChartInstant} so repeated fall-back hours stay
- * distinguishable; the chart's own tick labels keep their existing format.
- */
-export interface ChartSummaryTimeAxis {
-  start?: string | number | Date | null;
-  end?: string | number | Date | null;
-  /** IANA zone the axis renders in; falls back to the shared default when omitted. */
-  timeZone?: string;
 }
 
 /**
@@ -58,22 +45,10 @@ export interface WidgetChartSummaryProps {
    */
   xAxisLabel?: string;
   /**
-   * GMT-offset-annotated time caption rendered below the chart body.
-   * Hidden in `compact` mode with the chart.
-   */
-  timeAxis?: ChartSummaryTimeAxis;
-  /**
    * Static series key rendered below the chart body. Hidden in `compact`
    * mode with the chart.
    */
   legend?: ChartSummaryLegendItem[];
-}
-
-/** Valid instants only; mirrors the shared helper guards so an invalid input renders no caption. */
-function toValidDate(value: string | number | Date | null | undefined): Date | null {
-  if (value == null || value === '') return null;
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export function WidgetChartSummary({
@@ -86,7 +61,6 @@ export function WidgetChartSummary({
   isEmpty,
   yAxisLabel,
   xAxisLabel,
-  timeAxis,
   legend,
 }: WidgetChartSummaryProps) {
   const { t } = useTranslation('dashboard');
@@ -113,20 +87,6 @@ export function WidgetChartSummary({
   // chart-only render instead of throwing.
   const safeStats = stats ?? [];
   const safeLegend = legend ?? [];
-
-  // GMT-offset-annotated time caption ("Nov 1, 01:30 GMT-7 – Nov 1, 02:30
-  // GMT-8"). Each endpoint carries its own offset so a DST transition inside
-  // the range stays unambiguous. Invalid endpoints are dropped; with none
-  // valid there is no caption. The shared helper never throws and never
-  // renders a zone name.
-  const startDate = toValidDate(timeAxis?.start);
-  const endDate = toValidDate(timeAxis?.end);
-  const timeCaption =
-    startDate && endDate && startDate.getTime() !== endDate.getTime()
-      ? `${formatChartInstant(startDate, { tz: timeAxis?.timeZone })} – ${formatChartInstant(endDate, { tz: timeAxis?.timeZone })}`
-      : (startDate ?? endDate)
-        ? formatChartInstant((startDate ?? endDate) as Date, { tz: timeAxis?.timeZone })
-        : null;
 
   return (
     <div className="flex h-full min-w-0 flex-col">
@@ -183,11 +143,6 @@ export function WidgetChartSummary({
           {xAxisLabel != null && xAxisLabel !== '' && (
             <p className={cn(typography.role.caption, 'mt-1.5 break-words text-start')}>
               {xAxisLabel}
-            </p>
-          )}
-          {timeCaption != null && (
-            <p className={cn(typography.role.caption, 'mt-1 break-words text-start tabular-nums')}>
-              {timeCaption}
             </p>
           )}
         </div>

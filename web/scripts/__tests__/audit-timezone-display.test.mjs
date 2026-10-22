@@ -150,3 +150,29 @@ test('R5: flags member-expression supportedValuesOf(timeZone)', () => {
   );
   assert.deepEqual(rules(failures), ['R5']);
 });
+
+test('R6: flags GMT-offset helpers called in .tsx render scope', () => {
+  const caption = _scanSourceForTest(
+    `import { formatChartInstant } from '@/lib/dateConvert';\nexport function C({ s, e }) {\n  return <p>{formatChartInstant(s)} – {formatChartInstant(e)}</p>;\n}\n`,
+    { rel: 'src/components/C.tsx' },
+  );
+  assert.deepEqual(rules(caption), ['R6', 'R6']);
+  const offset = _scanSourceForTest(
+    `import { formatGmtOffset } from '@/lib/dateConvert';\nexport function C({ d }) {\n  return <span>{formatGmtOffset(d)}</span>;\n}\n`,
+    { rel: 'src/components/C.tsx' },
+  );
+  assert.deepEqual(rules(offset), ['R6']);
+});
+
+test('R6: allows offset helpers in .ts labels/timeline helpers', () => {
+  const tick = _scanSourceForTest(
+    `import { formatChartInstant } from '@/lib/dateConvert';\nexport function tickLabel(d, tz) {\n  return formatChartInstant(d, { tz });\n}\n`,
+    { rel: 'src/features/x/labels.ts' },
+  );
+  assert.deepEqual(tick, []);
+  const timeline = _scanSourceForTest(
+    `import { formatGmtOffset } from '@/lib/dateConvert';\nexport function stamp(d, tz) {\n  return formatGmtOffset(d, { tz });\n}\n`,
+    { rel: 'src/features/x/daylog.ts' },
+  );
+  assert.deepEqual(timeline, []);
+});
