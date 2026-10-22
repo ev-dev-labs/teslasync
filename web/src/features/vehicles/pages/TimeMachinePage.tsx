@@ -246,7 +246,7 @@ const SCRUB_DEBOUNCE_MS = 200;
 
 export default function TimeMachinePage() {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat();
+  const { formatDateTime, formatDateShort } = useDateFormat();
   usePageTitle(t('timeMachine.title', 'Vehicle time machine'));
 
   const { vehicle } = useSelectedVehicle();
@@ -464,11 +464,11 @@ export default function TimeMachinePage() {
                   <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-between">
                     <Caption className="inline-flex min-w-0 flex-wrap items-center gap-1 break-words">
                       <span>{t('timeMachine.earliest', 'Earliest')}:</span>
-                      <DateTime value={range?.earliest ?? null} variant="short" />
+                      <span>{formatDateShort(range?.earliest ?? null)}</span>
                     </Caption>
                     <Caption className="inline-flex min-w-0 flex-wrap items-center gap-1 break-words">
                       <span>{t('timeMachine.latest', 'Latest')}:</span>
-                      <DateTime value={range?.latest ?? null} variant="short" />
+                      <span>{formatDateShort(range?.latest ?? null)}</span>
                     </Caption>
                   </div>
                 </div>
