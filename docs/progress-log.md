@@ -513,3 +513,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-21 21:01 - Codex: TZ-6 e2e spec done (4/4 green)
 - New `web/e2e/timezone-display.smoke.spec.ts`: UTC browser, user LA/Tokyo; drives times + Quick-view drawer, timeline midnight bucket (Mar 8 LA / Mar 9 Tokyo) + Review-details end-inclusive range + Inspect drawer; no raw ISO/zone names. tsc clean, split-check OK, audit unaffected (specs excluded). No markers, no contract change.
 - Next: freshness-header revert, then TZ-7 full replica + push.
+
+## 2026-10-21 21:08 - Codex: freshness-header revert done + verified
+- Reverted `c8aad38605,dc22ed9bfb,f6d6be4106` as `70b4c257a2,0a89cfc2ed,fb85d89745` (WidgetHeaderContext + widgetFreshnessOwnership test + dashboard-widget-headers spec deleted; snapshots restored). Docs conflicts kept at HEAD; i18n pins via `--typed --checkpoint-catalog`; producer/combined checkpoints verified (cad1237f5f not needed). Vitest pins 7867 + dash/widgets 371 green, tsc clean, split OK, TZ-6 e2e 4/4 still green.
+- Next: TZ-7 full replica + push + PR green.

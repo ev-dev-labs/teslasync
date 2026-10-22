@@ -4,8 +4,8 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Codex (TZ-6 spec done, 4/4 green).
-Branch HEAD: `d6bb348a23` + TZ-6 spec (committing, pushing at gate).
+Last updated: 2026-10-22 by Codex (freshness revert done + verified).
+Branch HEAD: `fb85d89745` + pin regen (committing, pushing at gate).
 
 ## Parts overview
 
@@ -33,7 +33,7 @@ Branch HEAD: `d6bb348a23` + TZ-6 spec (committing, pushing at gate).
 | TZ-5c marker-free migration (user update) | done | `2fbe414e..edf280bfeb` (4 + docs + Analytics pin) | `tz-computation` 72->0 verified 0 in web/src, all other `tz-*` 0 (1 absence test kept); playbook no-suppression rule present |
 | WaitOracle backend zone param + useCharging + panel (wip handoff fix) | done | `66eda8c6d5` wip + `a09dc6ec15` fix | Backend `?timezone=` (400/UTC default), store AT TIME ZONE $3, Predict(loc); hook sends effective tz; panel best_hour + no UTC; Go + 43 panel + 43 trips + tsc + split + trio + audit green |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | done | TZ-6 spec (this change) | `web/e2e/timezone-display.smoke.spec.ts` 4/4 green (chromium-smoke, mock build reuse); TZ=UTC browser, `tz_display_default=user` + `timezone_user` LA/Tokyo; drive times + Quick-view drawer, timeline daily bucket (Mar 8 LA / Mar 9 Tokyo) + Review-details range drawer (end-inclusive, no Mar 10) + Inspect drawer; no raw ISO / zone names; tsc + split-check green; audit unaffected (specs excluded by design); no markers added. |
-| Freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106`) | not started | revert set identified | `git revert` (no resets) after Part 1 code done; `cad1237f5f` only if shell-preservation fails; i18n conflicts via generators |
+| Freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106`) | done | `70b4c257a2,0a89cfc2ed,fb85d89745` + pin regen (this change) | 3 sequential `git revert`s (newest first); docs conflicts (`ci-handoff/followups/progress-log`) kept at HEAD (later docs supersede; SUPERSEDED note records revert); i18n pins regenerated via sanctioned `--typed --checkpoint-catalog` (7 test files); producer checkpoints verified correct as-reverted (FreshnessDot/StatusBadge/IconButton correctly entryless = pre-freshness state, old dynamic key unverifiable); combined 68/68 match; `cad1237f5f` NOT needed (shell-preservation 211 green). Vitest: pins 7867 + dash/widgets 371 green; tsc clean; split-check OK; TZ-6 e2e still 4/4. No markers, no contract change. |
 | TZ-7 i18n regen, full local replica, commit, push, PR green | not started | — | Section 3 replica, then push once |
 
 ## Part 2 summary mirror (updated after every task once started)
@@ -148,4 +148,4 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-New playbook committed+pushed (`c4b9a91d9b`); API contract review done (recorded above). PR202 shows no fails. TZ-6 done (4/4 green, committing + pushing at gate). Next: freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106` via `git revert`), then TZ-7 i18n regen + full local replica (section 3) + push + PR green. Full 277-route sweep runs at the TZ-7 gate.
+New playbook committed+pushed (`c4b9a91d9b`); API contract review done (recorded above). PR202 shows no fails. Freshness revert done + verified (pushing at gate). Next: TZ-7 full local replica (section 3: 16 quality shards + a11y + firefox/webkit smoke + route/contract/scenario/list + lint/audits + build + full vitest + go build/test) + push + PR green. Full 277-route sweep runs at the TZ-7 gate.
