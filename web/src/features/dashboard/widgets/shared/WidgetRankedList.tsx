@@ -7,12 +7,13 @@ import { dashboardTokens } from '../../lib/dashboardTokens';
 /**
  * One row of the shared ranked-list primitive.
  *
- * Speaks the `rows` language from the widget-redesign spec: a title with an
- * optional muted sublabel on the left, a right-aligned value with an optional
- * muted hint underneath, an optional leading status dot, and an optional
- * status pill. Rows are separated by dividers — there are no rank numerals
- * and no background magnitude bars (spec rule 5: no meaningless meters; the
- * After cards show plain divider rows).
+ * Speaks the `rows` language from the widget-redesign spec: a muted rank
+ * numeral, a title with an optional muted sublabel on the left, a
+ * right-aligned value with an optional muted hint underneath, an optional
+ * leading status dot, and an optional status pill. Rows are separated by
+ * dividers with no background magnitude bars (spec rule 5: no meaningless
+ * meters; the After cards show plain divider rows). The rank numeral keeps
+ * caller-ranked identity visible (see the route-efficiency After preview).
  */
 export interface RankedItem {
   id: string | number;
@@ -120,7 +121,7 @@ export function WidgetRankedList({
   return (
     <div className="overflow-y-auto">
       <ul className="flex flex-col">
-        {visible.map((item) => (
+        {visible.map((item, index) => (
           <li
             key={item.id}
             className={cn(
@@ -130,6 +131,11 @@ export function WidgetRankedList({
               dashboardTokens.density.rowPadding,
             )}
           >
+            {/* Rank number */}
+            <span className="w-5 shrink-0 text-right text-xs font-medium tabular-nums text-[var(--text-muted)]">
+              {index + 1}
+            </span>
+
             {/* Leading status dot (decorative — the adjacent text names the state). */}
             {item.status && (
               <span

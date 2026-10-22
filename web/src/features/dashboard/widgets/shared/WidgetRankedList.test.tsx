@@ -16,7 +16,7 @@
  *   2. Limits: the default cap (5 wide / 3 compact), the `maxItems` override,
  *      and the guard that a zero/negative cap collapses to the empty state
  *      instead of `Array.slice`'s negative-index footgun.
- *   3. Spec rows: divider-separated rows with no rank numerals and no
+ *   3. Spec rows: divider-separated rows with a muted rank numeral and no
  *      background magnitude bars (the `showBars` / `barColor` props remain
  *      accepted for source compatibility but render nothing).
  *   4. Sublabel / hint: muted secondary lines under the label and value.
@@ -74,7 +74,7 @@ function decorations(container: HTMLElement): HTMLElement[] {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('WidgetRankedList', () => {
-  it('sorts items by value descending without rank numerals', () => {
+  it('sorts items by value descending and numbers the ranks 1..N', () => {
     const { container } = render(
       <WidgetRankedList
         items={[
@@ -91,8 +91,8 @@ describe('WidgetRankedList', () => {
     expect(rows[0]).toHaveTextContent('Bravo');
     expect(rows[1]).toHaveTextContent('Charlie');
     expect(rows[2]).toHaveTextContent('Alpha');
-    // Spec divider rows carry no rank numerals and no decorative bars.
-    expect(rows[0].textContent).toBe('Bravo30');
+    // Spec divider rows carry rank prefixes 1..N and no decorative bars.
+    expect(rows[0].textContent).toBe('1Bravo30');
     expect(decorations(container)).toHaveLength(0);
   });
 
