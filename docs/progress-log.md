@@ -475,3 +475,6 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-22 - Muse: TZ-5 batch 1 committed (eccca4cdc1)
 - Migrated 8 component toLocale sites to the shared layer (monthShortLabel x2, AlignmentPairs, thermal fallback, sourceMetadata + 2 briefs, SignalTrendPage axis); new formatMonthDayHour/formatHourName/weekdayStyle; SecretRotation tests zone-pinned to LA.
 - Touched tests green (100 + 7 + 22), tsc clean. Next: batch 2 (report/certificate generated docs).
+## 2026-10-22 - Muse: TZ-5 batch 2 committed (f99116af32)
+- report.ts/certificate.ts dead builders (zero production callers): 4 footer sites to shared formatDateTime/formatDate; report tests 11 green, tsc clean.
+- Next: labels.ts Intl factories (12 sites), then driving/battery/analytics libs.
