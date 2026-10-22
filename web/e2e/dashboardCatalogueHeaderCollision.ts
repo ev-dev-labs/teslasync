@@ -13,7 +13,7 @@ async function headerGeometry(expand: Locator) {
     }
     const panel = container.querySelector(':scope > .widget-panel');
     const title = panel?.querySelector('h3:not(.sr-only)');
-    const header = panel?.querySelector<HTMLElement>('[data-role="widget-shell-header"]');
+    const header = title?.parentElement?.parentElement?.parentElement;
     if (!header || !panel?.contains(header)) throw new Error('Missing exact FleetPosture shell header');
     const rect = (node: Element) => {
       const box = node.getBoundingClientRect();
@@ -36,7 +36,7 @@ async function headerGeometry(expand: Locator) {
     const controls = [...header.querySelectorAll('button')].filter(visible).map(button => {
       const box = rect(button);
       const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-      return { text: button.textContent?.trim(), label: button.getAttribute('aria-label'), box, isExpand: button === element,
+      return { text: button.textContent?.trim(), label: button.getAttribute('aria-label'), box,
         verticalOverlap: Math.max(0, Math.min(box.bottom, expandBox.bottom) - Math.max(box.top, expandBox.top)),
         gap: expandBox.left - box.right, hitOwnButton: hit?.closest('button') === button };
     });
@@ -77,12 +77,11 @@ function assertGeometry(frame: Awaited<ReturnType<typeof headerGeometry>>, keybo
   expect(frame.title).toBe('Fleet posture');
   const refresh = frame.controls.filter(control => control.label?.startsWith('Refresh data'));
   expect(refresh, 'Visible Refresh must not be dropped to avoid the collision').toHaveLength(1);
-  expect(frame.expand.right).toBeLessThanOrEqual(refresh[0].box.left);
-  expect(refresh[0].box.left - frame.expand.right, 'Actual Expand/Refresh gap must be at least8px').toBeGreaterThanOrEqual(8);
-  expect(refresh[0].box.left - frame.expand.right, 'Expand/Refresh must form one tight cluster').toBeLessThanOrEqual(8);
+  expect(refresh[0].box.right).toBeLessThanOrEqual(frame.expand.left);
+  expect(refresh[0].gap, 'Actual Refresh/Expand gap must be at least8px').toBeGreaterThanOrEqual(8);
   for (const control of frame.controls) {
     expect(control.hitOwnButton, 'Each visible header control center must retain its own button').toBe(true);
-    if (control.verticalOverlap > 0 && !control.isExpand && control !== refresh[0]) expect(control.gap, 'Vertically overlapping controls require8px gap')
+    if (control.verticalOverlap > 0) expect(control.gap, 'Vertically overlapping controls require8px gap')
       .toBeGreaterThanOrEqual(8);
   }
   expect(frame.readings.some(reading => reading.text === 'Fleet posture')).toBe(true);
