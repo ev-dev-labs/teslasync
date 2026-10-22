@@ -219,7 +219,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     : null;
 
   const footer = vehicle ? (
-    <>
+    <span className="flex w-full min-w-0 items-center justify-between gap-2">
       <span>
         {t('widget.verifiedFields', '{{count}} verified fields', {
           count: verifiedFields.length,
@@ -231,7 +231,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
       >
         {t('hero.details', 'Details')} <span aria-hidden="true">→</span>
       </Link>
-    </>
+    </span>
   ) : undefined;
 
   return (

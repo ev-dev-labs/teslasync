@@ -326,7 +326,7 @@ describe('VehicleHeroWidget — After layout', () => {
 
     expect(screen.getByText('Battery')).toBeInTheDocument();
     expect(screen.getByText('64')).toBeInTheDocument();
-    expect(screen.getByText('Est. range')).toBeInTheDocument();
+    expect(screen.getByText('Range')).toBeInTheDocument();
     // 276,000 m → 276 km with the metric preference.
     expect(screen.getByText('276')).toBeInTheDocument();
     expect(screen.getByTestId('charge-limit-marker')).toBeInTheDocument();

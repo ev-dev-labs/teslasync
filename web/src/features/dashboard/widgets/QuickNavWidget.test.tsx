@@ -54,7 +54,7 @@ const SHORTCUTS = [
   { name: /drives/i, href: '/drives', label: 'Drives' },
   { name: /charging/i, href: '/charging', label: 'Charging' },
   { name: /analytics/i, href: '/analytics', label: 'Analytics' },
-  { name: /battery/i, href: '/battery', label: 'Battery' },
+  { name: /battery/i, href: '/battery', label: 'Battery health' },
 ] as const;
 
 /** Descriptions the pre-redesign tiles showed; the After `.lk` tiles drop them. */
@@ -170,7 +170,7 @@ describe('QuickNavWidget — i18n wiring (no hardcoded English)', () => {
     expect(tSpy).toHaveBeenCalledWith('nav.drives', 'Drives');
     expect(tSpy).toHaveBeenCalledWith('nav.charging', 'Charging');
     expect(tSpy).toHaveBeenCalledWith('nav.analytics', 'Analytics');
-    expect(tSpy).toHaveBeenCalledWith('nav.battery', 'Battery');
+    expect(tSpy).toHaveBeenCalledWith('nav.battery', 'Battery health');
   });
 
   it('does not resolve description keys (After tiles are label-only)', () => {

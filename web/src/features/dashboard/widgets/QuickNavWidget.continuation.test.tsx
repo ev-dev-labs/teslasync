@@ -8,7 +8,7 @@ describe('canonical quick navigation typography', () => {
     renderWidget(<QuickNavWidget size={{ cols: 1, rows: 4 }} />);
     const links = screen.getAllByRole('link');
     expect(links.map(link => link.getAttribute('href'))).toEqual(['/drives', '/charging', '/analytics', '/battery']);
-    for (const label of ['Drives', 'Charging', 'Analytics', 'Battery']) {
+    for (const label of ['Drives', 'Charging', 'Analytics', 'Battery health']) {
       expect(screen.getByText(label)).toBeVisible();
       expect(screen.getByText(label)).not.toHaveClass('truncate');
     }
