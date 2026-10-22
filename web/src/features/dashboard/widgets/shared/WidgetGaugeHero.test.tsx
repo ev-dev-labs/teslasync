@@ -324,6 +324,69 @@ describe('WidgetGaugeHero — stats row', () => {
   });
 });
 
+// ── Spec redesign chrome (Phase 1 shared foundation) ─────────────────────────
+// The LinearGauge bar is the single headline; the wrapper only centers it
+// full-width on the shared section rhythm, and the secondary stats use the
+// shared label/unit tokens with tabular numerals and logical (RTL-safe)
+// inline-start spacing. No gradients, glass, emoji, or motion of its own.
+describe('WidgetGaugeHero — spec chrome', () => {
+  it('centers a full-width hero on the shared section rhythm', () => {
+    const { container } = render(<WidgetGaugeHero gauge={baseGauge} />);
+
+    const root = container.firstElementChild;
+    expect(root).toHaveClass(
+      'flex', 'h-full', 'w-full', 'min-w-0', 'flex-col', 'items-center', 'justify-center',
+    );
+    // dashboardTokens.density.sectionGap (the After 12px section rhythm).
+    expect(root).toHaveClass('gap-3');
+  });
+
+  it('lays the stats row out full-width on the shared stat gaps', () => {
+    const stats: GaugeHeroStat[] = [{ label: 'Range', value: 250, unit: 'mi' }];
+    const { container } = render(<WidgetGaugeHero gauge={baseGauge} stats={stats} />);
+
+    // The stats wrapper keeps the `.flex-wrap` marker asserted above…
+    const row = container.querySelector('.flex-wrap');
+    expect(row).toBeInTheDocument();
+    // …on the After stat-grid gaps (14px columns / 12px rows), full-width so
+    // wrapped cells stay centered instead of hugging a shrink-to-fit box.
+    expect(row).toHaveClass('w-full', 'min-w-0', 'items-center', 'justify-center');
+    expect(row).toHaveClass('gap-x-3.5', 'gap-y-3');
+  });
+
+  it('renders stat labels on the shared label token with a truncation title', () => {
+    const stats: GaugeHeroStat[] = [{ label: 'Range', value: 250, unit: 'mi' }];
+    render(<WidgetGaugeHero gauge={baseGauge} stats={stats} />);
+
+    const label = screen.getByText('Range');
+    // dashboardTokens.metricLabel: text-sm secondary, wrapping, snug.
+    expect(label).toHaveClass('text-sm', 'break-words', 'leading-snug');
+    expect(label.className).toContain('text-[var(--text-secondary)]');
+    expect(label).toHaveAttribute('title', 'Range');
+  });
+
+  it('omits the truncation title when the stat label falls back to the em-dash', () => {
+    const stats = [{ label: undefined, value: 42 }] as unknown as GaugeHeroStat[];
+    render(<WidgetGaugeHero gauge={baseGauge} stats={stats} />);
+
+    expect(screen.getByText('—')).not.toHaveAttribute('title');
+  });
+
+  it('renders stat values tabular with the unit on logical inline-start spacing', () => {
+    const stats: GaugeHeroStat[] = [{ label: 'Range', value: 250, unit: 'mi' }];
+    render(<WidgetGaugeHero gauge={baseGauge} stats={stats} />);
+
+    expect(screen.getByText('250')).toHaveClass('tabular-nums', 'font-semibold');
+
+    const unit = screen.getByText('mi');
+    // dashboardTokens.unit (muted caption) with ms- spacing: no physical
+    // ml- remains, so the RTL audit budget never grows.
+    expect(unit).toHaveClass('ms-0.5', 'text-xs');
+    expect(unit.className).toContain('text-[var(--text-muted)]');
+    expect(unit.className).not.toContain('ml-');
+  });
+});
+
 // ── Children slot + compact suppression ──────────────────────────────────────
 describe('WidgetGaugeHero — children slot', () => {
   it('renders children below the gauge when not compact', () => {
