@@ -472,3 +472,6 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Commits: 284851a318 backend, 0beecc8b4c frontend (74 files), e9e72b0c38 i18n, b3ab750b44 docs, e660161274 timemachine fix. tsc clean, Go green. Final TZ=UTC gate running, then push + PR checks.
 - Note: PR202 CI red on pushed TZ-3b (frontend shard + e2e) — expected until TZ-4 lands; e2e/visual triage at TZ-7.
 - Next: push, PR checks, TZ-5 guard + 277-route sweep.
+## 2026-10-22 - Muse: TZ-5 batch 1 committed (eccca4cdc1)
+- Migrated 8 component toLocale sites to the shared layer (monthShortLabel x2, AlignmentPairs, thermal fallback, sourceMetadata + 2 briefs, SignalTrendPage axis); new formatMonthDayHour/formatHourName/weekdayStyle; SecretRotation tests zone-pinned to LA.
+- Touched tests green (100 + 7 + 22), tsc clean. Next: batch 2 (report/certificate generated docs).
