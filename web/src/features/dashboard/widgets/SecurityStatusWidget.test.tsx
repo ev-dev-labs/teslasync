@@ -2,9 +2,10 @@
  * SecurityStatusWidget — behaviour, branch + hardening coverage.
  *
  * The widget is the dashboard's security tile. It reads the latest security
- * snapshot (`useSecurityLatest`) and folds it into a 2×2 status grid — Lock,
- * Sentry, Doors, Windows — each carrying a tri-state (ok / warning|error /
- * inactive / unknown) plus a human-readable value. Its surface under test:
+ * snapshot (`useSecurityLatest`) and renders the After design: a lock-state
+ * hero headline plus Sentry / Doors / Windows detail rows, each carrying a
+ * tri-state (ok / warning|error / inactive / unknown) as dot + word plus a
+ * human-readable value. Its surface under test:
  *
  *   1. The four cells in their nominal states: secured (locked + sentry +
  *      all-closed) → every cell "ok"; unsecured (unlocked → red `error`,
@@ -189,7 +190,7 @@ describe('SecurityStatusWidget', () => {
     const { container } = renderWidget();
     expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByText('Lock')).toBeInTheDocument();
+    expect(screen.getByText('Sentry')).toBeInTheDocument();
     expect(screen.getByText('Off')).toBeInTheDocument();
     expect(screen.getByText('Doors')).toBeInTheDocument();
     expect(screen.getByText('Windows')).toBeInTheDocument();
@@ -201,29 +202,24 @@ describe('SecurityStatusWidget', () => {
     expect(refetch).toHaveBeenCalledOnce();
   });
 
-  it('renders the titled shell and four "ok" cells when fully secured', () => {
+  it('renders the titled shell with a Locked hero and three closed/active rows when fully secured', () => {
     renderWidget();
 
     expect(screen.getByText('Security')).toBeInTheDocument();
 
-    // Labels for every cell.
-    expect(screen.getByText('Lock')).toBeInTheDocument();
+    // Row labels (the lock state is the hero headline, not a row).
     expect(screen.getByText('Sentry')).toBeInTheDocument();
     expect(screen.getByText('Doors')).toBeInTheDocument();
     expect(screen.getByText('Windows')).toBeInTheDocument();
 
-    // Values: secured state.
+    // Hero + row values: secured state.
     expect(screen.getByText('Locked')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     // Doors + Windows both closed → two "All Closed" values.
     expect(screen.getAllByText('All closed')).toHaveLength(2);
-
-    expect(screen.getAllByText('Healthy')).toHaveLength(4);
-    expect(screen.queryByText('Error')).not.toBeInTheDocument();
-    expect(screen.queryByText('Warning')).not.toBeInTheDocument();
   });
 
-  it('maps an unlocked car to a red "error" lock cell and sentry-off to "inactive"', () => {
+  it('maps an unlocked car to an Unlocked hero and sentry-off to a neutral row', () => {
     securityMock.mockReturnValue(
       makeQuery({ data: makeSecurity({ locked: false, sentry_mode: false }) }),
     );
@@ -232,8 +228,6 @@ describe('SecurityStatusWidget', () => {
     expect(screen.getByText('Unlocked')).toBeInTheDocument();
     expect(screen.getByText('Off')).toBeInTheDocument();
 
-    expect(screen.getByText('Error')).toBeInTheDocument();
-    expect(screen.getByText('Inactive')).toBeInTheDocument();
     // Sentry "Off" is inactive (neutral), not an alarm.
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
@@ -292,7 +286,6 @@ describe('SecurityStatusWidget', () => {
 
     expect(screen.getByText('2 Open')).toBeInTheDocument();
     expect(screen.getByText('1 Open')).toBeInTheDocument();
-    expect(screen.getAllByText('Warning')).toHaveLength(2);
   });
 
   it('treats a native boolean door_state=true as one open door', () => {

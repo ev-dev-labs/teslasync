@@ -1,14 +1,30 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Lock, Unlock, Shield, ShieldCheck, DoorOpen, AppWindow } from 'lucide-react';
+import { Lock, Unlock, Shield } from 'lucide-react';
 import { useVehicles, useSecurityLatest } from '@/api/hooks/useVehicles';
 import { asBoolean, asNonEmptyString } from '@/lib/typeGuards';
 import { useDataState } from '@/hooks/useDataState';
-import { WidgetStatusGrid, type StatusCell } from './shared';
+import { EmptyState } from '@/components/feedback';
+import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 const DASH = '—';
+
+type TriState = 'ok' | 'warning' | 'error' | 'inactive' | 'unknown';
+
+function toDetailStatus(status: TriState): DetailEntry['status'] {
+  switch (status) {
+    case 'ok':
+      return 'success';
+    case 'warning':
+      return 'warning';
+    case 'error':
+      return 'error';
+    default:
+      return 'neutral';
+  }
+}
 
 export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -33,8 +49,8 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
   // default vehicle lands.
   const resolvingVehicle = vehicleId == null && vehiclesLoading;
 
-  const cells = useMemo<StatusCell[]>(() => {
-    if (!securityData) return [];
+  const model = useMemo(() => {
+    if (!securityData) return null;
 
     const locked = asBoolean(securityData.locked);
     const sentry = asBoolean(securityData.sentry_mode);
@@ -66,59 +82,58 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
       return !!s && s.toLowerCase() !== 'closed';
     });
 
-    return [
-      {
-        id: 'lock',
-        label: t('widget.lock', 'Lock'),
-        status: locked == null ? 'unknown' : locked ? 'ok' : 'error',
-        value:
-          locked == null
-            ? DASH
-            : locked
-              ? t('widget.locked', 'Locked')
-              : t('widget.unlocked', 'Unlocked'),
-        icon: locked
-          ? <Lock className="h-3.5 w-3.5" />
-          : <Unlock className="h-3.5 w-3.5" />,
-      },
+    const lockStatus: TriState = locked == null ? 'unknown' : locked ? 'ok' : 'error';
+    const lockValue =
+      locked == null ? DASH : locked ? t('widget.locked', 'Locked') : t('widget.unlocked', 'Unlocked');
+    const sentryStatus: TriState = sentry == null ? 'unknown' : sentry ? 'ok' : 'inactive';
+    const doorsStatus: TriState = !doorKnown ? 'unknown' : openDoors.length === 0 ? 'ok' : 'warning';
+    const windowsStatus: TriState = !windowsKnown
+      ? 'unknown'
+      : openWindows.length === 0
+        ? 'ok'
+        : 'warning';
+
+    const entries: DetailEntry[] = [
       {
         id: 'sentry',
         label: t('widget.sentry', 'Sentry'),
-        status: sentry == null ? 'unknown' : sentry ? 'ok' : 'inactive',
+        status: toDetailStatus(sentryStatus),
         value:
-          sentry == null
-            ? DASH
-            : sentry
-              ? t('widget.active', 'Active')
-              : t('widget.off', 'Off'),
-        icon: sentry
-          ? <ShieldCheck className="h-3.5 w-3.5" />
-          : <Shield className="h-3.5 w-3.5" />,
+          sentry == null ? DASH : sentry ? t('widget.active', 'Active') : t('widget.off', 'Off'),
       },
       {
         id: 'doors',
         label: t('widget.doors', 'Doors'),
-        status: !doorKnown ? 'unknown' : openDoors.length === 0 ? 'ok' : 'warning',
+        status: toDetailStatus(doorsStatus),
         value: !doorKnown
           ? DASH
           : openDoors.length === 0
             ? t('widget.allClosed', 'All closed')
             : `${openDoors.length} ${t('widget.open', 'Open')}`,
-        icon: <DoorOpen className="h-3.5 w-3.5" />,
       },
       {
         id: 'windows',
         label: t('widget.windows', 'Windows'),
-        status: !windowsKnown ? 'unknown' : openWindows.length === 0 ? 'ok' : 'warning',
+        status: toDetailStatus(windowsStatus),
         value: !windowsKnown
           ? DASH
           : openWindows.length === 0
             ? t('widget.allClosed', 'All closed')
             : `${openWindows.length} ${t('widget.open', 'Open')}`,
-        icon: <AppWindow className="h-3.5 w-3.5" />,
       },
     ];
+
+    return { locked, lockStatus, lockValue, entries };
   }, [securityData, t]);
+
+  const heroIcon =
+    model == null || model.locked == null ? (
+      <Shield className="h-6 w-6 text-[var(--text-muted)]" aria-hidden="true" />
+    ) : model.locked ? (
+      <Lock className="h-6 w-6 text-[var(--semantic-success)]" aria-hidden="true" />
+    ) : (
+      <Unlock className="h-6 w-6 text-[var(--semantic-danger)]" aria-hidden="true" />
+    );
 
   return (
     <WidgetShell
@@ -133,12 +148,22 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
-      <WidgetStatusGrid
-        cells={cells}
-        cols={2}
-        emptyIcon={<Shield className="h-5 w-5" />}
-        emptyMessage={t('widget.noSecurity', 'No security data')}
-      />
+      {model ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <WidgetBigNumber value={model.lockValue} animated={false} />
+            <span className="shrink-0">{heroIcon}</span>
+          </div>
+          <WidgetDetailCard entries={model.entries} />
+        </div>
+      ) : (
+        <EmptyState
+          /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+          icon={<Shield className="h-5 w-5" />}
+          message={t('widget.noSecurity', 'No security data')}
+          className="py-4"
+        />
+      )}
     </WidgetShell>
   );
 }
