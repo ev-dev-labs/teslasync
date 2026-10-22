@@ -4,8 +4,8 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Codex (wip handoff fix, queue reconciled).
-Branch HEAD: `a09dc6ec15` (TZ-5c 2fbe414e..edf280bf + wip 66eda8c6d5 + fix a09dc6ec15; all pushed except a09dc6ec15 — pushing next).
+Last updated: 2026-10-22 by Codex (sweep calibration 2/2 pass).
+Branch HEAD: `2d01635e96` (TZ-5c + wip + fix a09dc6ec15 + queue reconcile; pushed). Sweep calibration done, docs update pending.
 
 ## Parts overview
 
@@ -29,7 +29,7 @@ Branch HEAD: `a09dc6ec15` (TZ-5c 2fbe414e..edf280bf + wip 66eda8c6d5 + fix a09dc
 | Calendar values unshifted (LA + Kiritimati tests) | done | `d4653c5517` + `86bb6e735d` | `formatMonthYear` day-rollover validation; `dateFormat.test.ts` 82 green |
 | `useConversionTimezone` + `resolveRawTimezone` (conversion boundaries) | done | `d4653c5517` + `86bb6e735d` | RateForm + JourneyAssurancePage converted; `timezone.test.ts` extended |
 | TZ-4 API `timezone` sends + backend zone params + Go tests | done | `284851a318..147f180cf3` (7, pushed) | Vitest 2727/57276 + tsc + Go green at push; PR202 run in progress |
-| TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `e24583d253` timeline fix | Guard done (R1-R5, registry+wired, 3725 green); sweep spec + 12-route calibration done; timeline zoned bucketing done. 277-route full sweep not yet run. |
+| TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `e24583d253` timeline fix + Codex calibration 2026-10-22 | Guard done (R1-R5, 3725 green); sweep spec + 12-route calibration done; timeline zoned bucketing done; waitoracle panel calibration 2/2 pass (/charging + /tesla-charging-sessions @1280, tzIso/zones/dupes 0). Full 277-route sweep pending (timeboxed; run at TZ-7 gate or via CI smoke). |
 | TZ-5c marker-free migration (user update) | done | `2fbe414e..edf280bfeb` (4 + docs + Analytics pin) | `tz-computation` 72->0 verified 0 in web/src, all other `tz-*` 0 (1 absence test kept); playbook no-suppression rule present |
 | WaitOracle backend zone param + useCharging + panel (wip handoff fix) | done | `66eda8c6d5` wip + `a09dc6ec15` fix | Backend `?timezone=` (400/UTC default), store AT TIME ZONE $3, Predict(loc); hook sends effective tz; panel best_hour + no UTC; Go + 43 panel + 43 trips + tsc + split + trio + audit green |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | not started | — | Drive times, drawers, ranges, midnight day assignment |
@@ -147,6 +147,6 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-Push `a09dc6ec15`, watch PR202 checks (expect Lighthouse green). Then:
-277-route full sweep, TZ-6 e2e, freshness
+`a09dc6ec15` pushed (PR202 rerunning; expect Lighthouse green). Sweep calibration 2/2 pass. Then:
+full 277 sweep (TZ-7 gate), TZ-6 e2e, freshness
 revert, TZ-7 full replica + green.

@@ -500,3 +500,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Verified wip 66eda8c6d5 (waitoracle ?timezone=/store/Predict + journey UTC plumbing + useCharging tz send): Go green, but backend renamed best_hour_utc->best_hour without panel/test/en.json update -> tsc + Lighthouse red. Fixed panel/test to best_hour, dropped all UTC suffixes per Part 1 rule 3, title fallback to catalog case, i18n via sanctioned generators (split + trio + pins). Panel 43 + trips 43 + Go + tsc + split + trio (missing 0) + timezone audit (3725) green.
 - Reconciled queue: TZ-5c done (2fbe414e..edf280bfeb), tz-computation 0 + no-suppression rule present verified, widget-redesign/state.md correctly absent (Part 2 not started).
 - Next: push a09dc6ec15 + queue docs, watch PR202 (expect Lighthouse green); then 277-route full sweep, TZ-6 e2e, freshness revert, TZ-7 replica.
+
+## 2026-10-22 - Codex: sweep calibration 2/2 pass (mock build)
+- Built hermetic mock (E2E_MOCKS=1 e2e:build) and ran route-layout-guard TZ sweep for /charging + /tesla-charging-sessions @1280: both pass, tzIso/zones/dupes 0 (waitoracle UTC removal verified). Full 277-route sweep deferred to TZ-7 gate (timeboxed; 277x5 too long for single local run).
+- Next: TZ-6 e2e spec (UTC browser, LA then Tokyo), freshness revert, TZ-7 replica.
