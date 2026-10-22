@@ -509,3 +509,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Fingerprint suites green after waitoracle fix: canonical/owner/copy-owner 49 pass; excluded-consistent/feature/resolved/final-four 7679 pass. No other vitest asserts old UTC strings.
 - TZ-6 design: settings `tz_display_default=user` + `timezone_user` LA->Tokyo, browser UTC; needs new e2e spec for drive times/drawers/ranges/midnight assignment (no existing spec covers LA/Tokyo switch). Mock build ready.
 - Next: implement TZ-6 spec, then freshness revert, TZ-7 replica.
+
+## 2026-10-21 21:01 - Codex: TZ-6 e2e spec done (4/4 green)
+- New `web/e2e/timezone-display.smoke.spec.ts`: UTC browser, user LA/Tokyo; drives times + Quick-view drawer, timeline midnight bucket (Mar 8 LA / Mar 9 Tokyo) + Review-details end-inclusive range + Inspect drawer; no raw ISO/zone names. tsc clean, split-check OK, audit unaffected (specs excluded). No markers, no contract change.
+- Next: freshness-header revert, then TZ-7 full replica + push.

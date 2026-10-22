@@ -4,8 +4,8 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Codex (new playbook adopted; API contract review done).
-Branch HEAD: `c4b9a91d9b` (new playbook adopted + pushed; contract review done, queue update pending).
+Last updated: 2026-10-22 by Codex (TZ-6 spec done, 4/4 green).
+Branch HEAD: `d6bb348a23` + TZ-6 spec (committing, pushing at gate).
 
 ## Parts overview
 
@@ -32,7 +32,7 @@ Branch HEAD: `c4b9a91d9b` (new playbook adopted + pushed; contract review done, 
 | TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `e24583d253` timeline fix + Codex calibration 2026-10-22 | Guard done (R1-R5, 3725 green); sweep spec + 12-route calibration done; timeline zoned bucketing done; waitoracle panel calibration 2/2 pass (/charging + /tesla-charging-sessions @1280, tzIso/zones/dupes 0). Full 277-route sweep pending (timeboxed; run at TZ-7 gate or via CI smoke). |
 | TZ-5c marker-free migration (user update) | done | `2fbe414e..edf280bfeb` (4 + docs + Analytics pin) | `tz-computation` 72->0 verified 0 in web/src, all other `tz-*` 0 (1 absence test kept); playbook no-suppression rule present |
 | WaitOracle backend zone param + useCharging + panel (wip handoff fix) | done | `66eda8c6d5` wip + `a09dc6ec15` fix | Backend `?timezone=` (400/UTC default), store AT TIME ZONE $3, Predict(loc); hook sends effective tz; panel best_hour + no UTC; Go + 43 panel + 43 trips + tsc + split + trio + audit green |
-| TZ-6 e2e spec (UTC browser, LA then Tokyo) | in progress | Codex assessment 2026-10-22 | Settings `tz_display_default=user` + `timezone_user` LA then Tokyo; drive times/drawers/ranges + daily chart midnight assignment. No existing spec; new file needed. Mock build ready. |
+| TZ-6 e2e spec (UTC browser, LA then Tokyo) | done | TZ-6 spec (this change) | `web/e2e/timezone-display.smoke.spec.ts` 4/4 green (chromium-smoke, mock build reuse); TZ=UTC browser, `tz_display_default=user` + `timezone_user` LA/Tokyo; drive times + Quick-view drawer, timeline daily bucket (Mar 8 LA / Mar 9 Tokyo) + Review-details range drawer (end-inclusive, no Mar 10) + Inspect drawer; no raw ISO / zone names; tsc + split-check green; audit unaffected (specs excluded by design); no markers added. |
 | Freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106`) | not started | revert set identified | `git revert` (no resets) after Part 1 code done; `cad1237f5f` only if shell-preservation fails; i18n conflicts via generators |
 | TZ-7 i18n regen, full local replica, commit, push, PR green | not started | — | Section 3 replica, then push once |
 
@@ -148,5 +148,4 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-New playbook committed+pushed (`c4b9a91d9b`); API contract review done (recorded above). PR202 shows no fails. Now implement TZ-6 e2e spec `web/e2e/timezone-display.smoke.spec.ts`: browser TZ=UTC (CI=true TZ=UTC), seed `tz_display_default=user` + `timezone_user=America/Los_Angeles` then `Asia/Tokyo` (via settings UI or mock settings override); assert drive times/drawers, range labels (`formatRange` end-inclusive), and timeline daily bucket day assignment near midnight (use LA-midnight fixture from e24583d253 vitest as mock drive). Full 277 sweep at TZ-7 gate, then freshness
-revert, TZ-7 full replica + green.
+New playbook committed+pushed (`c4b9a91d9b`); API contract review done (recorded above). PR202 shows no fails. TZ-6 done (4/4 green, committing + pushing at gate). Next: freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106` via `git revert`), then TZ-7 i18n regen + full local replica (section 3) + push + PR green. Full 277-route sweep runs at the TZ-7 gate.
