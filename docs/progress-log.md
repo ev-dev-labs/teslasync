@@ -466,3 +466,9 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Display follows setting (32 files): 24 pages/components from hardcoded useTimezone(mode) to useDateFormat().tz; DateTime in-prop; ScienceLab scope+display unified; mode-pin tests updated. Left as designed: caller-less legacy getters (UTC), rolling stats, journey drive-vehicle frame, automation schedule zones, pure lib sanitizers.
 - tsc clean. Full Vitest running as the TZ-4 push gate.
 - Next: commit TZ-4 (backend, frontend, docs) + push + PR checks; then TZ-5 guard + 277-route sweep, TZ-6 e2e, freshness revert, TZ-7 replica.
+## 2026-10-21 17:10 - Muse: TZ-4 gate fixes, 5 commits stacked
+- Gate fallout fixed: 7 i18n producer checkpoints regenerated via trio generator (no key changes); FleetCompare query-key + CostAnalysis URL pins updated for ?timezone=; digest tests mirror UTC-framed weeks; digest weekLabel formats with tz (real bug: UTC-framed instants labeled in browser zone); AuditLogPage wall-input test pins saved zone instead of host zone.
+- TimeMachine range labels rendered browser-zone via pure DateTime path (Oct 1 on UTC browsers vs Sep 30 Honolulu slider): now use bound useDateFormat short formatter; test awaits async render. Verified green under TZ=UTC and host TZ.
+- Commits: 284851a318 backend, 0beecc8b4c frontend (74 files), e9e72b0c38 i18n, b3ab750b44 docs, e660161274 timemachine fix. tsc clean, Go green. Final TZ=UTC gate running, then push + PR checks.
+- Note: PR202 CI red on pushed TZ-3b (frontend shard + e2e) — expected until TZ-4 lands; e2e/visual triage at TZ-7.
+- Next: push, PR checks, TZ-5 guard + 277-route sweep.

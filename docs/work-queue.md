@@ -4,8 +4,8 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-21 ~23:10 UTC by Muse (continuing after Codex).
-Branch HEAD: `86dab84447` (+ uncommitted TZ-4 work, see below).
+Last updated: 2026-10-22 ~00:10 UTC by Muse (continuing after Codex).
+Branch HEAD: `e660161274` (5 TZ-4 commits stacked, final gate running).
 
 ## Parts overview
 
@@ -28,7 +28,7 @@ Branch HEAD: `86dab84447` (+ uncommitted TZ-4 work, see below).
 | TZ-3b direct-formatter migration (shared layer) | done | `d4653c5517` src + `86bb6e735d` tests + `330fb6052d` i18n | Full suite 2724/57248 green |
 | Calendar values unshifted (LA + Kiritimati tests) | done | `d4653c5517` + `86bb6e735d` | `formatMonthYear` day-rollover validation; `dateFormat.test.ts` 82 green |
 | `useConversionTimezone` + `resolveRawTimezone` (conversion boundaries) | done | `d4653c5517` + `86bb6e735d` | RateForm + JourneyAssurancePage converted; `timezone.test.ts` extended |
-| TZ-4 API `timezone` sends + backend zone params + Go tests | in progress (verify) | code done uncommitted | `?timezone=` on carbon/regen/tempimpact/costforecast/rul/mileage + Go tests; 7 hooks send zone; 32 display files to `useDateFormat().tz`; full suite + tsc gate, then commit + push |
+| TZ-4 API `timezone` sends + backend zone params + Go tests | in progress (final gate) | 5 commits stacked | backend + frontend + i18n + docs + timemachine fix; TZ=UTC full-suite gate running, then push + PR checks |
 | TZ-5 guard (lint/audit) + ALL-routes (277) sweep | not started | — | Fail on direct date formatting, raw ISO, zone names, extra pickers; record per-route results |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | not started | — | Drive times, drawers, ranges, midnight day assignment |
 | Freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106`) | not started | revert set identified | `git revert` (no resets) after Part 1 code done; `cad1237f5f` only if shell-preservation fails; i18n conflicts via generators |
