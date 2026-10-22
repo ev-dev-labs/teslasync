@@ -4,8 +4,8 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Codex (sweep calibration 2/2 pass).
-Branch HEAD: `2d01635e96` (TZ-5c + wip + fix a09dc6ec15 + queue reconcile; pushed). Sweep calibration done, docs update pending.
+Last updated: 2026-10-22 by Codex (TZ-6 design recorded; stopping).
+Branch HEAD: `498fde26e0` + pending TZ-6 docs (pushing next).
 
 ## Parts overview
 
@@ -147,6 +147,5 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-`a09dc6ec15` pushed (PR202 rerunning; expect Lighthouse green). Sweep calibration 2/2 pass. Then:
-full 277 sweep (TZ-7 gate), TZ-6 e2e, freshness
+Push TZ-6 assessment docs, watch PR202 (expect Lighthouse green after a09dc6ec15). Then implement TZ-6 e2e spec `web/e2e/timezone-display.smoke.spec.ts`: browser TZ=UTC (CI=true TZ=UTC), seed `tz_display_default=user` + `timezone_user=America/Los_Angeles` then `Asia/Tokyo` (via settings UI or mock settings override); assert drive times/drawers, range labels (`formatRange` end-inclusive), and timeline daily bucket day assignment near midnight (use LA-midnight fixture from e24583d253 vitest as mock drive). Full 277 sweep at TZ-7 gate, then freshness
 revert, TZ-7 full replica + green.
