@@ -325,7 +325,7 @@
   {
     "file": "web/src/features/admin/components/statstrip-coverage-flags-secrets/SecretRotationOperationalBrief.tsx",
     "calls": 22,
-    "sha256": "f3cf66c88850267138b75914fbee7517f0275f0c982ec5b61601cf0b63b0e3e8"
+    "sha256": "1ba962d18885ced07974f4cf15aa2a43a0f4cca3373f4332d23f74370e005739"
   },
   {
     "file": "web/src/features/admin/components/statstrip-performance-storage/DiskForecastSummary.tsx",
@@ -655,7 +655,7 @@
   {
     "file": "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
     "calls": 35,
-    "sha256": "3bf690c05222d774eb42aa12946d6f6fac21b7f2862c6778b0becccc9451ca94"
+    "sha256": "3444a1b85b2b42243c10d4b0badc6990a3439e686441489a9d072190ff361c90"
   },
   {
     "file": "web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx",
@@ -785,7 +785,7 @@
   {
     "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
     "calls": 45,
-    "sha256": "dfc98cf2c69244a8b349492801f51758dc843b562dc45aa61a8fcd1ba0472934"
+    "sha256": "52eb108a42e8c33c695b971a2edf5cfb48d3182f33a2427f2b94609f931b6cd3"
   },
   {
     "file": "web/src/features/settings/components/RegionSettings.tsx",
@@ -913,7 +913,7 @@
   {
     "file": "web/src/features/system/components/state-machine/LiveControls.tsx",
     "calls": 15,
-    "sha256": "386ec9bc0898eb64f5c9ecd3b8cb9be3e33c090a08d469b9e07bfb25f8105f6c"
+    "sha256": "d95ea85d9cb38b885c9183744f648af54a4867deabb7d7a7cf123554ba928fbe"
   },
   {
     "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx",
@@ -928,12 +928,12 @@
   {
     "file": "web/src/features/system/pages/CommandHistoryPage.tsx",
     "calls": 101,
-    "sha256": "3f2fd4db373776fb0298ee515362dc36f9e843a99702165c929bde63c89bec53"
+    "sha256": "b377c4f9719a8527f03c7bf3de75814ce9b4efc2265084755b0a84c5a28c18c6"
   },
   {
     "file": "web/src/features/system/pages/CommandReliabilityPage.tsx",
     "calls": 43,
-    "sha256": "0e25dff4038db298f0fdff2001c90cb7e99c34041935d1ad3a2af3fc34b78ecb"
+    "sha256": "0a45607ba6fda01956f30951b3305f4ec983f2705a65b64f2ae1b426c6de0a03"
   },
   {
     "file": "web/src/features/system/pages/DataExportPage.tsx",
@@ -958,7 +958,7 @@
   {
     "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
     "calls": 81,
-    "sha256": "ab7f7c69039b200031deffa949c81497f531fde7300fb3c2209daebf6f8a21d1"
+    "sha256": "4a3e7c6e2925d725704f32355a6224e1debcab5a39e783a0162ae542d6b8b104"
   },
   {
     "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",
