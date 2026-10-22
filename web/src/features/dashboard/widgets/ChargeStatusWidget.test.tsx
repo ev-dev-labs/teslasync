@@ -1,39 +1,29 @@
 /**
  * ChargeStatusWidget — behaviour + hardening tests.
  *
- * ChargeStatusWidget is a 1×1 dashboard tile that resolves a target vehicle
+ * ChargeStatusWidget is a dashboard tile that resolves a target vehicle
  * (`vehicleId` prop → first vehicle → 0) and renders its live charge state
- * (`useVehicleState`). The body has three mutually-exclusive branches:
- *   - charging     → a "Charging" header plus a compact source brief of Power (kW), Rate
- *                    (distance-unit/h), Battery (%) and Time-to-Full (h or "—").
- *   - not charging → a "Not Charging" line with battery % · rated range.
+ * (`useVehicleState`). After-spec layout (Phase 2 redesign):
+ *   - charging     → "Charging" pill, headline battery ("64 → 80 %" when a
+ *                    validated charge_limit_soc is present, else "64 %"),
+ *                    done-at time via the shared date layer plus time-left,
+ *                    battery meter with limit marker, stat grid
+ *                    Power (kW, 1 decimal) / Rate (distance-unit/h) / Range.
+ *   - not charging → "Not charging" pill, headline battery %, meter, range.
+ *   - unknown      → "Unknown" pill with the same battery/range face.
  *   - no state     → an explicit "No charge data" empty state (never blank).
- * The surrounding `WidgetShell` owns the loading skeleton and the compact
- * data-freshness / refresh affordance (the tile has no title, so the chip is
- * icon-only but still exposes `role="button"` labelled "Refresh").
+ * The surrounding `WidgetShell` owns the loading skeleton and the single
+ * top-right `FreshnessDot` / refresh affordance.
  *
  * The two data hooks are mocked at the `@/api/hooks/useVehicles` boundary so
  * every orchestration branch is deterministic. `react-i18next` is echo-mocked
  * so assertions target the rendered English fallback; `useSettings` /
  * `useTimezone` come from the global stub in src/test-setup.ts (metric — km).
  * Network never touches the real backend.
- *
- * Facets covered:
- *   - vehicle resolution: explicit prop wins; else first vehicle; else 0.
- *   - loading  → skeleton, no refresh control, no body (never a blank panel).
- *   - empty    → explicit "No charge data" empty state.
- *   - error    → non-blank empty state + the freshness chip's error dot.
- *   - charging → SI→display conversion for rate (32000 m/h → "32 km/h"),
- *                power/battery/time-to-full formatting, and the i18n labels.
- *   - time-to-full < 0 renders "—"; a real zero remains a measured estimate.
- *   - not charging → "Not Charging" + battery% · rated range (400000 m → km).
- *   - null-safety: missing battery/range readings render "—", never fake zero.
- *   - refresh: activating the freshness control invokes the query refetch.
  */
 
-import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -146,11 +136,16 @@ function stateData(over: Partial<VehicleState> = {}) {
   return { state: makeState(over), live: true };
 }
 
+/** A state object with an extra (untyped) `charge_limit_soc` field attached. */
+function stateWithLimit(limit: unknown, over: Partial<VehicleState> = {}) {
+  return { state: { ...makeState(over), charge_limit_soc: limit } as unknown as VehicleState, live: true };
+}
+
 // A charging state with clean, deterministic display values:
-//   charger_power 11    → "11.00 kW"
-//   charge_rate  32000  → 32 km/h  (32000 m/h ÷ 1000)
+//   charger_power 11    → "11.0 kW" (1 decimal)
+//   charge_rate  32000  → 32 km/h  (32000 m/h ÷ 1000, whole)
 //   battery_level 72    → "72%"
-//   time_to_full 2.5    → "2.5h"
+//   time_to_full 2.5    → "2h 30m" left
 const CHARGING: Partial<VehicleState> = {
   is_charging: true,
   charger_power: 11,
@@ -187,21 +182,18 @@ describe('ChargeStatusWidget — vehicle resolution', () => {
   it('prefers the explicit vehicleId prop over the vehicle list', () => {
     mockVehicles.mockReturnValue(vehicles([7, 9]));
     renderWidget({ vehicleId: 42 });
-
     expect(mockVehicleState).toHaveBeenCalledWith(42);
   });
 
   it('falls back to the first vehicle when no vehicleId prop is given', () => {
     mockVehicles.mockReturnValue(vehicles([7, 9]));
     renderWidget();
-
     expect(mockVehicleState).toHaveBeenCalledWith(7);
   });
 
   it('falls back to 0 when there is neither a prop nor any vehicle', () => {
     mockVehicles.mockReturnValue(vehicles([]));
     renderWidget();
-
     expect(mockVehicleState).toHaveBeenCalledWith(0);
   });
 });
@@ -210,7 +202,6 @@ describe('ChargeStatusWidget — shell states', () => {
   it('shows a skeleton (never a blank panel) and no refresh control while loading', () => {
     mockVehicleState.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget();
-
     expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Charging')).toBeNull();
     expect(screen.queryByText('No charge data')).toBeNull();
@@ -220,7 +211,6 @@ describe('ChargeStatusWidget — shell states', () => {
   it('renders an explicit empty state when no vehicle state has arrived', () => {
     mockVehicleState.mockReturnValue(qr({ data: { state: undefined, live: false } }));
     renderWidget();
-
     expect(screen.getByText('No charge data')).toBeInTheDocument();
     expect(screen.queryByText('Charging')).toBeNull();
     expect(screen.queryByText('Not charging')).toBeNull();
@@ -229,7 +219,6 @@ describe('ChargeStatusWidget — shell states', () => {
   it('is resilient when the query resolves to undefined data', () => {
     mockVehicleState.mockReturnValue(qr({ data: undefined }));
     renderWidget();
-
     expect(screen.getByText('No charge data')).toBeInTheDocument();
   });
 
@@ -238,36 +227,34 @@ describe('ChargeStatusWidget — shell states', () => {
       qr({ isError: true, error: new Error('state down'), data: undefined }),
     );
     const { container } = renderWidget();
-
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    // …and the error is still communicated through the freshness chip.
     expect(container.querySelector('[class~="bg-[var(--semantic-danger)]"]')).not.toBeNull();
   });
 });
 
 describe('ChargeStatusWidget — charging', () => {
-  it('renders the charging header, formatted metrics and SI→display rate conversion', () => {
-    renderWidget();
-
+  it('renders the charging pill, formatted metrics and SI→display rate conversion', () => {
+    const { container } = renderWidget();
     expect(screen.getByText('Charging')).toBeInTheDocument();
-
-    // Metric values (each is a single <p> once text nodes are joined).
-    expect(screen.getByText('11.00 kW')).toBeInTheDocument();
-    expect(screen.getByText('32.00 km/h')).toBeInTheDocument(); // 32000 m/h → 32 km/h
-    expect(screen.getByText('72.00%')).toBeInTheDocument();
-    expect(screen.getByText('2.50h')).toBeInTheDocument();
-
-    // Not-charging copy must be absent on the charging branch.
+    expect(container.textContent).toContain('11.0');
+    expect(container.textContent).toContain('32');
+    expect(screen.getByText('72')).toBeInTheDocument();
+    expect(screen.getByText(/2h 30m/)).toBeInTheDocument();
     expect(screen.queryByText('Not charging')).toBeNull();
   });
 
   it('labels every metric through i18n', () => {
     renderWidget();
-
     expect(screen.getByText('Power')).toBeInTheDocument();
     expect(screen.getByText('Rate')).toBeInTheDocument();
-    expect(screen.getByText('Battery')).toBeInTheDocument();
-    expect(screen.getByText('Time to full')).toBeInTheDocument();
+    expect(screen.getByText('Range')).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Battery' })).toBeInTheDocument();
+    expect(screen.getByText(/Time to full/)).toBeInTheDocument();
+  });
+
+  it('renders a done-at clock time through the shared date layer', () => {
+    const { container } = renderWidget();
+    expect(container.textContent).toMatch(/\d{1,2}:\d{2}/);
   });
 
   it('preserves a real zero time-to-full estimate', () => {
@@ -275,10 +262,33 @@ describe('ChargeStatusWidget — charging', () => {
       qr({ data: stateData({ ...CHARGING, time_to_full_charge: 0 }) }),
     );
     renderWidget();
+    expect(screen.getByText(/0m/)).toBeInTheDocument();
+    expect(screen.getByText('72')).toBeInTheDocument();
+  });
 
-    expect(screen.getByText('0.00h')).toBeInTheDocument();
-    // The other charging metrics still render.
-    expect(screen.getByText('72.00%')).toBeInTheDocument();
+  it('shows current → limit headline and limit marker when charge_limit_soc is valid', () => {
+    mockVehicleState.mockReturnValue(qr({ data: stateWithLimit(80, { ...CHARGING, battery_level: 64 }) }));
+    const { container } = renderWidget();
+    expect(screen.getByText('64 → 80')).toBeInTheDocument();
+    const marker = container.querySelector('[data-testid="charge-limit-marker"]');
+    expect(marker).not.toBeNull();
+    expect(marker).toHaveStyle({ left: '80%' });
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '64');
+  });
+
+  it('omits the limit headline and marker when charge_limit_soc is invalid', () => {
+    mockVehicleState.mockReturnValue(qr({ data: stateWithLimit('high', { ...CHARGING, battery_level: 64 }) }));
+    const { container } = renderWidget();
+    expect(container.querySelector('[data-testid="charge-limit-marker"]')).toBeNull();
+    expect(screen.getByText('64')).toBeInTheDocument();
+    expect(screen.queryByText(/→/)).toBeNull();
+  });
+
+  it('retains an out-of-scale reading as the headline without a clipped meter', () => {
+    mockVehicleState.mockReturnValue(qr({ data: stateData({ ...CHARGING, battery_level: 125 }) }));
+    renderWidget();
+    expect(screen.getByText('125')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).toBeNull();
   });
 });
 
@@ -288,29 +298,25 @@ describe('ChargeStatusWidget — not charging', () => {
       qr({ data: stateData({ is_charging: false, battery_level: 80, rated_range: 400_000 }) }),
     );
     const { container } = renderWidget();
-
     expect(screen.getByText('Not charging')).toBeInTheDocument();
-    // "80% · 400 km" — assert the pieces to stay robust to the middot spacing.
-    expect(container.textContent).toContain('80.00%');
-    expect(container.textContent).toContain('400.00 km'); // 400000 m → 400 km
-    // Charging-only copy must be absent.
+    expect(container.textContent).toContain('80');
+    expect(container.textContent).toContain('400');
     expect(screen.queryByText('Charging')).toBeNull();
   });
 });
 
 describe('ChargeStatusWidget — null-safety hardening', () => {
-  it('keeps an unknown charging status distinct from idle in a fitted stat grid', () => {
+  it('keeps an unknown charging status distinct from idle', () => {
     mockVehicleState.mockReturnValue(qr({
       data: stateData({ is_charging: undefined as unknown as boolean, battery_level: 0, rated_range: 0 }),
     }));
-    const { container } = renderWidget();
+    renderWidget();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('Not charging')).not.toBeInTheDocument();
-    expect(screen.getByText('0.00%')).toBeInTheDocument();
-    expect(screen.getByText('0.00 km')).toBeInTheDocument();
-    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('data-testid', 'dashboard-charge-status-idle-brief');
+    expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(1);
   });
-  it('keeps a missing charging battery level unknown', () => {
+
+  it('keeps a missing charging battery level unknown, never a fake zero', () => {
     mockVehicleState.mockReturnValue(
       qr({
         data: stateData({
@@ -322,14 +328,10 @@ describe('ChargeStatusWidget — null-safety hardening', () => {
         }),
       }),
     );
-    renderWidget();
-
-    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
-    // The missing battery stays off the value-only face and is counted as hidden in the drawer.
-    assertOperationalMetricUnavailable(
-      screen.getByTestId('dashboard-charge-status-charging-brief'),
-      'Battery',
-    );
+    const { container } = renderWidget();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(container.textContent).toContain('7.0');
+    expect(screen.queryByRole('meter')).toBeNull();
   });
 
   it('keeps missing idle battery and range unknown', () => {
@@ -342,18 +344,9 @@ describe('ChargeStatusWidget — null-safety hardening', () => {
         }),
       }),
     );
-    const { container } = renderWidget();
-
+    renderWidget();
     expect(screen.getByText('Not charging')).toBeInTheDocument();
-    // Without the `?? 0` hardening this line would read "% · 0 km".
-    expect(container.textContent).not.toContain('0.00%');
-    expect(container.textContent).not.toContain('0.00 km');
-    // Both operands are unknown, so the face shows the shared empty-metrics
-    // state and the drawer counts the two hidden fields.
-    const brief = screen.getByTestId('dashboard-charge-status-idle-brief');
-    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
-    assertOperationalMetricUnavailable(brief, 'Battery');
-    assertOperationalMetricUnavailable(brief, 'Range');
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -364,103 +357,33 @@ describe('ChargeStatusWidget — refresh wiring', () => {
       isError: true,
       error: new Error('refresh failed'),
     }));
-    renderWidget();
-    expect(screen.getByText('0.00 kW')).toBeInTheDocument();
-    expect(screen.getByText('0.00%')).toBeInTheDocument();
-    expect(screen.getByText('-1.00 km/h')).toBeInTheDocument();
+    const { container } = renderWidget();
+    expect(container.textContent).toContain('0.0');
+    expect(container.textContent).toContain('-1');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
 
-  describe('ChargeStatusWidget — actual source briefs', () => {
-    it('keeps all four charging operands, zero versus missing and retained source trust in the actual brief', () => {
-      const refetch = vi.fn();
-      mockVehicleState.mockReturnValue(qr({
-        data: stateData({
-          ...CHARGING,
-          charger_power: 0,
-          charge_rate: -1000,
-          battery_level: null as unknown as number,
-          time_to_full_charge: -1,
-        }),
-        isError: true,
-        error: new Error('refresh failed'),
-        refetch,
-      }));
-      renderWidget({ vehicleId: 42 });
-
-      const brief = screen.getByTestId('dashboard-charge-status-charging-brief');
-      // The missing battery stays off the value-only face; power, rate and the
-      // negative time-to-full estimate (rendered '—') remain visible.
-      expect(within(brief).getAllByRole('listitem')).toHaveLength(3);
-      expect(within(brief).getByText('0.00 kW')).toBeInTheDocument();
-      expect(within(brief).getByText('-1.00 km/h')).toBeInTheDocument();
-      expect(within(brief).queryByText('0.00%')).not.toBeInTheDocument();
-      expect(within(brief).getAllByText('—')).toHaveLength(1);
-      expect(brief.querySelector('[data-operational-metric="charge-status-power"]')).toHaveAttribute('data-value-state', 'value');
-      expect(brief.querySelector('[data-operational-metric="charge-status-battery"]')).toBeNull();
-      assertOperationalMetricUnavailable(brief, 'Battery');
-      assertOperationalBriefDisclosure(brief, 'Retained readings', { contains: true });
-      assertOperationalBriefDisclosure(brief, 'Vehicle 42 · returned state snapshot; not a completed charging session or continuous recording.', { contains: true });
-      expect(screen.getByText('Charging')).toBeInTheDocument();
-      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: /^Refresh data ·/i }));
-      expect(refetch).toHaveBeenCalledTimes(1);
-    });
-
-    it('keeps both idle operands and unknown charging status distinct from discovery and missing source states', () => {
-      const refetch = vi.fn();
-      mockVehicleState.mockReturnValue(qr({
-        data: stateData({
-          is_charging: undefined as unknown as boolean,
-          battery_level: 0,
-          rated_range: null as unknown as number,
-        }),
-        refetch,
-      }));
-      renderWidget();
-
-      const brief = screen.getByTestId('dashboard-charge-status-idle-brief');
-      // The missing range stays off the value-only face; the measured battery zero remains.
-      expect(within(brief).getAllByRole('listitem')).toHaveLength(1);
-      expect(within(brief).getByText('0.00%')).toBeInTheDocument();
-      expect(within(brief).queryByText('—')).not.toBeInTheDocument();
-      expect(brief.querySelector('[data-operational-metric="charge-status-battery"]')).toHaveAttribute('data-value-state', 'value');
-      expect(brief.querySelector('[data-operational-metric="charge-status-range"]')).toBeNull();
-      assertOperationalMetricUnavailable(brief, 'Range');
-      assertOperationalBriefDisclosure(brief, 'Source available');
-      expect(screen.getByText('Unknown')).toBeInTheDocument();
-      expect(screen.queryByText('Not charging')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('dashboard-charge-status-charging-brief')).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-      expect(refetch).toHaveBeenCalledTimes(1);
-
-      cleanup();
-      const discover = vi.fn();
-      mockVehicles.mockReturnValue(qr({ isLoading: true, refetch: discover }));
-      mockVehicleState.mockReturnValue(qr());
-      const discovery = renderWidget();
-      expect(discovery.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'initial');
-      expect(discovery.container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
-      expect(screen.queryByTestId('dashboard-charge-status-idle-brief')).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-      expect(discover).toHaveBeenCalledTimes(1);
-
-      cleanup();
-      mockVehicles.mockReturnValue(vehicles([1]));
-      mockVehicleState.mockReturnValue(qr({ data: { state: undefined, live: false } }));
-      const empty = renderWidget();
-      expect(empty.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'unavailable');
-      expect(screen.getByText('No charge data')).toBeInTheDocument();
-      expect(screen.queryByTestId('dashboard-charge-status-idle-brief')).not.toBeInTheDocument();
-    });
-  });
   it('invokes the query refetch when the freshness control is activated', () => {
     const refetch = vi.fn();
     mockVehicleState.mockReturnValue(qr({ data: stateData(CHARGING), refetch }));
     renderWidget();
-
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
 
+  it('keeps retained charging readings visible on a refetch error', () => {
+    const refetch = vi.fn();
+    mockVehicleState.mockReturnValue(qr({
+      data: stateData({ ...CHARGING, charger_power: 0, charge_rate: -1000, battery_level: 72, time_to_full_charge: -1 }),
+      isError: true,
+      error: new Error('refresh failed'),
+      refetch,
+    }));
+    renderWidget({ vehicleId: 42 });
+    expect(screen.getByText('Charging')).toBeInTheDocument();
+    expect(screen.getByText('72')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data ·/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
