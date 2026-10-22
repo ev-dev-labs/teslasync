@@ -3211,6 +3211,9 @@
     "commandPending": "Pending",
     "commandSuccess": "Success",
     "commandUnknown": "Unknown",
+    "comparison": {
+      "previousLabel": "Last week"
+    },
     "consuming": "Consuming",
     "costBreakdown": {
       "chartLabel": "Monthly EV charging cost breakdown",
@@ -3478,7 +3481,6 @@
     "epaComparison": "EPA variance",
     "estimatedTime": "Est. time",
     "eventFeed": {
-      "hoursAgo": "{{hours}}h ago",
       "justNow": "Just now",
       "label": "Event feed",
       "minutesAgo": "{{minutes}}m ago"

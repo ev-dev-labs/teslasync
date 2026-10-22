@@ -172,7 +172,7 @@
   {
     "file": "web/src/components/layout/sidebar/SectionRail.tsx",
     "calls": 13,
-    "sha256": "3f635fd4e2ab442c71bd05f55572a05ab90b2affb91d5fb64c766bcb9ff5a4e8"
+    "sha256": "6fef30ca3d07d9889887b16ba748004afe999b09facce57c49595632fece3aec"
   },
   {
     "file": "web/src/components/layout/sidebar/SidebarRow.tsx",
@@ -520,12 +520,17 @@
   {
     "file": "web/src/features/battery/pages/BatteryDegradationPage.tsx",
     "calls": 121,
-    "sha256": "4aac3a2c362d0522508cd72304bcfeae765d4465ec9964d46e1bac12b74f369f"
+    "sha256": "9afdd6ec81e82cb8f0c554ac4313949723b7cb50431d8eb50735d02794ccecd9"
   },
   {
     "file": "web/src/features/charging/components/charging-list/ChargingInsights.tsx",
     "calls": 19,
     "sha256": "418a4aacf535056bb9f8e92f01a0afb178d23f81b9515e413378e1c61443cf59"
+  },
+  {
+    "file": "web/src/features/charging/components/ChargingSessionCard.tsx",
+    "calls": 11,
+    "sha256": "e707fd3ea4df39aaad49c3256098ca11b89b9843d48e5d49da9ad875a3a18950"
   },
   {
     "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
@@ -570,7 +575,7 @@
   {
     "file": "web/src/features/dashboard/lib/dashboardTokens.ts",
     "calls": 0,
-    "sha256": "ff73a12b948e7794f23cc38c70020dc3d6e2a111723e12c8041c27cddf311959"
+    "sha256": "d57f7d27dcebd5db7ccdb4233ab3b5b0c04d2bfd789bed50da7f50d8c9853e4d"
   },
   {
     "file": "web/src/features/dashboard/pages/DashboardPage.tsx",
@@ -613,14 +618,24 @@
     "sha256": "84899f80889f65d19180a8ab54f5ffba8b3c53b4bdced57feb266ea7200dc13e"
   },
   {
+    "file": "web/src/features/dashboard/widgets/MediaNowPlayingWidget.tsx",
+    "calls": 5,
+    "sha256": "b73c7401ce430b930f2d11c9d419450b6d9494ca747b2bd0218c78e2b54f00a0"
+  },
+  {
     "file": "web/src/features/dashboard/widgets/NotificationStatsWidget.tsx",
     "calls": 28,
     "sha256": "61237693fbae45ddeecd0859f9fd81ec50bdd700686fb36ea9d365c50cc80291"
   },
   {
     "file": "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
-    "calls": 5,
-    "sha256": "8e4816f1cbaac4d2d1665fd991d75089a81e9181b297d4c5b07c518e4db5438d"
+    "calls": 4,
+    "sha256": "33d8169cac4861057197d3fb94e477614a3e12168063882527bef96beb789185"
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/shared/WidgetMapView.tsx",
+    "calls": 2,
+    "sha256": "cdc3bf8429cc3aa52cd0baca99df20f7f98b2e17843fc40b7c92f4f65c753b9c"
   },
   {
     "file": "web/src/features/dashboard/widgets/SignalLogWidget.tsx",
@@ -645,7 +660,7 @@
   {
     "file": "web/src/features/driving/components/DriveCard.tsx",
     "calls": 13,
-    "sha256": "13cac27362a7f9fdae35effd3751c10dbbae066d4968e7d8052b070b7293378c"
+    "sha256": "92a823d5afc896952ebdcc20607a4a9553ee6027c595404cb89f9014f99984e8"
   },
   {
     "file": "web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx",
@@ -665,7 +680,7 @@
   {
     "file": "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
     "calls": 35,
-    "sha256": "3444a1b85b2b42243c10d4b0badc6990a3439e686441489a9d072190ff361c90"
+    "sha256": "2edebb95887f4990c899b516f66c6d351bc2c5e152ecfd5066db06b3e1894f3a"
   },
   {
     "file": "web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx",
@@ -795,7 +810,7 @@
   {
     "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
     "calls": 45,
-    "sha256": "52eb108a42e8c33c695b971a2edf5cfb48d3182f33a2427f2b94609f931b6cd3"
+    "sha256": "675d4aeede3d186f7a137ec13e3565d163279f577e29f4b3a824fe014f0328e3"
   },
   {
     "file": "web/src/features/settings/components/RegionSettings.tsx",
@@ -968,7 +983,7 @@
   {
     "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
     "calls": 81,
-    "sha256": "4a3e7c6e2925d725704f32355a6224e1debcab5a39e783a0162ae542d6b8b104"
+    "sha256": "a2b3ae8dfdac5091e91988e7b37535097b44a5655d3f2b73e40380b75998a486"
   },
   {
     "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",

@@ -3,6 +3,9 @@
     "reported": "Reported",
     "digitalTwinWindows": "Windows",
     "unknownVehicle": "Unknown vehicle",
+    "comparison": {
+      "previousLabel": "Last week"
+    },
     "statusGrid": {
       "noData": "No status data available"
     },

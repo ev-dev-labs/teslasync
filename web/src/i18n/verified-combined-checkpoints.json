@@ -36,6 +36,7 @@
     "web/src/features/driving/components/ShareDriveDialog.tsx",
     "web/src/features/charging/components/SitePriceRadar.tsx",
     "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+    "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
     "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
     "web/src/features/driving/pages/DriveDetailPage.tsx",
     "web/src/features/driving/components/drive-detail/SupervisedDrivingPanel.tsx",
@@ -217,7 +218,7 @@
     {
       "file": "web/src/features/battery/pages/BatteryDegradationPage.tsx",
       "calls": 121,
-      "sha256": "4aac3a2c362d0522508cd72304bcfeae765d4465ec9964d46e1bac12b74f369f"
+      "sha256": "9afdd6ec81e82cb8f0c554ac4313949723b7cb50431d8eb50735d02794ccecd9"
     },
     {
       "file": "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",
@@ -255,6 +256,11 @@
       "sha256": "5729f17d6d2f3421a50441e33592722ae23daa5ed955fdd2b4bb657c82b8407a"
     },
     {
+      "file": "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
+      "calls": 4,
+      "sha256": "33d8169cac4861057197d3fb94e477614a3e12168063882527bef96beb789185"
+    },
+    {
       "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
       "calls": 0,
       "sha256": "86a184296adaf3dc8a8f96f667be29280b41f73ed6eeef4936bbc9ac86fe2cf0"
@@ -282,7 +288,7 @@
     {
       "file": "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
       "calls": 35,
-      "sha256": "3444a1b85b2b42243c10d4b0badc6990a3439e686441489a9d072190ff361c90"
+      "sha256": "2edebb95887f4990c899b516f66c6d351bc2c5e152ecfd5066db06b3e1894f3a"
     },
     {
       "file": "web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx",
@@ -332,7 +338,7 @@
     {
       "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
       "calls": 45,
-      "sha256": "52eb108a42e8c33c695b971a2edf5cfb48d3182f33a2427f2b94609f931b6cd3"
+      "sha256": "675d4aeede3d186f7a137ec13e3565d163279f577e29f4b3a824fe014f0328e3"
     },
     {
       "file": "web/src/features/settings/components/sessions/SessionsTable.tsx",
