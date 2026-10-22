@@ -1456,7 +1456,7 @@
   },
   "wait_oracle": {
     "title": "Supercharger wait oracle",
-    "subtitle": "Expected queue wait per site and arrival time, predicted from your fleet charging history. All hours UTC.",
+    "subtitle": "Expected queue wait per site and arrival time, predicted from your fleet charging history.",
     "site": "Site",
     "sessions": "{{count}} sessions",
     "pickSite": "Select a site",
@@ -1470,7 +1470,7 @@
     "expectedWait": "{{min}} min expected wait",
     "confidence": "{{level}} confidence",
     "waitProb": "{{pct}}% chance of any wait · ~{{stalls}} stalls",
-    "bestHour": "Arrive {{hour}}:00 UTC instead to save ~{{min}} min.",
+    "bestHour": "Arrive {{hour}}:00 instead to save ~{{min}} min.",
     "verdict": {
       "quiet": "Quiet",
       "steady": "Steady",
@@ -1483,10 +1483,10 @@
       "low": "Low"
     },
     "chart": {
-      "title": "Wait across the arrival day (UTC)",
+      "title": "Wait across the arrival day",
       "aria": "Expected wait minutes by hour of day",
       "col": {
-        "hour": "Hour (UTC)",
+        "hour": "Hour",
         "wait": "Expected wait (min)"
       }
     }

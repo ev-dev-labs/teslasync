@@ -528,6 +528,11 @@
     "sha256": "418a4aacf535056bb9f8e92f01a0afb178d23f81b9515e413378e1c61443cf59"
   },
   {
+    "file": "web/src/features/charging/components/WaitOraclePanel.tsx",
+    "calls": 39,
+    "sha256": "95d120091d37dd050ad1caf3b2d9bf1597204d57a13cc7e53341ea140a2f60b3"
+  },
+  {
     "file": "web/src/features/charging/pages/ChargingCurvePage.tsx",
     "calls": 25,
     "sha256": "74bbca6be61fc94b3ddc89ebc4f644f571d561778af9b9cdb14cf08fc9754f8b"
