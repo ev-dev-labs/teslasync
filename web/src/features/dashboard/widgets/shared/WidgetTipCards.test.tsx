@@ -110,10 +110,19 @@ describe('WidgetTipCards — rendering tips', () => {
     expect(screen.getByText(title)).toHaveTextContent(title);
     expect(screen.getByText(title)).toHaveClass('min-w-0', '[overflow-wrap:anywhere]');
     expect(screen.getByText(description.trim())).toHaveTextContent(description.trim());
+    // Spec `.tip` body language: muted secondary text that wraps anywhere.
+    expect(screen.getByText(description.trim())).toHaveClass('text-[var(--text-muted)]', '[overflow-wrap:anywhere]');
     expect(screen.getByText(impactLabel.trim())).toHaveTextContent(impactLabel.trim());
     expect(screen.getByText(impactLabel.trim())).toHaveClass('max-w-full', 'whitespace-normal');
-    expect(screen.getByRole('listitem')).toHaveClass('border-b', 'last:border-b-0');
-    expect(screen.getByRole('listitem')).not.toHaveClass('bg-[var(--surface-2)]', 'rounded-lg');
+    // Spec `.tip` card language: bordered 10px sub-surface card, not a divided row.
+    expect(screen.getByRole('listitem')).toHaveClass(
+      'border',
+      'bg-[var(--surface-2)]',
+      'rounded-shape-lg',
+      'px-3',
+      'py-2.5',
+    );
+    expect(screen.getByRole('listitem')).not.toHaveClass('border-b', 'last:border-b-0');
   });
 
   it('renders each tip title + description as accessible list items', () => {
