@@ -29,7 +29,7 @@ Branch HEAD: `147f180cf3` (7 TZ-4 commits pushed; PR202 run in progress, 5 jobs 
 | Calendar values unshifted (LA + Kiritimati tests) | done | `d4653c5517` + `86bb6e735d` | `formatMonthYear` day-rollover validation; `dateFormat.test.ts` 82 green |
 | `useConversionTimezone` + `resolveRawTimezone` (conversion boundaries) | done | `d4653c5517` + `86bb6e735d` | RateForm + JourneyAssurancePage converted; `timezone.test.ts` extended |
 | TZ-4 API `timezone` sends + backend zone params + Go tests | done | `284851a318..147f180cf3` (7, pushed) | Vitest 2727/57276 + tsc + Go green at push; PR202 run in progress |
-| TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `ed59a0d318` batch 4 | Batch 4 done (6 weekday/month display sites -> shared; 49 files green, tsc clean). Triage complete: remaining Intl sites are computation/validation (markers) + daylog DST-offset display. Next: guard audit + markers + 277-route sweep |
+| TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `1778b6221e` guard | Guard done: audit-timezone-display (R1-R5, 14 tests, registry+wired, 3725 files green) + 67 markers + mileage label + 3 hoists (tsc/eslint/11 files green). Recorded: StatPeriod date-only boundary shift -> Part 3. Next: 277-route sweep |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | not started | — | Drive times, drawers, ranges, midnight day assignment |
 | Freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106`) | not started | revert set identified | `git revert` (no resets) after Part 1 code done; `cad1237f5f` only if shell-preservation fails; i18n conflicts via generators |
 | TZ-7 i18n regen, full local replica, commit, push, PR green | not started | — | Section 3 replica, then push once |
@@ -79,6 +79,17 @@ exceptions / bugs-fixed: —.
 - Dev server `npm run dev -- --host` (PIDs 69812/45664, started 10/21
   12:55 PM, owner unclear) left running; revisit at the TZ-7 replica.
   Codex runtime node processes are the user's tooling, untouched.
+- TZ-5 guard: `{/* */}` markers for JSX-children positions, `//` for JS
+  and JSX-attribute positions (TS accepts `//` between attributes);
+  attribute-position ISO hoisted to marked consts in 3 files.
+- TZ-5 finding -> Part 3: `formatDateTime(period.start)` shifts date-only
+  boundaries by zone (mileage label fixed via `formatDayKey`; generic
+  StatPeriod renderer + producers need a shared boundary helper).
+- TimestampTool keeps raw ISO rows (`tz-tool-subject`: the converter's
+  subject is the format itself); daylog keeps GMT offsets
+  (`tz-dst-offset`: fall-back disambiguation, same class as
+  `formatChartInstant`); quiet-hours per-window zones stay
+  (`tz-schedule-data`, same class as automation schedules).
 
 ## Blockers
 

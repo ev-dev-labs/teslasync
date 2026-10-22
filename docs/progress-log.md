@@ -484,3 +484,6 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-22 - Muse: TZ-5 batch 4 committed (ed59a0d318)
 - 6 weekday/month display sites to formatWeekdayName/formatMonthYear (regex dropped per calendar rule); 49 files green, tsc clean. Triage done: rest is computation/validation + daylog DST offset.
 - Next: audit-timezone-display.mjs guard + markers + route sweep.
+## 2026-10-22 - Muse: TZ-5 guard committed (1778b6221e)
+- audit-timezone-display.mjs (R1-R5, 14 node:test, registry + npm wiring green) + 67 markers + mileage formatDayKey label + 3 const hoists; tsc/eslint/11 files green.
+- Next: 277-route sweep (extend route layout guard: raw ISO, zone names/offsets, duplicate timestamps).
