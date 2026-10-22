@@ -487,3 +487,6 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-22 - Muse: TZ-5 guard committed (1778b6221e)
 - audit-timezone-display.mjs (R1-R5, 14 node:test, registry + npm wiring green) + 67 markers + mileage formatDayKey label + 3 const hoists; tsc/eslint/11 files green.
 - Next: 277-route sweep (extend route layout guard: raw ISO, zone names/offsets, duplicate timestamps).
+## 2026-10-22 - Muse: TZ-5 sweep spec (0228f6413d) + timeline zoned buckets (e24583d253) committed
+- Sweep found WaitOracle UTC labels (backend has no zone param - recorded gap) and validated the timeline fix; calibration flake noted (1/5 timeline flag, DOM capture added).
+- USER UPDATE: removing all tz-computation markers (before=72) via shared API + narrowed guard; no suppressions going forward.

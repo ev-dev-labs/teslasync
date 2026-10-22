@@ -97,6 +97,10 @@ exceptions / bugs-fixed: —.
   CI, Windows visual (1/64) red; job logs unavailable until the run
   completes. Triage then; visual/e2e diffs likely intended TZ-4 display
   changes, regen at TZ-7 after all display work. Not blocking TZ-5/6.
+- :8080 serves the TeslaSync SPA (user's server via Docker; left running).
+  Mock-preview proxy escapes would fail loudly (HTML vs JSON), not via
+  ECONNREFUSED. Caveat recorded for the TZ-7 replica; revisit if escape
+  anomalies appear.
 
 ## Exact next step
 
