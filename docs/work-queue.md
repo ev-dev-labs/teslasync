@@ -4,8 +4,8 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Codex (TZ-6 design recorded; stopping).
-Branch HEAD: `498fde26e0` + pending TZ-6 docs (pushing next).
+Last updated: 2026-10-22 by Codex (new playbook adopted; API contract review done).
+Branch HEAD: `c4b9a91d9b` (new playbook adopted + pushed; contract review done, queue update pending).
 
 ## Parts overview
 
@@ -127,6 +127,7 @@ exceptions / bugs-fixed: —.
   SecretRotationOperationalBrief (stale since `eccca4cdc1`, fixed via
   the sanctioned generator, translations verified clean).
 - Wip handoff fix (Codex 2026-10-22): `66eda8c6d5` added waitoracle `?timezone=` (400/UTC default), store AT TIME ZONE $3, Predict(loc), journey plumbing (UTC-preserving per TZ-4 intentionally-unchanged), useCharging effective-tz send; but renamed backend JSON `best_hour_utc`->`best_hour` without updating panel/test/en.json, breaking tsc + Lighthouse. Fixed by `a09dc6ec15`: panel/test use `best_hour`, dropped all UTC suffixes per Part 1 rule 3 (subtitle/bestHour/chart title/col), title fallback aligned to catalog sentence case, i18n via sanctioned generators (split + trio producer/combined + catalog pins).
+- API CONTRACT `best_hour_utc`->`best_hour` (waitoracle forecast): all in-repo dependents fixed in same change (hook type, panel, panel test, en.json + split/trio/pins, Go forecast + handler + tests). Repo-wide grep: old name remains only in handler absence-assertion (contract test, intentional) + queue/progress history notes. No OpenAPI (`docs/public/openapi.yaml` has no waitoracle), no `docs/api-reference.md` entry, no generated clients, no e2e/mock harness refs, no scripts, ar/he have no `wait_oracle` keys. External readers: undocumented internal SPA API (only reader is `useCharging` in this repo); old UTC-suffixed name was factually wrong (hours are zone-framed) and violates Part 1 rule 5, so old field NOT kept (intentional breaking rename, pinned by absence test). DATA STORAGE: store uses `AT TIME ZONE $3` query-time only, no migration, stored values unchanged. NO SUPPRESSION: no new exception/marker/allowlist added.
 - Pending user update verified done: `tz-computation` 0 in `web/src` (grep 0), all other `tz-*` 0 in src (1 absence-assertion test kept); playbook global no-suppression rule present (`docs/agent-playbook.md:126`).
 - Queue reconciled 2026-10-22: TZ-5c commits `2fbe414e..edf280bfeb` done/pushed; `docs/widget-redesign/state.md` correctly absent (Part 2 not started; dir holds only inputs).
 - AnalyticsPage `re-scopes and re-fetches` failure was PRE-EXISTING
@@ -147,5 +148,5 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-Push TZ-6 assessment docs, watch PR202 (expect Lighthouse green after a09dc6ec15). Then implement TZ-6 e2e spec `web/e2e/timezone-display.smoke.spec.ts`: browser TZ=UTC (CI=true TZ=UTC), seed `tz_display_default=user` + `timezone_user=America/Los_Angeles` then `Asia/Tokyo` (via settings UI or mock settings override); assert drive times/drawers, range labels (`formatRange` end-inclusive), and timeline daily bucket day assignment near midnight (use LA-midnight fixture from e24583d253 vitest as mock drive). Full 277 sweep at TZ-7 gate, then freshness
+New playbook committed+pushed (`c4b9a91d9b`); API contract review done (recorded above). PR202 shows no fails. Now implement TZ-6 e2e spec `web/e2e/timezone-display.smoke.spec.ts`: browser TZ=UTC (CI=true TZ=UTC), seed `tz_display_default=user` + `timezone_user=America/Los_Angeles` then `Asia/Tokyo` (via settings UI or mock settings override); assert drive times/drawers, range labels (`formatRange` end-inclusive), and timeline daily bucket day assignment near midnight (use LA-midnight fixture from e24583d253 vitest as mock drive). Full 277 sweep at TZ-7 gate, then freshness
 revert, TZ-7 full replica + green.
