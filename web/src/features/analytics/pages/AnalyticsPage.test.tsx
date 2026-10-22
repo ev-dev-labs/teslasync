@@ -185,7 +185,10 @@ function renderPage(initialEntries: string[] = ['/analytics']) {
 
 function HeaderRangeChange() {
   const { setRange } = useRangeState();
-  return <button onClick={() => setRange(getDatePreset('7d')!.resolve())}>Change header range</button>;
+  // Resolve in UTC (the display zone this file pins): the page re-resolves
+  // the scope preset in the display zone, so a local-zone resolution would
+  // disagree by a day whenever the local and UTC dates differ.
+  return <button onClick={() => setRange(getDatePreset('7d')!.resolve(new Date(), 'UTC'))}>Change header range</button>;
 }
 
 /** The single fleet request path that was issued (last call). */
@@ -458,7 +461,7 @@ describe('AnalyticsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Change header range' }));
 
-    const expected = getDatePreset('7d')!.resolve();
+    const expected = getDatePreset('7d')!.resolve(new Date(), 'UTC');
     const expectedPath = calendarFleetPath(expected.start, expected.end);
     await waitFor(() => expect(fleetPaths()).toContain(expectedPath));
     // The window actually changed (a new request was issued, not the URL one).

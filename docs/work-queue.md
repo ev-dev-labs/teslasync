@@ -125,9 +125,13 @@ exceptions / bugs-fixed: —.
 - i18n: trio regen covers 7 touched producers + pre-existing stale
   SecretRotationOperationalBrief (stale since `eccca4cdc1`, fixed via
   the sanctioned generator, translations verified clean).
-- AnalyticsPage `re-scopes and re-fetches` failure is PRE-EXISTING
-  (reproduced on pristine base worktree `4fd5b3bd1c`); must still be
-  fixed for the TZ-7 green gate. Queued after the TZ-5c push.
+- AnalyticsPage `re-scopes and re-fetches` failure was PRE-EXISTING
+  (reproduced on pristine base worktree `4fd5b3bd1c`) and zone-fragile:
+  the test resolved `7d` in the local zone while the page re-resolves
+  the scope preset in the UTC display zone, disagreeing by a day
+  whenever local and UTC dates differ (red in PDT evenings, green in
+  CI/UTC). Fixed by pinning both resolutions to UTC; 20/20 green in
+  PDT, UTC, and Pacific/Kiritimati.
 
 ## Blockers
 
