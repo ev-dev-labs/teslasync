@@ -478,3 +478,6 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-22 - Muse: TZ-5 batch 2 committed (f99116af32)
 - report.ts/certificate.ts dead builders (zero production callers): 4 footer sites to shared formatDateTime/formatDate; report tests 11 green, tsc clean.
 - Next: labels.ts Intl factories (12 sites), then driving/battery/analytics libs.
+## 2026-10-22 - Muse: TZ-5 batch 3 committed (e2c6972b61)
+- arrival/destination labels.ts (12 Intl sites) to formatHourName(+showMinutes)/formatWeekdayName/formatMonthYear; driving suite 209 files / 3359 tests green, tsc clean.
+- Next: driving/battery/analytics lib Intl sites.
