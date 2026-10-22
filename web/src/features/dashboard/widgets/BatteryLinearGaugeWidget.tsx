@@ -2,13 +2,14 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Battery } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { LinearGauge } from '@/components/charts';
-import { Badge } from '@/components/ui';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
+import { useUnits } from '@/hooks/useUnits';
+import { fmtNumber } from '@/lib/numberFormat';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber, WidgetGaugeHero, WidgetStatGrid } from './shared';
 import { batteryColor } from './BatteryGaugeWidget';
 import type { WidgetProps } from './types';
 
@@ -19,12 +20,17 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
   const query = useVehicleState(id);
   const { data: stateData, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
   const trust = useDataState(query, { provenance: stateData?.live ? 'live' : 'cached', maxAgeMs: 120_000 });
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
   const state = stateData?.state;
 
   const isCompact = size.cols === 1 && size.rows === 1;
-  const isLarge = size.cols >= 2 && size.rows >= 2;
 
   const batteryLevel = knownNumber(state?.battery_level);
+  /* SI-floor: state.rated_range arrives in METERS; convert only for display. */
+  const ratedRange = knownNumber(state?.rated_range);
+  const rangeText =
+    ratedRange != null ? `${fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0)} ${distanceUnit}` : null;
   // charge_limit_soc may be present on extended state payloads. Validate it is
   // a finite number before use so a malformed field never leaks a NaN into the
   // gauge overlay or the stat row.
@@ -50,34 +56,48 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
     >
       <div className="flex min-w-0 flex-col gap-2">
         {batteryLevel != null ? (
-          <LinearGauge
-            preserveReadingAndScale
-            value={batteryLevel}
-            max={100}
-            label={t('widget.level', 'Level')}
-            ariaLabel={t('widget.batteryLevel', 'Battery')}
-            unit="%"
-            color={batteryColor(batteryLevel)}
-            size={isCompact ? 70 : 110}
-            marker={chargeLimitSoc}
-            markerLabel={chargeLimitSoc != null ? `${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%` : undefined}
-          />
+          <WidgetGaugeHero
+            compact={isCompact}
+            gauge={{
+              preserveReadingAndScale: true,
+              value: batteryLevel,
+              max: 100,
+              label: t('widget.level', 'Level'),
+              ariaLabel: t('widget.batteryLevel', 'Battery'),
+              unit: '%',
+              color: batteryColor(batteryLevel),
+              marker: chargeLimitSoc,
+              markerLabel: chargeLimitSoc != null ? `${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%` : undefined,
+            }}
+          >
+            {(rangeText != null || state?.is_charging) && (
+              <div className="flex min-w-0 flex-col items-center gap-1 text-center">
+                {rangeText != null && (
+                  <p className="text-xs leading-snug text-[var(--text-muted)]">{rangeText}</p>
+                )}
+                {state?.is_charging && (
+                  <p className="text-xs leading-snug text-[var(--text-muted)]">
+                    {chargeLimitSoc != null
+                      ? `${t('widget.charging', 'Charging')} · ${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%`
+                      : t('widget.charging', 'Charging')}
+                  </p>
+                )}
+              </div>
+            )}
+          </WidgetGaugeHero>
         ) : state ? (
-          <WidgetBigNumber value={null} label={t('widget.level', 'Level')} />
+          <>
+            <WidgetBigNumber value={null} label={t('widget.level', 'Level')} />
+            {!isCompact && chargeLimitSoc != null && (
+              <WidgetStatGrid stats={[{ label: t('widget.chargeLimit', 'Limit'), value: chargeLimitSoc, unit: '%' }]} />
+            )}
+          </>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Battery className="h-6 w-6" />}
             message={t('widget.noBattery', 'No battery data')}
             className="py-4"
           />
-        )}
-        {isLarge && chargeLimitSoc != null && (
-          <WidgetStatGrid stats={[{ label: t('widget.chargeLimit', 'Limit'), value: chargeLimitSoc, unit: '%' }]} />
-        )}
-        {state?.is_charging && (
-          <Badge variant="success" size="sm" className="self-start">
-            <span aria-hidden="true">⚡</span> {t('widget.charging', 'Charging')}
-          </Badge>
         )}
       </div>
     </WidgetShell>

@@ -57,6 +57,12 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicleState: vi.fn(),
 }));
 
+// Distance preference pinned to miles so the SI (metres) rated range renders
+// deterministically as e.g. "172 mi".
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ unitPrefs: { distance: 'mi' } }),
+}));
+
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import BatteryLinearGaugeWidget from './BatteryLinearGaugeWidget';
 import { gaugeColors } from '@/test/gaugeTestUtils';
@@ -213,7 +219,7 @@ describe('BatteryLinearGaugeWidget — level → gauge colour', () => {
 });
 
 describe('BatteryLinearGaugeWidget — charge-limit overlay + stat', () => {
-  it('shows the limit marker and Limit stat when charge_limit_soc is a finite number (large)', () => {
+  it('shows the limit marker when charge_limit_soc is a finite number (large)', () => {
     mockUseVehicleState.mockReturnValue(
       stateQuery(stateWithLimit(90, { battery_level: 80 })),
     );
@@ -221,10 +227,26 @@ describe('BatteryLinearGaugeWidget — charge-limit overlay + stat', () => {
 
     // The tick sits at the limit's position on the same 0–100 scale.
     expect(limitMarker(container)?.style.left).toBe('90%');
-    expect(screen.getByText('Limit')).toBeInTheDocument();
+    expect(limitMarker(container)?.getAttribute('title')).toContain('Limit 90%');
     expect(screen.getByText('Level')).toBeInTheDocument();
-    // The distinct limit value renders in the stat row.
-    expect(screen.getByText('90')).toBeInTheDocument();
+  });
+
+  it('shows the rated range and charging-to-limit lines under the gauge (After)', () => {
+    mockUseVehicleState.mockReturnValue(
+      stateQuery(stateWithLimit(80, { battery_level: 64, is_charging: true, rated_range: 172 * 1609.344 })),
+    );
+    renderWidget({ size: { cols: 2, rows: 2 } });
+    expect(screen.getByText('172 mi')).toBeInTheDocument();
+    expect(screen.getByText('Charging · Limit 80%')).toBeInTheDocument();
+  });
+
+  it('omits the range line when rated_range is missing, without fabricating 0 mi', () => {
+    mockUseVehicleState.mockReturnValue(
+      stateQuery({ ...makeState({ battery_level: 64 }), rated_range: undefined as unknown as number }),
+    );
+    renderWidget({ size: { cols: 2, rows: 2 } });
+    expect(screen.queryByText('0 mi')).not.toBeInTheDocument();
+    expect(screen.queryByText(/ mi$/)).not.toBeInTheDocument();
   });
 
   it('omits the limit marker and Limit stat when charge_limit_soc is absent', () => {
@@ -265,10 +287,6 @@ describe('BatteryLinearGaugeWidget — charging indicator', () => {
     const { container } = renderWidget();
 
     expect(screen.getByText(/Charging/)).toBeInTheDocument();
-    const bolt = screen.getByText(/Charging/).querySelector('span[aria-hidden="true"]');
-    expect(bolt).not.toBeNull();
-    expect(bolt).toHaveTextContent('⚡');
-    expect(bolt).toHaveAttribute('aria-hidden', 'true');
     // Gauge still renders alongside the indicator.
     expect(circleStrokes(container)).toContain('var(--semantic-success)');
   });
