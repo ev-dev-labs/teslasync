@@ -89,7 +89,9 @@ export function WidgetStatusGrid({
             key={cell.id}
             className={cn(
               // After `.sgi`: bordered 10px box, 8px dot/body gap, no ambient motion.
-              'flex min-w-0 items-center gap-2 border border-[var(--border-subtle)]',
+              // `relative` is a positioning hook only (no absolute descendants):
+              // consumer status tests climb `.closest('.relative')` to the cell.
+              'relative flex min-w-0 items-center gap-2 border border-[var(--border-subtle)]',
               dashboardTokens.radius.inner,
               dashboardTokens.density.itemPadding,
               compact && 'py-1.5',

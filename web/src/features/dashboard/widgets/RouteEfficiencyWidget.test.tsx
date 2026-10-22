@@ -294,7 +294,7 @@ describe('RouteEfficiencyWidget populated list', () => {
     expect(screen.getByText('Poor')).toBeInTheDocument();
   });
 
-  it('highlights the most-efficient route (lowest raw) with an emerald bar and the rest blue', async () => {
+  it('highlights the most-efficient route (lowest raw) with a badge pill and no magnitude bars (After spec: divider rows carry no bars)', async () => {
     routeRequest(
       routeData([
         makeRoute({ startLocation: 'Slow', endLocation: 'Trip', avgEfficiency: 300 }),
@@ -305,8 +305,10 @@ describe('RouteEfficiencyWidget populated list', () => {
 
     await screen.findByText('Best → Trip');
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(view.container.querySelector('.bg-emerald-400')).not.toBeNull();
-    expect(view.container.querySelector('.bg-blue-400')).not.toBeNull();
+    // Best route (180 → Excellent) carries the badge pill; the rest render plain.
+    expect(screen.getByText('Excellent')).toBeInTheDocument();
+    expect(view.container.querySelector('.bg-emerald-400')).toBeNull();
+    expect(view.container.querySelector('.bg-blue-400')).toBeNull();
   });
 
   it('is null-safe: null locations / efficiency / trip count render placeholders, not NaN', async () => {
