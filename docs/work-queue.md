@@ -15,7 +15,7 @@ untouched as possible user tooling.
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
 | 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | TZ-5c done; wip fixed by a09dc6ec15; freshness correction b7c55d6ab2+b3f0ba6272+658e6563fc; startup-budget fix (this change, unpushed) | TZ-5 277-route sweep, TZ-6 re-run, TZ-7 replica + push + PR #202 green. Only Track A commits here until done |
-| 2 | Dashboard widget redesign (119 widgets) — TRACK B (`feat/widget-redesign` in `~/repos/teslasync-widgets`) | in progress | Phase 0 + Phase 1 complete; review fixes through 376937f321; rank-numeral follow-up pending final full-suite evidence; branch tracks `origin/feat/widget-redesign` | Phase 2 pilots (9) via rolling dispatch, 5 at a time; every worker task carries the TZ line (`Follow the time zone rules (playbook Part 1): no zone names/offsets on pages, all dates via the shared date layer.`); workers commit owned paths only, never push; header guard stays in place |
+| 2 | Dashboard widget redesign (119 widgets) — TRACK B (`feat/widget-redesign` in `~/repos/teslasync-widgets`) | in progress | Phase 0, Gate 1 and Phase 2 (9 pilots) GATE 2 PASS; pushed `462bde401e` on `origin/feat/widget-redesign` | Phase 3 rolling redesign (110 widgets) via 5 parallel workers; every worker task carries the TZ line; workers commit owned paths only, never push; header guard stays |
 | 3 | Shared-pattern consolidation (whole codebase) | not started | — | `docs/shared-patterns.md` catalog first |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
 | 5 | CI green on PR #202 | not started | PR green at takeover (199 pass / 1 skipping) | Loop `gh pr checks --watch` after each push |
@@ -41,7 +41,7 @@ untouched as possible user tooling.
 
 ## Part 2 summary mirror (updated after every task once started)
 
-Phase 0 gate PASS. Phase 1 shared foundation complete (14 tasks, rolling
+Phase 0 gate PASS. Phase 1 Gate 1 PASS (see below). Phase 2 pilots 9/9 done and GATE 2 PASS (pushed 462bde401e): wave1 288598cf28 climate, cde879bcbf onboarding, 357162dda0 recent-drives, ef09f6e589 battery-gauge, ac254eaf53 vehicle-hero; wave2 df582bf4b4 charge-status, 928a3ed11f security-status, e65b7f3136 quick-nav, 11d794a694 fleet-posture. After captures 18 PNGs (light+dark) in docs/widget-redesign/after/ (untracked), self-reviewed: exactly one FreshnessDot top-right per widget, no Live/2m-ago. Gate fixes: 012af5e74b typography tokens (audit 0), aab39c80be i18n keys (checklist.progressDone, widget.batteryGauge.*, widget.verifiedFields, dashboard.fleetPosture.*) + sanctioned re-pins (QuickNav/RecentDrives checkpointed), 7762911dcc hero footer + catalog fallbacks, 462bde401e preservation tests updated to After whole-percent precision. Gate checks: dashboard scope 222 files/4654 green, tsc 0, TZ audit 3726/0, typography 0, i18n 8110/8110, split OK. Deviations/data gaps logged in state.md + data-gaps.md (charge-status charger-type/added-kWh omitted, never fabricated). Phase 1 detail:
 workflow; commits 7d81146653..7f68554fce + gap 1b9f1e9470 on
 `feat/widget-redesign`). Review fixes: 8bc591fbec (status-grid `relative`
 hook; RouteEfficiency bar test → After spec), 900d526fe5 (GMT-offset caption
