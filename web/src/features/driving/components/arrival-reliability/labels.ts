@@ -1,7 +1,8 @@
 import type { TFunction } from 'i18next';
 
 import type { ArrivalEvidenceBand } from '../../lib/arrivalReliability';
-import { formatHourName, formatMonthYear, formatWeekdayName } from '@/lib/dateFormat';
+import {formatMonthYear, formatWeekdayName} from '@/lib/dateConvert'
+import {formatHourName} from '@/lib/dateConvert';
 import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export function arrivalEvidenceBandLabel(

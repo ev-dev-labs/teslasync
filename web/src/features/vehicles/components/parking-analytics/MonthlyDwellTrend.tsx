@@ -18,7 +18,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 import { useUnits } from '@/hooks/useUnits';
 
 import { convertDurationFromSI } from '@/lib/unitConversion';
@@ -39,7 +39,7 @@ export function MonthlyDwellTrend(
 ) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const { formatMonthYear } = useDateFormat();
+  const { formatMonthYear } = useDateLabels();
   const { unitPrefs } = useUnits();
   const durationUnit = unitPrefs.duration;
   const rows = useMemo(() => {

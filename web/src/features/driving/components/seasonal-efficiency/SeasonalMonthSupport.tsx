@@ -8,7 +8,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatDisplayDistance } from './formatters';
-import { formatMonthName } from '@/lib/dateFormat';
+import { formatMonthName } from '@/lib/dateConvert';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalMonthSupport({

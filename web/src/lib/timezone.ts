@@ -7,18 +7,6 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
  */
 export type TzMode = 'vehicle' | 'user' | 'utc';
 
-/**
- * Narrow an arbitrary runtime value to a {@link TzMode}. The persisted
- * `settings.tz_display_default` column predates the enum, is nullable, and
- * is written by older clients, so at runtime it can be `undefined`, an empty
- * string, or a legacy value outside the union — none of which the nullish
- * coalescing operator alone would sanitise. Private: `useDateFormat` keeps
- * its own copy so it never gains imports from this widely-mocked module.
- */
-function isTzMode(value: unknown): value is TzMode {
-  return value === 'vehicle' || value === 'user' || value === 'utc';
-}
-
 /** Resolves the browser's IANA timezone, or `'UTC'` if `Intl` is unavailable. */
 export function browserTimezone(): string {
   try {
@@ -84,30 +72,6 @@ export function resolveTimezone(
 }
 
 /**
- * UNSANITIZED resolution for business-instant conversion boundaries ONLY
- * (rate effective dates, journey departure inputs, schedule builders):
- * returns the raw saved/vehicle zone WITHOUT `Intl` validation, falling
- * back to the browser zone only when nothing is set. An invalid saved
- * zone therefore reaches the conversion helper, which decides: strict
- * helpers throw (the form surfaces a validation error instead of
- * persisting instants converted in a guessed zone); legacy wall-clock
- * parsers keep their browser-local fallback. NEVER use for display —
- * display must use {@link resolveTimezone} / `useTimezone`, which fall
- * back to a usable zone and can never throw at render time.
- */
-export function resolveRawTimezone(
-  mode: TzMode,
-  vehicleTz?: string | null,
-  userOverride?: string | null,
-): string {
-  if (mode === 'utc') return 'UTC';
-  const userTz = userOverride && userOverride.trim() ? userOverride : browserTimezone();
-  if (mode === 'user') return userTz;
-  if (!vehicleTz || vehicleTz === 'UTC') return userTz;
-  return vehicleTz;
-}
-
-/**
  * React hook returning the IANA timezone for the given mode, sourcing
  * the vehicle's tz from `useSelectedVehicle()` and the user's optional
  * override from `useSettings()`. Only call inside provider-mounted
@@ -119,19 +83,4 @@ export function useTimezone(mode: TzMode = 'vehicle'): string {
   return resolveTimezone(mode, vehicle?.timezone, settings.timezone_user);
 }
 
-/**
- * React hook returning the UNSANITIZED conversion zone for business-instant
- * conversion boundaries (rate effective dates, journey departure inputs,
- * schedule builders). The mode mirrors `settings.tz_display_default`
- * (validated, `'vehicle'` fallback); the zone itself is raw per
- * {@link resolveRawTimezone} — an invalid saved zone reaches the conversion
- * helper instead of being pre-guessed by the display layer. Only call
- * inside provider-mounted components.
- */
-export function useConversionTimezone(): string {
-  const { vehicle } = useSelectedVehicle();
-  const { settings } = useSettings();
-  const requestedMode = settings.tz_display_default;
-  const mode: TzMode = isTzMode(requestedMode) ? requestedMode : 'vehicle';
-  return resolveRawTimezone(mode, vehicle?.timezone, settings.timezone_user);
-}
+

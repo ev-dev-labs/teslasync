@@ -31,7 +31,8 @@ import {
   useDeleteQuietHours,
 } from '@/api/hooks/useNotifications'
 import type { QuietHoursWindow, QuietHoursWindowInput } from '@/api/hooks/useNotifications'
-import { browserTimeZone, supportedTimeZones } from '@/lib/dateFormat'
+import {browserTimeZone} from '@/lib/dateFormat'
+import {supportedTimeZones} from '@/lib/dateConvert'
 
 // Quiet hours / Do-Not-Disturb settings panel.
 //

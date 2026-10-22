@@ -12,7 +12,8 @@ import type { Drive } from '@/types/driving';
 import {
   fmtInt, fmtNumber, getFormatterPreferences, isFiniteNumber, setGlobalLocale, setGlobalPrecision,
 } from '@/lib/numberFormat';
-import { formatDateTime, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import {formatDateTime} from '@/lib/dateFormat'
+import {formatDurationSecondsAsMinutes} from '@/lib/dateConvert';
 import { analyzeChargeDepartureAlignment } from '../../lib/chargeDepartureAlignment';
 import ChargeDepartureAlignmentPage from '../../pages/ChargeDepartureAlignmentPage';
 

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formatDateRange, formatDayKeyRange, formatTime, formatDateTime, ymdInTz } from '../dateFormat';
+import {formatDateRange, formatDayKeyRange, formatTime, formatDateTime} from '../dateFormat'
+import {ymdInTz} from '../dateConvert';
 
 const LA = 'America/Los_Angeles';
 const TOKYO = 'Asia/Tokyo';

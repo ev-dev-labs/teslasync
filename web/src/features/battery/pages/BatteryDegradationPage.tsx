@@ -35,6 +35,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDayKey } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 
 import { cn } from '@/lib/cn';
 import { gaugeTone, neonColorMap, typography, chartTokens } from '@/lib/tokens';
@@ -120,7 +121,7 @@ export default function BatteryDegradationPage() {
     (key: string | null | undefined) => formatDayKey(key, opts),
     [opts],
   );
-  const { formatMonthYear } = useDateFormat();
+  const { formatMonthYear } = useDateLabels();
   const formatProjectionMonth = useCallback((key: string | null | undefined) => {
     if (typeof key !== 'string' || !/^\d{4}-\d{2}$/.test(key)) return '—';
     return formatMonthYear(key);

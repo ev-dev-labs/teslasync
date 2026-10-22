@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 
-import { formatMonthName, formatMonthYear } from '@/lib/dateFormat';
+import { formatMonthName, formatMonthYear } from '@/lib/dateConvert';
 
 const WEEKDAYS = [
   ['sun', 'Sun', 'Sunday'],

@@ -9,7 +9,7 @@ import { AlertBanner, QueryError } from '@/components/feedback';
 import { useSettings } from '@/hooks/useSettings';
 import { currencyCodeFromSymbol, microToValue } from '@/lib/currencyFormat';
 import { formatTime } from '@/lib/dateFormat';
-import { useConversionTimezone } from '@/lib/timezone';
+import { useConversionTimezone } from '@/lib/dateConvert';
 import { addCivilDays, civilDateInTimeZone, localMidnightToInstant } from '@/lib/dateRange';
 import { useCreateGeofenceRate } from '@/api/hooks/useLocations';
 import { currencyPerKwhToRatePerWh } from './helpers';

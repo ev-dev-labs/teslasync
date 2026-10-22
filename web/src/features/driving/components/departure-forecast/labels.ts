@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 
-import { formatChartInstant, formatDateTime, formatTime } from '@/lib/dateFormat';
+import {formatDateTime, formatTime} from '@/lib/dateFormat'
+import {formatChartInstant} from '@/lib/dateConvert';
 import type {
   DepartureDaypart,
   EvidenceBand,

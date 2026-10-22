@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { toIsoString } from '@/lib/dateFormat';
+import { toIsoString } from '@/lib/dateConvert';
 import type { DepartureForecastKpiBand } from '../departure-forecast/DepartureForecastKpiBand';
 import { DepartureForecastQueryStatus } from '../departure-forecast/DepartureForecastQueryStatus';
 import { departureClock, departureDateTime, departureEvidenceBandLabel, relativeDepartureLabel } from '../departure-forecast/labels';

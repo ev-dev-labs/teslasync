@@ -36,7 +36,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useUrlNumber } from '@/hooks/useUrlState';
 import { useUnits } from '@/hooks/useUnits';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { formatDurationClock } from '@/lib/dateFormat';
+import { formatDurationClock } from '@/lib/dateConvert';
 import { fmtInt } from '@/lib/numberFormat';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useMotionPreference } from '@/hooks/useMotionPreference';

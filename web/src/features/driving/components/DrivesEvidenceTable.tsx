@@ -5,7 +5,8 @@ import { AlertTriangle, Eye } from 'lucide-react';
 import { Badge, Button, DataTable, DataTableValueFilter, Input, Select, buildTableFilterValues, selectedTableValueKeys, type Column, type PaginationProps } from '@/components/ui';
 import { endpointLabel } from '@/components/data-display';
 import type { TableControls } from '@/components/forms';
-import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
+import {formatDateTime} from '@/lib/dateFormat'
+import {formatDurationMinutes} from '@/lib/dateConvert';
 
 import { getEfficiency, gradeFromEfficiency } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';

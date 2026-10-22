@@ -6,7 +6,7 @@ import { GridMetricIndicator, RouteDisplay } from '@/components/data-display';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import type { TableControls } from '@/components/forms';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateConvert';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
 

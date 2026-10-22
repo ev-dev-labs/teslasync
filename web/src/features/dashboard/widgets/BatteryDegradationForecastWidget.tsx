@@ -10,7 +10,7 @@ import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import type { StatMetric } from '@/components/data-display';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
-import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
@@ -59,7 +59,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = id != null ? String(id) : null;
-  const { formatMonthYear } = useDateFormat();
+  const { formatMonthYear } = useDateLabels();
 
   const query = useBatteryDegradation(idStr);
   const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;

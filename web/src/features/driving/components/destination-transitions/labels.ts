@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next';
 
-import { formatDateTime, formatHourName, formatMonthYear, formatWeekdayName } from '@/lib/dateFormat';
+import {formatDateTime} from '@/lib/dateFormat'
+import {formatMonthYear, formatWeekdayName} from '@/lib/dateConvert'
+import {formatHourName} from '@/lib/dateConvert';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { DestinationEvidenceBand } from '../../lib/destinationTransitions';
 import { getGlobalPrecision } from '@/lib/numberFormat';

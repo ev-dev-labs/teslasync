@@ -32,7 +32,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import type { ReactNode } from 'react';
 import type { FSMTransition } from '@/types/fsm';
-import { formatDurationMsCompact } from '@/lib/dateFormat';
+import { formatDurationMsCompact } from '@/lib/dateConvert';
 import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 // ── Mutable per-test fixture (referenced inside hoisted vi.mock factories) ──

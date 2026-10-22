@@ -2,10 +2,8 @@ import { useCallback, useMemo } from 'react';
 
 import { useUnits } from '@/hooks/useUnits';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import {
-  formatDayKey,
-  formatDurationSecondsAsMinutes,
-} from '@/lib/dateFormat';
+import {formatDayKey} from '@/lib/dateFormat'
+import {formatDurationSecondsAsMinutes} from '@/lib/dateConvert';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 export function useUtilizationDisplay() {

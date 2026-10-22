@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
-import { toIsoString } from '@/lib/dateFormat';
+import { toIsoString } from '@/lib/dateConvert';
 
 import type { DepartureForecast } from '../../lib/departureForecast';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';

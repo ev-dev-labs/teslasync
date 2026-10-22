@@ -3,7 +3,7 @@ import { Music, Radio, Volume2 } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { MetricBar } from '@/components/data-display';
 import { useVehicles, useMediaLatest } from '@/api/hooks/useVehicles';
-import { formatDurationClock } from '@/lib/dateFormat';
+import { formatDurationClock } from '@/lib/dateConvert';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useDataState } from '@/hooks/useDataState';

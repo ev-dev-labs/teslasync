@@ -25,7 +25,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 import { isFiniteNumber } from '@/lib/numberFormat';
-import { toIsoString } from '@/lib/dateFormat';
+import { toIsoString } from '@/lib/dateConvert';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { chartTokens } from '@/lib/tokens';
 import type { Drive } from '@/types/driving';

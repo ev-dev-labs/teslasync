@@ -30,7 +30,8 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { useTripReplay } from '@/hooks/useTripReplay';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { haversineDistance } from '@/lib/geo';
-import { formatDate, toIsoString } from '@/lib/dateFormat';
+import {formatDate} from '@/lib/dateFormat'
+import {toIsoString} from '@/lib/dateConvert';
 import { fmtInt as formatInt } from '@/lib/numberFormat';
 import { asFiniteNumber } from '@/lib/typeGuards';
 

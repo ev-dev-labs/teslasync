@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { TrendingUp, Route, Gauge, Clock } from 'lucide-react';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateConvert';
 import type { useDrivesListPageData } from '../../hooks/useDrivesListPageData';
 import type { useDrivesListPageFilters } from '../../hooks/useDrivesListPageFilters';
 

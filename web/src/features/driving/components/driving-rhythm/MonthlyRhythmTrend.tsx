@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ChartContainer } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { formatMonthYear } from '@/lib/dateFormat';
+import { formatMonthYear } from '@/lib/dateConvert';
 
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';

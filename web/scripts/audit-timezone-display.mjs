@@ -2,7 +2,8 @@
 // Time-zone display audit (TZ-5 guard).
 //
 // Every displayed date/time in the app must flow through the shared layer
-// (`src/lib/dateFormat.ts` via `useDateFormat()`), which renders instants in
+// (`src/lib/dateFormat.ts` via `useDateFormat()`, plus route-side
+// conversions/labels in `src/lib/dateConvert.ts`), which renders instants in
 // the user's resolved zone and keeps calendar values zone-stable. Numbers
 // must flow through the shared number layer (`src/lib/numberFormat.ts`),
 // which carries the user's locale and precision. This audit scans every
@@ -21,9 +22,10 @@
 //       boundary between the call and the JSX container). NOT flagged:
 //       calls inside handlers or memo callbacks (deferred, left to the
 //       runtime sweep); ISO nested as an argument to a shared-layer
-//       formatter (imported from `@/lib/dateFormat` / `@/hooks/useDateFormat`
-//       or a known formatter name, which also covers hook-destructured
-//       fns); ISO in a `<time dateTime>` machine attribute (ISO is its
+//       formatter (imported from `@/lib/dateFormat`, `@/lib/dateConvert` or
+//       `@/hooks/useDateFormat`, or a known formatter name, which also
+//       covers hook-destructured fns); ISO in a `<time dateTime>` machine
+//       attribute (ISO is its
 //       correct content); ISO in props of the shared date components
 //       (`TimeStamp`, `DateTime`), which render through the shared layer.
 //       Chained derivations (`x.toISOString().slice(0, 10)`) and ISO passed
@@ -35,8 +37,8 @@
 //       `supportedTimeZones()` helper, not directly.
 //
 // Exempt files (the shared layer itself): `src/lib/dateFormat.ts`,
-// `src/lib/timezone.ts`, `src/lib/dateRange.ts`, `src/lib/numberFormat.ts`,
-// `src/lib/locale.ts`, `src/hooks/useDateFormat.ts`. Test files
+// `src/lib/dateConvert.ts`, `src/lib/timezone.ts`, `src/lib/dateRange.ts`,
+// `src/lib/numberFormat.ts`, `src/lib/locale.ts`, `src/hooks/useDateFormat.ts`. Test files
 // (`*.test.*`, `*.spec.*`, `__tests__`, `__mocks__`) are not scanned.
 //
 // There are no marker comments or per-site exceptions: every finding is
@@ -56,13 +58,14 @@ import ts from 'typescript'
 const SRC_ROOT = join('src')
 const EXEMPT_FILES = new Set([
   join('src', 'lib', 'dateFormat.ts'),
+  join('src', 'lib', 'dateConvert.ts'),
   join('src', 'lib', 'timezone.ts'),
   join('src', 'lib', 'dateRange.ts'),
   join('src', 'lib', 'numberFormat.ts'),
   join('src', 'lib', 'locale.ts'),
   join('src', 'hooks', 'useDateFormat.ts'),
 ])
-const SHARED_DATE_MODULES = new Set(['@/lib/dateFormat', '@/hooks/useDateFormat'])
+const SHARED_DATE_MODULES = new Set(['@/lib/dateFormat', '@/lib/dateConvert', '@/hooks/useDateFormat', '@/hooks/useDateLabels'])
 // Known shared formatter names. Import-aware recognition (below) covers
 // direct imports; this static set additionally covers the same functions
 // destructured from useDateFormat() at call sites.
@@ -73,6 +76,8 @@ const KNOWN_FORMATTERS = new Set([
   'formatChartInstant', 'formatMonthDayHour', 'formatHourName',
   'formatDateWithDay', 'formatDateRange', 'formatGmtOffset',
   'ymdInTz', 'zonedWallTimeToUtc', 'zonedDateParts', 'toIsoString',
+  'toZonedDatetimeStr', 'supportedTimeZones',
+  'isoUtcToLocalDatetimeInput', 'localDatetimeInputToIso',
   'formatDurationMs', 'formatDurationMsCompact', 'formatDurationMsLong',
   'formatDurationSecondsAsMinutes', 'formatDurationMinutes',
   'formatDurationRange', 'formatDurationClock',
@@ -242,7 +247,7 @@ function scanSource(text, rel) {
         report(
           'R2', node,
           `direct .${node.expression.name.text}() outside the shared layers`,
-          'dates: useDateFormat() / @/lib/dateFormat; numbers: @/lib/numberFormat (fmtInt/fmtNumber)',
+          'dates: useDateFormat() / @/lib/dateFormat / @/lib/dateConvert; numbers: @/lib/numberFormat (fmtInt/fmtNumber)',
         )
       } else if (
         ts.isPropertyAccessExpression(node.expression) &&
@@ -259,7 +264,7 @@ function scanSource(text, rel) {
         report(
           'R5', node,
           "supportedValuesOf('timeZone') outside the shared layer (time-zone picker seed)",
-          'use supportedTimeZones() from @/lib/dateFormat, or link to Settings > Units',
+          'use supportedTimeZones() from @/lib/dateConvert, or link to Settings > Units',
         )
       }
     }
@@ -267,7 +272,7 @@ function scanSource(text, rel) {
       report(
         'R3', node,
         'timeZoneName outside the shared date layer (renders a zone name/offset)',
-        'use formatGmtOffset() from @/lib/dateFormat for DST-disambiguating offsets',
+        'use formatGmtOffset() from @/lib/dateConvert for DST-disambiguating offsets',
       )
     }
     ts.forEachChild(node, visit)
@@ -298,7 +303,7 @@ if (isMainModule) {
     for (const f of failures) {
       console.error(`  ${f.where} [${f.rule}] ${f.why}\n      fix: ${f.fix}`)
     }
-    console.error('\nAll displayed dates/times must use useDateFormat() / @/lib/dateFormat.')
+    console.error('\nAll displayed dates/times must use useDateFormat() / @/lib/dateFormat / @/lib/dateConvert.')
     process.exit(1)
   }
   console.log(`OK — no direct date/time formatting outside the shared layer (${scanned} files scanned)`)

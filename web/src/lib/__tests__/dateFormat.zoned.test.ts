@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { zonedWallTimeToUtc, toZonedDatetimeStr } from '../dateFormat';
+import { zonedWallTimeToUtc, toZonedDatetimeStr } from '../dateConvert';
 
 const LA = 'America/Los_Angeles';
 

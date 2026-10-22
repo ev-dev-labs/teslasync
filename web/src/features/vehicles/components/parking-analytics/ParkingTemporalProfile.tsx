@@ -6,6 +6,7 @@ import { ChartContainer } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { Subhead } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 
 
 import type { ParkingSummary } from '../../lib/parkingDwell';
@@ -28,7 +29,8 @@ export function ParkingTemporalProfile({
 }: ParkingTemporalProfileProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const { formatTime, formatWeekdayName } = useDateFormat();
+  const { formatTime } = useDateFormat();
+  const { formatWeekdayName } = useDateLabels();
   const hourRows = useMemo(
     () =>
       summary.hourly.map((bucket) => ({

@@ -4,7 +4,7 @@ import { DataTable, type Column, Badge, GlassPanel, PanelTitle, HelpTooltip, Tex
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 import type { AlignmentFlag, DeparturePair } from '../../lib/chargeDepartureAlignment';
 import { pairDisplayValues } from './presentation';
 

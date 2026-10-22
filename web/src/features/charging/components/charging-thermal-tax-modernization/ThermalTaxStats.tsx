@@ -4,7 +4,7 @@ import { Badge, Button, Text } from '@/components/ui';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { type StatMetric, type StatPeriod } from '@/components/data-display';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { DataState } from '@/api/dataState';
 import type { ChargingSession } from '@/types/charging';

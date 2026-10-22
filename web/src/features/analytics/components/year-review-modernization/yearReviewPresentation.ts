@@ -1,4 +1,4 @@
-import { formatMonthName } from '@/lib/dateFormat';
+import { formatMonthName } from '@/lib/dateConvert';
 
 /** Existing month policy, copied from the acquisition source without changing
  * calendar/query semantics. This helper only produces a display label. */

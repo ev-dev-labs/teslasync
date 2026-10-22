@@ -22,7 +22,8 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 
-import { formatTime, formatWeekdayName } from '@/lib/dateFormat';
+import {formatTime} from '@/lib/dateFormat'
+import {formatWeekdayName} from '@/lib/dateConvert';
 import { chartTokens } from '@/lib/tokens';
 
 import {

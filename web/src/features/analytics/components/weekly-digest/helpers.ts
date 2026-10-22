@@ -1,5 +1,6 @@
 import { fmtNumber } from '@/lib/numberFormat';
-import { zonedDateParts, zonedWallTimeToUtc } from '@/lib/dateFormat';
+import {zonedDateParts} from '@/lib/dateFormat'
+import {zonedWallTimeToUtc} from '@/lib/dateConvert';
 import { CITY_PAIRS } from './constants';
 
 /**

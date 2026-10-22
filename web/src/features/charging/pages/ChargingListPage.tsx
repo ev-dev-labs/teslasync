@@ -43,7 +43,9 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDayKey, formatTime } from '@/lib/dateFormat';
+import {formatDateTime, formatDayKey, formatTime} from '@/lib/dateFormat'
+import {formatRelativeDayKey} from '@/lib/dateConvert'
+import {formatDurationMinutes} from '@/lib/dateConvert';
 import { matchPresetId, getDatePreset, isAllTimeRange } from '@/lib/datePresets';
 
 import { buildContextHref } from '@/lib/contextNavigation';

@@ -1,5 +1,6 @@
 import type { ScoredDrive } from './scoreDomain';
-import { type FormatOptions, ymdInTz } from '@/lib/dateFormat';
+import {type FormatOptions} from '@/lib/dateFormat'
+import {ymdInTz} from '@/lib/dateConvert';
 import { addCivilDays } from '@/lib/dateRange';
 
 /** Weekly / monthly roll-up derived from the scored drives in range. */

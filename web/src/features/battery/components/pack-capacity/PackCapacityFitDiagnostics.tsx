@@ -24,7 +24,7 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { formatMonthYear } from '@/lib/dateFormat';
+import { formatMonthYear } from '@/lib/dateConvert';
 import {
   convertEnergyFromSI,
   type EnergyUnitPref,

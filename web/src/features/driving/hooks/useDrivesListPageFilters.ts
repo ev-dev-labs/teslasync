@@ -6,7 +6,8 @@ import { useUrlBatch, useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/use
 import { parseSearchQuery, matchesTokens, compareNumeric } from '@/lib/searchQuery';
 import { apiUrl } from '@/api/client';
 import { scopedPath } from '@/api/scope';
-import { formatRelativeDayKey, formatDayKey } from '@/lib/dateFormat';
+import {formatDayKey} from '@/lib/dateFormat'
+import {formatRelativeDayKey} from '@/lib/dateConvert';
 import type { Drive } from '@/types/driving';
 import { convertTempFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import {

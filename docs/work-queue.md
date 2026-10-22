@@ -7,14 +7,14 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 Last updated: 2026-10-22 by Muse (section-0 handoff: tree clean except untracked
 `docs/widget-redesign/` inputs, HEAD `658e6563fc` pushed, no `wip:` commits;
 Codex CLIs on pts/5+pts/9 and vite :3000 left untouched as possible user tooling).
-Branch HEAD: `658e6563fc` (pushed); freshness docs correction + Lighthouse budget fix in progress.
+Branch HEAD: `658e6563fc` (pushed); Lighthouse budget fix in progress (startup 401.6KB, bisect done).
 
 ## Parts overview
 
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
-| 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | TZ-5c done; wip fixed by a09dc6ec15; freshness correction b7c55d6ab2+b3f0ba6272+658e6563fc; BLOCKER: Lighthouse startup 401.6KB>400KB (bisect running) | Budget fix, then 277-route sweep, TZ-6 re-run, TZ-7 replica + push + PR #202 green. Only Track A commits here until done |
-| 2 | Dashboard widget redesign (119 widgets) — TRACK B (`feat/widget-redesign` in `~/repos/teslasync-widgets`) | not started | inputs present (`README.md`, `widgets-compare.html`, `widgets.json`); owner parallel-tracks override 2026-10-22 | Setup after budget fix: branch from pushed fix/post-merge-followups, copy inputs, `npm ci`; rolling 5-worker dispatch; header guard stays in place (redesign keeps the existing FreshnessDot in the corner, never the preview Live/2m-ago design) |
+| 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | TZ-5c done; wip fixed by a09dc6ec15; freshness correction b7c55d6ab2+b3f0ba6272+658e6563fc; startup-budget fix (this change, unpushed) | TZ-5 277-route sweep, TZ-6 re-run, TZ-7 replica + push + PR #202 green. Only Track A commits here until done |
+| 2 | Dashboard widget redesign (119 widgets) — TRACK B (`feat/widget-redesign` in `~/repos/teslasync-widgets`) | in progress | Phase 0 gate PASS (state.md 119 tasks, harness + 18 Before baselines, tree clean); worktree npm ci done | Rolling 5-worker dispatch: Phase 1 shared foundation (same-file serialize), then Phase 2 pilots; workers commit owned paths only, never push; header guard stays in place (redesign keeps the existing FreshnessDot in the corner, never the preview Live/2m-ago design) |
 | 3 | Shared-pattern consolidation (whole codebase) | not started | — | `docs/shared-patterns.md` catalog first |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
 | 5 | CI green on PR #202 | not started | PR green at takeover (199 pass / 1 skipping) | Loop `gh pr checks --watch` after each push |
@@ -40,7 +40,11 @@ Branch HEAD: `658e6563fc` (pushed); freshness docs correction + Lighthouse budge
 
 ## Part 2 summary mirror (updated after every task once started)
 
-Not started. No `state.md` yet (verified 2026-10-22: `docs/widget-redesign/` holds only inputs README/PROMPT/widgets-compare.html/widgets.json; consistent with not-started).
+Phase 0 done, gate PASS (2026-10-22, workflow-verified): `state.md` has 119
+pending tasks (9 phase-2 pilots + 110 phase-3), `data-gaps.md` created,
+capture harness (`web/e2e/_cap/capture.spec.ts` + `web/playwright.cap.config.ts`)
+in place, 18 Before baselines (9 pilots × light/dark), worktree tree clean on
+`feat/widget-redesign`. Next: Phase 1 shared foundation via rolling workflow.
 
 ## Part 3 counts (once started)
 
@@ -48,6 +52,25 @@ Catalog: not started. Coverage: 0%. Found / replaced / new-shared /
 exceptions / bugs-fixed: —.
 
 ## Decisions log
+
+- Startup-budget fix (Lighthouse red: startup 401.6KB > 400KB; main 398.6KB):
+  TZ-3b..TZ-5c date-layer growth (+636 lines in `dateFormat.ts`, +88 in
+  `timezone.ts`) landed in the shell's startup closure. Fix by moving
+  route-only code out of the entry (real bytes, no suppression, no behavior
+  change): new `web/src/lib/dateConvert.ts` (zone/wall conversions, ISO/GMT
+  helpers, durations, chart labels, conversion-zone hook) + new
+  `web/src/hooks/useDateLabels.ts` (month/weekday/relative-day labels bound
+  to settings) split off `useDateFormat`; `timezone.ts` keeps display
+  resolution only. Updated the TZ guard (`SHARED_DATE_MODULES`,
+  `KNOWN_FORMATTERS`, exempt files, fix hints) and its 16 tests. Moved lib
+  tests keep asserting identical behavior from the new paths; one widget
+  test gained a parallel `useDateLabels` mock (same convention). Result:
+  399.6KB, `perf:check` strict green. NO API CONTRACT change (internal SPA
+  modules only); DATA STORAGE untouched. Duplication note: `dateConvert`
+  carries local `browserTimezone`/`isTzMode` copies (5-line probe + predicate)
+  to stay free of value imports from the widely-mocked `@/lib/timezone`,
+  same documented pattern as the existing `dateFormat.browserTimeZone` copy.
+- Display uses sanitized `resolveTimezone` (invalid -> browser -> UTC,
 
 - Display uses sanitized `resolveTimezone` (invalid -> browser -> UTC,
   never throws); business-instant conversion uses new unsanitized
@@ -153,12 +176,7 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-Freshness CORRECTION verified + docs fixed (this change; `f6d6be4106` kept,
-header guard stays). BLOCKER: Lighthouse CI red on HEAD — startup JS 401.6KB >
-400KB budget (main: 398.6KB; entry +3.0KB; bisect points at TZ-4..TZ-5c range).
-Next: (1) cut startup closure back under budget (real bytes, no suppression),
-(2) TZ-5 full 277-route sweep, (3) TZ-6 e2e re-run, (4) TZ-7 full local
-replica (section 3: 16 quality shards + a11y + firefox/webkit smoke +
-route/contract/scenario/list + lint/audits + build + full vitest + go
-build/test) + push + PR green. Track B (widget redesign worktree) sets up in
-parallel once the budget fix lands.
+Startup-budget fix done locally (startup 401.6KB → 399.6KB, strict gate green;
+see decisions log). Next: (1) commit + push this change, (2) launch Track B
+rolling redesign workflow (Phase 0 gate PASS), (3) TZ-5 full 277-route sweep,
+(4) TZ-6 e2e re-run, (5) TZ-7 full local replica (section 3) + push + PR green.

@@ -3,7 +3,7 @@ import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief';
 import { GlassPanel, Text } from '@/components/ui';
 
 import { ACTIVITY_KINDS, ACTIVITY_KIND_LABELS, type ActivityItem } from '@/types/activity';
-import { ymdInTz } from '@/lib/dateFormat';
+import { ymdInTz } from '@/lib/dateConvert';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ActivityOverviewProps {

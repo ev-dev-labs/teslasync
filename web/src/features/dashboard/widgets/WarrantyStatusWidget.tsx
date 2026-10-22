@@ -10,6 +10,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
 
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetDetailCard, WidgetStatGrid, type DetailEntry } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
@@ -67,7 +68,8 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
-  const { formatDate, formatMonthYear } = useDateFormat();
+  const { formatDate } = useDateFormat();
+  const { formatMonthYear } = useDateLabels();
 
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = useCallback(

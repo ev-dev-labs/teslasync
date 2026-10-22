@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useUnits } from '@/hooks/useUnits';
-import { formatMonthYear } from '@/lib/dateFormat';
+import { formatMonthYear } from '@/lib/dateConvert';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type { CarbonDisplay } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';

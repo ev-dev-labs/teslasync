@@ -6,7 +6,7 @@ import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatIntensityWhPerM } from './formatters';
-import { formatMonthName } from '@/lib/dateFormat';
+import { formatMonthName } from '@/lib/dateConvert';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalRankedMonths({

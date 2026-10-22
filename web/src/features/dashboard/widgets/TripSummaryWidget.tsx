@@ -7,7 +7,7 @@ import { useTrips } from '@/api/hooks/useTrips';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDurationRange } from '@/lib/dateFormat';
+import { formatDurationRange } from '@/lib/dateConvert';
 
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';

@@ -1,6 +1,6 @@
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { fmtNumber } from '@/lib/numberFormat';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 
 export function getStatusColor(status: string): string {
   switch ((status ?? '').toLowerCase()) {

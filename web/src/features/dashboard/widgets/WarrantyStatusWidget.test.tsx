@@ -73,6 +73,12 @@ vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => dateFormatMock(),
 }));
 
+// The widget reads month labels from the route-side `useDateLabels` hook;
+// mirror the date mock there so label copy stays deterministic.
+vi.mock('@/hooks/useDateLabels', () => ({
+  useDateLabels: () => dateFormatMock(),
+}));
+
 import WarrantyStatusWidget, {
   asString,
   asNumber,

@@ -9,7 +9,7 @@ import {
 } from '@/lib/unitConversion';
 import type { ShareCardDisplay } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { formatMonthYear } from '@/lib/dateFormat';
+import { formatMonthYear } from '@/lib/dateConvert';
 import { getGlobalPrecision } from '@/lib/numberFormat';
 
 function finite(value: number | null | undefined): value is number {

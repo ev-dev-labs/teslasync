@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatDisplayIntensity, toDisplayIntensity } from './formatters';
-import { formatMonthYear } from '@/lib/dateFormat';
+import { formatMonthYear } from '@/lib/dateConvert';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalDeseasonalizedTrend({

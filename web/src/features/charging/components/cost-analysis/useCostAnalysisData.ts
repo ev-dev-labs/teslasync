@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { useMemo } from 'react';
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from '../charging-curve/helpers';
-import { ymdInTz, zonedDateParts } from '@/lib/dateFormat';
+import {zonedDateParts} from '@/lib/dateFormat'
+import {ymdInTz} from '@/lib/dateConvert';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { CHART_COLORS, CHARGER_COLORS } from '@/lib/colors';
 import { KWH_PER_GALLON, CO2_PER_GAL_KG, KG_CO2_PER_TREE_YEAR } from './constants';

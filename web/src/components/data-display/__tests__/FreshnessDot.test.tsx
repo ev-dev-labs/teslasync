@@ -7,16 +7,8 @@ import {
   FRESHNESS_COLORS,
   type FreshnessQuery,
 } from '../FreshnessDot'
-import {
-  formatDate,
-  formatDateTime,
-  formatTime,
-  formatDateShort,
-  formatDateWithDay,
-  formatRelative,
-  formatRelativeTime,
-  formatRelativeDays,
-} from '@/lib/dateFormat'
+import {formatDate, formatDateTime, formatTime, formatDateShort, formatDateWithDay, formatRelative, formatRelativeTime} from '@/lib/dateFormat'
+import {formatRelativeDays} from '@/lib/dateConvert'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

@@ -14,7 +14,7 @@ import {
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
-import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { QUICK_LINKS } from './constants';
@@ -25,7 +25,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
-  const { formatWeekdayName } = useDateFormat();
+  const { formatWeekdayName } = useDateLabels();
   const distanceUnit = unitPrefs.distance;
 
   const { data, isLoading, isError, error, refetch } = query;

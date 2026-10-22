@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { knownNumber } from '@/api/dataState';
-import { toIsoString } from '@/lib/dateFormat';
+import { toIsoString } from '@/lib/dateConvert';
 import { type StatMetric } from '@/components/data-display/stat-reference';
 import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { LayoutCard } from '@/components/layout/layout-reference';

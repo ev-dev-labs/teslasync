@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 
-import { formatMonthYear } from '@/lib/dateFormat';
+import { formatMonthYear } from '@/lib/dateConvert';
 import type { RangeBufferEvidenceBand } from '../../lib/rangeBuffer';
 import { getGlobalPrecision } from '@/lib/numberFormat';
 

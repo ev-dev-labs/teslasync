@@ -23,7 +23,8 @@ import type { FSMTransition } from '@/types/fsm';
 import type { SignalSnapshotResponse } from '@/api/hooks/useTelemetry';
 import { deriveDataState } from '@/api/dataState';
 import { MemoryRouter } from 'react-router-dom';
-import { formatDurationMs, formatRelative } from '@/lib/dateFormat';
+import {formatRelative} from '@/lib/dateFormat'
+import {formatDurationMs} from '@/lib/dateConvert';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 vi.mock('@/hooks/useSettings', () => ({

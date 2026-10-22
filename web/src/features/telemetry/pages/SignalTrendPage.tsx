@@ -20,7 +20,7 @@ import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
-import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 
 import { chartTokens } from '@/lib/tokens';
@@ -33,7 +33,7 @@ const HOURS = 168;
 export default function SignalTrendPage() {
   const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const { formatMonthDayHour } = useDateFormat();
+  const { formatMonthDayHour } = useDateLabels();
   usePageTitle(t('signalTrend.title', 'Signal trend'));
 
   const { vehicleId } = useSelectedVehicle();

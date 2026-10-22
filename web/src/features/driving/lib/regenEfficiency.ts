@@ -7,7 +7,8 @@
  */
 
 import type { Drive } from '@/types/driving';
-import { isValidTimeZone, ymdInTz } from '@/lib/dateFormat';
+import {isValidTimeZone} from '@/lib/dateFormat'
+import {ymdInTz} from '@/lib/dateConvert';
 
 export const REGEN_HISTORY_LIMIT = 1_000;
 export const REGEN_MONTH_DISPLAY_LIMIT = 24;

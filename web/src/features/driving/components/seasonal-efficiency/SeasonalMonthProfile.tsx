@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatDisplayIntensity, toDisplayIntensity } from './formatters';
-import { formatMonthName } from '@/lib/dateFormat';
+import { formatMonthName } from '@/lib/dateConvert';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalMonthProfile({

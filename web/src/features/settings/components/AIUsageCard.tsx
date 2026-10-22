@@ -26,7 +26,7 @@ import { useDataState } from '@/hooks/useDataState'
 import { useUnits } from '@/hooks/useUnits'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { fmtInt, fmtNumber } from '@/lib/numberFormat'
-import { toIsoString } from '@/lib/dateFormat'
+import { toIsoString } from '@/lib/dateConvert'
 
 const PLACEHOLDER = '—'
 

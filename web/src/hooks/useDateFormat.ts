@@ -6,15 +6,10 @@ import {
   formatDateShort as libFormatDateShort,
   formatDateWithDay as libFormatDateWithDay,
   formatDateRange as libFormatDateRange,
-  formatMonthYear as libFormatMonthYear,
-  formatMonthName as libFormatMonthName,
-  formatMonthDayHour as libFormatMonthDayHour,
-  formatWeekdayName as libFormatWeekdayName,
   formatDayKey as libFormatDayKey,
   formatDayKeyRange as libFormatDayKeyRange,
   formatRelative as libFormatRelative,
   formatRelativeTime as libFormatRelativeTime,
-  formatRelativeDays as libFormatRelativeDays,
   type FormatOptions,
 } from '@/lib/dateFormat'
 import { useSettings } from './useSettings'
@@ -60,23 +55,8 @@ export interface UseDateFormatResult {
     key: string | null | undefined,
     override?: FormatOptions & { style?: 'short' | 'long' },
   ) => string
-  /** Month-year label; calendar values stay zone-stable, instants use the zone. */
-  formatMonthYear: DateFormatter
-  /** Month name; calendar values and 1–12 numbers stay zone-stable. */
-  formatMonthName: (
-    value: string | number | Date | null | undefined,
-    override?: FormatOptions,
-  ) => string
-  /** Short weekday name in the target zone. */
-  formatWeekdayName: DateFormatter
-  /** Compact chart-axis label ("Oct 1, 02 AM"); accepts epoch millis. */
-  formatMonthDayHour: (
-    value: string | Date | number | null | undefined,
-    override?: FormatOptions,
-  ) => string
   formatRelative: DateFormatter
   formatRelativeTime: DateFormatter
-  formatRelativeDays: DateFormatter
 }
 
 /**
@@ -156,22 +136,6 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
     (key, override) => libFormatDayKey(key, { ...opts, ...override }),
     [opts],
   )
-  const formatMonthYear = useCallback<DateFormatter>(
-    (value, override) => libFormatMonthYear(value, { ...opts, ...override }),
-    [opts],
-  )
-  const formatMonthName = useCallback<UseDateFormatResult['formatMonthName']>(
-    (value, override) => libFormatMonthName(value, { ...opts, ...override }),
-    [opts],
-  )
-  const formatWeekdayName = useCallback<DateFormatter>(
-    (value, override) => libFormatWeekdayName(value, { ...opts, ...override }),
-    [opts],
-  )
-  const formatMonthDayHour = useCallback<UseDateFormatResult['formatMonthDayHour']>(
-    (value, override) => libFormatMonthDayHour(value, { ...opts, ...override }),
-    [opts],
-  )
   const formatRelative = useCallback<DateFormatter>(
     (value, override) => libFormatRelative(value, { ...opts, ...override }),
     [opts],
@@ -180,11 +144,6 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
     (value, override) => libFormatRelativeTime(value, { ...opts, ...override }),
     [opts],
   )
-  const formatRelativeDays = useCallback<DateFormatter>(
-    (value, override) => libFormatRelativeDays(value, { ...opts, ...override }),
-    [opts],
-  )
-
   return useMemo(
     () => ({
       opts,
@@ -198,13 +157,8 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
       formatDateRange,
       formatDayKey,
       formatDayKeyRange,
-      formatMonthYear,
-      formatMonthName,
-      formatWeekdayName,
-      formatMonthDayHour,
       formatRelative,
       formatRelativeTime,
-      formatRelativeDays,
     }),
     [
       opts,
@@ -218,13 +172,8 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
       formatDateRange,
       formatDayKey,
       formatDayKeyRange,
-      formatMonthYear,
-      formatMonthName,
-      formatWeekdayName,
-      formatMonthDayHour,
       formatRelative,
       formatRelativeTime,
-      formatRelativeDays,
     ],
   )
 }

@@ -8,7 +8,7 @@ import {
 } from '@/components/charts';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useUnits } from '@/hooks/useUnits';
-import { formatMonthName } from '@/lib/dateFormat';
+import { formatMonthName } from '@/lib/dateConvert';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import type { YearReview } from '@/api/types';

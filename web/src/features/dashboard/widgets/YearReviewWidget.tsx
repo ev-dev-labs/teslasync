@@ -14,7 +14,7 @@ import { DashboardSourceBrief } from '../components/operationalbrief-all/Dashboa
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { formatMonthName } from '@/lib/dateFormat';
+import { formatMonthName } from '@/lib/dateConvert';
 import { isFiniteNumber } from '@/lib/numberFormat';
 
 // The year-review endpoint emits distances in kilometres and speeds in km/h

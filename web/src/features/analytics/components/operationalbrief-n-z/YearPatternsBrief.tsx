@@ -5,7 +5,8 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatTime, formatWeekdayName } from '@/lib/dateFormat';
+import {formatTime} from '@/lib/dateFormat'
+import {formatWeekdayName} from '@/lib/dateConvert';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { YearReview } from '@/api/types';
 import { to12Hour } from '../year-review-modernization/yearReviewPresentation';
