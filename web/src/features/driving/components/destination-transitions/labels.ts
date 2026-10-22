@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateTime, formatHourName, formatMonthYear, formatWeekdayName } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { DestinationEvidenceBand } from '../../lib/destinationTransitions';
 import { getGlobalPrecision } from '@/lib/numberFormat';
@@ -56,20 +56,9 @@ export function destinationLocalHour(
   hour: number,
   locale: string,
 ): string {
-  const date = new Date(Date.UTC(2026, 0, 4, hour, 0));
-  try {
-    return new Intl.DateTimeFormat(locale, {
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZone: 'UTC',
-    }).format(date);
-  } catch {
-    return new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZone: 'UTC',
-    }).format(date);
-  }
+  // Wrap out-of-range buckets onto the 24h dial like the old UTC anchor did.
+  const wrapped = Number.isFinite(hour) ? ((Math.trunc(hour) % 24) + 24) % 24 : NaN;
+  return formatHourName(wrapped, { locale, showMinutes: true });
 }
 
 export function destinationWeekday(
@@ -77,17 +66,7 @@ export function destinationWeekday(
   locale: string,
 ): string {
   const date = new Date(Date.UTC(2026, 0, 4 + weekday, 12));
-  try {
-    return new Intl.DateTimeFormat(locale, {
-      weekday: 'long',
-      timeZone: 'UTC',
-    }).format(date);
-  } catch {
-    return new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      timeZone: 'UTC',
-    }).format(date);
-  }
+  return formatWeekdayName(date, { locale, tz: 'UTC', weekdayStyle: 'long' });
 }
 
 export function destinationMonth(
@@ -95,19 +74,7 @@ export function destinationMonth(
   locale: string,
   timeZone: string,
 ): string {
-  try {
-    return new Intl.DateTimeFormat(locale, {
-      month: 'short',
-      year: 'numeric',
-      timeZone,
-    }).format(new Date(observationMs));
-  } catch {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(observationMs));
-  }
+  return formatMonthYear(new Date(observationMs), { locale, tz: timeZone });
 }
 
 export function destinationDateTime(

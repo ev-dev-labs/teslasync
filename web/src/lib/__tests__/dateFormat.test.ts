@@ -534,6 +534,12 @@ describe('formatHourName', () => {
   it('falls back to en-US for an invalid locale tag', () => {
     expect(formatHourName(9, { locale: 'not-a-locale' })).toBe('9 AM');
   });
+
+  it('appends :00 minutes with showMinutes', () => {
+    expect(formatHourName(2, { locale: 'en-US', showMinutes: true })).toBe('2:00 AM');
+    expect(formatHourName(14, { locale: 'en-US', showMinutes: true })).toBe('2:00 PM');
+    expect(formatHourName(0, { locale: 'en-US', tz: 'Pacific/Kiritimati', showMinutes: true })).toBe('12:00 AM');
+  });
 });
 
 describe('formatMonthDayHour', () => {

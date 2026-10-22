@@ -38,6 +38,8 @@ export interface FormatOptions {
   yearStyle?: 'numeric' | '2-digit'
   /** Weekday width; only `formatWeekdayName` honors this. */
   weekdayStyle?: 'short' | 'long'
+  /** Append ":00" minutes; only `formatHourName` honors this. */
+  showMinutes?: boolean
 }
 
 /**
@@ -752,9 +754,10 @@ export function formatWeekdayName(
 }
 
 /**
- * User-facing hour-of-day bucket name ("12 AM", "3 PM") for the given
- * hour 0-23. Hour buckets are bucket identities, not instants, so they
- * render from a UTC anchor and never shift with the display zone.
+ * User-facing hour-of-day bucket name ("12 AM", "3 PM", or "3:00 PM"
+ * with `showMinutes`) for the given hour 0-23. Hour buckets are bucket
+ * identities, not instants, so they render from a UTC anchor and never
+ * shift with the display zone.
  * Out-of-range, non-integer, or missing input returns the placeholder;
  * an invalid locale falls back to `en-US` before giving up.
  * Never throws.
@@ -767,7 +770,9 @@ export function formatHourName(
   // UTC-anchored bucket label: hour-of-day names are bucket identities,
   // not instants, so they render in UTC and never shift with the zone.
   const d = new Date(Date.UTC(2024, 0, 4, value, 0))
-  const fields: Intl.DateTimeFormatOptions = { timeZone: 'UTC', hour: 'numeric' }
+  const fields: Intl.DateTimeFormatOptions = {
+    timeZone: 'UTC', hour: 'numeric', ...(opts?.showMinutes ? { minute: '2-digit' as const } : {}),
+  }
   try {
     return new Intl.DateTimeFormat(intlLocale(opts), fields).format(d)
   } catch {
