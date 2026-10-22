@@ -63,7 +63,7 @@ func friday18UTC() time.Time {
 }
 
 func TestForecastPeakVerdict(t *testing.T) {
-	f, err := Predict(fridayPeakHistory(), friday18UTC())
+	f, err := Predict(fridayPeakHistory(), friday18UTC(), time.UTC)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestForecastQuietBucket(t *testing.T) {
 	if arr.Weekday() != time.Tuesday {
 		t.Fatal("test date is not a Tuesday")
 	}
-	f, err := Predict(fridayPeakHistory(), arr)
+	f, err := Predict(fridayPeakHistory(), arr, time.UTC)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestForecastQuietBucket(t *testing.T) {
 func TestForecastArrivalTimezone(t *testing.T) {
 	// Friday 20:00 +02:00 is Friday 18:00 UTC — the peak cell.
 	arr := time.Date(2026, 9, 11, 20, 0, 0, 0, time.FixedZone("CEST", 2*3600))
-	f, err := Predict(fridayPeakHistory(), arr)
+	f, err := Predict(fridayPeakHistory(), arr, time.UTC)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestForecastArrivalTimezone(t *testing.T) {
 }
 
 func TestForecastBestHour(t *testing.T) {
-	f, err := Predict(fridayPeakHistory(), friday18UTC())
+	f, err := Predict(fridayPeakHistory(), friday18UTC(), time.UTC)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,18 +144,18 @@ func TestForecastBestHour(t *testing.T) {
 func TestForecastNoHistory(t *testing.T) {
 	h := fridayPeakHistory()
 	h.Sessions = 9
-	if _, err := Predict(h, friday18UTC()); !errors.Is(err, ErrNoHistory) {
+	if _, err := Predict(h, friday18UTC(), time.UTC); !errors.Is(err, ErrNoHistory) {
 		t.Fatalf("few sessions: err = %v, want ErrNoHistory", err)
 	}
 	h = fridayPeakHistory()
 	h.Spans = nil
-	if _, err := Predict(h, friday18UTC()); !errors.Is(err, ErrNoHistory) {
+	if _, err := Predict(h, friday18UTC(), time.UTC); !errors.Is(err, ErrNoHistory) {
 		t.Fatalf("no spans: err = %v, want ErrNoHistory", err)
 	}
 	h = fridayPeakHistory()
 	stamp := time.Now()
 	h.Spans = []Session{{Start: stamp, Stop: stamp}} // zero duration
-	if _, err := Predict(h, friday18UTC()); !errors.Is(err, ErrNoHistory) {
+	if _, err := Predict(h, friday18UTC(), time.UTC); !errors.Is(err, ErrNoHistory) {
 		t.Fatalf("zero durations: err = %v, want ErrNoHistory", err)
 	}
 }
@@ -166,7 +166,7 @@ func TestForecastIgnoresBadCells(t *testing.T) {
 		Bucket{Weekday: 9, Hour: 3, Starts: 100000},
 		Bucket{Weekday: 2, Hour: 99, Starts: 100000},
 	)
-	f, err := Predict(h, friday18UTC())
+	f, err := Predict(h, friday18UTC(), time.UTC)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,16 +177,57 @@ func TestForecastIgnoresBadCells(t *testing.T) {
 
 func TestForecastDeterministic(t *testing.T) {
 	h := fridayPeakHistory()
-	a, err := Predict(h, friday18UTC())
+	a, err := Predict(h, friday18UTC(), time.UTC)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := Predict(h, friday18UTC())
+	b, err := Predict(h, friday18UTC(), time.UTC)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if a.ExpectedS != b.ExpectedS || a.BestHour != b.BestHour || a.Verdict != b.Verdict {
 		t.Fatalf("nondeterministic:\n%+v\n%+v", a, b)
+	}
+}
+
+func TestForecastResolvesCellsInRequestedZone(t *testing.T) {
+	la, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Friday 2026-09-11 18:00 UTC is 11:00 PDT. The fixture spikes the
+	// Friday-18 bucket frame cell, so UTC lands on the crush while LA
+	// lands on Friday-11 background.
+	utcF, err := Predict(fridayPeakHistory(), friday18UTC(), time.UTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	laF, err := Predict(fridayPeakHistory(), friday18UTC(), la)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if utcF.Verdict != VerdictPacked || utcF.Busyness != 100 {
+		t.Fatalf("UTC: verdict=%q busyness=%v, want packed/100", utcF.Verdict, utcF.Busyness)
+	}
+	if laF.Verdict != VerdictQuiet {
+		t.Fatalf("LA: verdict=%q, want quiet (background cell)", laF.Verdict)
+	}
+	if laF.Busyness == 100 {
+		t.Fatalf("LA: busyness=100, want background share (got %v)", laF.Busyness)
+	}
+	// The day curve covers the LA Friday: cell 11 is the arrival cell.
+	if laF.Hours[11].Busyness != laF.Busyness {
+		t.Fatalf("LA hours[11]=%v, arrival=%v, want equal", laF.Hours[11].Busyness, laF.Busyness)
+	}
+	if laF.Hours[18].Busyness != 100 {
+		t.Fatalf("LA hours[18]=%v, want 100 (spike cell)", laF.Hours[18].Busyness)
+	}
+	if laF.BestHour != 11 {
+		t.Fatalf("LA best hour=%d, want 11 (uniform background keeps arrival)", laF.BestHour)
+	}
+	// The echoed instant is the same moment regardless of frame.
+	if !utcF.ArriveAt.Equal(laF.ArriveAt) {
+		t.Fatalf("arrive_at differs: %v vs %v", utcF.ArriveAt, laF.ArriveAt)
 	}
 }
 
