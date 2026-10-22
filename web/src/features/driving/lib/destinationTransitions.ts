@@ -533,6 +533,7 @@ export function normalizeDestinationTimeZone(timeZone: string): string {
       ? timeZone.trim()
       : 'UTC';
   try {
+    // tz-computation: validates the IANA zone; the result is computed with, never rendered
     new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
     return candidate;
   } catch {
@@ -622,6 +623,7 @@ export function parseDestinationTimestamp(value: unknown): number | null {
 function partsFormatter(timeZone: string): Intl.DateTimeFormat {
   const cached = PARTS_FORMATTERS.get(timeZone);
   if (cached) return cached;
+  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
   const formatter = new Intl.DateTimeFormat(
     'en-US-u-ca-gregory-nu-latn',
     {

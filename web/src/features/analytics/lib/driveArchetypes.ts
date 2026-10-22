@@ -273,6 +273,7 @@ function validTimeZone(value: unknown): string {
     return DEFAULTS.timeZone;
   }
   try {
+    // tz-computation: validates the IANA zone; the result is computed with, never rendered
     new Intl.DateTimeFormat('en-US', { timeZone: value }).format(0);
     return value;
   } catch {
@@ -426,6 +427,7 @@ export function buildDrivePoints(
   const seenIds = new Set<number>();
   const timestampedMs: number[] = [];
   const observedTemperatures: number[] = [];
+  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
   const calendarFormatter = new Intl.DateTimeFormat('en-US', {
     timeZone: thresholds.timeZone,
     year: 'numeric',

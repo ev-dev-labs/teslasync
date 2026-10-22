@@ -84,6 +84,7 @@ function makeDraft(initial?: QuietHoursWindow): DraftWindow {
   }
   let tz = 'UTC'
   try {
+    // tz-computation: detects the browser zone as the new-window default; the zone id is computed with, never rendered
     tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
   } catch {
     tz = 'UTC'
@@ -119,6 +120,7 @@ function listTimezones(currentTz: string): SelectOption[] {
   const intlAny = Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
   if (typeof intlAny.supportedValuesOf === 'function') {
     try {
+      // tz-schedule-data: each quiet-hours window carries its own IANA zone as schedule data
       zones = intlAny.supportedValuesOf('timeZone')
     } catch {
       zones = fallback

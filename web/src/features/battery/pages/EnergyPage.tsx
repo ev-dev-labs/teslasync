@@ -125,6 +125,7 @@ export default function EnergyPage() {
   const { formatCurrency, currencySymbol, estimateGasCost } = useFormatting();
   const { tz: timezone } = useDateFormat();
   const sessionHourFormatter = useMemo(
+    // tz-computation: extracts the session hour as a number for grouping; the number is computed with, never rendered
     () => new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,
       hour: 'numeric',

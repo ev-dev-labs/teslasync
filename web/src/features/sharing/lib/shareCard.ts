@@ -298,6 +298,7 @@ function resolveTimeZone(timezone: string): {
   timezoneValid: boolean;
 } {
   try {
+    // tz-computation: validates the IANA zone; the result is computed with, never rendered
     new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(0);
     return { resolvedTimezone: timezone, timezoneValid: true };
   } catch {
@@ -306,6 +307,7 @@ function resolveTimeZone(timezone: string): {
 }
 
 function localDay(timestampMs: number, timezone: string): string {
+  // tz-computation: builds a YYYY-MM-DD day key in the zone for grouping; the key is computed with, never rendered
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
     year: 'numeric',

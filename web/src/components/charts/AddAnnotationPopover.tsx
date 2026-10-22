@@ -165,6 +165,9 @@ export function AddAnnotationPopover({
     if (open && !inFlight.current && !retainDate.current) setEditedDate(toDateInputValue(timestamp));
   }, [open, timestamp]);
 
+  // tz-computation: ISO feeds the date-input max attribute; the control renders a calendar, not the string
+  const maxDateInput = toDateInputValue(new Date().toISOString());
+
   const resetDraft = () => {
     setLabel('');
     setCategory('milestone');
@@ -281,7 +284,7 @@ export function AddAnnotationPopover({
             onChange={(e) => { if (!inFlight.current && !locked) setEditedDate(e.target.value); }}
             disabled={locked}
             label={t('annotation.date', 'Date')}
-            max={toDateInputValue(new Date().toISOString())}
+            max={maxDateInput}
             required
           />
         ) : (

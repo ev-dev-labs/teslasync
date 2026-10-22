@@ -589,6 +589,7 @@ function calendarDateMilliseconds(value: string): number | null {
 function validTimezone(value: string): boolean {
   if (!value.trim()) return false;
   try {
+    // tz-computation: validates the IANA zone; the boolean is computed with, never rendered
     new Intl.DateTimeFormat('en-US', { timeZone: value }).format(0);
     return true;
   } catch {

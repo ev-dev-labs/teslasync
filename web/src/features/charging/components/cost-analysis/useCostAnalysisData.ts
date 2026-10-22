@@ -150,6 +150,7 @@ export function useCostAnalysisData({
   const { t } = useTranslation();
   const { tz: accountingTimezone, formatDateShort } = useDateFormat();
   const sessionDates = useMemo(() => {
+    // tz-computation: extracts the session hour as a number for grouping; the number is computed with, never rendered
     const hourFormatter = new Intl.DateTimeFormat('en-US', {
       timeZone: accountingTimezone, hour: 'numeric', hourCycle: 'h23',
     });

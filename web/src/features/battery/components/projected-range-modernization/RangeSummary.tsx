@@ -33,6 +33,7 @@ export function RangeSummary({ source, loading }: RangeSectionProps) {
           loading={loading && !source.hasData} retained={source.status === 'stale'}
           period={{ kind: 'snapshot',
             label: t('range.modernization.snapshot', 'Range projection snapshot'),
+            // tz-computation: ISO observed-at in the period data object; the brief renders it via the shared layer
             observedAt: source.updatedAt == null ? null : new Date(source.updatedAt).toISOString(),
             provenance: t('range.modernization.snapshotSource', 'Current battery state and the existing driving-history model; not scoped to a selected date window.') }} />
       )}

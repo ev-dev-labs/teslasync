@@ -657,6 +657,7 @@ export function summarizeHvacCycling(
 ): HvacCyclingSummary {
   const source = Array.isArray(samples) ? samples : [];
   const optionValues = isRecord(options) ? options : {};
+  // tz-computation: extracts the hour as a number and reads back the resolved zone; both are computed with, never rendered
   const clock = new Intl.DateTimeFormat('en-US', {
     timeZone: options?.timeZone ?? 'UTC',
     hour: '2-digit',

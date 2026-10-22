@@ -148,6 +148,7 @@ export default function CommandReliabilityPage() {
                       : t('commandReliability.brief.recorded', 'Recorded command outcomes')}
               statusTone={state.status === 'stale' ? 'warning' : 'neutral'}
               freshness={state.updatedAt != null
+                // tz-computation: ISO feeds the shared formatter; the formatted string renders, not the ISO
                 ? formatDateTime(new Date(state.updatedAt).toISOString(), dateOptions) : undefined}
             />
           )}
@@ -304,6 +305,7 @@ export default function CommandReliabilityPage() {
                       {t('commandReliability.lastUsed', 'Last used')}
                     </Text>
                     <Text as="dd" variant="bodySm" className="min-w-0 break-words">
+                      {/* tz-computation: ISO feeds the shared formatter; the formatted string renders, not the ISO */}
                       {formatDateShort(new Date(c.lastMs).toISOString(), dateOptions)}
                     </Text>
                     {c.topError != null ? (

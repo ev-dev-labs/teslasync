@@ -166,6 +166,7 @@ function isMissing(value: unknown): boolean {
 function normalizeTimeZone(timeZone: string): string {
   const candidate = timeZone.trim() || 'UTC';
   try {
+    // tz-computation: validates the IANA zone; the result is computed with, never rendered
     new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
     return candidate;
   } catch {

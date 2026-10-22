@@ -70,6 +70,7 @@ export function DepartureEvidenceBrief({ forecast, state, locale, timeZone, time
       description={t('departure.brief.description', 'Next-24-hour modeled likelihood uses capped observed departure history; the support index is not a calibrated probability or confidence score.')}
       scope={<>
         {t('departure.brief.snapshotAnchor', 'Model snapshot anchor: ')}
+        {/* tz-computation: machine-readable <time dateTime>; human text renders via the shared layer */}
         <time dateTime={new Date(forecast.nowMs).toISOString()}>
           {departureDateTime(forecast.nowMs, locale, timeZone)}
         </time>

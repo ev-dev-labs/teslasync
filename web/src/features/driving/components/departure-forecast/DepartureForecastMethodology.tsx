@@ -37,6 +37,7 @@ export function DepartureForecastMethodology({
       title: t('departure.method.snapshotTitle', 'Fixed model snapshot'),
       body: <>
         {t('departure.brief.snapshotAnchor', 'Model snapshot anchor: ')}
+        {/* tz-computation: machine-readable <time dateTime>; human text renders via the shared layer */}
         <time dateTime={new Date(forecast.nowMs).toISOString()}>
           {departureDateTime(forecast.nowMs, locale, timeZone)}
         </time>

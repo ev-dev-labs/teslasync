@@ -133,6 +133,7 @@ export function TimestampTool() {
             />
             {fromUnix.date && (
               <div className="mt-1 space-y-0.5">
+                {/* tz-tool-subject: Unix/ISO converter whose subject is the raw format itself */}
                 <ConversionRow label={isoLabel} value={fromUnix.date.toISOString()} />
                 <ConversionRow label={localLabel} value={formatDateTime(fromUnix.date)} />
                 <ConversionRow label={relativeLabel} value={getRelativeTime(fromUnix.date, opts)} />

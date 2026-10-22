@@ -227,6 +227,7 @@ export function parseParkingInstantRange(
 function resolveTimeZone(raw: string): { timeZone: string; fallback: boolean } {
   const candidate = raw.trim() || 'UTC';
   try {
+    // tz-computation: validates the IANA zone; the result is computed with, never rendered
     new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
     return { timeZone: candidate, fallback: false };
   } catch {
@@ -237,6 +238,7 @@ function resolveTimeZone(raw: string): { timeZone: string; fallback: boolean } {
 function getZonedFormatter(timeZone: string): Intl.DateTimeFormat {
   let formatter = zonedFormatterCache.get(timeZone);
   if (!formatter) {
+    // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
     formatter = new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {
       timeZone,
       year: 'numeric',
@@ -328,6 +330,7 @@ function zonedHourToEpoch(
 export function nightOverlapMs(
   startMs: number,
   endMs: number,
+  // tz-computation: detects the browser zone as the default; the zone id is computed with, never rendered
   requestedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
 ): number {
   if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {

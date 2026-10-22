@@ -215,6 +215,7 @@ function median(sortedAsc: readonly number[]): number {
 
 function browserTimeZone(): string {
   try {
+    // tz-computation: detects the browser zone as the default; the zone id is computed with, never rendered
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   } catch {
     return 'UTC';
@@ -227,6 +228,7 @@ function resolveTimeZone(requested?: string): {
 } {
   const candidate = requested?.trim() || browserTimeZone();
   try {
+    // tz-computation: validates the IANA zone; the result is computed with, never rendered
     new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
     return { timeZone: candidate, fallback: false };
   } catch {
@@ -235,6 +237,7 @@ function resolveTimeZone(requested?: string): {
 }
 
 function calendarFormatter(timeZone: string): Intl.DateTimeFormat {
+  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
   return new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {
     timeZone,
     year: 'numeric',

@@ -37,6 +37,7 @@ function isWindowActiveNow(w: QuietHoursWindow, now: Date): boolean | null {
     || !Number.isInteger(w.weekdays) || w.weekdays < 0 || w.weekdays > 127) return null;
   let parts: Intl.DateTimeFormatPart[];
   try {
+    // tz-computation: reads zoned weekday/minutes to test window activity; parts are computed with, never rendered
     parts = new Intl.DateTimeFormat('en-US', {
       timeZone: w.timezone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     }).formatToParts(now);

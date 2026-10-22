@@ -768,6 +768,7 @@ export default function TeslaChargingHistoryPage() {
                   virtualized
                   rowHeight={56}
                   exportable
+                  // tz-export: export filename keeps a sortable YYYY-MM-DD date
                   exportFilename={`tesla-charging-history-${new Date().toISOString().slice(0, 10)}`}
                   onExport={(format, rows) => {
                     const filename = `tesla-charging-history-${new Date().toISOString().slice(0, 10)}`;

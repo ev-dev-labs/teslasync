@@ -89,6 +89,7 @@ export function AIUsageCard({ enabled = true, showSourceNotice = true }: {
         retained={enabled && state.status === 'stale'} testId="helix-usage-summary"
         freshness={data && state.updatedAt != null ? (
           <Caption>
+            {/* tz-computation: machine-readable <time dateTime>; human text renders via the shared layer */}
             <time dateTime={new Date(state.updatedAt).toISOString()}>
               {t('common:freshness.lastUpdated', 'Last updated: {{time}}', {
                 time: formatDateTime(new Date(state.updatedAt)),

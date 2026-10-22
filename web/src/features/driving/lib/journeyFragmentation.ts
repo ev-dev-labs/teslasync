@@ -297,6 +297,7 @@ function parseTimestamp(value: unknown): number | null {
 function safeTimeZone(timeZone: unknown): string {
   const candidate = typeof timeZone === 'string' && timeZone.trim() ? timeZone.trim() : 'UTC';
   try {
+    // tz-computation: sanitizes the zone, falling back to UTC; the result is computed with, never rendered
     new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
     return candidate;
   } catch {
@@ -654,6 +655,7 @@ function profileParts(ms: number, timeZone: string): {
   hour: number;
   weekday: number;
 } {
+  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone,
     year: 'numeric',

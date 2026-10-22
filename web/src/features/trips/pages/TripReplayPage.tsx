@@ -674,6 +674,7 @@ export default function TripReplayPage() {
                         </Text>
                         <Text as="dd" variant="caption" className="[overflow-wrap:anywhere]">
                           {t('common.timestamp', 'Timestamp')}: {sourceTs != null
+                            // tz-computation: machine-readable <time dateTime>; human text renders via the shared layer
                             ? <time dateTime={new Date(sourceTs).toISOString()}>{formatDateTime(new Date(sourceTs).toISOString())}</time>
                             : t('common.unknown', 'Unknown')}
                           {' · '}{t('statistics.age', 'Age')}: {age}

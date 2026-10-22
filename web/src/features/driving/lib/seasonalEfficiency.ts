@@ -305,6 +305,7 @@ function normalizeOptions(options: SeasonalEfficiencyOptions): NormalizedOptions
 export function normalizeSeasonalTimezone(timeZone: string | null | undefined): string {
   if (typeof timeZone !== 'string' || !timeZone.trim()) return 'UTC';
   try {
+    // tz-computation: validates the IANA zone; the result is computed with, never rendered
     return new Intl.DateTimeFormat('en-US', {
       timeZone,
       calendar: 'gregory',
@@ -316,6 +317,7 @@ export function normalizeSeasonalTimezone(timeZone: string | null | undefined): 
 }
 
 function dateParts(timestampMs: number, timeZone: string): LocalParts {
+  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone,
     calendar: 'gregory',

@@ -80,6 +80,7 @@ function isValidTimeZone(tz: string): boolean {
   if (cached !== undefined) return cached;
   let ok = false;
   try {
+    // tz-computation: caches IANA zone validity; the boolean is computed with, never rendered
     new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(0);
     ok = true;
   } catch {

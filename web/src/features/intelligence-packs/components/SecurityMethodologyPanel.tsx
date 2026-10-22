@@ -64,11 +64,14 @@ export function SecurityMethodologyPanel() {
         <Table aria-label={t('intelPacks.security.limitsTitle', 'Resource ceilings & budgets in this build')}>
 
           <tbody>
+            {/* tz-number-format: thousands grouping on a plain number */}
             <tr><th scope="row">{t('intelPacks.security.maxBytes', 'Max envelope size')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxEnvelopeJsonBytes.toLocaleString()} B</td></tr>
             <tr><th scope="row">{t('intelPacks.security.maxDepth', 'Max JSON depth')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxJsonDepth}</td></tr>
+            {/* tz-number-format: thousands grouping on a plain number */}
             <tr><th scope="row">{t('intelPacks.security.maxNodes', 'Max JSON node count')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxJsonNodeCount.toLocaleString()}</td></tr>
             <tr><th scope="row">{t('intelPacks.security.maxExprNodes', 'Max AST nodes per formula')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxExprNodesPerFormula}</td></tr>
             <tr><th scope="row">{t('intelPacks.security.maxExprDepth', 'Max AST depth per formula')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxExprDepth}</td></tr>
+            {/* tz-number-format: thousands grouping on a plain number */}
             <tr><th scope="row">{t('intelPacks.security.sandboxSteps', 'Max sandbox evaluation steps')}</th><td className="text-right tabular-nums">{SANDBOX_BUDGETS.maxTotalSteps.toLocaleString()}</td></tr>
             <tr><th scope="row">{t('intelPacks.security.sandboxDuration', 'Max sandbox wall-clock time')}</th><td className="text-right tabular-nums">{SANDBOX_BUDGETS.maxDurationMs} ms</td></tr>
             <tr><th scope="row">{t('intelPacks.security.sandboxRows', 'Max sandbox sample rows')}</th><td className="text-right tabular-nums">{SANDBOX_BUDGETS.maxRows}</td></tr>

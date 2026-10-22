@@ -41,6 +41,7 @@ const ZONE_WEEKDAY: Record<string, number> = {
 function zonedWeekRange(offset: number, timeZone: string): [Date, Date] | null {
   let parts: Intl.DateTimeFormatPart[];
   try {
+    // tz-computation: reads zoned weekday parts to build week ranges; parts are computed with, never rendered
     parts = new Intl.DateTimeFormat('en-US', {
       timeZone, weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit',
     }).formatToParts(new Date());

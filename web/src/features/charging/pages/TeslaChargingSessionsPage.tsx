@@ -907,6 +907,7 @@ export default function TeslaChargingSessionsPage() {
               error={error}
               onRetry={() => { void sessionsQuery.refetch(); }}
               exportData={monthlyData}
+              // tz-export: export filename keeps a sortable YYYY-MM-DD date
               exportFilename={`tesla-monthly-cost-${new Date().toISOString().slice(0, 10)}`}
             >
               {isLoading ? (
@@ -1102,6 +1103,7 @@ export default function TeslaChargingSessionsPage() {
                 virtualized
                 rowHeight={56}
                 exportable
+                // tz-export: export filename keeps a sortable YYYY-MM-DD date
                 exportFilename={`tesla-fleet-sessions-${new Date().toISOString().slice(0, 10)}`}
                 exportRow={(row) => ({
                   date: row.charge_start_datetime,

@@ -36,6 +36,7 @@ export function MaintenanceSummary({
           period={{
             kind: 'snapshot',
             label: t('dataSources.labels.maintenanceItems', 'Maintenance items'),
+            // tz-computation: ISO observed-at in the period data object; the brief renders it via the shared layer
             observedAt: source.updatedAt != null ? new Date(source.updatedAt).toISOString() : null,
             provenance: t('maintenance.summary.provenance', 'Counts use all returned maintenance items, before category filtering.'),
           }}

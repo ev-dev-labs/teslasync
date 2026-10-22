@@ -245,6 +245,8 @@ export function formatTimeSeconds(iso: string | null | undefined, tz?: string): 
       tz: tz || undefined,
       clock: { hour: '2-digit', minute: '2-digit', second: '2-digit' },
     });
+    // tz-computation: extracts the GMT offset via formatToParts for DST disambiguation
+    // tz-dst-offset: the offset identifies repeated fall-back hours on the timeline
     const offset = new Intl.DateTimeFormat(locale, {
       timeZone: tz || undefined,
       timeZoneName: 'shortOffset',
@@ -261,6 +263,7 @@ export function hourKeyInTz(iso: string, tz?: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   try {
+    // tz-computation: builds an HH hour key in the zone for time separators; the key is computed with, never rendered
     return new Intl.DateTimeFormat('en-GB', {
       hour: '2-digit',
       hourCycle: 'h23',

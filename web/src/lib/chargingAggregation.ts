@@ -277,6 +277,7 @@ function parseStartHour(iso: string | null | undefined, tz?: string): number | n
   if (Number.isNaN(d.getTime())) return null;
   if (!tz) return d.getHours();
   try {
+    // tz-computation: extracts the hour as a number for aggregation; the number is computed with, never rendered
     const fmt = new Intl.DateTimeFormat('en-US', {
       timeZone: tz,
       hour: 'numeric',

@@ -17,6 +17,7 @@ import {
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -51,6 +52,7 @@ export default function MileageBudgetPage() {
 
   const { formatDistance, unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
+  const { formatDayKey } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const { config, update } = useMileageBudget();
   const nowMs = Date.now();
@@ -162,9 +164,10 @@ export default function MileageBudgetPage() {
             kind: 'event',
             eventId: `mileage-budget:${config.termStartIso}`,
             start: config.termStartIso,
+            // tz-computation: ISO end bound in the period data object; the brief renders it via the shared layer
             end: Number.isFinite(budget.termEndMs) ? new Date(budget.termEndMs).toISOString() : null,
             provenance: t('mileageBudget.termProvenance', 'Configured term; observed drive-history coverage may be incomplete.'),
-            label: t('mileageBudget.termPeriod', 'Term starting {{start}} · {{months}} months', { start: config.termStartIso, months: config.termMonths }),
+            label: t('mileageBudget.termPeriod', 'Term starting {{start}} · {{months}} months', { start: formatDayKey(config.termStartIso), months: config.termMonths }),
           }}
         />
       </FadeIn>

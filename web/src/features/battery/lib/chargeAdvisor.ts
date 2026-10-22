@@ -369,6 +369,7 @@ function normalizeTimeZone(timeZone: unknown): string {
     ? timeZone.trim()
     : DEFAULT_TIME_ZONE;
   try {
+    // tz-computation: validates the IANA zone; the result is computed with, never rendered
     new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
     return candidate;
   } catch {
@@ -381,6 +382,7 @@ const formatters = new Map<string, Intl.DateTimeFormat>();
 function formatter(timeZone: string): Intl.DateTimeFormat {
   const existing = formatters.get(timeZone);
   if (existing) return existing;
+  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
   const created = new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {
     timeZone,
     year: 'numeric',
