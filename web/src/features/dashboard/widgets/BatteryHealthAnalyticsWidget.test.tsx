@@ -1,21 +1,21 @@
 /**
  * BatteryHealthAnalyticsWidget tests.
  *
- * The widget renders a battery State-of-Health (SoH) gauge plus a six-stat
- * summary (cycles, charge depth, discharge depth, DC-fast ratio, temperature
- * exposure score, charge-habits score) sourced from
+ * The widget renders a battery State-of-Health (SoH) hero plus a four-stat
+ * summary (cycles, discharge depth, DC-fast ratio, temperature
+ * exposure score) sourced from
  * `useBatteryHealthAnalytics()`. Its behaviour surface — the thing under test:
  *
  *   1. Two responsive layouts driven by `size.cols`:
- *        - compact (cols <= 1): a gauge only, no section title, no stat grid.
- *        - standard (cols >= 2): a titled shell + gauge + the six-stat grid.
+ *        - compact (cols <= 1): a hero only, no stat grid.
+ *        - standard (cols >= 2): a titled shell + hero + the four-stat grid.
  *   2. The four query states every data source must handle: loading (skeleton),
  *      initial error (QueryError panel), empty (EmptyState placeholder — never a
  *      blank panel), and data.
- *   3. The SoH → colour threshold logic (the internal `scoreColor`): >= 80 green,
- *      50–79 amber, < 50 red — asserted through the gauge's coloured arc stroke.
+ *   3. The SoH → status pill logic: >= 80 Good, 50–79 Fair, < 50 Poor —
+ *      asserted through the pill text and semantic badge classes.
  *   4. Null-safety: a partial `{}` payload keeps every field unknown without
- *      fabricating zeros or a critical gauge.
+ *      fabricating zeros or a Poor pill.
  *   5. Vehicle resolution: an explicit `vehicleId` prop wins; otherwise the first
  *      vehicle from `useVehicles()` is used; with neither, the query is disabled
  *      by passing `null`.
@@ -29,17 +29,16 @@
  * `@/api/hooks/useEnergy` and `@/api/hooks/useVehicles` are mocked so the network
  * is never touched and every query state is driven deterministically.
  * `react-i18next` is stubbed with a passthrough `t(key, default)` so assertions
- * read the English defaults. The shared WidgetShell / WidgetGaugeHero /
- * LinearGauge / FreshnessDot / EmptyState primitives all run for real, so the
+ * read the English defaults. The shared WidgetShell / WidgetBigNumber /
+ * WidgetStatGrid / FreshnessDot / EmptyState primitives all run for real, so the
  * assertions exercise the true rendered DOM. `<MemoryRouter>` wraps every render
  * because the error branch's <QueryError> uses `useNavigate`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 import BatteryHealthAnalyticsWidget from './BatteryHealthAnalyticsWidget';
-import { hasGaugeColor } from '@/test/gaugeTestUtils';
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via
 // <FreshnessDot> → useMotionPreference) reads it during render. Install a
@@ -86,12 +85,6 @@ vi.mock('react-i18next', () => ({
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
-
-// Colour tokens returned by the widget's internal `scoreColor()` and rendered
-// as the LinearGauge arc `stroke`.
-const GREEN = '#10b981';
-const AMBER = '#f59e0b';
-const RED = '#ef4444';
 
 function makeAnalytics(
   overrides: Partial<BatteryHealthAnalytics> = {},
@@ -185,9 +178,9 @@ function renderWidget(
   );
 }
 
-/** True when a LinearGauge in the tree is filled with `color`. */
-function gaugeArc(container: HTMLElement, color: string): boolean {
-  return hasGaugeColor(container, color);
+function pillBadge(): HTMLElement {
+  const el = screen.getByText(/^(Good|Fair|Poor)$/);
+  return el.closest('span') as HTMLElement;
 }
 
 beforeEach(() => {
@@ -208,7 +201,7 @@ afterEach(() => {
 });
 
 describe('BatteryHealthAnalyticsWidget — standard layout', () => {
-  it('renders the titled shell, the SoH gauge, and all six formatted stats', () => {
+  it('renders the titled shell, the SoH hero with Good pill, and all four formatted stats', () => {
     useBatteryHealthAnalyticsMock.mockReturnValue(
       makeQuery({
         data: makeAnalytics({
@@ -223,52 +216,39 @@ describe('BatteryHealthAnalyticsWidget — standard layout', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
-    // Titled shell + gauge unit label.
+    // Titled shell + hero label/value and status pill.
     expect(screen.getByText('Battery analytics')).toBeInTheDocument();
     expect(screen.getByText('health')).toBeInTheDocument();
+    expect(screen.getByText('92')).toBeInTheDocument();
+    expect(screen.getByText('Good')).toBeInTheDocument();
+    expect(pillBadge().className).toContain('var(--semantic-success)');
 
-    // All six stat labels …
+    // All four After-card stat labels …
     expect(screen.getByText('Cycles')).toBeInTheDocument();
-    expect(screen.getByText('Charge depth')).toBeInTheDocument();
     expect(screen.getByText('Discharge')).toBeInTheDocument();
     expect(screen.getByText('DC fast')).toBeInTheDocument();
     expect(screen.getByText('Temp score')).toBeInTheDocument();
-    expect(screen.getByText('Habits')).toBeInTheDocument();
 
-    // … and their formatted values.
+    // … and their whole-number formatted values (spec rule 2).
     expect(screen.getByText('512')).toBeInTheDocument();
-    expect(screen.getByText('71.00%')).toBeInTheDocument();
-    expect(screen.getByText('43.00%')).toBeInTheDocument();
-    expect(screen.getByText('18.00%')).toBeInTheDocument();
-    expect(screen.getByText('88.00/ 100')).toBeInTheDocument();
-    expect(screen.getByText('76.00/ 100')).toBeInTheDocument();
-
-    // A healthy SoH paints the gauge arc green.
-    const semanticColors: Record<string, string> = {
-      [GREEN]: 'var(--semantic-success)',
-      [AMBER]: 'var(--semantic-warning)',
-      [RED]: 'var(--semantic-danger)',
-    };
-    expect(gaugeArc(container, semanticColors[GREEN])).toBe(true);
+    expect(screen.getByText('43')).toBeInTheDocument();
+    expect(screen.getByText('18')).toBeInTheDocument();
+    expect(screen.getByText('88')).toBeInTheDocument();
+    expect(screen.getByText('/ 100')).toBeInTheDocument();
   });
 
-  it('retains all six source factors without substituting the health gauge for unknown values', () => {
+  it('keeps measured zero visible and unknown stats as dashes without fabricating values', () => {
     useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery({
       data: makeAnalytics({ current_soh: 92, total_cycles: 0, fast_charge_pct: Number.NaN }),
     }));
     const { container } = renderWidget();
-    const brief = screen.getByTestId('dashboard-battery-health-brief');
-    expect(brief).toHaveTextContent('Returned battery-health factors');
-    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(5);
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const factorsDrawer = screen.getByRole('dialog');
-    expect(factorsDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('continuous coverage is unknown');
-    expect(within(factorsDrawer).getByText('1 empty fields are hidden.')).toBeInTheDocument();
-    fireEvent.keyDown(factorsDrawer, { key: 'Escape' });
-    expect(brief).not.toHaveTextContent('NaN');
-    expect(gaugeArc(container, 'var(--semantic-success)')).toBe(true);
+    expect(screen.getByText('Cycles')).toBeInTheDocument();
+    // Measured zeros stay visible (cycles, discharge and temp score are 0).
+    expect(screen.getAllByText('0')).toHaveLength(3);
+    expect(container.textContent).not.toContain('NaN');
+    expect(screen.getByText('Good')).toBeInTheDocument();
   });
 
   it('formats a large cycle count with locale thousands separators', () => {
@@ -283,58 +263,51 @@ describe('BatteryHealthAnalyticsWidget — standard layout', () => {
   });
 });
 
-describe('BatteryHealthAnalyticsWidget — SoH colour thresholds', () => {
-  it('paints the gauge green at and above the 80 threshold', () => {
+describe('BatteryHealthAnalyticsWidget — SoH status thresholds', () => {
+  it('shows a Good success pill at and above the 80 threshold', () => {
     useBatteryHealthAnalyticsMock.mockReturnValue(
       makeQuery({ data: makeAnalytics({ current_soh: 80 }) }),
     );
-
-    const { container } = renderWidget({ cols: 2, rows: 2 });
-
-    expect(gaugeArc(container, 'var(--semantic-success)')).toBe(true);
-    expect(gaugeArc(container, 'var(--semantic-warning)')).toBe(false);
-    expect(gaugeArc(container, 'var(--semantic-danger)')).toBe(false);
+    renderWidget({ cols: 2, rows: 2 });
+    expect(screen.getByText('Good')).toBeInTheDocument();
+    expect(pillBadge().className).toContain('var(--semantic-success)');
   });
 
-  it('paints the gauge amber in the 50–79 band', () => {
+  it('shows a Fair warning pill in the 50–79 band', () => {
     useBatteryHealthAnalyticsMock.mockReturnValue(
       makeQuery({ data: makeAnalytics({ current_soh: 65 }) }),
     );
-
-    const { container } = renderWidget({ cols: 2, rows: 2 });
-
-    expect(gaugeArc(container, 'var(--semantic-warning)')).toBe(true);
-    expect(gaugeArc(container, 'var(--semantic-success)')).toBe(false);
+    renderWidget({ cols: 2, rows: 2 });
+    expect(screen.getByText('Fair')).toBeInTheDocument();
+    expect(pillBadge().className).toContain('var(--semantic-warning)');
   });
 
-  it('paints the gauge red below 50', () => {
+  it('shows a Poor danger pill below 50', () => {
     useBatteryHealthAnalyticsMock.mockReturnValue(
       makeQuery({ data: makeAnalytics({ current_soh: 49 }) }),
     );
-
-    const { container } = renderWidget({ cols: 2, rows: 2 });
-
-    expect(gaugeArc(container, 'var(--semantic-danger)')).toBe(true);
-    expect(gaugeArc(container, 'var(--semantic-warning)')).toBe(false);
+    renderWidget({ cols: 2, rows: 2 });
+    expect(screen.getByText('Poor')).toBeInTheDocument();
+    expect(pillBadge().className).toContain('var(--semantic-danger)');
   });
 });
 
 describe('BatteryHealthAnalyticsWidget — compact layout', () => {
-  it('renders a gauge only — no section title and no stat grid', () => {
+  it('renders a hero only — no stat grid', () => {
     useBatteryHealthAnalyticsMock.mockReturnValue(
       makeQuery({
         data: makeAnalytics({ current_soh: 88, total_cycles: 300 }),
       }),
     );
 
-    const { container } = renderWidget({ cols: 1, rows: 1 });
+    renderWidget({ cols: 1, rows: 1 });
 
-    // Gauge (with its unit) is present …
     expect(screen.getByText('health')).toBeInTheDocument();
-    expect(gaugeArc(container, 'var(--semantic-success)')).toBe(true);
+    expect(screen.getByText('88')).toBeInTheDocument();
+    expect(screen.getByText('Good')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Battery analytics', level: 3 })).toBeVisible();
     expect(screen.queryByText('Cycles')).not.toBeInTheDocument();
-    expect(screen.queryByText('Habits')).not.toBeInTheDocument();
+    expect(screen.queryByText('Temp score')).not.toBeInTheDocument();
   });
 
   it('shows the empty placeholder (not a blank panel) when compact and data-less', () => {
@@ -362,8 +335,7 @@ describe('BatteryHealthAnalyticsWidget — query states', () => {
     expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByText('Battery analytics')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Battery analytics', level: 3 })).toBeVisible();
-    expect(screen.queryByRole('meter')).toBeNull();
-    expect(screen.queryByTestId('dashboard-battery-health-brief')).toBeNull();
+    expect(screen.queryByText('Cycles')).not.toBeInTheDocument();
     expect(screen.queryByText('No battery health data')).not.toBeInTheDocument();
   });
 
@@ -390,31 +362,24 @@ describe('BatteryHealthAnalyticsWidget — query states', () => {
     // Titled shell still renders; the body degrades to the placeholder.
     expect(screen.getByText('Battery analytics')).toBeInTheDocument();
     expect(screen.getByText('No battery health data')).toBeInTheDocument();
-    expect(screen.getByText('Cycles')).toBeInTheDocument();
-    expect(screen.queryByText('—')).not.toBeInTheDocument();
-    const emptyBrief = screen.getByTestId('dashboard-battery-health-brief');
-    fireEvent.click(within(emptyBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('6 empty fields are hidden.')).toBeInTheDocument();
+    expect(screen.queryByText('Cycles')).not.toBeInTheDocument();
   });
 
-  it('keeps a partial payload unknown without fabricating zeros or a red gauge', () => {
+  it('keeps a partial payload unknown without fabricating zeros or a Poor pill', () => {
     useBatteryHealthAnalyticsMock.mockReturnValue(
       makeQuery({ data: {} as BatteryHealthAnalytics }),
     );
 
-    let container!: HTMLElement;
     expect(() => {
-      container = renderWidget({ cols: 2, rows: 2 }).container;
+      renderWidget({ cols: 2, rows: 2 });
     }).not.toThrow();
 
     expect(screen.getByText('Cycles')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(1);
-    const partialBrief = screen.getByTestId('dashboard-battery-health-brief');
-    fireEvent.click(within(partialBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('6 empty fields are hidden.')).toBeInTheDocument();
+    // Hero placeholder plus one dash per stat tile.
+    expect(screen.getAllByText('—')).toHaveLength(5);
     expect(screen.queryByText('0')).toBeNull();
-    expect(gaugeArc(container, 'var(--semantic-danger)')).toBe(false);
-    expect(screen.queryByRole('meter')).toBeNull();
+    expect(screen.queryByText('Poor')).toBeNull();
+    expect(screen.queryByText('Good')).toBeNull();
   });
 });
 
@@ -500,7 +465,7 @@ describe('BatteryHealthAnalyticsWidget — graceful degradation on transient err
     // Data is still on screen …
     expect(screen.getByText('Battery analytics')).toBeInTheDocument();
     expect(screen.getByText('640')).toBeInTheDocument();
-    expect(gaugeArc(container, 'var(--semantic-success)')).toBe(true);
+    expect(screen.getByText('Good')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // … and the freshness indicator retains its semantic error state.
