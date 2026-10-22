@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapContainer, MapTileLayer, MapInvalidator } from '@/components/maps';
 import { EmptyState } from '@/components/feedback';
@@ -31,6 +31,38 @@ function isRenderableCenter(center: [number, number] | null | undefined): boolea
   );
 }
 
+/**
+ * True while the app runs its light theme. `ThemeProvider` mirrors the
+ * resolved color scheme onto `document.documentElement` (`light-mode`
+ * class), so the primitive reads that marker — observed, so a mid-session
+ * theme switch re-resolves the tiles — instead of requiring a
+ * `ThemeProvider` ancestor. Consumer widget tests render the real
+ * `WidgetMapView` provider-free and must keep working.
+ */
+function useLightMode(): boolean {
+  const read = (): boolean =>
+    typeof document !== 'undefined' &&
+    document.documentElement.classList.contains('light-mode');
+  const [light, setLight] = useState<boolean>(read);
+  useEffect(() => {
+    if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => setLight(read()));
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    setLight(read());
+    return () => observer.disconnect();
+  }, []);
+  return light;
+}
+
+/**
+ * Shared leaflet frame for the dashboard map widgets. Speaks the `mapSvg`
+ * language from the widget-redesign spec: a quiet 10px tile well on the
+ * theme surface, muted theme-aware tiles (light streets / dark raster) with
+ * light/dark parity, and a 160px content floor so the map never collapses
+ * inside an auto-height row. Leaflet motion is gesture feedback only; the
+ * global reduced-motion safety net neutralises its transitions.
+ */
 export function WidgetMapView({
   center,
   zoom = 13,
@@ -42,6 +74,7 @@ export function WidgetMapView({
   ariaLabel,
 }: WidgetMapViewProps) {
   const { t } = useTranslation('dashboard');
+  const lightMode = useLightMode();
 
   if (isEmpty || !isRenderableCenter(center)) {
     return (
@@ -59,7 +92,7 @@ export function WidgetMapView({
     <div
       role="region"
       aria-label={ariaLabel ?? t('widget.mapView.label', 'Map')}
-      className={cn('relative flex min-h-0 flex-1 flex-col w-full rounded-lg overflow-hidden', className)}
+      className={cn('relative flex min-h-40 flex-1 flex-col w-full rounded-shape-lg overflow-hidden border border-[var(--border-subtle)]', className)}
     >
       <MapContainer
         center={center}
@@ -67,9 +100,12 @@ export function WidgetMapView({
         scrollWheelZoom={interactive}
         zoomControl={interactive}
         dragging={interactive}
-        className="min-h-0 flex-1 w-full bg-[#1a1a2e]"
+        className="min-h-0 flex-1 w-full bg-[var(--surface-2)]"
       >
-        <MapTileLayer style="dark" />
+        {/* Light/dark parity: plain street tiles in the light theme, the
+            dark raster in the dark theme. The low-bandwidth override inside
+            <MapTileLayer> still wins on constrained links. */}
+        <MapTileLayer style={lightMode ? 'streets' : 'dark'} />
         <MapInvalidator />
         {children}
       </MapContainer>
