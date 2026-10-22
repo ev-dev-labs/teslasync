@@ -4,17 +4,18 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Muse (section-0 handoff: tree clean except untracked
-`docs/widget-redesign/` inputs, HEAD `658e6563fc` pushed, no `wip:` commits;
-Codex CLIs on pts/5+pts/9 and vite :3000 left untouched as possible user tooling).
-Branch HEAD: `658e6563fc` (pushed); Lighthouse budget fix in progress (startup 401.6KB, bisect done).
+Last updated: 2026-10-22 by Muse (Track A budget+i18n fix pushed; Track B
+Phase 1 reviewed; two full-suite runs reconciled).
+Branch HEAD: `94b2f4a62a` (pushed). Next: TZ-5 277-route sweep, TZ-6 re-run,
+TZ-7 full local replica + PR green. Codex CLIs and vite :3000 were left
+untouched as possible user tooling.
 
 ## Parts overview
 
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
 | 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | TZ-5c done; wip fixed by a09dc6ec15; freshness correction b7c55d6ab2+b3f0ba6272+658e6563fc; startup-budget fix (this change, unpushed) | TZ-5 277-route sweep, TZ-6 re-run, TZ-7 replica + push + PR #202 green. Only Track A commits here until done |
-| 2 | Dashboard widget redesign (119 widgets) — TRACK B (`feat/widget-redesign` in `~/repos/teslasync-widgets`) | in progress | Phase 0 gate PASS (state.md 119 tasks, harness + 18 Before baselines, tree clean); worktree npm ci done | Rolling 5-worker dispatch: Phase 1 shared foundation (same-file serialize), then Phase 2 pilots; workers commit owned paths only, never push; header guard stays in place (redesign keeps the existing FreshnessDot in the corner, never the preview Live/2m-ago design) |
+| 2 | Dashboard widget redesign (119 widgets) — TRACK B (`feat/widget-redesign` in `~/repos/teslasync-widgets`) | in progress | Phase 0 + Phase 1 complete; review fixes through 376937f321; rank-numeral follow-up pending final full-suite evidence; branch tracks `origin/feat/widget-redesign` | Phase 2 pilots (9) via rolling dispatch, 5 at a time; every worker task carries the TZ line (`Follow the time zone rules (playbook Part 1): no zone names/offsets on pages, all dates via the shared date layer.`); workers commit owned paths only, never push; header guard stays in place |
 | 3 | Shared-pattern consolidation (whole codebase) | not started | — | `docs/shared-patterns.md` catalog first |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
 | 5 | CI green on PR #202 | not started | PR green at takeover (199 pass / 1 skipping) | Loop `gh pr checks --watch` after each push |
@@ -47,13 +48,18 @@ hook; RouteEfficiency bar test → After spec), 900d526fe5 (GMT-offset caption
 removed from WidgetChartSummary; guard R6 restricts offset helpers to .ts
 tick/timeline helpers; 2 new guard tests), dbf279d573 (i18n regen via
 sanctioned generators incl. new key widget.comparison.previousLabel).
-Branch pushed, tracking `origin/feat/widget-redesign` (never pull/push
+Review follow-up: rank numerals restored in `WidgetRankedList` after the
+first full suite found 1 failure in `shared-library-completion` (caller-ranked
+identity; route-efficiency After preview confirms numerals). Branch pushed,
+tracking `origin/feat/widget-redesign` (never pull/push
 `fix/post-merge-followups` from the worktree). Gate 1 checks: tsc 0, eslint 0,
-TZ audit 0 (3726 files), guard tests 18/18, i18n 8110/8110, split-check OK;
-full unit suite re-running after corrections. Carry-overs recorded in
+TZ audit 0 (3726 files), guard tests 18/18, i18n 8110/8110, split-check OK,
+dashboard scope 222 files green, first full suite 57382/57387 (1 ranked
+failure, now fixed); final full-suite re-run pending. Carry-overs recorded in
 state.md (TimelineItem density, FlowArrow.label adoption, dead barColor
-props). Next: Phase 2 pilots (9) via rolling workflow with the TZ line in
-every task.
+props). Every Phase 2 pilot task row in state.md is annotated with the TZ
+rule line; the same line goes into every worker prompt. Next: Phase 2 pilots
+(9) via rolling workflow.
 
 ## Part 3 counts (once started)
 
@@ -185,7 +191,9 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-Startup-budget fix done locally (startup 401.6KB → 399.6KB, strict gate green;
-see decisions log). Next: (1) commit + push this change, (2) launch Track B
-rolling redesign workflow (Phase 0 gate PASS), (3) TZ-5 full 277-route sweep,
-(4) TZ-6 e2e re-run, (5) TZ-7 full local replica (section 3) + push + PR green.
+Startup-budget fix + i18n re-pin pushed (`94b2f4a62a`); Lighthouse green path
+verified (startup 399.6KB). Track B Gate 1 corrections fixed. Next: (1)
+confirm re-run of both full unit suites is green, (2) commit/push any
+remaining review fixes, (3) dispatch Phase 2 pilots in rolling waves of 5
+(every task carries the TZ rule line), (4) TZ-5 full 277-route sweep,
+(5) TZ-6 e2e re-run, (6) TZ-7 full local replica + push + PR green.
