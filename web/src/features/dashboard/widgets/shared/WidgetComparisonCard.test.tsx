@@ -2,17 +2,21 @@
  * WidgetComparisonCard — behavioural, branch, null-safety and a11y coverage for
  * the dashboard "current vs previous period" card.
  *
- * The card maps each `ComparisonMetric` to a label + formatted value (with an
- * optional unit) and a `<Delta>` change indicator whose `direction` is derived
- * from `higherIsBetter` (defaulting to `higher_better`). `compact` clamps the
- * list to the first two rows and tightens the type scale; an empty (or missing)
- * list renders a shared `<EmptyState>` rather than a blank panel.
+ * The card maps each `ComparisonMetric` to the spec `rows` language: a label
+ * with a previous-period sub-line ("Last week 162 mi") on the left, and the
+ * current value with a plain-text `<Delta>` sub-line on the right. `tone`
+ * selects whether the delta may carry status colour (neutral by default per
+ * spec rule 4); `formattedPrevious` is omitted — never fabricated — when the
+ * previous reading is unknown. `compact` clamps the list to the first two rows
+ * and tightens the type scale; an empty (or missing) list renders a shared
+ * `<EmptyState>` rather than a blank panel.
  *
  * Strategy: `<Delta>` is the settings/i18n/network boundary, so it is stubbed
- * with a prop-recording element — the card's own direction mapping and value
- * pass-through stay observable without mounting useSettings/useUnits. The real
+ * with a prop-recording element — the card's own direction/display/hideArrow
+ * wiring stays observable without mounting useSettings/useUnits. The real
  * `<EmptyState>` is used so the empty branch is verified end-to-end (role +
- * message). No network is touched.
+ * message). `react-i18next` is globally mocked (fallback strings), so the
+ * default previous-period label renders deterministically. No network is touched.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -23,19 +27,21 @@ interface StubDeltaProps {
   current: number;
   previous: number;
   display: string;
+  hideArrow?: boolean;
 }
 
 // Prop-recording stub for <Delta> (the only thing the card pulls from the
-// data-display barrel). Mirrors direction/current/previous/display into DOM
-// attributes so the card's wiring is assertable, and renders nothing heavy.
+// data-display barrel). Mirrors direction/current/previous/display/hideArrow
+// into DOM attributes so the card's wiring is assertable, and renders nothing heavy.
 vi.mock('@/components/data-display', () => ({
-  Delta: ({ metric, current, previous, display }: StubDeltaProps) => (
+  Delta: ({ metric, current, previous, display, hideArrow }: StubDeltaProps) => (
     <span
       data-testid="delta"
       data-direction={metric.direction}
       data-current={String(current)}
       data-previous={String(previous)}
       data-display={display}
+      data-hide-arrow={hideArrow === true ? 'true' : 'false'}
     />
   ),
 }));
@@ -46,6 +52,7 @@ function makeMetric(overrides: Partial<ComparisonMetric> = {}): ComparisonMetric
     current: 120.5,
     previous: 100,
     formattedCurrent: '120.5',
+    formattedPrevious: '100',
     unit: 'mi',
     higherIsBetter: true,
     ...overrides,
@@ -60,8 +67,8 @@ describe('WidgetComparisonCard — rendering', () => {
   it('renders one row (label + value + Delta) per metric', () => {
     const metrics = [
       makeMetric({ label: 'Distance', formattedCurrent: '120.5' }),
-      makeMetric({ label: 'Drives', formattedCurrent: '8', unit: undefined }),
-      makeMetric({ label: 'Energy', formattedCurrent: '54.2', unit: 'kWh' }),
+      makeMetric({ label: 'Drives', formattedCurrent: '8', unit: undefined, formattedPrevious: '10' }),
+      makeMetric({ label: 'Energy', formattedCurrent: '54.2', unit: 'kWh', formattedPrevious: '41 kWh' }),
     ];
     render(<WidgetComparisonCard metrics={metrics} />);
 
@@ -96,29 +103,92 @@ describe('WidgetComparisonCard — rendering', () => {
 
     expect(screen.getByText('—')).toBeInTheDocument();
   });
+
+  it('renders the delta as plain text without an arrow (spec delta language)', () => {
+    render(<WidgetComparisonCard metrics={[makeMetric()]} />);
+
+    expect(screen.getByTestId('delta')).toHaveAttribute('data-hide-arrow', 'true');
+  });
 });
 
-describe('WidgetComparisonCard — Delta wiring & direction', () => {
-  it('maps higherIsBetter=true to higher_better and forwards current/previous/percent', () => {
-    render(<WidgetComparisonCard metrics={[makeMetric({ current: 120.5, previous: 100, higherIsBetter: true })]} />);
+describe('WidgetComparisonCard — previous-period sub-line', () => {
+  it('renders "Last week {formattedPrevious}" beneath the label by default', () => {
+    render(<WidgetComparisonCard metrics={[makeMetric({ label: 'Distance', formattedPrevious: '162 mi' })]} />);
+
+    expect(screen.getByText('Last week 162 mi')).toBeInTheDocument();
+  });
+
+  it('renders a caller-supplied previousLabel prefix instead of the default', () => {
+    render(
+      <WidgetComparisonCard
+        metrics={[makeMetric({ formattedPrevious: '162 mi' })]}
+        previousLabel="Yesterday"
+      />,
+    );
+
+    expect(screen.getByText('Yesterday 162 mi')).toBeInTheDocument();
+    expect(screen.queryByText('Last week 162 mi')).toBeNull();
+  });
+
+  it('omits the sub-line when formattedPrevious is missing (never fabricates)', () => {
+    render(<WidgetComparisonCard metrics={[makeMetric({ formattedPrevious: undefined })]} />);
+
+    expect(screen.getByText('Distance')).toBeInTheDocument();
+    expect(screen.queryByText(/Last week/)).toBeNull();
+    // The row (value + Delta) still renders from the measured operands.
+    expect(screen.getByTestId('delta')).toBeInTheDocument();
+  });
+
+  it('omits the sub-line when formattedPrevious is an empty string', () => {
+    render(<WidgetComparisonCard metrics={[makeMetric({ formattedPrevious: '' })]} />);
+
+    expect(screen.queryByText(/Last week/)).toBeNull();
+  });
+});
+
+describe('WidgetComparisonCard — Delta wiring, tone & display', () => {
+  it('defaults to a neutral direction and percent display (no status colour)', () => {
+    render(<WidgetComparisonCard metrics={[makeMetric({ current: 120.5, previous: 100 })]} />);
 
     const delta = screen.getByTestId('delta');
-    expect(delta).toHaveAttribute('data-direction', 'higher_better');
+    expect(delta).toHaveAttribute('data-direction', 'neutral');
     expect(delta).toHaveAttribute('data-current', '120.5');
     expect(delta).toHaveAttribute('data-previous', '100');
     expect(delta).toHaveAttribute('data-display', 'percent');
   });
 
-  it('maps higherIsBetter=false to lower_better', () => {
-    render(<WidgetComparisonCard metrics={[makeMetric({ higherIsBetter: false })]} />);
+  it('maps tone=good with higherIsBetter=true to higher_better', () => {
+    render(<WidgetComparisonCard metrics={[makeMetric({ tone: 'good', higherIsBetter: true })]} />);
+
+    expect(screen.getByTestId('delta')).toHaveAttribute('data-direction', 'higher_better');
+  });
+
+  it('maps tone=good with higherIsBetter=false to lower_better', () => {
+    render(<WidgetComparisonCard metrics={[makeMetric({ tone: 'good', higherIsBetter: false })]} />);
 
     expect(screen.getByTestId('delta')).toHaveAttribute('data-direction', 'lower_better');
   });
 
-  it('defaults to higher_better when higherIsBetter is omitted', () => {
-    render(<WidgetComparisonCard metrics={[makeMetric({ higherIsBetter: undefined })]} />);
+  it('maps tone=bad to the directional mapping', () => {
+    render(<WidgetComparisonCard metrics={[makeMetric({ tone: 'bad', higherIsBetter: true })]} />);
 
     expect(screen.getByTestId('delta')).toHaveAttribute('data-direction', 'higher_better');
+  });
+
+  it('maps explicit tone=neutral to neutral even when higherIsBetter is set', () => {
+    render(<WidgetComparisonCard metrics={[makeMetric({ tone: 'neutral', higherIsBetter: false })]} />);
+
+    expect(screen.getByTestId('delta')).toHaveAttribute('data-direction', 'neutral');
+  });
+
+  it('forwards deltaDisplay=absolute for count-style metrics', () => {
+    render(
+      <WidgetComparisonCard
+        metrics={[makeMetric({ label: 'Drives', current: 12, previous: 10, deltaDisplay: 'absolute' })]}
+      />,
+    );
+
+    expect(screen.getByTestId('delta')).toHaveAttribute('data-display', 'absolute');
   });
 });
 
