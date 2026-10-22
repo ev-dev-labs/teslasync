@@ -357,7 +357,7 @@ nothing to revert in uncommitted work). Sequencing decision: finish the
 in-flight timezone batch first (clean tree), then revert the freshness commits
 via `git revert` (no resets), re-verify, and push once. The redesign loop must
 reject any worker diff touching freshness. Revert set identified
-2026-10-21: `c8aad38605`, `dc22ed9bfb`, `f6d6be4106` (reverse order);
+2026-10-21: `c8aad38605`, `dc22ed9bfb`, `f6d6be4106` (reverse order); CORRECTION 2026-10-22 (owner override): the `f6d6be4106` revert (`fb85d89745`) was itself reverted (`b7c55d6ab2`), so `f6d6be4106` (one shared FreshnessDot per widget, pinned top-right corner, header icons directly left) is KEPT; only `c8aad38605` + `dc22ed9bfb` stay reverted (`70b4c257a2`, `0a89cfc2ed`). The header guard stays passing; the redesign keeps the existing FreshnessDot/FreshnessDotAuto wiring and never uses the preview 'Live'/'2m ago' design. Playbook freshness rule + Part 2 wording updated (`b3f0ba6272`).
 `cad1237f5f` (Layout preservation pins) only if the shell-preservation
 suite fails after the revert; `8a895df1ad` is range-label e2e, unrelated,
 keep. Expected revert conflicts in i18n pins (timezone commits touched the

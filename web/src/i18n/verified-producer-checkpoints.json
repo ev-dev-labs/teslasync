@@ -540,7 +540,7 @@
   {
     "file": "web/src/features/dashboard/components/DashboardGrid.tsx",
     "calls": 7,
-    "sha256": "733649fd5865775e80d7cd635a8d79e24f4aedbe72da15ecd9f3fe1ea9a87dee"
+    "sha256": "931c535e3ce22b97bc971fd79ca4d66e254b8d7c3986d24bb2a5b7054aa8e028"
   },
   {
     "file": "web/src/features/dashboard/components/LayoutSwitcher.tsx",
@@ -565,7 +565,12 @@
   {
     "file": "web/src/features/dashboard/components/WidgetEditChrome.tsx",
     "calls": 22,
-    "sha256": "4bc81646a472602c742dc2f90414276c8d05d8f17c5721422a30f8eccfc740d1"
+    "sha256": "83823aeee9a94aded542595fdf3bdf033c3e98a46044e2da6e965f4163abd226"
+  },
+  {
+    "file": "web/src/features/dashboard/lib/dashboardTokens.ts",
+    "calls": 0,
+    "sha256": "ff73a12b948e7794f23cc38c70020dc3d6e2a111723e12c8041c27cddf311959"
   },
   {
     "file": "web/src/features/dashboard/pages/DashboardPage.tsx",

@@ -4,15 +4,15 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Codex (freshness revert done + verified).
-Branch HEAD: `fb85d89745` + pin regen (committing, pushing at gate).
+Last updated: 2026-10-22 by Codex (freshness CORRECTION applied: f6d6be4106 kept).
+Branch HEAD: `b3f0ba6272` (pushed); Step 0 verification in progress.
 
 ## Parts overview
 
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
-| 1 | Time zone: follow setting everywhere, remove duplicates | in progress | TZ-5c done (2fbe414e..edf280bf); wip waitoracle/journey/useCharging 66eda8c6d5 fixed by a09dc6ec15 | 277-route full sweep, TZ-6 e2e, freshness revert, TZ-7 replica + push |
-| 2 | Dashboard widget redesign (119 widgets) | not started | inputs present (`README.md`, `widgets-compare.html`, `widgets.json`) | Phase 0 only after Part 1 clean + pushed; Phase 1 header task SKIPPED (freshness frozen) |
+| 1 | Time zone: follow setting everywhere, remove duplicates | in progress | TZ-5c done (2fbe414e..edf280bf); wip waitoracle/journey/useCharging 66eda8c6d5 fixed by a09dc6ec15; freshness correction b7c55d6ab2+b3f0ba6272 | 277-route full sweep, TZ-6 e2e re-run, Step 0 verify + push, TZ-7 replica + push |
+| 2 | Dashboard widget redesign (119 widgets) | not started | inputs present (`README.md`, `widgets-compare.html`, `widgets.json`) | Phase 0 only after Part 1 clean + pushed; header guard stays in place (redesign keeps the existing FreshnessDot in the corner, never the preview Live/2m-ago design) |
 | 3 | Shared-pattern consolidation (whole codebase) | not started | — | `docs/shared-patterns.md` catalog first |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
 | 5 | CI green on PR #202 | not started | PR green at takeover (199 pass / 1 skipping) | Loop `gh pr checks --watch` after each push |
