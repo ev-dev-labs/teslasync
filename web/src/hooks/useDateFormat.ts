@@ -8,6 +8,7 @@ import {
   formatDateRange as libFormatDateRange,
   formatMonthYear as libFormatMonthYear,
   formatMonthName as libFormatMonthName,
+  formatMonthDayHour as libFormatMonthDayHour,
   formatWeekdayName as libFormatWeekdayName,
   formatDayKey as libFormatDayKey,
   formatDayKeyRange as libFormatDayKeyRange,
@@ -68,6 +69,11 @@ export interface UseDateFormatResult {
   ) => string
   /** Short weekday name in the target zone. */
   formatWeekdayName: DateFormatter
+  /** Compact chart-axis label ("Oct 1, 02 AM"); accepts epoch millis. */
+  formatMonthDayHour: (
+    value: string | Date | number | null | undefined,
+    override?: FormatOptions,
+  ) => string
   formatRelative: DateFormatter
   formatRelativeTime: DateFormatter
   formatRelativeDays: DateFormatter
@@ -162,6 +168,10 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
     (value, override) => libFormatWeekdayName(value, { ...opts, ...override }),
     [opts],
   )
+  const formatMonthDayHour = useCallback<UseDateFormatResult['formatMonthDayHour']>(
+    (value, override) => libFormatMonthDayHour(value, { ...opts, ...override }),
+    [opts],
+  )
   const formatRelative = useCallback<DateFormatter>(
     (value, override) => libFormatRelative(value, { ...opts, ...override }),
     [opts],
@@ -191,6 +201,7 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
       formatMonthYear,
       formatMonthName,
       formatWeekdayName,
+      formatMonthDayHour,
       formatRelative,
       formatRelativeTime,
       formatRelativeDays,
@@ -210,6 +221,7 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
       formatMonthYear,
       formatMonthName,
       formatWeekdayName,
+      formatMonthDayHour,
       formatRelative,
       formatRelativeTime,
       formatRelativeDays,

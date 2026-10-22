@@ -36,6 +36,8 @@ export interface FormatOptions {
   clock?: Pick<Intl.DateTimeFormatOptions, 'hour' | 'minute' | 'second' | 'hour12' | 'hourCycle'>
   /** Year width; only `formatDate` and `formatMonthYear` honor this. */
   yearStyle?: 'numeric' | '2-digit'
+  /** Weekday width; only `formatWeekdayName` honors this. */
+  weekdayStyle?: 'short' | 'long'
 }
 
 /**
@@ -719,11 +721,12 @@ export function formatMonthName(
 }
 
 /**
- * User-facing short weekday name ("Mon") for the given date in the
- * target zone. Weekday-bucket labels pass a UTC-nooned anchor date with
- * an explicit `{ tz: 'UTC' }` override so the name never shifts with
- * the display zone. Missing or invalid input returns the placeholder;
- * an invalid locale falls back to `en-US` before giving up.
+ * User-facing weekday name ("Mon", or "Monday" with
+ * `{ weekdayStyle: 'long' }`) for the given date in the target zone.
+ * Weekday-bucket labels pass a UTC-nooned anchor date with an explicit
+ * `{ tz: 'UTC' }` override so the name never shifts with the display
+ * zone. Missing or invalid input returns the placeholder; an invalid
+ * locale falls back to `en-US` before giving up.
  * Never throws.
  */
 export function formatWeekdayName(
@@ -735,8 +738,36 @@ export function formatWeekdayName(
   if (isNaN(d.getTime())) return FALLBACK
   const timeZone = safeTimeZone(opts?.tz)
   const fields: Intl.DateTimeFormatOptions = {
-    ...(timeZone ? { timeZone } : {}), weekday: 'short',
+    ...(timeZone ? { timeZone } : {}), weekday: opts?.weekdayStyle ?? 'short',
   }
+  try {
+    return new Intl.DateTimeFormat(intlLocale(opts), fields).format(d)
+  } catch {
+    try {
+      return new Intl.DateTimeFormat('en-US', fields).format(d)
+    } catch {
+      return FALLBACK
+    }
+  }
+}
+
+/**
+ * User-facing hour-of-day bucket name ("12 AM", "3 PM") for the given
+ * hour 0-23. Hour buckets are bucket identities, not instants, so they
+ * render from a UTC anchor and never shift with the display zone.
+ * Out-of-range, non-integer, or missing input returns the placeholder;
+ * an invalid locale falls back to `en-US` before giving up.
+ * Never throws.
+ */
+export function formatHourName(
+  value: number | null | undefined,
+  opts?: FormatOptions,
+): string {
+  if (value == null || !Number.isInteger(value) || value < 0 || value > 23) return FALLBACK
+  // UTC-anchored bucket label: hour-of-day names are bucket identities,
+  // not instants, so they render in UTC and never shift with the zone.
+  const d = new Date(Date.UTC(2024, 0, 4, value, 0))
+  const fields: Intl.DateTimeFormatOptions = { timeZone: 'UTC', hour: 'numeric' }
   try {
     return new Intl.DateTimeFormat(intlLocale(opts), fields).format(d)
   } catch {
@@ -767,6 +798,37 @@ export function formatChartInstant(
     ...(timeZone ? { timeZone } : {}),
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
     timeZoneName: 'shortOffset',
+  }
+  try {
+    return new Intl.DateTimeFormat(intlLocale(opts), fields).format(d)
+  } catch {
+    try {
+      return new Intl.DateTimeFormat('en-US', fields).format(d)
+    } catch {
+      return FALLBACK
+    }
+  }
+}
+
+/**
+ * Compact chart-axis label ("Oct 1, 02 AM") for an instant in the target
+ * zone: month + day + hour, without minutes or offset. Unlike
+ * {@link formatChartInstant}, repeated fall-back hours render
+ * identically; use it for dense axes where the offset would not fit.
+ * Missing or invalid input returns the placeholder; an invalid locale
+ * falls back to `en-US` before giving up. Never throws.
+ */
+export function formatMonthDayHour(
+  value: string | Date | number | null | undefined,
+  opts?: FormatOptions,
+): string {
+  if (value == null || value === '') return FALLBACK
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return FALLBACK
+  const timeZone = safeTimeZone(opts?.tz)
+  const fields: Intl.DateTimeFormatOptions = {
+    ...(timeZone ? { timeZone } : {}),
+    month: 'short', day: 'numeric', hour: '2-digit',
   }
   try {
     return new Intl.DateTimeFormat(intlLocale(opts), fields).format(d)

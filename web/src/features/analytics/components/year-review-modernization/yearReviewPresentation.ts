@@ -1,9 +1,11 @@
+import { formatMonthName } from '@/lib/dateFormat';
+
 /** Existing month policy, copied from the acquisition source without changing
  * calendar/query semantics. This helper only produces a display label. */
 export function monthShortLabel(month: number | null | undefined, locale: string | undefined): string {
   const n = typeof month === 'number' && Number.isFinite(month) ? month : 1;
   const clamped = Math.min(12, Math.max(1, Math.round(n)));
-  return new Date(2000, clamped - 1, 1).toLocaleString(locale, { month: 'short' });
+  return formatMonthName(clamped, { locale });
 }
 
 /** Existing peak-hour wrap/truncate policy; deliberately not a timezone conversion. */

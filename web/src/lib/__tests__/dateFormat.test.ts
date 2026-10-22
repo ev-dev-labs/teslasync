@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   formatDateTime, formatDate, formatTime, formatDateShort, tzAbbreviation,
   formatRelativeDays, formatRelativeDayKey, formatDayKey, formatMonthYear, formatMonthName,
-  formatWeekdayName, formatChartInstant, ymdInTz,
+  formatWeekdayName, formatChartInstant, formatMonthDayHour, formatHourName, ymdInTz,
   isoUtcToLocalDatetimeInput, localDatetimeInputToIso,
   formatDurationMs, formatDurationMsCompact, formatDurationMsLong,
   formatDurationSecondsAsMinutes, formatDurationMinutes, formatDurationRange,
@@ -506,6 +506,55 @@ describe('formatWeekdayName', () => {
 
   it('falls back to en-US for an invalid locale tag', () => {
     expect(formatWeekdayName(new Date(Date.UTC(2026, 0, 4, 12)), { locale: 'not-a-locale', tz: 'UTC' })).toBe('Sun');
+  });
+
+  it('renders the long name with weekdayStyle long', () => {
+    expect(formatWeekdayName(new Date(Date.UTC(2026, 0, 5, 12)), { locale: 'en-US', tz: 'UTC', weekdayStyle: 'long' })).toBe('Monday');
+    expect(formatWeekdayName('2026-01-04T00:30:00.000Z', { locale: 'en-US', tz: 'America/Los_Angeles', weekdayStyle: 'long' })).toBe('Saturday');
+  });
+});
+
+describe('formatHourName', () => {
+  it('renders hour buckets zone-stable', () => {
+    expect(formatHourName(0, { locale: 'en-US', tz: 'America/Los_Angeles' })).toBe('12 AM');
+    expect(formatHourName(0, { locale: 'en-US', tz: 'Pacific/Kiritimati' })).toBe('12 AM');
+    expect(formatHourName(15, { locale: 'en-US' })).toBe('3 PM');
+    expect(formatHourName(23, { locale: 'en-US' })).toBe('11 PM');
+  });
+
+  it('returns the placeholder for missing or invalid input', () => {
+    expect(formatHourName(null, { locale: 'en-US' })).toBe('—');
+    expect(formatHourName(undefined, { locale: 'en-US' })).toBe('—');
+    expect(formatHourName(-1, { locale: 'en-US' })).toBe('—');
+    expect(formatHourName(24, { locale: 'en-US' })).toBe('—');
+    expect(formatHourName(2.5, { locale: 'en-US' })).toBe('—');
+    expect(formatHourName(NaN, { locale: 'en-US' })).toBe('—');
+  });
+
+  it('falls back to en-US for an invalid locale tag', () => {
+    expect(formatHourName(9, { locale: 'not-a-locale' })).toBe('9 AM');
+  });
+});
+
+describe('formatMonthDayHour', () => {
+  it('renders instants in the target zone, accepting epoch millis', () => {
+    // Oct 1 00:30Z is still Sep 30 in LA but Oct 1 in Tokyo.
+    expect(formatMonthDayHour(Date.parse('2026-10-01T00:30:00.000Z'), { locale: 'en-US', tz: 'America/Los_Angeles' })).toBe('Sep 30, 05 PM');
+    expect(formatMonthDayHour(Date.parse('2026-10-01T00:30:00.000Z'), { locale: 'en-US', tz: 'Asia/Tokyo' })).toBe('Oct 1, 09 AM');
+    expect(formatMonthDayHour('2026-10-01T00:30:00.000Z', { locale: 'en-US', tz: 'Asia/Tokyo' })).toBe('Oct 1, 09 AM');
+    expect(formatMonthDayHour(new Date('2026-10-01T00:30:00.000Z'), { locale: 'en-US', tz: 'Asia/Tokyo' })).toBe('Oct 1, 09 AM');
+  });
+
+  it('returns the placeholder for missing or invalid input', () => {
+    expect(formatMonthDayHour(null, { locale: 'en-US' })).toBe('—');
+    expect(formatMonthDayHour(undefined, { locale: 'en-US' })).toBe('—');
+    expect(formatMonthDayHour('', { locale: 'en-US' })).toBe('—');
+    expect(formatMonthDayHour('not-a-date', { locale: 'en-US' })).toBe('—');
+    expect(formatMonthDayHour(NaN, { locale: 'en-US' })).toBe('—');
+  });
+
+  it('falls back to en-US for an invalid locale tag', () => {
+    expect(formatMonthDayHour(Date.parse('2026-10-01T00:30:00.000Z'), { locale: 'not-a-locale', tz: 'Asia/Tokyo' })).toBe('Oct 1, 09 AM');
   });
 });
 

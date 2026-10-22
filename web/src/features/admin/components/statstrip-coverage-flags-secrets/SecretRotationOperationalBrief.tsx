@@ -8,6 +8,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { SecretRotationStatus } from '@/types/admin-operator-confidence';
 import type { useSecretRotationPage } from '../../hooks/useSecretRotationPage';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { sourceStatus, sourceFreshness } from './sourceMetadata';
 
 export function secretRotationMetrics(
@@ -67,6 +68,7 @@ export function secretRotationMetrics(
 
 export function SecretRotationOperationalBrief({ controller }: { controller: ReturnType<typeof useSecretRotationPage> }) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const { precision } = useNumberFormatting();
   const { query, source, rowLabel, subsystemMissing, showError, retry } = controller;
   const metrics = secretRotationMetrics(source.hasData ? query.data?.items ?? [] : undefined, t, rowLabel)
@@ -84,7 +86,7 @@ export function SecretRotationOperationalBrief({ controller }: { controller: Ret
       statusLabel={subsystemMissing ? t('admin.secretRotation.brief.unsupported', 'Tracker not configured') : sourceStatus(source.status, t)}
       statusTone={error ? 'warning' : 'neutral'}
       scope={<Text as="span" variant="caption">{t('admin.secretRotation.statstrip.period', 'Rotation tracker snapshot')}</Text>}
-      freshness={<Text as="span" variant="caption">{sourceFreshness(source.updatedAt, t)}</Text>}
+      freshness={<Text as="span" variant="caption">{sourceFreshness(source.updatedAt, t, formatDateTime)}</Text>}
       provenance={t('admin.secretRotation.statstrip.provenance', 'Returned credentials and server-computed per-kind thresholds; not a selected date-range aggregate.')} />
     {source.hasData && <Text variant="caption">{t('admin.secretRotation.statstrip.unknown', '{{count}} tracked credentials have unknown severity', {
         count: (query.data?.items ?? []).filter(row => row.severity === 'unknown').length,
