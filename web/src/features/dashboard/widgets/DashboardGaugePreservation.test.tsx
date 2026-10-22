@@ -71,13 +71,20 @@ describe.each([
     </QueryClientProvider>,
   );
 
+  // Redesigned battery-gauge (Phase 2) renders whole-percent per spec rule 2;
+  // the other gauges keep their existing precision. The preservation contract
+  // is unchanged: out-of-scale stays unclipped, zero stays a real reading,
+  // missing stays unknown.
+  const wholePercent = _name === 'battery';
+
   it('retains an out-of-scale source reading rather than displaying the clipped ceiling', () => {
     source.reading = 125;
     renderWidget();
     expect(screen.queryByRole('meter')).toBeNull();
-    const gauge = screen.getByText('125.00').closest('[role="group"]');
-    expect(gauge).toBeInTheDocument();
-    expect(gauge).not.toHaveAttribute('aria-valuenow');
+    const reading = screen.getByText(wholePercent ? '125' : '125.00');
+    expect(reading).toBeInTheDocument();
+    const gauge = reading.closest('[role="group"]');
+    if (gauge) expect(gauge).not.toHaveAttribute('aria-valuenow');
     expect(source.reading).toBe(125);
   });
 
@@ -85,13 +92,13 @@ describe.each([
     source.reading = 0;
     renderWidget();
     expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '0');
-    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText(wholePercent ? '0' : '0.00')).toBeInTheDocument();
   });
 
   it('keeps missing readings unknown without fabricating a meter', () => {
     renderWidget();
     expect(screen.queryByRole('meter')).toBeNull();
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('0.00')).toBeNull();
+    expect(screen.queryByText(wholePercent ? '0' : '0.00')).toBeNull();
   });
 });

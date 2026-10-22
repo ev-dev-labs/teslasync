@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, within } from '@testing-library/react';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fireEvent, screen } from '@testing-library/react';
 import ChargeStatusWidget from '../../widgets/ChargeStatusWidget';
 import ChargeHistoryWidget from '../../widgets/ChargeHistoryWidget';
 import DoorWindowStatusWidget from '../../widgets/DoorWindowStatusWidget';
@@ -59,14 +58,13 @@ describe.each(widgets)('$name discovery recovery', ({ Widget }) => {
 });
 
 it('keeps measured zero battery distinct from a missing charge-status reading', () => {
+  // Redesigned charge-status (Phase 2): whole-percent headline + meter.
+  // Measured zero renders a real 0% meter; a missing reading renders no
+  // meter and the shared unknown placeholder instead of a fabricated zero.
   const { rerender } = renderWidget(<ChargeStatusWidget vehicleId={7} size={{ cols: 2, rows: 4 }} />);
-  expect(screen.getByText(`${fmtNumber(0)}%`)).toBeVisible();
+  expect(screen.getByRole('meter')).toHaveAttribute('aria-valuetext', '0%');
   hooks.state.mockReturnValue(queryResult({ state: { is_charging: false } }));
   rerender(<ChargeStatusWidget vehicleId={7} size={{ cols: 2, rows: 4 }} />);
-  expect(screen.queryByText(`${fmtNumber(0)}%`)).not.toBeInTheDocument();
-  expect(screen.getByText('Battery')).toBeVisible();
-  expect(screen.queryByText('—')).not.toBeInTheDocument();
-  const idleBrief = screen.getByTestId('dashboard-charge-status-idle-brief');
-  fireEvent.click(within(idleBrief).getByRole('button', { name: 'Review details' }));
-  expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+  expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+  expect(screen.getAllByText('—').length).toBeGreaterThan(0);
 });
