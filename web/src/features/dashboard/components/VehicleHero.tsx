@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { GlassPanel, Heading, Text, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui';
 import { severityTokens, gaugeTone } from '@/lib/tokens';
-import { StatusBadge } from '@/components/data-display';
+import { StatusBadge, FreshnessDot } from '@/components/data-display';
 import { LinearGauge, ambientTemperatureGaugeRange } from '@/components/charts';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -122,8 +122,16 @@ export const VehicleHero = memo(function VehicleHero({
               {t('hero.unknownStatus', 'Unknown')}
             </span>
           ) : (
-            <StatusBadge status={status} size="md" showDot={false} />
+            <StatusBadge status={status} size="md" />
           )}
+          {/* Observation age in the dot's tooltip; stale after the same 2-minute window. */}
+          <FreshnessDot
+            updatedAt={observedAt ?? null}
+            isFetching={false}
+            isStale={false}
+            isError={false}
+            forceStaleAfterMs={120_000}
+          />
         </div>
         <Text as="p" size="sm" color="secondary">
           {vehicle.model} {vehicle.trim_badging} · <span className="font-mono">{vehicle.vin}</span>

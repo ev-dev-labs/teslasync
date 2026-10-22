@@ -280,7 +280,7 @@ describe('DashboardStatsWidget — states', () => {
     );
     renderWidget();
     // Error tier dot on the freshness chip, and an empty panel (never blank).
-    const freshness = screen.getByRole('button', { name: /^Refresh data · error/ });
+    const freshness = screen.getByRole('button', { name: /^Refresh data · Error/ });
     expect(freshness.querySelector('[class*="--semantic-danger"]')).not.toBeNull();
     expect(screen.getByText('FSM state')).toBeInTheDocument();
   });
@@ -321,7 +321,7 @@ describe('DashboardStatsWidget — primary freshness does not follow historical 
       makeQ<VehicleState>(undefined, { isError: true, dataUpdatedAt: 0 }),
     );
     renderWidget();
-    const freshness = screen.getByRole('button', { name: /^Refresh data · error/ });
+    const freshness = screen.getByRole('button', { name: /^Refresh data · Error/ });
     expect(freshness.querySelector('[class*="--semantic-danger"]')).not.toBeNull();
   });
 });

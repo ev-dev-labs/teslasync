@@ -163,10 +163,8 @@ for (const route of VISUAL_ROUTES) {
         [aria-label^="API connection status"] {
           min-width: 8rem !important;
         }
-        /* Widget headers use the real dot/action geometry. The historical
-           text-width pin applies only to freshness controls outside widgets. */
-        [aria-label^="Refresh data"]:not([data-role="widget-shell-header"] *),
-        [aria-label^="Data freshness:"]:not([data-role="widget-shell-header"] *) {
+        [aria-label^="Refresh data"],
+        [aria-label^="Data freshness:"] {
           width: 8.5rem !important;
           min-width: 8.5rem !important;
           max-width: 8.5rem !important;

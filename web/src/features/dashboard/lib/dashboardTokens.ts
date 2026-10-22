@@ -3,7 +3,7 @@ import { typography } from '@/lib/tokens';
 /** Dashboard content is hosted by the canvas panel; these tokens add no card chrome. */
 export const dashboardTokens = {
   shell: 'relative flex h-full min-w-0 flex-col',
-  header: 'flex w-full shrink-0 flex-col pl-4 pr-4 pb-2 pt-3',
+  header: 'flex shrink-0 items-start gap-2 pl-4 pr-4 pb-2 pt-3',
   title: `${typography.size.sm} ${typography.weight.semibold} ${typography.color.primary} leading-snug`,
   description: `${typography.role.bodySm} mt-1 break-words leading-snug`,
   // One horizontal inset token (p-4) shared with header/footer; the body owns

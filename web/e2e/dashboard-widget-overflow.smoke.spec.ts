@@ -241,7 +241,6 @@ interface WidgetRecord {
   bodyScroll: number | null
   bodyClient: number | null
   clipped: ClipDetail[]
-  headerFailures: string[]
 }
 
 async function measureAll(page: Page): Promise<WidgetRecord[]> {
@@ -257,40 +256,9 @@ async function measureAll(page: Page): Promise<WidgetRecord[]> {
       }
       return false
     }
-    const headerFailures = (root: Element): string[] => {
-      const errors: string[] = []
-      const dots = root.querySelectorAll<HTMLElement>('[data-role="freshness-dot"]')
-      const header = root.querySelector<HTMLElement>('[data-role="widget-shell-header"]')
-      const title = header?.querySelector<HTMLElement>('[data-role="widget-header-title"]')
-      if (dots.length !== 1) errors.push(`expected exactly one freshness dot, got ${dots.length}`)
-      if (!header || !title) return [...errors, 'missing shared header/title line']
-      if (dots.length !== 1) return errors
-      const dot = dots[0]
-      if (!header.contains(dot)) errors.push('freshness dot is outside shared header')
-      const bounds = dot.getBoundingClientRect()
-      const titleBounds = title.getBoundingClientRect()
-      const widgetBounds = root.getBoundingClientRect()
-      const padding = Number.parseFloat(getComputedStyle(header).paddingLeft)
-      const rightDelta = Math.abs(bounds.right - (widgetBounds.right - padding))
-      if (rightDelta > 2) errors.push(`freshness right inset differs by ${rightDelta.toFixed(2)}px (padding ${padding})`)
-      const centerDelta = Math.abs((bounds.top + bounds.bottom - titleBounds.top - titleBounds.bottom) / 2)
-      if (centerDelta > 2) errors.push(`freshness/title centers differ by ${centerDelta.toFixed(2)}px`)
-      const cluster = header.querySelector('[data-role="widget-header-actions"]')
-      if (!cluster) return [...errors, 'missing shared action cluster']
-      const controls = Array.from(cluster.querySelectorAll<HTMLElement>('button, a[href]'))
-        .filter(control => !control.contains(dot) && control.querySelector('svg') && control.getBoundingClientRect().width > 0)
-        .map(control => control.getBoundingClientRect()).sort((a, b) => a.left - b.left)
-      for (let i = 0; i < controls.length; i++) {
-        const nextLeft = i + 1 < controls.length ? controls[i + 1].left : bounds.left
-        const gap = nextLeft - controls[i].right
-        if (gap > 8 || gap < -2) errors.push(`header action gap ${gap.toFixed(2)}px is outside 0..8px`)
-      }
-      if (cluster.getBoundingClientRect().right > bounds.right + 2) errors.push('reserved space or action to the right of freshness')
-      return errors
-    }
     return ids.map((id, index): WidgetRecord => {
       const root = document.querySelector(`[data-widget-id="overflow-guard-${index}"]`)
-      if (!root) return { id, status: 'missing', bodyScroll: null, bodyClient: null, clipped: [], headerFailures: ['missing widget'] }
+      if (!root) return { id, status: 'missing', bodyScroll: null, bodyClient: null, clipped: [] }
       const body = root.querySelector<HTMLElement>('[data-testid="widget-body"]')
       if (!body) {
         const failed = /failed to load/i.test(root.textContent ?? '')
@@ -300,7 +268,6 @@ async function measureAll(page: Page): Promise<WidgetRecord[]> {
           bodyScroll: null,
           bodyClient: null,
           clipped: [],
-          headerFailures: headerFailures(root),
         }
       }
       const record: WidgetRecord = {
@@ -309,7 +276,6 @@ async function measureAll(page: Page): Promise<WidgetRecord[]> {
         bodyScroll: body.scrollWidth,
         bodyClient: body.clientWidth,
         clipped: [],
-        headerFailures: headerFailures(root),
       }
       if (body.scrollWidth > body.clientWidth + 1) {
         record.status = 'body-overflow'
@@ -431,7 +397,7 @@ async function measureSettled(page: Page): Promise<WidgetRecord[]> {
       const candidate = sample[index]
       if (STATUS_RANK[candidate.status] > STATUS_RANK[worst.status]) worst = candidate
     }
-    return { ...worst, headerFailures: [...new Set(samples.flatMap(sample => sample[index].headerFailures))] }
+    return worst
   })
 }
 
@@ -463,12 +429,6 @@ test('widget bodies never overflow horizontally at min, default and large sizes 
       }
       const rows = await measureSettled(page)
       records.push({ size, mode, rows })
-      for (const row of rows) {
-        for (const failure of row.headerFailures) {
-          violations.push(`${size}/${mode} ${row.id}: ${failure}`)
-          console.log(`[header-guard] VIOLATION ${size}/${mode} ${row.id}: ${failure}`)
-        }
-      }
       // Incremental record: a later config must never lose an earlier one.
       await writeFile(
         testInfo.outputPath(`records-${size}-${mode}.json`),

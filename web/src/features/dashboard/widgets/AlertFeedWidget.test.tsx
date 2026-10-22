@@ -164,9 +164,7 @@ describe('AlertFeedWidget — shell states', () => {
     expect(skeleton).toHaveClass('h-full', 'w-full', 'min-h-24', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
     expect(skeleton).toHaveAttribute('aria-hidden', 'true');
     expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
-    expect(container.querySelector('[data-testid="widget-body"] .animate-pulse')).toBeNull();
-    expect(container.querySelectorAll('[data-role="freshness-dot"]')).toHaveLength(1);
-    expect(container.querySelector('[data-role="freshness-dot"]')).toHaveClass('animate-pulse');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByText('Battery critically low')).not.toBeInTheDocument();
     expect(screen.queryByText('No alerts yet')).not.toBeInTheDocument();
     // Title + rows are suppressed until the shell resolves.

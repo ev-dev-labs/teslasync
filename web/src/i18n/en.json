@@ -20010,8 +20010,7 @@
     "exportFailed": "Failed",
     "exportQueued": "Queued",
     "exportRunning": "Running",
-    "exportDone": "Done",
-    "overview": "Widget overview"
+    "exportDone": "Done"
   },
   "operationalSummary": {
     "retained": "Retained source data",

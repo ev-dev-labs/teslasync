@@ -419,7 +419,7 @@ describe('ChargingScheduleWidget — states', () => {
       makeSignalsResult({ isError: true, dataUpdatedAt: 0, data: undefined }),
     );
     renderWidget();
-    expect(screen.getByRole('button', { name: 'Refresh data · error' }).querySelector('[class*="--semantic-danger"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Refresh data · Error' }).querySelector('[class*="--semantic-danger"]')).not.toBeNull();
     expect(screen.getAllByRole('button', { name: /refresh/i })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(screen.getByText('Charging schedule unavailable')).toBeInTheDocument();

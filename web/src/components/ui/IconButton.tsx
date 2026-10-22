@@ -37,7 +37,6 @@ export interface IconButtonProps {
   'aria-expanded'?: boolean;
   'aria-pressed'?: boolean;
   'aria-describedby'?: string;
-  'aria-busy'?: AriaAttributes['aria-busy'];
   'data-testid'?: string;
   'data-tour'?: string;
   className?: string;

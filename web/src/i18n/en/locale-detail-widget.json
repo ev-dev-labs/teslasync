@@ -1714,7 +1714,6 @@
     "exportFailed": "Failed",
     "exportQueued": "Queued",
     "exportRunning": "Running",
-    "exportDone": "Done",
-    "overview": "Widget overview"
+    "exportDone": "Done"
   }
 }
