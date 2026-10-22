@@ -2,16 +2,42 @@ import { type ReactNode, useMemo } from 'react';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
+import { dashboardTokens } from '../../lib/dashboardTokens';
 
+/**
+ * One row of the shared ranked-list primitive.
+ *
+ * Speaks the `rows` language from the widget-redesign spec: a title with an
+ * optional muted sublabel on the left, a right-aligned value with an optional
+ * muted hint underneath, an optional leading status dot, and an optional
+ * status pill. Rows are separated by dividers — there are no rank numerals
+ * and no background magnitude bars (spec rule 5: no meaningless meters; the
+ * After cards show plain divider rows).
+ */
 export interface RankedItem {
   id: string | number;
   label: string;
   /** Missing/null is unknown; finite zero and negative readings remain measured. */
   value?: number | null;
   formattedValue: string;
+  /** Muted secondary line under the label (e.g. "Oct 12 · 24 min"). Caller passes translated text. */
+  sublabel?: string;
+  /** Muted secondary line under the value. Right-aligned beside the label column. */
+  hint?: string;
+  /**
+   * Leading status dot. Color means status only: the dot is decorative
+   * (aria-hidden) and the adjacent label/value/badge text always names the
+   * state, so meaning never travels by color alone.
+   */
+  status?: 'success' | 'warning' | 'error' | 'info' | 'neutral';
   /** Optional rich presentation; label remains the caller's plain-text fallback. */
   labelContent?: ReactNode;
-  badge?: { text: string; variant: 'success' | 'warning' | 'error' | 'neutral' };
+  badge?: { text: string; variant: 'success' | 'warning' | 'error' | 'info' | 'neutral' };
+  /**
+   * @deprecated Background magnitude bars were removed in the Phase 1
+   * redesign (spec divider rows carry no bars). Retained for source
+   * compatibility with widgets awaiting their Phase 3 redesign; ignored.
+   */
   barColor?: string;
 }
 
@@ -21,6 +47,10 @@ interface WidgetRankedListProps {
   order?: 'value-desc' | 'source';
   maxItems?: number;
   compact?: boolean;
+  /**
+   * @deprecated Background magnitude bars were removed in the Phase 1
+   * redesign. Retained for source compatibility; ignored.
+   */
   showBars?: boolean;
   emptyMessage?: string;
   emptyIcon?: ReactNode;
@@ -32,13 +62,23 @@ const badgeVariantMap = {
   success: 'success',
   warning: 'warning',
   error: 'danger',
+  info: 'info',
   neutral: 'neutral',
 } as const;
 
+/** Status-dot fill per state; mirrors the shared freshness/semantic tiers. */
+const statusDotClass = {
+  success: 'bg-[var(--semantic-success)]',
+  warning: 'bg-[var(--semantic-warning)]',
+  error: 'bg-[var(--semantic-danger)]',
+  info: 'bg-[var(--semantic-info)]',
+  neutral: 'bg-[var(--text-secondary)]',
+} as const;
+
 /**
- * Preserve unknown readings without a magnitude bar. Malformed non-null
- * numbers retain the existing zero normalization for sort/bar safety only;
- * caller-formatted text is never replaced with an invented measured zero.
+ * Preserve unknown readings for sort safety. Malformed non-null numbers
+ * retain the existing zero normalization; caller-formatted text is never
+ * replaced with an invented measured zero.
  */
 function safeValue(value: number | null | undefined): number | null {
   if (value == null) return null;
@@ -50,13 +90,11 @@ export function WidgetRankedList({
   order = 'value-desc',
   maxItems,
   compact = false,
-  showBars = true,
   emptyMessage = 'No data available',
   emptyIcon,
   wrapContent = false,
 }: WidgetRankedListProps) {
   const limit = maxItems ?? (compact ? 3 : 5);
-  const hideBars = compact || !showBars;
 
   const visible = useMemo(() => {
     // `items ?? []` guards the spread below: the prop is typed non-null, but
@@ -75,86 +113,77 @@ export function WidgetRankedList({
     return normalized.slice(0, Math.max(0, limit));
   }, [items, limit, order]);
 
-  const maxValue = useMemo(
-    () => visible.reduce(
-      (max, item) => item.value === null ? max : Math.max(max, item.value),
-      0,
-    ),
-    [visible],
-  );
-
   if (visible.length === 0) {
-    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={emptyIcon} message={emptyMessage} className="py-8" />;
+    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={emptyIcon} message={emptyMessage} className="py-4" />;
   }
 
   return (
     <div className="overflow-y-auto">
-      <ul className="flex flex-col gap-1">
-        {visible.map((item, index) => {
-          // Clamp to [0,100]: a negative reading mixed with positive ones
-          // would otherwise yield a negative CSS width.
-          const barPct =
-            item.value !== null && maxValue > 0
-              ? Math.min(100, Math.max(0, (item.value / maxValue) * 100))
-              : 0;
+      <ul className="flex flex-col">
+        {visible.map((item) => (
+          <li
+            key={item.id}
+            className={cn(
+              'flex min-w-0 items-center border-b border-[var(--border-subtle)] last:border-b-0',
+              dashboardTokens.density.row,
+              dashboardTokens.density.rowGap,
+              dashboardTokens.density.rowPadding,
+            )}
+          >
+            {/* Leading status dot (decorative — the adjacent text names the state). */}
+            {item.status && (
+              <span
+                aria-hidden="true"
+                className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass[item.status])}
+              />
+            )}
 
-          return (
-            <li
-              key={item.id}
-              className="relative min-h-[44px] rounded-lg px-3 py-2 transition-colors hover:bg-[var(--surface-2)]"
-            >
-              {/* Background bar (decorative — conveys rank magnitude already
-                  present in the numeric value, so hidden from assistive tech) */}
-              {!hideBars && item.value !== null && (
-                <div
-                  aria-hidden="true"
-                  className={cn(
-                    'absolute inset-y-0 left-0 rounded-lg opacity-15',
-                    item.barColor ?? 'bg-blue-400',
-                  )}
-                  style={{ width: `${barPct}%` }}
-                />
-              )}
-
-              {/* Row content */}
+            {/* Label column */}
+            <div className="min-w-0 flex-1">
               <div className={cn(
-                'relative flex items-center gap-3',
-                wrapContent && 'flex-wrap',
+                'text-sm font-medium text-[var(--text-primary)]',
+                wrapContent ? 'whitespace-normal break-words' : 'truncate',
               )}>
-                {/* Rank number */}
-                <span className="w-5 shrink-0 text-right text-xs font-medium text-[var(--text-muted)]">
-                  {index + 1}
-                </span>
-
-                {/* Label */}
-                <span className={cn(
-                  'min-w-0 flex-1 text-sm text-[var(--text-primary)]',
-                  wrapContent ? 'basis-1/2 whitespace-normal break-words' : 'truncate',
+                {item.labelContent ?? item.label ?? '—'}
+              </div>
+              {item.sublabel && (
+                <div className={cn(
+                  'text-xs text-[var(--text-muted)]',
+                  wrapContent ? 'whitespace-normal break-words' : 'truncate',
                 )}>
-                  {item.labelContent ?? item.label ?? '—'}
-                </span>
+                  {item.sublabel}
+                </div>
+              )}
+            </div>
 
-                {/* Badge */}
-                {item.badge && (
-                  <Badge
-                    variant={badgeVariantMap[item.badge.variant]}
-                    size="sm"
-                  >
-                    {item.badge.text}
-                  </Badge>
-                )}
-
-                {/* Value */}
-                <span className={cn(
+            {/* Value column */}
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="text-end">
+                <div className={cn(
                   'text-sm font-semibold tabular-nums text-[var(--text-primary)]',
-                  wrapContent ? 'max-w-full whitespace-normal break-words' : 'shrink-0',
+                  wrapContent && 'whitespace-normal break-words',
                 )}>
                   {item.formattedValue ?? '—'}
-                </span>
+                </div>
+                {item.hint && (
+                  <div className="whitespace-normal text-xs text-[var(--text-muted)]">
+                    {item.hint}
+                  </div>
+                )}
               </div>
-            </li>
-          );
-        })}
+
+              {/* Status pill */}
+              {item.badge && (
+                <Badge
+                  variant={badgeVariantMap[item.badge.variant]}
+                  size="sm"
+                >
+                  {item.badge.text}
+                </Badge>
+              )}
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
   );

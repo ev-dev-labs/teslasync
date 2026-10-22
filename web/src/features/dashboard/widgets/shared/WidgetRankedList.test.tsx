@@ -3,10 +3,12 @@
  *
  * WidgetRankedList is a pure presentational primitive used across the
  * dashboard widgets to render a "top N" leaderboard: it sorts a list of
- * {@link RankedItem}s by `value` (descending), caps it, and draws each row
- * with a rank number, label, optional badge, formatted value, and an
- * optional proportional background bar. It owns no data hooks and touches no
- * network, so every render here is deterministic from props alone.
+ * {@link RankedItem}s by `value` (descending), caps it, and draws each row in
+ * the spec `rows` language — a title with an optional muted sublabel on the
+ * left, a right-aligned value with an optional muted hint, an optional
+ * leading status dot, and an optional status pill, separated by dividers. It
+ * owns no data hooks and touches no network, so every render here is
+ * deterministic from props alone.
  *
  * Surface under test:
  *   1. Ranking: input is sorted by `value` desc regardless of incoming order,
@@ -14,16 +16,20 @@
  *   2. Limits: the default cap (5 wide / 3 compact), the `maxItems` override,
  *      and the guard that a zero/negative cap collapses to the empty state
  *      instead of `Array.slice`'s negative-index footgun.
- *   3. Bars: shown by default, hidden when `compact` or `showBars={false}`,
- *      width proportional to the max value, decorative (aria-hidden), and
- *      clamped to [0,100] so a negative reading never yields a negative width.
- *   4. Badges: each `variant` maps to the right shared <Badge> colour.
- *   5. Empty / null-safety: an empty list, an `undefined` list (typed
+ *   3. Spec rows: divider-separated rows with no rank numerals and no
+ *      background magnitude bars (the `showBars` / `barColor` props remain
+ *      accepted for source compatibility but render nothing).
+ *   4. Sublabel / hint: muted secondary lines under the label and value.
+ *   5. Status dot: decorative (aria-hidden), one fill per state, with the
+ *      state always named by adjacent text.
+ *   6. Badges: each `variant` maps to the right shared <Badge> colour.
+ *   7. Empty / null-safety: an empty list, an `undefined` list (typed
  *      non-null but undefined mid-fetch), and a zero cap all render the
  *      shared <EmptyState> (role="status") with the supplied message + icon
  *      rather than throwing or drawing a blank panel.
- *   6. Field null-safety: a missing `label` / `formattedValue` renders the
- *      em-dash placeholder; a non-finite `value` is coerced to 0.
+ *   8. Field null-safety: a missing `label` / `formattedValue` renders the
+ *      em-dash placeholder; a non-finite `value` is coerced to 0 for sort
+ *      safety while caller-formatted text is preserved.
  *
  * Convention: `@testing-library/user-event` is intentionally NOT a dependency
  * of this codebase (see web/package.json) and this widget exposes no
@@ -60,16 +66,16 @@ function makeSeries(count: number): RankedItem[] {
   );
 }
 
-/** Decorative bars are the only aria-hidden nodes the widget emits. */
-function bars(container: HTMLElement): HTMLElement[] {
+/** Decorative nodes are the status dots (the only aria-hidden nodes emitted). */
+function decorations(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>('[aria-hidden="true"]'));
 }
 
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('WidgetRankedList', () => {
-  it('sorts items by value descending and numbers the ranks 1..N', () => {
-    render(
+  it('sorts items by value descending without rank numerals', () => {
+    const { container } = render(
       <WidgetRankedList
         items={[
           makeItem({ id: 'a', label: 'Alpha', value: 10, formattedValue: '10' }),
@@ -85,10 +91,9 @@ describe('WidgetRankedList', () => {
     expect(rows[0]).toHaveTextContent('Bravo');
     expect(rows[1]).toHaveTextContent('Charlie');
     expect(rows[2]).toHaveTextContent('Alpha');
-    // Rank prefixes are 1-based and in render order.
-    expect(rows[0].textContent).toContain('1');
-    expect(rows[1].textContent).toContain('2');
-    expect(rows[2].textContent).toContain('3');
+    // Spec divider rows carry no rank numerals and no decorative bars.
+    expect(rows[0].textContent).toBe('Bravo30');
+    expect(decorations(container)).toHaveLength(0);
   });
 
   it('does not mutate the caller-supplied items array', () => {
@@ -116,12 +121,10 @@ describe('WidgetRankedList', () => {
     expect(screen.queryByText('F')).not.toBeInTheDocument();
   });
 
-  it('caps at 3 rows and hides bars in compact mode', () => {
-    const { container } = render(<WidgetRankedList items={makeSeries(8)} compact />);
+  it('caps at 3 rows in compact mode', () => {
+    render(<WidgetRankedList items={makeSeries(8)} compact />);
 
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
-    // compact implies hideBars — no decorative bar nodes at all.
-    expect(bars(container)).toHaveLength(0);
   });
 
   it('honours an explicit maxItems over the default and picks the top values', () => {
@@ -144,7 +147,7 @@ describe('WidgetRankedList', () => {
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
   });
 
-  it('renders one decorative, aria-hidden bar per row with a proportional width', () => {
+  it('renders divider rows with no background magnitude bars', () => {
     const { container } = render(
       <WidgetRankedList
         items={[
@@ -155,34 +158,30 @@ describe('WidgetRankedList', () => {
       />,
     );
 
-    const rendered = bars(container);
-    expect(rendered).toHaveLength(3);
-    // Width is value/maxValue — top row full, others proportional.
-    expect(rendered[0].style.width).toBe('100%');
-    expect(rendered[1].style.width).toBe('50%');
-    expect(rendered[2].style.width).toBe('25%');
+    // No decorative bars: magnitude is carried by the numeric value alone.
+    expect(decorations(container)).toHaveLength(0);
+    // Divider rows, not cards: every row carries the bottom border, the last
+    // one removes it.
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      expect(row).toHaveClass('border-b');
+    }
+    expect(rows[2]).toHaveClass('last:border-b-0');
   });
 
-  it('omits bars when showBars is false but still renders rows', () => {
-    const { container } = render(
-      <WidgetRankedList items={makeSeries(3)} showBars={false} />,
-    );
-
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
-    expect(bars(container)).toHaveLength(0);
-  });
-
-  it('applies a custom barColor class to the decorative bar', () => {
+  it('ignores the deprecated showBars and barColor props without rendering bars', () => {
     const { container } = render(
       <WidgetRankedList
+        showBars={false}
         items={[makeItem({ id: 'a', label: 'Alpha', value: 40, barColor: 'bg-emerald-400' })]}
       />,
     );
 
-    const [bar] = bars(container);
-    expect(bar).toHaveClass('bg-emerald-400');
-    // The default blue is replaced, not appended.
-    expect(bar).not.toHaveClass('bg-blue-400');
+    // Props remain accepted for source compatibility; rows still render.
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(decorations(container)).toHaveLength(0);
+    expect(container.querySelector('.bg-emerald-400')).toBeNull();
   });
 
   it('maps each badge variant to the matching shared Badge colour', () => {
@@ -193,6 +192,7 @@ describe('WidgetRankedList', () => {
           makeItem({ id: 'w', label: 'W', value: 3, badge: { text: 'Warn', variant: 'warning' } }),
           makeItem({ id: 'e', label: 'E', value: 2, badge: { text: 'Bad', variant: 'error' } }),
           makeItem({ id: 'n', label: 'N', value: 1, badge: { text: 'Meh', variant: 'neutral' } }),
+          makeItem({ id: 'i', label: 'I', value: 0, badge: { text: 'Info', variant: 'info' } }),
         ]}
       />,
     );
@@ -202,6 +202,53 @@ describe('WidgetRankedList', () => {
     // 'error' → the Badge's `danger` variant (red).
     expect(screen.getByText('Bad')).toHaveClass('bg-[var(--semantic-danger-bg)]');
     expect(screen.getByText('Meh')).toHaveClass(BADGE_VARIANTS.neutral);
+    expect(screen.getByText('Info')).toHaveClass('bg-[var(--semantic-info-bg)]');
+  });
+
+  it('renders a muted sublabel under the label and a hint under the value', () => {
+    render(
+      <WidgetRankedList
+        items={[
+          makeItem({
+            id: 'a',
+            label: 'Bellevue, WA',
+            sublabel: 'Oct 12 · 24 min',
+            value: 38,
+            formattedValue: '38 kWh',
+            hint: '$15.20',
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Oct 12 · 24 min')).toHaveClass('text-[var(--text-muted)]');
+    expect(screen.getByText('$15.20')).toHaveClass('text-[var(--text-muted)]');
+    // The headline value stays prominent and tabular.
+    expect(screen.getByText('38 kWh')).toHaveClass('font-semibold', 'tabular-nums');
+  });
+
+  it('renders one decorative status dot per state while the text names the state', () => {
+    const { container } = render(
+      <WidgetRankedList
+        order="source"
+        items={[
+          makeItem({ id: 'ok', label: 'Flowing', value: 3, formattedValue: '3 kW', status: 'success' }),
+          makeItem({ id: 'warn', label: 'Paused', value: 2, formattedValue: '0 kW', status: 'warning' }),
+          makeItem({ id: 'bad', label: 'Fault', value: 1, formattedValue: '—', status: 'error' }),
+          makeItem({ id: 'info', label: 'Scheduled', value: 0, formattedValue: '22:00', status: 'info' }),
+        ]}
+      />,
+    );
+
+    const dots = decorations(container);
+    expect(dots).toHaveLength(4);
+    expect(dots[0]).toHaveClass('bg-[var(--semantic-success)]');
+    expect(dots[1]).toHaveClass('bg-[var(--semantic-warning)]');
+    expect(dots[2]).toHaveClass('bg-[var(--semantic-danger)]');
+    expect(dots[3]).toHaveClass('bg-[var(--semantic-info)]');
+    // Meaning never travels by color alone.
+    expect(screen.getByText('Flowing')).toBeInTheDocument();
+    expect(screen.getByText('Fault')).toBeInTheDocument();
   });
 
   it('renders the empty state (role=status) with a default message when the list is empty', () => {
@@ -249,8 +296,8 @@ describe('WidgetRankedList', () => {
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
   });
 
-  it('coerces a non-finite value to 0 so the bar width never becomes NaN%', () => {
-    const { container } = render(
+  it('coerces a non-finite value to 0 for sort safety while keeping caller text', () => {
+    render(
       <WidgetRankedList
         items={[
           makeItem({ id: 'ok', label: 'Ok', value: 100, formattedValue: '100' }),
@@ -259,15 +306,14 @@ describe('WidgetRankedList', () => {
       />,
     );
 
-    const rendered = bars(container);
-    expect(rendered).toHaveLength(2);
-    // NaN collapses to 0 → a 0% bar rather than the literal string "NaN%".
-    expect(rendered[1].style.width).toBe('0%');
-    expect(rendered[1].style.width).not.toContain('NaN');
+    // NaN collapses to 0 for ordering; the caller's placeholder text survives.
+    const rows = screen.getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('Ok');
+    expect(rows[1]).toHaveTextContent('Bad—');
   });
 
-  it('clamps a negative value to a 0% bar width', () => {
-    const { container } = render(
+  it('renders a negative reading as a plain row without clamping artifacts', () => {
+    render(
       <WidgetRankedList
         items={[
           makeItem({ id: 'p', label: 'Pos', value: 100, formattedValue: '100' }),
@@ -276,9 +322,7 @@ describe('WidgetRankedList', () => {
       />,
     );
 
-    const rendered = bars(container);
-    // -50 / 100 → -50% would be an invalid width; it is clamped to 0%.
-    expect(rendered[1].style.width).toBe('0%');
+    expect(screen.getByText('-50')).toBeInTheDocument();
   });
 
   it('falls back to an em-dash for a missing label or formatted value', () => {
@@ -342,18 +386,19 @@ describe('WidgetRankedList', () => {
 
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveTextContent('1Caller firstPending');
-    expect(rows[1]).toHaveTextContent('2Caller secondLow effort');
-    expect(rows[2]).toHaveTextContent('3Caller thirdHigh effort');
+    expect(rows[0]).toHaveTextContent('Caller first');
+    expect(rows[0]).toHaveTextContent('Pending');
+    expect(rows[1]).toHaveTextContent('Caller second');
+    expect(rows[2]).toHaveTextContent('Caller third');
   });
 
-  it('keeps null and missing readings as unknown rows while measured zero has a bar', () => {
+  it('keeps null and missing readings as unknown rows while measured zero stays a row', () => {
     const missing: RankedItem = {
       id: 'missing',
       label: 'Missing',
       formattedValue: 'Not reported',
     };
-    const { container } = render(
+    render(
       <WidgetRankedList
         order="source"
         items={[
@@ -367,18 +412,16 @@ describe('WidgetRankedList', () => {
 
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(4);
-    expect(rows[0]).toHaveTextContent('NullUnknown');
-    expect(rows[1]).toHaveTextContent('MissingNot reported');
-    expect(rows[2]).toHaveTextContent('Measured zero0 visits');
-    expect(rows[0].querySelector('[aria-hidden="true"]')).toBeNull();
-    expect(rows[1].querySelector('[aria-hidden="true"]')).toBeNull();
-    expect(bars(container)).toHaveLength(2);
-    expect(bars(container)[0].style.width).toBe('0%');
-    expect(bars(container)[1].style.width).toBe('100%');
+    expect(rows[0]).toHaveTextContent('Null');
+    expect(rows[0]).toHaveTextContent('Unknown');
+    expect(rows[1]).toHaveTextContent('Missing');
+    expect(rows[1]).toHaveTextContent('Not reported');
+    expect(rows[2]).toHaveTextContent('Measured zero');
+    expect(rows[2]).toHaveTextContent('0 visits');
   });
 
   it('defaults to finite descending order with unknowns after zero and negative readings', () => {
-    const { container } = render(
+    render(
       <WidgetRankedList
         items={[
           makeItem({ id: 'unknown', label: 'Unknown', value: null, formattedValue: 'No reading' }),
@@ -393,13 +436,12 @@ describe('WidgetRankedList', () => {
     expect(rows).toHaveLength(4);
     expect(rows[0]).toHaveTextContent('Positive');
     expect(rows[1]).toHaveTextContent('Zero');
-    expect(rows[2]).toHaveTextContent('Negative-5');
-    expect(rows[3]).toHaveTextContent('UnknownNo reading');
-    expect(bars(container).map((bar) => bar.style.width)).toEqual(['100%', '0%', '0%']);
+    expect(rows[2]).toHaveTextContent('Negative');
+    expect(rows[3]).toHaveTextContent('Unknown');
   });
 
   it('retains malformed-number zero safety and formatted text without treating null as zero', () => {
-    const { container } = render(
+    render(
       <WidgetRankedList
         order="source"
         items={[
@@ -412,16 +454,14 @@ describe('WidgetRankedList', () => {
     );
 
     expect(screen.getAllByRole('listitem')).toHaveLength(4);
-    expect(bars(container).map((bar) => bar.style.width)).toEqual(['0%', '0%', '0%']);
     expect(screen.getByText('Invalid reading')).toBeInTheDocument();
     expect(screen.getByText('Out of range')).toBeInTheDocument();
     expect(screen.getByText('Invalid range')).toBeInTheDocument();
     expect(screen.getByText('Not measured')).toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')[3].querySelector('[aria-hidden="true"]')).toBeNull();
   });
 
-  it('keeps all-unknown rows and caller labels without inventing magnitude bars', () => {
-    const { container } = render(
+  it('keeps all-unknown rows with caller labels instead of an empty state', () => {
+    render(
       <WidgetRankedList
         items={[
           makeItem({ id: 'first', label: 'First', value: null, formattedValue: 'Unknown' }),
@@ -432,16 +472,15 @@ describe('WidgetRankedList', () => {
 
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveTextContent('FirstUnknown');
-    expect(rows[1]).toHaveTextContent('SecondPending');
-    expect(bars(container)).toHaveLength(0);
+    expect(rows[0]).toHaveTextContent('First');
+    expect(rows[1]).toHaveTextContent('Second');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('wraps long rich labels and formatted evidence without hiding badges or values', () => {
     const label = 'A long caller-owned route label with all destination evidence retained';
     const formattedValue = 'Unavailable until the complete source reading arrives';
-    const { container } = render(
+    render(
       <WidgetRankedList
         wrapContent
         items={[makeItem({
@@ -460,17 +499,16 @@ describe('WidgetRankedList', () => {
     const labelSlot = screen.getByText(label).parentElement?.parentElement;
     expect(labelSlot).toHaveClass('whitespace-normal', 'break-words');
     expect(labelSlot).not.toHaveClass('truncate');
-    expect(screen.getByText(formattedValue)).toHaveClass('whitespace-normal', 'break-words', 'max-w-full');
+    expect(screen.getByText(formattedValue)).toHaveClass('whitespace-normal', 'break-words');
     expect(screen.getByText('Pending')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
-    expect(bars(container)).toHaveLength(0);
   });
 
   it('retains default truncated labels and non-wrapping formatted values', () => {
     render(<WidgetRankedList items={[makeItem({ label: 'Default label', formattedValue: 'Formatted value' })]} />);
 
     expect(screen.getByText('Default label')).toHaveClass('truncate');
-    expect(screen.getByText('Formatted value')).toHaveClass('shrink-0');
+    expect(screen.getByText('Formatted value')).not.toHaveClass('whitespace-normal');
   });
 
   it('applies caller limits to source order including unknown rows and compact overrides', () => {
@@ -478,22 +516,21 @@ describe('WidgetRankedList', () => {
       makeItem({ id: 'unknown', label: 'First unknown', value: null, formattedValue: 'Pending' }),
       ...makeSeries(7),
     ];
-    const { rerender, container } = render(
+    const { rerender } = render(
       <WidgetRankedList items={items} order="source" maxItems={2} />,
     );
 
     let rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveTextContent('First unknownPending');
+    expect(rows[0]).toHaveTextContent('First unknown');
     expect(rows[1]).toHaveTextContent('A');
     expect(screen.queryByText('B')).not.toBeInTheDocument();
 
     rerender(<WidgetRankedList items={items} order="source" compact maxItems={7} />);
     rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(7);
-    expect(rows[0]).toHaveTextContent('First unknownPending');
+    expect(rows[0]).toHaveTextContent('First unknown');
     expect(rows[6]).toHaveTextContent('F');
     expect(screen.queryByText('G')).not.toBeInTheDocument();
-    expect(bars(container)).toHaveLength(0);
   });
 });
