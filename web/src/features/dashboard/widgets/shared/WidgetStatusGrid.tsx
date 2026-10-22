@@ -70,7 +70,13 @@ export function WidgetStatusGrid({
   const resolvedCols = compact ? 2 : cols;
 
   return (
-    <div className={cn('grid min-w-0 gap-2', dashboardTokens.columns[resolvedCols] ?? dashboardTokens.columns[2])}>
+    <div
+      className={cn(
+        'grid min-w-0',
+        dashboardTokens.density.gridGap,
+        dashboardTokens.columns[resolvedCols] ?? dashboardTokens.columns[2],
+      )}
+    >
       {items.map((cell) => {
         // Fail closed like StatusBadge: a status outside the known union (e.g. a
         // raw backend string cast to StatusCell['status']) must not dereference
@@ -82,14 +88,17 @@ export function WidgetStatusGrid({
           <div
             key={cell.id}
             className={cn(
-              'relative flex min-h-11 min-w-0 items-start gap-2 border-b border-[var(--border-subtle)] py-2 last:border-b-0',
+              // After `.sgi`: bordered 10px box, 8px dot/body gap, no ambient motion.
+              'flex min-w-0 items-center gap-2 border border-[var(--border-subtle)]',
+              dashboardTokens.radius.inner,
+              dashboardTokens.density.itemPadding,
               compact && 'py-1.5',
             )}
           >
             {/* Status meaning remains visible as text independently of this dot. */}
             <span
               aria-hidden="true"
-              className={cn('mt-1.5 size-2 shrink-0 rounded-full', style.dot)}
+              className={cn('size-2 shrink-0 rounded-full', style.dot)}
             />
 
             {cell.icon && (
@@ -99,13 +108,26 @@ export function WidgetStatusGrid({
             )}
 
             <div className="min-w-0 flex-1">
-              <p className={dashboardTokens.metricLabel}>{cell.label}</p>
+              <p className={typography.role.caption}>{cell.label}</p>
               {cell.value && (
-                <p className={cn(typography.role.body, 'break-words font-medium')}>
+                <p
+                  className={cn(
+                    typography.size.sm,
+                    typography.weight.semibold,
+                    typography.color.primary,
+                    'truncate tabular-nums',
+                  )}
+                  title={cell.value}
+                >
                   {cell.value}
                 </p>
               )}
-              <span className={cn(typography.role.caption, 'block break-words')}>{statusLabel}</span>
+              <span
+                className={cn(typography.role.caption, 'block truncate')}
+                title={statusLabel}
+              >
+                {statusLabel}
+              </span>
             </div>
           </div>
         );
