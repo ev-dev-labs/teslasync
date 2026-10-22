@@ -1,5 +1,6 @@
 import { printStylesheetURL, printWhenReady } from './printDocument'
 import { formatDate } from './dateFormat'
+import { fmtInt } from './numberFormat'
 
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
@@ -32,13 +33,11 @@ export function generateCarbonCertificate(data: {
       <h1>\u{1f30d} Carbon Offset Certificate</h1>
       <div class="subtitle">Powered by TeslaSync</div>
       <div class="hero">
-        // tz-number-format: thousands grouping on a plain number
-        <div class="hero-number">${Math.round(co2SavedKg).toLocaleString()}</div>
+        <div class="hero-number">${fmtInt(Math.round(co2SavedKg))}</div>
         <div class="hero-unit">kg CO\u{2082} Avoided</div>
       </div>
       <div class="stats">
-        // tz-number-format: thousands grouping on a plain number
-        <div class="stat"><div class="stat-value">${Math.round(data.totalKm).toLocaleString()}</div><div class="stat-label">km Driven Electric</div></div>
+        <div class="stat"><div class="stat-value">${fmtInt(Math.round(data.totalKm))}</div><div class="stat-label">km Driven Electric</div></div>
         <div class="stat"><div class="stat-value">${treesEquivalent}</div><div class="stat-label">Trees Equivalent</div></div>
         <div class="stat"><div class="stat-value">${gallonsSaved}</div><div class="stat-label">Gallons Saved</div></div>
       </div>

@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
+import { toIsoString } from '@/lib/dateFormat';
 
 import type { DepartureForecast } from '../../lib/departureForecast';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -37,8 +38,7 @@ export function DepartureForecastMethodology({
       title: t('departure.method.snapshotTitle', 'Fixed model snapshot'),
       body: <>
         {t('departure.brief.snapshotAnchor', 'Model snapshot anchor: ')}
-        {/* tz-computation: machine-readable <time dateTime>; human text renders via the shared layer */}
-        <time dateTime={new Date(forecast.nowMs).toISOString()}>
+        <time dateTime={toIsoString(forecast.nowMs) ?? undefined}>
           {departureDateTime(forecast.nowMs, locale, timeZone)}
         </time>
         {'. '}

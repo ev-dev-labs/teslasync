@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
+import { toIsoString } from '@/lib/dateFormat';
 import { Text } from '@/components/ui';
 import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import { summarizeItems, type MaintenanceItem } from './maintenanceModel';
@@ -36,8 +37,7 @@ export function MaintenanceSummary({
           period={{
             kind: 'snapshot',
             label: t('dataSources.labels.maintenanceItems', 'Maintenance items'),
-            // tz-computation: ISO observed-at in the period data object; the brief renders it via the shared layer
-            observedAt: source.updatedAt != null ? new Date(source.updatedAt).toISOString() : null,
+            observedAt: toIsoString(source.updatedAt),
             provenance: t('maintenance.summary.provenance', 'Counts use all returned maintenance items, before category filtering.'),
           }}
           retained={source.hasData && (source.status === 'stale' || source.isRefreshBlocked || source.refreshError != null)}

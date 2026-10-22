@@ -23,6 +23,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 
 import { cn } from '@/lib/cn';
+import { toIsoString } from '@/lib/dateFormat';
 import type { FSMTransition, FSMType } from '@/types/fsm';
 import { FSM_TYPE_OPTIONS } from '@/types/fsm';
 import { StateBadge } from '../components/StateBadge';
@@ -813,9 +814,8 @@ export default function StateMachineDebuggerPage() {
               totalCount={transData?.total}
               rangeScope={rangeScope}
               page={serverPage}
-              // tz-computation: ISO window bounds passed as data props; rendered output goes through the shared layer
-              bufferSince={bufferClearedAt?.toISOString()}
-              windowEnd={windowed.anchor.toISOString()}
+              bufferSince={toIsoString(bufferClearedAt)}
+              windowEnd={toIsoString(windowed.anchor)}
             />
           </div>
           <StateTimeline

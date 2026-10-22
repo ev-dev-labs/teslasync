@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useMemo } from 'react';
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from '../charging-curve/helpers';
-import { ymdInTz } from '@/lib/dateFormat';
+import { ymdInTz, zonedDateParts } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { CHART_COLORS, CHARGER_COLORS } from '@/lib/colors';
 import { KWH_PER_GALLON, CO2_PER_GAL_KG, KG_CO2_PER_TREE_YEAR } from './constants';
@@ -150,19 +150,12 @@ export function useCostAnalysisData({
   const { t } = useTranslation();
   const { tz: accountingTimezone, formatDateShort } = useDateFormat();
   const sessionDates = useMemo(() => {
-    // tz-computation: extracts the session hour as a number for grouping; the number is computed with, never rendered
-    const hourFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: accountingTimezone, hour: 'numeric', hourCycle: 'h23',
-    });
     return new Map((sourceSessions ?? []).map(session => {
       const date = session.started_at ? new Date(session.started_at) : null;
       const validDate = date && Number.isFinite(date.getTime()) ? date : null;
-      const hour = validDate
-        ? Number(hourFormatter.formatToParts(validDate).find(part => part.type === 'hour')?.value)
-        : NaN;
       return [session, {
         month: validDate ? ymdInTz(validDate, accountingTimezone)?.slice(0, 7) ?? null : null,
-        hour: Number.isFinite(hour) ? hour : null,
+        hour: validDate ? zonedDateParts(validDate, accountingTimezone)?.hour ?? null : null,
         timestamp: validDate?.getTime() ?? null,
       }];
     }));

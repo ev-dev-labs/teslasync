@@ -124,7 +124,6 @@ export default function WeeklyDigestPage() {
     - ((now.getUTCDay() + 6) % 7));
   const selectedMonday = Date.UTC(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
   const aiWeekOffset = (selectedMonday - utcMonday) / (7 * 24 * 60 * 60 * 1000);
-  // tz-computation: ISO week bound passed to the AI panel as data; rendered output goes through the shared layer
   const aiWeekStartIso = weekStart.toISOString();
 
   // Period metadata describes, but never controls, the independent digest

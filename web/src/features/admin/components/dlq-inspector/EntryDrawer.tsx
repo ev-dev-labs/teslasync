@@ -256,8 +256,7 @@ export function EntryDrawer({
                 : undefined}
             />
             {detail.hasData && detail.updatedAt != null && detail.status === 'stale' && (
-              // tz-computation: ISO feeds the shared TimeStamp renderer; the formatted string renders, not the ISO
-              <TimeStamp value={new Date(detail.updatedAt).toISOString()} format="absolute" />
+              <TimeStamp value={detail.updatedAt} format="absolute" />
             )}
             {detail.fatalError ? (
               <QueryError error={detail.fatalError} onRetry={detail.retry ?? undefined} />

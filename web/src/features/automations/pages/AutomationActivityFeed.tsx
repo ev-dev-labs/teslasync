@@ -100,14 +100,12 @@ function LiveEventRow({ event }: { event: AutomationActivityEvent }) {
     : `#${(event.data as { automation_id: number }).automation_id}`;
   const errMsg = 'error' in event.data ? (event.data as { error?: string }).error : undefined;
   const reason = 'reason' in event.data ? (event.data as { reason?: string }).reason : undefined;
-  // tz-computation: ISO feeds the shared relative-time formatter; the formatted string renders, not the ISO
-  const eventTime = formatRelativeTime(event.receivedAt.toISOString());
 
   return (
     <TimelineItem
       icon={<Icon className={cn('h-4 w-4 animate-pulse motion-reduce:animate-none', cfg.color)} aria-hidden="true" />}
       title={name}
-      time={eventTime}
+      time={formatRelativeTime(event.receivedAt)}
       wrap
       isLast
       badges={

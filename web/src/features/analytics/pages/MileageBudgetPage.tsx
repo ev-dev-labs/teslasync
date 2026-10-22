@@ -25,6 +25,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 import { isFiniteNumber } from '@/lib/numberFormat';
+import { toIsoString } from '@/lib/dateFormat';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { chartTokens } from '@/lib/tokens';
 import type { Drive } from '@/types/driving';
@@ -164,8 +165,7 @@ export default function MileageBudgetPage() {
             kind: 'event',
             eventId: `mileage-budget:${config.termStartIso}`,
             start: config.termStartIso,
-            // tz-computation: ISO end bound in the period data object; the brief renders it via the shared layer
-            end: Number.isFinite(budget.termEndMs) ? new Date(budget.termEndMs).toISOString() : null,
+            end: toIsoString(budget.termEndMs),
             provenance: t('mileageBudget.termProvenance', 'Configured term; observed drive-history coverage may be incomplete.'),
             label: t('mileageBudget.termPeriod', 'Term starting {{start}} · {{months}} months', { start: formatDayKey(config.termStartIso), months: config.termMonths }),
           }}

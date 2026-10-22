@@ -463,8 +463,7 @@ export default function JurisdictionCompliancePage() {
                 : t('common.unknown', 'Unknown')}
             statusTone={reportState.status === 'stale' ? 'warning' : 'neutral'}
             freshness={reportState.updatedAt != null
-              // tz-computation: ISO feeds the shared formatter; the formatted string renders, not the ISO
-              ? formatDateTime(new Date(reportState.updatedAt).toISOString(), { locale }) : undefined}
+              ? formatDateTime(reportState.updatedAt, { locale }) : undefined}
           />
         </OwnershipPanel>
       </FadeIn>

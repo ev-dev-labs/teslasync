@@ -173,6 +173,12 @@ describe('toDateInputValue', () => {
   it('returns an empty string for unparseable garbage', () => {
     expect(toDateInputValue('not-a-date')).toBe('');
   });
+
+  it('accepts epoch millis and Date instances like the ISO string', () => {
+    expect(toDateInputValue(Date.parse('2025-03-15T23:30:00Z'))).toBe('2025-03-15');
+    expect(toDateInputValue(new Date('2025-03-15T23:30:00Z'))).toBe('2025-03-15');
+    expect(toDateInputValue(0)).toBe('1970-01-01');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────

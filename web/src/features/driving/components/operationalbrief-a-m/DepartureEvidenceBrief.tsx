@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { toIsoString } from '@/lib/dateFormat';
 import type { DepartureForecastKpiBand } from '../departure-forecast/DepartureForecastKpiBand';
 import { DepartureForecastQueryStatus } from '../departure-forecast/DepartureForecastQueryStatus';
 import { departureClock, departureDateTime, departureEvidenceBandLabel, relativeDepartureLabel } from '../departure-forecast/labels';
@@ -70,8 +71,7 @@ export function DepartureEvidenceBrief({ forecast, state, locale, timeZone, time
       description={t('departure.brief.description', 'Next-24-hour modeled likelihood uses capped observed departure history; the support index is not a calibrated probability or confidence score.')}
       scope={<>
         {t('departure.brief.snapshotAnchor', 'Model snapshot anchor: ')}
-        {/* tz-computation: machine-readable <time dateTime>; human text renders via the shared layer */}
-        <time dateTime={new Date(forecast.nowMs).toISOString()}>
+        <time dateTime={toIsoString(forecast.nowMs) ?? undefined}>
           {departureDateTime(forecast.nowMs, locale, timeZone)}
         </time>
         {timeZoneProvenance && <>{' · '}{timeZoneProvenance}</>}

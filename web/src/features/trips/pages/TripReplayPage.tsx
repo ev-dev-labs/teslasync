@@ -30,7 +30,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { useTripReplay } from '@/hooks/useTripReplay';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { haversineDistance } from '@/lib/geo';
-import { formatDate } from '@/lib/dateFormat';
+import { formatDate, toIsoString } from '@/lib/dateFormat';
 import { fmtInt as formatInt } from '@/lib/numberFormat';
 import { asFiniteNumber } from '@/lib/typeGuards';
 
@@ -674,8 +674,7 @@ export default function TripReplayPage() {
                         </Text>
                         <Text as="dd" variant="caption" className="[overflow-wrap:anywhere]">
                           {t('common.timestamp', 'Timestamp')}: {sourceTs != null
-                            // tz-computation: machine-readable <time dateTime>; human text renders via the shared layer
-                            ? <time dateTime={new Date(sourceTs).toISOString()}>{formatDateTime(new Date(sourceTs).toISOString())}</time>
+                            ? <time dateTime={toIsoString(sourceTs) ?? undefined}>{formatDateTime(sourceTs)}</time>
                             : t('common.unknown', 'Unknown')}
                           {' · '}{t('statistics.age', 'Age')}: {age}
                         </Text>

@@ -455,8 +455,7 @@ export default function CommandHistoryPage() {
                         : t('commandHistory.brief.recorded', 'Recorded command history')}
               statusTone={state.status === 'stale' ? 'warning' : 'neutral'}
               freshness={state.updatedAt != null
-                // tz-computation: ISO feeds the shared formatter; the formatted string renders, not the ISO
-                ? formatDateTime(new Date(state.updatedAt).toISOString(), { tz: timeZone, locale }) : undefined}
+                ? formatDateTime(state.updatedAt, { tz: timeZone, locale }) : undefined}
             />
           )}
         </section>

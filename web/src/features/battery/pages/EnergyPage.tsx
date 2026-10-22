@@ -59,7 +59,7 @@ import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useDataState } from '@/hooks/useDataState';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
-import { formatDateShort, formatDayKey, ymdInTz } from '@/lib/dateFormat';
+import { formatDateShort, formatDayKey, ymdInTz, zonedDateParts } from '@/lib/dateFormat';
 
 import { chartTokens, gaugeTone, typography, type NeonColor } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
@@ -124,15 +124,6 @@ export default function EnergyPage() {
   const { reduce, durationMs } = useMotionPreference();
   const { formatCurrency, currencySymbol, estimateGasCost } = useFormatting();
   const { tz: timezone } = useDateFormat();
-  const sessionHourFormatter = useMemo(
-    // tz-computation: extracts the session hour as a number for grouping; the number is computed with, never rendered
-    () => new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      hour: 'numeric',
-      hourCycle: 'h23',
-    }),
-    [timezone],
-  );
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   const toEnergyDisplay = (wh: number) => convertEnergyFromSI(wh, unitPrefs.energy);
 
@@ -490,8 +481,8 @@ export default function EnergyPage() {
     const buckets: Record<string, { count: number; energy: number }> = {};
     labels.forEach((l) => { buckets[l] = { count: 0, energy: 0 }; });
     sessions.forEach((s) => {
-      const hour = Number(sessionHourFormatter.format(new Date(s.started_at)));
-      if (!Number.isFinite(hour)) return;
+      const hour = zonedDateParts(s.started_at, timezone)?.hour;
+      if (hour == null) return;
       const idx = hour < 6 ? 0 : hour < 12 ? 1 : hour < 18 ? 2 : 3;
       buckets[labels[idx]].count++;
       buckets[labels[idx]].energy += s.total_energy_added_wh ?? 0;
@@ -503,7 +494,7 @@ export default function EnergyPage() {
       count: buckets[name].count,
       energy: convertEnergyFromSI(buckets[name].energy, energyUnit),
     }));
-  }, [sessions, t, energyUnit, sessionHourFormatter]);
+  }, [sessions, t, energyUnit, timezone]);
 
   /* ── Charger-type breakdown ───────────────────────────────────── */
   const chargerBreakdown = useMemo(() => {

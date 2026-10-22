@@ -1,5 +1,5 @@
 import { fmtNumber } from '@/lib/numberFormat';
-import { zonedWallTimeToUtc } from '@/lib/dateFormat';
+import { zonedDateParts, zonedWallTimeToUtc } from '@/lib/dateFormat';
 import { CITY_PAIRS } from './constants';
 
 /**
@@ -33,27 +33,14 @@ export function getWeekRange(offset: number, timeZone?: string): [Date, Date] {
   return [start, end];
 }
 
-const ZONE_WEEKDAY: Record<string, number> = {
-  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
-};
-
 /** Monday 00:00 → Sunday 23:59:59.999 in `timeZone`, or null to fall back. */
 function zonedWeekRange(offset: number, timeZone: string): [Date, Date] | null {
-  let parts: Intl.DateTimeFormatPart[];
-  try {
-    // tz-computation: reads zoned weekday parts to build week ranges; parts are computed with, never rendered
-    parts = new Intl.DateTimeFormat('en-US', {
-      timeZone, weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit',
-    }).formatToParts(new Date());
-  } catch {
-    return null;
-  }
-  const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? '';
-  const dow = ZONE_WEEKDAY[get('weekday')] ?? -1;
-  const y = Number(get('year'));
-  const m = Number(get('month'));
-  const d = Number(get('day'));
-  if (dow < 0 || !Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return null;
+  const parts = zonedDateParts(new Date(), timeZone);
+  if (!parts) return null;
+  const dow = parts.weekday;
+  const y = parts.year;
+  const m = parts.month;
+  const d = parts.day;
   const daysSinceMonday = dow === 0 ? 6 : dow - 1;
   // Date arithmetic on the zone wall calendar (UTC getters sidestep the
   // browser zone; Date.UTC normalizes across month boundaries).
