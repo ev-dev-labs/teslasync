@@ -8,10 +8,10 @@
  *                   shown when the user dismissed the widget OR the 24h
  *                   post-completion celebration window has elapsed
  *                   (decided by the REAL `shouldHideChecklist`).
- *   - active      → a progress header (done/total + %, an accessible
- *                   `progressbar`), one row per visible task (completion glyph,
- *                   title, description, and a CTA button only while incomplete),
- *                   and — once every task is complete — a celebratory footer.
+ *   - active      → an After hero ("X of Y done", an accessible
+ *                   `progressbar` meter — no standalone %), one compact
+ *                   `.check` row per visible task (18px round box + title
+ *                   only, and a CTA button only while incomplete).
  *   - empty       → an explicit "no setup steps" empty state (never a blank
  *                   panel) when the hook yields zero tasks.
  *
@@ -28,18 +28,18 @@
  *   - hidden (dismissed)         → "hidden" title, Restart wired to `restart`,
  *                                  full checklist suppressed.
  *   - hidden (celebration over)  → "all set" title after the window elapses.
- *   - active progress header     → done/total text, rounded %, progressbar
- *                                  aria-valuenow / aria-valuemax.
- *   - task rows                  → title + description; completed rows are
- *                                  flagged and CTA-less; incomplete rows expose
- *                                  a CTA.
+ *   - active hero                → "X of Y done" text, meter fill width,
+ *                                  progressbar aria-valuenow / aria-valuemax.
+ *   - task rows                  → title only (no description); completed
+ *                                  rows are flagged and CTA-less; incomplete
+ *                                  rows expose a CTA.
  *   - CTA routing                → non-palette CTA → `navigate(ctaTo)`; palette
  *                                  sentinel → `toggle-command-palette` event and
  *                                  NO navigation.
  *   - dismiss                    → header control invokes `dismiss`.
- *   - completion footer          → 100% + celebratory footer inside the window;
- *                                  its dismiss control invokes `dismiss`.
- *   - empty                      → explicit empty state, "0/0 complete", "0%",
+ *   - completion                 → 100% hero + meter inside the window, no
+ *                                  CTAs, single header Dismiss.
+ *   - empty                      → explicit empty state, "0 of 0 done",
  *                                  no task list.
  */
 
@@ -227,9 +227,9 @@ describe('OnboardingChecklistWidget — prerequisite trust and reactive hierarch
   it('updates completion counts after a locale preference change without re-fetching', () => {
     mockUseChecklist.mockReturnValue(makeState({ totalCount: 1234, completeCount: 1000, allComplete: false }));
     renderWidget();
-    expect(screen.getByText('1,000/1,234 complete')).toBeInTheDocument();
+    expect(screen.getByText('1,000 of 1,234 done')).toBeInTheDocument();
     act(() => setGlobalLocale('de-DE'));
-    expect(screen.getByText('1.000/1.234 complete')).toBeInTheDocument();
+    expect(screen.getByText('1.000 of 1.234 done')).toBeInTheDocument();
   });
 });
 
@@ -277,7 +277,7 @@ describe('OnboardingChecklistWidget — hidden footprint', () => {
 });
 
 describe('OnboardingChecklistWidget — active checklist', () => {
-  it('renders the widget title, progress copy, rounded %, and an accessible progressbar', () => {
+  it('renders the widget title, After hero copy, meter fill, and an accessible progressbar', () => {
     const tasks = [
       makeTask({ id: 'a', complete: true }),
       makeTask({ id: 'b', complete: false }),
@@ -286,19 +286,23 @@ describe('OnboardingChecklistWidget — active checklist', () => {
     mockUseChecklist.mockReturnValue(
       makeState({ visibleTasks: tasks, totalCount: 3, completeCount: 1 }),
     );
-    renderWidget();
+    const { container } = renderWidget();
 
     expect(screen.getByText('Get started')).toBeInTheDocument();
-    expect(screen.getByText('1/3 complete')).toBeInTheDocument();
-    expect(screen.getByText('33%')).toBeInTheDocument();
+    expect(screen.getByText('1 of 3 done')).toBeInTheDocument();
+    // No standalone % — the meter carries progress (spec rule 3).
+    expect(screen.queryByText('33%')).toBeNull();
 
     const bar = screen.getByRole('progressbar');
     expect(bar).toHaveAttribute('aria-valuenow', '1');
     expect(bar).toHaveAttribute('aria-valuemax', '3');
     expect(bar).toHaveAttribute('aria-valuemin', '0');
+    const fill = bar.firstElementChild as HTMLElement | null;
+    expect(fill?.style.width).toBe('33%');
+    expect(container.querySelector('[data-testid="onboarding-checklist"]')).not.toBeNull();
   });
 
-  it('lists each task with title + description, flags completed rows, and gates the CTA on incompleteness', () => {
+  it('lists each task title only, flags completed rows, and gates the CTA on incompleteness', () => {
     const tasks = [
       makeTask({
         id: 'connect-vehicle',
@@ -323,7 +327,9 @@ describe('OnboardingChecklistWidget — active checklist', () => {
 
     expect(screen.getByText('Connect your Tesla')).toBeInTheDocument();
     expect(screen.getByText('Pick a theme')).toBeInTheDocument();
-    expect(screen.getByText('Choose an accent color.')).toBeInTheDocument();
+    // After `.check` rows carry the title only — descriptions are dropped.
+    expect(screen.queryByText('Choose an accent color.')).toBeNull();
+    expect(screen.queryByText('Link your Tesla account.')).toBeNull();
 
     const completedRow = container.querySelector(
       '[data-testid="checklist-task-connect-vehicle"]',
@@ -404,7 +410,7 @@ describe('OnboardingChecklistWidget — dismiss & completion', () => {
     expect(dismiss).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the celebration footer (100%, no CTAs) inside the window and wires its dismiss control', () => {
+  it('renders the full hero at 100% (no CTAs, single header Dismiss) inside the celebration window', () => {
     const dismiss = vi.fn();
     const recentCompletedAt = Date.now() - 60_000;
     const tasks = [
@@ -425,16 +431,19 @@ describe('OnboardingChecklistWidget — dismiss & completion', () => {
 
     // Still inside the 24h window — the full checklist stays visible.
     expect(screen.getByTestId('onboarding-checklist')).toBeInTheDocument();
-    expect(screen.getByText('100%')).toBeInTheDocument();
-    expect(screen.getByText("You're all set! 🎉")).toBeInTheDocument();
+    expect(screen.getByText('2 of 2 done')).toBeInTheDocument();
+    const bar = screen.getByRole('progressbar');
+    expect(bar).toHaveAttribute('aria-valuenow', '2');
+    expect((bar.firstElementChild as HTMLElement | null)?.style.width).toBe('100%');
+    // After design has no celebration footer; the headline carries completion.
+    expect(screen.queryByText("You're all set! 🎉")).toBeNull();
     // Every task complete → no CTAs.
     expect(screen.queryByRole('button', { name: /Open/ })).toBeNull();
 
-    // Two "Dismiss" affordances exist (header icon-button + footer button);
-    // both are wired to dismiss. Activate the footer one.
+    // Only the header Dismiss remains; it is wired to dismiss.
     const dismissButtons = screen.getAllByRole('button', { name: 'Dismiss' });
-    expect(dismissButtons).toHaveLength(2);
-    fireEvent.click(dismissButtons[dismissButtons.length - 1]);
+    expect(dismissButtons).toHaveLength(1);
+    fireEvent.click(dismissButtons[0]);
     expect(dismiss).toHaveBeenCalledTimes(1);
   });
 });
@@ -449,8 +458,8 @@ describe('OnboardingChecklistWidget — empty state', () => {
     expect(
       screen.getByText('No setup steps available right now.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('0/0 complete')).toBeInTheDocument();
-    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('0 of 0 done')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
     // The empty branch replaces the task list entirely.
     expect(screen.queryByTestId('onboarding-checklist')).toBeNull();
   });
