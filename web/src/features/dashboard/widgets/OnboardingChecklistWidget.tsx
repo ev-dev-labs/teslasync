@@ -229,7 +229,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
                     className={cn(
                       'grid h-[18px] w-[18px] flex-none place-items-center rounded-full border-[1.5px]',
                       task.complete
-                        ? 'border-[var(--semantic-success)] bg-[var(--semantic-success)] text-white'
+                        ? 'border-[var(--semantic-success)] bg-[var(--semantic-success)] text-[var(--text-on-accent)]'
                         : 'border-[var(--border-default)] text-transparent',
                     )}
                     aria-hidden="true"

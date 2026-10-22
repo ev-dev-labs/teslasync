@@ -256,7 +256,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
           {/* Vehicle name + model, with the trusted status pill. */}
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
-              <Heading level="section" className="min-w-0 max-w-full break-words text-[15px]">
+              <Heading level="section" className="min-w-0 max-w-full break-words text-base">
                 {modelLine ? `${vehicleName} · ${modelLine}` : vehicleName}
               </Heading>
               {subtitle ? (
@@ -312,7 +312,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
             {chargeLimit != null && (
               <div className="relative h-4" aria-hidden="true">
                 <span
-                  className="absolute -translate-x-1/2 text-[10px] whitespace-nowrap text-[var(--text-muted)]"
+                  className="absolute -translate-x-1/2 text-xs whitespace-nowrap text-[var(--text-muted)]"
                   style={{ left: `${chargeLimit}%` }}
                 >
                   {t('widget.chargeLimit', 'Limit')} {fmtNumber(chargeLimit, 0)}%

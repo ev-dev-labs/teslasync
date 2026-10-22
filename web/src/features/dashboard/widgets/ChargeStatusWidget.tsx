@@ -82,7 +82,7 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
         <div className="relative h-4" aria-hidden="true">
           <span
             data-testid="charge-limit-marker"
-            className="absolute bottom-0 -translate-x-1/2 text-[10px] font-medium whitespace-nowrap text-[var(--text-muted)]"
+            className="absolute bottom-0 -translate-x-1/2 text-xs font-medium whitespace-nowrap text-[var(--text-muted)]"
             style={{ left: `${chargeLimit}%` }}
           >
             {fmtNumber(chargeLimit, 0)}%
