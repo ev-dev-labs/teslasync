@@ -481,3 +481,6 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-22 - Muse: TZ-5 batch 3 committed (e2c6972b61)
 - arrival/destination labels.ts (12 Intl sites) to formatHourName(+showMinutes)/formatWeekdayName/formatMonthYear; driving suite 209 files / 3359 tests green, tsc clean.
 - Next: driving/battery/analytics lib Intl sites.
+## 2026-10-22 - Muse: TZ-5 batch 4 committed (ed59a0d318)
+- 6 weekday/month display sites to formatWeekdayName/formatMonthYear (regex dropped per calendar rule); 49 files green, tsc clean. Triage done: rest is computation/validation + daylog DST offset.
+- Next: audit-timezone-display.mjs guard + markers + route sweep.

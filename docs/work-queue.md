@@ -29,7 +29,7 @@ Branch HEAD: `147f180cf3` (7 TZ-4 commits pushed; PR202 run in progress, 5 jobs 
 | Calendar values unshifted (LA + Kiritimati tests) | done | `d4653c5517` + `86bb6e735d` | `formatMonthYear` day-rollover validation; `dateFormat.test.ts` 82 green |
 | `useConversionTimezone` + `resolveRawTimezone` (conversion boundaries) | done | `d4653c5517` + `86bb6e735d` | RateForm + JourneyAssurancePage converted; `timezone.test.ts` extended |
 | TZ-4 API `timezone` sends + backend zone params + Go tests | done | `284851a318..147f180cf3` (7, pushed) | Vitest 2727/57276 + tsc + Go green at push; PR202 run in progress |
-| TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `e2c6972b61` batch 3 | Batch 3 done (12 labels.ts sites -> shared + `showMinutes`; driving 209/3359 green, tsc clean). Next: driving/battery/analytics lib Intl sites, guard + sweep |
+| TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `ed59a0d318` batch 4 | Batch 4 done (6 weekday/month display sites -> shared; 49 files green, tsc clean). Triage complete: remaining Intl sites are computation/validation (markers) + daylog DST-offset display. Next: guard audit + markers + 277-route sweep |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | not started | — | Drive times, drawers, ranges, midnight day assignment |
 | Freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106`) | not started | revert set identified | `git revert` (no resets) after Part 1 code done; `cad1237f5f` only if shell-preservation fails; i18n conflicts via generators |
 | TZ-7 i18n regen, full local replica, commit, push, PR green | not started | — | Section 3 replica, then push once |
