@@ -22,7 +22,6 @@ import type { TzMode } from './timezone'
 import {
   FALLBACK,
   type FormatOptions,
-  formatDayKey,
   getFormatter,
   intlLocale,
   safeTimeZone,

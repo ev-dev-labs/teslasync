@@ -40,11 +40,20 @@ Branch HEAD: `658e6563fc` (pushed); Lighthouse budget fix in progress (startup 4
 
 ## Part 2 summary mirror (updated after every task once started)
 
-Phase 0 done, gate PASS (2026-10-22, workflow-verified): `state.md` has 119
-pending tasks (9 phase-2 pilots + 110 phase-3), `data-gaps.md` created,
-capture harness (`web/e2e/_cap/capture.spec.ts` + `web/playwright.cap.config.ts`)
-in place, 18 Before baselines (9 pilots × light/dark), worktree tree clean on
-`feat/widget-redesign`. Next: Phase 1 shared foundation via rolling workflow.
+Phase 0 gate PASS. Phase 1 shared foundation complete (14 tasks, rolling
+workflow; commits 7d81146653..7f68554fce + gap 1b9f1e9470 on
+`feat/widget-redesign`). Review fixes: 8bc591fbec (status-grid `relative`
+hook; RouteEfficiency bar test → After spec), 900d526fe5 (GMT-offset caption
+removed from WidgetChartSummary; guard R6 restricts offset helpers to .ts
+tick/timeline helpers; 2 new guard tests), dbf279d573 (i18n regen via
+sanctioned generators incl. new key widget.comparison.previousLabel).
+Branch pushed, tracking `origin/feat/widget-redesign` (never pull/push
+`fix/post-merge-followups` from the worktree). Gate 1 checks: tsc 0, eslint 0,
+TZ audit 0 (3726 files), guard tests 18/18, i18n 8110/8110, split-check OK;
+full unit suite re-running after corrections. Carry-overs recorded in
+state.md (TimelineItem density, FlowArrow.label adoption, dead barColor
+props). Next: Phase 2 pilots (9) via rolling workflow with the TZ line in
+every task.
 
 ## Part 3 counts (once started)
 
