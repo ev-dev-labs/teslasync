@@ -6,12 +6,10 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import type { StatMetric } from '@/components/data-display';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatusGrid } from './shared';
-import type { StatusCell } from './shared';
+import { WidgetStatGrid, WidgetStatusGrid } from './shared';
+import type { StatGridItem, StatusCell } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { getGlobalPrecision } from '@/lib/numberFormat';
@@ -68,36 +66,46 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
     });
   }, [cells, avgV, isWide, t, formatTemperature, fmtNumber, fmtScientificNumber]);
 
-  // Summary stats
-  const voltageMetrics: StatMetric[] = [
-    { metricId: 'number', occurrenceId: 'cells-min-voltage', rawValue: data?.min_voltage,
+  // After-spec summary row (stats primitive): Min / Max / Spread / Temp.
+  // Voltages keep 3-decimal honest precision; the spread is shown in mV with
+  // the healthy-threshold note from the target design; temperature collapses
+  // to the min–max range converted at the display boundary. A measured zero
+  // stays a value; a missing reading stays null so the tile shows '—'.
+  const minV = knownNumber(data?.min_voltage);
+  const maxV = knownNumber(data?.max_voltage);
+  const spreadMvRaw = knownNumber(data?.voltage_spread);
+  const spreadMv = spreadMvRaw != null ? spreadMvRaw * 1000 : null;
+  const minT = knownNumber(data?.min_temperature);
+  const maxT = knownNumber(data?.max_temperature);
+  const tempRange =
+    minT != null && maxT != null
+      ? `${formatTemperature(minT)}–${formatTemperature(maxT)}`
+      : minT != null
+        ? formatTemperature(minT)
+        : maxT != null
+          ? formatTemperature(maxT)
+          : null;
+  const summaryStats: StatGridItem[] = [
+    {
       label: t('widget.batteryCells.minV', 'Min V'),
-      description: t('widget.batteryCells.voltageSource', 'Returned cell voltage in volts; no conversion is applied to the source measurement.'),
-      display: { formatter: raw => ({ value: fmtNumber(raw, Math.max(3, getGlobalPrecision())), unit: 'V' }) } },
-    { metricId: 'number', occurrenceId: 'cells-max-voltage', rawValue: data?.max_voltage,
+      value: minV != null ? fmtNumber(minV, Math.max(3, getGlobalPrecision())) : null,
+      unit: 'V',
+    },
+    {
       label: t('widget.batteryCells.maxV', 'Max V'),
-      description: t('widget.batteryCells.voltageSource', 'Returned cell voltage in volts; no conversion is applied to the source measurement.'),
-      display: { formatter: raw => ({ value: fmtNumber(raw, Math.max(3, getGlobalPrecision())), unit: 'V' }) } },
-    { metricId: 'number', occurrenceId: 'cells-average-voltage', rawValue: data?.avg_voltage,
-      label: t('widget.batteryCells.avgV', 'Avg V'),
-      description: t('widget.batteryCells.voltageSource', 'Returned cell voltage in volts; no conversion is applied to the source measurement.'),
-      display: { formatter: raw => ({ value: fmtNumber(raw, Math.max(3, getGlobalPrecision())), unit: 'V' }) } },
-    { metricId: 'number', occurrenceId: 'cells-voltage-spread', rawValue: data?.voltage_spread,
+      value: maxV != null ? fmtNumber(maxV, Math.max(3, getGlobalPrecision())) : null,
+      unit: 'V',
+    },
+    {
       label: t('widget.batteryCells.spread', 'Spread'),
-      description: t('widget.batteryCells.spreadSource', 'Returned voltage spread in volts, displayed in millivolts.'),
-      display: { formatter: raw => ({ value: fmtNumber(raw * 1000), unit: 'mV' }) } },
-  ];
-  const temperatureMetrics: StatMetric[] = [
-    { metricId: 'temperature', occurrenceId: 'cells-min-temperature', rawValue: data?.min_temperature, label: t('widget.batteryCells.minTemp', 'Min temp') },
-    { metricId: 'temperature', occurrenceId: 'cells-average-temperature', rawValue: data?.avg_temperature, label: t('widget.batteryCells.avgTemp', 'Avg temp') },
-    { metricId: 'temperature', occurrenceId: 'cells-max-temperature', rawValue: data?.max_temperature, label: t('widget.batteryCells.maxTemp', 'Max temp') },
-  ];
-  const metrics: StatMetric[] = [
-    ...voltageMetrics,
-    ...(isWide ? temperatureMetrics.map(metric => ({
-      ...metric,
-      display: { formatter: (raw: number) => ({ value: formatTemperature(raw), unit: '' }) },
-    })) : []),
+      value: spreadMv != null ? fmtNumber(spreadMv) : null,
+      unit: 'mV',
+      sublabel: spreadMv != null && spreadMv < 30 ? `${t('widget.status.ok', 'Healthy')} < 30 mV` : undefined,
+    },
+    {
+      label: t('widget.motorTemp', 'Temp'),
+      value: tempRange,
+    },
   ];
 
   return (
@@ -124,14 +132,8 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
             />
           </div>
 
-          {/* Min / Max / Avg / Spread stats */}
-          <DashboardSourceBrief metrics={metrics} state={trust}
-            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
-            title={t('widget.batteryCells.summaryTitle', 'Returned cell measurements')}
-            description={t('widget.batteryCells.summaryDescription', 'Voltage extremes, average and spread summarize the returned cells; wide layouts also retain the temperature summary.')}
-            scope={t('widget.batteryCells.summaryScope', 'Vehicle {{id}} · returned cell snapshot; recording coverage is unknown.', { id: vid ?? '—' })}
-            loading={isLoading && !data}
-            testId="dashboard-battery-cells-brief" />
+          {/* Min / Max / Spread / Temp summary (After stats row) */}
+          <WidgetStatGrid cols={isCompact ? 2 : 4} stats={summaryStats} />
         </div>
     </WidgetShell>
   );

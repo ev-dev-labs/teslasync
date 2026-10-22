@@ -8,6 +8,14 @@
  *     variant (compact / medium / wide), plus loading / error / empty /
  *     null-data branches and the manual-refresh interaction.
  *
+ * After redesign (Phase 3, widget-id battery-cells): the per-cell status
+ * grid stays (the accessible form of the target heat map — every cell keeps
+ * its voltage plus a dot + word status), while the former
+ * DashboardSourceBrief summary is replaced by the shared stats row
+ * (Min / Max / Spread with its healthy-threshold note / Temp min–max range).
+ * The average-voltage and average-temperature tiles are dropped so each
+ * value appears once.
+ *
  * Strategy (mirrors the focused component-test convention used by
  * BatteryHealthPage.test.tsx):
  *   - The two data hooks (`useBatteryCells`, `useVehicles`) are replaced with
@@ -25,7 +33,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -189,9 +197,8 @@ describe('BatteryCellsWidget', () => {
     temperatureUnit = '°F';
     renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
     expect(screen.getByText('3.701 V / 75.2°F')).toBeInTheDocument();
-    expect(screen.getByText('73.6°F')).toBeInTheDocument();
-    expect(screen.getByText('76.1°F')).toBeInTheDocument();
-    expect(screen.getByText('78.8°F')).toBeInTheDocument();
+    // After-spec Temp stat is the min–max range, converted as a whole.
+    expect(screen.getByText('73.6°F–78.8°F')).toBeInTheDocument();
   });
   it('shows localized cell states as visible text, not just colors', () => {
     renderWidget(<BatteryCellsWidget size={SIZE_MEDIUM} />);
@@ -200,31 +207,42 @@ describe('BatteryCellsWidget', () => {
     expect(screen.getByText('Error')).toBeInTheDocument();
   });
 
-  it('keeps seven raw summary operands, signed temperatures and measured zero in the real wide brief', () => {
+  it('keeps measured zero, signed temperatures and the After stats row at wide size', () => {
     batteryCellsMock.mockReturnValue(makeQuery(makeSummary({
       min_voltage: 0, voltage_spread: 0, min_temperature: -5,
     })));
-    renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
-    const brief = screen.getByTestId('dashboard-battery-cells-brief');
-    expect(brief).toHaveTextContent('Returned cell measurements');
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const scopeDrawer = screen.getByRole('dialog');
-    expect(scopeDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('recording coverage is unknown');
-    fireEvent.keyDown(scopeDrawer, { key: 'Escape' });
-    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(7);
-    expect(brief).toHaveTextContent('0.000 V');
-    expect(brief).toHaveTextContent('0.00 mV');
-    expect(brief).toHaveTextContent('-5.0°C');
+    const { container } = renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
+    // The former DashboardSourceBrief summary is gone in the After design.
+    expect(screen.queryByTestId('dashboard-battery-cells-brief')).toBeNull();
+    // Measured zero is a value, not a missing reading.
+    expect(container).toHaveTextContent('0.000');
+    expect(container).toHaveTextContent('0.00');
+    // Temp stat is the signed min–max range.
+    expect(screen.getByText('-5.0°C–26.0°C')).toBeInTheDocument();
     expect(screen.getByText('Cell 1 · M1')).toBeInTheDocument();
     expect(screen.getByText('Cell 2 · M1')).toBeInTheDocument();
     expect(screen.getByText('Cell 3 · M2')).toBeInTheDocument();
   });
 
+  it('shows the After stats row: Min / Max / Spread with healthy note / Temp range', () => {
+    renderWidget(<BatteryCellsWidget size={SIZE_MEDIUM} />);
+    expect(screen.getByText('Min V')).toBeInTheDocument();
+    expect(screen.getByText('Max V')).toBeInTheDocument();
+    expect(screen.getByText('Spread')).toBeInTheDocument();
+    expect(screen.getByText('Healthy < 30 mV')).toBeInTheDocument();
+    expect(screen.getByText('Temp')).toBeInTheDocument();
+    expect(screen.getByText('23.1°C–26.0°C')).toBeInTheDocument();
+    // The average voltage/temp tiles from the former brief are dropped:
+    // each value appears once, per the After card.
+    expect(screen.queryByText('Avg V')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg temp')).not.toBeInTheDocument();
+  });
+
   it('retains cell readings and summary during a cached refresh failure', () => {
     batteryCellsMock.mockReturnValue(makeQuery(makeSummary(), { error: new Error('transient'), isError: true }));
-    renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
+    const { container } = renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
     expect(screen.getByText('Cell 1 · M1')).toBeInTheDocument();
-    expect(screen.getByText('17.00 mV')).toBeInTheDocument();
+    expect(container).toHaveTextContent('17.00');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -252,18 +270,20 @@ describe('BatteryCellsWidget', () => {
     expect(screen.getByText('C3')).toBeInTheDocument();
     expect(screen.getByText('3.701 V')).toBeInTheDocument();
 
-    // Summary tiles (label + formatted value).
+    // Summary tiles (label + formatted value; unit renders separately).
     expect(screen.getByText('Min V')).toBeInTheDocument();
-    expect(screen.getByText('3.695 V')).toBeInTheDocument();
+    expect(screen.getByText('3.695')).toBeInTheDocument();
     expect(screen.getByText('Max V')).toBeInTheDocument();
-    expect(screen.getByText('3.712 V')).toBeInTheDocument();
-    expect(screen.getByText('Avg V')).toBeInTheDocument();
-    expect(screen.getByText('3.700 V')).toBeInTheDocument();
+    expect(screen.getByText('3.712')).toBeInTheDocument();
     expect(screen.getByText('Spread')).toBeInTheDocument();
-    expect(screen.getByText('17.00 mV')).toBeInTheDocument();
+    expect(screen.getByText('17.00')).toBeInTheDocument();
 
-    // The temperature summary is a wide-only row — absent here.
+    // After design: average tiles are dropped and the temperature range
+    // shows at every size, not only wide.
+    expect(screen.queryByText('Avg V')).not.toBeInTheDocument();
     expect(screen.queryByText('Min temp')).not.toBeInTheDocument();
+    expect(screen.getByText('Temp')).toBeInTheDocument();
+    expect(screen.getByText('23.1°C–26.0°C')).toBeInTheDocument();
   });
 
   it('falls back to the first vehicle when no vehicleId prop is supplied', () => {
@@ -293,13 +313,12 @@ describe('BatteryCellsWidget', () => {
     expect(screen.getByText('Cell 1 · M1')).toBeInTheDocument();
     expect(screen.getByText('3.701 V / 24.0°C')).toBeInTheDocument();
 
-    // Wide-only temperature summary row.
-    expect(screen.getByText('Min temp')).toBeInTheDocument();
-    expect(screen.getByText('23.1°C')).toBeInTheDocument();
-    expect(screen.getByText('Avg temp')).toBeInTheDocument();
-    expect(screen.getByText('24.5°C')).toBeInTheDocument();
-    expect(screen.getByText('Max temp')).toBeInTheDocument();
-    expect(screen.getByText('26.0°C')).toBeInTheDocument();
+    // After-spec temperature summary: one min–max range tile.
+    expect(screen.getByText('Temp')).toBeInTheDocument();
+    expect(screen.getByText('23.1°C–26.0°C')).toBeInTheDocument();
+    expect(screen.queryByText('Min temp')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg temp')).not.toBeInTheDocument();
+    expect(screen.queryByText('Max temp')).not.toBeInTheDocument();
   });
 
   it('keeps per-cell values readable with the compact heading', () => {
@@ -328,10 +347,9 @@ describe('BatteryCellsWidget', () => {
 
     expect(screen.getByText('No battery cell data')).toBeInTheDocument();
     expect(screen.getByText('Min V')).toBeInTheDocument();
-    expect(screen.queryByText('—')).not.toBeInTheDocument();
-    const emptyBrief = screen.getByTestId('dashboard-battery-cells-brief');
-    fireEvent.click(within(emptyBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    // Missing readings stay unknown ('—' per stat tile), never a fake zero.
+    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByTestId('dashboard-battery-cells-brief')).toBeNull();
   });
 
   it('renders a loading skeleton without any content while fetching the first time', () => {
