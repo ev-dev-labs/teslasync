@@ -349,13 +349,19 @@ SUPERSEDED 2026-10-21 (owner update): the freshness indicator stays exactly
 as it is on `main`. Do not change FreshnessDot/FreshnessDotAuto, WidgetShell
 freshness props, or per-widget freshness wiring; ignore the "Live"/age dots in
 widgets-compare.html (placeholders); add no age text/"Live" labels/new
-freshness UI. The Phase 1 WIDGET HEADER task is SKIPPED and its guard
-assertions DROPPED. The work below (already committed on this branch) must be
-REVERTED as its own commit group (verified: 2026-10-21, the uncommitted
-working tree contains zero FreshnessDot/freshness-prop diff lines, so there is
-nothing to revert in uncommitted work). Sequencing decision: finish the
-in-flight timezone batch first (clean tree), then revert the freshness commits
-via `git revert` (no resets), re-verify, and push once. The redesign loop must
+freshness UI. CORRECTION APPLIED 2026-10-22 (owner override, committed as
+`b7c55d6ab2` + `b3f0ba6272` + `658e6563fc`): the Phase 1 WIDGET HEADER task is
+DONE and its guard assertions STAY PASSING — `f6d6be4106` (one shared
+FreshnessDot per widget, pinned top-right corner, header icons directly left)
+is KEPT; only `c8aad38605` + `dc22ed9bfb` stay reverted (`70b4c257a2`,
+`0a89cfc2ed`). The 2026-10-21 SKIPPED/DROPPED/revert-everything directive is
+void (it was executed before the correction as `70b4c257a2,0a89cfc2ed,fb85d89745`,
+then `fb85d89745` was itself reverted). History, kept for the record: on
+2026-10-21 the uncommitted working tree contained zero FreshnessDot/
+freshness-prop diff lines, so there was nothing to revert in uncommitted work;
+the in-flight timezone batch finished first (clean tree), then the freshness
+commits were reverted via `git revert` (no resets), re-verified, and pushed.
+The redesign loop must
 reject any worker diff touching freshness. Revert set identified
 2026-10-21: `c8aad38605`, `dc22ed9bfb`, `f6d6be4106` (reverse order); CORRECTION 2026-10-22 (owner override): the `f6d6be4106` revert (`fb85d89745`) was itself reverted (`b7c55d6ab2`), so `f6d6be4106` (one shared FreshnessDot per widget, pinned top-right corner, header icons directly left) is KEPT; only `c8aad38605` + `dc22ed9bfb` stay reverted (`70b4c257a2`, `0a89cfc2ed`). The header guard stays passing; the redesign keeps the existing FreshnessDot/FreshnessDotAuto wiring and never uses the preview 'Live'/'2m ago' design. Playbook freshness rule + Part 2 wording updated (`b3f0ba6272`).
 `cad1237f5f` (Layout preservation pins) only if the shell-preservation
@@ -392,7 +398,10 @@ same translated fallback header. These choices avoid inventing observation times
   snapshots now use actual production geometry. Masks, threshold0.1,
   maxDiffPixels500 and all assertions remain unchanged. No workflow edits.
 - Private production build and complete strict perf:check pass at399.7KB startup,
-  with the400KB limit unchanged. Generated translations/source checkpoints use
+  with the400KB limit unchanged (2026-10-22 NOTE: regressed to 401.6KB startup
+  on HEAD `658e6563fc` — Lighthouse CI red; TZ-5c/date-layer + waitoracle +
+  freshness-correction growth under bisect, fix in progress, see work queue).
+  Generated translations/source checkpoints use
   repository generators and LF normalization. No temporary captures/reports added
   to Git. Final full-unit and browser-matrix results will be recorded below.
 

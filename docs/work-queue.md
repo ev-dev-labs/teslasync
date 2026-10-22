@@ -4,15 +4,17 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Codex (freshness CORRECTION applied: f6d6be4106 kept).
-Branch HEAD: `b3f0ba6272` (pushed); Step 0 verification in progress.
+Last updated: 2026-10-22 by Muse (section-0 handoff: tree clean except untracked
+`docs/widget-redesign/` inputs, HEAD `658e6563fc` pushed, no `wip:` commits;
+Codex CLIs on pts/5+pts/9 and vite :3000 left untouched as possible user tooling).
+Branch HEAD: `658e6563fc` (pushed); freshness docs correction + Lighthouse budget fix in progress.
 
 ## Parts overview
 
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
-| 1 | Time zone: follow setting everywhere, remove duplicates | in progress | TZ-5c done (2fbe414e..edf280bf); wip waitoracle/journey/useCharging 66eda8c6d5 fixed by a09dc6ec15; freshness correction b7c55d6ab2+b3f0ba6272 | 277-route full sweep, TZ-6 e2e re-run, Step 0 verify + push, TZ-7 replica + push |
-| 2 | Dashboard widget redesign (119 widgets) | not started | inputs present (`README.md`, `widgets-compare.html`, `widgets.json`) | Phase 0 only after Part 1 clean + pushed; header guard stays in place (redesign keeps the existing FreshnessDot in the corner, never the preview Live/2m-ago design) |
+| 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | TZ-5c done; wip fixed by a09dc6ec15; freshness correction b7c55d6ab2+b3f0ba6272+658e6563fc; BLOCKER: Lighthouse startup 401.6KB>400KB (bisect running) | Budget fix, then 277-route sweep, TZ-6 re-run, TZ-7 replica + push + PR #202 green. Only Track A commits here until done |
+| 2 | Dashboard widget redesign (119 widgets) — TRACK B (`feat/widget-redesign` in `~/repos/teslasync-widgets`) | not started | inputs present (`README.md`, `widgets-compare.html`, `widgets.json`); owner parallel-tracks override 2026-10-22 | Setup after budget fix: branch from pushed fix/post-merge-followups, copy inputs, `npm ci`; rolling 5-worker dispatch; header guard stays in place (redesign keeps the existing FreshnessDot in the corner, never the preview Live/2m-ago design) |
 | 3 | Shared-pattern consolidation (whole codebase) | not started | — | `docs/shared-patterns.md` catalog first |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
 | 5 | CI green on PR #202 | not started | PR green at takeover (199 pass / 1 skipping) | Loop `gh pr checks --watch` after each push |
@@ -33,7 +35,7 @@ Branch HEAD: `b3f0ba6272` (pushed); Step 0 verification in progress.
 | TZ-5c marker-free migration (user update) | done | `2fbe414e..edf280bfeb` (4 + docs + Analytics pin) | `tz-computation` 72->0 verified 0 in web/src, all other `tz-*` 0 (1 absence test kept); playbook no-suppression rule present |
 | WaitOracle backend zone param + useCharging + panel (wip handoff fix) | done | `66eda8c6d5` wip + `a09dc6ec15` fix | Backend `?timezone=` (400/UTC default), store AT TIME ZONE $3, Predict(loc); hook sends effective tz; panel best_hour + no UTC; Go + 43 panel + 43 trips + tsc + split + trio + audit green |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | done | TZ-6 spec (this change) | `web/e2e/timezone-display.smoke.spec.ts` 4/4 green (chromium-smoke, mock build reuse); TZ=UTC browser, `tz_display_default=user` + `timezone_user` LA/Tokyo; drive times + Quick-view drawer, timeline daily bucket (Mar 8 LA / Mar 9 Tokyo) + Review-details range drawer (end-inclusive, no Mar 10) + Inspect drawer; no raw ISO / zone names; tsc + split-check green; audit unaffected (specs excluded by design); no markers added. |
-| Freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106`) | done | `70b4c257a2,0a89cfc2ed,fb85d89745` + pin regen (this change) | 3 sequential `git revert`s (newest first); docs conflicts (`ci-handoff/followups/progress-log`) kept at HEAD (later docs supersede; SUPERSEDED note records revert); i18n pins regenerated via sanctioned `--typed --checkpoint-catalog` (7 test files); producer checkpoints verified correct as-reverted (FreshnessDot/StatusBadge/IconButton correctly entryless = pre-freshness state, old dynamic key unverifiable); combined 68/68 match; `cad1237f5f` NOT needed (shell-preservation 211 green). Vitest: pins 7867 + dash/widgets 371 green; tsc clean; split-check OK; TZ-6 e2e still 4/4. No markers, no contract change. |
+| Freshness-header CORRECTION (owner override: `f6d6be4106` KEPT) | done | `b7c55d6ab2` revert-of-revert + `b3f0ba6272` docs + `658e6563fc` verify | `f6d6be4106` (one shared FreshnessDot per widget, top-right corner, header icons directly left) restored; only `c8aad38605` + `dc22ed9bfb` stay reverted. Header guard (`dashboard-widget-headers` + overflow + unit ownership) STAYS PASSING — never SKIPPED/DROPPED. i18n pins regen via sanctioned `--typed --checkpoint-catalog`; FreshnessDot back, 14 calls, shell/edit-chrome shas + dashboardTokens entry restored; combined 68/68. Vitest dash scope + tsc + split-check green; TZ-6 e2e 4/4. Followups-plan SKIPPED-task wording corrected this change. |
 | TZ-7 i18n regen, full local replica, commit, push, PR green | not started | — | Section 3 replica, then push once |
 
 ## Part 2 summary mirror (updated after every task once started)
@@ -57,9 +59,12 @@ exceptions / bugs-fixed: —.
   last included instant (pinned by ThermalPanels fr-FR/Tokyo test).
 - `useDateFormat().tz` is the single resolved display value (settings
   `tz_display_default` + override + vehicle, browser fallback).
-- Freshness: frozen per playbook global rules; committed header work
-  (`f6d6be4106` + 2 follow-ups) will be reverted; uncommitted tree
-  verified to contain zero freshness-dot changes.
+- Freshness (CORRECTED 2026-10-22, owner override): `f6d6be4106` (one shared
+  dot per widget, top-right corner, header icons directly left) is KEPT and
+  the header guard stays passing — the 2026-10-21 "SKIPPED/frozen, revert
+  everything" directive is void; only `c8aad38605` + `dc22ed9bfb` stay
+  reverted. Uncommitted tree verified (2026-10-21) to contain zero
+  freshness-dot diffs.
 - 2026-10-21 docs-only push (playbook + this file) without the section-3
   replica: two markdown files cannot affect code checks; full replica
   runs at the Part 1 gate (TZ-7) as scheduled.
@@ -148,4 +153,12 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-New playbook committed+pushed (`c4b9a91d9b`); API contract review done (recorded above). PR202 shows no fails. Freshness revert done + verified (pushing at gate). Next: TZ-7 full local replica (section 3: 16 quality shards + a11y + firefox/webkit smoke + route/contract/scenario/list + lint/audits + build + full vitest + go build/test) + push + PR green. Full 277-route sweep runs at the TZ-7 gate.
+Freshness CORRECTION verified + docs fixed (this change; `f6d6be4106` kept,
+header guard stays). BLOCKER: Lighthouse CI red on HEAD — startup JS 401.6KB >
+400KB budget (main: 398.6KB; entry +3.0KB; bisect points at TZ-4..TZ-5c range).
+Next: (1) cut startup closure back under budget (real bytes, no suppression),
+(2) TZ-5 full 277-route sweep, (3) TZ-6 e2e re-run, (4) TZ-7 full local
+replica (section 3: 16 quality shards + a11y + firefox/webkit smoke +
+route/contract/scenario/list + lint/audits + build + full vitest + go
+build/test) + push + PR green. Track B (widget redesign worktree) sets up in
+parallel once the budget fix lands.
