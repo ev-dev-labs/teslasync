@@ -127,8 +127,7 @@ export function WidgetShell({
               <h3 data-role="widget-header-title" className={cn(dashboardTokens.title, 'min-w-0 truncate')} title={visibleTitle}>{visibleTitle}</h3>
             </div>
           </div>
-          {/* The 44px hit targets fit inside header padding around this 28px title line. */}
-          <div className="ms-auto flex h-7 shrink-0 items-center gap-2" data-role="widget-header-actions">
+          <div className="ms-auto flex shrink-0 items-center gap-2" data-role="widget-header-actions">
             {status}
             {help && (
                 <HelpTooltip

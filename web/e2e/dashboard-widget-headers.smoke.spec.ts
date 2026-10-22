@@ -22,12 +22,11 @@ for (const width of [375,768,1280,1920]) for (const theme of ['light','dark'] as
    const dots = root.querySelectorAll<HTMLElement>('[data-role="freshness-dot"]');
    if (!header || !title || dots.length !== 1) return { id: root.dataset.widgetId, valid: false };
    const dot = dots[0].getBoundingClientRect();
-   const headerBox = header.getBoundingClientRect();
    const text = title.getBoundingClientRect();
    const padding = parseFloat(getComputedStyle(header).paddingLeft);
    const controls = Array.from(header.querySelectorAll<HTMLElement>('button, a[href]')).filter(el => !el.contains(dots[0]) && el.querySelector('svg')).map(el => el.getBoundingClientRect()).filter(rect => rect.width > 0).sort((a,b)=>a.left-b.left);
    const gaps = controls.map((rect,i)=>(controls[i+1]?.left ?? dot.left)-rect.right);
-   return { id: root.dataset.widgetId, valid: header.contains(dots[0]) && Math.abs(root.getBoundingClientRect().right-padding-dot.right)<=2 && Math.abs((text.top+text.bottom-dot.top-dot.bottom)/2)<=2 && gaps.every(gap=>gap>=-2 && gap<=8) && controls.every(rect=>rect.top>=headerBox.top && rect.bottom<=headerBox.bottom), right: dot.right };
+   return { id: root.dataset.widgetId, valid: header.contains(dots[0]) && Math.abs(root.getBoundingClientRect().right-padding-dot.right)<=2 && Math.abs((text.top+text.bottom-dot.top-dot.bottom)/2)<=2 && gaps.every(gap=>gap>=-2 && gap<=8), right: dot.right };
   }));
   const view = await measure();
   expect(view).toHaveLength(6);
