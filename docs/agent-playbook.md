@@ -128,13 +128,15 @@ branches) into main or this branch.
   reading: display in the frontend's shared date layer, and grouping in
   queries (e.g. `AT TIME ZONE` with the user's zone passed as a parameter).
   No database migrations unless a part explicitly requires one.
-- Freshness indicator stays exactly as it is: do not change `FreshnessDot`,
-  `FreshnessDotAuto`, the freshness props on `WidgetShell`, or how any widget
-  passes freshness (`query`, `updatedAt`, `isFetching`, `isStale`,
-  `onRefresh`, `refreshIntervalMs`). Same component, position, labels,
-  colors and refresh action. Don't move or remove freshness dots. Revert
-  any earlier changes that did. Reject any worker diff that touches
-  freshness.
+- Freshness: always use the existing `FreshnessDot` / `FreshnessDotAuto`
+  component and existing freshness wiring (`query`, `updatedAt`,
+  `isFetching`, `isStale`, `onRefresh`, `refreshIntervalMs`); never
+  implement the redesign preview's 'Live' / '2m ago' freshness design. Each
+  widget shows exactly ONE freshness dot, rendered by the shared
+  `WidgetShell` header, pinned to the top-right corner (right inset equal
+  to the title's left inset, vertically centered on the title line), with
+  header icon actions directly to its left (4-8px gaps). Keep the header
+  guard (one dot, corner position, icon gap) passing for all widgets.
 - `vehicle-twin` and `digital-twin-mini` widgets: rendered output stays
   identical.
 - All user-facing text through `t()` with complete-sentence `en.json` keys
@@ -320,7 +322,7 @@ Scope:
   fit; record each change.
 - Keep data hooks, units (`useUnits`, `web/src/lib/unitConversion.ts`), i18n
   (`docs/I18N_GUIDELINES.md`, `lint:i18n`), the shared date layer from Part
-  1, accessibility, freshness (unchanged), and header actions. The "Live" /
+  1, accessibility, freshness per the global freshness rule, and header actions. The "Live" /
   "2m ago" dots in the preview are placeholders: ignore them; add no new
   freshness UI.
 - Never fabricate data: omit elements with no existing data source and log
