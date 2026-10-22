@@ -495,3 +495,8 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - tz-computation 72->0 and all other tz-* kinds 0 in web/ (1 absence-assertion test kept); shared API +browserTimeZone/validity cache/hour-24 (dateFormat 118 green); 40 lib/component sites migrated; guard rewritten marker-free, R4 narrowed (16 node:test green, 3725 files green); certificate marker-leak bug fixed; playbook no-suppression bullet added.
 - tsc + full lint green; area suites green (915 + 1707 + 1129 + 7718 i18n incl. trio regen for 7 producers + pre-existing SecretRotation). Full suite: 2 pre-existing failures reproduced on pristine base (AnalyticsPage re-scopes - queued for fix; SecretRotation fingerprint - fixed via regen).
 - Next: commit + push TZ-5c, watch PR202; then AnalyticsPage probe, 277-route sweep, wait-oracle backend, TZ-6.
+
+## 2026-10-22 - Codex: wip handoff verified + fixed (a09dc6ec15), queue reconciled
+- Verified wip 66eda8c6d5 (waitoracle ?timezone=/store/Predict + journey UTC plumbing + useCharging tz send): Go green, but backend renamed best_hour_utc->best_hour without panel/test/en.json update -> tsc + Lighthouse red. Fixed panel/test to best_hour, dropped all UTC suffixes per Part 1 rule 3, title fallback to catalog case, i18n via sanctioned generators (split + trio + pins). Panel 43 + trips 43 + Go + tsc + split + trio (missing 0) + timezone audit (3725) green.
+- Reconciled queue: TZ-5c done (2fbe414e..edf280bfeb), tz-computation 0 + no-suppression rule present verified, widget-redesign/state.md correctly absent (Part 2 not started).
+- Next: push a09dc6ec15 + queue docs, watch PR202 (expect Lighthouse green); then 277-route full sweep, TZ-6 e2e, freshness revert, TZ-7 replica.

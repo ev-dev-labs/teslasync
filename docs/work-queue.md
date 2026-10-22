@@ -4,14 +4,14 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Muse (TZ-5c marker-free migration).
-Branch HEAD: `4fd5b3bd1c` + uncommitted TZ-5c (shared API, 40-site migration, guard rewrite, i18n regen — committing + pushing next).
+Last updated: 2026-10-22 by Codex (wip handoff fix, queue reconciled).
+Branch HEAD: `a09dc6ec15` (TZ-5c 2fbe414e..edf280bf + wip 66eda8c6d5 + fix a09dc6ec15; all pushed except a09dc6ec15 — pushing next).
 
 ## Parts overview
 
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
-| 1 | Time zone: follow setting everywhere, remove duplicates | in progress | `147f180cf3` TZ-4 pushed (7 commits); TZ-5 inventory done | TZ-5 migration batches + guard, TZ-6 e2e, freshness revert, TZ-7 replica + push |
+| 1 | Time zone: follow setting everywhere, remove duplicates | in progress | TZ-5c done (2fbe414e..edf280bf); wip waitoracle/journey/useCharging 66eda8c6d5 fixed by a09dc6ec15 | 277-route full sweep, TZ-6 e2e, freshness revert, TZ-7 replica + push |
 | 2 | Dashboard widget redesign (119 widgets) | not started | inputs present (`README.md`, `widgets-compare.html`, `widgets.json`) | Phase 0 only after Part 1 clean + pushed; Phase 1 header task SKIPPED (freshness frozen) |
 | 3 | Shared-pattern consolidation (whole codebase) | not started | — | `docs/shared-patterns.md` catalog first |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
@@ -30,14 +30,15 @@ Branch HEAD: `4fd5b3bd1c` + uncommitted TZ-5c (shared API, 40-site migration, gu
 | `useConversionTimezone` + `resolveRawTimezone` (conversion boundaries) | done | `d4653c5517` + `86bb6e735d` | RateForm + JourneyAssurancePage converted; `timezone.test.ts` extended |
 | TZ-4 API `timezone` sends + backend zone params + Go tests | done | `284851a318..147f180cf3` (7, pushed) | Vitest 2727/57276 + tsc + Go green at push; PR202 run in progress |
 | TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `e24583d253` timeline fix | Guard done (R1-R5, registry+wired, 3725 green); sweep spec + 12-route calibration done; timeline zoned bucketing done. 277-route full sweep not yet run. |
-| TZ-5c marker-free migration (user update) | in progress | this push | `tz-computation` 72->0, all other `tz-*` kinds 0 in src (1 absence-assertion test kept); shared API +3 helpers; guard rewritten marker-free (16 tests); R2 stays syntactic (see decisions). Next: commit + push, then sweep findings + TZ-6 |
+| TZ-5c marker-free migration (user update) | done | `2fbe414e..edf280bfeb` (4 + docs + Analytics pin) | `tz-computation` 72->0 verified 0 in web/src, all other `tz-*` 0 (1 absence test kept); playbook no-suppression rule present |
+| WaitOracle backend zone param + useCharging + panel (wip handoff fix) | done | `66eda8c6d5` wip + `a09dc6ec15` fix | Backend `?timezone=` (400/UTC default), store AT TIME ZONE $3, Predict(loc); hook sends effective tz; panel best_hour + no UTC; Go + 43 panel + 43 trips + tsc + split + trio + audit green |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | not started | — | Drive times, drawers, ranges, midnight day assignment |
 | Freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106`) | not started | revert set identified | `git revert` (no resets) after Part 1 code done; `cad1237f5f` only if shell-preservation fails; i18n conflicts via generators |
 | TZ-7 i18n regen, full local replica, commit, push, PR green | not started | — | Section 3 replica, then push once |
 
 ## Part 2 summary mirror (updated after every task once started)
 
-Not started. No `state.md` yet.
+Not started. No `state.md` yet (verified 2026-10-22: `docs/widget-redesign/` holds only inputs README/PROMPT/widgets-compare.html/widgets.json; consistent with not-started).
 
 ## Part 3 counts (once started)
 
@@ -125,6 +126,9 @@ exceptions / bugs-fixed: —.
 - i18n: trio regen covers 7 touched producers + pre-existing stale
   SecretRotationOperationalBrief (stale since `eccca4cdc1`, fixed via
   the sanctioned generator, translations verified clean).
+- Wip handoff fix (Codex 2026-10-22): `66eda8c6d5` added waitoracle `?timezone=` (400/UTC default), store AT TIME ZONE $3, Predict(loc), journey plumbing (UTC-preserving per TZ-4 intentionally-unchanged), useCharging effective-tz send; but renamed backend JSON `best_hour_utc`->`best_hour` without updating panel/test/en.json, breaking tsc + Lighthouse. Fixed by `a09dc6ec15`: panel/test use `best_hour`, dropped all UTC suffixes per Part 1 rule 3 (subtitle/bestHour/chart title/col), title fallback aligned to catalog sentence case, i18n via sanctioned generators (split + trio producer/combined + catalog pins).
+- Pending user update verified done: `tz-computation` 0 in `web/src` (grep 0), all other `tz-*` 0 in src (1 absence-assertion test kept); playbook global no-suppression rule present (`docs/agent-playbook.md:126`).
+- Queue reconciled 2026-10-22: TZ-5c commits `2fbe414e..edf280bfeb` done/pushed; `docs/widget-redesign/state.md` correctly absent (Part 2 not started; dir holds only inputs).
 - AnalyticsPage `re-scopes and re-fetches` failure was PRE-EXISTING
   (reproduced on pristine base worktree `4fd5b3bd1c`) and zone-fragile:
   the test resolved `7d` in the local zone while the page re-resolves
@@ -135,10 +139,7 @@ exceptions / bugs-fixed: —.
 
 ## Blockers
 
-- PR202 run 39699895510 (TZ-4 push): responsive-14/-29/-34, Lighthouse
-  CI, Windows visual (1/64) red; job logs unavailable until the run
-  completes. Triage then; visual/e2e diffs likely intended TZ-4 display
-  changes, regen at TZ-7 after all display work. Not blocking TZ-5/6.
+- PR202: run 39699895510 (TZ-4 push) responsive-14/-29/-34 + visual (1/64) red — triage at TZ-7 (likely intended display changes). Latest run 39715700018: only Lighthouse CI red, caused by wip `best_hour_utc` break (tsc); fixed by `a09dc6ec15`, pushing to verify. Visual/e2e diffs regen at TZ-7 after all display work. Not blocking TZ-5/6.
 - :8080 serves the TeslaSync SPA (user's server via Docker; left running).
   Mock-preview proxy escapes would fail loudly (HTML vs JSON), not via
   ECONNREFUSED. Caveat recorded for the TZ-7 replica; revisit if escape
@@ -146,7 +147,6 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-Commit TZ-5c in logical groups + push, watch PR202 checks. Then:
-AnalyticsPage pre-existing failure probe (needed for green), 277-route
-full sweep + wait-oracle backend zone param, TZ-6 e2e, freshness
+Push `a09dc6ec15`, watch PR202 checks (expect Lighthouse green). Then:
+277-route full sweep, TZ-6 e2e, freshness
 revert, TZ-7 full replica + green.
