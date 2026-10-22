@@ -36,6 +36,7 @@
     "web/src/features/driving/components/ShareDriveDialog.tsx",
     "web/src/features/charging/components/SitePriceRadar.tsx",
     "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+    "web/src/features/dashboard/widgets/QuickNavWidget.tsx",
     "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
     "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
     "web/src/features/driving/pages/DriveDetailPage.tsx",
@@ -254,6 +255,11 @@
       "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
       "calls": 38,
       "sha256": "5729f17d6d2f3421a50441e33592722ae23daa5ed955fdd2b4bb657c82b8407a"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/QuickNavWidget.tsx",
+      "calls": 6,
+      "sha256": "798b6e322a672ebfde97376d6db6c940a8066729b9b157c22d152b63537c0d21"
     },
     {
       "file": "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",

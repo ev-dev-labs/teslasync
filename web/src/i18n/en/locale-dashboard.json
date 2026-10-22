@@ -63,7 +63,8 @@
         "description": "Add widgets that match how you use TeslaSync.",
         "cta": "Open"
       }
-    }
+    },
+    "progressDone": "{{done}} of {{total}} done"
   },
   "dashSettings": {
     "allVehicles": "All vehicles",
@@ -526,6 +527,11 @@
     "empty": "No activity yet. Start driving!",
     "myActivity": {
       "empty": "No recent activity in this window."
+    },
+    "timeline": {
+      "item": {
+        "drive": "Drive"
+      }
     },
     "title": "Recent activity"
   },
@@ -1103,6 +1109,8 @@
     "fleetPosture": {
       "activeScope": "Active vehicle scope",
       "badge": {
+        "attention": "{{count}} need attention",
+        "fresh": "Fresh",
         "resolving": "Checking live state",
         "unavailable": "Live state unavailable",
         "verified": "{{verified}} of {{total}} verified"
@@ -1115,6 +1123,9 @@
         "stale": "Last known",
         "unverified": "Unverified"
       },
+      "coverage": "Coverage",
+      "coverageLabel": "Coverage {{pct}}%",
+      "emptyFleet": "No vehicles registered yet. Vehicles will appear here once they are added to your fleet.",
       "headline": {
         "attention": "{{verified}} of {{total}} vehicles verified. {{attention}} need attention.",
         "ok": "All {{total}} vehicles verified from current telemetry.",
@@ -1142,7 +1153,13 @@
         "verified": "Verified",
         "verifiedHelp": "current telemetry"
       },
+      "newestEvidence": "Newest evidence {{age}}",
       "openVehicle": "Open vehicle",
+      "row": {
+        "active": "Active",
+        "lastSeen": "last seen {{age}}",
+        "telemetryLive": "telemetry live"
+      },
       "scope": {
         "checking": "Checking",
         "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
@@ -1521,7 +1538,8 @@
       "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\"",
       "searchButton": "Search with Helix",
       "title": "Find a drive in natural language"
-    }
+    },
+    "allDrives": "All drives"
   },
   "editConflict": {
     "banner": {
@@ -2957,7 +2975,6 @@
       "title": "Backup monitor",
       "type": "Type"
     },
-    "batHeater": "Heater",
     "battery": "Battery",
     "batteryCells": {
       "avgTemp": "Avg temp",
@@ -2981,6 +2998,11 @@
     "batteryDegradationChart": {
       "aria": "Monthly battery health trend",
       "month": "Month"
+    },
+    "batteryGauge": {
+      "chargingToLimit": "Charging · +{{pct}}% to limit",
+      "limitMarker": "Charge limit {{pct}}%",
+      "range": "{{range}} range"
     },
     "batteryHealthAnalytics": {
       "avgChargeDepth": "Charge depth",
@@ -3067,17 +3089,7 @@
         "unknown": "Unknown"
       }
     },
-    "chargeStatusBatteryDescription": "Returned battery percentage; a measured zero is not a missing reading.",
-    "chargeStatusChargingSummaryDescription": "Power, range-addition rate, battery and time estimate remain separate source readings; missing values are not zero.",
-    "chargeStatusChargingSummaryTitle": "Returned charging readings",
-    "chargeStatusIdleSummaryDescription": "Battery and rated range remain visible for both idle and unknown charging status; the status badge does not establish source freshness.",
-    "chargeStatusIdleSummaryTitle": "Returned battery and range",
     "chargeStatusLive": "Charge status",
-    "chargeStatusPowerDescription": "Returned charger power in the established kW API contract; no additional scaling is applied.",
-    "chargeStatusRangeDescription": "Returned rated range in meters, converted only to the distance preference.",
-    "chargeStatusRateDescription": "Meters of range added per hour, converted to the distance preference; this is not vehicle speed.",
-    "chargeStatusSummaryScope": "Vehicle {{id}} · returned state snapshot; not a completed charging session or continuous recording.",
-    "chargeStatusTimeDescription": "The existing hours display is retained; the wire unit is not independently established. Negative estimates remain unknown.",
     "chargeStops": "Charge stops",
     "charger": "Charger",
     "charging": "Charging",
@@ -3203,9 +3215,6 @@
       "title": "Climate control",
       "wheelLevelDescription": "Reported wheel-heater level on the 0–3 scale; zero means Off."
     },
-    "climateSummaryDescription": "Cabin and outside temperatures remain separate SI measurements, converted only for display; HVAC, defrost and heater states remain below.",
-    "climateSummaryScope": "Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established.",
-    "climateSummaryTitle": "Returned climate temperatures",
     "commandFailed": "Failed",
     "commandHistory": "Command history",
     "commandPending": "Pending",
@@ -3273,7 +3282,6 @@
       "trips": "Trips",
       "vehicles": "Vehicles"
     },
-    "defrost": "Defrost",
     "degradation": "Degradation",
     "destinationETA": {
       "eta": "ETA",
@@ -3946,6 +3954,7 @@
     "recentDrivesDurationUnit": "min",
     "recentDrivesList": "Recent drives",
     "recentDrivesListDrive": "Drive",
+    "recentDrivesWeekSummary": "{{count}} drives this week · {{total}}",
     "recentTrips": "Recent trips",
     "recentlyUnlocked": {
       "disabled": "Recently unlocked achievements are hidden in your settings.",
@@ -4407,6 +4416,7 @@
     "vehicleAccessUnknown": "Unknown",
     "vehicleHeroCard": "Vehicle",
     "vehicleSpecs": "Vehicle specs",
+    "verifiedFields": "{{count}} verified fields",
     "versionInfo": {
       "arch": "Arch",
       "avgLatency": "Avg latency",

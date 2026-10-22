@@ -296,7 +296,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
             />
             <div className="text-right">
               <Text as="p" size="sm" color="secondary">
-                {t('hero.range', 'Est. range')}
+                {t('hero.range', 'Range')}
               </Text>
               <p className="text-xl font-semibold tabular-nums text-[var(--text-primary)]">
                 {rangeDisplay != null ? fmtNumber(rangeDisplay, 0) : '—'}

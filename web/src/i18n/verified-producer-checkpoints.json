@@ -628,6 +628,16 @@
     "sha256": "61237693fbae45ddeecd0859f9fd81ec50bdd700686fb36ea9d365c50cc80291"
   },
   {
+    "file": "web/src/features/dashboard/widgets/QuickNavWidget.tsx",
+    "calls": 6,
+    "sha256": "798b6e322a672ebfde97376d6db6c940a8066729b9b157c22d152b63537c0d21"
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/RecentDrivesWidget.tsx",
+    "calls": 8,
+    "sha256": "cb848a2699fcc3c2fb624d5077d608cc8abe2b2589b1adb0ad0d89f70a127b55"
+  },
+  {
     "file": "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
     "calls": 4,
     "sha256": "33d8169cac4861057197d3fb94e477614a3e12168063882527bef96beb789185"

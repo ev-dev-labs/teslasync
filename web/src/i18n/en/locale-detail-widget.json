@@ -1718,6 +1718,13 @@
     "exportQueued": "Queued",
     "exportRunning": "Running",
     "exportDone": "Done",
-    "overview": "Widget overview"
+    "overview": "Widget overview",
+    "recentDrivesWeekSummary": "{{count}} drives this week · {{total}}",
+    "verifiedFields": "{{count}} verified fields",
+    "batteryGauge": {
+      "limitMarker": "Charge limit {{pct}}%",
+      "chargingToLimit": "Charging · +{{pct}}% to limit",
+      "range": "{{range}} range"
+    }
   }
 }

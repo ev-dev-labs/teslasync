@@ -13,7 +13,7 @@ export default function QuickNavWidget(_props: WidgetProps) {
     { to: '/drives', label: t('nav.drives', 'Drives') },
     { to: '/charging', label: t('nav.charging', 'Charging') },
     { to: '/analytics', label: t('nav.analytics', 'Analytics') },
-    { to: '/battery', label: t('nav.battery', 'Battery') },
+    { to: '/battery', label: t('nav.battery', 'Battery health') },
   ] as const;
   return (
     <WidgetShell title={t('nav.quickNav', 'Quick navigation')}>

@@ -6958,7 +6958,9 @@
       "badge": {
         "resolving": "Checking live state",
         "unavailable": "Live state unavailable",
-        "verified": "{{verified}} of {{total}} verified"
+        "verified": "{{verified}} of {{total}} verified",
+        "attention": "{{count}} need attention",
+        "fresh": "Fresh"
       },
       "headline": {
         "resolving": "Resolving live state for {{count}} vehicle(s).",
@@ -7046,7 +7048,16 @@
         "title": "Fleet operating posture",
         "scope": "All registered vehicles; active vehicle shown below",
         "provenance": "Verified coverage comes from the same resolved fleet-state batch. Client classification takes over when evidence ages; the oldest reading is a real backend observation, never fetch completion."
-      }
+      },
+      "row": {
+        "active": "Active",
+        "telemetryLive": "telemetry live",
+        "lastSeen": "last seen {{age}}"
+      },
+      "emptyFleet": "No vehicles registered yet. Vehicles will appear here once they are added to your fleet.",
+      "coverage": "Coverage",
+      "coverageLabel": "Coverage {{pct}}%",
+      "newestEvidence": "Newest evidence {{age}}"
     },
     "title": "Fleet operations",
     "subtitle": "Monitor readiness, investigate exceptions, and act from one workspace",
@@ -8607,7 +8618,8 @@
         "description": "Add widgets that match how you use TeslaSync.",
         "cta": "Open"
       }
-    }
+    },
+    "progressDone": "{{done}} of {{total}} done"
   },
   "onboarding": {
     "pageTitle": "Welcome to TeslaSync",
@@ -20014,7 +20026,14 @@
     "exportQueued": "Queued",
     "exportRunning": "Running",
     "exportDone": "Done",
-    "overview": "Widget overview"
+    "overview": "Widget overview",
+    "recentDrivesWeekSummary": "{{count}} drives this week · {{total}}",
+    "verifiedFields": "{{count}} verified fields",
+    "batteryGauge": {
+      "limitMarker": "Charge limit {{pct}}%",
+      "chargingToLimit": "Charging · +{{pct}}% to limit",
+      "range": "{{range}} range"
+    }
   },
   "operationalSummary": {
     "retained": "Retained source data",

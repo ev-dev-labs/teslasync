@@ -46,7 +46,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
     const end = drive.end_address?.trim();
     const routeLabel = start || end
       ? `${start || '—'} → ${end || '—'}`
-      : t('widget.recentDrivesListDrive', 'Drive');
+      : t('activity.timeline.item.drive', 'Drive');
 
     const day = formatRelativeDays(drive.start_ts);
     const dateLabel = day === 'Today' || day === 'Yesterday'
@@ -110,7 +110,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
             to="/drives"
             className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--accent-primary)] hover:underline"
           >
-            {t('widget.allDrives', 'All drives')}
+            {t('drives.allDrives', 'All drives')}
             <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         </div>
