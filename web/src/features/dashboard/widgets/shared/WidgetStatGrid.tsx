@@ -48,15 +48,16 @@ export function WidgetStatGrid({ stats, compact, cols, maxPerRow }: WidgetStatGr
   }
 
   const resolvedMaxPerRow = compact ? 1 : (maxPerRow ?? cols ?? autoCols(items.length));
-  const gap = compact ? 8 : 12;
-  const tileStyle = {
-    flex: compact ? '1 1 100%' : '1 1 200px',
-    minWidth: compact ? '100%' : 'min(100%, 200px)',
-    maxWidth: `calc((100% - ${gap * (resolvedMaxPerRow - 1)}px) / ${resolvedMaxPerRow})`,
-  };
 
   return (
-    <div className={cn('flex min-w-0 flex-wrap items-stretch', compact ? 'gap-2' : 'gap-3')} data-max-per-row={resolvedMaxPerRow}>
+    <div
+      className={cn(
+        'grid min-w-0',
+        compact ? 'gap-2' : dashboardTokens.density.statGap,
+        dashboardTokens.columns[resolvedMaxPerRow] ?? dashboardTokens.columns[2],
+      )}
+      data-max-per-row={resolvedMaxPerRow}
+    >
       {items.map((stat, index) => (
         <StatCard
           key={`${stat.label}-${index}`}
@@ -76,11 +77,21 @@ export function WidgetStatGrid({ stats, compact, cols, maxPerRow }: WidgetStatGr
           }
           className={cn(
             dashboardTokens.stat,
-            'min-w-0 flex-[1_1_200px] [&>div:first-child>span[aria-hidden=true]]:hidden [&>div:nth-child(2)]:[overflow-wrap:normal] [&>div:nth-child(2)]:[word-break:normal]',
-            compact && '!basis-full',
+            // Spec `st` cell language (widgets-compare.html `.stats` / `.st`):
+            // muted label, 18px semibold tabular value, quiet unit. StatCard
+            // renders a 14px label/unit and a 24px (30px at sm:) metric, so the
+            // structural selectors below re-voice them to the spec scale
+            // without touching the shared StatCard. First row: the label span
+            // (the decorative icon span stays hidden); value row: the
+            // MetricValue div, then the unit span.
+            '[&>div:first-child>span:first-child]:text-xs [&>div:first-child>span:first-child]:text-[var(--text-muted)]',
+            '[&>div:nth-child(2)>div]:text-lg [&>div:nth-child(2)>span]:text-xs',
+            // Long values wrap at spaces instead of overflowing the
+            // minmax(0,1fr) column.
+            '[&>div:nth-child(2)]:[overflow-wrap:normal] [&>div:nth-child(2)]:[word-break:normal]',
+            '[&>div:first-child>span[aria-hidden=true]]:hidden',
             stat.valueColor,
           )}
-          style={tileStyle}
         />
       ))}
     </div>
