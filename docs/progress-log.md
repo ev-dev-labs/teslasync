@@ -490,3 +490,8 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-22 - Muse: TZ-5 sweep spec (0228f6413d) + timeline zoned buckets (e24583d253) committed
 - Sweep found WaitOracle UTC labels (backend has no zone param - recorded gap) and validated the timeline fix; calibration flake noted (1/5 timeline flag, DOM capture added).
 - USER UPDATE: removing all tz-computation markers (before=72) via shared API + narrowed guard; no suppressions going forward.
+
+## 2026-10-22 - Muse: TZ-5c marker-free migration done, pushing
+- tz-computation 72->0 and all other tz-* kinds 0 in web/ (1 absence-assertion test kept); shared API +browserTimeZone/validity cache/hour-24 (dateFormat 118 green); 40 lib/component sites migrated; guard rewritten marker-free, R4 narrowed (16 node:test green, 3725 files green); certificate marker-leak bug fixed; playbook no-suppression bullet added.
+- tsc + full lint green; area suites green (915 + 1707 + 1129 + 7718 i18n incl. trio regen for 7 producers + pre-existing SecretRotation). Full suite: 2 pre-existing failures reproduced on pristine base (AnalyticsPage re-scopes - queued for fix; SecretRotation fingerprint - fixed via regen).
+- Next: commit + push TZ-5c, watch PR202; then AnalyticsPage probe, 277-route sweep, wait-oracle backend, TZ-6.

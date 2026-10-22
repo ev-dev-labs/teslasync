@@ -123,6 +123,9 @@ into main or this branch.
   record it as blocked with the exact error and move on; come back later
   if time allows. Kill commands running over 20 minutes; stop any dev or
   preview server you start when idle.
+- No suppression comments: never satisfy a lint rule, audit or guard with
+  an exception comment, marker, disable directive or allowlist entry. Fix
+  the cause (code, shared API, or an over-broad guard) instead.
 
 ---
 

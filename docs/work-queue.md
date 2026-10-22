@@ -4,8 +4,8 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Muse (post-compaction resume).
-Branch HEAD: `147f180cf3` (7 TZ-4 commits pushed; PR202 run in progress, 5 jobs red so far).
+Last updated: 2026-10-22 by Muse (TZ-5c marker-free migration).
+Branch HEAD: `4fd5b3bd1c` + uncommitted TZ-5c (shared API, 40-site migration, guard rewrite, i18n regen — committing + pushing next).
 
 ## Parts overview
 
@@ -29,7 +29,8 @@ Branch HEAD: `147f180cf3` (7 TZ-4 commits pushed; PR202 run in progress, 5 jobs 
 | Calendar values unshifted (LA + Kiritimati tests) | done | `d4653c5517` + `86bb6e735d` | `formatMonthYear` day-rollover validation; `dateFormat.test.ts` 82 green |
 | `useConversionTimezone` + `resolveRawTimezone` (conversion boundaries) | done | `d4653c5517` + `86bb6e735d` | RateForm + JourneyAssurancePage converted; `timezone.test.ts` extended |
 | TZ-4 API `timezone` sends + backend zone params + Go tests | done | `284851a318..147f180cf3` (7, pushed) | Vitest 2727/57276 + tsc + Go green at push; PR202 run in progress |
-| TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `1778b6221e` guard | Guard done: audit-timezone-display (R1-R5, 14 tests, registry+wired, 3725 files green) + 67 markers + mileage label + 3 hoists (tsc/eslint/11 files green). Recorded: StatPeriod date-only boundary shift -> Part 3. Next: 277-route sweep |
+| TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `e24583d253` timeline fix | Guard done (R1-R5, registry+wired, 3725 green); sweep spec + 12-route calibration done; timeline zoned bucketing done. 277-route full sweep not yet run. |
+| TZ-5c marker-free migration (user update) | in progress | this push | `tz-computation` 72->0, all other `tz-*` kinds 0 in src (1 absence-assertion test kept); shared API +3 helpers; guard rewritten marker-free (16 tests); R2 stays syntactic (see decisions). Next: commit + push, then sweep findings + TZ-6 |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | not started | — | Drive times, drawers, ranges, midnight day assignment |
 | Freshness-header revert (`c8aad38605`, `dc22ed9bfb`, `f6d6be4106`) | not started | revert set identified | `git revert` (no resets) after Part 1 code done; `cad1237f5f` only if shell-preservation fails; i18n conflicts via generators |
 | TZ-7 i18n regen, full local replica, commit, push, PR green | not started | — | Section 3 replica, then push once |
@@ -90,6 +91,43 @@ exceptions / bugs-fixed: —.
   (`tz-dst-offset`: fall-back disambiguation, same class as
   `formatChartInstant`); quiet-hours per-window zones stay
   (`tz-schedule-data`, same class as automation schedules).
+  SUPERSEDED by TZ-5c: all `tz-*` markers removed via shared API
+  (toIsoString/formatGmtOffset/supportedTimeZones); same behaviors kept.
+- TZ-5c shared API: `browserTimeZone()` added to `dateFormat.ts`
+  (mock-safe leaf; `timezone.ts` keeps its own for hook-adjacent code
+  because 40+ tests mock that module); validity results cached in
+  `safeTimeZone` (bucketing calls it per row); `zonedDateParts`
+  normalizes h23 midnight 24->0 for all callers.
+- TZ-5c parity calls: seasonal/hvac canonical-case readback dropped
+  (unpinned; real inputs are canonical IANA ids); midnight hour-24
+  rows now bucket at hour 0 instead of 24/null/crash (chargeAdvisor,
+  drivingRhythm, hvacCycling latent crash, EnergyPage evening-bucket,
+  QuietHoursSummary leg); invalid zone/NaN paths still throw RangeError
+  where the old Intl code threw (daylog keeps its RangeError->ISO catch
+  for bad locales too, pinned by test).
+- TZ-5c guard: R2 stays syntactic (flags ALL toLocale*, dates and
+  numbers) instead of a typechecker program — a full TS program in lint
+  would cost minutes per run, and the shared number layer
+  (@/lib/numberFormat) exists precisely so numbers never format
+  directly either. R4 narrowed: skips `<time dateTime>`, TimeStamp/
+  DateTime props, ISO nested in shared-formatter calls
+  (import-aware + known names); still flags direct, chained
+  (`.slice`), and non-shared (`String(...)`) ISO in JSX.
+- TZ-5c certificate bug: `tz-number-format` markers sat INSIDE the
+  print-document template string and leaked into certificates; removed
+  with the fmtInt migration + regression test.
+- Other markers verdict (user review): `relative-time:` (17),
+  `flow-cta:` (10), `not-destructive` (4) belong to the FROZEN
+  freshness audit — cannot touch (playbook global). `no-action:`
+  (754) belongs to audit-empty-state-cta — each documents a product
+  decision (no meaningful recovery action); removal needs 754 product
+  re-reviews or deleting a workflow gate. All kept; both audits green.
+- i18n: trio regen covers 7 touched producers + pre-existing stale
+  SecretRotationOperationalBrief (stale since `eccca4cdc1`, fixed via
+  the sanctioned generator, translations verified clean).
+- AnalyticsPage `re-scopes and re-fetches` failure is PRE-EXISTING
+  (reproduced on pristine base worktree `4fd5b3bd1c`); must still be
+  fixed for the TZ-7 green gate. Queued after the TZ-5c push.
 
 ## Blockers
 
@@ -104,6 +142,7 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-TZ-5: migrate remaining direct date formatters to the shared layer in
-batches (Vitest + tsc per batch), then write the guard audit + tests,
-then the 277-route sweep. Then TZ-6 e2e, freshness revert, TZ-7.
+Commit TZ-5c in logical groups + push, watch PR202 checks. Then:
+AnalyticsPage pre-existing failure probe (needed for green), 277-route
+full sweep + wait-oracle backend zone param, TZ-6 e2e, freshness
+revert, TZ-7 full replica + green.
