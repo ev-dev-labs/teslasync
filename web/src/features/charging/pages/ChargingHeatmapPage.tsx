@@ -22,7 +22,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 
-import { formatTime } from '@/lib/dateFormat';
+import { formatTime, formatWeekdayName } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
 
 import {
@@ -75,12 +75,10 @@ export default function ChargingHeatmapPage() {
   // Labels describe browser-local bucket identities, not real instants to
   // convert into another timezone. UTC reference dates keep them stable.
   const dayLabels = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
-    return Array.from({ length: 7 }, (_, day) => formatter.format(new Date(Date.UTC(2024, 0, 7 + day))));
+    return Array.from({ length: 7 }, (_, day) => formatWeekdayName(new Date(Date.UTC(2024, 0, 7 + day)), { locale, tz: 'UTC' }));
   }, [locale]);
   const fullDayLabels = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
-    return Array.from({ length: 7 }, (_, day) => formatter.format(new Date(Date.UTC(2024, 0, 7 + day))));
+    return Array.from({ length: 7 }, (_, day) => formatWeekdayName(new Date(Date.UTC(2024, 0, 7 + day)), { locale, tz: 'UTC', weekdayStyle: 'long' }));
   }, [locale]);
   const hourLabels = useMemo(() => Array.from({ length: 24 }, (_, hour) =>
     formatTime(new Date(Date.UTC(2024, 0, 7, hour)), { locale, tz: 'UTC' }),

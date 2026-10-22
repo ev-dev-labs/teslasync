@@ -9,6 +9,7 @@ import {
 } from '@/lib/unitConversion';
 import type { TrueCostDisplay } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { formatMonthYear } from '@/lib/dateFormat';
 import { getGlobalPrecision } from '@/lib/numberFormat';
 
 function finite(value: number | null | undefined): value is number {
@@ -75,15 +76,7 @@ export function useTrueCostDisplay(): TrueCostDisplay {
     [energyUnit],
   );
   const formatMonth = useCallback(
-    (month: string) => {
-      const match = /^(\d{4})-(\d{2})$/.exec(month);
-      if (!match) return month;
-      return new Intl.DateTimeFormat(locale, {
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'UTC',
-      }).format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)));
-    },
+    (month: string) => formatMonthYear(month, { locale }),
     [locale],
   );
 

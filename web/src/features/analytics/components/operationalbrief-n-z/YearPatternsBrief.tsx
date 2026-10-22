@@ -5,7 +5,7 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatTime } from '@/lib/dateFormat';
+import { formatTime, formatWeekdayName } from '@/lib/dateFormat';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { YearReview } from '@/api/types';
 import { to12Hour } from '../year-review-modernization/yearReviewPresentation';
@@ -24,8 +24,7 @@ export function YearPatternsBrief({ data, period, retained }: { data: YearReview
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const weekday = weekdays.indexOf(data.most_active_day_of_week ?? '');
   const dayDisplay = weekday >= 0
-    ? new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' })
-      .format(new Date(Date.UTC(2000, 0, 2 + weekday)))
+    ? formatWeekdayName(new Date(Date.UTC(2000, 0, 2 + weekday)), { locale, tz: 'UTC', weekdayStyle: 'long' })
     : data.most_active_day_of_week || '—';
   const metrics: StatMetric[] = [
     { metricId: 'rate', occurrenceId: 'year-drives-per-week', rawValue: data.avg_drives_per_week,

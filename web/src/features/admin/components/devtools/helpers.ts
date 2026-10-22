@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import i18n, { type TFunction } from 'i18next'
 import { request } from '@/api/client'
 import type { Vehicle } from '@/api/types'
-import { formatRelative, type FormatOptions } from '@/lib/dateFormat'
+import { formatRelative, formatWeekdayName, type FormatOptions } from '@/lib/dateFormat'
 import { fmtInt, getGlobalLocale } from '@/lib/numberFormat'
 import type { TelemetryError } from './types'
 
@@ -131,8 +131,7 @@ export function describeCron(
   }))
   if (dow !== '*') {
     const weekday = /^\d+$/.test(dow!)
-      ? new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' })
-        .format(new Date(Date.UTC(2024, 0, 7 + Number(dow))))
+      ? formatWeekdayName(new Date(Date.UTC(2024, 0, 7 + Number(dow))), { locale, tz: 'UTC' })
       : dow
     pieces.push(t('devtools.utils.cronOnWeekday', {
       defaultValue: 'on {{weekday}}', weekday,
