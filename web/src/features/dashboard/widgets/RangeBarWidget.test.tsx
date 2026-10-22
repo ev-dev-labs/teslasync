@@ -493,14 +493,16 @@ describe('RangeBarWidget — EPA variance', () => {
 // ── Compact layout ────────────────────────────────────────────────────────────
 
 describe('RangeBarWidget — compact layout', () => {
-  it('renders the rated figure and a "<unit> rated" caption without a title or bars', () => {
+  it('renders the rated figure and a "<unit> rated" caption under the shared header without body headings or bars', () => {
     setState({ state: makeState({ rated_range: mi(300), ideal_range: mi(350) }) });
     renderWidget(COMPACT);
 
     expect(screen.getByText('300.00')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
     expect(screen.getByText('Rated range')).toBeInTheDocument();
-    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getAllByRole('heading')).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Widget overview' })).toBeInTheDocument();
+    expect(screen.getByTestId('widget-body').querySelector('h1, h2, h3, h4')).toBeNull();
     expect(metricBarSpy).not.toHaveBeenCalled();
   });
 

@@ -14,6 +14,7 @@ interface StatusBadgeProps {
   className?: string;
   /** Localized presentation only; status still owns the FSM lookup. */
   label?: string;
+  showDot?: boolean;
 }
 
 const sizes = {
@@ -35,7 +36,7 @@ const restrainedDot = [
   '[&.bg-gray-400]:bg-[var(--text-secondary)]',
 ].join(' ');
 
-export function StatusBadge({ status, size = 'md', className, label: presentationLabel }: StatusBadgeProps) {
+export function StatusBadge({ status, size = 'md', className, label: presentationLabel, showDot = true }: StatusBadgeProps) {
   const s = sizes[size];
   // Fail closed: coerce nullish (and trim whitespace-only) status to '' so
   // getStateDefinition — which lowercases the state name — never throws on a
@@ -56,7 +57,7 @@ export function StatusBadge({ status, size = 'md', className, label: presentatio
       )}
     >
       {/* Decorative colour cue — the adjacent text already names the status. */}
-      <span className={cn('inline-block shrink-0 rounded-full', s.dot, dotColor, restrainedDot)} aria-hidden="true" />
+      {showDot && <span className={cn('inline-block shrink-0 rounded-full', s.dot, dotColor, restrainedDot)} aria-hidden="true" />}
       <span className={cn('min-w-0', typography.color.secondary)}>{label ? (presentationLabel ?? label) : EMPTY_LABEL}</span>
     </span>
   );

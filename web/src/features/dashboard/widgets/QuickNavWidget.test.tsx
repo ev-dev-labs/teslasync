@@ -211,7 +211,8 @@ describe('QuickNavWidget — shell + prop-agnostic contract', () => {
     const { container } = renderWidget({ size: { cols, rows: 2 } });
     expect(screen.getAllByRole('link')).toHaveLength(4);
     expect(screen.getByRole('navigation').className).toContain('@xs:grid-cols-2');
-    expect(container.querySelector('[style]')).toBeNull();
+    expect(container.querySelector('[data-testid="widget-body"] [style]')).toBeNull();
+    expect(container.querySelectorAll('[data-role="freshness-dot"]')).toHaveLength(1);
     expect(screen.getByRole('link', { name: /drives/i }).className).toContain('focus-visible:ring-2');
   });
 });

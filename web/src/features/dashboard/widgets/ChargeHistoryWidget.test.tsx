@@ -285,7 +285,9 @@ describe('ChargeHistoryWidget — query lifecycle', () => {
     expect(skeleton).toHaveClass('w-full', 'bg-[var(--skeleton-bg)]');
     expect(skeleton?.closest('[aria-busy]')).toHaveAttribute('aria-busy', 'true');
     expect(container.querySelectorAll('.h-full.min-h-24.rounded-xl[aria-hidden="true"]')).toHaveLength(1);
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[data-testid="widget-body"] .animate-pulse')).toBeNull();
+    expect(container.querySelectorAll('[data-role="freshness-dot"]')).toHaveLength(1);
+    expect(container.querySelector('[data-role="freshness-dot"]')).toHaveClass('animate-pulse');
     expect(screen.queryByText('Charge history')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Charge history', level: 3 })).toBeVisible();
     expect(screen.queryByText('No charge sessions yet')).toBeNull();

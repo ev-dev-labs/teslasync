@@ -714,7 +714,7 @@ describe('ChargingSessionDetailWidget — graceful degradation on transient erro
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // … and the freshness indicator exposes the error state and semantic danger dot.
-    expect(screen.getByRole('button', { name: /^Refresh data · Error/ })
+    expect(screen.getByRole('button', { name: /^Refresh data · error/ })
       .querySelector('[class*="--semantic-danger"]')).toBeTruthy();
   });
 });

@@ -28,6 +28,22 @@ import { DashboardGrid } from '../DashboardGrid';
 import { getWidgetDef } from '../../widgets/registry';
 import type { SavedDashboard, RGLLayouts, WidgetInstance } from '../../widgets/types';
 
+// Header controls now mount with the shared shell. Keep a real shell and inert
+// body so chrome assertions exercise that integration without data requests.
+vi.mock('../../widgets/registry', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../widgets/registry')>();
+  const { WidgetShell } = await import('../../widgets/WidgetShell');
+  const definitions = new Map(actual.WIDGET_REGISTRY.map(def => [def.id, {
+    ...def, component: () => <WidgetShell title={def.name}><div>Widget content</div></WidgetShell>,
+  }]));
+  return {
+    ...actual,
+    getWidgetDef: (id: string) => {
+      return definitions.get(id);
+    },
+  };
+});
+
 // Two real registry widgets — their bodies are lazy, so only the def
 // metadata (name, defaultSize) is used synchronously in these tests.
 const W1_ID = 'vehicle-hero';
@@ -158,8 +174,8 @@ describe('DashboardGrid — render paths', () => {
     expect(screen.getAllByRole('button', { name: /^Expand /i })).toHaveLength(2);
     expect(screen.getByRole('button', { name: `Expand ${W1_NAME}` })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Expand ${W2_NAME}` })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: `Expand ${W1_NAME}` })).toHaveClass('right-12');
-    expect(container.querySelector('.widget-panel')).toHaveClass('[&_[data-role=widget-shell-header]]:pr-28');
+    expect(screen.getByRole('button', { name: `Expand ${W1_NAME}` }).closest('[data-role="widget-shell-header"]')).not.toBeNull();
+    expect(container.querySelector('.widget-panel')).not.toHaveClass('[&_[data-role=widget-shell-header]]:pr-28');
     expect(container.querySelector('.widget-container')).not.toHaveClass('[--dashboard-widget-chrome-inset:4rem]');
   });
 
@@ -268,17 +284,17 @@ describe('DashboardGrid — fullscreen overlay', () => {
     setViewport(1440);
     renderGrid({ dashboard: makeDashboard([{ id: 'wid-1', widgetId: W1_ID }]) });
 
-    // Overlay heading is absent until the user expands.
-    expect(screen.queryByRole('heading', { name: W1_NAME })).toBeNull();
+    // The fullscreen dialog is absent until the user expands.
+    expect(screen.queryByRole('dialog', { name: W1_NAME })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: `Expand ${W1_NAME}` }));
 
-    expect(screen.getByRole('heading', { name: W1_NAME })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: W1_NAME })).toBeInTheDocument();
     const exit = screen.getByRole('button', { name: /exit fullscreen/i });
     expect(exit).toBeInTheDocument();
 
     fireEvent.click(exit);
-    expect(screen.queryByRole('heading', { name: W1_NAME })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: W1_NAME })).toBeNull();
   });
 });
 

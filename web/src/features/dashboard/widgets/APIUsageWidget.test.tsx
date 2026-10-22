@@ -401,9 +401,9 @@ describe('APIUsageWidget — graceful degradation on transient error', () => {
     assertOperationalBriefDisclosure(screen.getByTestId('api-usage-operational-brief'), 'Retained readings');
     // The interpolated freshness control names its semantic error state; the
     // retained-data notice carries trust here.
-    const freshness = screen.getByRole('button', { name: 'Refresh data · Error · just now' });
+    const freshness = screen.getByRole('button', { name: 'Refresh data · error · just now' });
     expect(freshness.querySelector('[class*="bg-[var(--semantic-danger)]"]')).toBeTruthy();
-    expect(freshness).toHaveAccessibleDescription(expect.stringContaining('Refresh data · Error'));
+    expect(freshness).toHaveAccessibleDescription(expect.stringContaining('Refresh data · error'));
     expect(freshness).toBeEnabled();
   });
 
