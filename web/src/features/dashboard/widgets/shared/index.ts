@@ -1,4 +1,4 @@
-export { WidgetBigNumber, type WidgetBigNumberProps } from './WidgetBigNumber';
+export { WidgetBigNumber, type WidgetBigNumberDelta, type WidgetBigNumberProps } from './WidgetBigNumber';
 export { WidgetChartSummary, type ChartSummaryStat, type WidgetChartSummaryProps } from './WidgetChartSummary';
 export { WidgetComparisonCard, type ComparisonMetric } from './WidgetComparisonCard';
 export { WidgetDetailCard, type DetailEntry } from './WidgetDetailCard';
