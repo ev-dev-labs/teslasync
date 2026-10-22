@@ -504,3 +504,8 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-22 - Codex: sweep calibration 2/2 pass (mock build)
 - Built hermetic mock (E2E_MOCKS=1 e2e:build) and ran route-layout-guard TZ sweep for /charging + /tesla-charging-sessions @1280: both pass, tzIso/zones/dupes 0 (waitoracle UTC removal verified). Full 277-route sweep deferred to TZ-7 gate (timeboxed; 277x5 too long for single local run).
 - Next: TZ-6 e2e spec (UTC browser, LA then Tokyo), freshness revert, TZ-7 replica.
+
+## 2026-10-22 - Codex: i18n pins verified, TZ-6 assessed
+- Fingerprint suites green after waitoracle fix: canonical/owner/copy-owner 49 pass; excluded-consistent/feature/resolved/final-four 7679 pass. No other vitest asserts old UTC strings.
+- TZ-6 design: settings `tz_display_default=user` + `timezone_user` LA->Tokyo, browser UTC; needs new e2e spec for drive times/drawers/ranges/midnight assignment (no existing spec covers LA/Tokyo switch). Mock build ready.
+- Next: implement TZ-6 spec, then freshness revert, TZ-7 replica.
