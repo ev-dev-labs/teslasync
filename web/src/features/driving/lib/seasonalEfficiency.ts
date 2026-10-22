@@ -6,6 +6,7 @@
  * are derived from the vehicle IANA timezone, never from the browser clock.
  */
 import type { Drive } from '@/types/driving';
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 const DAY_MS = 86_400_000;
 const YEAR_MS = 365.2425 * DAY_MS;
@@ -304,37 +305,15 @@ function normalizeOptions(options: SeasonalEfficiencyOptions): NormalizedOptions
 /** Returns a valid IANA timezone or UTC without throwing. */
 export function normalizeSeasonalTimezone(timeZone: string | null | undefined): string {
   if (typeof timeZone !== 'string' || !timeZone.trim()) return 'UTC';
-  try {
-    // tz-computation: validates the IANA zone; the result is computed with, never rendered
-    return new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      calendar: 'gregory',
-      numberingSystem: 'latn',
-    }).resolvedOptions().timeZone || 'UTC';
-  } catch {
-    return 'UTC';
-  }
+  return isValidTimeZone(timeZone) ? timeZone : 'UTC';
 }
 
 function dateParts(timestampMs: number, timeZone: string): LocalParts {
-  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    calendar: 'gregory',
-    numberingSystem: 'latn',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const parts = formatter.formatToParts(new Date(timestampMs));
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type === 'year' || part.type === 'month' || part.type === 'day')
-      .map((part) => [part.type, Number(part.value)]),
-  ) as Record<string, number>;
-  const year = values.year;
-  const month = values.month;
-  const day = values.day;
+  const parts = zonedDateParts(timestampMs, timeZone);
+  if (!parts) {
+    throw new RangeError(`unable to derive calendar parts in ${timeZone}`);
+  }
+  const { year, month, day } = parts;
   const date = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const dayIndex = Math.floor(
     (Date.UTC(year, month - 1, day) - Date.UTC(year, 0, 1)) / DAY_MS,

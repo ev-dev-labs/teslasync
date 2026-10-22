@@ -6,6 +6,7 @@
  */
 
 import type { Drive } from '@/types/driving';
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 export type ArchetypeLabel =
   | 'highwayRun'
@@ -272,13 +273,7 @@ function validTimeZone(value: unknown): string {
   if (typeof value !== 'string' || value.trim().length === 0) {
     return DEFAULTS.timeZone;
   }
-  try {
-    // tz-computation: validates the IANA zone; the result is computed with, never rendered
-    new Intl.DateTimeFormat('en-US', { timeZone: value }).format(0);
-    return value;
-  } catch {
-    return DEFAULTS.timeZone;
-  }
+  return isValidTimeZone(value) ? value : DEFAULTS.timeZone;
 }
 
 function resolveOptions(options: ArchetypeOptions | null | undefined): Required<ArchetypeOptions> {
@@ -323,17 +318,13 @@ function resolveOptions(options: ArchetypeOptions | null | undefined): Required<
 
 function calendarParts(
   milliseconds: number,
-  formatter: Intl.DateTimeFormat,
+  timeZone: string,
 ): { hour: number; month: string } {
-  const parts = formatter.formatToParts(new Date(milliseconds));
-  const value = (type: Intl.DateTimeFormatPartTypes): number =>
-    Number(parts.find((part) => part.type === type)?.value ?? 0);
-  const year = value('year');
-  const month = value('month');
-  const day = value('day');
-  const hour = value('hour');
-  const minute = value('minute');
-  const second = value('second');
+  const parts = zonedDateParts(milliseconds, timeZone);
+  if (!parts) {
+    throw new RangeError('unable to derive calendar parts in configured timezone');
+  }
+  const { year, month, day, hour, minute, second } = parts;
   if (
     year <= 0
     || month <= 0
@@ -427,17 +418,6 @@ export function buildDrivePoints(
   const seenIds = new Set<number>();
   const timestampedMs: number[] = [];
   const observedTemperatures: number[] = [];
-  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
-  const calendarFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: thresholds.timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  });
 
   for (const raw of sourceRows as readonly unknown[]) {
     if (!isRecord(raw)) {
@@ -508,7 +488,7 @@ export function buildDrivePoints(
       accounting.eligibleObservedTempRows += 1;
       observedTemperatures.push(observedTempC);
     }
-    const calendar = calendarParts(departureMs, calendarFormatter);
+    const calendar = calendarParts(departureMs, thresholds.timeZone);
     const durationS = finite(raw.durationS);
 
     pending.push({

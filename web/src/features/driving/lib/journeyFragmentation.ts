@@ -1,5 +1,6 @@
 import type { Drive } from '@/types/driving';
 import { isFiniteNumber } from '@/lib/numberFormat';
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 /**
  * Journey fragmentation is deliberately a descriptive analysis of the
@@ -296,13 +297,7 @@ function parseTimestamp(value: unknown): number | null {
 
 function safeTimeZone(timeZone: unknown): string {
   const candidate = typeof timeZone === 'string' && timeZone.trim() ? timeZone.trim() : 'UTC';
-  try {
-    // tz-computation: sanitizes the zone, falling back to UTC; the result is computed with, never rendered
-    new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
-    return candidate;
-  } catch {
-    return 'UTC';
-  }
+  return isValidTimeZone(candidate) ? candidate : 'UTC';
 }
 
 function isLiveOrIncomplete(drive: Drive): boolean {
@@ -655,31 +650,18 @@ function profileParts(ms: number, timeZone: string): {
   hour: number;
   weekday: number;
 } {
-  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    hourCycle: 'h23',
-    weekday: 'short',
-  });
-  const parts = Object.fromEntries(
-    formatter.formatToParts(ms)
-      .filter((part) => part.type !== 'literal')
-      .map((part) => [part.type, part.value]),
-  );
-  const year = parts.year ?? '0000';
-  const month = parts.month ?? '01';
-  const day = parts.day ?? '01';
-  const hourValue = Number(parts.hour ?? 0);
-  const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const parts = zonedDateParts(ms, timeZone);
+  if (!parts) {
+    throw new RangeError(`unable to derive calendar parts in ${timeZone}`);
+  }
+  const year = String(parts.year).padStart(4, '0');
+  const month = String(parts.month).padStart(2, '0');
+  const day = String(parts.day).padStart(2, '0');
   return {
     dateKey: `${year}-${month}-${day}`,
     monthKey: `${year}-${month}`,
-    hour: Number.isFinite(hourValue) ? hourValue % 24 : 0,
-    weekday: Math.max(0, weekdayNames.indexOf(parts.weekday ?? 'Sun')),
+    hour: parts.hour,
+    weekday: parts.weekday,
   };
 }
 

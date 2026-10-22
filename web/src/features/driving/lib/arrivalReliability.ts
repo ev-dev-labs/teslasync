@@ -7,6 +7,7 @@
  * injected by the caller.
  */
 import type { Drive } from '@/types/driving';
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 const MS_PER_DAY = 86_400_000;
 const BUCKET_HOURS = 2;
@@ -224,7 +225,6 @@ const DEFAULTS: ResolvedArrivalReliabilityOptions = {
   strongGlobalActiveWeeks: 12,
 };
 
-const PARTS_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
 
 function clamp(value: number, minimum = 0, maximum = 1): number {
   if (!Number.isFinite(value)) return minimum;
@@ -388,43 +388,16 @@ export function normalizeArrivalTimeZone(timeZone: string): string {
     typeof timeZone === 'string' && timeZone.trim().length > 0
       ? timeZone.trim()
       : 'UTC';
-  try {
-    // tz-computation: validates the IANA zone; the result is computed with, never rendered
-    new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
-    return candidate;
-  } catch {
-    return 'UTC';
-  }
-}
-
-function partsFormatter(timeZone: string): Intl.DateTimeFormat {
-  const cached = PARTS_FORMATTERS.get(timeZone);
-  if (cached) return cached;
-  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
-  const formatter = new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    hourCycle: 'h23',
-  });
-  PARTS_FORMATTERS.set(timeZone, formatter);
-  return formatter;
+  return isValidTimeZone(candidate) ? candidate : 'UTC';
 }
 
 function zonedParts(ms: number, timeZone: string): ZonedParts {
-  const parts = partsFormatter(timeZone).formatToParts(new Date(ms));
-  const numberPart = (type: Intl.DateTimeFormatPartTypes): number => {
-    const parsed = Number(parts.find((part) => part.type === type)?.value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-  const year = numberPart('year');
-  const month = numberPart('month');
-  const day = numberPart('day');
-  const rawHour = numberPart('hour');
-  const hour = rawHour === 24 ? 0 : Math.floor(clamp(rawHour, 0, 23));
-  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const parts = zonedDateParts(ms, timeZone);
+  if (!parts) {
+    throw new RangeError(`unable to derive calendar parts in ${timeZone}`);
+  }
+  const { year, month, day, weekday } = parts;
+  const hour = Math.floor(clamp(parts.hour, 0, 23));
   const yearLabel = String(year).padStart(4, '0');
   const monthLabel = String(month).padStart(2, '0');
   const dayLabel = String(day).padStart(2, '0');

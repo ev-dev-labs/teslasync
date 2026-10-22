@@ -10,6 +10,7 @@
 
 import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 export const RESERVE_FLOOR_PCT = 20;
 export const DEFAULT_HISTORY_WINDOW_DAYS = 180;
@@ -368,41 +369,15 @@ function normalizeTimeZone(timeZone: unknown): string {
   const candidate = typeof timeZone === 'string' && timeZone.trim()
     ? timeZone.trim()
     : DEFAULT_TIME_ZONE;
-  try {
-    // tz-computation: validates the IANA zone; the result is computed with, never rendered
-    new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
-    return candidate;
-  } catch {
-    return DEFAULT_TIME_ZONE;
-  }
-}
-
-const formatters = new Map<string, Intl.DateTimeFormat>();
-
-function formatter(timeZone: string): Intl.DateTimeFormat {
-  const existing = formatters.get(timeZone);
-  if (existing) return existing;
-  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
-  const created = new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    hourCycle: 'h23',
-  });
-  formatters.set(timeZone, created);
-  return created;
+  return isValidTimeZone(candidate) ? candidate : DEFAULT_TIME_ZONE;
 }
 
 function localParts(ms: number, timeZone: string): LocalParts {
-  const parts = formatter(timeZone).formatToParts(new Date(ms));
-  const get = (type: Intl.DateTimeFormatPartTypes): number => {
-    const item = parts.find((part) => part.type === type);
-    const parsed = item ? Number(item.value) : NaN;
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-  return { year: get('year'), month: get('month'), day: get('day'), hour: get('hour') };
+  const parts = zonedDateParts(ms, timeZone);
+  if (!parts) {
+    throw new RangeError(`unable to derive calendar parts in ${timeZone}`);
+  }
+  return { year: parts.year, month: parts.month, day: parts.day, hour: parts.hour };
 }
 
 function dateKey(parts: LocalParts): string {

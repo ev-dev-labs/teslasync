@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { Icons } from '@/lib/icons';
-import { formatTime, ymdInTz } from '@/lib/dateFormat';
+import { browserTimeZone, formatGmtOffset, formatTime, isValidTimeZone, ymdInTz, zonedDateParts } from '@/lib/dateFormat';
 import { getGlobalLocale } from '@/lib/numberFormat';
 import type { DayLogEvent, DayLogLayer } from '@/api/types';
 
@@ -238,20 +238,16 @@ export function formatTimeSeconds(iso: string | null | undefined, tz?: string): 
   if (!iso) return formatTime(iso);
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return formatTime(iso);
-  const locale = getGlobalLocale();
+  if (tz && !isValidTimeZone(tz)) return iso;
   try {
+    const locale = getGlobalLocale();
     const time = formatTime(iso, {
       locale,
       tz: tz || undefined,
       clock: { hour: '2-digit', minute: '2-digit', second: '2-digit' },
     });
-    // tz-computation: extracts the GMT offset via formatToParts for DST disambiguation
-    // tz-dst-offset: the offset identifies repeated fall-back hours on the timeline
-    const offset = new Intl.DateTimeFormat(locale, {
-      timeZone: tz || undefined,
-      timeZoneName: 'shortOffset',
-    }).formatToParts(d).find((part) => part.type === 'timeZoneName')?.value;
-    return offset ? `${time} ${offset}` : time;
+    const offset = formatGmtOffset(d, { locale, tz: tz || undefined });
+    return `${time} ${offset}`;
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
     return iso;
@@ -262,16 +258,10 @@ export function formatTimeSeconds(iso: string | null | undefined, tz?: string): 
 export function hourKeyInTz(iso: string, tz?: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  try {
-    // tz-computation: builds an HH hour key in the zone for time separators; the key is computed with, never rendered
-    return new Intl.DateTimeFormat('en-GB', {
-      hour: '2-digit',
-      hourCycle: 'h23',
-      timeZone: tz || undefined,
-    }).format(d);
-  } catch {
-    return String(d.getUTCHours()).padStart(2, '0');
-  }
+  const zone = tz || browserTimeZone();
+  const parts = zonedDateParts(d, zone);
+  if (!parts) return String(d.getUTCHours()).padStart(2, '0');
+  return String(parts.hour).padStart(2, '0');
 }
 
 /**

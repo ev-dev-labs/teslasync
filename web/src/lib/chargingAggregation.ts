@@ -12,6 +12,8 @@
  * so callers can convert at the edge.
  */
 
+import { zonedDateParts } from '@/lib/dateFormat';
+
 import type { ChargingSession } from '@/api/types';
 import {
   priorPeriod,
@@ -276,21 +278,9 @@ function parseStartHour(iso: string | null | undefined, tz?: string): number | n
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   if (!tz) return d.getHours();
-  try {
-    // tz-computation: extracts the hour as a number for aggregation; the number is computed with, never rendered
-    const fmt = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz,
-      hour: 'numeric',
-      hour12: false,
-    });
-    const parts = fmt.formatToParts(d);
-    const h = parts.find((p) => p.type === 'hour')?.value;
-    if (!h) return null;
-    const n = Number(h);
-    return Number.isFinite(n) ? n % 24 : null;
-  } catch {
-    return d.getHours();
-  }
+  const parts = zonedDateParts(d, tz);
+  if (!parts) return d.getHours();
+  return parts.hour;
 }
 
 /* ------------------------------------------------------------------ */

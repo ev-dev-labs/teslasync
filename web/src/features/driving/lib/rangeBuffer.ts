@@ -1,8 +1,8 @@
 import type { Drive } from '@/types/driving';
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 const MS_PER_DAY = 86_400_000;
 const PROFILE_HOURS = 4;
-const PARTS_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
 
 export const DEFAULT_RANGE_BUFFER_THRESHOLD_PCT = 20;
 export const CRITICAL_RANGE_BUFFER_THRESHOLD_PCT = 10;
@@ -354,32 +354,7 @@ function summarizeArrivals(
 function resolveTimeZone(candidate: string): string {
   const trimmed = candidate.trim();
   if (!trimmed) return 'UTC';
-  try {
-    // tz-computation: validates the IANA zone; the result is computed with, never rendered
-    new Intl.DateTimeFormat('en-US', { timeZone: trimmed }).format(0);
-    return trimmed;
-  } catch {
-    return 'UTC';
-  }
-}
-
-function partsFormatter(timeZone: string): Intl.DateTimeFormat {
-  const cached = PARTS_FORMATTERS.get(timeZone);
-  if (cached) return cached;
-  // tz-computation: extracts zoned calendar parts for bucketing; parts are computed with, never rendered
-  const formatter = new Intl.DateTimeFormat(
-    'en-US-u-ca-gregory-nu-latn',
-    {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      hourCycle: 'h23',
-    },
-  );
-  PARTS_FORMATTERS.set(timeZone, formatter);
-  return formatter;
+  return isValidTimeZone(trimmed) ? trimmed : 'UTC';
 }
 
 function localWeekKey(year: number, month: number, day: number): string {
@@ -390,15 +365,11 @@ function localWeekKey(year: number, month: number, day: number): string {
 }
 
 function zonedParts(ms: number, timeZone: string): ZonedParts {
-  const parts = partsFormatter(timeZone).formatToParts(new Date(ms));
-  const numberPart = (type: Intl.DateTimeFormatPartTypes): number => {
-    const value = Number(parts.find((part) => part.type === type)?.value);
-    return Number.isFinite(value) ? value : 0;
-  };
-  const year = numberPart('year');
-  const month = numberPart('month');
-  const day = numberPart('day');
-  const hour = numberPart('hour') % 24;
+  const parts = zonedDateParts(ms, timeZone);
+  if (!parts) {
+    throw new RangeError(`unable to derive calendar parts in ${timeZone}`);
+  }
+  const { year, month, day, hour } = parts;
   const localDate = new Date(Date.UTC(year, month - 1, day));
 
   return {

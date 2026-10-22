@@ -11,6 +11,7 @@
  */
 
 import { resolveHvacActive } from '@/lib/climateState';
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 export const DEFAULT_HVAC_MAX_GAP_S = 30 * 60;
 export const DEFAULT_HVAC_SHORT_CYCLE_THRESHOLD_S = 10 * 60;
@@ -370,7 +371,7 @@ function splitIntervalByHour(
   endMs: number,
   on: boolean,
   profile: HvacHourlyProfile[],
-  clock: Intl.DateTimeFormat,
+  timeZone: string,
 ): void {
   let cursor = startMs;
   while (cursor < endMs) {
@@ -378,7 +379,7 @@ function splitIntervalByHour(
     // DST hours and half-hour offset changes must conserve elapsed seconds.
     const next = Math.min(endMs, cursor + 60_000 - (cursor % 60_000 + 60_000) % 60_000);
     const durationS = (next - cursor) / 1000;
-    const bucket = profile[hourInZone(cursor, clock)]!;
+    const bucket = profile[hourInZone(cursor, timeZone)]!;
     bucket.observedS += durationS;
     if (on) bucket.onS += durationS;
     else bucket.offS += durationS;
@@ -387,8 +388,8 @@ function splitIntervalByHour(
 
 }
 
-function hourInZone(ms: number, clock: Intl.DateTimeFormat): number {
-  return Number(clock.formatToParts(ms).find((part) => part.type === 'hour')!.value);
+function hourInZone(ms: number, timeZone: string): number {
+  return zonedDateParts(ms, timeZone)?.hour ?? 0;
 }
 
 function boundaryFromDisposition(disposition: PairDisposition): HvacRunBoundary {
@@ -657,13 +658,11 @@ export function summarizeHvacCycling(
 ): HvacCyclingSummary {
   const source = Array.isArray(samples) ? samples : [];
   const optionValues = isRecord(options) ? options : {};
-  // tz-computation: extracts the hour as a number and reads back the resolved zone; both are computed with, never rendered
-  const clock = new Intl.DateTimeFormat('en-US', {
-    timeZone: options?.timeZone ?? 'UTC',
-    hour: '2-digit',
-    hourCycle: 'h23',
-  });
-  const timeZone = clock.resolvedOptions().timeZone;
+  const requestedTimeZone = options?.timeZone ?? 'UTC';
+  if (!isValidTimeZone(requestedTimeZone)) {
+    throw new RangeError(`Unknown time zone: ${requestedTimeZone}`);
+  }
+  const timeZone = requestedTimeZone;
   const maxGapS = positiveOption(
     optionValues.maxGapS,
     DEFAULT_HVAC_MAX_GAP_S,
@@ -700,7 +699,7 @@ export function summarizeHvacCycling(
     const current = timeline[pair.index]!;
     const next = timeline[pair.index + 1]!;
     if (current.on == null) continue;
-    splitIntervalByHour(pair.startMs, pair.endMs, current.on, hourlyProfile, clock);
+    splitIntervalByHour(pair.startMs, pair.endMs, current.on, hourlyProfile, timeZone);
     if (current.on) totalOnObservedS += pair.durationS;
     else totalOffObservedS += pair.durationS;
 
@@ -710,7 +709,7 @@ export function summarizeHvacCycling(
       transitions.offToOff += 1;
     } else if (!current.on && next.on) {
       transitions.offToOn += 1;
-      hourlyProfile[hourInZone(next.ms, clock)]!.onTransitions += 1;
+      hourlyProfile[hourInZone(next.ms, timeZone)]!.onTransitions += 1;
     } else if (current.on && !next.on) {
       transitions.onToOff += 1;
     } else {
