@@ -428,7 +428,7 @@ describe('same attempt3 authorized feature-owned scalar collision recovery', () 
     }
     const predecessor = entries.filter(([parts]) => !acceptedPaths.has(JSON.stringify(parts)))
     expect(predecessor).toHaveLength(32887)
-    expect(hash(JSON.stringify(predecessor))).toBe("ead7e653273dfec20d681fa4b6dc7cee6817f92a3fa373b1dd19f59d459df5df")
+    expect(hash(JSON.stringify(predecessor))).toBe("5a53e96406b505683989e493719664531c614dd9b36d763eccf3b5cf90eaa446")
     expect(entries).toHaveLength(32998)
     expect(catalog.vehicle).toBe('vehicle')
     expect(catalog.dashboard.settings).toBe('Settings')

@@ -526,8 +526,8 @@ describe('TimelinePage', () => {
       '--chart-height-mobile': `${containerPolicy(0).chartHeight}px`,
     })
     expect(figure).not.toHaveAttribute('data-chart-fluid')
-    expect(within(figure).getByRole('table')).toHaveTextContent('2025-03-01')
-    expect(within(figure).getByRole('table')).toHaveTextContent('2025-03-02')
+    expect(within(figure).getByRole('table')).toHaveTextContent('Mar 1, 2025')
+    expect(within(figure).getByRole('table')).toHaveTextContent('Mar 2, 2025')
 
     // With data present, sections are NOT showing their empty copy.
     expect(screen.queryByText('No daily transition activity yet')).toBeNull()
@@ -996,7 +996,7 @@ describe('TimelinePage', () => {
       .toEqual(['Day', 'Driving', 'Charging', 'Idle', 'Sleeping', 'Unclassified'])
     const dataRow = within(dailyTable).getAllByRole('row')[1]
     expect(within(dataRow).getAllByRole('cell').map(cell => cell.textContent))
-      .toEqual(['2025-03-01', '1', '1', '3', '3', '2'])
+      .toEqual(['Mar 1, 2025', '1', '1', '3', '3', '2'])
     expect(screen.getByText(/Sleeping groups sleeping, asleep and offline transitions/))
       .toHaveTextContent('this grouping does not establish measured sleep')
     const table = screen.getByRole('table', { name: 'State transitions' })
@@ -1009,7 +1009,7 @@ describe('TimelinePage', () => {
     expect(within(screen.getByTestId('timeline-summary')).getByText('25m')).toBeInTheDocument()
   })
 
-  it('uses the vehicle day for preview navigation without changing UTC daily buckets', async () => {
+  it('uses the vehicle day for preview navigation while daily buckets follow the selected zone', async () => {
     timezoneFixture.value = 'America/Los_Angeles'
     install()
     mockedRequest.mockImplementation((path: string) => {
@@ -1032,7 +1032,7 @@ describe('TimelinePage', () => {
     expect(within(drawer).getByText('3h')).toBeInTheDocument()
     fireEvent.click(within(drawer).getByText('Close'))
     const chart = screen.getByRole('group', { name: 'Daily transition counts by vehicle state' })
-    expect(within(chart.closest('figure')!).getByRole('table')).toHaveTextContent('2025-03-09')
+    expect(within(chart.closest('figure')!).getByRole('table')).toHaveTextContent('Mar 9, 2025')
     const table = screen.getByRole('table', { name: 'State transitions' })
     expect(within(table).getByText('offline')).toHaveClass('bg-[var(--surface-2)]')
     const rangeCalls = mockedRequest.mock.calls.map(([path]) => path).filter(path => path.startsWith('/vehicle-states/'))
@@ -1042,6 +1042,27 @@ describe('TimelinePage', () => {
       expect(params.get('end')).toBe('2025-03-10T07:00:00.000Z')
     }
     expect(rangeCalls).toHaveLength(2)
+  })
+
+  it('bins the daily breakdown by the selected zone across the UTC midnight boundary', async () => {
+    timezoneFixture.value = 'America/Los_Angeles'
+    install()
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/vehicle-states/summary')) return Promise.resolve(summaryFor(1))
+      if (path.startsWith('/vehicle-states/timeline')) return Promise.resolve({
+        transitions: [
+          // 2025-03-09T06:30Z is Mar 9 in UTC but Mar 8 22:30 in LA.
+          { ts: '2025-03-09T06:30:00Z', from_state: 'offline', to_state: 'driving', trigger_field: null, trigger_value: null },
+        ],
+      })
+      return Promise.resolve({})
+    })
+    renderPage('/timeline?from=2025-03-08&to=2025-03-09')
+    const chart = await screen.findByRole('group', { name: 'Daily transition counts by vehicle state' })
+    const dailyTable = within(chart.closest('figure')!).getByRole('table')
+    expect(dailyTable).toHaveTextContent('Mar 8, 2025')
+    expect(dailyTable).not.toHaveTextContent('Mar 9, 2025')
   })
 
   it.each([1, 2])('serializes originating vehicle %s only through supported destination contracts', async vehicleId => {

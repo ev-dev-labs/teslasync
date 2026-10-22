@@ -3604,7 +3604,7 @@
     "daily": {
       "groupingNote": "Idle groups idle, online and parked transitions. Sleeping groups sleeping, asleep and offline transitions; this grouping does not establish measured sleep. Other destination states are unclassified. Raw states remain in State transitions.",
       "unclassified": "Unclassified",
-      "utcNote": "Transition counts grouped by UTC day; state durations come from the summary"
+      "utcNote": "Transition counts grouped by day; state durations come from the summary"
     },
     "dailyBreakdown": "Daily breakdown",
     "dailyBreakdownAria": "Daily transition counts by vehicle state",
