@@ -5,6 +5,7 @@ import {
   formatDateShort,
   formatTime,
   formatDayKey,
+  isValidTimeZone,
   type FormatOptions,
 } from '@/lib/dateFormat';
 import { resolveLocale } from '@/lib/locale';
@@ -68,27 +69,6 @@ function PureDateTime({ value, variant = 'full', className }: DateTimeProps) {
   return renderSpan({ value, variant, className });
 }
 
-/**
- * Module-cached IANA timezone validity probe. `Intl.DateTimeFormat` throws a
- * `RangeError` when constructed with an unknown `timeZone`. Caching keeps
- * the check O(1) after a zone is first seen — this runs once per row on
- * table-heavy pages.
- */
-const TZ_VALIDITY = new Map<string, boolean>();
-function isValidTimeZone(tz: string): boolean {
-  const cached = TZ_VALIDITY.get(tz);
-  if (cached !== undefined) return cached;
-  let ok = false;
-  try {
-    // tz-computation: caches IANA zone validity; the boolean is computed with, never rendered
-    new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(0);
-    ok = true;
-  } catch {
-    ok = false;
-  }
-  TZ_VALIDITY.set(tz, ok);
-  return ok;
-}
 
 /**
  * Renders the timestamp in the IANA timezone resolved from the user's

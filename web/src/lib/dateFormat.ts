@@ -19,6 +19,13 @@
  * negative duration, or a non-number masquerading via a cast) and returns
  * the universal "—" placeholder rather than throwing or producing strings
  * like "NaN:NaN" or "Invalid Date". Callers should NOT pre-guard.
+ *
+ * Instant helpers accept `string | number | Date | null | undefined`:
+ * ISO strings, epoch millis, and Dates are instants rendered in the
+ * target zone; callers pass raw values, never pre-converting to ISO
+ * strings. (Day-key helpers take `YYYY-MM-DD` calendar strings,
+ * `formatHourName` takes 0-23 bucket hours, and `formatMonthName` takes
+ * 1-12 month numbers — those are bucket identities, not instants.)
  */
 
 import { fmtNumber, getGlobalLocale, isFiniteNumber } from './numberFormat'
@@ -50,12 +57,18 @@ export interface FormatOptions {
  * validation lives in `resolveTimezone`; this is the backstop that keeps
  * every formatter total per the contract above.
  */
+const timeZoneValidityCache = new Map<string, boolean>()
+
 function safeTimeZone(tz: unknown): string | undefined {
   if (typeof tz !== 'string' || tz.trim() === '') return undefined
+  const cached = timeZoneValidityCache.get(tz)
+  if (cached !== undefined) return cached ? tz : undefined
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(0)
+    timeZoneValidityCache.set(tz, true)
     return tz
   } catch {
+    timeZoneValidityCache.set(tz, false)
     return undefined
   }
 }
@@ -78,10 +91,170 @@ function intlLocale(opts?: FormatOptions): string | undefined {
   return undefined
 }
 
+/**
+ * Canonical IANA probe for the date layer: true when `tz` names a zone
+ * `Intl` can format in. Display code should prefer `resolveTimezone` /
+ * `useDateFormat` (which fall back to a usable zone); this boolean is
+ * for branching (normalize-then-compute) in bucketing and schedule code.
+ * Never throws.
+ */
+export function isValidTimeZone(tz: unknown): tz is string {
+  return safeTimeZone(tz) !== undefined
+}
+
+/**
+ * Browser's IANA zone, or `'UTC'` when `Intl` is unavailable. The
+ * mock-safe leaf for "default to the browser zone" branching in
+ * bucketing and schedule code; display code should prefer
+ * `resolveTimezone` / `useDateFormat`. Never throws.
+ */
+export function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
+}
+
+/** Numeric calendar parts of an instant in a zone. `weekday` is 0 (Sun) - 6. */
+export interface ZonedDateParts {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
+  weekday: number
+}
+
+const partsFormatterCache = new Map<string, Intl.DateTimeFormat>()
+
+function cachedPartsFormatter(timeZone: string): Intl.DateTimeFormat {
+  let formatter = partsFormatterCache.get(timeZone)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    })
+    partsFormatterCache.set(timeZone, formatter)
+  }
+  return formatter
+}
+
+/**
+ * Numeric calendar parts of an instant in the given IANA zone, for
+ * bucketing, grouping, and schedule math. Single `formatToParts` call;
+ * formatters are cached per zone. Returns `null` for missing, invalid,
+ * or unparseable input, or when `timeZone` is not a real zone —
+ * callers normalize the zone first (see {@link isValidTimeZone}).
+ * Never throws.
+ */
+export function zonedDateParts(
+  value: string | number | Date | null | undefined,
+  timeZone: string,
+): ZonedDateParts | null {
+  if (value == null || value === '') return null
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime()) || !isValidTimeZone(timeZone)) return null
+  try {
+    const parts = cachedPartsFormatter(timeZone).formatToParts(d)
+    const get = (type: string): number => Number(parts.find((p) => p.type === type)?.value)
+    const year = get('year')
+    const month = get('month')
+    const day = get('day')
+    // h23 midnight reads back as 24 on some ICU builds; bucketing
+    // expects 0-23, so normalize here for every caller.
+    const rawHour = get('hour')
+    const out: ZonedDateParts = {
+      year,
+      month,
+      day,
+      hour: rawHour === 24 ? 0 : rawHour,
+      minute: get('minute'),
+      second: get('second'),
+      weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
+    }
+    if (Object.values(out).some((n) => !Number.isInteger(n))) return null
+    return out
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Canonical ISO-8601 UTC string (`2026-04-04T14:30:00.000Z`) for machine
+ * values: `<time dateTime>`, data props, export payloads, query keys.
+ * Returns `null` for missing or unparseable input. Never throws.
+ */
+export function toIsoString(value: string | number | Date | null | undefined): string | null {
+  if (value == null || value === '') return null
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return null
+  try {
+    return d.toISOString()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Short GMT offset label (`GMT-7`, `GMT+5:30`, `GMT`) of an instant in
+ * the target zone. For time axes and timelines where the offset
+ * disambiguates repeated fall-back hours; not a zone name. Missing or
+ * invalid input returns the placeholder. Never throws.
+ */
+export function formatGmtOffset(
+  value: string | number | Date | null | undefined,
+  opts?: FormatOptions,
+): string {
+  if (value == null || value === '') return FALLBACK
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return FALLBACK
+  const timeZone = safeTimeZone(opts?.tz)
+  const fields: Intl.DateTimeFormatOptions = {
+    ...(timeZone ? { timeZone } : {}), timeZoneName: 'shortOffset',
+  }
+  try {
+    const found = new Intl.DateTimeFormat(intlLocale(opts), fields)
+      .formatToParts(d).find((p) => p.type === 'timeZoneName')
+    return found?.value ?? FALLBACK
+  } catch {
+    try {
+      const found = new Intl.DateTimeFormat('en-US', fields)
+        .formatToParts(d).find((p) => p.type === 'timeZoneName')
+      return found?.value ?? FALLBACK
+    } catch {
+      return FALLBACK
+    }
+  }
+}
+
+/**
+ * All IANA zones the runtime knows, for zone pickers. The user-facing
+ * setting lives in exactly one place (Settings > Units); per-record
+ * schedule pickers (quiet-hours windows) also list through here.
+ * Returns `[]` when `Intl.supportedValuesOf` is unavailable. Never throws.
+ */
+export function supportedTimeZones(): string[] {
+  try {
+    const sv = (Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf
+    if (typeof sv !== 'function') return []
+    return sv.call(Intl, 'timeZone')
+  } catch {
+    return []
+  }
+}
+
 /** Full date + time: "Apr 4, 2026, 2:30 AM" */
-export function formatDateTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatDateTime(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleString(intlLocale(opts), intlOpts({
     year: 'numeric', month: 'short', day: 'numeric',
@@ -90,9 +263,9 @@ export function formatDateTime(iso: string | Date | null | undefined, opts?: For
 }
 
 /** Date only: "Apr 4, 2026" */
-export function formatDate(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatDate(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
     year: opts?.yearStyle ?? 'numeric', month: 'short', day: 'numeric',
@@ -100,9 +273,9 @@ export function formatDate(iso: string | Date | null | undefined, opts?: FormatO
 }
 
 /** Short date: "Apr 4" */
-export function formatDateShort(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatDateShort(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
     month: 'short', day: 'numeric',
@@ -137,9 +310,9 @@ function cachedTimeFormatter(opts?: FormatOptions): Intl.DateTimeFormat {
 }
 
 /** Time only: "02:30" (24h) or "2:30 AM" (based on locale) */
-export function formatTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatTime(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   return cachedTimeFormatter(opts).format(d)
 }
@@ -149,9 +322,9 @@ export function formatTime(iso: string | Date | null | undefined, opts?: FormatO
  * after seven days. Uses the selected formatter locale unless overridden.
  * English keeps its existing "just now" label for the first past minute.
  */
-export function formatRelative(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatRelative(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   const diff = d.getTime() - Date.now()
   const seconds = Math.floor(Math.abs(diff) / 1000)
@@ -180,7 +353,7 @@ export function formatRelative(iso: string | Date | null | undefined, opts?: For
   if (hours < 24) return formatter.format(direction * hours, 'hour')
   const days = Math.floor(hours / 24)
   if (days < 7) return formatter.format(direction * days, 'day')
-  return formatDate(iso, { ...opts, locale: formatter.resolvedOptions().locale })
+  return formatDate(value, { ...opts, locale: formatter.resolvedOptions().locale })
 }
 
 /**
@@ -197,11 +370,11 @@ export function formatRelative(iso: string | Date | null | undefined, opts?: For
  * just because the user's browser already rolled to the next day.
  */
 export function formatRelativeDays(
-  iso: string | Date | null | undefined,
+  value: string | number | Date | null | undefined,
   opts?: FormatOptions,
 ): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   const targetKey = ymdInTz(d, opts?.tz)
   if (!targetKey) return '—'
@@ -349,9 +522,10 @@ function parseYmdToUtcMillis(key: string): number | null {
 }
 
 /** Relative time matching dashboard activity feeds: "Just now", "5m ago", or "Apr 4, 02:30 AM" */
-export function formatRelativeTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatRelativeTime(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return '—'
   const diffMs = Date.now() - d.getTime()
   const diffMin = Math.floor(diffMs / 60_000)
   // relative-time: shared event-time formatter
@@ -410,10 +584,10 @@ export function formatDurationMinutes(
 
 /** Duration between two timestamps, rounded to whole minutes. */
 export function formatDurationRange(
-  start: string | Date | null | undefined,
-  end: string | Date | null | undefined,
+  start: string | number | Date | null | undefined,
+  end: string | number | Date | null | undefined,
 ): string {
-  if (!start || !end) return FALLBACK
+  if (start == null || start === '' || end == null || end === '') return FALLBACK
   const s = new Date(start).getTime()
   const e = new Date(end).getTime()
   if (!Number.isFinite(s) || !Number.isFinite(e)) return FALLBACK
@@ -463,9 +637,9 @@ export function localDatetimeInputToIso(value: string | null | undefined): strin
 }
 
 /** Weekday + short date: "Fri, Apr 4" */
-export function formatDateWithDay(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatDateWithDay(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
     weekday: 'short', month: 'short', day: 'numeric',
@@ -481,11 +655,11 @@ export function formatDateWithDay(iso: string | Date | null | undefined, opts?: 
  * the universal placeholder.
  */
 export function formatDateRange(
-  start: string | Date | null | undefined,
-  endExclusive: string | Date | null | undefined,
+  start: string | number | Date | null | undefined,
+  endExclusive: string | number | Date | null | undefined,
   opts?: FormatOptions,
 ): string {
-  if (!start || !endExclusive) return FALLBACK
+  if (start == null || start === '' || endExclusive == null || endExclusive === '') return FALLBACK
   const s = new Date(start)
   const e = new Date(endExclusive)
   if (isNaN(s.getTime()) || isNaN(e.getTime())) return FALLBACK
@@ -631,12 +805,13 @@ export function toZonedDatetimeStr(d: Date, timeZone: string): string {
  * User-facing month-year label ("Mar 2027", or "Mar '27" with
  * `yearStyle: '2-digit'`). Plain `YYYY-MM` / `YYYY-MM-DD`
  * calendar values are formatted zone-stable (noon-anchored UTC, like
- * {@link formatDayKey}); full instants are rendered in the target zone.
+ * {@link formatDayKey}); full instants (ISO strings, epoch millis,
+ * Dates) are rendered in the target zone.
  * Missing or invalid input returns the placeholder; an invalid locale
  * falls back to `en-US` before giving up. Never throws.
  */
 export function formatMonthYear(
-  value: string | Date | null | undefined,
+  value: string | number | Date | null | undefined,
   opts?: FormatOptions,
 ): string {
   if (value == null || value === '') return FALLBACK
@@ -732,7 +907,7 @@ export function formatMonthName(
  * Never throws.
  */
 export function formatWeekdayName(
-  value: string | Date | null | undefined,
+  value: string | number | Date | null | undefined,
   opts?: FormatOptions,
 ): string {
   if (value == null || value === '') return FALLBACK

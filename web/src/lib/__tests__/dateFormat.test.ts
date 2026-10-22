@@ -3,6 +3,8 @@ import {
   formatDateTime, formatDate, formatTime, formatDateShort, tzAbbreviation,
   formatRelativeDays, formatRelativeDayKey, formatDayKey, formatMonthYear, formatMonthName,
   formatWeekdayName, formatChartInstant, formatMonthDayHour, formatHourName, ymdInTz,
+  isValidTimeZone, browserTimeZone, zonedDateParts, toIsoString, formatGmtOffset, supportedTimeZones,
+  formatDateWithDay, formatRelativeTime, formatDateRange,
   isoUtcToLocalDatetimeInput, localDatetimeInputToIso,
   formatDurationMs, formatDurationMsCompact, formatDurationMsLong,
   formatDurationSecondsAsMinutes, formatDurationMinutes, formatDurationRange,
@@ -630,5 +632,156 @@ describe('localDatetimeInputToIso', () => {
     expect(localDatetimeInputToIso(undefined)).toBeNull();
     expect(localDatetimeInputToIso('')).toBeNull();
     expect(localDatetimeInputToIso('not-a-date')).toBeNull();
+  });
+});
+
+describe('instant helpers accept string | number | Date', () => {
+  const MS = Date.parse(ISO); // 2026-04-04 14:30 UTC
+  const OPTS = { locale: 'en-US', tz: 'America/Los_Angeles' } as const;
+  const cases: Array<[string, (v: string | number | Date | null | undefined) => string]> = [
+    ['formatDateTime', (v) => formatDateTime(v, OPTS)],
+    ['formatDate', (v) => formatDate(v, OPTS)],
+    ['formatDateShort', (v) => formatDateShort(v, OPTS)],
+    ['formatTime', (v) => formatTime(v, OPTS)],
+    ['formatDateWithDay', (v) => formatDateWithDay(v, OPTS)],
+    ['formatWeekdayName', (v) => formatWeekdayName(v, OPTS)],
+    ['formatMonthYear', (v) => formatMonthYear(v, OPTS)],
+  ];
+
+  it.each(cases)('%s renders epoch millis and Dates like the ISO string', (_name, fmt) => {
+    const expected = fmt(ISO);
+    expect(fmt(MS)).toBe(expected);
+    expect(fmt(new Date(MS))).toBe(expected);
+  });
+
+  it.each(cases)('%s returns the placeholder for missing/invalid input without throwing', (_name, fmt) => {
+    expect(fmt(null)).toBe('—');
+    expect(fmt(undefined)).toBe('—');
+    expect(fmt('')).toBe('—');
+    expect(fmt('not-a-date')).toBe('—');
+    expect(fmt(NaN)).toBe('—');
+  });
+
+  it('renders epoch 0 instead of treating it as missing', () => {
+    expect(formatDateTime(0, { locale: 'en-US', tz: 'UTC' })).toBe('Jan 1, 1970, 12:00 AM');
+    expect(formatTime(0, { locale: 'en-US', tz: 'UTC' })).toBe('12:00 AM');
+    expect(formatRelativeTime(0, { locale: 'en-US', tz: 'UTC' })).not.toBe('—');
+  });
+
+  it('formatRelativeTime returns the placeholder for garbage instead of throwing', () => {
+    expect(formatRelativeTime('not-a-date', { locale: 'en-US' })).toBe('—');
+    expect(formatRelativeTime(NaN, { locale: 'en-US' })).toBe('—');
+  });
+
+  it('formatDateRange and formatDurationRange accept epoch millis', () => {
+    const start = Date.parse('2026-04-04T00:00:00.000Z');
+    const end = Date.parse('2026-04-06T00:00:00.000Z');
+    expect(formatDateRange(start, end, { locale: 'en-US', tz: 'UTC' }))
+      .toBe(formatDateRange('2026-04-04T00:00:00.000Z', '2026-04-06T00:00:00.000Z', { locale: 'en-US', tz: 'UTC' }));
+    expect(formatDurationRange(start, end)).toBe(formatDurationRange(new Date(start), new Date(end)));
+    expect(formatDateRange(null, end)).toBe('—');
+    expect(formatDurationRange(start, null)).toBe('—');
+  });
+});
+
+describe('isValidTimeZone', () => {
+  it('accepts real zones and rejects everything else without throwing', () => {
+    expect(isValidTimeZone('America/Los_Angeles')).toBe(true);
+    expect(isValidTimeZone('UTC')).toBe(true);
+    expect(isValidTimeZone('Mars/Olympus')).toBe(false);
+    expect(isValidTimeZone('')).toBe(false);
+    expect(isValidTimeZone('   ')).toBe(false);
+    expect(isValidTimeZone(null)).toBe(false);
+    expect(isValidTimeZone(undefined)).toBe(false);
+    expect(isValidTimeZone(42)).toBe(false);
+    expect(isValidTimeZone({})).toBe(false);
+  });
+
+  it('returns stable results on repeat calls (cached validity)', () => {
+    expect(isValidTimeZone('America/Los_Angeles')).toBe(true);
+    expect(isValidTimeZone('America/Los_Angeles')).toBe(true);
+    expect(isValidTimeZone('Mars/Olympus_Mons_Cached')).toBe(false);
+    expect(isValidTimeZone('Mars/Olympus_Mons_Cached')).toBe(false);
+  });
+});
+
+describe('browserTimeZone', () => {
+  it('resolves to a usable zone without throwing', () => {
+    const zone = browserTimeZone();
+    expect(typeof zone).toBe('string');
+    expect(zone.length).toBeGreaterThan(0);
+    expect(isValidTimeZone(zone)).toBe(true);
+  });
+});
+
+describe('zonedDateParts', () => {
+  it('extracts numeric parts in the requested zone', () => {
+    // 2026-10-01T00:30Z is Sep 30 17:30 in LA (a Wednesday).
+    expect(zonedDateParts('2026-10-01T00:30:00.000Z', 'America/Los_Angeles')).toEqual({
+      year: 2026, month: 9, day: 30, hour: 17, minute: 30, second: 0, weekday: 3,
+    });
+    expect(zonedDateParts(Date.parse('2026-10-01T00:30:00.000Z'), 'Asia/Tokyo')).toEqual({
+      year: 2026, month: 10, day: 1, hour: 9, minute: 30, second: 0, weekday: 4,
+    });
+    expect(zonedDateParts(new Date('2026-10-01T00:30:00.000Z'), 'UTC')).toEqual({
+      year: 2026, month: 10, day: 1, hour: 0, minute: 30, second: 0, weekday: 4,
+    });
+  });
+
+  it('returns null for missing, invalid, or unparseable input without throwing', () => {
+    expect(zonedDateParts(null, 'UTC')).toBeNull();
+    expect(zonedDateParts(undefined, 'UTC')).toBeNull();
+    expect(zonedDateParts('', 'UTC')).toBeNull();
+    expect(zonedDateParts('not-a-date', 'UTC')).toBeNull();
+    expect(zonedDateParts(NaN, 'UTC')).toBeNull();
+    expect(zonedDateParts(ISO, 'Mars/Olympus')).toBeNull();
+    expect(zonedDateParts(ISO, '')).toBeNull();
+  });
+
+  it('normalizes the h23 midnight hour to 0 instead of 24', () => {
+    // 2026-03-01T08:00Z is exactly midnight in LA (a Sunday).
+    expect(zonedDateParts('2026-03-01T08:00:00.000Z', 'America/Los_Angeles')).toEqual({
+      year: 2026, month: 3, day: 1, hour: 0, minute: 0, second: 0, weekday: 0,
+    });
+  });
+});
+
+describe('toIsoString', () => {
+  it('canonicalizes strings, epoch millis, and Dates', () => {
+    expect(toIsoString('2026-04-04T14:30:00.000Z')).toBe('2026-04-04T14:30:00.000Z');
+    expect(toIsoString(Date.parse('2026-04-04T14:30:00.000Z'))).toBe('2026-04-04T14:30:00.000Z');
+    expect(toIsoString(new Date('2026-04-04T14:30:00.000Z'))).toBe('2026-04-04T14:30:00.000Z');
+  });
+
+  it('returns null for missing or unparseable input instead of throwing', () => {
+    expect(toIsoString(null)).toBeNull();
+    expect(toIsoString(undefined)).toBeNull();
+    expect(toIsoString('')).toBeNull();
+    expect(toIsoString('not-a-date')).toBeNull();
+    expect(toIsoString(NaN)).toBeNull();
+  });
+});
+
+describe('formatGmtOffset', () => {
+  it('renders the short offset of the instant in the target zone', () => {
+    expect(formatGmtOffset('2026-07-01T12:00:00.000Z', { locale: 'en-US', tz: 'America/Los_Angeles' })).toBe('GMT-7');
+    expect(formatGmtOffset('2026-01-01T12:00:00.000Z', { locale: 'en-US', tz: 'America/Los_Angeles' })).toBe('GMT-8');
+    expect(formatGmtOffset('2026-07-01T12:00:00.000Z', { locale: 'en-US', tz: 'Asia/Kathmandu' })).toBe('GMT+5:45');
+  });
+
+  it('returns the placeholder for missing or invalid input without throwing', () => {
+    expect(formatGmtOffset(null, { locale: 'en-US' })).toBe('—');
+    expect(formatGmtOffset(undefined, { locale: 'en-US' })).toBe('—');
+    expect(formatGmtOffset('', { locale: 'en-US' })).toBe('—');
+    expect(formatGmtOffset('not-a-date', { locale: 'en-US' })).toBe('—');
+  });
+});
+
+describe('supportedTimeZones', () => {
+  it('lists the runtime IANA zones', () => {
+    const zones = supportedTimeZones();
+    expect(Array.isArray(zones)).toBe(true);
+    expect(zones.length).toBeGreaterThan(100);
+    expect(zones).toContain('America/Los_Angeles');
   });
 });

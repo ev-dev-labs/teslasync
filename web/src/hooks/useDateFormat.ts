@@ -27,7 +27,7 @@ import { useTimezone, type TzMode } from '@/lib/timezone'
  * than the rest of the page).
  */
 export type DateFormatter = (
-  value: string | Date | null | undefined,
+  value: string | number | Date | null | undefined,
   override?: FormatOptions,
 ) => string
 
